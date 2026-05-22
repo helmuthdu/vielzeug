@@ -52,7 +52,7 @@ export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
     const roleAttr = () => (props.decorative.value ? 'none' : 'separator');
     const ariaHidden = () => (props.decorative.value ? 'true' : null);
 
-    return () => html`
+    return html`
       ${() =>
         props.label.value
           ? html`

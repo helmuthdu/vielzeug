@@ -1,27 +1,32 @@
-import { computed, define, html, inject } from '@vielzeug/craftit';
-import { type CheckableChangePayload, createCheckableFieldControl } from '../../controls';
+import { define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
 
-import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { type CheckableChangePayload, createCheckable, createHeadlessScope } from '../../headless';
+import { SWITCH_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
+import { connectFormField } from '../shared/connect-form-field';
+import { applyCheckableBinding } from '../shared/field-binding';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './switch.css?inline';
 
 export type BitSwitchEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitSwitchProps = CheckableProps &
-  ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Error message (marks field as invalid) */
-    error?: string;
-    /** Helper text displayed below the switch */
-    helper?: string;
-  };
+export type BitSwitchProps = CheckableProps & {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Error message (marks field as invalid) */
+  error?: string;
+  /** Helper text displayed below the switch */
+  helper?: string;
+  /** Component size */
+  size?: ComponentSize;
+};
 
 /**
  * A toggle switch component for binary on/off states.
@@ -78,55 +83,46 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
 
-    let labelRef: HTMLElement | null = null;
-    let helperRef: HTMLElement | null = null;
-
-    const checkable = createCheckableFieldControl({
+    const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: false,
-      disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
+      disabled: fCtxProps.disabled,
       error: props.error,
-      getHelperEl: () => helperRef,
-      getLabelEl: () => labelRef,
       helper: props.helper,
+      host: host.el,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
         emit('change', payload);
       },
       prefix: 'switch',
       role: 'switch',
+      signal: createHeadlessScope(onCleanup).signal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { checked, disabled, handleClick, handleKeydown, helperId, labelId } = checkable;
+    const { assistiveId, checked, disabled, handleClick, handleKeydown, labelId } = checkable;
 
+    connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
-    host.bind({
-      attr: {
-        checked,
-        size: () => props.size?.value ?? formCtx?.size.value,
-        tabindex: () => (disabled.value ? undefined : 0),
-      },
-      class: () => ({
-        'is-checked': checked.value,
-        'is-disabled': disabled.value,
-      }),
-      on: {
-        click: handleClick,
-        keydown: handleKeydown,
-      },
-    });
+    applyCheckableBinding(host, fCtxProps.size, { checked, disabled, handleClick, handleKeydown });
 
-    return () => html`
+    return html`
       <div class="switch-wrapper" part="switch">
         <div class="switch-track" part="track">
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },
-  styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],
+  styles: [
+    colorThemeMixin,
+    forcedColorsFormControlMixin,
+    disabledStateMixin(),
+    sizeVariantMixin(SWITCH_SIZE_PRESET),
+    componentStyles,
+  ],
 });

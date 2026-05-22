@@ -123,7 +123,7 @@ export const roundedVariantMixin = css`
  * };
  * ```
  */
-type SizeConfig = {
+export type SizeConfig = {
   /** Arbitrary CSS custom properties (must start with --) */
   [key: `--${string}`]: string | undefined;
   /** Font size — maps to --_font-size */

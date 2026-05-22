@@ -1,14 +1,28 @@
-import { define, html, inject, live, prop, ref, signal } from '@vielzeug/craftit';
-import { createTextField } from '../../controls';
+import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craftit';
 
+import type { TextFieldProps } from '../../shared/config';
 import type { InputType, VisualVariant } from '../../types';
-import type { TextFieldProps } from '../shared/base-props';
 
+import { createHeadlessScope, createTextField } from '../../headless';
 import '../../content/icon/icon';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import {
+  FIELD_SIZE_PRESET,
+  disablableBundle,
+  roundableBundle,
+  sizableBundle,
+  themableBundle,
+} from '../../shared/config';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
+import { connectFormField } from '../shared/connect-form-field';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
@@ -133,30 +147,18 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
+    const fieldSignal = createHeadlessScope(onCleanup).signal;
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
-
-    const resolvedInputType = (): string =>
-      props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
-
-    const {
-      assistive,
-      clear,
-      errorId,
-      fieldId: inputId,
-      helperId,
-      labelInsetId,
-      labelOutsideId,
-      value: fieldValue,
-    } = createTextField({
-      context: formCtx,
-      disabled: props.disabled,
-      elementRef: inputRef,
+    const tf = createTextField({
+      disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      name: props.name,
       onChange: (event, value) => {
         emit('change', { originalEvent: event, value });
       },
@@ -164,22 +166,43 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
         emit('input', { originalEvent: event, value });
       },
       prefix: 'input',
+      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+    const {
+      assistive,
+      clear: clearValue,
+      errorId,
+      fieldId: inputId,
+      assistiveId,
+      value: fieldValue,
+      wire,
+    } = tf;
+
+    onElement(inputRef, (el) => {
+      wire(el, fieldSignal);
+    });
+
+    connectFormField(tf, defineField, fieldValue, (v) => v);
+
+    const clear = (event?: Event): void => {
+      clearValue(event);
+      inputRef.value?.focus();
+    };
+
+    const resolvedInputType = (): string =>
+      props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
 
     host.bind({
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
         'has-value': () => (fieldValue.value ? true : undefined),
-        size: () => props.size?.value ?? formCtx?.size.value,
-        variant: () => props.variant?.value ?? formCtx?.variant?.value,
+        size: fCtxProps.size,
+        variant: fCtxProps.variant,
       },
     });
 
-    const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
-    const ariaDescribedBy = () => (assistive.value.errorText || assistive.value.helperText ? helperId : null);
-    const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
-    const ariaInvalid = () => (assistive.value.errorText ? 'true' : null);
+    const { aria, label } = tf;
     const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
     const passwordTogglePressed = () => String(showPassword.value);
     const passwordToggleIcon = () =>
@@ -190,8 +213,6 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     const helperText = () => assistive.value.helperText;
     const errorHidden = () => !assistive.value.errorText;
     const errorText = () => assistive.value.errorText;
-    const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
-    const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
     const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);
     const counterHidden = () => !assistive.value.hasCounter;
@@ -202,18 +223,18 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       inputRef.value?.focus();
     };
 
-    return () => html`
+    return html`
       <div class="input-wrapper" part="wrapper">
         <label
           class="label-outside"
           for="${inputId}"
-          id="${labelOutsideId}"
+          id="${label.outside.id}"
           part="label"
-          ?hidden="${outsideLabelHidden}"
+          ?hidden="${() => !label.outside.show.value}"
           >${props.label}</label
         >
         <div class="field" part="field">
-          <label class="label-inset" for="${inputId}" id="${labelInsetId}" part="label" ?hidden="${insetLabelHidden}"
+          <label class="label-inset" for="${inputId}" id="${label.inset.id}" part="label" ?hidden="${() => !label.inset.show.value}"
             >${props.label}</label
           >
           <div class="input-row" part="input-row">
@@ -233,10 +254,10 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
               ?readonly="${props.readonly}"
               ?required="${props.required}"
               :value="${live(fieldValue)}"
-              :aria-labelledby="${ariaLabelledBy}"
-              :aria-describedby="${ariaDescribedBy}"
-              :aria-errormessage="${ariaErrorMessage}"
-              :aria-invalid="${ariaInvalid}"
+              :aria-labelledby="${aria.labelledBy}"
+              :aria-describedby="${aria.describedBy}"
+              :aria-errormessage="${aria.errorMessage}"
+              :aria-invalid="${aria.invalid}"
               ref="${inputRef}" />
             <slot name="suffix"></slot>
             <button
@@ -254,7 +275,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
             </button>
           </div>
         </div>
-        <div class="helper-text" id="${helperId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
+        <div class="helper-text" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
         <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
         <div
           class="char-counter"
@@ -270,7 +291,10 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
   shadow: { delegatesFocus: true },
   styles: [
     sizeVariantMixin(FIELD_SIZE_PRESET),
-    ...formFieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
     disabledLoadingMixin(),
     forcedColorsFocusMixin('input'),
     componentStyles,

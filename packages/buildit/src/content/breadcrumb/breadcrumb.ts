@@ -41,7 +41,7 @@ export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrum
     separator: prop.string('/'),
   },
   setup(props) {
-    return () => html`
+    return html`
       <li class="item" role="listitem">
         <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
         <a
@@ -124,7 +124,7 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
       syncItems();
     });
 
-    return () => html`
+    return html`
       <nav part="nav" :aria-label="${props.label}">
         <ol role="list" part="list">
           <slot></slot>

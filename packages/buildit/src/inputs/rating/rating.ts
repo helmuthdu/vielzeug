@@ -1,12 +1,12 @@
 import { computed, define, defineField, html, inject, signal } from '@vielzeug/craftit';
-import { createSliderControl } from '../../controls';
 
-import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
 
+import { createSliderControl } from '../../headless';
 import '../../content/icon/icon';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { FORM_CTX } from '../shared/form-context';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './rating.css?inline';
 
 export type BitRatingEvents = {
@@ -14,22 +14,26 @@ export type BitRatingEvents = {
 };
 
 /** Rating props */
-export type BitRatingProps = ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Accessible group label */
-    label?: string;
-    /** Maximum rating (number of stars) */
-    max?: number;
-    /** Form field name */
-    name?: string;
-    /** Make rating read-only */
-    readonly?: boolean;
-    /** Render selected stars as solid-filled instead of outline-only */
-    solid?: boolean;
-    /** Current rating value */
-    value?: number;
-  };
+export type BitRatingProps = {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Accessible group label */
+  label?: string;
+  /** Maximum rating (number of stars) */
+  max?: number;
+  /** Form field name */
+  name?: string;
+  /** Make rating read-only */
+  readonly?: boolean;
+  /** Component size */
+  size?: ComponentSize;
+  /** Render selected stars as solid-filled instead of outline-only */
+  solid?: boolean;
+  /** Current rating value */
+  value?: number;
+};
 
 /**
  * A star rating input.
@@ -76,7 +80,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
-
+    const fCtxProps = useFormContext(host, props, formCtx);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);
@@ -87,7 +91,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     });
 
     const fd = defineField({
-      disabled: computed(() => Boolean(props.disabled!.value) || Boolean(formCtx?.disabled.value)),
+      disabled: fCtxProps.disabled,
       value: computed(() => String(normalizedValue.value || 0)),
     });
 
@@ -97,16 +101,16 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
       }
     };
 
-    const isInteractive = computed(() => !props.readonly!.value && !(props.disabled!.value || formCtx?.disabled.value));
+    const isInteractive = computed(() => !props.readonly!.value && !fCtxProps.disabled.value);
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
       return [...(host.el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
     };
     const ratingControl = createSliderControl({
-      max: () => Number(props.max!.value) || 5,
-      min: () => 1,
-      step: () => 1,
+      max: computed(() => Number(props.max!.value) || 5),
+      min: signal(1),
+      step: signal(1),
     });
 
     function spawnSparkles(star: number) {
@@ -149,8 +153,8 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
 
       if (nextValue === normalizedValue.value) return;
 
-      // Write through the reactive prop signal; craftit handles host reflection.
-      props.value!.value = nextValue;
+      // Write through the host attribute; craftit handles host reflection.
+      host.el.setAttribute('value', String(nextValue));
       emit('change', { originalEvent, value: nextValue });
       triggerValidation('change');
       spawnSparkles(nextValue);
@@ -174,9 +178,9 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
-    host.bind({ attr: { size: () => props.size?.value ?? formCtx?.size.value } });
+    host.bind({ attr: { size: fCtxProps.size } });
 
-    return () => html`
+    return html`
       <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">
         ${() =>
           stars.value.map(

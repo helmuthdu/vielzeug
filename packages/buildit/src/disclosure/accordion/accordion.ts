@@ -1,7 +1,8 @@
 import { define, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
-import { createListControl } from '../../controls';
 
 import type { ComponentSize, VisualVariant } from '../../types';
+
+import { createListControl } from '../../headless';
 
 /** Context provided by bit-accordion to its bit-accordion-item children. */
 export type AccordionContext = {
@@ -146,7 +147,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
       },
     });
 
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
 
   styles: [styles],

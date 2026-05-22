@@ -36,7 +36,7 @@ describe('form integration', () => {
       let capturedData: FormData | undefined;
 
       fixture.element.addEventListener('submit', (e) => {
-        capturedData = (e as CustomEvent).detail?.formData as FormData | undefined;
+        capturedData = (e as unknown as CustomEvent).detail?.formData as FormData | undefined;
       });
 
       fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -54,7 +54,7 @@ describe('form integration', () => {
       let capturedData: FormData | undefined;
 
       fixture.element.addEventListener('submit', (e) => {
-        capturedData = (e as CustomEvent).detail?.formData as FormData | undefined;
+        capturedData = (e as unknown as CustomEvent).detail?.formData as FormData | undefined;
       });
 
       fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

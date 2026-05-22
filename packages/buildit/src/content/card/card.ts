@@ -1,9 +1,9 @@
 import { define, effect, html } from '@vielzeug/craftit';
-import { createPressControl } from '../../controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-import { disablableBundle, loadableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { createInteraction } from '../../headless';
+import { disablableBundle, loadableBundle, themableBundle } from '../../shared/config';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
 
@@ -128,7 +128,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     // Event Handlers
     // ────────────────────────────────────────────────────────────────
 
-    const pressControl = createPressControl({
+    const pressControl = createInteraction({
       disabled: () => !props.interactive.value || Boolean(props.disabled.value),
       onPress: (originalEvent, trigger) => {
         emit('activate', { originalEvent, trigger });
@@ -158,7 +158,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     // Template
     // ────────────────────────────────────────────────────────────────
 
-    return () => html`
+    return html`
       <div class="card" part="card">
         <div class="loading-bar" part="loading-bar"></div>
         <div class="card-media" part="media" ?hidden="${() => !slots.has('media').value}">

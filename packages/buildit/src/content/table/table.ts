@@ -2,7 +2,7 @@ import { define, effect, html, onMounted } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 
@@ -281,7 +281,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
       };
     });
 
-    return () => html`<div class="scroll-container"></div>`;
+    return html`<div class="scroll-container"></div>`;
   },
   styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
 });

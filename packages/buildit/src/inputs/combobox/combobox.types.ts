@@ -1,12 +1,10 @@
-import type { OverlayCloseDetail, OverlayOpenDetail } from '../../controls';
-
+import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail } from '../../headless';
+import type { SelectableFieldProps } from '../../shared/config';
 import type { VisualVariant } from '../../types';
-import type { SelectableFieldProps } from '../shared/base-props';
-import type { ChoiceChangeDetail } from '../shared/utils';
 
 export type BitComboboxEvents = {
   change: ChoiceChangeDetail;
-  close: OverlayCloseDetail;
+  close: { reason: DropdownCloseReason };
   open: OverlayOpenDetail;
   search: { query: string };
 };
@@ -31,7 +29,7 @@ export type BitComboboxProps = Omit<
 > & {
   /** Allow typing a new value to create a new option */
   creatable?: boolean;
-  'label-placement'?: 'outside' | 'inset' | 'hidden';
+  'label-placement'?: 'outside' | 'inset';
   /** Show loading state in the dropdown */
   loading?: boolean;
   multiple?: boolean;

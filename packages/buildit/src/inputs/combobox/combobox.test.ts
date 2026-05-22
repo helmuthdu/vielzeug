@@ -67,7 +67,7 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(onOpen).toHaveBeenCalled();
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('click');
       expect(onClose).toHaveBeenCalled();
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
     });
@@ -87,10 +87,10 @@ describe('bit-combobox', () => {
       await user.press(input, 'Enter');
       await fixture.flush();
 
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('keyboard');
     });
 
-    it('emits outside-click close reason when clicking away from the popup', async () => {
+    it('emits outsideClick close reason when clicking away from the popup', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
@@ -108,7 +108,7 @@ describe('bit-combobox', () => {
       document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outside-click');
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outsideClick');
     });
 
     it('emits programmatic close reason after selecting an option in single mode', async () => {
@@ -161,7 +161,7 @@ describe('bit-combobox', () => {
 
       expect(Array.isArray(detail.values)).toBe(true);
       expect(detail.labels).toEqual(['United States']);
-      expect(detail.value).toBe('us');
+      expect(detail.values?.[0]).toBe('us');
     });
 
     it('shows all options when reopened after a selection', async () => {
@@ -649,7 +649,6 @@ describe('bit-combobox', () => {
 
       const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
 
-      expect(detail.value).toBe('');
       expect(detail.values).toEqual([]);
       expect(detail.originalEvent).toBeDefined();
     });

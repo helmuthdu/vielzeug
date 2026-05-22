@@ -1,34 +1,24 @@
-import {
-  computed,
-  createId,
-  css,
-  define,
-  effect,
-  html,
-  prop,
-  signal,
-  watch,
-  onMounted,
-  syncAria,
-} from '@vielzeug/craftit';
-import {
-  createPopupListControl,
-  createPressControl,
-  type OverlayCloseDetail,
-  type OverlayOpenDetail,
-} from '../../controls';
-import { createDropdownPositioner } from '../../inputs/shared/dom-sync';
-
 import type { Placement } from '@vielzeug/floatit';
+
+import { computed, css, define, effect, html, prop, watch, onMounted, syncAria } from '@vielzeug/craftit';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { disablableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
-import { coarsePointerMixin, colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import {
+  createOptionList,
+  createInteraction,
+  createStableId,
+  type DropdownCloseReason,
+  type OverlayOpenDetail,
+} from '../../headless';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import menuItemStyles from './menu-item.css?inline';
+import menuSeparatorStyles from './menu-separator.css?inline';
 import componentStyles from './menu.css?inline';
 
-// ============================================
-// Types
-// ============================================
+// ── Types ─────────────────────────────────────────────────────────────
+
 export interface MenuSelectDetail {
   value: string;
   checked?: boolean;
@@ -37,7 +27,7 @@ export interface MenuSelectDetail {
 export type BitMenuItemType = 'checkbox' | 'radio';
 
 export type BitMenuEvents = {
-  close: OverlayCloseDetail;
+  close: { reason: DropdownCloseReason };
   open: OverlayOpenDetail;
   select: MenuSelectDetail;
 };
@@ -56,9 +46,7 @@ export type BitMenuProps = {
   size?: ComponentSize;
 };
 
-// ============================================
-// Styles
-// ============================================
+// ── Styles ─────────────────────────────────────────────────────────────
 
 const themeStyles = /* css */ css`
   ${colorThemeMixin}
@@ -66,9 +54,7 @@ const themeStyles = /* css */ css`
   ${forcedColorsMixin}
 `;
 
-// ============================================
-// Menu Item Component
-// ============================================
+// ── Menu Item Component ─────────────────────────────────────────────────────────────
 
 const menuItemProps = {
   checked: false,
@@ -102,127 +88,43 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
 
       return 'menuitem';
     };
-    const checkIndicator = () => {
-      if (props.type.value === 'checkbox') return props.checked.value ? '☑' : '☐';
+    const itemClass = () => {
+      const type = props.type.value;
 
-      if (props.type.value === 'radio') return props.checked.value ? '◉' : '◯';
-
-      return '';
+      return [
+        'item',
+        type === 'checkbox' ? 'is-checkbox' : '',
+        type === 'radio' ? 'is-radio' : '',
+        isChecked() ? 'is-checked' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
     };
 
-    return () => html`
-      <style>
-        @layer buildit.base {
-          :host {
-            display: block;
-            outline: none;
-          }
-
-          .item {
-            align-items: center;
-            border-radius: 0;
-            cursor: pointer;
-            display: flex;
-            font-size: var(--text-sm);
-            gap: var(--size-2);
-            line-height: var(--leading-normal);
-            padding: var(--size-1-5) var(--size-3);
-            transition:
-              background var(--transition-fast),
-              color var(--transition-fast);
-            user-select: none;
-            white-space: nowrap;
-          }
-
-          :host(:first-of-type) .item {
-            border-radius: var(--rounded-sm) var(--rounded-sm) 0 0;
-          }
-
-          :host(:last-child) .item {
-            border-radius: 0 0 var(--rounded-sm) var(--rounded-sm);
-          }
-
-          :host(:first-of-type:last-child) .item {
-            border-radius: var(--rounded-sm);
-          }
-
-          :host(:not([disabled])) .item:hover {
-            background: var(--color-contrast-100);
-          }
-
-          :host(:focus-visible) .item {
-            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100));
-            color: var(--color-primary);
-          }
-
-          /* Driven by JS via sync() — avoids :host() attribute selector edge-cases */
-          .item.is-checkable {
-            background: color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas));
-          }
-
-          .item.is-checked {
-            background: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas));
-            color: var(--color-primary);
-            font-weight: var(--font-medium);
-          }
-
-          :host([disabled]) .item {
-            color: var(--color-contrast-400);
-            cursor: not-allowed;
-            opacity: 0.6;
-            pointer-events: none;
-          }
-
-          .icon-slot {
-            display: contents;
-          }
-
-          .item-check {
-            align-items: center;
-            color: currentColor;
-            display: inline-flex;
-            flex-shrink: 0;
-            justify-content: center;
-            width: 1.25rem;
-          }
-
-          .item-label {
-            flex: 1;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-        ${coarsePointerMixin}
-      </style>
-      ${() =>
-        isCheckable()
-          ? html`
-              <div
-                class="${() => `item${isCheckable() ? ' is-checkable' : ''}${isChecked() ? ' is-checked' : ''}`}"
-                tabindex="-1"
-                role="${itemRole}"
-                aria-checked="${() => String(isChecked())}"
-                aria-disabled="${props.disabled}">
-                <span class="item-check" aria-hidden="true">${checkIndicator}</span>
-                <span class="icon-slot"><slot name="icon"></slot></span>
-                <span class="item-label"><slot></slot></span>
-              </div>
-            `
-          : html`
-              <div class="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
-                <span class="icon-slot"><slot name="icon"></slot></span>
-                <span class="item-label"><slot></slot></span>
-              </div>
-            `}
-    `;
+    return isCheckable()
+      ? html`
+          <div
+            class="${itemClass}"
+            tabindex="-1"
+            role="${itemRole}"
+            aria-checked="${() => String(isChecked())}"
+            aria-disabled="${props.disabled}">
+            <span class="item-check" aria-hidden="true">${() => (isChecked() ? '☑' : '☐')}</span>
+            <span class="icon-slot"><slot name="icon"></slot></span>
+            <span class="item-label"><slot></slot></span>
+          </div>
+        `
+      : html`
+          <div class="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
+            <span class="icon-slot"><slot name="icon"></slot></span>
+            <span class="item-label"><slot></slot></span>
+          </div>
+        `;
   },
+  styles: [menuItemStyles],
 });
 
-// ============================================
-// Menu Separator
-// ============================================
+// ── Menu Separator ─────────────────────────────────────────────────────────────
 
 /**
  * Visual separator used to group menu items.
@@ -231,22 +133,12 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
  */
 export const SEPARATOR_TAG = define('bit-menu-separator', {
   setup() {
-    return () =>
-      html`<style>
-        @layer buildit.base {
-          :host {
-            display: block;
-            margin: var(--size-1) 0;
-            border-top: var(--border) solid var(--color-contrast-200);
-          }
-        }
-      </style>`;
+    return html``;
   },
+  styles: [menuSeparatorStyles],
 });
 
-// ============================================
-// Menu Component
-// ============================================
+// ── Menu Component ─────────────────────────────────────────────────────────────
 
 const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
   value === 'checkbox' || value === 'radio';
@@ -297,8 +189,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
     ),
   },
   setup(props, { emit, host, slots }) {
-    const menuId = createId('menu');
-    const isOpenSignal = signal(false);
+    const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     let triggerEl: HTMLElement | null = null;
     let panelEl: HTMLElement | null = null;
@@ -325,56 +216,32 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       });
     }
 
-    let focusedIndex = -1;
+    const optionList = createOptionList<HTMLElement>({
+      getBoundary: () => host.el,
+      getItems: getItems,
+      getPanel: () => panelEl,
+      getReference: () => triggerEl,
+      getTrigger: () => triggerEl,
+      isDisabled: () => isDisabled.value,
+      isItemDisabled: (item) => item.hasAttribute('disabled'),
+      // syncAria on the slotted trigger element handles aria-expanded, aria-controls,
+      // aria-haspopup, and aria-disabled — opt out of duplicate management here.
+      manageAriaExpanded: false,
+      onClose: (reason) => emit('close', { reason }),
+      onNavigate: (_action, index) => {
+        const nextItem = getItems()[index];
 
-    const menuPositioner = createDropdownPositioner(
-      () => triggerEl,
-      () => panelEl,
-      { matchWidth: false, offsetPx: 4, padding: 6, getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement },
-    );
-
-    const triggerRef = { value: null as HTMLElement | null };
-
-    const popupList = createPopupListControl({
-      aria: {
-        ariaSync: { role: 'menu' },
-        listId: menuId,
+        getItemFocusable(nextItem)?.focus();
       },
-      behavior: {
-        isDisabled: () => isDisabled.value,
-        isItemDisabled: (item) => item.hasAttribute('disabled'),
-      },
-      elements: {
-        getBoundaryElement: () => host.el,
-        getPanelElement: () => panelEl,
-        getTriggerElement: () => triggerEl,
-        triggerRef,
-      },
-      on: {
-        onClose: (reason) => emit('close', { reason }),
-        onOpen: (reason) => emit('open', { reason }),
-      },
-      positioner: {
-        floating: () => panelEl,
-        reference: () => triggerEl,
-        update: menuPositioner.updatePosition,
-      },
-      state: {
-        getIndex: () => focusedIndex,
-        getItems: getItems,
-        isOpen: () => isOpenSignal.value,
-        setIndex: (index) => {
-          focusedIndex = index;
-
-          const nextItem = getItems()[index];
-
-          getItemFocusable(nextItem)?.focus();
-        },
-        setOpen: (next) => {
-          isOpenSignal.value = next;
-        },
+      onOpen: (reason) => emit('open', { reason }),
+      positionerOptions: {
+        getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
+        matchWidth: false,
+        offsetPx: 4,
+        padding: 6,
       },
     });
+    const { isOpen: isOpenSignal } = optionList;
 
     const activateItem = (item: HTMLElement): void => {
       const type = item.getAttribute('type');
@@ -394,21 +261,21 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       emit('select', { checked, value });
 
       if (!isCheckable) {
-        popupList.close('programmatic');
+        optionList.close('programmatic');
       }
     };
 
-    const openFromKeyboardPress = createPressControl({
+    const openFromKeyboardPress = createInteraction({
       keys: ['Enter', ' ', 'ArrowDown'],
       onPress: () => {
-        popupList.open('trigger');
-        requestAnimationFrame(() => popupList.first());
+        optionList.open('keyboard');
+        requestAnimationFrame(() => optionList.first());
       },
     });
 
-    const activateFocusedFromKeyboardPress = createPressControl({
+    const activateFocusedFromKeyboardPress = createInteraction({
       onPress: () => {
-        const focused = popupList.getActiveItem();
+        const focused = optionList.getActiveItem();
 
         if (focused) activateItem(focused);
       },
@@ -429,9 +296,9 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
       const currentFocusedIndex = getFocusedItemIndex();
 
-      if (currentFocusedIndex >= 0) focusedIndex = currentFocusedIndex;
+      if (currentFocusedIndex >= 0) optionList.set(currentFocusedIndex);
 
-      if (popupList.handleListKeydown(e)) return;
+      if (optionList.handleKeydown(e)) return;
 
       // When open: navigate and activate
       if (e.key === ' ' || e.key === 'Enter') {
@@ -440,15 +307,8 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
         return;
       }
 
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        popupList.close('escape');
-
-        return;
-      }
-
       if (e.key === 'Tab') {
-        popupList.close('programmatic');
+        optionList.close('programmatic');
       }
     }
 
@@ -487,13 +347,13 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       const assigned = slots.elements('trigger').value;
 
       triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
-      triggerRef.value = triggerEl;
 
       if (!triggerEl) return;
 
       const cleanups: Array<() => void> = [];
       const removeAria = syncAria(triggerEl, {
         controls: () => menuId,
+        disabled: () => isDisabled.value,
         expanded: () => String(isOpenSignal.value),
         haspopup: 'menu',
       });
@@ -503,7 +363,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
         if (isDisabled.value) return;
 
-        popupList.toggle();
+        optionList.toggle();
       };
       const onTriggerKeydown = (event: KeyboardEvent) => {
         handleMenuKeydown(event);
@@ -527,11 +387,11 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       return () => {
         cleanupTrigger?.();
         cleanupTrigger = null;
-        triggerRef.value = null;
+        optionList.cleanup();
       };
     });
 
-    return () => html`
+    return html`
       <slot name="trigger"></slot>
       <div
         class="menu-panel"

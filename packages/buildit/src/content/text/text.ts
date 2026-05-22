@@ -96,7 +96,7 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
       },
     });
 
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
   styles: [styles],
 });

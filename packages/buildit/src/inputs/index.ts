@@ -35,4 +35,4 @@ export { TEXTAREA_TAG } from './textarea/textarea';
 export type { BitTextareaEvents, BitTextareaProps } from './textarea/textarea';
 export { FORM_CTX } from './shared/form-context';
 export type { FormContext } from './shared/form-context';
-export type { BaseFormProps, SelectableFieldProps, TextFieldProps } from './shared/base-props';
+export type { BaseFormProps, SelectableFieldProps, TextFieldProps } from '../shared/config';

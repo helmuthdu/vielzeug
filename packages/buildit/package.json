@@ -22,6 +22,17 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./testing": {
+      "source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    },
+    "./headless": {
+      "source": "./src/headless/index.ts",
+      "types": "./dist/headless/index.d.ts",
+      "import": "./dist/headless/index.js",
+      "require": "./dist/headless/index.cjs"
+    },
     "./types": {
       "source": "./src/types/index.ts",
       "types": "./dist/types/index.d.ts",

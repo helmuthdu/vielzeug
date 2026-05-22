@@ -1,11 +1,11 @@
 import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createListControl } from '../../controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
+import { createListControl } from '../../headless';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { FORM_CTX } from '../shared/form-context';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './otp-input.css?inline';
 
 export type BitOtpInputEvents = {
@@ -89,8 +89,9 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);
-    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
+    const isDisabled = fCtxProps.disabled;
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
     const focusedIndex = signal(0);
     const otpValue = signal(String(props.value.value || ''));
@@ -98,12 +99,11 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
 
     host.bind({
       attr: {
-        size: () => props.size?.value ?? formCtx?.size.value,
+        size: fCtxProps.size,
         value: () => otpValue.value || null,
-        variant: () => props.variant?.value ?? formCtx?.variant?.value,
+        variant: fCtxProps.variant,
       },
     });
-
 
     function getInputs(): HTMLInputElement[] {
       return [...(host.el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
@@ -248,7 +248,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
       syncInputsFromValue(normalizedPropValue());
     });
 
-    return () => html`
+    return html`
       <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
         ${() =>
           cells.value.map(

@@ -1,50 +1,56 @@
-import { define, prop, computed, defineField, effect, html, inject } from '@vielzeug/craftit';
+import { define, prop, computed, defineField, html, inject } from '@vielzeug/craftit';
 
-import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
+import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
+  coarsePointerMixin,
+  colorThemeMixin,
   disabledLoadingMixin,
   forcedColorsMixin,
-  formFieldMixins,
   frostVariantMixin,
   rainbowEffectMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import { computeSafeRel } from '../../utils';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
-import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import componentStyles from './button.css?inline';
 
-const BUTTON_COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
-const BUTTON_SIZES = ['sm', 'md', 'lg'] as const;
 const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
 /** Button component properties */
-export type BitButtonProps = ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Full width button (100% of container) */
-    fullwidth?: boolean;
-    /** When set, renders an `<a>` instead of `<button>` */
-    href?: string;
-    /** Icon-only mode (square aspect ratio, no padding) */
-    iconOnly?: boolean;
-    /** Accessible label for the inner button — required for icon-only buttons */
-    label?: string;
-    /** Show loading state with spinner */
-    loading?: boolean;
-    /** Enable animated rainbow border effect */
-    rainbow?: boolean;
-    /** Link rel attribute (requires href) */
-    rel?: string;
-    /** Border radius size */
-    rounded?: RoundedSize;
-    /** Link target (requires href) */
-    target?: '_blank' | '_self' | '_parent' | '_top';
-    /** HTML button type attribute */
-    type?: ButtonType;
-    /** Visual style variant */
-    variant?: Exclude<VisualVariant, 'glass'>;
-  };
+export type BitButtonProps = {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Full width button (100% of container) */
+  fullwidth?: boolean;
+  /** When set, renders an `<a>` instead of `<button>` */
+  href?: string;
+  /** Icon-only mode (square aspect ratio, no padding) */
+  iconOnly?: boolean;
+  /** Accessible label for the inner button — required for icon-only buttons */
+  label?: string;
+  /** Show loading state with spinner */
+  loading?: boolean;
+  /** Enable animated rainbow border effect */
+  rainbow?: boolean;
+  /** Link rel attribute (requires href) */
+  rel?: string;
+  /** Border radius size */
+  rounded?: RoundedSize;
+  /** Component size */
+  size?: ComponentSize;
+  /** Link target (requires href) */
+  target?: '_blank' | '_self' | '_parent' | '_top';
+  /** HTML button type attribute */
+  type?: ButtonType;
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass'>;
+};
 
 /**
  * A customizable button component with multiple variants, sizes, and states.
@@ -110,31 +116,18 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
   setup(props, { emit, host }) {
-    // Reactively inherit size/variant/color from a parent bit-button-group when present.
+    // Derive effective color/size/variant — prefer group context, fall back to own prop.
     const groupCtx = inject(BUTTON_GROUP_CTX);
-
-    if (groupCtx) {
-      effect(() => {
-        const color = groupCtx.color.value;
-        const size = groupCtx.size.value;
-        const variant = groupCtx.variant.value;
-
-        if (color !== undefined && BUTTON_COLORS.includes(color as (typeof BUTTON_COLORS)[number])) {
-          props.color.value = color as BitButtonProps['color'];
-        }
-
-        if (size !== undefined && BUTTON_SIZES.includes(size as (typeof BUTTON_SIZES)[number])) {
-          props.size.value = size as BitButtonProps['size'];
-        }
-
-        if (variant !== undefined && BUTTON_VARIANTS.includes(variant as (typeof BUTTON_VARIANTS)[number])) {
-          props.variant.value = variant as BitButtonProps['variant'];
-        }
-      });
-    }
+    const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
+    const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
+    const effectiveVariant = computed(() => groupCtx?.variant.value ?? props.variant.value);
 
     const isLink = computed(() => !!props.href.value);
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
+
+    // Automatically add noopener/noreferrer when opening in a new tab to prevent
+    // reverse tabnapping (opened page accessing window.opener to redirect origin).
+    const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
@@ -182,17 +175,20 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
         'aria-busy': props.loading,
         'aria-disabled': isDisabled,
         'aria-label': props.label,
+        color: effectiveColor,
+        size: effectiveSize,
+        variant: effectiveVariant,
       },
     });
 
-    return () => html`
+    return html`
       ${() =>
         isLink.value
           ? html`<a
               part="button"
               :href="${props.href}"
               :target="${props.target}"
-              :rel="${props.rel}"
+              :rel="${effectiveRel}"
               role="button"
               :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
               :aria-busy="${() => (props.loading.value ? 'true' : null)}"
@@ -218,7 +214,10 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...formFieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
     forcedColorsMixin,
     sizeVariantMixin({
       lg: {

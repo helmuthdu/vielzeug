@@ -1,6 +1,6 @@
 import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
-import { sizableBundle, themableBundle } from '../shared/bundles';
+import { sizableBundle, themableBundle } from '../../shared/config';
 import styles from './button-group.css?inline';
 
 /** Button group properties */
@@ -76,7 +76,7 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
       variant: props.variant!,
     });
 
-    return () => html`
+    return html`
       <div class="button-group" part="group" role="group" :aria-label="${props.label}">
         <slot></slot>
       </div>

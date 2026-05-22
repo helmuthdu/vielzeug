@@ -1,6 +1,8 @@
 import { computed, define, html, prop, provide } from '@vielzeug/craftit';
 
+import type { ValidationTrigger } from '../../headless';
 import type { ComponentSize, VisualVariant } from '../../types';
+
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
 
@@ -15,7 +17,7 @@ export type BitFormProps = {
   /** Form size preset */
   size?: ComponentSize;
   /** Validate on: 'submit' | 'change' | 'blur' | 'input' */
-  validateOn?: 'submit' | 'change' | 'blur' | 'input';
+  validateOn?: ValidationTrigger;
   /** Form visual variant */
   variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
 };
@@ -96,7 +98,7 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
       emit('reset', { originalEvent: e });
     }
 
-    return () => html`
+    return html`
       <form
         part="form"
         :novalidate="${props.novalidate}"

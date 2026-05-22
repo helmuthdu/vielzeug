@@ -1,11 +1,11 @@
-import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail, SwipeAxis } from '../../controls';
+import { define, onEvent, html, prop, ref, onMounted } from '@vielzeug/craftit';
 
-import { createId, define, onCleanup, onEvent, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl, createSwipeControl } from '../../controls';
+import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 
+import { createStableId, createSwipeControl } from '../../headless';
 import '../../content/icon/icon';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
-import { lockBackground, unlockBackground, useOverlay } from '../../utils';
+import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
@@ -158,11 +158,9 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     title: undefined,
   },
   setup(props, { emit, host, slots }) {
-    const drawerLabelId = createId('drawer-label');
+    const drawerLabelId = createStableId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
-    const isOpen = signal(false);
-    let closeReason: OverlayCloseReason = 'programmatic';
 
     // Drag-to-close state
     let isSwipeClosing = false;
@@ -316,86 +314,44 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     // Overlay State Management
     // ────────────────────────────────────────────────────────────────
 
-    const { applyInitialFocus, captureReturnFocus, restoreFocus } = useOverlay(
-      host.el,
+    const { overlay, requestClose, watchOpenProp } = useDialogControl({
+      beforeOpen: (dialog) => {
+        // Clear any inline drag styles from a previous swipe-close so the CSS
+        // entry animation starts from the correct base state.
+        const panel = panelRef.value;
+
+        if (panel) resetPanelDragStyles(panel);
+
+        void dialog;
+      },
+      closeRequestDetail: (_reason) => ({ placement: props.placement.value ?? 'right' }),
       dialogRef,
-      () => panelRef.value,
-      props,
-    );
+      getPanelEl: () => panelRef.value,
+      host: host.el,
+      initialFocus: props['initial-focus'],
+      isPersistent: () => Boolean(props.persistent.value),
+      onNativeClose: (reason) => {
+        const panelEl = panelRef.value;
 
-    const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
-      return host.el.dispatchEvent(
-        new CustomEvent('close-request', {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          detail: { placement: props.placement.value ?? 'right', reason },
-        }),
-      );
-    };
+        // For swipe-close, keep the panel hidden and off-screen until the next
+        // open cycle — resetting inline styles during native close can produce
+        // a visible frame at the rest position on some browsers.
+        if (panelEl && reason !== 'swipe') resetPanelDragStyles(panelEl);
 
-    const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-      const dialog = dialogRef.value;
-
-      if (!dialog) return;
-
-      const closeAllowed = dispatchCloseRequest(reason);
-
-      if (!closeAllowed) return;
-
-      closeReason = reason;
-
-      overlay.close({ reason, restoreFocus: false });
-    };
-
-    const handleCloseButtonClick = () => {
-      const dialog = dialogRef.value;
-
-      if (!dialog) return;
-
-      requestClose('trigger');
-    };
-
-    const overlay = createOverlayControl({
-      getBoundaryElement: () => host.el,
-      getPanelElement: () => panelRef.value,
-      isOpen: () => isOpen.value,
-      onCleanup,
-      onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
-      setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
 
-        if (!dialog) return;
+        if (dialog) dialog.style.transition = '';
 
-        if (next) {
-          if (dialog.open) return;
-
-          captureReturnFocus();
-
-          // Clear any inline drag styles from a previous swipe-close so the CSS
-          // entry animation starts from the correct base state.
-          const panel = panelRef.value;
-
-          if (panel) resetPanelDragStyles(panel);
-
-          dialog.showModal();
-          lockBackground(host.el);
-          applyInitialFocus();
-          isOpen.value = true;
-
-          return;
-        }
-
-        if (dialog.open) {
-          closeReason = reason as OverlayCloseReason;
-          dialog.close();
-
-          return;
-        }
-
-        isOpen.value = false;
+        emit('close', { placement: props.placement.value ?? 'right', reason });
       },
+      onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
+      openProp: props.open,
+      returnFocus: props['return-focus'],
     });
+
+    const handleCloseButtonClick = () => {
+      requestClose('trigger');
+    };
 
     // ────────────────────────────────────────────────────────────────
     // Lifecycle: Setup Drawer Integration
@@ -410,35 +366,16 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       const el = host.el as DrawerElement;
 
       el.show = () => {
-        overlay.open({ reason: 'programmatic' });
+        overlay.open('programmatic');
       };
 
       el.hide = () => {
-        overlay.close({ reason: 'programmatic', restoreFocus: false });
+        overlay.close('programmatic', false);
       };
 
       // ────────────────────────────────────────────────────────────
-      // Event Handlers: Native Close, Escape, Backdrop Click
+      // Event Handlers: Cancel, Backdrop Click
       // ────────────────────────────────────────────────────────────
-
-      const handleNativeClose = () => {
-        const panelEl = panelRef.value;
-
-        // For swipe-close, keep the panel hidden and off-screen until the next
-        // open cycle. Resetting inline styles during native close can still
-        // produce a visible frame at the rest position on some browsers.
-        if (panelEl && closeReason !== 'swipe') resetPanelDragStyles(panelEl);
-
-        // Restore any inline dialog transition override set during swipe-close.
-        dialog.style.transition = '';
-
-        unlockBackground();
-        host.el.removeAttribute('open');
-        isOpen.value = false;
-        restoreFocus();
-        emit('close', { placement: props.placement.value ?? 'right', reason: closeReason });
-        closeReason = 'programmatic';
-      };
 
       const handleCancel = (e: Event) => {
         e.preventDefault();
@@ -455,25 +392,11 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
 
         if (e.target !== dialog) return; // Click inside panel
 
-        requestClose('outside-click');
+        requestClose('outsideClick');
       };
 
-      // Sync open prop → native dialog
-      watch(
-        props.open,
-        (isOpen) => {
-          if (isOpen) {
-            overlay.open({ reason: 'programmatic' });
+      watchOpenProp();
 
-            return;
-          }
-
-          overlay.close({ reason: 'programmatic', restoreFocus: false });
-        },
-        { immediate: true },
-      );
-
-      onEvent(dialog, 'close', handleNativeClose);
       onEvent(dialog, 'cancel', handleCancel);
       onEvent(dialog, 'click', handleBackdropClick);
 
@@ -490,14 +413,11 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       }
 
       return () => {
-        if (dialog.open) {
-          unlockBackground();
-          dialog.close();
-        }
+        overlay.cleanup();
       };
     });
 
-    return () => html`
+    return html`
       <dialog
         ref=${dialogRef}
         aria-modal="true"

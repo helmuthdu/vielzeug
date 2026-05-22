@@ -287,7 +287,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     // ============================================
     // Render
     // ============================================
-    return () => html`
+    return html`
       ${() => {
         const mode = props.mode.value;
 
@@ -301,7 +301,6 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       }}
     `;
   },
-  shadow: {},
   styles: [
     colorThemeMixin,
     disabledStateMixin(),

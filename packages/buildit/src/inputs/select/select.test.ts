@@ -168,7 +168,7 @@ describe('bit-select', () => {
       await fixture.flush();
 
       expect(onOpen).toHaveBeenCalled();
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('click');
       expect(onClose).toHaveBeenCalled();
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
     });
@@ -190,7 +190,7 @@ describe('bit-select', () => {
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
     });
 
-    it('emits outside-click close reason when clicking away from the dropdown', async () => {
+    it('emits outsideClick close reason when clicking away from the dropdown', async () => {
       fixture = await mount('bit-select', { html: SELECT_OPTIONS });
 
       const onClose = vi.fn();
@@ -203,7 +203,7 @@ describe('bit-select', () => {
       document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outside-click');
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outsideClick');
     });
 
     it('emits programmatic close reason after selecting an option in single mode', async () => {
@@ -239,7 +239,7 @@ describe('bit-select', () => {
 
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
 
-      expect(detail.value).toBeDefined();
+      expect(detail.values).toBeDefined();
       expect(detail.labels).toEqual(['Apple']);
       expect(detail.originalEvent).toBeDefined();
     });
@@ -774,7 +774,7 @@ describe('bit-select accessibility', () => {
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
       expect(changeHandler).toHaveBeenCalledTimes(1);
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('banana');
+      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.values?.[0]).toBe('banana');
     });
 
     it('selects focused option with Space when open', async () => {
@@ -798,7 +798,7 @@ describe('bit-select accessibility', () => {
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
       expect(changeHandler).toHaveBeenCalledTimes(1);
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('banana');
+      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.values?.[0]).toBe('banana');
     });
   });
 });

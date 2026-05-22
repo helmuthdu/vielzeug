@@ -11,11 +11,11 @@ import {
   watch,
   onMounted,
 } from '@vielzeug/craftit';
-import { createListControl, createPressControl } from '../../controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { createListControl, createInteraction } from '../../headless';
+import { sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin } from '../../styles';
 import styles from './tabs.css?inline';
 
@@ -279,7 +279,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       if (focusedValue && focusedValue !== selectedValue.value) setSelection(focusedValue, true);
     };
 
-    const manualActivationPress = createPressControl({
+    const manualActivationPress = createInteraction({
       disabled: () => !isManualActivation(),
       onPress: activateFocusedTab,
     });
@@ -336,7 +336,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       };
     });
 
-    return () => html`
+    return html`
       <div class="tablist-wrapper">
         <div
           role="tablist"

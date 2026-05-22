@@ -63,6 +63,8 @@ const processRef = globalThis.process;
 
 const staticExportKeys = new Set([
   '.',
+  './headless',
+  './testing',
   './types',
   './styles',
   './styles/animation.css',
@@ -111,6 +113,8 @@ export function getComponentExports() {
 export function getBuilditLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
+    ['headless', resolve(rootDir, './src/headless/index')],
+    ['testing', resolve(rootDir, './src/testing/index')],
     ...componentManifest.map(({ name, source }) => [name, resolve(rootDir, source)]),
   ]);
 }

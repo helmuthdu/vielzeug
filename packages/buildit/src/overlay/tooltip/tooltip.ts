@@ -1,12 +1,12 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, createId, define, html, onCleanup, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '../../controls';
+import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
 
-import { disablableBundle, sizableBundle } from '../../inputs/shared/bundles';
+import { createOverlayControl, createStableId, parseStringTriggers } from '../../headless';
+import { disablableBundle, sizableBundle } from '../../shared/config';
 import { forcedColorsMixin } from '../../styles';
 import styles from './tooltip.css?inline';
 
@@ -29,14 +29,8 @@ const parseDelayMs = (value: string | null): number => {
 const parseOptionalBool = (value: string | null): boolean | undefined =>
   value == null ? undefined : value === '' || value === 'true';
 
-const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] => {
-  const parsed = String(value ?? '')
-    .split(',')
-    .map((t) => t.trim())
-    .filter((t): t is TooltipTrigger => VALID_TOOLTIP_TRIGGERS.has(t as TooltipTrigger));
-
-  return parsed.length > 0 ? parsed : DEFAULT_TOOLTIP_TRIGGERS;
-};
+const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =>
+  parseStringTriggers(value, VALID_TOOLTIP_TRIGGERS, DEFAULT_TOOLTIP_TRIGGERS);
 
 /** Tooltip component properties */
 export type BitTooltipProps = {
@@ -111,7 +105,7 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
     let showTimer: ReturnType<typeof setTimeout> | null = null;
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
     let tooltipEl: HTMLElement | null = null;
-    const tooltipId = createId('tooltip');
+    const tooltipId = createStableId('tooltip');
     const triggers = computed<TooltipTrigger[]>(() => normalizeTriggers(props.trigger.value));
     const clearShowTimer = () => {
       if (!showTimer) return;
@@ -157,12 +151,11 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
     }
 
     const overlay = createOverlayControl({
-      getBoundaryElement: () => document.body,
-      getPanelElement: () => tooltipEl,
-      getTriggerElement: getTriggerEl,
+      getBoundary: () => document.body,
+      getPanel: () => tooltipEl,
+      getTrigger: getTriggerEl,
       isDisabled: () => isDisabled.value,
       isOpen: () => visible.value,
-      onCleanup,
       positioner: {
         floating: () => tooltipEl,
         reference: getTriggerEl,
@@ -188,7 +181,7 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
       },
     });
 
-    function show() {
+    function show(reason: 'hover' | 'focus' | 'click' = 'hover') {
       if (isControlled.value) return;
 
       if (isDisabled.value || (!props.content.value && !slots.has('content').value)) return;
@@ -198,7 +191,7 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
 
       showTimer = setTimeout(
         () => {
-          overlay.open({ reason: 'trigger' });
+          overlay.open(reason);
         },
         Number(props.delay.value) || 0,
       );
@@ -222,14 +215,14 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
       }
     }
     function closeNow() {
-      overlay.close({ reason: 'trigger', restoreFocus: false });
+      overlay.close('trigger', false);
     }
     function toggleClick() {
       if (visible.value) hide();
-      else show();
+      else show('click');
     }
     function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') overlay.close({ reason: 'escape', restoreFocus: false });
+      if (e.key === 'Escape') overlay.close('escape', false);
     }
 
     onMounted(() => {
@@ -264,12 +257,12 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          add(triggerEl, 'pointerenter', show as EventListener);
+          add(triggerEl, 'pointerenter', () => show('hover'));
           add(triggerEl, 'pointerleave', hide as EventListener);
         }
 
         if (t.includes('focus')) {
-          add(triggerEl, 'focusin', show as EventListener);
+          add(triggerEl, 'focusin', () => show('focus'));
           add(triggerEl, 'focusout', hide as EventListener);
         }
 
@@ -293,9 +286,9 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
         if (openVal === undefined || openVal === null) return;
 
         if (openVal) {
-          overlay.open({ reason: 'programmatic' });
+          overlay.open('programmatic');
         } else {
-          overlay.close({ reason: 'programmatic', restoreFocus: false });
+          overlay.close('programmatic', false);
         }
       });
 
@@ -305,10 +298,11 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
 
         clearShowTimer();
         clearHideTimer();
+        overlay.cleanup();
       };
     });
 
-    return () => html`
+    return html`
       <slot></slot>
       <div
         class="tooltip"

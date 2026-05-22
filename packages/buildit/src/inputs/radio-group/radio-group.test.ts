@@ -107,11 +107,8 @@ describe('bit-radio-group', () => {
       expect(onChange).toHaveBeenCalled();
 
       const changeWithDetail = onChange.mock.calls
-        .map(
-          (call) =>
-            call[0] as CustomEvent<{ labels?: string[]; originalEvent?: Event; value?: string; values?: string[] }>,
-        )
-        .find((event) => event?.detail?.value === 'b');
+        .map((call) => call[0] as CustomEvent<{ labels?: string[]; originalEvent?: Event; values?: string[] }>)
+        .find((event) => event?.detail?.values?.includes('b'));
 
       expect(changeWithDetail).toBeTruthy();
       expect(changeWithDetail?.detail.values).toEqual(['b']);

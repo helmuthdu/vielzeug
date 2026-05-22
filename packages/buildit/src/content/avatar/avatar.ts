@@ -3,7 +3,7 @@ import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../icon/icon';
-import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
@@ -133,7 +133,7 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     };
     const avatarRole = () => (avatarLabel() ? 'img' : null);
 
-    return () => html`
+    return html`
       <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
         ${() =>
           props.src.value
@@ -234,7 +234,7 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
     const overflowLabel = () => `+${overflowCount.value} more`;
     const overflowText = () => `+${overflowCount.value}`;
 
-    return () => html`
+    return html`
       <slot></slot>
       ${() =>
         overflowCount.value > 0

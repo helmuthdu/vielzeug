@@ -1,7 +1,6 @@
 import {
-  AsyncSubscription,
   StateError,
-  TrackingProvider,
+  type TrackingProvider,
   batch,
   computed,
   configure,
@@ -210,7 +209,7 @@ describe('stateit', () => {
       let caught: unknown;
 
       try {
-        a.value;
+        void a.value;
       } catch (e) {
         caught = e;
       }
@@ -267,6 +266,7 @@ describe('stateit', () => {
 
       let compRef!: ReturnType<typeof computed<number>>;
 
+      // eslint-disable-next-line prefer-const
       compRef = computed<number>(() => {
         void trigger.value;
 
@@ -1319,7 +1319,7 @@ describe('stateit', () => {
       let caught: unknown;
 
       try {
-        a.value;
+        void a.value;
       } catch (e) {
         caught = e;
       }

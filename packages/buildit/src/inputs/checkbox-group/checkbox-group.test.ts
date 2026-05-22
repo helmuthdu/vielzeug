@@ -147,7 +147,7 @@ describe('bit-checkbox-group', () => {
 
       expect(evt).toBeTruthy();
       expect(evt?.detail.values).toContain('a');
-      expect(evt?.detail.value).toBe('a');
+      expect(evt?.detail.values?.[0]).toBe('a');
       expect(evt?.detail.labels).toContain('A');
       expect(evt?.detail.originalEvent).toBeDefined();
     });
@@ -177,7 +177,7 @@ describe('bit-checkbox-group', () => {
 
       expect(evt.detail.values).not.toContain('a');
       expect(evt.detail.values).toContain('b');
-      expect(evt.detail.value).toBe('b');
+      expect(evt.detail.values?.[0]).toBe('b');
       expect(evt.detail.labels).toEqual(['B']);
       expect(evt.detail.originalEvent).toBeDefined();
     });

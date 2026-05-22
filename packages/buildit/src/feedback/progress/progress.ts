@@ -2,7 +2,7 @@ import { define, prop, computed, effect, html, styleMap, when } from '@vielzeug/
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './progress.css?inline';
 
@@ -113,7 +113,7 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
       host.el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
-    return () => html`
+    return html`
       ${when(
         () => props.type.value === 'circular',
         () =>

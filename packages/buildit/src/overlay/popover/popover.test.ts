@@ -252,7 +252,7 @@ describe('bit-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('click');
     });
 
     it('fires close when the popover closes', async () => {
@@ -278,7 +278,7 @@ describe('bit-popover', () => {
       expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
     });
 
-    it('fires outside-click close reason when clicking outside', async () => {
+    it('fires outsideClick close reason when clicking outside', async () => {
       fixture = await mount('bit-popover', {
         html: '<button>Open</button>',
       });
@@ -298,7 +298,7 @@ describe('bit-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('outside-click');
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('outsideClick');
     });
 
     it('fires escape close reason when dismissed via Escape key', async () => {

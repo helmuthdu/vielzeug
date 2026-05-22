@@ -1,31 +1,42 @@
-import { computed, define, html, inject } from '@vielzeug/craftit';
-import { type CheckableChangePayload, createCheckableFieldControl } from '../../controls';
+import { computed, define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
 
-import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
+import { type CheckableChangePayload, createCheckable, createHeadlessScope } from '../../headless';
 import '../../content/icon/icon';
-import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledStateMixin,
+  forcedColorsFormControlMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { connectFormField } from '../shared/connect-form-field';
+import { applyCheckableBinding } from '../shared/field-binding';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './checkbox.css?inline';
 
 export type BitCheckboxEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitCheckboxProps = CheckableProps &
-  ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Error message (marks field as invalid) */
-    error?: string;
-    /** Helper text displayed below the checkbox */
-    helper?: string;
-    /** Indeterminate state (partially checked) */
-    indeterminate?: boolean;
-  };
+export type BitCheckboxProps = CheckableProps & {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Error message (marks field as invalid) */
+  error?: string;
+  /** Helper text displayed below the checkbox */
+  helper?: string;
+  /** Indeterminate state (partially checked) */
+  indeterminate?: boolean;
+  /** Component size */
+  size?: ComponentSize;
+};
 
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
@@ -83,22 +94,17 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
-    let labelRef: HTMLElement | null = null;
-    let helperRef: HTMLElement | null = null;
-
-    const checkable = createCheckableFieldControl({
+    const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: true,
-      disabled: computed(
-        () => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value) || Boolean(groupCtx?.disabled.value),
-      ),
+      disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
-      getHelperEl: () => helperRef,
-      getLabelEl: () => labelRef,
       group: groupCtx,
       helper: props.helper,
+      host: host.el,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -111,40 +117,33 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       },
       prefix: 'checkbox',
       role: 'checkbox',
+      signal: createHeadlessScope(onCleanup).signal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { checked, disabled, handleClick, handleKeydown, helperId, indeterminate, labelId } = checkable;
+    const { assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = checkable;
 
+    connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
-    host.bind({
-      attr: {
-        checked,
-        indeterminate,
-        size: () => props.size?.value ?? formCtx?.size.value,
-        tabindex: () => (disabled.value ? undefined : 0),
-      },
-      class: () => ({
-        'is-checked': checked.value,
-        'is-disabled': disabled.value,
-        'is-indeterminate': indeterminate.value,
-      }),
-      on: {
-        click: handleClick,
-        keydown: handleKeydown,
-      },
-    });
+    applyCheckableBinding(host, fCtxProps.size, { checked, disabled, handleClick, handleKeydown, indeterminate });
 
-    return () => html`
+    return html`
       <div class="checkbox-wrapper" part="checkbox">
         <div class="box" part="box">
           <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
           <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },
-  styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
+  styles: [
+    colorThemeMixin,
+    forcedColorsFormControlMixin,
+    disabledStateMixin(),
+    coarsePointerMixin,
+    sizeVariantMixin(CONTROL_SIZE_PRESET),
+    componentStyles,
+  ],
 });

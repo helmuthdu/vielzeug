@@ -1,17 +1,20 @@
-import { computed, define, html, inject } from '@vielzeug/craftit';
+import { computed, define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
+
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
+
+import { type CheckableChangePayload, createCheckable, createHeadlessScope, createListControl } from '../../headless';
+import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
-  type CheckableChangePayload,
-  createCheckableFieldControl,
-  createListControl,
-} from '../../controls';
-
-import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
-
-import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledStateMixin,
+  forcedColorsFormControlMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { connectFormField } from '../shared/connect-form-field';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './radio.css?inline';
 
 /** Radio component properties */
@@ -20,15 +23,18 @@ export type BitRadioEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitRadioProps = CheckableProps &
-  ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Error message (marks field as invalid) */
-    error?: string;
-    /** Helper text displayed below the radio */
-    helper?: string;
-  };
+export type BitRadioProps = CheckableProps & {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Error message (marks field as invalid) */
+  error?: string;
+  /** Helper text displayed below the radio */
+  helper?: string;
+  /** Component size */
+  size?: ComponentSize;
+};
 
 /**
  * A customizable radio button component for mutually exclusive selections.
@@ -85,9 +91,10 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
   setup(props, { emit, host }) {
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
-    const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value ?? formCtx?.size.value);
+    const effectiveSize = computed(() => groupCtx?.size.value ?? fCtxProps.size.value);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
     const checkedFromState = computed(() => {
       if (groupCtx) return groupCtx.value.value === props.value.value;
@@ -145,31 +152,24 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       checkable.toggle(originalEvent ?? new Event('change'));
     };
 
-    let labelRef: HTMLElement | null = null;
-    let helperRef: HTMLElement | null = null;
-
-    const checkable = createCheckableFieldControl({
+    const checkable = createCheckable({
       checked: checkedFromState,
-      disabled: computed(
-        () => Boolean(props.disabled.value) || Boolean(groupCtx?.disabled.value) || Boolean(formCtx?.disabled.value),
-      ),
+      disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
-      getHelperEl: () => helperRef,
-      getLabelEl: () => labelRef,
       helper: props.helper,
-      onPress: (_control, originalEvent) => {
-        activateSelf(originalEvent);
-      },
+      host: host.el,
       onToggle: (payload) => {
         emit('change', payload);
       },
       prefix: 'radio',
       role: 'radio',
+      signal: createHeadlessScope(onCleanup).signal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { checked, disabled, handleKeydown, helperId, labelId, toggle } = checkable;
+    const { assistiveId, checked, disabled, labelId, toggle } = checkable;
 
+    connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
     host.bind({
       attr: {
@@ -210,6 +210,13 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
           }
         },
         keydown: (e: KeyboardEvent) => {
+          if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            activateSelf(e);
+
+            return;
+          }
+
           const radios = getRadioGroup();
 
           if (radios.length === 0) return;
@@ -218,22 +225,27 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
           if (activeIndex === -1) return;
 
-          if (handleKeydown(e)) return;
-
           listControl.handleKeydown(e);
         },
       },
     });
 
-    return () => html`
+    return html`
       <div class="radio-wrapper" part="radio">
         <div class="circle" part="circle">
           <div class="dot" part="dot"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },
-  styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
+  styles: [
+    colorThemeMixin,
+    forcedColorsFormControlMixin,
+    disabledStateMixin(),
+    coarsePointerMixin,
+    sizeVariantMixin(CONTROL_SIZE_PRESET),
+    componentStyles,
+  ],
 });

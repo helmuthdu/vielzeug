@@ -74,11 +74,11 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
         const size = tabsCtx.size.value;
         const variant = tabsCtx.variant.value;
 
-        if (color !== undefined) props.color.value = color;
+        if (color !== undefined) host.el.setAttribute('color', color);
 
-        if (size !== undefined) props.size.value = size;
+        if (size !== undefined) host.el.setAttribute('size', size);
 
-        if (variant !== undefined) props.variant.value = variant;
+        if (variant !== undefined) host.el.setAttribute('variant', variant);
       });
     }
 
@@ -108,7 +108,7 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     const tabId = () => `tab-${props.value.value}`;
     const controlsAttr = () => `tabpanel-${props.value.value}`;
 
-    return () => html`
+    return html`
       <button
         role="tab"
         type="button"

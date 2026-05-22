@@ -1,10 +1,9 @@
-import type { SwipeControl } from '../../controls';
-
 import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craftit';
-import { createSwipeControl } from '../../controls';
 
+import type { SwipeControl } from '../../headless';
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import { createSwipeControl } from '../../headless';
 import { reducedMotionMixin } from '../../styles';
 import { awaitExit } from '../../utils';
 import componentStyles from './toast.css?inline';
@@ -409,7 +408,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       el.clear = clearAll;
     });
 
-    return () => html`
+    return html`
       <div
         class="toast-container"
         ref=${containerRef}

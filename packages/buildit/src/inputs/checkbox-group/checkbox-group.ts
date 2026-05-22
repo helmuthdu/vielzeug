@@ -1,8 +1,8 @@
 import {
   computed,
   createContext,
-  createId,
   define,
+  defineField,
   effect,
   html,
   inject,
@@ -11,21 +11,22 @@ import {
   signal,
   when,
 } from '@vielzeug/craftit';
-import { createChoiceField } from '../../controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { FORM_CTX } from '../shared/form-context';
 import {
+  createChoiceField,
+  createStableId,
   type ChoiceChangeDetail,
-  createChoiceChangeDetail,
   getChoiceLabel,
-  getSlottedByTag,
+  getLightChildrenByTag,
   setBooleanAttribute,
   setMaybeAttribute,
-} from '../shared/utils';
+} from '../../headless';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { connectFormField } from '../shared/connect-form-field';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -123,26 +124,29 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
   },
   setup(props, { emit, host, slots }) {
     const formCtx = inject(FORM_CTX);
-
+    const fCtxProps = useFormContext(host, props, formCtx);
 
     const choice = createChoiceField({
-      context: formCtx,
-      disabled: props.disabled,
+      disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
       multiple: signal(true),
-      name: props.name,
       prefix: 'checkbox-group',
+      validateOn: formCtx?.validateOn,
       value: props.values,
     });
     const checkedValues = choice.selectedValues;
 
-    const getCheckboxes = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-checkbox');
+    connectFormField(choice, defineField, choice.formValue, (v) => v);
+
+    const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(host.el, 'bit-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
     const emitChange = (originalEvent?: Event) => {
       const values = checkedValues.value;
 
-      emit('change', createChoiceChangeDetail(values, values.map(getLabelForValue), originalEvent));
+      const labels = values.map(getLabelForValue);
+
+      emit('change', { labels, originalEvent, values });
     };
 
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
@@ -209,15 +213,15 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
       };
     });
 
-    const legendId = createId('checkbox-group-legend');
+    const legendId = createStableId('checkbox-group-legend');
     const errorId = `${legendId}-error`;
     const helperId = `${legendId}-helper`;
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    host.bind({ attr: { size: () => props.size?.value ?? formCtx?.size.value } });
+    host.bind({ attr: { size: fCtxProps.size } });
 
-    return () => html`
+    return html`
       <fieldset
         role="group"
         aria-required="${() => String(Boolean(props.required.value))}"

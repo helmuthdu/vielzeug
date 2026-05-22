@@ -1,12 +1,12 @@
 import { computed, define, defineField, html, inject, prop, signal, watch } from '@vielzeug/craftit';
-import { createSpinnerControl } from '../../controls';
 
-import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
+import { createSpinnerControl } from '../../headless';
 import '../../content/icon/icon';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { disabledStateMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { FORM_CTX } from '../shared/form-context';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 // Ensure child components are registered
 import '../button/button';
 import '../input/input';
@@ -18,37 +18,41 @@ export type BitNumberInputEvents = {
 };
 
 /** Number Input props */
-export type BitNumberInputProps = ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Stretch to full width of container */
-    fullwidth?: boolean;
-    /** Visible label */
-    label?: string;
-    /** Label placement: 'inset' renders the label inside the control box, 'outside' renders it above */
-    'label-placement'?: 'inset' | 'outside';
-    /** Large step (for Page Up/Down, default: 10 × step) */
-    'large-step'?: number;
-    /** Maximum allowed value */
-    max?: number;
-    /** Minimum allowed value */
-    min?: number;
-    name?: string;
-    /** Allow null/empty value */
-    nullable?: boolean;
-    /** Form field name */
+export type BitNumberInputProps = {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Stretch to full width of container */
+  fullwidth?: boolean;
+  /** Visible label */
+  label?: string;
+  /** Label placement: 'inset' renders the label inside the control box, 'outside' renders it above */
+  'label-placement'?: 'inset' | 'outside';
+  /** Large step (for Page Up/Down, default: 10 × step) */
+  'large-step'?: number;
+  /** Maximum allowed value */
+  max?: number;
+  /** Minimum allowed value */
+  min?: number;
+  name?: string;
+  /** Allow null/empty value */
+  nullable?: boolean;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Form field name */
 
-    /** Placeholder text */
-    placeholder?: string;
-    /** Make the input read-only */
-    readonly?: boolean;
-    /** Step size for increment/decrement */
-    step?: number;
-    /** Current numeric value */
-    value?: number;
-    /** Visual variant */
-    variant?: VisualVariant;
-  };
+  /** Make the input read-only */
+  readonly?: boolean;
+  /** Component size */
+  size?: ComponentSize;
+  /** Step size for increment/decrement */
+  step?: number;
+  /** Current numeric value */
+  value?: number;
+  /** Visual variant */
+  variant?: VisualVariant;
+};
 
 /**
  * A numeric spin-button input with +/− controls, min/max clamping, and full keyboard support.
@@ -108,8 +112,9 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
     const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
-    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
+    const isDisabled = fCtxProps.disabled;
     const isReadonly = computed(() => Boolean(props.readonly.value));
     const inputValue = signal<string>(normalizeValue(props.value.value));
     const committedValue = signal<string>(normalizeValue(props.value.value));
@@ -121,12 +126,11 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     host.bind({
       attr: {
-        size: () => props.size?.value ?? formCtx?.size.value,
+        size: fCtxProps.size,
         value: () => committedValue.value || null,
-        variant: () => props.variant?.value ?? formCtx?.variant?.value,
+        variant: fCtxProps.variant,
       },
     });
-
 
     defineField({
       disabled: isDisabled,
@@ -170,13 +174,13 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     const spinner = createSpinnerControl({
       commit,
-      disabled: () => isDisabled.value,
-      largeStep: () => props['large-step'].value,
-      max: () => props.max.value,
-      min: () => props.min.value,
+      disabled: isDisabled,
+      largeStep: props['large-step'],
+      max: props.max,
+      min: props.min,
       parse: parseValue,
-      readonly: () => isReadonly.value,
-      step: () => props.step.value,
+      readonly: isReadonly,
+      step: props.step,
     });
 
     function handleKeydown(e: KeyboardEvent) {
@@ -185,7 +189,7 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
-    return () => html`
+    return html`
       <div
         class="wrapper"
         role="spinbutton"
@@ -260,5 +264,6 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       </div>
     `;
   },
+  shadow: { delegatesFocus: true },
   styles: [disabledStateMixin(), styles],
 });

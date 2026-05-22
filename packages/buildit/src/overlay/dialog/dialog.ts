@@ -1,13 +1,11 @@
-import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '../../controls';
+import { define, html, prop, ref, onMounted } from '@vielzeug/craftit';
 
-import { define, onCleanup, onEvent, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '../../controls';
-
+import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
 import type { PaddingSize, RoundedSize } from '../../types';
 
-import '../../content/icon/icon';
 import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
-import { lockBackground, unlockBackground, useOverlay } from '../../utils';
+import { useDialogControl } from '../shared/use-dialog';
+import '../../content/icon/icon';
 import componentStyles from './dialog.css?inline';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -133,82 +131,26 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
   },
   setup(props, { emit, host, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
-    const isOpen = signal(false);
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
-    let closeReason: OverlayCloseReason = 'programmatic';
 
-    const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
-      return host.el.dispatchEvent(
-        new CustomEvent('close-request', {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          detail: { reason },
-        }),
-      );
-    };
-
-    // ────────────────────────────────────────────────────────────────
-    // Overlay State Management
-    // ────────────────────────────────────────────────────────────────
-
-    const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
-      host.el,
+    const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
       dialogRef,
-      () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
-      props,
-    );
-
-    const overlay = createOverlayControl({
-      getBoundaryElement: () => host.el,
-      getPanelElement: () => dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
-      isOpen: () => isOpen.value,
-      onCleanup,
+      getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
+      host: host.el,
+      initialFocus: props['initial-focus'],
+      isPersistent: () => Boolean(props.persistent.value),
+      onNativeClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
-      setOpen: (next, { reason }) => {
-        const dialog = dialogRef.value;
-
-        if (!dialog) return;
-
-        if (next) {
-          if (dialog.open) return;
-
-          captureReturnFocus();
-          dialog.showModal();
-          applyInitialFocus();
-          lockBackground(host.el);
-          isOpen.value = true;
-
-          return;
-        }
-
-        if (dialog.open) {
-          closeReason = reason as OverlayCloseReason;
-          closeWithAnimation();
-
-          return;
-        }
-
-        isOpen.value = false;
+      openProp: props.open,
+      performClose: () => {
+        closeWithAnimation();
       },
+      returnFocus: props['return-focus'],
     });
 
-    // ────────────────────────────────────────────────────────────────
-    // Lifecycle: Setup Native Dialog Integration
-    // ────────────────────────────────────────────────────────────────
-
     const handleDismiss = () => {
-      const dialog = dialogRef.value;
-
-      if (!dialog) return;
-
-      const closeAllowed = dispatchCloseRequest('trigger');
-
-      if (!closeAllowed) return;
-
-      closeReason = 'trigger';
-      overlay.close({ reason: 'trigger', restoreFocus: false });
+      requestClose('trigger');
     };
 
     onMounted(() => {
@@ -216,72 +158,14 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
 
       if (!dialog) return;
 
-      // Sync prop changes → native dialog
-      watch(
-        props.open,
-        (open) => {
-          if (open) {
-            overlay.open({ reason: 'programmatic' });
-
-            return;
-          }
-
-          overlay.close({ reason: 'programmatic', restoreFocus: false });
-        },
-        { immediate: true },
-      );
-
-      // ────────────────────────────────────────────────────────────
-      // Event Handlers: Close, Escape, Backdrop Click
-      // ────────────────────────────────────────────────────────────
-
-      const handleNativeClose = () => {
-        unlockBackground();
-        host.el.removeAttribute('open');
-        isOpen.value = false;
-        restoreFocus();
-        emit('close', { reason: closeReason });
-        closeReason = 'programmatic';
-      };
-
-      const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-        const closeAllowed = dispatchCloseRequest(reason);
-
-        if (!closeAllowed) return;
-
-        closeReason = reason;
-        overlay.close({ reason, restoreFocus: false });
-      };
-
-      const handleKeydown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && !props.persistent.value) {
-          e.preventDefault();
-          requestClose('escape');
-        }
-      };
-
-      const handleBackdropClick = (e: MouseEvent) => {
-        if (props.persistent.value) return;
-
-        // Click target is the <dialog> element itself (not the panel)
-        if (e.target === dialog) {
-          requestClose('outside-click');
-        }
-      };
-
-      onEvent(dialog, 'close', handleNativeClose);
-      onEvent(dialog, 'click', handleBackdropClick);
-      onEvent(dialog, 'keydown', handleKeydown);
+      setupNativeListeners();
 
       return () => {
-        // Ensure the native dialog is closed on unmount to release top-layer
-        if (dialog.open) dialog.close();
-
-        unlockBackground();
+        overlay.cleanup();
       };
     });
 
-    return () => html`
+    return html`
       <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
         <div class="panel" part="panel" :data-size="${props.size}">

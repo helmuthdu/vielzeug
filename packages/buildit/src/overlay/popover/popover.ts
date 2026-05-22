@@ -1,10 +1,14 @@
-import type { OverlayCloseDetail, OverlayOpenDetail } from '../../controls';
-
-import { computed, createId, define, html, onCleanup, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '../../controls';
+import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/floatit';
 
-import { disablableBundle } from '../../inputs/shared/bundles';
+import {
+  createOverlayControl,
+  createStableId,
+  parseStringTriggers,
+  type OverlayCloseReason,
+  type OverlayOpenReason,
+} from '../../headless';
+import { disablableBundle } from '../../shared/config';
 import { reducedMotionMixin } from '../../styles';
 import styles from './popover.css?inline';
 
@@ -12,22 +16,16 @@ export type PopoverTrigger = 'click' | 'hover' | 'focus';
 
 const PANEL_OFFSET = 8;
 const VALID_TRIGGERS = new Set<PopoverTrigger>(['click', 'hover', 'focus']);
+const DEFAULT_POPOVER_TRIGGERS: PopoverTrigger[] = ['click'];
 
-function normalizeTriggers(value: unknown): PopoverTrigger[] {
-  const parsed = String(value)
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item): item is PopoverTrigger => VALID_TRIGGERS.has(item as PopoverTrigger));
-
-  // Keep behavior predictable for invalid input.
-  return parsed.length > 0 ? parsed : ['click'];
-}
+const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
+  parseStringTriggers(String(value ?? ''), VALID_TRIGGERS, DEFAULT_POPOVER_TRIGGERS);
 
 export type BitPopoverEvents = {
   /** Emitted when the popover closes */
-  close: OverlayCloseDetail;
+  close: { reason: OverlayCloseReason };
   /** Emitted when the popover opens */
-  open: OverlayOpenDetail;
+  open: { reason: OverlayOpenReason };
 };
 
 /** Popover component properties */
@@ -112,17 +110,16 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
       action();
     };
-    const panelId = createId('popover');
+    const panelId = createStableId('popover');
     let panelEl: HTMLElement | null = null;
     let currentTrigger: HTMLElement | null = null;
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
     const overlay = createOverlayControl({
-      getBoundaryElement: () => host.el,
-      getPanelElement: () => panelEl,
-      getTriggerElement: () => currentTrigger,
+      getBoundary: () => host.el,
+      getPanel: () => panelEl,
+      getTrigger: () => currentTrigger,
       isDisabled: () => isDisabled.value,
       isOpen: () => visible.value,
-      onCleanup,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       positioner: {
@@ -170,11 +167,11 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
       if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
     }
-    function open(reason: OverlayOpenDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.open({ reason }));
+    function open(reason: OverlayOpenReason = 'programmatic') {
+      runIfUncontrolled(() => overlay.open(reason));
     }
-    function close(reason: OverlayCloseDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.close({ reason, restoreFocus: false }));
+    function close(reason: OverlayCloseReason = 'trigger') {
+      runIfUncontrolled(() => overlay.close(reason, false));
     }
     function toggle() {
       runIfUncontrolled(() => overlay.toggle());
@@ -196,7 +193,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
       if (isPathInside(path)) return;
 
-      close('outside-click');
+      close('outsideClick');
     }
     // Don't close when focus moves from the trigger into the panel content.
     function handleFocusOut(e: FocusEvent) {
@@ -256,17 +253,17 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         }
 
         if (hasTrigger('hover')) {
-          add(el, 'pointerenter', () => open('trigger'));
+          add(el, 'pointerenter', () => open('hover'));
           add(el, 'pointerleave', () => close('trigger'));
 
           if (panelEl) {
-            add(panelEl, 'pointerenter', () => open('trigger'));
+            add(panelEl, 'pointerenter', () => open('hover'));
             add(panelEl, 'pointerleave', () => close('trigger'));
           }
         }
 
         if (hasTrigger('focus')) {
-          add(el, 'focusin', () => open('trigger'));
+          add(el, 'focusin', () => open('focus'));
           add(el, 'focusout', handleFocusOut as EventListener);
 
           if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
@@ -306,10 +303,12 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         triggerBinding = null;
 
         if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
+
+        overlay.cleanup();
       };
     });
 
-    return () => html`
+    return html`
       <slot></slot>
       <div
         class="panel"

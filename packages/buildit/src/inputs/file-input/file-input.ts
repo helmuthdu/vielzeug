@@ -1,6 +1,5 @@
 import {
   computed,
-  createId,
   define,
   defineField,
   html,
@@ -11,12 +10,20 @@ import {
   signal,
   onMounted,
 } from '@vielzeug/craftit';
-import { createPressControl } from '../../controls';
 import { createDropZone } from '@vielzeug/dragit';
 
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { createInteraction, createStableId } from '../../headless';
+import { FILE_INPUT_SIZE_PRESET } from '../../shared/config';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './file-input.css?inline';
 
 const formatBytes = (bytes: number) => {
@@ -148,7 +155,8 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     const files = signal<File[]>([]);
     const isDragging = signal(false);
     const formCtx = inject(FORM_CTX);
-    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
+    const fCtxProps = useFormContext(host, props, formCtx);
+    const isDisabled = fCtxProps.disabled;
     const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
 
@@ -178,15 +186,14 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       attr: {
         'drag-over': () => (isDragging.value ? true : undefined),
         invalid: () => (isInvalid.value ? true : undefined),
-        size: () => props.size?.value ?? formCtx?.size.value,
+        size: fCtxProps.size,
       },
     });
-
 
     // ============================================
     // IDs
     // ============================================
-    const fileInputId = createId('file-input');
+    const fileInputId = createStableId('file-input');
     const labelId = `label-${fileInputId}`;
     const helperId = `helper-${fileInputId}`;
     const errorId = `error-${fileInputId}`;
@@ -262,7 +269,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       const inp = inputRef.value!;
       const dz = dropzoneRef.value!;
       let skipNextClick = false;
-      const pressControl = createPressControl({
+      const pressControl = createInteraction({
         disabled: () => isDisabled.value,
         onPress: () => {
           inp.click();
@@ -306,7 +313,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       onCleanup(() => dropZone.destroy());
     });
 
-    return () => html`
+    return html`
       <div class="file-input-wrapper" part="wrapper">
         <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
           >${props.label}</label
@@ -381,7 +388,10 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...formFieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
     sizeVariantMixin(FILE_INPUT_SIZE_PRESET),
     disabledLoadingMixin(),
     forcedColorsFocusMixin('.dropzone'),

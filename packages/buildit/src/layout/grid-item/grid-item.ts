@@ -100,7 +100,7 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
       },
     });
 
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
   styles: [styles],
 });

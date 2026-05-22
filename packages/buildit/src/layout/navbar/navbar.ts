@@ -24,6 +24,7 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
+import { computeSafeRel } from '../../utils';
 import navbarStyles from './navbar.css?inline';
 
 type NavbarMode = 'floating' | 'sticky';
@@ -588,7 +589,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
       };
     });
 
-    return () => html`
+    return html`
       <nav part="nav" aria-label="${props.label}">
         <div class="navbar" part="bar">
           <div class="navbar-logo" part="logo" ?hidden=${() => !hasLogo()}>
@@ -683,6 +684,9 @@ export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
 
     const isLink = () => Boolean(props.href.value) && !props.disabled.value;
 
+    // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
+    const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
+
     const renderItemContent = () => html`
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
@@ -693,7 +697,7 @@ export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
       </span>
     `;
 
-    return () => html`
+    return html`
       ${() => {
         if (isLink()) {
           return html`
@@ -701,7 +705,7 @@ export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
               class="item"
               part="item"
               href="${props.href}"
-              :rel="${props.rel}"
+              :rel="${effectiveRel}"
               :target="${props.target}"
               aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}

@@ -14,6 +14,7 @@ import { resizeObserver } from '@vielzeug/craftit/observers';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
+import { computeSafeRel } from '../../utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -555,7 +556,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       };
     });
 
-    return () => html`
+    return html`
       <button
         class="mobile-backdrop"
         part="mobile-backdrop"
@@ -716,7 +717,7 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       },
     });
 
-    return () => html`
+    return html`
       <details class="group" part="group" ?open=${isOpen}>
         <summary
           class="group-header"
@@ -835,6 +836,9 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
 
     const isLink = () => !!props.href.value && !props.disabled.value;
 
+    // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
+    const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
+
     const renderItemContent = () => html`
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
@@ -845,7 +849,7 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
       </span>
     `;
 
-    return () => html`
+    return html`
       ${() => {
         if (isLink()) {
           return html`
@@ -853,7 +857,7 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
               class="item"
               part="item"
               href="${props.href}"
-              :rel="${props.rel}"
+              :rel="${effectiveRel}"
               :target="${props.target}"
               aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}

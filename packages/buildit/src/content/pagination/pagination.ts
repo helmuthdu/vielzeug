@@ -4,7 +4,7 @@ import '../icon/icon';
 import '../../inputs/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle } from '../../shared/config';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './pagination.css?inline';
 
@@ -101,14 +101,14 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     'total-pages': 1,
     variant: undefined,
   },
-  setup(props, { emit }) {
+  setup(props, { emit, host }) {
     function goTo(page: number) {
       const total = props['total-pages'].value || 1;
       const next = Math.min(Math.max(1, page), total);
 
       if (next === props.page.value) return;
 
-      props.page.value = next;
+      host.el.setAttribute('page', String(next));
       emit('change', { page: next });
     }
 
@@ -137,7 +137,7 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     const isFirst = computed(() => (props.page.value || 1) <= 1);
     const isLast = computed(() => (props.page.value || 1) >= (props['total-pages'].value || 1));
 
-    return () => html`
+    return html`
       <nav :aria-label="${props.label}" part="nav" @click=${handlePageClick}>
         <ol class="pagination" part="list">
           ${() =>

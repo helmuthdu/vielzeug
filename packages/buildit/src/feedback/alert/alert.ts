@@ -3,9 +3,16 @@ import { define, html } from '@vielzeug/craftit';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../../content/icon/icon';
-import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
-import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { awaitExit } from '../../utils/animation';
+import { awaitExit } from '../../overlay/shared/await-exit';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  forcedColorsMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import componentStyles from './alert.css?inline';
 
 export type BitAlertEvents = {
@@ -102,7 +109,7 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
 
     const alertRole = () => (props.color.value === 'error' ? 'alert' : 'status');
 
-    return () => html`
+    return html`
       <div class="alert" :role="${alertRole}" part="alert">
         <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
           <slot name="icon"></slot>
@@ -134,7 +141,10 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
     `;
   },
   styles: [
-    ...formFieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
     forcedColorsMixin,
     sizeVariantMixin({
       lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },

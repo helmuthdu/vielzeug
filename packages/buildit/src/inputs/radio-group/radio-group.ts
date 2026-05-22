@@ -1,7 +1,5 @@
 import {
-  computed,
   createContext,
-  createId,
   define,
   effect,
   html,
@@ -13,17 +11,18 @@ import {
   watch,
   when,
 } from '@vielzeug/craftit';
-import { createListControl } from '../../controls';
 
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../shared/form-context';
 import {
-  createChoiceChangeDetail,
+  createListControl,
+  createStableId,
+  type ChoiceChangeDetail,
   getChoiceLabel,
-  getSlottedByTag,
+  getLightChildrenByTag,
   setBooleanAttribute,
   setMaybeAttribute,
-} from '../shared/utils';
+} from '../../headless';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
@@ -65,12 +64,7 @@ export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('Bit
 /** Events emitted by the radio-group component */
 export type BitRadioGroupEvents = {
   /** Emitted when the selection changes */
-  change: {
-    labels: string[];
-    originalEvent?: Event;
-    value: string;
-    values: string[];
-  };
+  change: ChoiceChangeDetail;
 };
 
 /**
@@ -121,11 +115,13 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
   },
   setup(props, { emit, host, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
+    const isDisabled = fCtxProps.disabled;
 
     host.bind({
       attr: {
-        size: () => props.size?.value ?? formCtx?.size.value,
+        size: fCtxProps.size,
         value: () => selectedValue.value || null,
       },
     });
@@ -138,7 +134,7 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       { immediate: true },
     );
 
-    const getSlottedRadios = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-radio');
+    const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(host.el, 'bit-radio');
 
     const getEnabledRadios = (): HTMLElement[] =>
       isDisabled.value ? [] : getSlottedRadios().filter((radio) => !radio.hasAttribute('disabled'));
@@ -151,11 +147,8 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       const labels = val ? [getLabelForValue(val)] : [];
       const values = val ? [val] : [];
 
-      emit('change', createChoiceChangeDetail(values, labels, originalEvent));
+      emit('change', { labels, originalEvent, values });
     };
-
-    const formCtx = inject(FORM_CTX);
-
 
     provide(RADIO_GROUP_CTX, {
       color: props.color,
@@ -253,13 +246,13 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       },
     });
 
-    const legendId = createId('radio-group-legend');
+    const legendId = createStableId('radio-group-legend');
     const errorId = `${legendId}-error`;
     const helperId = `${legendId}-helper`;
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    return () => html`
+    return html`
       <fieldset
         role="radiogroup"
         aria-required="${() => String(Boolean(props.required.value))}"

@@ -1277,6 +1277,7 @@ export const reactiveArray = <T>(initial: readonly T[] = []): T[] => {
 
   let proxy: T[];
 
+  // eslint-disable-next-line prefer-const
   proxy = new Proxy(raw, {
     deleteProperty(target, key) {
       const result = Reflect.deleteProperty(target, key);
@@ -1409,4 +1410,33 @@ export const memo = <T>(deps: () => readonly unknown[], fn: () => T): ReadonlySi
 
     return cached as T;
   });
+};
+
+// ── Synced signal ─────────────────────────────────────────────────────────────
+
+/**
+ * Creates a locally-writable signal that stays in sync with an external
+ * `ReadonlySignal` source. The optional `transform` function can coerce the
+ * input type (e.g. `T | undefined` → `boolean`).
+ *
+ * Use this when a component needs to both reflect an externally-controlled
+ * value AND allow internal mutations (e.g. a checkbox that can be toggled
+ * locally but also reset by a parent).
+ *
+ * @example
+ * ```ts
+ * const checked = syncedSignal(props.checked, (v) => Boolean(v));
+ * ```
+ */
+export const syncedSignal = <TIn, TOut = TIn>(
+  source: ReadonlySignal<TIn>,
+  transform: (v: TIn) => TOut = (v) => v as unknown as TOut,
+): Signal<TOut> => {
+  const local = signal(transform(source.value));
+
+  watch(source, (next) => {
+    local.value = transform(next);
+  });
+
+  return local;
 };

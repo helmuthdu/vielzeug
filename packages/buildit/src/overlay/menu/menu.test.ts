@@ -31,7 +31,7 @@ describe('bit-menu', () => {
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
-      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'trigger' });
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'click' });
     });
 
     it('emits select and closes for normal menu items', async () => {
@@ -177,7 +177,7 @@ describe('bit-menu', () => {
       await user.press(trigger, 'Enter');
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
-      expect((onOpen.mock.calls[0][0] as CustomEvent).detail.reason).toBe('trigger');
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail.reason).toBe('keyboard');
     });
 
     it('supports keyboard open using Space on trigger', async () => {

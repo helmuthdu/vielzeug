@@ -3,8 +3,9 @@ import { intersectionObserver } from '@vielzeug/craftit/observers';
 
 import type { ComponentSize } from '../../types';
 
-import { sizableBundle } from '../../inputs/shared/bundles';
+import { sizableBundle } from '../../shared/config';
 import { reducedMotionMixin } from '../../styles';
+import { safeCSSLength } from '../../utils';
 import componentStyles from './skeleton.css?inline';
 
 /** Skeleton loader component properties */
@@ -93,13 +94,17 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     watch(
       computed(styleDeps),
       () => {
-        if (props.width.value) host.el.style.setProperty('--skeleton-width', props.width.value);
+        const safeWidth = safeCSSLength(props.width.value);
+        const safeHeight = safeCSSLength(props.height.value);
+        const safeRadius = safeCSSLength(props.radius.value);
+
+        if (safeWidth) host.el.style.setProperty('--skeleton-width', safeWidth);
         else host.el.style.removeProperty('--skeleton-width');
 
-        if (props.height.value) host.el.style.setProperty('--skeleton-height', props.height.value);
+        if (safeHeight) host.el.style.setProperty('--skeleton-height', safeHeight);
         else host.el.style.removeProperty('--skeleton-height');
 
-        if (props.radius.value) host.el.style.setProperty('--skeleton-radius', props.radius.value);
+        if (safeRadius) host.el.style.setProperty('--skeleton-radius', safeRadius);
         else host.el.style.removeProperty('--skeleton-radius');
 
         const rawAnimated = host.el.getAttribute('animated');
@@ -129,7 +134,7 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
       });
     });
 
-    return () => html`
+    return html`
       <div class="stack" part="stack">
         ${() =>
           Array.from({ length: renderLineCount() }, (_, index) => {

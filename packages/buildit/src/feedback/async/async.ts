@@ -1,4 +1,4 @@
-import { define, prop, html, signal, type Signal, onMounted, when } from '@vielzeug/craftit';
+import { define, prop, html, type ReadonlySignal, onMounted, signal, when } from '@vielzeug/craftit';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
@@ -76,30 +76,31 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     retryable: false,
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, host, slots: _slots }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);
 
-    const updateNamedSlotPresence = () => {
-      const children = Array.from(host.el.children);
-
-      hasLoadingSlot.value = children.some((child) => child.getAttribute('slot') === 'loading');
-      hasEmptySlot.value = children.some((child) => child.getAttribute('slot') === 'empty');
-      hasErrorSlot.value = children.some((child) => child.getAttribute('slot') === 'error');
+    /** Checks direct light-DOM children for named slot assignments. */
+    const checkSlots = () => {
+      hasLoadingSlot.value = host.el.querySelector('[slot="loading"]') !== null;
+      hasEmptySlot.value = host.el.querySelector('[slot="empty"]') !== null;
+      hasErrorSlot.value = host.el.querySelector('[slot="error"]') !== null;
     };
 
-    updateNamedSlotPresence();
+    checkSlots();
 
-    const mount = () => {
-      updateNamedSlotPresence();
+    onMounted(() => {
+      checkSlots();
 
-      const observer = new MutationObserver(() => updateNamedSlotPresence());
+      // Watch for child additions/removals and slot attribute changes on any descendant.
+      // subtree is needed because a direct child's slot attribute may be reassigned after mount.
+      const observer = new MutationObserver(checkSlots);
 
       observer.observe(host.el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
 
       return () => observer.disconnect();
-    };
+    });
 
     // Keep host accessibility state in sync with async status.
     host.bind({
@@ -110,8 +111,9 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       },
     });
 
-    const renderText = (className: 'title' | 'description', text: Signal<string | undefined> | undefined) => () =>
-      text?.value ? html`<p class="${className}">${text}</p>` : '';
+    const renderText =
+      (className: 'title' | 'description', text: ReadonlySignal<string | undefined> | undefined) => () =>
+        text?.value ? html`<p class="${className}">${text}</p>` : '';
 
     const renderDefaultState = ({
       action,
@@ -122,9 +124,9 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       stateClass,
     }: {
       action?: () => unknown;
-      description: Signal<string | undefined> | undefined;
+      description: ReadonlySignal<string | undefined> | undefined;
       icon: string;
-      label: Signal<string | undefined> | undefined;
+      label: ReadonlySignal<string | undefined> | undefined;
       role: 'alert' | 'status';
       stateClass: 'empty-state' | 'error-state';
     }) => html`
@@ -216,9 +218,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       return renderSuccess();
     };
 
-    onMounted(mount);
-
-    return () => html`${() => renderByStatus()}`;
+    return html`${() => renderByStatus()}`;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

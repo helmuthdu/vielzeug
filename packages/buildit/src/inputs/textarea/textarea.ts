@@ -1,13 +1,27 @@
-import { define, effect, html, inject, live, onElement, prop, ref } from '@vielzeug/craftit';
-import { createTextField } from '../../controls';
+import { define, defineField, effect, html, inject, live, onElement, prop, ref } from '@vielzeug/craftit';
 
+import type { TextFieldProps } from '../../shared/config';
 import type { VisualVariant } from '../../types';
-import type { TextFieldProps } from '../shared/base-props';
 
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { TEXTAREA_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { createTextField } from '../../headless';
+import {
+  TEXTAREA_SIZE_PRESET,
+  disablableBundle,
+  roundableBundle,
+  sizableBundle,
+  themableBundle,
+} from '../../shared/config';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
+import { connectFormField } from '../shared/connect-form-field';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
@@ -103,7 +117,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
-
+    const fCtxProps = useFormContext(host, props, formCtx);
 
     const textareaRef = ref<HTMLTextAreaElement>();
 
@@ -117,26 +131,29 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     };
 
     const tf = createTextField({
-      context: formCtx,
-      disabled: props.disabled,
-      elementRef: textareaRef,
+      disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      name: props.name,
       onChange: (event, value) => {
         emit('change', { originalEvent: event, value });
       },
       onInput: (event, value) => {
         emit('input', { originalEvent: event, value });
       },
-      onInputExtra: autoGrow,
+      onRawInput: autoGrow,
       prefix: 'textarea',
+      validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistive, errorId, fieldId: textareaId, helperId, labelInsetId, labelOutsideId, value: fieldValue } = tf;
+    const { assistive, assistiveId, fieldId: textareaId } = tf;
+
+    connectFormField(tf, defineField, tf.value, (v) => v);
 
     onElement(textareaRef, (textareaEl) => {
+      const unwireEl = tf.wire(textareaEl);
       const syncLayout = effect(() => {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
@@ -146,21 +163,21 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
         }
       });
 
-      return syncLayout;
+      return () => {
+        unwireEl();
+        syncLayout();
+      };
     });
 
     host.bind({
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
-        size: () => props.size?.value ?? formCtx?.size.value,
-        variant: () => props.variant?.value ?? formCtx?.variant?.value,
+        size: fCtxProps.size,
+        variant: fCtxProps.variant,
       },
     });
 
-    const ariaDescribedBy = () => (assistive.value.errorText || assistive.value.helperText ? helperId : null);
-    const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
-    const ariaInvalid = () => (assistive.value.errorText ? 'true' : null);
-    const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
+    const { aria, label } = tf;
     const counterClass = () =>
       assistive.value.counterAtLimit
         ? 'counter at-limit'
@@ -171,16 +188,14 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     const counterText = () => assistive.value.counterText.replace(' / ', '/');
     const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
     const helperText = () => assistive.value.errorText || assistive.value.helperText;
-    const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
-    const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
 
-    return () => html`
+    return html`
       <div class="textarea-wrapper">
-        <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}"
+        <label class="label-outside" for="${textareaId}" id="${label.outside.id}" ?hidden="${() => !label.outside.show.value}"
           >${props.label}</label
         >
         <div class="field">
-          <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ?hidden="${insetLabelHidden}"
+          <label class="label-inset" for="${textareaId}" id="${label.inset.id}" ?hidden="${() => !label.inset.show.value}"
             >${props.label}</label
           >
           <textarea
@@ -193,20 +208,23 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
             ?disabled="${props.disabled}"
             ?readonly="${props.readonly}"
             ?required="${props.required}"
-            :value="${live(fieldValue)}"
-            :aria-describedby="${ariaDescribedBy}"
-            :aria-errormessage="${ariaErrorMessage}"
-            :aria-invalid="${ariaInvalid}"
-            :aria-labelledby="${ariaLabelledBy}"></textarea>
+            :value="${live(tf.value)}"
+            :aria-describedby="${aria.describedBy}"
+            :aria-errormessage="${aria.errorMessage}"
+            :aria-invalid="${aria.invalid}"
+            :aria-labelledby="${aria.labelledBy}"></textarea>
         </div>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
+        <div id="${assistiveId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
       </div>
     `;
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...formFieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
     sizeVariantMixin(TEXTAREA_SIZE_PRESET),
     disabledLoadingMixin(),
     forcedColorsFocusMixin('textarea'),

@@ -31,7 +31,7 @@ function makeRecord<M extends Messages>(source: LocaleSource<M>): LocaleRecord<M
     : { kind: 'static', messages: source as M };
 }
 
-const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}\-]+)\}/gu;
+const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}-]+)\}/gu;
 
 const CARDINAL_FALLBACK: PluralRuleSelector = { select: (n) => (n === 1 ? 'one' : 'other') };
 

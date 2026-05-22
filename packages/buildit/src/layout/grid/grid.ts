@@ -261,7 +261,7 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       });
     });
 
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
 
   styles: [styles],

@@ -9,6 +9,37 @@ const DEFAULT_SIZE = 16;
 const DEFAULT_STROKE_WIDTH = 2;
 const LUCIDE_VIEWBOX_SIZE = 24;
 
+/**
+ * Allowlisted SVG shape/structure element names. Only these tags are permitted
+ * when building the SVG markup from an IconNode, preventing arbitrary element
+ * injection (e.g. <script>, event-handler-bearing elements).
+ */
+const ALLOWED_SVG_TAGS = new Set([
+  'circle',
+  'clipPath',
+  'defs',
+  'ellipse',
+  'g',
+  'line',
+  'linearGradient',
+  'mask',
+  'path',
+  'polygon',
+  'polyline',
+  'radialGradient',
+  'rect',
+  'stop',
+  'symbol',
+  'use',
+]);
+
+/**
+ * Allowlisted SVG presentation / structural attribute names.
+ * Event handler attributes (on*) and "xlink:href" are excluded.
+ */
+const ATTR_KEY_RE = /^[a-zA-Z][a-zA-Z0-9:_-]*$/;
+const BLOCKED_ATTR_RE = /^(on|xlink:|xml:|href$)/i;
+
 // Sync registry seeded from lucide at module load; extend at any time via registerIcons()
 const registry = new Map<string, IconNode>(
   Object.entries((lucideModule as unknown as { icons: Record<string, IconNode> }).icons),
@@ -26,7 +57,11 @@ export function registerIcons(icons: Record<string, IconNode>): void {
 
 const toAttrString = (attrs: Record<string, string | number>): string =>
   Object.entries(attrs)
-    .map(([k, v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`)
+    .filter(([k]) => ATTR_KEY_RE.test(k) && !BLOCKED_ATTR_RE.test(k))
+    .map(
+      ([k, v]) =>
+        `${k}="${String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`,
+    )
     .join(' ');
 
 const toPascalCase = (value: string): string =>
@@ -109,7 +144,9 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
       const iconNode = registry.get(name) ?? registry.get(toPascalCase(name));
 
       if (!iconNode) {
-        console.warn(`[bit-icon] Icon not found: "${name}"`);
+        if (import.meta.env.DEV) {
+          console.warn(`[bit-icon] Icon not found: "${String(name).slice(0, 64)}"`);
+        }
 
         return '';
       }
@@ -124,6 +161,7 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
           : (props.strokeWidth.value ?? DEFAULT_STROKE_WIDTH);
 
       const nodes = iconNode
+        .filter(([tag]) => ALLOWED_SVG_TAGS.has(tag))
         .map(([tag, tagAttrs]) => {
           const attrs: Record<string, string | number> = {};
 
@@ -150,7 +188,7 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
       return `<svg ${svgAttrs}>${nodes}</svg>`;
     });
 
-    return () => html`${() => raw(markup.value)}`;
+    return html`${() => raw(markup.value)}`;
   },
   styles: [styles],
 });

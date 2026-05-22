@@ -1,0 +1,7 @@
+@layer buildit.base {
+  :host {
+    display: block;
+    margin: var(--size-1) 0;
+    border-top: var(--border) solid var(--color-contrast-200);
+  }
+}

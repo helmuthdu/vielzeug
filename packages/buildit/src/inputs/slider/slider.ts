@@ -1,6 +1,5 @@
 import {
   computed,
-  createId,
   define,
   defineField,
   onEvent,
@@ -12,14 +11,13 @@ import {
   watch,
   onMounted,
 } from '@vielzeug/craftit';
-import { createSliderControl } from '../../controls';
 
-import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
 
+import { createSliderControl, createStableId } from '../../headless';
+import { SLIDER_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
-import { FORM_CTX } from '../shared/form-context';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './slider.css?inline';
 
 const guard =
@@ -34,32 +32,36 @@ export type BitSliderEvents = {
   change: { from?: number; originalEvent?: Event; to?: number; value: number | { from: number; to: number } };
 };
 
-export type BitSliderProps = ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Range mode: lower bound */
-    from?: number | string;
-    /** Range mode a11y label for the start thumb (e.g. "$20") */
-    'from-value-text'?: string;
-    /** Maximum value */
-    max?: number | string;
-    /** Minimum value */
-    min?: number | string;
-    /** Single-value mode: form field name */
-    name?: string;
-    /** Activate two-thumb range selection */
-    range?: boolean;
-    /** Step increment */
-    step?: number | string;
-    /** Range mode: upper bound */
-    to?: number | string;
-    /** Range mode a11y label for the end thumb (e.g. "$80") */
-    'to-value-text'?: string;
-    /** Single-value mode: current value */
-    value?: number | string;
-    /** Single-value mode a11y label override (e.g. "75%"). Overrides raw aria-valuenow. */
-    'value-text'?: string;
-  };
+export type BitSliderProps = {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable interaction */
+  disabled?: boolean;
+  /** Range mode: lower bound */
+  from?: number | string;
+  /** Range mode a11y label for the start thumb (e.g. "$20") */
+  'from-value-text'?: string;
+  /** Maximum value */
+  max?: number | string;
+  /** Minimum value */
+  min?: number | string;
+  /** Single-value mode: form field name */
+  name?: string;
+  /** Activate two-thumb range selection */
+  range?: boolean;
+  /** Component size */
+  size?: ComponentSize;
+  /** Step increment */
+  step?: number | string;
+  /** Range mode: upper bound */
+  to?: number | string;
+  /** Range mode a11y label for the end thumb (e.g. "$80") */
+  'to-value-text'?: string;
+  /** Single-value mode: current value */
+  value?: number | string;
+  /** Single-value mode a11y label override (e.g. "75%"). Overrides raw aria-valuenow. */
+  'value-text'?: string;
+};
 
 /**
  * A slider for selecting a single numeric value or a numeric range.
@@ -127,21 +129,21 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
     const sliderControl = createSliderControl({
-      max: () => props.max.value,
-      min: () => props.min.value,
-      step: () => props.step.value,
+      max: props.max,
+      min: props.min,
+      step: props.step,
     });
     // ── Single-value state ────────────────────────────────────────
     const formCtx = inject(FORM_CTX);
+    const fCtxProps = useFormContext(host, props, formCtx);
     const isDragging = signal(false);
-    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
+    const isDisabled = fCtxProps.disabled;
     const labelledById = signal<string | undefined>(undefined);
-
 
     host.bind({
       attr: {
         'data-dragging': () => (isDragging.value ? true : undefined),
-        size: () => props.size?.value ?? formCtx?.size.value,
+        size: fCtxProps.size,
       },
     });
 
@@ -220,8 +222,8 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const labelRef = ref<HTMLSpanElement>();
     const thumbStartRef = ref<HTMLDivElement>();
     const thumbEndRef = ref<HTMLDivElement>();
-    const startId = createId('slider-start');
-    const endId = createId('slider-end');
+    const startId = createStableId('slider-start');
+    const endId = createStableId('slider-end');
     // ── CSS update helpers ────────────────────────────────────────
     const updateSingleCSS = (value: number) => {
       const pct = sliderControl.toPercent(value);
@@ -467,7 +469,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       if (!container) return;
 
       if (slots.has().value && labelRef.value) {
-        const labelId = createId('slider-label');
+        const labelId = createStableId('slider-label');
 
         labelRef.value.id = labelId;
 
@@ -478,7 +480,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       else setupSingleMode(container);
     });
 
-    return () => html`
+    return html`
       <div class="slider-container" part="slider" ref=${containerRef}>
         <div class="slider-track" part="track">
           <div class="slider-fill" part="fill"></div>

@@ -142,7 +142,7 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
 
     const segClass = (threshold: number) => () => `segment${score.value >= threshold ? ' active' : ''}`;
 
-    return () => html`
+    return html`
       <div
         class="meter"
         role="meter"

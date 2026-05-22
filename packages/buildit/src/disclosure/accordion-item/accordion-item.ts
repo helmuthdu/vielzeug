@@ -87,9 +87,9 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
         const size = accordionCtx.size.value;
         const variant = accordionCtx.variant.value;
 
-        if (size !== undefined) props.size.value = size;
+        if (size !== undefined) host.el.setAttribute('size', size);
 
-        if (variant !== undefined) props.variant.value = variant;
+        if (variant !== undefined) host.el.setAttribute('variant', variant);
       });
     }
 
@@ -102,10 +102,10 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
 
       // Notify accordion parent for single-selection management
       if (isOpen && !wasExpanded) {
-        props.expanded.value = true;
+        host.el.toggleAttribute('expanded', true);
         emit('expand', { expanded: true, item: host.el });
       } else if (!isOpen && wasExpanded) {
-        props.expanded.value = false;
+        host.el.toggleAttribute('expanded', false);
         emit('collapse', { expanded: false, item: host.el });
       }
     };
@@ -174,31 +174,30 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       };
     });
 
-    return () =>
-      html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
-        <summary
-          part="summary"
-          :aria-expanded="${() => String(props.expanded.value)}"
-          :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
-          ref="${summaryRef}">
-          <slot name="prefix"></slot>
-          <div class="header-content" part="header">
-            <span class="title" part="title" id="${titleId}">
-              <slot name="title"></slot>
-            </span>
-            <span class="subtitle" part="subtitle">
-              <slot name="subtitle"></slot>
-            </span>
-          </div>
-          <slot name="suffix"></slot>
-          <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
-        </summary>
-        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-          <div class="content-inner">
-            <slot></slot>
-          </div>
+    return html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+      <summary
+        part="summary"
+        :aria-expanded="${() => String(props.expanded.value)}"
+        :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+        ref="${summaryRef}">
+        <slot name="prefix"></slot>
+        <div class="header-content" part="header">
+          <span class="title" part="title" id="${titleId}">
+            <slot name="title"></slot>
+          </span>
+          <span class="subtitle" part="subtitle">
+            <slot name="subtitle"></slot>
+          </span>
         </div>
-      </details>`;
+        <slot name="suffix"></slot>
+        <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
+      </summary>
+      <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+        <div class="content-inner">
+          <slot></slot>
+        </div>
+      </div>
+    </details>`;
   },
 
   styles: [coarsePointerMixin, styles],

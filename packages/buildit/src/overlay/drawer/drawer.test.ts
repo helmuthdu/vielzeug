@@ -285,7 +285,7 @@ describe('bit-drawer', () => {
       expect((detail as { placement: string; reason: string })?.placement).toBe('left');
     });
 
-    it('close-request reason is outside-click for backdrop clicks', async () => {
+    it('close-request reason is outsideClick for backdrop clicks', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
 
       let detail: unknown;
@@ -297,7 +297,7 @@ describe('bit-drawer', () => {
       fixture.query<HTMLDialogElement>('dialog')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await fixture.flush();
 
-      expect((detail as { placement: string; reason: string })?.reason).toBe('outside-click');
+      expect((detail as { placement: string; reason: string })?.reason).toBe('outsideClick');
       expect((detail as { placement: string; reason: string })?.placement).toBe('left');
     });
 
