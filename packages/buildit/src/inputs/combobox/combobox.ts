@@ -3,7 +3,13 @@ import { computed, define, defineField, effect, html, inject, onCleanup, prop, s
 import type { AddEventListeners } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
-import { createComposite, createInteraction, toAbortSignal, type OverlayCloseReason, type OverlayOpenReason } from '../../headless';
+import {
+  createComposite,
+  createInteraction,
+  toAbortSignal,
+  type OverlayCloseReason,
+  type OverlayOpenReason,
+} from '../../headless';
 import { FIELD_SIZE_PRESET } from '../../shared/config';
 import {
   coarsePointerMixin,
@@ -124,7 +130,9 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         manageAriaExpanded: false,
         onClose: (reason) => {
           emit('close', { reason });
+
           if (!abortSignal.aborted) restoreQueryFromSelection();
+
           c.triggerValidation('blur');
         },
         onOpen: (reason) => emit('open', { reason }),
@@ -133,13 +141,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       signal: abortSignal,
     });
 
-    const {
-      disabled: isDisabled,
-      fieldId: comboId,
-      assistiveId,
-      selectedValues,
-      triggerValidation,
-    } = choice;
+    const { assistiveId, disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
     const labelInsetId = choice.label.inset.id;
     const labelOutsideId = choice.label.outside.id;
 
