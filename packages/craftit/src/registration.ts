@@ -1,18 +1,18 @@
 import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/stateit';
 
-import { CRAFTIT_ERRORS } from './errors';
+import { CRAFTIT_ERRORS, createRuntimeError, reportRuntimeError, type CraftitRuntimeError } from './errors';
+import { ComponentPhase } from './lifecycle';
 import { createHost, type ComponentHost } from './host-bind';
 import {
   createProps,
-  isReflecting,
   normalizePropDefinition,
   prop,
   propRegistry,
+  validatePropDefs,
   type InferPropsFromDefs,
   type InferPropsSignals,
   type PropDef,
   type PropInputDefs,
-  type PropOptions,
   type PropsDef,
 } from './props';
 import { getCurrentElement, type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
@@ -52,6 +52,13 @@ export type ComponentRegistrationOptions = {
   formAssociated?: boolean;
   /** @internal — list of attribute names to observe via attributeChangedCallback */
   observedAttrs?: string[];
+  /**
+   * Optional error handler called when setup throws.
+   * Receives a structured error envelope with full context.
+   * If a recovery template is returned, it will be rendered instead of failing.
+   * Otherwise, an error event is dispatched on the element.
+   */
+  onError?: (error: CraftitRuntimeError, element: HTMLElement) => HTMLResult | void;
   /** Shadow root init options. `mode` defaults to `'open'`; set to `'closed'` for
    * security-sensitive components where shadow DOM internals must not be reachable
    * via `element.shadowRoot`. */
@@ -62,33 +69,39 @@ export type ComponentRegistrationOptions = {
 
 type ComponentState = {
   mountCallbacks: OnMountedCallback[];
-  mountedCallbacksRan: boolean;
   mountToken: number;
+  phase: ComponentPhase;
   scope: Scope;
-  setupDone: boolean;
   styles?: (string | CSSStyleSheet | CSSResult)[];
-  templateMounted: boolean;
   templateResult: HTMLResult | null;
 };
 
 const createComponentState = (styles?: (string | CSSStyleSheet | CSSResult)[]): ComponentState => ({
   mountCallbacks: [],
-  mountedCallbacksRan: false,
   mountToken: 0,
+  phase: ComponentPhase.UNINITIALIZED,
   scope: _scope(),
-  setupDone: false,
   styles,
-  templateMounted: false,
   templateResult: null,
 });
 
 class BaseElement extends HTMLElement {
-  // Lifecycle: setup() runs on first connect and calls the user setup function which returns
-  // an HTMLResult directly. _init() runs on every connect to apply styles, mount the template,
-  // and run onMounted callbacks.
-  // disconnectedCallback() disposes the scope to run effect cleanups, then recreates it.
-  // This means setup() re-runs on reconnect. Signals created in setup() closures survive
-  // reconnect naturally; computeds are re-created because they are scope-managed.
+  /**
+   * Lifecycle:
+   *
+   * 1. UNINITIALIZED → SETUP_RUNNING → SETUP_DONE (first connect)
+   *    - setup() runs once, returns HTMLResult
+   *    - signals created in setup closure survive reconnect
+   *    - computeds are re-created on each reconnect (scope-managed)
+   *
+   * 2. SETUP_DONE (every connect after first)
+   *    - Template mounted if not already mounted
+   *    - onMounted callbacks queued and executed
+   *
+   * 3. SETUP_DONE → UNMOUNTED (disconnect)
+   *    - scope.dispose() runs all effect cleanups
+   *    - Phase resets to allow setup re-run on reconnect
+   */
   static _options?: ComponentRegistrationOptions;
   static _setup: () => HTMLResult;
   static formAssociated = false;
@@ -108,7 +121,9 @@ class BaseElement extends HTMLElement {
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._component.setupDone) this._runSetup();
+      if (this._component.phase === ComponentPhase.UNINITIALIZED) {
+        this._runSetup();
+      }
 
       this._init();
     });
@@ -119,14 +134,15 @@ class BaseElement extends HTMLElement {
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
 
-    if (isReflecting(this, name)) return;
-
-    const propMeta = propRegistry.get(this)?.get(name);
+    const attrName = name;
+    const propMeta = propRegistry.get(this)?.get(attrName);
 
     if (!propMeta) return;
 
+    // Parse the new attribute value
     const parsed = propMeta.parse(newValue);
 
+    // Only update signal if value actually changed
     if (
       !Object.is(
         untrack(() => propMeta.signal.value),
@@ -139,6 +155,7 @@ class BaseElement extends HTMLElement {
 
   disconnectedCallback(): void {
     this._component.mountToken++;
+    this._component.phase = ComponentPhase.UNMOUNTED;
     this._component.scope.dispose();
 
     // Reset component state while preserving shadow and styles
@@ -146,21 +163,44 @@ class BaseElement extends HTMLElement {
 
     this._component.scope = state.scope;
     this._component.mountCallbacks = state.mountCallbacks;
-    this._component.mountedCallbacksRan = state.mountedCallbacksRan;
-    this._component.templateMounted = state.templateMounted;
     this._component.templateResult = state.templateResult;
-    this._component.setupDone = state.setupDone;
+    this._component.phase = ComponentPhase.UNINITIALIZED;
 
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
   }
 
-  private _handleError(err: unknown): void {
-    console.error(CRAFTIT_ERRORS.unhandledComponentError(this.localName), err);
+  private _handleSetupError(error: unknown, operation: string = 'connectedCallback'): HTMLResult | void {
+    const err = error instanceof Error ? error : new Error(String(error));
+    const runtimeError = createRuntimeError({
+      code: 'SETUP_FAILED',
+      kind: 'setup',
+      phase: this._component.phase,
+      component: this.localName,
+      operation,
+      cause: err,
+      hint: 'Check component setup function and prop definitions',
+    });
 
-    throw err instanceof Error ? err : new Error(String(err));
+    const options = (this.constructor as typeof BaseElement)._options;
+    const handler = options?.onError;
+
+    if (handler) {
+      try {
+        return handler(runtimeError, this);
+      } catch {
+        // If error handler itself throws, fall through to default
+      }
+    }
+
+    // Default: report structured error and dispatch event
+    reportRuntimeError(runtimeError, this);
+
+    return undefined;
   }
 
   private _runSetup(): void {
+    this._component.phase = ComponentPhase.SETUP_RUNNING;
+
     const ctx: RuntimeContext = {
       element: this,
       mountCallbacks: [],
@@ -174,9 +214,16 @@ class BaseElement extends HTMLElement {
       });
 
       this._component.mountCallbacks.push(...ctx.mountCallbacks);
-      this._component.setupDone = true;
-    } catch (err) {
-      this._handleError(err);
+      this._component.phase = ComponentPhase.SETUP_DONE;
+    } catch (error) {
+      const recoveryTemplate = this._handleSetupError(error);
+      if (recoveryTemplate) {
+        this._component.templateResult = recoveryTemplate;
+        this._component.phase = ComponentPhase.SETUP_DONE;
+      } else {
+        this._component.phase = ComponentPhase.UNINITIALIZED;
+        throw error;
+      }
     }
   }
 
@@ -185,11 +232,10 @@ class BaseElement extends HTMLElement {
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (!this._component.templateMounted && this._component.templateResult != null) {
+    if (this._component.templateResult != null) {
       const { bindings, html: htmlString } = extractResult(this._component.templateResult);
 
       this.shadow.replaceChildren(parseHTML(htmlString));
-      this._component.templateMounted = true;
 
       if (bindings.length) {
         this._component.scope.run(() => {
@@ -200,9 +246,7 @@ class BaseElement extends HTMLElement {
       }
     }
 
-    if (!this._component.mountedCallbacksRan && this._component.mountCallbacks.length > 0) {
-      this._component.mountedCallbacksRan = true;
-
+    if (this._component.mountCallbacks.length > 0) {
       const token = ++this._component.mountToken;
 
       queueMicrotask(() => {
@@ -218,8 +262,8 @@ class BaseElement extends HTMLElement {
               });
             });
           }
-        } catch (err) {
-          this._handleError(err);
+        } catch (error) {
+          this._handleSetupError(error, 'mountedCallback');
         }
       });
     }
@@ -250,7 +294,7 @@ const defineComponent = (tag: string, setup: () => HTMLResult, options: Componen
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { prop };
-export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions, PropsDef };
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropsDef };
 
 /**
  * Setup context passed as the second argument to the component setup function.
@@ -302,6 +346,14 @@ export type ComponentDefinition<
   slots?: readonly SlotNames[];
   /** Component-specific styles */
   styles?: (string | CSSStyleSheet | CSSResult)[];
+  /**
+   * Optional validation hook that runs at define-time.
+   * Use to assert that required contexts or other global state is available before
+   * any component instance is created.
+   *
+   * Throws if validation fails, preventing component registration.
+   */
+  validate?: (options: { injectionKeys: unknown[] }) => void;
 };
 
 const createSetupProps = <Props extends Record<string, unknown>>(
@@ -334,16 +386,33 @@ export function define<
   Emits extends Record<string, unknown> = Record<string, never>,
   SlotNames extends string = string,
 >(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): string {
-  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles, validate } = definition;
 
-  // Normalize props at define-time for early error feedback
+  // Run validation hook at define-time if provided
+  if (validate) {
+    try {
+      validate({ injectionKeys: [] });
+    } catch (error) {
+      throw new Error(
+        `Component definition validation failed for '${tag}': ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // Normalize and validate all props at define-time for early, complete error feedback
   const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
     if (!propDefs) return undefined;
+
+    const errors = validatePropDefs(propDefs as Record<string, unknown>);
+
+    if (errors.length > 0) {
+      throw new Error(CRAFTIT_ERRORS.validationFailed(tag, errors));
+    }
 
     const normalized: PropInputDefs = {};
 
     for (const [key, def] of Object.entries(propDefs)) {
-      normalized[key] = normalizePropDefinition(def);
+      normalized[key] = normalizePropDefinition(def, key);
     }
 
     return normalized as PropsDef<Props>;

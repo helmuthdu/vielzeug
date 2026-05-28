@@ -1,4 +1,4 @@
-import { computed, define, html } from '@vielzeug/craftit';
+import { computed, define, html, prop } from '@vielzeug/craftit';
 
 import '../icon/icon';
 import '../../inputs/button/button';
@@ -93,13 +93,13 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
   props: {
     ...themableBundle,
     ...sizableBundle,
-    label: 'Pagination',
-    page: 1,
-    'show-first-last': false,
-    'show-prev-next': false,
-    siblings: 1,
-    'total-pages': 1,
-    variant: undefined,
+    label: prop.string('Pagination'),
+    page: prop.number(1),
+    'show-first-last': prop.bool(false),
+    'show-prev-next': prop.bool(false),
+    siblings: prop.number(1),
+    'total-pages': prop.number(1),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props, { emit, host }) {
     function goTo(page: number) {

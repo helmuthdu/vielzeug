@@ -1,4 +1,4 @@
-import { define, html, signal } from '../index';
+import { define, html, prop, signal } from '../index';
 import { mount } from '../testing';
 import { uniqueTag } from './test-utils';
 
@@ -72,7 +72,7 @@ describe('component definition and rendering', () => {
         (props) => {
           return html`<div class="count">${() => props.count.value}</div>`;
         },
-        { componentOptions: { props: { count: 0 } } },
+        { componentOptions: { props: { count: prop.number(0) } } },
       );
 
       await fixture.attr('count', '1');

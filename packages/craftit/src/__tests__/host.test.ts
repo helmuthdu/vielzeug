@@ -10,7 +10,7 @@ import {
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { currentElementOrThrow } from '../runtime';
+import { getCurrentElement } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -440,7 +440,7 @@ describe('mount slot timing', () => {
     const mountFn = vi.fn();
 
     register('test-slot-timing-element', () => {
-      const host = currentElementOrThrow();
+      const host = getCurrentElement();
 
       onMounted(() => {
         mountFn();

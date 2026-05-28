@@ -1,27 +1,27 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from './errors';
 import { getCurrentElement, effect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
-export type PropOptions<T> = {
-  parse?: (value: string | null) => T;
-  /** Whether to reflect prop changes to HTML attributes. Default: true.
-   * Set to false only when host.bind() manages the same attribute with derived/computed state. */
-  reflect?: boolean;
-};
-
 export type PropsDef<T extends Record<string, unknown>> = {
-  // Keep default authoring ergonomic: plain `undefined` is a valid default for any prop.
-  [K in keyof Required<T>]: T[K] | undefined | PropDef<T[K] | undefined>;
+  // All props must be explicitly defined via prop.* helpers or PropDef objects
+  [K in keyof Required<T>]: PropDef<T[K] | undefined>;
 };
 
-export type PropDef<T> = PropOptions<T> & { readonly default: T };
-export type PropInputDefs = Record<string, unknown | PropDef<unknown>>;
+export type PropDef<T> = { readonly default: T; readonly parse: (value: string | null) => T; reflect?: boolean };
+export type PropInputDefs = Record<string, PropDef<unknown>>;
 
+/**
+ * Prop definition factory — use these helpers for all prop definitions.
+ * No implicit type inference; all parser behavior is explicit and intentional.
+ */
 export const prop = {
-  bool(defaultValue = false): PropDef<boolean> {
+  bool(defaultValue?: boolean): PropDef<boolean> {
+    const def = defaultValue ?? false;
+
     return {
-      default: defaultValue,
+      default: def,
       parse: (value) => value === '' || value === 'true',
       reflect: true,
     };
@@ -41,75 +41,111 @@ export const prop = {
       reflect: false,
     };
   },
-  number(defaultValue = 0): PropDef<number> {
+  number<T extends number = number>(defaultValue?: number): PropDef<T | undefined> {
+    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
+
     return {
-      default: defaultValue,
-      parse: (value) => (value == null ? defaultValue : Number(value)),
+      default: def,
+      parse: (value) => (value == null ? def : (Number(value) as T)),
       reflect: true,
     };
   },
-  oneOf<T extends string>(allowed: readonly T[], defaultValue: T): PropDef<T> {
+  oneOf<T extends string | undefined, D extends T = T>(
+    allowed: readonly NonNullable<T>[],
+    defaultValue: D,
+  ): PropDef<T> {
     return {
       default: defaultValue,
-      parse: (value) => (value != null && allowed.includes(value as T) ? (value as T) : defaultValue),
+      parse: (value) => (value != null && allowed.includes(value as NonNullable<T>) ? (value as T) : defaultValue),
       reflect: true,
     };
   },
-  string<T extends string>(defaultValue: T): PropDef<T> {
+  string<T extends string = string>(defaultValue?: string): PropDef<T | undefined> {
+    // When no default provided, undefined sentinel → attribute removed when value is absent
+    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
+
     return {
-      default: defaultValue,
-      parse: (value) => (value == null ? defaultValue : (value as T)),
+      default: def,
+      parse: (value: string | null) => (value == null ? def : (value as T)),
       reflect: true,
     };
   },
 };
 
 /**
- * Explicit prop definition factory. Plain objects with `{ default: ... }` are duck-typed as PropDef.
- *
- * Use to explicitly configure prop behavior with options like `reflect`, or when you need a parse function.
- * Simple string/number/boolean defaults don't require this—just pass the value directly.
+ * Define a custom prop with explicit parser and reflection behavior.
+ * Use when prop.* helpers don't cover your type.
  *
  * @example
  * ```ts
- * props: {
- *   label: 'Default Label',
- *   disabled: { default: false, reflect: true },
- *   count: { default: 0, reflect: true },
- * }
+ * const customProp = (): PropDef<MyCustomType> => ({
+ *   default: new MyCustomType(),
+ *   parse: (value) => JSON.parse(value || '{}') as MyCustomType,
+ *   reflect: false,
+ * });
  * ```
  */
 
 const isPropDef = (value: unknown): value is PropDef<unknown> =>
-  typeof value === 'object' && value !== null && 'default' in value;
+  typeof value === 'object' && value !== null && 'default' in value && 'parse' in value;
 
-export function normalizePropDefinition<T>(value: T | PropDef<T>): PropDef<T> {
-  if (isPropDef(value)) {
-    const descriptor = value as PropDef<T>;
-    const reflect = descriptor.reflect ?? true;
-
-    if (reflect && isStructuredValue(descriptor.default)) {
-      throw new Error('Structured prop defaults cannot use reflect:true. Set reflect:false and sync explicitly.');
-    }
-
-    return {
-      ...descriptor,
-      reflect,
-    };
+/**
+ * Validate and normalize a prop definition.
+ * Throws if definition is invalid or incomplete.
+ */
+export function normalizePropDefinition<T>(value: unknown, propName: string): PropDef<T> {
+  if (!isPropDef(value)) {
+    throw new Error(
+      `Prop "${propName}" must be defined with prop.* helper or PropDef object. ` +
+        `Received plain value: ${typeof value}. Use prop.string(), prop.number(), prop.bool(), prop.json(), or prop.oneOf() ` +
+        `instead of plain defaults.`,
+    );
   }
 
-  if (isStructuredValue(value)) {
-    return {
-      default: value as T,
-      reflect: false,
-    };
+  const descriptor = value as PropDef<T>;
+
+  if (!descriptor.parse) {
+    throw new Error(`Prop "${propName}" must have a parse function. Use prop.* helpers.`);
+  }
+
+  const reflect = descriptor.reflect ?? false;
+
+  // Validate: structured defaults with reflect:true are not allowed
+  if (reflect && isStructuredValue(descriptor.default)) {
+    throw new Error(
+      `Prop "${propName}": ${CRAFTIT_ERRORS.propInvalidReflect} Use prop.json() with reflect:false instead.`,
+    );
   }
 
   return {
-    default: value as T,
-    reflect: true,
+    ...descriptor,
+    reflect,
   };
 }
+
+/**
+ * Validate all prop definitions at define-time.
+ * Returns validation error messages or empty array if valid.
+ */
+export function validatePropDefs(defs: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  for (const [key, value] of Object.entries(defs)) {
+    try {
+      normalizePropDefinition(value, key);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  return errors;
+}
+
+type PropMeta<T = unknown> = {
+  parse: (value: string | null) => T;
+  reflect: boolean;
+  signal: Signal<T>;
+};
 
 export const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
 
@@ -138,50 +174,21 @@ const unmarkReflecting = (el: HTMLElement, name: string): void => {
 
 export const isReflecting = (el: HTMLElement, name: string): boolean => reflectingAttrs.get(el)?.has(name) ?? false;
 
-type PropMeta<T = unknown> = {
-  parse: (value: string | null) => T;
-  reflect: boolean;
-  signal: Signal<T>;
-};
-
-const parseBoolean = <T>(value: string | null): T => (value === '' || value === 'true') as T;
-const parseNumber = <T>(value: string | null): T => Number(value) as T;
-const parseString = <T>(value: string | null): T => value as unknown as T;
-
-const PARSER_BY_TYPE: Record<string, <T>(value: string | null) => T> = {
-  boolean: parseBoolean,
-  number: parseNumber,
-  string: parseString,
-};
-
-/** Infer attribute parser from default value type. */
-const inferParserFromValue = <T>(defaultValue: T): ((value: string | null) => T) => {
-  return (value: string | null): T => {
-    if (value == null) return defaultValue;
-
-    const parser = PARSER_BY_TYPE[typeof defaultValue];
-
-    return parser ? (parser(value) as T) : (value as unknown as T);
-  };
-};
-
 /** @internal Runtime prop registration (called by createProps) */
-const registerProp = <T>(propName: string, attrName: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
+const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
   const el = getCurrentElement();
 
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 
-  // Infer parser from default value type if not explicitly provided
-  const parse = options?.parse ?? inferParserFromValue<T>(defaultValue);
-
+  const { default: defaultValue, parse, reflect = false } = propDef;
   const s = signal<T>(defaultValue);
   const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, propName);
   const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[propName] : undefined;
 
-  const meta = {
+  const meta: PropMeta<unknown> = {
     parse,
-    reflect: options?.reflect ?? true,
-    signal: s as Signal<unknown>,
+    reflect,
+    signal: s,
   };
 
   if (hasPreUpgradeProperty) {
@@ -202,7 +209,7 @@ const registerProp = <T>(propName: string, attrName: string, defaultValue: T, op
     },
   });
 
-  if (options?.reflect ?? true) {
+  if (reflect) {
     effect(() => {
       const v = s.value;
 
@@ -239,14 +246,10 @@ export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals
   const props = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
-    // Ensure definition is normalized (should have been done at define-time, but this is a safety measure)
-    const descriptor =
-      typeof def === 'object' && def !== null && 'default' in def
-        ? (def as PropDef<unknown>)
-        : normalizePropDefinition(def);
+    const normalized = normalizePropDefinition(def, name);
     const attrName = toKebab(name);
 
-    props[name] = registerProp(name, attrName, descriptor.default, descriptor);
+    props[name] = registerProp(name, attrName, normalized);
   }
 
   return props as unknown as InferPropsSignals<InferPropsFromDefs<D>>;

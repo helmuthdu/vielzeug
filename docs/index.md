@@ -47,6 +47,9 @@ features:
   - title: '@vielzeug/logit'
     details: "<img src='/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
     link: /logit/
+  - title: '@vielzeug/machinit'
+    details: "<img src='/logo-machinit.svg' class='logo-highlight-smaller' alt='Machinit Logo' width='72'/>Typed finite state machines with reactive signals, guards, async invokes, and persistence."
+    link: /machinit/
   - title: '@vielzeug/mcpit'
     details: "<img src='/logo-mcpit.svg' class='logo-highlight-smaller' alt='Mcpit Logo' width='72'/>MCP server for exposing Vielzeug package docs, APIs, and metadata to AI clients."
     link: /mcpit/

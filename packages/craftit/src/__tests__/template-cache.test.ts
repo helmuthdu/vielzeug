@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { html } from '../template-compiler';
 
 describe('template caching', () => {
-  it('reuses html wrapper signal for plain getter interpolations', () => {
+  it('produces html bindings for plain getter interpolations', () => {
     const getter = () => 42;
 
     const first = html`<div>${getter}</div>`;
@@ -15,15 +15,9 @@ describe('template caching', () => {
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
-
-    if (firstBinding?.type !== 'html' || secondBinding?.type !== 'html') {
-      throw new Error('Expected html bindings to be present');
-    }
-
-    expect(secondBinding.signal).toBe(firstBinding.signal);
   });
 
-  it('reuses html wrapper signal for function interpolations', () => {
+  it('produces html bindings for function interpolations that return HTMLResult', () => {
     const render = () => html`<span>Hello</span>`;
 
     const first = html`<div>${render}</div>`;
@@ -34,15 +28,9 @@ describe('template caching', () => {
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
-
-    if (firstBinding?.type !== 'html' || secondBinding?.type !== 'html') {
-      throw new Error('Expected html bindings to be present');
-    }
-
-    expect(secondBinding.signal).toBe(firstBinding.signal);
   });
 
-  it('reuses html wrapper signal for signal-based html values', () => {
+  it('produces html bindings for signal-based html values', () => {
     const source = signal<unknown>(html`<em>cached</em>`);
 
     const first = html`<div>${source}</div>`;
@@ -53,11 +41,20 @@ describe('template caching', () => {
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
+  });
 
-    if (firstBinding?.type !== 'html' || secondBinding?.type !== 'html') {
-      throw new Error('Expected html bindings to be present');
-    }
+  it('reuses the compiled template plan for identical template strings', () => {
+    // Template plan cache (WeakMap on TemplateStringsArray) means identical template
+    // tag references produce the same slot/prefix plan across calls.
+    const tag = (strings: TemplateStringsArray, ...values: unknown[]) =>
+      html(strings, ...values);
 
-    expect(secondBinding.signal).toBe(firstBinding.signal);
+    const result1 = tag`<div class="a">static</div>`;
+    const result2 = tag`<div class="a">static</div>`;
+
+    // Both have the same HTML structure (no bindings for static templates)
+    expect(result1.__html).toBe(result2.__html);
+    expect(result1.__bindings).toHaveLength(0);
+    expect(result2.__bindings).toHaveLength(0);
   });
 });

@@ -1,12 +1,12 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, css, define, effect, html, prop, watch, onMounted, syncAria } from '@vielzeug/craftit';
+import { computed, define, effect, html, onMounted, prop, syncAria, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
-  createOptionList,
   createInteraction,
+  createOptionList,
   createStableId,
   type DropdownCloseReason,
   type OverlayOpenDetail,
@@ -48,20 +48,7 @@ export type BitMenuProps = {
 
 // ── Styles ─────────────────────────────────────────────────────────────
 
-const themeStyles = /* css */ css`
-  ${colorThemeMixin}
-  ${sizeVariantMixin()}
-  ${forcedColorsMixin}
-`;
-
 // ── Menu Item Component ─────────────────────────────────────────────────────────────
-
-const menuItemProps = {
-  checked: false,
-  disabled: false,
-  type: undefined,
-  value: undefined,
-};
 
 /**
  * A selectable action item used inside `<bit-menu>`.
@@ -77,7 +64,12 @@ const menuItemProps = {
  * @slot icon - Optional leading icon content
  */
 export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
-  props: menuItemProps,
+  props: {
+    checked: prop.bool(false),
+    disabled: prop.bool(false),
+    type: prop.string<BitMenuItemType>(),
+    value: prop.string(),
+  },
   setup(props) {
     const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
     const isChecked = () => isCheckable() && props.checked.value;
@@ -407,5 +399,5 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       </div>
     `;
   },
-  styles: [componentStyles, themeStyles],
+  styles: [componentStyles, colorThemeMixin, sizeVariantMixin(), forcedColorsMixin],
 });

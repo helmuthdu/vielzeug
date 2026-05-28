@@ -121,9 +121,9 @@ export type BitIconProps = {
 export const ICON_TAG = define<BitIconProps>('bit-icon', {
   props: {
     absoluteStrokeWidth: prop.bool(),
-    label: undefined,
-    name: undefined,
-    size: { default: DEFAULT_SIZE as number | string, parse: parseSize },
+    label: prop.string(),
+    name: prop.string(),
+    size: { default: DEFAULT_SIZE as number | string, parse: parseSize, reflect: false },
     solid: prop.bool(),
     strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
@@ -151,14 +151,14 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
         return '';
       }
 
-      const size = props.size.value ?? DEFAULT_SIZE;
+      const size = props.size.value;
       const cssSize = typeof size === 'number' ? `${size}px` : String(size);
       const numericSize = typeof size === 'number' ? size : LUCIDE_VIEWBOX_SIZE;
 
       const strokeWidth =
         props.absoluteStrokeWidth.value && !props.solid.value
-          ? (props.strokeWidth.value ?? DEFAULT_STROKE_WIDTH) * (LUCIDE_VIEWBOX_SIZE / numericSize)
-          : (props.strokeWidth.value ?? DEFAULT_STROKE_WIDTH);
+          ? props.strokeWidth.value! * (LUCIDE_VIEWBOX_SIZE / numericSize)
+          : props.strokeWidth.value!;
 
       const nodes = iconNode
         .filter(([tag]) => ALLOWED_SVG_TAGS.has(tag))

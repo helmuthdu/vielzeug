@@ -6,6 +6,7 @@ import { floatitExamples } from './floatit';
 import { formitExamples } from './formit';
 import { i18nitExamples } from './i18nit';
 import { logitExamples } from './logit';
+import { machinitExamples } from './machinit';
 import { permitExamples } from './permit';
 import { routeitExamples } from './routeit';
 import { sourceitExamples } from './sourceit';
@@ -26,6 +27,7 @@ export const examples = {
   formit: formitExamples,
   i18nit: i18nitExamples,
   logit: logitExamples,
+  machinit: machinitExamples,
   permit: permitExamples,
   routeit: routeitExamples,
   sourceit: sourceitExamples,

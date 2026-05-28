@@ -125,24 +125,24 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     ...sizableBundle,
     ...disablableBundle,
     ...roundableBundle,
-    autocomplete: undefined,
-    clearable: false,
-    error: { default: '' as string, reflect: false },
-    fullwidth: false,
-    helper: '',
-    inputmode: undefined,
-    label: { default: '' },
+    autocomplete: prop.string(),
+    clearable: prop.bool(false),
+    error: prop.string(),
+    fullwidth: prop.bool(false),
+    helper: prop.string(),
+    inputmode: prop.string<'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'>(),
+    label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
-    maxlength: undefined,
-    minlength: undefined,
-    name: '',
-    pattern: undefined,
-    placeholder: { default: '' },
-    readonly: false,
-    required: false,
+    maxlength: prop.json(undefined as number | undefined),
+    minlength: prop.json(undefined as number | undefined),
+    name: prop.string(),
+    pattern: prop.string(),
+    placeholder: prop.string(),
+    readonly: prop.bool(false),
+    required: prop.bool(false),
     type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
-    value: '',
-    variant: undefined,
+    value: prop.string(),
+    variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
@@ -150,30 +150,34 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
-    const tf = useTextField({
-      disabled: fCtxProps.disabled,
-      error: props.error,
-      helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      maxLength: props.maxlength,
-      onChange: (event, value) => {
-        emit('change', { originalEvent: event, value });
+    const tf = useTextField(
+      {
+        disabled: fCtxProps.disabled,
+        error: props.error,
+        helper: props.helper,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        maxLength: props.maxlength,
+        onChange: (event, value) => {
+          emit('change', { originalEvent: event, value });
+        },
+        onInput: (event, value) => {
+          emit('input', { originalEvent: event, value });
+        },
+        prefix: 'input',
+        validateOn: formCtx?.validateOn,
+        value: props.value,
       },
-      onInput: (event, value) => {
-        emit('input', { originalEvent: event, value });
-      },
-      prefix: 'input',
-      validateOn: formCtx?.validateOn,
-      value: props.value,
-    }, defineField, onCleanup);
+      defineField,
+      onCleanup,
+    );
     const {
-      signal: abortSignal,
       assistive,
+      assistiveId,
       clear: clearValue,
       errorId,
       fieldId: inputId,
-      assistiveId,
+      signal: abortSignal,
       value: fieldValue,
       wire,
     } = tf;
@@ -231,7 +235,12 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
           >${props.label}</label
         >
         <div class="field" part="field">
-          <label class="label-inset" for="${inputId}" id="${label.inset.id}" part="label" ?hidden="${() => !label.inset.show.value}"
+          <label
+            class="label-inset"
+            for="${inputId}"
+            id="${label.inset.id}"
+            part="label"
+            ?hidden="${() => !label.inset.show.value}"
             >${props.label}</label
           >
           <div class="input-row" part="input-row">

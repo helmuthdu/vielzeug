@@ -1,4 +1,4 @@
-import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
+import { define, createContext, html, provide, type ReadonlySignal, prop } from '@vielzeug/craftit';
 
 import { sizableBundle, themableBundle } from '../../shared/config';
 import styles from './button-group.css?inline';
@@ -63,11 +63,11 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
   props: {
     ...themableBundle,
     ...sizableBundle,
-    attached: false,
-    fullwidth: false,
-    label: undefined,
-    orientation: undefined,
-    variant: undefined,
+    attached: prop.bool(false),
+    fullwidth: prop.bool(false),
+    label: prop.string(),
+    orientation: prop.string<'horizontal' | 'vertical'>(),
+    variant: prop.string(),
   },
   setup(props) {
     provide(BUTTON_GROUP_CTX, {

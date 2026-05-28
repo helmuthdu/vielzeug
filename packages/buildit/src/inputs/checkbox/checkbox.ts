@@ -1,4 +1,4 @@
-import { computed, define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
+import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craftit';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -85,12 +85,12 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
-    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
-    error: '',
-    helper: '',
-    indeterminate: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
-    name: '',
-    value: 'on',
+    checked: prop.bool(false),
+    error: prop.string(),
+    helper: prop.string(),
+    indeterminate: prop.bool(false),
+    name: prop.string(),
+    value: prop.string('on'),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
@@ -134,7 +134,9 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
           <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
+        ><slot></slot
+      ></span>
       ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },

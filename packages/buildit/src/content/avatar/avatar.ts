@@ -1,4 +1,4 @@
-import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -78,10 +78,10 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     ...themableBundle,
     ...sizableBundle,
     ...roundableBundle,
-    alt: undefined,
-    initials: undefined,
-    src: undefined,
-    status: undefined,
+    alt: prop.string(),
+    initials: prop.string(),
+    src: prop.string(),
+    status: prop.string<AvatarStatus>(),
   },
   setup(props) {
     const imgFailed = signal(false);
@@ -208,8 +208,8 @@ export type BitAvatarGroupProps = {
  */
 export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', {
   props: {
-    max: 5,
-    total: undefined,
+    max: prop.number(5),
+    total: prop.json(undefined as number | undefined),
   },
   setup(props, { host, slots }) {
     const overflowCount = signal(0);

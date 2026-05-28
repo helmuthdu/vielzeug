@@ -1,4 +1,4 @@
-import { define, computed, html, signal, watch } from '@vielzeug/craftit';
+import { define, prop, computed, html, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -154,15 +154,15 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
       reflect: false,
     },
-    color: undefined as BitChipComponentProps['color'],
-    'default-checked': false,
-    disabled: false,
-    label: undefined,
-    mode: 'static' as BitChipMode,
-    rounded: undefined as BitChipComponentProps['rounded'],
-    size: undefined as BitChipComponentProps['size'],
-    value: undefined,
-    variant: undefined as BitChipComponentProps['variant'],
+    color: prop.string<ThemeColor>(),
+    'default-checked': prop.bool(false),
+    disabled: prop.bool(false),
+    label: prop.string(),
+    mode: prop.oneOf(['static', 'removable', 'selectable', 'action'] as const, 'static'),
+    rounded: prop.string<RoundedSize | ''>(),
+    size: prop.string<ComponentSize>(),
+    value: prop.string(),
+    variant: prop.string<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>(),
   },
 
   setup(props, { emit, host }) {

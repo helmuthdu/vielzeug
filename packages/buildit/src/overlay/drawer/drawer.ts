@@ -145,17 +145,17 @@ export type BitDrawerProps = {
 
 export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', {
   props: {
-    backdrop: undefined,
-    dismissible: true,
+    backdrop: prop.string<DrawerBackdrop>(),
+    dismissible: prop.bool(true),
     'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
-    'initial-focus': undefined,
-    label: undefined,
-    open: false,
-    persistent: false,
+    'initial-focus': prop.string(),
+    label: prop.string(),
+    open: prop.bool(false),
+    persistent: prop.bool(false),
     placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
-    'return-focus': true,
-    size: undefined,
-    title: undefined,
+    'return-focus': prop.bool(true),
+    size: prop.string<DrawerSize>(),
+    title: prop.string(),
   },
   setup(props, { emit, host, slots }) {
     const drawerLabelId = createStableId('drawer-label');

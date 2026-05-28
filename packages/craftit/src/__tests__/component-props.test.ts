@@ -29,7 +29,7 @@ describe('component props', () => {
   it('initializes prop signals from attributes', async () => {
     const { query } = await mount((props) => html`<div class="count">${props.count}</div>`, {
       attrs: { count: '42' },
-      componentOptions: { props: { count: 0 } },
+      componentOptions: { props: { count: prop.number(0) } },
     });
 
     expect(query('.count')?.textContent).toBe('42');
@@ -95,7 +95,7 @@ describe('component props', () => {
     const parentTag = `test-array-parent-${suffix}`;
 
     define<{ items: string[] }>(childTag, {
-      props: { items: [] as string[] },
+      props: { items: prop.json([] as string[]) },
       setup: (props) => {
         return html`<div class="items">
           ${() => (Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? ''))}
@@ -132,7 +132,7 @@ describe('component props', () => {
 
     define<{ value?: string }>(tag, {
       props: {
-        value: { default: undefined as string | undefined, reflect: false },
+        value: { default: undefined as string | undefined, parse: (v: string | null) => v ?? undefined, reflect: false },
       },
       setup: (props) => {
         expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
@@ -178,7 +178,7 @@ describe('component props', () => {
       },
       {
         attrs: { count: '7' },
-        componentOptions: { props: { count: 0 } },
+        componentOptions: { props: { count: prop.number(0) } },
       },
     );
 

@@ -62,11 +62,11 @@ export type BitPasswordStrengthProps = {
  */
 export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-password-strength', {
   props: {
-    label: 'Password strength',
-    labels: undefined,
+    label: prop.string('Password strength'),
+    labels: prop.json(undefined as string[] | undefined),
     score: prop.number(-1),
-    'show-label': true,
-    value: prop.string(''),
+    'show-label': prop.bool(true),
+    value: prop.string(),
   },
 
   setup(props, { host }) {

@@ -1,4 +1,4 @@
-import { define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
+import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craftit';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -75,11 +75,11 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
-    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
-    error: '',
-    helper: '',
-    name: '',
-    value: 'on',
+    checked: prop.bool(false),
+    error: prop.string(),
+    helper: prop.string(),
+    name: prop.string(),
+    value: prop.string('on'),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
@@ -114,7 +114,9 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
+        ><slot></slot
+      ></span>
       ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },

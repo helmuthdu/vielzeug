@@ -12,6 +12,7 @@
 
 export type { PropsDef } from '@vielzeug/craftit';
 
+import { prop } from '@vielzeug/craftit';
 import type { SizeConfig } from '../styles/mixins/shape.css';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
@@ -97,32 +98,32 @@ export type AddEventListeners<T> = {
 
 /** Prop bundle for components that support a theme colour. */
 export const themableBundle = {
-  color: undefined as ThemeColor | undefined,
+  color: prop.string<ThemeColor>(),
 };
 
 /** Prop bundle for components with discrete size variants. */
 export const sizableBundle = {
-  size: undefined as ComponentSize | undefined,
+  size: prop.string<ComponentSize>(),
 };
 
 /** Prop bundle for interactive components that can be disabled. */
 export const disablableBundle = {
-  disabled: false,
+  disabled: prop.bool(false),
 };
 
 /** Prop bundle for components with a loading / busy state. */
 export const loadableBundle = {
-  loading: false,
+  loading: prop.bool(false),
 };
 
 /** Prop bundle for components with configurable border-radius. */
 export const roundableBundle = {
-  rounded: undefined as RoundedSize | undefined,
+  rounded: prop.string<RoundedSize>(),
 };
 
 /** Prop bundle for components with an elevation / box-shadow. */
 export const elevatableBundle = {
-  elevation: undefined,
+  elevation: prop.number<ElevationLevel>(),
 };
 
 // ── Derived prop types ────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { computed, define, defineField, effect, html, inject, onCleanup, prop, signal } from '@vielzeug/craftit';
 
-import type { AddEventListeners } from '../../types';
+import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
 import {
@@ -75,24 +75,24 @@ export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
 export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-combobox', {
   formAssociated: true,
   props: {
-    color: undefined,
-    creatable: false,
-    disabled: false,
-    error: undefined,
-    fullwidth: false,
-    helper: undefined,
-    label: undefined,
+    color: prop.string<ThemeColor>(),
+    creatable: prop.bool(false),
+    disabled: prop.bool(false),
+    error: prop.string(),
+    fullwidth: prop.bool(false),
+    helper: prop.string(),
+    label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
-    loading: false,
-    multiple: false,
-    name: undefined,
-    'no-filter': false,
-    options: undefined,
-    placeholder: 'Select...',
-    rounded: undefined,
-    size: undefined,
-    value: undefined,
-    variant: undefined,
+    loading: prop.bool(false),
+    multiple: prop.bool(false),
+    name: prop.string(),
+    'no-filter': prop.bool(false),
+    options: prop.json(undefined as ComboboxOptionInput[] | undefined),
+    placeholder: prop.string('Select...'),
+    rounded: prop.string<RoundedSize>(),
+    size: prop.string<ComponentSize>(),
+    value: prop.string(),
+    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);

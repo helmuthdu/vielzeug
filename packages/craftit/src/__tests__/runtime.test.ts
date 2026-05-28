@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { fire } from '../runtime';
+import { fire } from '../testing';
 
 describe('Runtime: fire', () => {
   it('should dispatch a CustomEvent when detail is provided', () => {

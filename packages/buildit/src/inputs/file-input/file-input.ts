@@ -6,10 +6,12 @@ import {
   inject,
   onEvent,
   onCleanup,
+  prop,
   ref,
   signal,
   onMounted,
 } from '@vielzeug/craftit';
+
 import { createDropZone } from '@vielzeug/dragit';
 
 import { createInteraction, createStableId } from '../../headless';
@@ -134,18 +136,18 @@ export type BitFileInputEvents = {
 export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit-file-input', {
   formAssociated: true,
   props: {
-    accept: undefined,
-    color: undefined,
-    disabled: false,
-    error: undefined,
-    helper: undefined,
-    label: undefined,
-    'max-files': 0,
-    'max-size': 0,
-    multiple: false,
-    name: undefined,
-    required: false,
-    size: undefined,
+    accept: prop.string(),
+    color: prop.string(),
+    disabled: prop.bool(false),
+    error: prop.string(),
+    helper: prop.string(),
+    label: prop.string(),
+    'max-files': prop.number(0),
+    'max-size': prop.number(0),
+    multiple: prop.bool(false),
+    name: prop.string(),
+    required: prop.bool(false),
+    size: prop.string(),
   },
   setup(props, { emit, host }) {
     // ============================================

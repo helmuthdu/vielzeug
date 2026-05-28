@@ -73,14 +73,14 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
   props: {
     ...themableBundle,
     ...sizableBundle,
-    'floating-label': undefined,
-    indeterminate: false,
-    label: undefined,
-    max: 100,
-    title: undefined,
+    'floating-label': prop.string(),
+    indeterminate: prop.bool(false),
+    label: prop.string(),
+    max: prop.number(100),
+    title: prop.string(),
     type: prop.oneOf(['linear', 'circular'] as const, 'linear'),
-    value: 0,
-    'value-text': undefined,
+    value: prop.number(0),
+    'value-text': prop.string(),
   },
 
   setup(props, { host }) {

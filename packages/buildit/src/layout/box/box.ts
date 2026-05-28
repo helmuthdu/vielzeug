@@ -10,7 +10,7 @@ export type BitBoxProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Shadow elevation level (0–5) */
-  elevation?: `${ElevationLevel}`;
+  elevation?: ElevationLevel;
   /** Full width mode (100% of container) */
   fullwidth?: boolean;
   /** Internal padding size */
@@ -57,13 +57,13 @@ export type BitBoxProps = {
  */
 export const BOX_TAG = define<BitBoxProps>('bit-box', {
   props: {
-    color: undefined,
-    elevation: undefined,
+    color: prop.string<ThemeColor>(),
+    elevation: prop.number<ElevationLevel>(),
     fullwidth: prop.bool(),
-    padding: undefined,
+    padding: prop.string<PaddingSize>(),
     rainbow: prop.bool(),
-    rounded: undefined,
-    variant: undefined,
+    rounded: prop.string<RoundedSize>(),
+    variant: prop.string<'flat' | 'solid' | 'frost' | 'glass'>(),
   },
   setup() {
     return html`<div class="box" part="box"><slot></slot></div>`;

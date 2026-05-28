@@ -1,4 +1,4 @@
-import { define, effect, html } from '@vielzeug/craftit';
+import { define, effect, html, prop } from '@vielzeug/craftit';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
@@ -36,7 +36,7 @@ export type BitCardProps = {
   /** Disable interaction */
   disabled?: boolean;
   /** Shadow elevation level (0-5) */
-  elevation?: `${ElevationLevel}`;
+  elevation?: ElevationLevel;
   /** Make the card interactive (role=button, keyboard nav, emits activate) */
   interactive?: boolean;
   /** Show a loading progress bar */
@@ -100,11 +100,11 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     ...themableBundle,
     ...disablableBundle,
     ...loadableBundle,
-    elevation: undefined,
-    interactive: false,
-    orientation: undefined,
-    padding: undefined,
-    variant: undefined,
+    elevation: prop.number<ElevationLevel>(),
+    interactive: prop.bool(false),
+    orientation: prop.string<'horizontal'>(),
+    padding: prop.string<PaddingSize>(),
+    variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
   },
 
   setup(props, { emit, host, slots }) {

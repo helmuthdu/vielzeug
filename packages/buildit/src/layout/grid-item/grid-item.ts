@@ -1,4 +1,4 @@
-import { define, html, computed } from '@vielzeug/craftit';
+import { define, html, computed, prop } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
 
@@ -57,13 +57,15 @@ export type BitGridItemProps = {
  */
 export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
   props: {
-    align: undefined,
-    area: '',
-    col: '',
-    colSpan: undefined,
-    justify: undefined,
-    row: '',
-    rowSpan: undefined,
+    align: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    area: prop.string(),
+    col: prop.string(),
+    colSpan: prop.string(
+      undefined as '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full' | undefined,
+    ),
+    justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    row: prop.string(),
+    rowSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | 'full'>(),
   },
   setup(props, { host }) {
     const gridColumn = computed(() => {

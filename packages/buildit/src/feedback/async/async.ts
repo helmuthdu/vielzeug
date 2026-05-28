@@ -69,11 +69,11 @@ export type BitAsyncProps = {
  */
 export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
   props: {
-    'empty-description': undefined,
-    'empty-label': 'No content yet',
-    'error-description': undefined,
-    'error-label': 'Something went wrong',
-    retryable: false,
+    'empty-description': prop.string(),
+    'empty-label': prop.string('No content yet'),
+    'error-description': prop.string(),
+    'error-label': prop.string('Something went wrong'),
+    retryable: prop.bool(false),
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
   setup(props, { emit, host, slots: _slots }) {

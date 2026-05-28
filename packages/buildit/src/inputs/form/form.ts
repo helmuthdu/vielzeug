@@ -61,12 +61,12 @@ export type BitFormEvents = {
  */
 export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
   props: {
-    disabled: false,
-    novalidate: false,
+    disabled: prop.bool(false),
+    novalidate: prop.bool(false),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
-    size: undefined,
+    size: prop.string<ComponentSize>(),
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
-    variant: undefined,
+    variant: prop.string<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>>(),
   },
   setup(props, { emit, host }) {
     const shadowRoot = host.el.shadowRoot;

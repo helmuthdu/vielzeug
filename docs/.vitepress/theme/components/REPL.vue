@@ -76,6 +76,7 @@ const LIBRARY_DESCRIPTIONS = {
   formit: 'Form state management with reactive fields and async validation.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
+  machinit: 'Typed finite state machines with guards, async invokes, context signals, and persistence.',
   permit: 'Role-based access control (RBAC) system for permissions.',
   routeit: 'Client-side routing library with nested routes and middleware support.',
   sourceit: 'Reactive local and remote query sources with pagination and URL state sync.',
@@ -97,6 +98,7 @@ const LIBRARY_LOADERS = {
   formit: () => import('@vielzeug/formit'),
   i18nit: () => import('@vielzeug/i18nit'),
   logit: () => import('@vielzeug/logit'),
+  machinit: () => import('@vielzeug/machinit'),
   permit: () => import('@vielzeug/permit'),
   routeit: () => import('@vielzeug/routeit'),
   sourceit: () => import('@vielzeug/sourceit'),
@@ -131,6 +133,7 @@ const LIBRARY_EXPORTS = {
   formit: ['FORM_ERROR', 'createForm', 'schemaValidator', 'toFormData'],
   i18nit: ['createI18n'],
   logit: ['Logit'],
+  machinit: ['defineMachine', 'interpret', 'resolveTransition', 'assign', 'MachinitError'],
   permit: ['createPermit', 'owns', 'WILDCARD', 'ANONYMOUS'],
   routeit: ['createRouter', 'createBrowserHistory', 'createMemoryHistory', 'redirectTo', 'Router'],
   sourceit: [

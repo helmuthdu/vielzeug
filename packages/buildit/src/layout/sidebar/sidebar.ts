@@ -9,6 +9,7 @@ import {
   type ReadonlySignal,
   watch,
   onMounted,
+  prop,
 } from '@vielzeug/craftit';
 import { resizeObserver } from '@vielzeug/craftit/observers';
 
@@ -186,17 +187,14 @@ export type BitSidebarProps = {
  */
 export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sidebar', {
   props: {
-    'bottom-nav-at': undefined,
-    collapsed: {
-      default: undefined as boolean | undefined,
-      parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
-    },
-    collapsible: false,
-    'container-breakpoints': false,
-    'default-collapsed': false,
-    label: 'Sidebar navigation',
-    responsive: undefined,
-    variant: undefined,
+    'bottom-nav-at': prop.string(),
+    collapsed: prop.bool(false),
+    collapsible: prop.bool(false),
+    'container-breakpoints': prop.bool(false),
+    'default-collapsed': prop.bool(false),
+    label: prop.string('Sidebar navigation'),
+    responsive: prop.string(),
+    variant: prop.string<SidebarVariant>(),
   },
   setup(props, { emit, host, slots }) {
     const hasHeader = () => slots.has('header').value;
@@ -674,9 +672,9 @@ export type BitSidebarGroupProps = {
  */
 export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEvents>('bit-sidebar-group', {
   props: {
-    collapsible: false,
-    'default-open': true,
-    label: '',
+    collapsible: prop.bool(false),
+    'default-open': prop.bool(true),
+    label: prop.string(),
     open: {
       default: undefined as boolean | undefined,
       parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
@@ -815,11 +813,11 @@ export type BitSidebarItemProps = {
  */
 export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', {
   props: {
-    active: false,
-    disabled: false,
-    href: undefined,
-    rel: undefined,
-    target: undefined,
+    active: prop.bool(false),
+    disabled: prop.bool(false),
+    href: prop.string(),
+    rel: prop.string(),
+    target: prop.string(),
   },
   setup(props, { host, slots }) {
     const hasIcon = () => slots.has('icon').value;

@@ -89,12 +89,12 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
     ...sizableBundle,
     ...disablableBundle,
     'close-delay': { default: 0, parse: parseDelayMs },
-    content: '',
+    content: prop.string(),
     delay: { default: 0, parse: parseDelayMs },
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(['top', 'bottom', 'left', 'right'] as const, 'top'),
     trigger: { default: 'hover,focus', parse: (value: string | null) => normalizeTriggers(value).join(',') },
-    variant: undefined,
+    variant: prop.string<'dark' | 'light'>(),
   },
   setup(props, { host, slots }) {
     const shadowRoot = host.el.shadowRoot;

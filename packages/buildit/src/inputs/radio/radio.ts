@@ -1,4 +1,4 @@
-import { computed, define, defineField, html, inject, onCleanup } from '@vielzeug/craftit';
+import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craftit';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -82,11 +82,11 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
-    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
-    error: '',
-    helper: '',
-    name: { default: '', reflect: false }, // managed by host.bind (effective name from radio-group)
-    value: '',
+    checked: prop.bool(false),
+    error: prop.string(),
+    helper: prop.string(),
+    name: prop.string(),
+    value: prop.string(),
   },
   setup(props, { emit, host }) {
     const groupCtx = inject(RADIO_GROUP_CTX);
@@ -236,7 +236,9 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
           <div class="dot" part="dot"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"><slot></slot></span>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
+        ><slot></slot
+      ></span>
       ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
     `;
   },

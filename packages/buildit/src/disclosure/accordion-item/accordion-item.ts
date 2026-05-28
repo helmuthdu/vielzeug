@@ -1,4 +1,4 @@
-import { define, effect, html, inject, ref, onMounted } from '@vielzeug/craftit';
+import { define, effect, html, inject, prop, ref, onMounted } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -72,10 +72,10 @@ export type BitAccordionItemProps = {
 
 export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItemEvents>('bit-accordion-item', {
   props: {
-    disabled: false,
-    expanded: false,
-    size: undefined,
-    variant: undefined,
+    disabled: prop.bool(false),
+    expanded: prop.bool(false),
+    size: prop.string<ComponentSize>(),
+    variant: prop.string<VisualVariant>(),
   },
 
   setup(props, { emit, host }) {

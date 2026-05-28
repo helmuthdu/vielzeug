@@ -19,8 +19,8 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { useTextField } from '../shared/use-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { useTextField } from '../shared/use-field';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
@@ -35,7 +35,7 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
   'auto-resize'?: boolean;
   /** Maximum character count; shows a counter when set */
   maxlength?: number;
-  /** Disable manual resize handle */
+  /** Disable a manual resize handle */
   'no-resize'?: boolean;
   /** Resize direction override */
   resize?: 'none' | 'horizontal' | 'both' | 'vertical';
@@ -97,22 +97,22 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     ...sizableBundle,
     ...disablableBundle,
     ...roundableBundle,
-    'auto-resize': false,
-    error: { default: '' as string, reflect: false },
-    fullwidth: false,
-    helper: '',
-    label: { default: '' },
+    'auto-resize': prop.bool(false),
+    error: prop.string(),
+    fullwidth: prop.bool(false),
+    helper: prop.string(),
+    label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
-    maxlength: undefined,
-    name: '',
-    'no-resize': false,
-    placeholder: { default: '' },
-    readonly: false,
-    required: false,
-    resize: undefined,
-    rows: undefined,
-    value: '',
-    variant: undefined,
+    maxlength: prop.json(undefined as number | undefined),
+    name: prop.string(),
+    'no-resize': prop.bool(false),
+    placeholder: prop.string(),
+    readonly: prop.bool(false),
+    required: prop.bool(false),
+    resize: prop.string<'none' | 'both' | 'horizontal' | 'vertical'>(),
+    rows: prop.json(undefined as number | undefined),
+    value: prop.string(),
+    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
@@ -129,24 +129,28 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       textareaEl.style.height = `${textareaEl.scrollHeight}px`;
     };
 
-    const tf = useTextField({
-      disabled: fCtxProps.disabled,
-      error: props.error,
-      helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      maxLength: props.maxlength,
-      onChange: (event, value) => {
-        emit('change', { originalEvent: event, value });
+    const tf = useTextField(
+      {
+        disabled: fCtxProps.disabled,
+        error: props.error,
+        helper: props.helper,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        maxLength: props.maxlength,
+        onChange: (event, value) => {
+          emit('change', { originalEvent: event, value });
+        },
+        onInput: (event, value) => {
+          emit('input', { originalEvent: event, value });
+        },
+        onRawInput: autoGrow,
+        prefix: 'textarea',
+        validateOn: formCtx?.validateOn,
+        value: props.value,
       },
-      onInput: (event, value) => {
-        emit('input', { originalEvent: event, value });
-      },
-      onRawInput: autoGrow,
-      prefix: 'textarea',
-      validateOn: formCtx?.validateOn,
-      value: props.value,
-    }, defineField, onCleanup);
+      defineField,
+      onCleanup,
+    );
     const { assistive, assistiveId, fieldId: textareaId } = tf;
 
     onElement(textareaRef, (textareaEl) => {
@@ -188,11 +192,19 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
 
     return html`
       <div class="textarea-wrapper">
-        <label class="label-outside" for="${textareaId}" id="${label.outside.id}" ?hidden="${() => !label.outside.show.value}"
+        <label
+          class="label-outside"
+          for="${textareaId}"
+          id="${label.outside.id}"
+          ?hidden="${() => !label.outside.show.value}"
           >${props.label}</label
         >
         <div class="field">
-          <label class="label-inset" for="${textareaId}" id="${label.inset.id}" ?hidden="${() => !label.inset.show.value}"
+          <label
+            class="label-inset"
+            for="${textareaId}"
+            id="${label.inset.id}"
+            ?hidden="${() => !label.inset.show.value}"
             >${props.label}</label
           >
           <textarea

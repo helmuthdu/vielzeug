@@ -1,4 +1,6 @@
-import { computed, define, defineField, html, inject, signal } from '@vielzeug/craftit';
+import { computed, define, defineField, html, inject, prop, signal,
+} from '@vielzeug/craftit';
+
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -71,12 +73,12 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
-    label: 'Rating',
-    max: 5,
-    name: undefined,
-    readonly: false,
-    solid: false,
-    value: 0,
+    label: prop.string('Rating'),
+    max: prop.number(5),
+    name: prop.string(),
+    readonly: prop.bool(false),
+    solid: prop.bool(false),
+    value: prop.number(0),
   },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);

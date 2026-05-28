@@ -38,44 +38,54 @@ type CompiledTemplatePlan = {
   tail: string;
 };
 
-type HtmlWrapperSignal = ReadonlySignal<{
-  bindings: Binding[];
-  html: string;
-}>;
+// ─────────────────────────────────────────────────────────────────────────────
+// Template caching and compilation
+// ─────────────────────────────────────────────────────────────────────────────
 
+// We cache only the template parsing plan (CompiledTemplatePlan) because it's stable
+// and parsing is relatively expensive. Signal wrapping and computed derivation is
+// cheap enough that caching provides negligible benefit and adds complexity.
 const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan>();
-const htmlGetterSignalCache = new WeakMap<() => unknown, HtmlWrapperSignal>();
-const htmlSignalWrapperCache = new WeakMap<ReadonlySignal<unknown>, HtmlWrapperSignal>();
 
-const MODIFIER_WRAPPERS: Record<string, (fn: (e: Event) => void) => (e: Event) => void> = {
-  prevent: (fn) => (e) => {
-    e.preventDefault();
-    fn(e);
-  },
-  self: (fn) => (e) => {
-    if (e.target === e.currentTarget) fn(e);
-  },
-  stop: (fn) => (e) => {
-    e.stopPropagation();
-    fn(e);
-  },
-};
-
+/**
+ * Apply event listener modifiers (prevent, stop, self, capture, once, passive).
+ * Inlined for clarity rather than using wrapper function dict.
+ */
 const applyModifiers = (
   handler: (e: Event) => void,
   modifiers: string[],
 ): { handler: (e: Event) => void; options?: AddEventListenerOptions } => {
-  const wrapped = modifiers.reduce((fn, m) => MODIFIER_WRAPPERS[m]?.(fn) ?? fn, handler);
+  let wrappedHandler = handler;
+
+  for (const modifier of modifiers) {
+    switch (modifier) {
+      case 'prevent':
+        wrappedHandler = ((h) => (e) => {
+          e.preventDefault();
+          h(e);
+        })(wrappedHandler);
+        break;
+      case 'stop':
+        wrappedHandler = ((h) => (e) => {
+          e.stopPropagation();
+          h(e);
+        })(wrappedHandler);
+        break;
+      case 'self':
+        wrappedHandler = ((h) => (e) => {
+          if (e.target === e.currentTarget) h(e);
+        })(wrappedHandler);
+        break;
+    }
+  }
 
   const options: AddEventListenerOptions = {};
 
   if (modifiers.includes('capture')) options.capture = true;
-
   if (modifiers.includes('once')) options.once = true;
-
   if (modifiers.includes('passive')) options.passive = true;
 
-  return { handler: wrapped, ...(Object.keys(options).length ? { options } : {}) };
+  return { handler: wrappedHandler, ...(Object.keys(options).length ? { options } : {}) };
 };
 
 const resolveDirectiveValue = (value: unknown): string => {
@@ -88,82 +98,62 @@ const resolveDirectiveValue = (value: unknown): string => {
   return escapeHtml(String(value));
 };
 
-const renderHtmlItems = (getter: () => unknown): { bindings: Binding[]; signal: ReadonlySignal<any> } => {
-  let cached = { bindings: [] as Binding[], html: '' };
-  const fnSignal = computed(() => {
+/**
+ * Render HTML items (array or single) into html + bindings via a computed signal.
+ * Used when a function getter returns HTML content that needs to be wrapped in a signal.
+ */
+const renderHtmlItems = (getter: () => unknown): ReadonlySignal<{ bindings: Binding[]; html: string }> => {
+  return computed(() => {
     const res = getter();
     const items = Array.isArray(res) ? res : [res];
     const getNestedId = createMarkerIdFactory();
     let html = '';
-    const nextBindings: Binding[] = [];
+    const bindings: Binding[] = [];
 
     for (const item of items) {
       if (isHtmlResult(item)) {
         const entry = rekeyHtmlResult(item, getNestedId);
 
         html += entry.html;
-        nextBindings.push(...entry.bindings);
+        bindings.push(...entry.bindings);
       } else {
         html += resolveDirectiveValue(item);
       }
     }
 
-    const bindingsChanged =
-      nextBindings.length !== cached.bindings.length || nextBindings.some((b, i) => b !== cached.bindings[i]);
-
-    if (html !== cached.html || bindingsChanged) {
-      cached = { bindings: nextBindings, html };
-    }
-
-    return cached;
+    return { bindings, html };
   });
-
-  return { bindings: [], signal: fnSignal };
 };
 
+/**
+ * Create a wrapped signal for HTML rendering that handles both function getters and signals.
+ * No caching of intermediate signals—let stateit handle all signal optimization.
+ */
 const createHtmlWrapperSignal = (
   value: unknown,
 ): {
-  signal: HtmlWrapperSignal;
+  signal: ReadonlySignal<{ bindings: Binding[]; html: string }>;
 } | null => {
   if (typeof value === 'function') {
-    const getter = value as () => unknown;
-    const cached = htmlGetterSignalCache.get(getter);
-
-    if (cached) {
-      return { signal: cached };
-    }
-
-    const { signal: sig } = renderHtmlItems(getter);
-
-    htmlGetterSignalCache.set(getter, sig);
-
-    return { signal: sig };
+    return { signal: renderHtmlItems(value as () => unknown) };
   }
 
   if (isSignal(value) && isHtmlResult((value as ReadonlySignal<unknown>).value)) {
     const htmlSignal = value as ReadonlySignal<unknown>;
-    const cached = htmlSignalWrapperCache.get(htmlSignal);
 
-    if (cached) {
-      return { signal: cached };
-    }
+    return {
+      signal: computed(() => {
+        const next = htmlSignal.value;
 
-    const wrapped = computed(() => {
-      const next = htmlSignal.value;
+        if (!isHtmlResult(next)) {
+          return { bindings: [], html: resolveDirectiveValue(next) };
+        }
 
-      if (!isHtmlResult(next)) {
-        return { bindings: [], html: resolveDirectiveValue(next) };
-      }
+        const entry = rekeyHtmlResult(next, createMarkerIdFactory());
 
-      const entry = rekeyHtmlResult(next, createMarkerIdFactory());
-
-      return { bindings: entry.bindings, html: entry.html };
-    });
-
-    htmlSignalWrapperCache.set(htmlSignal, wrapped);
-
-    return { signal: wrapped };
+        return { bindings: entry.bindings, html: entry.html };
+      }),
+    };
   }
 
   return null;

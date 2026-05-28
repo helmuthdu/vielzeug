@@ -117,16 +117,16 @@ export type BitDialogProps = {
 
 export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
   props: {
-    backdrop: undefined,
-    dismissible: false,
-    elevation: undefined,
-    'initial-focus': undefined,
-    label: '',
-    open: false,
-    padding: undefined,
-    persistent: false,
-    'return-focus': true,
-    rounded: undefined,
+    backdrop: prop.string<DialogBackdrop>(),
+    dismissible: prop.bool(false),
+    elevation: prop.string<DialogElevation>(),
+    'initial-focus': prop.string(),
+    label: prop.string(),
+    open: prop.bool(false),
+    padding: prop.string<PaddingSize>(),
+    persistent: prop.bool(false),
+    'return-focus': prop.bool(true),
+    rounded: prop.string<RoundedSize | ''>(),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
   setup(props, { emit, host, slots }) {

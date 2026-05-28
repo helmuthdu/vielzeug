@@ -1,4 +1,4 @@
-import { define, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
+import { define, prop, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -66,9 +66,9 @@ export type BitAccordionProps = {
 
 export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-accordion', {
   props: {
-    selectionMode: undefined,
-    size: undefined,
-    variant: undefined,
+    selectionMode: prop.string<'single' | 'multiple'>(),
+    size: prop.string<ComponentSize>(),
+    variant: prop.string<VisualVariant>(),
   },
 
   setup(props, { emit, host }) {

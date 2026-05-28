@@ -71,15 +71,28 @@ export type BitTextProps = {
 
 export const TEXT_TAG = define<BitTextProps>('bit-text', {
   props: {
-    align: undefined,
-    as: undefined,
-    color: undefined,
+    align: prop.string<'left' | 'center' | 'right' | 'justify'>(),
+    as: prop.string<'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'>(),
+    color: prop.string<
+      | 'primary'
+      | 'secondary'
+      | 'info'
+      | 'success'
+      | 'warning'
+      | 'error'
+      | 'heading'
+      | 'body'
+      | 'muted'
+      | 'tertiary'
+      | 'disabled'
+      | 'contrast'
+    >(),
     italic: prop.bool(),
-    lines: { default: undefined as number | undefined },
-    size: undefined,
+    lines: prop.number(),
+    size: prop.string<'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'>(),
     truncate: prop.bool(),
-    variant: undefined,
-    weight: undefined,
+    variant: prop.string<'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'>(),
+    weight: prop.string<'normal' | 'medium' | 'semibold' | 'bold'>(),
   },
   setup(props, { host }) {
     host.bind({

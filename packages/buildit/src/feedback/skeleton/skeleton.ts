@@ -72,13 +72,13 @@ export type BitSkeletonProps = {
 export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
   props: {
     ...sizableBundle,
-    animated: true,
-    height: undefined,
-    lines: 1,
-    radius: undefined,
-    striped: false,
+    animated: prop.bool(true),
+    height: prop.string(),
+    lines: prop.number(1),
+    radius: prop.string(),
+    striped: prop.bool(false),
     variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
-    width: undefined,
+    width: prop.string(),
   },
   setup(props, { host }) {
     const isPaused = signal(false);

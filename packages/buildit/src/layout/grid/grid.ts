@@ -1,4 +1,4 @@
-import { define, effect, html, onMounted } from '@vielzeug/craftit';
+import { define, effect, html, onMounted, prop } from '@vielzeug/craftit';
 import { resizeObserver } from '@vielzeug/craftit/observers';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
@@ -140,26 +140,28 @@ export type BitGridProps = {
  */
 export const GRID_TAG = define<BitGridProps>('bit-grid', {
   props: {
-    align: undefined,
-    areas: '',
-    areas2xl: '',
-    areasLg: '',
-    areasMd: '',
-    areasSm: '',
-    areasXl: '',
-    cols: undefined,
-    cols2xl: undefined,
-    colsLg: undefined,
-    colsMd: undefined,
-    colsSm: undefined,
-    colsXl: undefined,
-    flow: undefined,
-    fullwidth: false,
-    gap: undefined,
-    justify: undefined,
-    minColWidth: '',
-    responsive: false,
-    rows: undefined,
+    align: prop.string<'start' | 'center' | 'end' | 'stretch' | 'baseline'>(),
+    areas: prop.string(),
+    areas2xl: prop.string(),
+    areasLg: prop.string(),
+    areasMd: prop.string(),
+    areasSm: prop.string(),
+    areasXl: prop.string(),
+    cols: prop.string<ColCount>(),
+    cols2xl: prop.string<ColCount>(),
+    colsLg: prop.string<ColCount>(),
+    colsMd: prop.string<ColCount>(),
+    colsSm: prop.string<ColCount>(),
+    colsXl: prop.string<ColCount>(),
+    flow: prop.string<'row' | 'column' | 'row-dense' | 'column-dense'>(),
+    fullwidth: prop.bool(false),
+    gap: prop.string<'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'>(),
+    justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    minColWidth: prop.string(),
+    responsive: prop.bool(false),
+    rows: prop.string(
+      undefined as '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto' | undefined,
+    ),
   },
 
   setup(props, { host }) {

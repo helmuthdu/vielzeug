@@ -102,16 +102,16 @@ export type BitRadioGroupEvents = {
  */
 export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
   props: {
-    color: undefined,
-    disabled: false,
-    error: undefined,
-    helper: undefined,
-    label: undefined,
-    name: undefined,
+    color: prop.string(),
+    disabled: prop.bool(false),
+    error: prop.string(),
+    helper: prop.string(),
+    label: prop.string(),
+    name: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
-    required: false,
-    size: undefined,
-    value: { default: '', reflect: false }, // managed by host.bind (selectedValue derived state)
+    required: prop.bool(false),
+    size: prop.string(),
+    value: prop.string(),
   },
   setup(props, { emit, host, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');

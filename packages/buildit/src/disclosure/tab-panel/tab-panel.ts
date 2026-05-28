@@ -53,10 +53,10 @@ export type BitTabPanelProps = {
  */
 export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
   props: {
-    active: { default: false, reflect: false },
-    lazy: false,
+    active: prop.bool(false),
+    lazy: prop.bool(false),
     padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
-    value: '',
+    value: prop.string(),
   },
   setup(props, { host }) {
     const tabsCtx = inject(TABS_CTX);

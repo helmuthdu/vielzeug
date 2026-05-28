@@ -102,10 +102,10 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     ...themableBundle,
     ...sizableBundle,
     activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
-    label: undefined,
+    label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
-    value: { default: undefined as string | undefined, reflect: false }, // managed by host.bind (selectedValue derived state)
-    variant: undefined,
+    value: prop.string(undefined),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props, { emit, host }) {
     const shadowRoot = host.el.shadowRoot;

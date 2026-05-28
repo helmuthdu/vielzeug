@@ -1,4 +1,4 @@
-import { define, effect, html, onMounted } from '@vielzeug/craftit';
+import { define, effect, html, onMounted, prop } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -221,11 +221,11 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
   props: {
     ...themableBundle,
     ...sizableBundle,
-    bordered: false,
-    caption: undefined,
-    loading: false,
-    sticky: false,
-    striped: false,
+    bordered: prop.bool(false),
+    caption: prop.string(),
+    loading: prop.bool(false),
+    sticky: prop.bool(false),
+    striped: prop.bool(false),
   },
 
   setup(props, { host }) {

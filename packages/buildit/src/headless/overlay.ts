@@ -72,7 +72,6 @@ export type OverlayControl = {
 // ── Factory ───────────────────────────────────────────────────────────────────
 export const createOverlayControl = (options: OverlayControlOptions): OverlayControl => {
   let positionerCleanup: (() => void) | null = null;
-  let popoverListener: ((event: Event) => void) | null = null;
 
   const shouldRestoreFocus = (): boolean => {
     if (typeof options.restoreFocus === 'function') return options.restoreFocus();
@@ -110,41 +109,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     if (options.isDisabled?.() || options.isOpen()) return;
 
     options.setOpen(true, reason);
-
-    // Popover API progressive enhancement — use native light-dismiss when
-    // available instead of a capture-phase document click listener.
-    const panel = options.getPanel?.();
-
-    if (panel && 'showPopover' in panel) {
-      const htmlPanel = panel as HTMLElement & { hidePopover(): void; showPopover(): void };
-
-      if (!panel.hasAttribute('popover')) panel.setAttribute('popover', 'auto');
-
-      const onToggle = (e: Event): void => {
-        const te = e as Event & { newState?: string };
-
-        if (te.newState === 'closed') {
-          panel.removeEventListener('toggle', onToggle);
-          popoverListener = null;
-
-          if (options.isOpen()) close('outsideClick');
-        }
-      };
-
-      popoverListener = onToggle;
-      panel.addEventListener('toggle', onToggle);
-
-      try {
-        htmlPanel.showPopover();
-      } catch {
-        // showPopover() not available or blocked — fall back to document click.
-        panel.removeEventListener('toggle', onToggle);
-        popoverListener = null;
-        registerClickListener(true);
-      }
-    } else {
-      registerClickListener(true);
-    }
+    registerClickListener(true);
 
     if (options.positioner) {
       options.positioner.update();
@@ -154,36 +119,10 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     options.onOpen?.(reason);
   };
 
-  const teardownPopover = (): void => {
-    if (!popoverListener) return;
-
-    const panel = options.getPanel?.();
-
-    if (panel) {
-      panel.removeEventListener('toggle', popoverListener);
-
-      // hidePopover() may throw if the element is already hidden. Guard it.
-      if ('hidePopover' in panel) {
-        try {
-          (panel as HTMLElement & { hidePopover(): void }).hidePopover();
-        } catch {
-          // Already hidden — no action needed.
-        }
-      }
-    }
-
-    popoverListener = null;
-  };
-
   const close = (reason: OverlayCloseReason = 'programmatic', restoreFocus?: boolean): void => {
     if (!options.isOpen()) return;
 
     options.setOpen(false, reason);
-
-    // Clean up Popover API listener if active. The listener may have already
-    // been removed by native light-dismiss detection in the toggle listener.
-    teardownPopover();
-
     registerClickListener(false);
 
     if (positionerCleanup) {
@@ -211,8 +150,6 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     if (options.isOpen()) close('programmatic', false);
 
     registerClickListener(false);
-
-    teardownPopover();
 
     if (positionerCleanup) {
       positionerCleanup();

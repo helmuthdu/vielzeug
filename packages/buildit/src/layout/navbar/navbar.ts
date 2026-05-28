@@ -10,6 +10,7 @@ import {
   signal,
   type ReadonlySignal,
   watch,
+  prop,
 } from '@vielzeug/craftit';
 import { resizeObserver } from '@vielzeug/craftit/observers';
 
@@ -125,7 +126,7 @@ export type BitNavbarProps = {
   /** Evaluate mobile breakpoint against container width only when possible. */
   'container-breakpoints'?: boolean;
   /** Shadow elevation level (0-5) */
-  elevation?: `${ElevationLevel}`;
+  elevation?: ElevationLevel;
   /** Start as detached floating navbar */
   floating?: boolean;
   /** Accessible nav landmark label */
@@ -211,17 +212,17 @@ export type BitNavbarItemProps = {
  */
 export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', {
   props: {
-    breakpoint: '(max-width: 768px)',
-    color: undefined,
-    'container-breakpoints': false,
-    elevation: undefined,
-    floating: false,
-    label: 'Main navigation',
-    'mobile-sidebar': undefined,
-    rounded: undefined,
-    'scroll-threshold': 80,
-    sticky: false,
-    variant: undefined,
+    breakpoint: prop.string('(max-width: 768px)'),
+    color: prop.string<ThemeColor>(),
+    'container-breakpoints': prop.bool(false),
+    elevation: prop.json(undefined as ElevationLevel | undefined),
+    floating: prop.bool(false),
+    label: prop.string('Main navigation'),
+    'mobile-sidebar': prop.string(),
+    rounded: prop.string<RoundedSize>(),
+    'scroll-threshold': prop.number(80),
+    sticky: prop.bool(false),
+    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost' | 'glass'>(),
   },
   setup(props, { emit, host, slots }) {
     const hasLogo = () => slots.has('logo').value;
@@ -664,11 +665,11 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
  */
 export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
   props: {
-    active: false,
-    disabled: false,
-    href: undefined,
-    rel: undefined,
-    target: undefined,
+    active: prop.bool(false),
+    disabled: prop.bool(false),
+    href: prop.string(),
+    rel: prop.string(),
+    target: prop.string(),
   },
   setup(props, { host, slots }) {
     const hasIcon = () => slots.has('icon').value;

@@ -17,6 +17,7 @@ The [REPL](/repl.html) lets you run any package in the browser without installin
 
 - [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Validit + Formit + Fetchit
 - [State and Routing](./state-and-routing.md) - Stateit + Routeit
+- [State Machines in Practice](/machinit/examples/) - Machinit integration examples
 
 ## Install a Package
 
@@ -273,11 +274,39 @@ const unchanged = isEqual(prev, next);
 
 ---
 
+### State Machines — [Machinit](/machinit/)
+
+Typed finite state machines with discriminated event unions, guard conditions, async invokes with cancellation, and reactive state/context as Stateit signals.
+
+```typescript
+import { defineMachine, interpret, assign } from '@vielzeug/machinit';
+
+type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
+
+const authMachine = defineMachine({
+  initial: 'idle',
+  context: { token: '' },
+  states: {
+    idle: { on: { LOGIN: [{ target: 'active', actions: [assign(({ event }) => ({ token: event.token }))] }] } },
+    active: { on: { LOGOUT: [{ target: 'idle', actions: [assign(() => ({ token: '' }))] }] } },
+  },
+});
+
+const auth = interpret(authMachine);
+auth.send({ type: 'LOGIN', token: 'abc123' });
+console.log(auth.state.value); // 'active'
+```
+
+**Start here if** you need predictable state transitions with strict type safety and reactive UI binding.
+
+---
+
 ### Other Packages
 
 | Package                  | What it does                                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | **[Logit](/logit/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
+| **[Machinit](/machinit/)** | Typed finite state machines with guards, async invokes, context signals, and persistence        |
 | **[i18nit](/i18nit/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
 | **[Eventit](/eventit/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
 | **[Workit](/workit/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
@@ -301,6 +330,9 @@ const unchanged = isEqual(prev, next);
 | **Virtualit + Floatit**     | Render a virtualised list inside a Floatit-positioned dropdown for high-item-count comboboxes            |
 | **Dragit + Virtualit**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
 | **Sourceit + Routeit**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
+| **Machinit + Stateit**      | Machine state and context are ReadonlySignals — bind them directly to effects or UI templates            |
+| **Machinit + Permit**       | Call permit predicates inside machine guards to block unauthorized transitions                           |
+| **Machinit + Eventit**      | Publish state-change events to decouple multiple machines from each other                                |
 
 ## Philosophy
 

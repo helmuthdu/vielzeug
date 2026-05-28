@@ -1,4 +1,4 @@
-import { define, html } from '@vielzeug/craftit';
+import { define, html, prop } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -89,11 +89,11 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
     ...themableBundle,
     ...sizableBundle,
     ...roundableBundle,
-    accented: false,
-    dismissible: false,
-    heading: '',
-    horizontal: false,
-    variant: undefined as 'solid' | 'flat' | 'bordered' | undefined,
+    accented: prop.bool(false),
+    dismissible: prop.bool(false),
+    heading: prop.string(),
+    horizontal: prop.bool(false),
+    variant: prop.string<'solid' | 'flat' | 'bordered'>(),
   },
   setup(props, { emit, host, slots }) {
     const handleDismiss = (e: MouseEvent) => {

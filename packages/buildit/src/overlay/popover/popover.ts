@@ -79,9 +79,9 @@ export type BitPopoverProps = {
 export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
   props: {
     ...disablableBundle,
-    label: undefined,
-    offset: PANEL_OFFSET,
-    open: undefined,
+    label: prop.string(),
+    offset: prop.number(PANEL_OFFSET),
+    open: prop.json(undefined as boolean | undefined),
     placement: prop.oneOf(
       [
         'top',
@@ -99,7 +99,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       ] as const,
       'bottom',
     ),
-    trigger: 'click',
+    trigger: prop.string('click'),
   },
   setup(props, { emit, host, slots }) {
     const visible = signal(false);

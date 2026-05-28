@@ -124,7 +124,7 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
 
 export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
   props: {
-    max: 5,
+    max: prop.number(5),
     position: prop.oneOf(
       ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'] as const,
       'bottom-right',

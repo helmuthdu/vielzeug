@@ -1,4 +1,4 @@
-import { define, html, onMounted } from '../index';
+import { define, html, onMounted, prop } from '../index';
 import { mount, waitForEvent } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
@@ -102,11 +102,11 @@ describe('component slots and emit', () => {
     expect(event.composed).toBe(false);
   });
 
-  it('infers emit and prop signals from schema + raw defaults', async () => {
+  it('infers emit and prop signals from schema + prop.* helpers', async () => {
     const tag = uniqueTag('test-schema-events');
     const toggleProps = {
-      checked: false,
-      label: 'Toggle',
+      checked: prop.bool(false),
+      label: prop.string('Toggle'),
     };
 
     define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }, typeof toggleProps>(tag, {

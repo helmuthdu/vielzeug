@@ -1,4 +1,4 @@
-import { define, computed, effect, html, inject } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, inject } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -58,12 +58,12 @@ export type BitTabItemProps = {
  */
 export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
   props: {
-    active: { default: false, reflect: false },
-    color: undefined,
-    disabled: false,
-    size: undefined,
-    value: '',
-    variant: undefined,
+    active: prop.bool(false),
+    color: prop.string<ThemeColor>(),
+    disabled: prop.bool(false),
+    size: prop.string<ComponentSize>(),
+    value: prop.string(),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props, { host }) {
     const tabsCtx = inject(TABS_CTX);

@@ -1,6 +1,5 @@
-import { define, html, inject, onCleanup, provide, ref, refs } from '../index';
+import { define, getCurrentElement, html, inject, onCleanup, prop, provide, ref, refs } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
-import { currentElementOrThrow } from '../runtime';
 import { mount } from '../testing';
 
 describe('component helpers and exports', () => {
@@ -13,9 +12,9 @@ describe('component helpers and exports', () => {
         attrs: { count: '42', label: 'custom' },
         componentOptions: {
           props: {
-            active: { default: true, reflect: false },
-            count: 0,
-            label: 'default',
+            active: prop.bool(true),
+            count: prop.number(0),
+            label: prop.string('default'),
           },
         },
       },
@@ -25,13 +24,13 @@ describe('component helpers and exports', () => {
     expect(query('.label')?.textContent).toBe('custom');
   });
 
-  it('supports inline object defaults containing a default key', async () => {
+  it('supports complex object defaults using prop.json()', async () => {
     const configDefault = { default: 'fallback', mode: 'dark' };
 
     const { query } = await mount((props) => html`<div class="mode">${() => props.config.value?.mode ?? ''}</div>`, {
       componentOptions: {
         props: {
-          config: { default: configDefault as { default: string; mode: string } | undefined, reflect: false },
+          config: prop.json(configDefault as { default: string; mode: string } | undefined),
         },
       },
     });
@@ -43,7 +42,7 @@ describe('component helpers and exports', () => {
     let elementInstance: HTMLElement | undefined;
 
     const { element } = await mount(() => {
-      elementInstance = currentElementOrThrow();
+      elementInstance = getCurrentElement();
 
       expect(onCleanup).toBeDefined();
       expect(provide).toBeDefined();

@@ -15,6 +15,15 @@ export {
 
 export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
+export { ComponentPhase, isValidTransition, type LifecycleTransition } from './lifecycle';
+
+export {
+  createRuntimeError,
+  reportRuntimeError,
+  type CraftitErrorKind,
+  type CraftitRuntimeError,
+} from './errors';
+
 export {
   define,
   LIFECYCLE_EVENTS,
@@ -26,11 +35,21 @@ export {
   type PropDef,
   type PropInputDefs,
   type PropsDef,
-  type PropOptions,
   type SetupContextBag,
 } from './registration';
 
-export { defineField, type FormFieldHandle, type FormFieldOptions } from './form';
+export {
+  createForm,
+  defineField,
+  FORM_CONTEXT_KEY,
+  provideFormContext,
+  useFormContext,
+  type FormContextValue,
+  type FormFieldHandle,
+  type FormFieldOptions,
+} from './form';
+
+export { suspend, type SuspendOptions } from './suspend';
 
 export { createContext, inject, injectStrict, provide, type InjectionKey } from './context';
 
