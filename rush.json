@@ -137,6 +137,12 @@
       "projectFolder": "packages/mcpit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/machinit",
+      "projectFolder": "packages/machinit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

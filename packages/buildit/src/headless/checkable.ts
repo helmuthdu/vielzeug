@@ -1,4 +1,4 @@
-import { type ReadonlySignal, type Signal, computed, effect, signal, syncedSignal } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, computed, signal, syncedSignal } from '@vielzeug/stateit';
 
 import type { ValidationTrigger } from './field-base';
 
@@ -31,7 +31,7 @@ export type CheckableOptions = FieldCoreOptions & {
    * effects are torn down automatically on `abort()` and `cleanup()` becomes
    * a no-op.
    *
-   * Obtain via `createHeadlessScope(onCleanup).signal` inside a craftit `setup()` function.
+   * Obtain via `toAbortSignal(onCleanup)` inside a craftit `setup()` function.
    */
   signal?: AbortSignal;
   value: ReadonlySignal<string | undefined>;
@@ -42,6 +42,7 @@ export type CheckableHandle = {
   /** The stable `id` for the assistive-text region (used for `aria-describedby`). */
   assistiveId: string;
   bindFormField: (field: { reportValidity(): void }) => void;
+  /** @internal Used by `connectFormField` to bind the native form field. */
   /** The form submission value: null when unchecked/indeterminate, the value string when checked. */
   checkableFormValue: ReadonlySignal<string | null>;
   checked: Signal<boolean>;
@@ -69,6 +70,7 @@ export type CheckableHandle = {
   setLabelEl: (el: HTMLElement | null) => void;
   toggle: (event: Event) => void;
   triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
+  /** @internal Used by form context to trigger validation on submit. */
 };
 
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
@@ -132,9 +134,9 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   // Set the ARIA role once — it is static for a given checkable instance.
   options.host.setAttribute('role', options.role);
 
-  // Unified reactive ARIA sync via createA11yHost. Re-runs whenever any tracked
-  // signal changes. _labelEl is reactive so aria-labelledby updates the moment
-  // the label element is mounted via setLabelEl().
+  // Unified reactive ARIA sync + helper ID stamping via createA11yHost.
+  // Re-runs whenever any tracked signal changes. _labelEl and _helperEl are
+  // reactive so their effects fire automatically when the elements mount.
   const { stop: stopAriaEffect } = createA11yHost(options.host, {
     aria: {
       'aria-checked': () =>
@@ -151,20 +153,18 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
         return el?.id ?? undefined;
       },
     },
+    run: () => {
+      // Stamp the helper element's stable ID so aria-describedby resolves
+      // even when assistive text is absent (pure ID reservation).
+      const el = _helperEl.value;
+
+      if (el && !el.id) el.id = assistiveId;
+    },
     signal: options.signal,
-  });
-
-  // Separate small effect to stamp the helper element's stable ID even when
-  // there is no assistive text (the ARIA effect only tracks what it reads).
-  const stopHelperIdEffect = effect(() => {
-    const el = _helperEl.value;
-
-    if (el && !el.id) el.id = assistiveId;
   });
 
   const cleanup = (): void => {
     stopAriaEffect();
-    stopHelperIdEffect();
   };
 
   options.signal?.addEventListener('abort', cleanup, { once: true });

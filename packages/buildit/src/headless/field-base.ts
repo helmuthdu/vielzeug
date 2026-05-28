@@ -1,5 +1,6 @@
 import { computed, type ReadonlySignal, signal } from '@vielzeug/stateit';
 
+import { createA11yHost } from './a11y-host';
 import { createStableId } from './id';
 
 // ── Validation / context types ────────────────────────────────────────────────
@@ -172,8 +173,7 @@ export type FieldBaseOptions = FieldCoreOptions & {
   labelPlacement?: ReadonlySignal<LabelPlacement>;
 };
 
-// Internal alias used by text-field.ts and choice-field.ts
-export type FieldOptions = FieldBaseOptions;
+
 
 // ── Field handle ──────────────────────────────────────────────────────────────
 
@@ -184,6 +184,21 @@ export type FieldOptions = FieldBaseOptions;
 export type FieldHandle = FieldCore & {
   /** Reactive ARIA attribute signals for the underlying input element. */
   aria: FieldAriaState;
+  /**
+   * Applies reactive ARIA bindings from `field.aria` to `element` in a single
+   * `createA11yHost` effect. Wires `aria-labelledby`, `aria-describedby`,
+   * `aria-errormessage`, and `aria-invalid`.
+   *
+   * Pass `signal` for automatic teardown, or call the returned stop function
+   * manually.
+   *
+   * @example
+   * ```ts
+   * // Inside onElement:
+   * onElement(inputRef, (el) => field.applyAria(el, signal));
+   * ```
+   */
+  applyAria: (element: Element, signal?: AbortSignal) => () => void;
   /** Reactive error + helper assistive text. */
   assistive: ReadonlySignal<ErrorHelperState>;
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
@@ -197,11 +212,12 @@ export type FieldHandle = FieldCore & {
  * single `FieldHandle`. Both `createTextField` and `createChoiceField` build
  * on top of this.
  *
- * Pass a custom `assistive` signal to override the default `ErrorHelperState`
- * (e.g. `createAssistiveState(...)` for the richer counter-aware state used by
- * text fields).
+ * @param customAssistive - Optional override for the assistive-text signal.
+ *   Pass `createAssistiveState(...)` to use the richer counter-aware state
+ *   (as `createTextField` does), or any other `ReadonlySignal<ErrorHelperState>`
+ *   for fully custom assistive content. Defaults to a plain `ErrorHelperState`.
  */
-export const createField = (options: FieldOptions, assistive?: ReadonlySignal<ErrorHelperState>): FieldHandle => {
+export const createField = (options: FieldBaseOptions, customAssistive?: ReadonlySignal<ErrorHelperState>): FieldHandle => {
   const core = createFieldCore(options);
   const insetId = createStableId('label');
   const outsideId = `${insetId}-outside`;
@@ -210,7 +226,7 @@ export const createField = (options: FieldOptions, assistive?: ReadonlySignal<Er
   const label$ = options.label ?? computed(() => undefined);
   const placement$ = options.labelPlacement ?? computed(() => 'inset' as LabelPlacement);
 
-  const resolvedAssistive = assistive ?? createErrorHelperState({ error: options.error, helper: options.helper });
+  const resolvedAssistive = customAssistive ?? createErrorHelperState({ error: options.error, helper: options.helper });
 
   const label: LabelState = {
     inset: {
@@ -236,5 +252,16 @@ export const createField = (options: FieldOptions, assistive?: ReadonlySignal<Er
     }),
   };
 
-  return { ...core, aria, assistive: resolvedAssistive, errorId, label };
+  const applyAria = (element: Element, signal?: AbortSignal): (() => void) =>
+    createA11yHost(element, {
+      aria: {
+        'aria-describedby': () => aria.describedBy.value,
+        'aria-errormessage': () => aria.errorMessage.value,
+        'aria-invalid': () => aria.invalid.value,
+        'aria-labelledby': () => aria.labelledBy.value,
+      },
+      signal,
+    }).stop;
+
+  return { ...core, applyAria, aria, assistive: resolvedAssistive, errorId, label };
 };

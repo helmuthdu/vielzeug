@@ -15,7 +15,11 @@ import { type BaseOptionItem, type OptionListHandle, type OptionListOptions, cre
 export type CompositeControlHandle<T extends BaseOptionItem> = {
   /** ChoiceField handle — field state, validation, assistive text. */
   choice: ChoiceFieldHandle;
-  /** Call on component teardown to release all event listeners and effects. */
+  /**
+   * Call on component teardown to release all event listeners and effects.
+   * No-op when a `signal` was provided in `CompositeOptions` — cleanup is
+   * already wired automatically via `AbortSignal`.
+   */
   cleanup: () => void;
   /** OptionList handle — open/close, navigation, positioner. */
   optionList: OptionListHandle<T>;
@@ -24,6 +28,12 @@ export type CompositeControlHandle<T extends BaseOptionItem> = {
 export type CompositeOptions<T extends BaseOptionItem> = {
   field: ChoiceFieldOptions;
   listFactory: (choice: ChoiceFieldHandle) => OptionListOptions<T>;
+  /**
+   * Optional lifecycle signal. When provided, both the choice field and option
+   * list tear down automatically on abort — no manual `onCleanup(cleanup)` call
+   * is required.
+   */
+  signal?: AbortSignal;
 };
 
 /**
@@ -51,7 +61,7 @@ export type CompositeOptions<T extends BaseOptionItem> = {
 export const createComposite = <T extends BaseOptionItem>(options: CompositeOptions<T>): CompositeControlHandle<T> => {
   const choice = createChoiceField(options.field);
   const listOptions = options.listFactory(choice);
-  const optionList = createOptionList<T>(listOptions);
+  const optionList = createOptionList<T>({ ...listOptions, signal: options.signal });
 
   return {
     choice,

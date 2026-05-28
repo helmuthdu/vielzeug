@@ -2,7 +2,7 @@ import { define, defineField, html, inject, onCleanup } from '@vielzeug/craftit'
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, createCheckable, createHeadlessScope } from '../../headless';
+import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
 import { SWITCH_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
 import { connectFormField } from '../shared/connect-form-field';
@@ -98,7 +98,7 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       },
       prefix: 'switch',
       role: 'switch',
-      signal: createHeadlessScope(onCleanup).signal,
+      signal: toAbortSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });

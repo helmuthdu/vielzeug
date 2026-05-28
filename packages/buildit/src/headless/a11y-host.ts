@@ -3,15 +3,18 @@ import { effect } from '@vielzeug/stateit';
 // ── A11y Host ─────────────────────────────────────────────────────────────────
 //
 // Declarative reactive manager that keeps ARIA attributes, HTML attributes,
-// and DOM properties in sync with signal-driven getter functions. Combines
-// everything into a single effect for minimal reactive overhead.
+// and DOM properties in sync with signals. Combines everything into a single
+// effect for minimal reactive overhead.
+//
+// Values can be static (resolved once, no tracking) or reactive getter functions
+// (re-evaluated on every effect run, tracking their signal reads automatically).
 //
 // Usage:
 // ```ts
 // const { stop } = createA11yHost(host.el, {
 //   aria: {
 //     'aria-expanded': () => isOpen.value ? 'true' : 'false',
-//     'aria-controls': () => listboxId,
+//     'aria-controls': listboxId,          // static — set once
 //     'aria-disabled': () => disabled.value ? 'true' : null,
 //   },
 //   attrs: {
@@ -20,23 +23,45 @@ import { effect } from '@vielzeug/stateit';
 //   props: {
 //     tabIndex: () => disabled.value ? -1 : 0,
 //   },
+//   run: () => {
+//     // extra reactive side-effects in the same effect
+//   },
 //   signal,
 // });
 // ```
 
-/** Getter map for string-valued HTML attributes. Return `null` or `undefined` to remove the attribute. */
-export type AttrGetterMap = Record<string, () => string | null | undefined>;
+/**
+ * An attribute value: a static string/null/undefined, or a reactive getter
+ * function. Return `null` or `undefined` to remove the attribute.
+ */
+export type AttrValue = string | null | undefined | (() => string | null | undefined);
 
-/** Getter map for DOM properties. Any value type is supported. */
-export type PropGetterMap = Record<string, () => unknown>;
+/**
+ * A DOM property value: a static value, or a reactive getter function.
+ * A function is treated as a getter — if you need to set a function as an actual
+ * property value, wrap it: `() => myFn`.
+ */
+export type PropValue = unknown | (() => unknown);
+
+/** Map of attribute names to static values or reactive getter functions. */
+export type AttrMap = Record<string, AttrValue>;
+
+/** Map of DOM property names to static values or reactive getter functions. */
+export type PropMap = Record<string, PropValue>;
 
 export type A11yHostOptions = {
-  /** Reactive `aria-*` attribute getters. Rendered under the same effect as `attrs`. */
-  aria?: AttrGetterMap;
-  /** Reactive non-ARIA attribute getters (e.g. `data-open`, `tabindex`). */
-  attrs?: AttrGetterMap;
-  /** Reactive DOM property setters (e.g. `tabIndex`, `value`, `indeterminate`). */
-  props?: PropGetterMap;
+  /** Reactive or static `aria-*` attribute values. Rendered in the same effect as `attrs`. */
+  aria?: AttrMap;
+  /** Reactive or static non-ARIA attribute values (e.g. `data-open`, `tabindex`). */
+  attrs?: AttrMap;
+  /** Reactive or static DOM property values (e.g. `tabIndex`, `value`, `indeterminate`). */
+  props?: PropMap;
+  /**
+   * Optional extra side-effects to run inside the same reactive effect as the
+   * attribute/property sync. Useful for stamping IDs or any other DOM mutation
+   * that should re-run when the same signals change.
+   */
+  run?: () => void;
   /** Optional lifecycle signal — stops all sync effects automatically when aborted. */
   signal?: AbortSignal;
 };
@@ -46,13 +71,19 @@ export type A11yHost = {
   stop: () => void;
 };
 
+const resolveAttr = (value: AttrValue): string | null | undefined =>
+  typeof value === 'function' ? value() : value;
+
+const resolveProp = (value: PropValue): unknown =>
+  typeof value === 'function' ? value() : value;
+
 /**
  * Creates a reactive manager that keeps a set of ARIA attributes, HTML
- * attributes, and DOM properties in sync with signal-driven getter functions.
+ * attributes, and DOM properties in sync with signals.
  *
  * All getters run in a single `effect` — attribute and property reads are
  * automatically tracked. When any tracked signal changes, the effect re-runs
- * and the DOM is updated.
+ * and the DOM is updated. Static values are applied on the first run only.
  *
  * Pass `signal` for automatic teardown, or call `stop()` manually.
  *
@@ -61,6 +92,7 @@ export type A11yHost = {
  * const { stop } = createA11yHost(host.el, {
  *   aria: {
  *     'aria-checked': () => checked.value ? 'true' : 'false',
+ *     'aria-controls': listboxId,   // static
  *     'aria-disabled': () => disabled.value ? 'true' : null,
  *   },
  *   props: { tabIndex: () => disabled.value ? -1 : 0 },
@@ -72,24 +104,26 @@ export const createA11yHost = (element: Element, options: A11yHostOptions): A11y
   const attrEntries = [
     ...Object.entries(options.aria ?? {}),
     ...Object.entries(options.attrs ?? {}),
-  ] as [string, () => string | null | undefined][];
+  ] as [string, AttrValue][];
 
-  const propEntries = Object.entries(options.props ?? {}) as [string, () => unknown][];
+  const propEntries = Object.entries(options.props ?? {}) as [string, PropValue][];
 
   const stop = effect(() => {
-    for (const [attr, getter] of attrEntries) {
-      const value = getter();
+    for (const [attr, value] of attrEntries) {
+      const resolved = resolveAttr(value);
 
-      if (value != null) {
-        element.setAttribute(attr, value);
+      if (resolved != null) {
+        element.setAttribute(attr, resolved);
       } else {
         element.removeAttribute(attr);
       }
     }
 
-    for (const [prop, getter] of propEntries) {
-      (element as unknown as Record<string, unknown>)[prop] = getter();
+    for (const [prop, value] of propEntries) {
+      (element as unknown as Record<string, unknown>)[prop] = resolveProp(value);
     }
+
+    options.run?.();
   });
 
   options.signal?.addEventListener('abort', stop, { once: true });

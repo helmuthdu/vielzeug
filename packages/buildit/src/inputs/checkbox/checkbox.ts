@@ -2,7 +2,7 @@ import { computed, define, defineField, html, inject, onCleanup } from '@vielzeu
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, createCheckable, createHeadlessScope } from '../../headless';
+import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
 import '../../content/icon/icon';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
@@ -117,7 +117,7 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       },
       prefix: 'checkbox',
       role: 'checkbox',
-      signal: createHeadlessScope(onCleanup).signal,
+      signal: toAbortSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });

@@ -19,7 +19,7 @@ import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import type { VisualVariant } from '../../types';
 
-import { createComposite } from '../../headless';
+import { createComposite, toAbortSignal } from '../../headless';
 import {
   FIELD_SIZE_PRESET,
   disablableBundle,
@@ -196,7 +196,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
 
-    const { choice, cleanup, optionList } = createComposite<OptionItem>({
+    const abortSignal = toAbortSignal(onCleanup);
+    const { choice, optionList } = createComposite<OptionItem>({
       field: {
         disabled: fCtxProps.disabled,
         error: props.error,
@@ -223,6 +224,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         },
         onOpen: (reason) => emit('open', { reason }),
       }),
+      signal: abortSignal,
     });
 
     const assistiveText = choice.assistive;
@@ -452,8 +454,6 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         if (triggerEl && onTriggerKeydown) triggerEl.removeEventListener('keydown', onTriggerKeydown);
       };
     });
-
-    onCleanup(cleanup);
 
     return html`<slot style="display:none"></slot>
       <div class="select-wrapper">

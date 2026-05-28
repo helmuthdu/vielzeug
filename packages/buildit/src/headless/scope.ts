@@ -1,55 +1,24 @@
-// ── Headless scope ────────────────────────────────────────────────────────────
-//
-// A lightweight lifecycle scope that bridges a framework's cleanup hook to the
-// standard `AbortSignal` API used by all headless primitives.
-//
-// Usage:
-// ```ts
-// define('bit-checkbox', {
-//   setup(props, { host, onCleanup }) {
-//     const { signal } = createHeadlessScope(onCleanup);
-//     const checkable = createCheckable({ signal, host: host.el, ... });
-//   },
-// });
-// ```
-
-export type HeadlessScope = {
-  /**
-   * Manual cleanup trigger — aborts the signal immediately. Equivalent to what
-   * happens automatically when the framework calls the registered `onCleanup`
-   * function. Safe to call multiple times.
-   */
-  cleanup: () => void;
-  /**
-   * `AbortSignal` that fires when the scope is torn down. Pass to any headless
-   * primitive that accepts `signal?: AbortSignal` to wire automatic cleanup.
-   */
-  signal: AbortSignal;
-};
+// ── Lifecycle → AbortSignal bridge ──────────────────────────────────────────
 
 /**
- * Creates a lifecycle-aware scope for headless primitives.
+ * Converts a framework cleanup hook to a standard `AbortSignal`.
  *
- * Pass the returned `signal` to any headless primitive that accepts
- * `signal?: AbortSignal`. The signal is aborted — and all registered
- * primitives cleaned up — when the framework lifecycle calls the registered
- * `onCleanup` function.
+ * Call inside a craftit `setup()` function and pass the returned signal to any
+ * headless primitive that accepts `signal?: AbortSignal`. The signal is aborted
+ * automatically when the framework triggers the registered `onCleanup` callback.
  *
  * @example
  * ```ts
- * const { signal } = createHeadlessScope(onCleanup);
- * const overlay   = createOverlayControl({ signal, ... });
- * const optList   = createOptionList({ signal, ... });
- * // All torn down automatically when onCleanup fires.
+ * define('bit-checkbox', {
+ *   setup(props, { host }) {
+ *     const signal = toAbortSignal(onCleanup);
+ *     const checkable = createCheckable({ signal, host: host.el, ... });
+ *   },
+ * });
  * ```
  */
-export const createHeadlessScope = (onCleanup: (fn: () => void) => void): HeadlessScope => {
+export const toAbortSignal = (onCleanup: (fn: () => void) => void): AbortSignal => {
   const controller = new AbortController();
-
   onCleanup(() => controller.abort());
-
-  return {
-    cleanup: () => controller.abort(),
-    signal: controller.signal,
-  };
+  return controller.signal;
 };

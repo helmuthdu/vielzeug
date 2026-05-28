@@ -1,9 +1,8 @@
-import { define, defineField, effect, html, inject, live, onElement, prop, ref } from '@vielzeug/craftit';
+import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craftit';
 
 import type { TextFieldProps } from '../../shared/config';
 import type { VisualVariant } from '../../types';
 
-import { createTextField } from '../../headless';
 import {
   TEXTAREA_SIZE_PRESET,
   disablableBundle,
@@ -20,7 +19,7 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
+import { useTextField } from '../shared/use-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './textarea.css?inline';
 
@@ -130,7 +129,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       textareaEl.style.height = `${textareaEl.scrollHeight}px`;
     };
 
-    const tf = createTextField({
+    const tf = useTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
@@ -147,10 +146,8 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       prefix: 'textarea',
       validateOn: formCtx?.validateOn,
       value: props.value,
-    });
+    }, defineField, onCleanup);
     const { assistive, assistiveId, fieldId: textareaId } = tf;
-
-    connectFormField(tf, defineField, tf.value, (v) => v);
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);

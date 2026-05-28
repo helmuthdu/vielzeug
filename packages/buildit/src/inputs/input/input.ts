@@ -3,7 +3,6 @@ import { define, defineField, html, inject, live, onCleanup, onElement, prop, re
 import type { TextFieldProps } from '../../shared/config';
 import type { InputType, VisualVariant } from '../../types';
 
-import { createHeadlessScope, createTextField } from '../../headless';
 import '../../content/icon/icon';
 import {
   FIELD_SIZE_PRESET,
@@ -21,8 +20,8 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { useTextField } from '../shared/use-field';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
@@ -148,11 +147,10 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(host, props, formCtx);
-    const fieldSignal = createHeadlessScope(onCleanup).signal;
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
-    const tf = createTextField({
+    const tf = useTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
@@ -168,8 +166,9 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       prefix: 'input',
       validateOn: formCtx?.validateOn,
       value: props.value,
-    });
+    }, defineField, onCleanup);
     const {
+      signal: abortSignal,
       assistive,
       clear: clearValue,
       errorId,
@@ -180,10 +179,8 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     } = tf;
 
     onElement(inputRef, (el) => {
-      wire(el, fieldSignal);
+      wire(el, abortSignal);
     });
-
-    connectFormField(tf, defineField, fieldValue, (v) => v);
 
     const clear = (event?: Event): void => {
       clearValue(event);

@@ -84,7 +84,7 @@ export type OptionListOptions<T extends BaseOptionItem> = {
    * removing event listeners. This replaces the need to call `cleanup()` manually
    * or to thread craftit lifecycle hooks through via `lifecycle`.
    *
-   * Obtain via `lifecycleSignal(onCleanup)` inside a craftit `setup()` function.
+   * Obtain via `toAbortSignal(onCleanup)` inside a craftit `setup()` function.
    */
   signal?: AbortSignal;
 };

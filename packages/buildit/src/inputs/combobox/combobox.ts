@@ -3,7 +3,7 @@ import { computed, define, defineField, effect, html, inject, onCleanup, prop, s
 import type { AddEventListeners } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
-import { createComposite, createInteraction, type OverlayCloseReason, type OverlayOpenReason } from '../../headless';
+import { createComposite, createInteraction, toAbortSignal, type OverlayCloseReason, type OverlayOpenReason } from '../../headless';
 import { FIELD_SIZE_PRESET } from '../../shared/config';
 import {
   coarsePointerMixin,
@@ -725,8 +725,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
                 :aria-controls="${() => `${comboId}-listbox`}"
                 :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
                 :aria-expanded="${() => String(isOpen.value)}"
-                :aria-describedby="${() => (props.error.value || props.helper.value ? assistiveId : null)}"
-                :aria-invalid="${() => (props.error.value ? 'true' : null)}"
+                :aria-describedby="${choice.aria.describedBy}"
+                :aria-invalid="${choice.aria.invalid}"
                 :aria-labelledby="${() => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null)}"
                 :disabled="${isDisabled}"
                 @input=${handleInput}

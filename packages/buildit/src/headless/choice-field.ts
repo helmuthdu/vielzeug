@@ -5,7 +5,7 @@ import {
   type ErrorHelperState,
   type FieldAriaState,
   type FieldHandle,
-  type FieldOptions,
+  type FieldBaseOptions,
   type LabelState,
 } from './field-base';
 
@@ -19,7 +19,7 @@ export type ChoiceChangeDetail = {
 
 // ── Choice field ──────────────────────────────────────────────────────────────────────
 
-export type ChoiceFieldOptions = FieldOptions & {
+export type ChoiceFieldOptions = FieldBaseOptions & {
   multiple?: ReadonlySignal<boolean | undefined>;
   /**
    * Current selection value(s). Accepts a comma-separated string

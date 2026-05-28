@@ -4,10 +4,8 @@ import {
   createAssistiveState,
   createField,
   type AssistiveState,
-  type FieldAriaState,
+  type FieldBaseOptions,
   type FieldHandle,
-  type FieldOptions,
-  type LabelState,
   type ValidationTrigger,
 } from './field-base';
 
@@ -72,7 +70,7 @@ const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => voi
 /** Detach function returned by `wire()`. Call to remove element listeners. */
 export type TextFieldDetach = () => void;
 
-export type TextFieldOptions = FieldOptions & {
+export type TextFieldOptions = FieldBaseOptions & {
   maxLength?: ReadonlySignal<number | undefined>;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
@@ -84,16 +82,12 @@ export type TextFieldOptions = FieldOptions & {
 
 export type TextFieldHandle = FieldHandle & {
   /**
-   * Reactive ARIA attribute signals — bind directly to the `<input>` element.
-   * Overrides `FieldHandle.aria` with a typed `AssistiveState` dependency.
+   * Narrows `FieldHandle.assistive` to the richer `AssistiveState` (which
+   * extends `ErrorHelperState` with `counter` and `maxLength` fields).
    */
-  aria: FieldAriaState;
-  /** Full assistive state including counter. Overrides `FieldHandle.assistive`. */
   assistive: ReadonlySignal<AssistiveState>;
   /** Clears the field value and fires synthetic input/change events. */
   clear: (event?: Event) => void;
-  /** Nested label state with stable IDs and reactive show signals. */
-  label: LabelState;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
   value: Signal<string>;
   /**
@@ -155,6 +149,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     // once (e.g. from both a manual call and the signal abort) is a no-op.
     const detach = (): void => {
       if (detached) return;
+
       detached = true;
       rawDetach();
     };

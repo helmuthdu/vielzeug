@@ -1,13 +1,15 @@
-// ── Lifecycle bridge (createHeadlessScope replaces lifecycleSignal) ───────────
-export { createHeadlessScope, type HeadlessScope } from './scope';
+// ── Lifecycle bridge ────────────────────────────────────────────────────────────
+export { toAbortSignal } from './scope';
 
 // ── A11y host ─────────────────────────────────────────────────────────────────
 export {
   createA11yHost,
   type A11yHost,
   type A11yHostOptions,
-  type AttrGetterMap,
-  type PropGetterMap,
+  type AttrMap,
+  type AttrValue,
+  type PropMap,
+  type PropValue,
 } from './a11y-host';
 
 // ── Field base ───────────────────────────────────────────────────────────────
@@ -27,7 +29,6 @@ export {
   type FieldCore,
   type FieldCoreOptions,
   type FieldHandle,
-  type FieldOptions,
   type LabelPlacement,
   type LabelState,
   type ValidationTrigger,

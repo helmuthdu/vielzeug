@@ -2,7 +2,7 @@ import { computed, define, defineField, html, inject, onCleanup } from '@vielzeu
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, createCheckable, createHeadlessScope, createListControl } from '../../headless';
+import { type CheckableChangePayload, createCheckable, createListControl, toAbortSignal } from '../../headless';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
   coarsePointerMixin,
@@ -163,7 +163,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       },
       prefix: 'radio',
       role: 'radio',
-      signal: createHeadlessScope(onCleanup).signal,
+      signal: toAbortSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
