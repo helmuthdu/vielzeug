@@ -94,12 +94,12 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),
   },
-  setup(props, { host, slots }) {
+  setup(props, { el, bind: _bind, slots }) {
     // ────────────────────────────────────────────────────────────────
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────
 
-    const getItems = (): HTMLElement[] => Array.from(host.el.getElementsByTagName('bit-breadcrumb-item'));
+    const getItems = (): HTMLElement[] => Array.from(el.getElementsByTagName('bit-breadcrumb-item'));
 
     const syncItems = () => {
       const sep = props.separator.value || '/';
@@ -111,8 +111,8 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
       }
 
       // Sync CSS variable for CSS-based separator (if used)
-      if (sep) host.el.style.setProperty('--breadcrumb-separator', `'${sep}'`);
-      else host.el.style.removeProperty('--breadcrumb-separator');
+      if (sep) el.style.setProperty('--breadcrumb-separator', `'${sep}'`);
+      else el.style.removeProperty('--breadcrumb-separator');
     };
 
     // ────────────────────────────────────────────────────────────────

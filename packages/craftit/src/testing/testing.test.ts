@@ -55,7 +55,7 @@ describe('Testing: Render Utilities', () => {
       const div = document.createElement('div');
 
       div.addEventListener('custom', spy);
-      fire.custom(div, 'custom', { value: 123 });
+      fire.custom(div, 'custom', { detail: 123 });
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });

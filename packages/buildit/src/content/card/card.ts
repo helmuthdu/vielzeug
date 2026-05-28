@@ -107,8 +107,8 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
   },
 
-  setup(props, { emit, host, slots }) {
-    host.bind({
+  setup(props, { emit, el, bind, slots }) {
+    bind({
       attr: {
         ariaBusy: () => (props.loading.value ? 'true' : 'false'),
         ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
@@ -118,9 +118,9 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
 
     effect(() => {
       if (props.interactive.value) {
-        host.el.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
+        el.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
       } else {
-        host.el.removeAttribute('tabindex');
+        el.removeAttribute('tabindex');
       }
     });
 
@@ -138,7 +138,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     const handleClick = (e: MouseEvent) => {
       if (!props.interactive.value || props.disabled.value) return;
 
-      if (isNestedInteractiveTarget(host.el, e)) return;
+      if (isNestedInteractiveTarget(el, e)) return;
 
       pressControl.handleClick(e);
     };
@@ -147,7 +147,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
       pressControl.handleKeydown(e);
     };
 
-    host.bind({
+    bind({
       on: {
         click: (e: MouseEvent) => handleClick(e),
         keydown: (e: KeyboardEvent) => handleKeydown(e),

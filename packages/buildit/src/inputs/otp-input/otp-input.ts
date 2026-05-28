@@ -87,9 +87,9 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     value: prop.string(),
     variant: prop.string<Exclude<VisualVariant, 'text' | 'frost' | 'glass'>>(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);
     const isDisabled = fCtxProps.disabled;
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
@@ -97,7 +97,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
 
-    host.bind({
+    bind({
       attr: {
         size: fCtxProps.size,
         value: () => otpValue.value || null,
@@ -106,7 +106,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     });
 
     function getInputs(): HTMLInputElement[] {
-      return [...(host.el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
+      return [...(el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
     }
 
     const listControl = createListControl({

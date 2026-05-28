@@ -114,9 +114,9 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el: _el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     const textareaRef = ref<HTMLTextAreaElement>();
 
@@ -170,7 +170,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       };
     });
 
-    host.bind({
+    bind({
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
         size: fCtxProps.size,

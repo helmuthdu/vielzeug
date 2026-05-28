@@ -60,14 +60,12 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
     align: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
     area: prop.string(),
     col: prop.string(),
-    colSpan: prop.string(
-      undefined as '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full' | undefined,
-    ),
+    colSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full'>(),
     justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
     row: prop.string(),
     rowSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | 'full'>(),
   },
-  setup(props, { host }) {
+  setup(props, { el: _el, bind }) {
     const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;
@@ -94,7 +92,7 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
       return '';
     });
 
-    host.bind({
+    bind({
       style: {
         gridArea: props.area,
         gridColumn,

@@ -24,7 +24,7 @@ export const createMarkerIdFactory = (): (() => string) => {
 };
 
 export const rekeyHtmlResult = (
-  result: { __bindings: Binding[]; __html: string },
+  result: { bindings: Binding[]; html: string },
   getNextId: () => string,
 ): { bindings: Binding[]; html: string } => {
   const idMap = new Map<string, string>();
@@ -41,8 +41,8 @@ export const rekeyHtmlResult = (
   };
 
   return {
-    bindings: result.__bindings.map((binding) => ({ ...binding, uid: getMappedId(binding.uid) }) as Binding),
-    html: result.__html
+    bindings: result.bindings.map((binding) => ({ ...binding, uid: getMappedId(binding.uid) }) as Binding),
+    html: result.html
       .replace(ATTR_ID_RE, (_, id: string) => `${CF_ID_ATTR}="${getMappedId(id)}"`)
       .replace(/<!--(\d+)-->/g, (_, id: string) => `<!--${getMappedId(id)}-->`),
   };

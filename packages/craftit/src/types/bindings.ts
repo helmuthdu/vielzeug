@@ -112,8 +112,8 @@ export type Binding = TextBinding | AttrBinding | EventBinding | RefBinding | Ht
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface HTMLResult {
-  __bindings: Binding[];
-  __html: string;
+  readonly bindings: Binding[];
+  readonly html: string;
   toString(): string;
 }
 
@@ -125,8 +125,8 @@ const htmlResultBrand = new WeakSet<object>();
  */
 export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
   const result: HTMLResult = {
-    __bindings: bindings,
-    __html: html,
+    bindings,
+    html,
     toString() {
       return html;
     },
@@ -141,5 +141,5 @@ export const isHtmlResult = (value: unknown): value is HTMLResult =>
   typeof value === 'object' && value !== null && htmlResultBrand.has(value as object);
 
 export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
-  return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.__bindings, html: v.__html };
+  return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.bindings, html: v.html };
 }

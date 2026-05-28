@@ -109,11 +109,11 @@ describe('component slots and emit', () => {
       label: prop.string('Toggle'),
     };
 
-    define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }, typeof toggleProps>(tag, {
+    define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }>(tag, {
       props: toggleProps,
       setup: (props, { emit }) => {
-        expectType<import('@vielzeug/stateit').Signal<boolean | undefined>>(props.checked);
-        expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.label);
+        expectType<import('@vielzeug/stateit').ReadonlySignal<boolean | undefined>>(props.checked);
+        expectType<import('@vielzeug/stateit').ReadonlySignal<string | undefined>>(props.label);
 
         return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
       },

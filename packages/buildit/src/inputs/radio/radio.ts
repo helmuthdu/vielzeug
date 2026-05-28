@@ -88,10 +88,10 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     name: prop.string(),
     value: prop.string(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
     const effectiveSize = computed(() => groupCtx?.size.value ?? fCtxProps.size.value);
@@ -157,7 +157,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
       helper: props.helper,
-      host: host.el,
+      host: el,
       onToggle: (payload) => {
         emit('change', payload);
       },
@@ -171,7 +171,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
     connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
-    host.bind({
+    bind({
       attr: {
         checked,
         color: effectiveColor,
@@ -202,7 +202,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
               const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
 
               allRadios.forEach((radio) => {
-                if (radio !== host.el) radio.removeAttribute('checked');
+                if (radio !== el) radio.removeAttribute('checked');
               });
 
               toggle(e);
@@ -221,7 +221,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
           if (radios.length === 0) return;
 
-          activeIndex = radios.indexOf(host.el);
+          activeIndex = radios.indexOf(el);
 
           if (activeIndex === -1) return;
 

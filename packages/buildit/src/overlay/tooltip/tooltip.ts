@@ -96,8 +96,8 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
     trigger: { default: 'hover,focus', parse: (value: string | null) => normalizeTriggers(value).join(',') },
     variant: prop.string<'dark' | 'light'>(),
   },
-  setup(props, { host, slots }) {
-    const shadowRoot = host.el.shadowRoot;
+  setup(props, { el, bind: _bind, slots }) {
+    const shadowRoot = el.shadowRoot;
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);

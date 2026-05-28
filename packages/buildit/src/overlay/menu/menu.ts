@@ -180,7 +180,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       'bottom-start',
     ),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind, slots }) {
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     let triggerEl: HTMLElement | null = null;
@@ -189,7 +189,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function getItems(): HTMLElement[] {
-      return Array.from(host.el.querySelectorAll<HTMLElement>('bit-menu-item:not([disabled])'));
+      return Array.from(el.querySelectorAll<HTMLElement>('bit-menu-item:not([disabled])'));
     }
 
     function getItemFocusable(item: HTMLElement | null | undefined): HTMLElement | null {
@@ -209,7 +209,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
     }
 
     const optionList = createOptionList<HTMLElement>({
-      getBoundary: () => host.el,
+      getBoundary: () => el,
       getItems: getItems,
       getPanel: () => panelEl,
       getReference: () => triggerEl,
@@ -242,7 +242,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       if (type === 'checkbox') {
         item.toggleAttribute('checked', !item.hasAttribute('checked'));
       } else if (type === 'radio') {
-        for (const radio of host.el.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]')) {
+        for (const radio of el.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]')) {
           radio.toggleAttribute('checked', radio === item);
         }
       }
@@ -305,7 +305,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
-    host.bind({
+    bind({
       on: {
         click: (e: MouseEvent) => {
           const path = e.composedPath();

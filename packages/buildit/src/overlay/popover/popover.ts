@@ -101,7 +101,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind: _bind, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
@@ -115,7 +115,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     let currentTrigger: HTMLElement | null = null;
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
     const overlay = createOverlayControl({
-      getBoundary: () => host.el,
+      getBoundary: () => el,
       getPanel: () => panelEl,
       getTrigger: () => currentTrigger,
       isDisabled: () => isDisabled.value,
@@ -181,7 +181,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     }
     function isPathInside(path: EventTarget[]): boolean {
       return (
-        path.includes(host.el) ||
+        path.includes(el) ||
         !!(panelEl && path.includes(panelEl)) ||
         !!(currentTrigger && path.includes(currentTrigger))
       );
@@ -207,7 +207,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     }
 
     onMounted(() => {
-      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      const triggerSlot = el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
       let triggerBinding: (() => void) | null = null;
 
       if (!triggerSlot) return;

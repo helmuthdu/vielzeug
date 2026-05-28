@@ -228,8 +228,8 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     striped: prop.bool(false),
   },
 
-  setup(props, { host }) {
-    host.bind({
+  setup(props, { el, bind }) {
+    bind({
       attr: {
         'aria-busy': props.loading,
         'aria-label': props.caption,
@@ -241,7 +241,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     // contexts.  All three issues — color themes, sticky headers, colspan —
     // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
     onMounted(() => {
-      const scrollContainer = host.el.shadowRoot!.querySelector('.scroll-container')!;
+      const scrollContainer = el.shadowRoot!.querySelector('.scroll-container')!;
 
       const table = document.createElement('table');
       const captionEl = document.createElement('caption');
@@ -265,15 +265,15 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
       });
 
       // Initial build
-      let cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
+      let cleanupCellObservers = buildTable(el, thead, tbody, tfoot);
 
       // Rebuild whenever direct children change (rows added / removed / reordered)
       const structureObserver = new MutationObserver(() => {
         cleanupCellObservers();
-        cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
+        cleanupCellObservers = buildTable(el, thead, tbody, tfoot);
       });
 
-      structureObserver.observe(host.el, { childList: true });
+      structureObserver.observe(el, { childList: true });
 
       return () => {
         structureObserver.disconnect();

@@ -1,4 +1,4 @@
-import { signal, type ReadonlySignal } from '@vielzeug/stateit';
+import { effect, signal, type ReadonlySignal } from '@vielzeug/stateit';
 
 import { onCleanup } from './runtime';
 import { htmlResult, type HTMLResult } from './types/bindings';
@@ -23,7 +23,8 @@ const toHtmlResult = (v: HTMLResult | string): HTMLResult =>
 
 /**
  * Run an async function and return a `ReadonlySignal<HTMLResult>` that transitions
- * through pending → settled states.
+ * through pending → settled states. Re-runs automatically when reactive dependencies
+ * accessed inside `asyncFn` change.
  *
  * Use inside component setup functions. The signal starts as the `fallback` template
  * and updates to the rendered result when the promise resolves.
@@ -52,26 +53,35 @@ export function suspend<T>(
   const { error: onError, fallback, render } = options;
   const result = signal<HTMLResult>(fallback ? toHtmlResult(fallback()) : htmlResult(''));
 
-  let cancelled = false;
+  const stop = effect(() => {
+    // Reading asyncFn() inside the effect body tracks its reactive dependencies.
+    // When those deps change, the effect re-runs: we reset to fallback, start a new
+    // fetch, and apply a cancelled guard to discard stale responses.
+    let cancelled = false;
 
-  asyncFn().then(
-    (value) => {
-      if (!cancelled) result.value = toHtmlResult(render(value));
-    },
-    (err) => {
-      if (!cancelled) {
-        if (onError) {
-          result.value = toHtmlResult(onError(err));
-        } else {
-          console.error('[craftit] suspend() rejected:', err);
+    if (fallback) result.value = toHtmlResult(fallback());
+
+    asyncFn().then(
+      (value) => {
+        if (!cancelled) result.value = toHtmlResult(render(value));
+      },
+      (err) => {
+        if (!cancelled) {
+          if (onError) {
+            result.value = toHtmlResult(onError(err));
+          } else {
+            console.error('[craftit] suspend() rejected:', err);
+          }
         }
-      }
-    },
-  );
+      },
+    );
 
-  onCleanup(() => {
-    cancelled = true;
+    return () => {
+      cancelled = true;
+    };
   });
+
+  onCleanup(stop);
 
   return result;
 }

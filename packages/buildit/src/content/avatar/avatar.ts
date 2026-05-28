@@ -211,11 +211,11 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
     max: prop.number(5),
     total: prop.json(undefined as number | undefined),
   },
-  setup(props, { host, slots }) {
+  setup(props, { el, bind: _bind, slots }) {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {
-      const avatars = [...host.el.querySelectorAll('bit-avatar')];
+      const avatars = [...el.querySelectorAll('bit-avatar')];
       const max = Number(props.max.value) || 5;
       const hidden = Math.max(0, avatars.length - max);
 

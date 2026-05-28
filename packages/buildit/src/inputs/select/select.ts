@@ -166,8 +166,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, host, slots }) {
-    const shadowRoot = host.el.shadowRoot;
+  setup(props, { emit, el, bind, slots }) {
+    const shadowRoot = el.shadowRoot;
     // ────────────────────────────────────────────────────────────────
     // State & Context
     // ────────────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       return Array.isArray(explicitOptions) ? explicitOptions.map(normalizeOption) : slottedOptions.value;
     });
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
@@ -210,7 +210,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         value: props.value,
       },
       listFactory: (c) => ({
-        getBoundary: () => host.el,
+        getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
         getItems: () => options.value,
         getPanel: () => dropdownEl,
@@ -241,7 +241,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     const { focusedIndex, isOpen } = optionList;
 
     // Sync host attributes for CSS hooks
-    host.bind({
+    bind({
       attr: {
         'has-error': () => (props.error.value ? true : undefined),
         open: () => (isOpen.value ? true : undefined),

@@ -15,8 +15,6 @@ export {
 
 export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
-export { ComponentPhase, isValidTransition, type LifecycleTransition } from './lifecycle';
-
 export {
   createRuntimeError,
   reportRuntimeError,
@@ -28,6 +26,7 @@ export {
   define,
   LIFECYCLE_EVENTS,
   type ComponentDefinition,
+  type HostBindFn,
   type InferPropsFromDefs,
   type InferPropsSignals,
   type LifecycleEventName,
@@ -56,8 +55,7 @@ export { createContext, inject, injectStrict, provide, type InjectionKey } from 
 export { syncAria, type SyncAriaOptions } from './aria';
 
 export {
-  createHost,
-  type ComponentHost,
+  createBind,
   type HostBindConfig,
   type HostBindingValue,
   type HostPropDescriptor,
@@ -77,8 +75,6 @@ export { raw, setRawSanitizer } from './directives/raw';
 export { css, type CSSResult } from './utils/css';
 
 export { createId } from './utils/id';
-
-export { createEmitFn, type EmitFn } from './utils/emit';
 
 export { ref, refs, type Ref, type Refs, type RefCallback, type HTMLResult } from './types/bindings';
 

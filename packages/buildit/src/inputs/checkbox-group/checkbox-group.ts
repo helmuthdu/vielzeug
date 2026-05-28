@@ -123,9 +123,9 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     required: prop.bool(false),
     values: prop.string(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind, slots }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
@@ -140,7 +140,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
 
     connectFormField(choice, defineField, choice.formValue, (v) => v);
 
-    const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(host.el, 'bit-checkbox');
+    const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
     const emitChange = (originalEvent?: Event) => {
       const values = checkedValues.value;
@@ -152,7 +152,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
 
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
       choice.toggleValue(val);
-      host.el.setAttribute('values', choice.formValue.value);
+      el.setAttribute('values', choice.formValue.value);
       choice.triggerValidation('change');
       emitChange(originalEvent);
     };
@@ -220,7 +220,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    host.bind({ attr: { size: fCtxProps.size } });
+    bind({ attr: { size: fCtxProps.size } });
 
     return html`
       <fieldset

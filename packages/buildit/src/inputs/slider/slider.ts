@@ -125,7 +125,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     value: prop.number(0),
     'value-text': prop.string(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -136,12 +136,12 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     });
     // ── Single-value state ────────────────────────────────────────
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const isDragging = signal(false);
     const isDisabled = fCtxProps.disabled;
     const labelledById = signal<string | undefined>(undefined);
 
-    host.bind({
+    bind({
       attr: {
         'data-dragging': () => (isDragging.value ? true : undefined),
         size: fCtxProps.size,
@@ -164,7 +164,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
         },
         { immediate: true },
       );
-      host.bind({
+      bind({
         attr: {
           ariaDisabled: () => (isDisabled.value ? 'true' : null),
           ariaLabelledby: () => labelledById.value ?? null,
@@ -229,18 +229,18 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const updateSingleCSS = (value: number) => {
       const pct = sliderControl.toPercent(value);
 
-      host.el.style.setProperty('--_thumb-pos', `${pct}%`);
-      host.el.style.setProperty('--_fill-start', '0%');
-      host.el.style.setProperty('--_fill-width', `${pct}%`);
+      el.style.setProperty('--_thumb-pos', `${pct}%`);
+      el.style.setProperty('--_fill-start', '0%');
+      el.style.setProperty('--_fill-width', `${pct}%`);
     };
     const updateRangeCSS = () => {
       const s = sliderControl.toPercent(startVal.value);
       const e = sliderControl.toPercent(endVal.value);
 
-      host.el.style.setProperty('--_thumb-start', `${s}%`);
-      host.el.style.setProperty('--_thumb-end', `${e}%`);
-      host.el.style.setProperty('--_fill-start', `${s}%`);
-      host.el.style.setProperty('--_fill-width', `${e - s}%`);
+      el.style.setProperty('--_thumb-start', `${s}%`);
+      el.style.setProperty('--_thumb-end', `${e}%`);
+      el.style.setProperty('--_fill-start', `${s}%`);
+      el.style.setProperty('--_fill-width', `${e - s}%`);
     };
 
     // ── Range mode setup ──────────────────────────────────────────
@@ -439,7 +439,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
         ),
       );
       onEvent(
-        host.el,
+        el,
         'keydown',
         guard(
           () => !isDisabled.value,

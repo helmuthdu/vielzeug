@@ -6,7 +6,7 @@ import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
 export type PropsDef<T extends Record<string, unknown>> = {
   // All props must be explicitly defined via prop.* helpers or PropDef objects
-  [K in keyof Required<T>]: PropDef<T[K] | undefined>;
+  [K in keyof Required<T>]: PropDef<T[K & keyof T]>;
 };
 
 export type PropDef<T> = { readonly default: T; readonly parse: (value: string | null) => T; reflect?: boolean };
@@ -16,7 +16,17 @@ export type PropInputDefs = Record<string, PropDef<unknown>>;
  * Prop definition factory — use these helpers for all prop definitions.
  * No implicit type inference; all parser behavior is explicit and intentional.
  */
-export const prop = {
+type PropFactory = {
+  bool(defaultValue?: boolean): PropDef<boolean>;
+  json<T>(defaultValue: T): PropDef<T>;
+  number<T extends number = number>(): PropDef<T | undefined>;
+  number<T extends number = number>(defaultValue: number): PropDef<T>;
+  oneOf<T extends string | undefined, D extends T = T>(allowed: readonly NonNullable<T>[], defaultValue: D): PropDef<T>;
+  string<T extends string = string>(): PropDef<T | undefined>;
+  string<T extends string = string>(defaultValue: string): PropDef<T>;
+};
+
+export const prop: PropFactory = {
   bool(defaultValue?: boolean): PropDef<boolean> {
     const def = defaultValue ?? false;
 
@@ -41,14 +51,14 @@ export const prop = {
       reflect: false,
     };
   },
-  number<T extends number = number>(defaultValue?: number): PropDef<T | undefined> {
+  number<T extends number = number>(defaultValue?: number): PropDef<T> | PropDef<T | undefined> {
     const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
 
     return {
       default: def,
       parse: (value) => (value == null ? def : (Number(value) as T)),
       reflect: true,
-    };
+    } as PropDef<T> | PropDef<T | undefined>;
   },
   oneOf<T extends string | undefined, D extends T = T>(
     allowed: readonly NonNullable<T>[],
@@ -60,7 +70,7 @@ export const prop = {
       reflect: true,
     };
   },
-  string<T extends string = string>(defaultValue?: string): PropDef<T | undefined> {
+  string<T extends string = string>(defaultValue?: string): PropDef<T> | PropDef<T | undefined> {
     // When no default provided, undefined sentinel → attribute removed when value is absent
     const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
 
@@ -68,7 +78,7 @@ export const prop = {
       default: def,
       parse: (value: string | null) => (value == null ? def : (value as T)),
       reflect: true,
-    };
+    } as PropDef<T> | PropDef<T | undefined>;
   },
 };
 
@@ -174,6 +184,16 @@ const unmarkReflecting = (el: HTMLElement, name: string): void => {
 
 export const isReflecting = (el: HTMLElement, name: string): boolean => reflectingAttrs.get(el)?.has(name) ?? false;
 
+const reflectAttribute = (el: HTMLElement, attrName: string, fn: () => void): void => {
+  markReflecting(el, attrName);
+
+  try {
+    fn();
+  } finally {
+    unmarkReflecting(el, attrName);
+  }
+};
+
 /** @internal Runtime prop registration (called by createProps) */
 const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
   const el = getCurrentElement();
@@ -213,9 +233,7 @@ const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>
     effect(() => {
       const v = s.value;
 
-      markReflecting(el, attrName);
-
-      try {
+      reflectAttribute(el, attrName, () => {
         if (v == null) {
           el.removeAttribute(attrName);
         } else if (typeof v === 'boolean') {
@@ -223,9 +241,7 @@ const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>
         } else {
           setAttr(el, attrName, v);
         }
-      } finally {
-        unmarkReflecting(el, attrName);
-      }
+      });
     });
   }
 

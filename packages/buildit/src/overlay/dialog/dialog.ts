@@ -129,7 +129,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind: _bind, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
@@ -137,7 +137,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
       dialogRef,
       getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
-      host: host.el,
+      host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
       onNativeClose: (reason) => emit('close', { reason }),

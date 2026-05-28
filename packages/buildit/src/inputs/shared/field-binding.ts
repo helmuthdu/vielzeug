@@ -1,4 +1,4 @@
-import type { ComponentHost } from '@vielzeug/craftit';
+import type { HostBindFn } from '@vielzeug/craftit';
 import type { ReadonlySignal, Signal } from '@vielzeug/stateit';
 
 import type { ComponentSize } from '../../types';
@@ -25,13 +25,13 @@ export type CheckableBindingHandle = {
  * components that need it (checkbox); omit it for switch/radio.
  */
 export const applyCheckableBinding = (
-  host: ComponentHost,
+  bind: HostBindFn,
   fCtxSize: ReadonlySignal<ComponentSize | undefined>,
   handle: CheckableBindingHandle,
 ): void => {
   const { checked, disabled, handleClick, handleKeydown, indeterminate } = handle;
 
-  host.bind({
+  bind({
     attr: {
       ...(indeterminate !== undefined && { indeterminate }),
       checked,

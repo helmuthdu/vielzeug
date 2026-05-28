@@ -157,7 +157,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     size: prop.string<DrawerSize>(),
     title: prop.string(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind: _bind, slots }) {
     const drawerLabelId = createStableId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
@@ -327,7 +327,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       closeRequestDetail: (_reason) => ({ placement: props.placement.value ?? 'right' }),
       dialogRef,
       getPanelEl: () => panelRef.value,
-      host: host.el,
+      host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
       onNativeClose: (reason) => {
@@ -363,13 +363,13 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       if (!dialog) return;
 
       // Expose imperative API
-      const el = host.el as DrawerElement;
+      const drawerEl = el as DrawerElement;
 
-      el.show = () => {
+      drawerEl.show = () => {
         overlay.open('programmatic');
       };
 
-      el.hide = () => {
+      drawerEl.hide = () => {
         overlay.close('programmatic', false);
       };
 

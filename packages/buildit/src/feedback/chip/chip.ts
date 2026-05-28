@@ -165,7 +165,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     variant: prop.string<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>(),
   },
 
-  setup(props, { emit, host }) {
+  setup(props, { emit, el: _el, bind }) {
     // ============================================
     // State Management
     // ============================================
@@ -191,7 +191,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       return checkedState.value;
     });
 
-    host.bind({
+    bind({
       attr: {
         checked: () => (props.mode.value === 'selectable' && isChecked.value ? true : undefined),
       },

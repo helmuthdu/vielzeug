@@ -47,7 +47,7 @@ describe('Core: Signal System', () => {
 
     it('watch() receives current and previous value', () => {
       const count = signal(10);
-      const pairs: [number, number][] = [];
+      const pairs: [number, number | undefined][] = [];
 
       watch(count, (next, prev) => pairs.push([next, prev]));
       count.value = 20;

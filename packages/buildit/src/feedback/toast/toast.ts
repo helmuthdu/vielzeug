@@ -130,7 +130,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       'bottom-right',
     ),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind: _bind }) {
     const toasts = signal<NormalizedToast[]>([]);
     const exitingIds = signal<Set<string>>(new Set());
     const containerRef = ref<HTMLDivElement>();
@@ -372,7 +372,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
 
     const setHovered = (hovered: boolean) => {
       hoverPaused = hovered;
-      host.el.classList.toggle('hovered', hovered);
+      el.classList.toggle('hovered', hovered);
       maybeUpdatePauseState();
     };
     const renderToastItem = (toast: NormalizedToast) => html`
@@ -400,12 +400,12 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     `;
 
     onMounted(() => {
-      const el = host.el as ToastElement;
+      const toastEl = el as ToastElement;
 
-      el.add = addToast;
-      el.update = updateToast;
-      el.dismiss = removeToast;
-      el.clear = clearAll;
+      toastEl.add = addToast;
+      toastEl.update = updateToast;
+      toastEl.dismiss = removeToast;
+      toastEl.clear = clearAll;
     });
 
     return html`

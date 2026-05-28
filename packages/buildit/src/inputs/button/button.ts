@@ -115,7 +115,7 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     // Derive effective color/size/variant — prefer group context, fall back to own prop.
     const groupCtx = inject(BUTTON_GROUP_CTX);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
@@ -163,14 +163,14 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
       }
 
       const path = e.composedPath();
-      const reachedHost = path.includes(host.el);
+      const reachedHost = path.includes(el);
 
       if (!reachedHost) {
         emit('click', e);
       }
     };
 
-    host.bind({
+    bind({
       attr: {
         'aria-busy': props.loading,
         'aria-disabled': isDisabled,

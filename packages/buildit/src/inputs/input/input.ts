@@ -144,9 +144,9 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el: _el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
@@ -194,7 +194,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     const resolvedInputType = (): string =>
       props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
 
-    host.bind({
+    bind({
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
         'has-value': () => (fieldValue.value ? true : undefined),

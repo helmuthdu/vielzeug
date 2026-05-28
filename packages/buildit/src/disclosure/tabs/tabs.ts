@@ -104,11 +104,11 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
-    value: prop.string(undefined),
+    value: prop.string(),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { emit, host }) {
-    const shadowRoot = host.el.shadowRoot;
+  setup(props, { emit, el, bind }) {
+    const shadowRoot = el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
@@ -116,13 +116,13 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     const isManualActivation = () => props.activation.value === 'manual';
     const isVertical = () => props.orientation.value === 'vertical';
 
-    host.bind({
+    bind({
       attr: {
         value: () => selectedValue.value ?? null,
       },
     });
 
-    const getTabs = () => [...host.el.querySelectorAll<HTMLElement>(':scope > bit-tab-item[slot="tabs"]')];
+    const getTabs = () => [...el.querySelectorAll<HTMLElement>(':scope > bit-tab-item[slot="tabs"]')];
     const getEnabledTabs = () => getTabs().filter((t) => !t.hasAttribute('disabled'));
     const focusTab = (tab: HTMLElement | undefined) => {
       if (!tab) return;
@@ -260,7 +260,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       if (!tab || tab.hasAttribute('disabled')) return;
 
       // Guard: only respond to tab-items that belong to THIS tabs instance
-      if (tab.closest('bit-tabs') !== host.el) return;
+      if (tab.closest('bit-tabs') !== el) return;
 
       const value = tab.getAttribute('value');
 
@@ -303,7 +303,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       manualActivationPress.handleKeydown(e);
     };
 
-    host.bind({
+    bind({
       on: {
         click: handleTabClick,
         keydown: handleKeydown,

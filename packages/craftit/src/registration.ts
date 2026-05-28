@@ -2,7 +2,7 @@ import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@
 
 import { CRAFTIT_ERRORS, createRuntimeError, reportRuntimeError, type CraftitRuntimeError } from './errors';
 import { ComponentPhase } from './lifecycle';
-import { createHost, type ComponentHost } from './host-bind';
+import { createBind, type HostBindFn } from './host-bind';
 import {
   createProps,
   normalizePropDefinition,
@@ -294,6 +294,7 @@ const defineComponent = (tag: string, setup: () => HTMLResult, options: Componen
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { prop };
+export type { HostBindFn } from './host-bind';
 export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropsDef };
 
 /**
@@ -306,8 +307,9 @@ export type SetupContextBag<
   Emits extends Record<string, unknown> = Record<string, unknown>,
   SlotNames extends string = string,
 > = {
+  bind: HostBindFn;
+  el: HTMLElement;
   emit: EmitFn<Emits>;
-  host: ComponentHost;
   slots: ComponentSlots<SlotNames>;
 };
 
@@ -346,14 +348,6 @@ export type ComponentDefinition<
   slots?: readonly SlotNames[];
   /** Component-specific styles */
   styles?: (string | CSSStyleSheet | CSSResult)[];
-  /**
-   * Optional validation hook that runs at define-time.
-   * Use to assert that required contexts or other global state is available before
-   * any component instance is created.
-   *
-   * Throws if validation fails, preventing component registration.
-   */
-  validate?: (options: { injectionKeys: unknown[] }) => void;
 };
 
 const createSetupProps = <Props extends Record<string, unknown>>(
@@ -386,18 +380,7 @@ export function define<
   Emits extends Record<string, unknown> = Record<string, never>,
   SlotNames extends string = string,
 >(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): string {
-  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles, validate } = definition;
-
-  // Run validation hook at define-time if provided
-  if (validate) {
-    try {
-      validate({ injectionKeys: [] });
-    } catch (error) {
-      throw new Error(
-        `Component definition validation failed for '${tag}': ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
+  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
 
   // Normalize and validate all props at define-time for early, complete error feedback
   const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
@@ -424,12 +407,12 @@ export function define<
     tag,
     () => {
       const props = createSetupProps(normalizedPropDefs);
-      const host = createHost();
       const el = getCurrentElement();
+      const bind = createBind(el);
       const emit = createEmitFn<Emits>(el);
       const slots = createSlots() as ComponentSlots<SlotNames>;
 
-      return setup(props, { emit, host, slots });
+      return setup(props, { bind, el, emit, slots });
     },
     { formAssociated, observedAttrs, shadow: shadowOptions, styles },
   );

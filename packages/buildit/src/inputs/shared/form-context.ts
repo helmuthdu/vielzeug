@@ -1,4 +1,4 @@
-import { type ComponentHost, createContext, type ReadonlySignal } from '@vielzeug/craftit';
+import { type HostBindFn, createContext, type ReadonlySignal } from '@vielzeug/craftit';
 import { computed } from '@vielzeug/stateit';
 
 import type { ValidationTrigger } from '../../headless';
@@ -64,13 +64,13 @@ export const mergeFormContext = (
  * Accepts `FormContext | undefined` directly — pass `inject(FORM_CTX)`.
  */
 export const useFormContext = (
-  host: ComponentHost,
+  bind: HostBindFn,
   props: Parameters<typeof mergeFormContext>[0],
   formCtx?: FormContext,
 ): FormContextResolvedProps => {
   const resolved = mergeFormContext(props, formCtx);
 
-  host.bind({
+  bind({
     attr: {
       disabled: () => (resolved.disabled.value ? '' : undefined),
     },

@@ -10,9 +10,9 @@
  * @example
  * ```ts
  * define('bit-checkbox', {
- *   setup(props, { host }) {
+ *   setup(props, { el, bind }) {
  *     const signal = toAbortSignal(onCleanup);
- *     const checkable = createCheckable({ signal, host: host.el, ... });
+ *     const checkable = createCheckable({ signal, host: el, ... });
  *   },
  * });
  * ```

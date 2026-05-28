@@ -35,7 +35,7 @@ export type DialogFocusControl = {
  *   getContainer: () => dialog,
  *   getInitialFocusSelector: () => props['initial-focus'].value,
  *   getReturnFocus: () => props['return-focus'].value !== false,
- *   host: host.el,
+ *   host: el,
  * });
  *
  * // On open:

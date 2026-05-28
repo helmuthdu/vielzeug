@@ -62,10 +62,10 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     color: prop.string<ThemeColor>(),
     disabled: prop.bool(false),
     size: prop.string<ComponentSize>(),
-    value: prop.string(),
+    value: prop.string(''),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { host }) {
+  setup(props, { el, bind }) {
     const tabsCtx = inject(TABS_CTX);
 
     if (tabsCtx) {
@@ -74,11 +74,11 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
         const size = tabsCtx.size.value;
         const variant = tabsCtx.variant.value;
 
-        if (color !== undefined) host.el.setAttribute('color', color);
+        if (color !== undefined) el.setAttribute('color', color);
 
-        if (size !== undefined) host.el.setAttribute('size', size);
+        if (size !== undefined) el.setAttribute('size', size);
 
-        if (variant !== undefined) host.el.setAttribute('variant', variant);
+        if (variant !== undefined) el.setAttribute('variant', variant);
       });
     }
 
@@ -87,7 +87,7 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     );
     const isDisabled = () => Boolean(props.disabled.value);
 
-    host.bind({
+    bind({
       attr: {
         active: () => (isActive.value ? true : undefined),
       },
@@ -102,7 +102,7 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
         return;
       }
 
-      host.el.dispatchEvent(new CustomEvent('click', { bubbles: true, detail: { value: props.value.value } }));
+      el.dispatchEvent(new CustomEvent('click', { bubbles: true, detail: { value: props.value.value } }));
     };
 
     const tabId = () => `tab-${props.value.value}`;

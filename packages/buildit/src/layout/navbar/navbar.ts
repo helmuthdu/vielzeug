@@ -224,7 +224,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
     sticky: prop.bool(false),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost' | 'glass'>(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const hasLogo = () => slots.has('logo').value;
     const hasMobileMenu = () => slots.elements('mobile-menu').value.some(hasElementContent);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -324,7 +324,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
       isScrolled.value = delta > threshold;
     };
 
-    host.bind({
+    bind({
       attr: {
         'data-mobile': () => (isMobile.value ? true : undefined),
         'data-mobile-open': () => (isMobile.value && isMobileMenuOpen.value ? true : undefined),
@@ -336,12 +336,12 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
     });
 
     onMounted(() => {
-      const el = host.el as NavbarElement;
-      const scrollContainer = findScrollContainer(host.el);
+      const navbarEl = el as NavbarElement;
+      const scrollContainer = findScrollContainer(el);
 
-      el.closeMobileMenu = closeMobileMenu;
-      el.openMobileMenu = openMobileMenu;
-      el.toggleMobileMenu = toggleMobileMenu;
+      navbarEl.closeMobileMenu = closeMobileMenu;
+      navbarEl.openMobileMenu = openMobileMenu;
+      navbarEl.toggleMobileMenu = toggleMobileMenu;
 
       const stopScroll = listen(
         window,
@@ -361,7 +361,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
             { passive: true },
           )
         : undefined;
-      const stopEscape = listen(host.el, 'keydown', (event: KeyboardEvent) => {
+      const stopEscape = listen(el, 'keydown', (event: KeyboardEvent) => {
         if (event.key !== 'Escape' || !isMobileMenuOpen.value) return;
 
         closeMobileMenu();
@@ -383,7 +383,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
 
         if (!selector) return;
 
-        const root = host.el.getRootNode();
+        const root = el.getRootNode();
         const scopedTarget =
           root instanceof ShadowRoot || root instanceof Document
             ? (root.querySelector(selector) as MobileSidebarElement | null)
@@ -505,7 +505,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
           maxWidthPx.value = parseMaxWidthPx(mediaQuery);
           mediaMatches.value = false;
 
-          const width = readContainerWidth(host.el);
+          const width = readContainerWidth(el);
 
           sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
           syncMobileMode();
@@ -544,9 +544,9 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
       const stopResizeEffect =
         typeof ResizeObserver === 'function'
           ? (() => {
-              const hostSize = resizeObserver(host.el);
-              const wrapperEl = host.el.parentElement;
-              const containerEl = resolveContainerElement(host.el);
+              const hostSize = resizeObserver(el);
+              const wrapperEl = el.parentElement;
+              const containerEl = resolveContainerElement(el);
               const wrapperSize = wrapperEl ? resizeObserver(wrapperEl) : undefined;
               const parentSize = containerEl && containerEl !== wrapperEl ? resizeObserver(containerEl) : undefined;
 
@@ -560,8 +560,8 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
                   parentSize?.value.height,
                 ]),
                 () => {
-                  const width = readContainerWidth(host.el);
-                  const parentWidth = resolveContainerElement(host.el)?.clientWidth ?? 0;
+                  const width = readContainerWidth(el);
+                  const parentWidth = resolveContainerElement(el)?.clientWidth ?? 0;
 
                   sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
                   isPreviewMode.value = parentWidth > 0 && parentWidth < window.innerWidth;
@@ -671,12 +671,12 @@ export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { host, slots }) {
+  setup(props, { bind, el: _el, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const navbarCtx = inject(NAVBAR_CTX);
 
-    host.bind({
+    bind({
       attr: {
         'navbar-mobile': () => (navbarCtx?.isMobile.value ? true : undefined),
         'navbar-mobile-open': () => (navbarCtx?.mobileMenuOpen.value ? true : undefined),

@@ -71,13 +71,13 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const focusedIndex = signal(0);
 
     const handleSelectionMode = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value !== 'single') return;
 
-      host.el.querySelectorAll('bit-accordion-item[expanded]').forEach((item) => {
+      el.querySelectorAll('bit-accordion-item[expanded]').forEach((item) => {
         if (item !== expandedItem && item.hasAttribute('expanded')) {
           item.removeAttribute('expanded');
         }
@@ -87,7 +87,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
     };
 
     const getAccordionItems = () => {
-      return [...host.el.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
+      return [...el.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
     };
 
     const getSummaryElements = () => {
@@ -119,7 +119,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
 
     // Group-level event and keyboard handling for WAI-ARIA Accordion pattern
 
-    host.bind({
+    bind({
       on: {
         expand: (event: Event) => {
           const eventTarget = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement);

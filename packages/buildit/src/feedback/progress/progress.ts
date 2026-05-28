@@ -83,7 +83,7 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
     'value-text': prop.string(),
   },
 
-  setup(props, { host }) {
+  setup(props, { el, bind: _bind }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7
@@ -110,7 +110,7 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
     const linearFillStyle = styleMap({ width: () => (!props.indeterminate.value ? percent.value : null) });
 
     effect(() => {
-      host.el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
+      el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
     return html`

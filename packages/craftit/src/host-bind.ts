@@ -5,7 +5,7 @@
 
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { getCurrentElement, effect, onCleanup } from './runtime';
+import { effect, onCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
 
@@ -49,15 +49,11 @@ export type HostBindConfig = {
   style?: Record<string, HostBindingValue>;
 };
 
-export type ComponentHost = {
-  bind: (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
-  el: HTMLElement;
-};
+export type HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
 
-export const createHost = (): ComponentHost => {
-  const el = getCurrentElement();
+export const createBind = (el: HTMLElement): HostBindFn => {
 
-  const bind = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
+  const bind: HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
     const disposers: Array<() => void> = [];
 
     if (config.attr) {
@@ -121,7 +117,7 @@ export const createHost = (): ComponentHost => {
     return cleanup;
   };
 
-  return { bind, el };
+  return bind;
 };
 
 const toHostAttr = normalizeHostAttrKey;

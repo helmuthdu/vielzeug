@@ -196,14 +196,14 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind, slots }) {
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
 
-    const isControlled = signal(host.el.hasAttribute('collapsed'));
+    const isControlled = signal(el.hasAttribute('collapsed'));
     const collapsedState = signal(
-      isControlled.value ? host.el.hasAttribute('collapsed') : props['default-collapsed'].value,
+      isControlled.value ? el.hasAttribute('collapsed') : props['default-collapsed'].value,
     );
     const isBottomNav = signal(false);
     const isMobileOpen = signal(false);
@@ -310,7 +310,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       setCollapsed(!isCollapsed(), 'toggle');
     };
 
-    host.bind({
+    bind({
       attr: {
         'data-bottom-nav': () => (isBottomNav.value ? true : undefined),
         'data-collapsed': () => (isCollapsed() && !isBottomNav.value ? true : undefined),
@@ -320,24 +320,24 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     });
 
     onMounted(() => {
-      const el = host.el as SidebarElement;
+      const sidebarEl = el as SidebarElement;
 
-      el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
-      el.toggle = doToggle;
-      el.openMobile = () => setMobileOpen(true, 'api');
-      el.closeMobile = () => setMobileOpen(false, 'api');
-      el.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
+      sidebarEl.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
+      sidebarEl.toggle = doToggle;
+      sidebarEl.openMobile = () => setMobileOpen(true, 'api');
+      sidebarEl.closeMobile = () => setMobileOpen(false, 'api');
+      sidebarEl.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
 
       // Suppress transitions during initial layout so the sidebar doesn't
       // animate from a collapsed/0 state before the first ResizeObserver fires.
-      host.el.setAttribute('data-no-transition', '');
+      el.setAttribute('data-no-transition', '');
 
       let transitionUnlocked = false;
       const unlockTransition = () => {
         if (transitionUnlocked) return;
 
         transitionUnlocked = true;
-        host.el.removeAttribute('data-no-transition');
+        el.removeAttribute('data-no-transition');
       };
 
       // Fallback: unlock after two frames in case ResizeObserver doesn't fire.
@@ -347,13 +347,13 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       let bottomNavCleanup: (() => void) | undefined;
       const itemObservers = new Map<HTMLElement, MutationObserver>();
       const observer = new MutationObserver(() => {
-        if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
+        if (!el.hasAttribute('collapsed') && !isControlled.value) return;
 
         isControlled.value = true;
-        collapsedState.value = host.el.hasAttribute('collapsed');
+        collapsedState.value = el.hasAttribute('collapsed');
       });
 
-      observer.observe(host.el, {
+      observer.observe(el, {
         attributeFilter: ['collapsed'],
         attributes: true,
       });
@@ -370,7 +370,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
           responsiveMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
           responsiveMediaMatches.value = false;
 
-          const width = readContainerWidth(host.el);
+          const width = readContainerWidth(el);
 
           responsiveSizeMatches.value =
             width > 0 && responsiveMaxWidthPx.value != null ? width <= responsiveMaxWidthPx.value : false;
@@ -414,7 +414,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
           bottomNavMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
           bottomNavMediaMatches.value = false;
 
-          const width = readContainerWidth(host.el);
+          const width = readContainerWidth(el);
 
           bottomNavSizeMatches.value =
             width > 0 && bottomNavMaxWidthPx.value != null ? width <= bottomNavMaxWidthPx.value : false;
@@ -450,9 +450,9 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       const stopResizeEffect =
         typeof ResizeObserver === 'function'
           ? (() => {
-              const hostSize = resizeObserver(host.el);
-              const wrapperEl = host.el.parentElement;
-              const containerEl = resolveContainerElement(host.el);
+              const hostSize = resizeObserver(el);
+              const wrapperEl = el.parentElement;
+              const containerEl = resolveContainerElement(el);
               const wrapperSize = wrapperEl ? resizeObserver(wrapperEl) : undefined;
               const parentSize = containerEl && containerEl !== wrapperEl ? resizeObserver(containerEl) : undefined;
               let rafId: number | undefined;
@@ -460,8 +460,8 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
               const onResize = () => {
                 cancelAnimationFrame(rafId!);
                 rafId = requestAnimationFrame(() => {
-                  const resolvedContainer = resolveContainerElement(host.el);
-                  const width = readContainerWidth(host.el);
+                  const resolvedContainer = resolveContainerElement(el);
+                  const width = readContainerWidth(el);
                   const responsiveWasMatched = responsiveSizeMatches.value;
                   const bottomNavWasMatched = bottomNavSizeMatches.value;
                   const parentWidth = resolvedContainer?.clientWidth ?? 0;
@@ -681,11 +681,11 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       reflect: false,
     },
   },
-  setup(props, { host, slots }) {
+  setup(props, { el: _el, bind, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
-    host.bind({
+    bind({
       attr: {
         'sidebar-bottom-nav': () =>
           sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,
@@ -709,7 +709,7 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       openState.value = value;
     });
 
-    host.bind({
+    bind({
       attr: {
         open: () => (isOpen.value ? true : undefined),
       },
@@ -819,12 +819,12 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { host, slots }) {
+  setup(props, { el: _el, bind, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
-    host.bind({
+    bind({
       attr: {
         'sidebar-bottom-nav': () =>
           sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,

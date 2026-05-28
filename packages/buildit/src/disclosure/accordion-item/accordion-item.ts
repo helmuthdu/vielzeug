@@ -78,7 +78,7 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind: _bind }) {
     // Inherit size/variant from a parent bit-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 
@@ -87,9 +87,9 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
         const size = accordionCtx.size.value;
         const variant = accordionCtx.variant.value;
 
-        if (size !== undefined) host.el.setAttribute('size', size);
+        if (size !== undefined) el.setAttribute('size', size);
 
-        if (variant !== undefined) host.el.setAttribute('variant', variant);
+        if (variant !== undefined) el.setAttribute('variant', variant);
       });
     }
 
@@ -102,11 +102,11 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
 
       // Notify accordion parent for single-selection management
       if (isOpen && !wasExpanded) {
-        host.el.toggleAttribute('expanded', true);
-        emit('expand', { expanded: true, item: host.el });
+        el.toggleAttribute('expanded', true);
+        emit('expand', { expanded: true, item: el });
       } else if (!isOpen && wasExpanded) {
-        host.el.toggleAttribute('expanded', false);
-        emit('collapse', { expanded: false, item: host.el });
+        el.toggleAttribute('expanded', false);
+        emit('collapse', { expanded: false, item: el });
       }
     };
 
@@ -121,7 +121,7 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
         let isRTL: boolean | undefined;
 
         // 1) Closest ancestor dir always wins (supports local RTL sections).
-        let parent: HTMLElement | null = host.el;
+        let parent: HTMLElement | null = el;
 
         while (parent) {
           const dir = parent.getAttribute('dir');
@@ -141,7 +141,7 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
 
         // 2) Fallback to computed direction when no explicit dir is found.
         if (isRTL === undefined) {
-          isRTL = getComputedStyle(host.el).direction === 'rtl';
+          isRTL = getComputedStyle(el).direction === 'rtl';
         }
 
         // 3) Keep markup simple for CSS targeting.

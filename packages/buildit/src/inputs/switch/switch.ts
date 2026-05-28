@@ -81,9 +81,9 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     const checkable = createCheckable({
       checked: props.checked,
@@ -91,7 +91,7 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
-      host: host.el,
+      host: el,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
         emit('change', payload);
@@ -106,7 +106,7 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
 
     connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
-    applyCheckableBinding(host, fCtxProps.size, { checked, disabled, handleClick, handleKeydown });
+    applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown });
 
     return html`
       <div class="switch-wrapper" part="switch">

@@ -113,13 +113,13 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
     size: prop.string(),
     value: prop.string(),
   },
-  setup(props, { emit, host, slots }) {
+  setup(props, { emit, el, bind, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const isDisabled = fCtxProps.disabled;
 
-    host.bind({
+    bind({
       attr: {
         size: fCtxProps.size,
         value: () => selectedValue.value || null,
@@ -134,7 +134,7 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       { immediate: true },
     );
 
-    const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(host.el, 'bit-radio');
+    const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-radio');
 
     const getEnabledRadios = (): HTMLElement[] =>
       isDisabled.value ? [] : getSlottedRadios().filter((radio) => !radio.hasAttribute('disabled'));
@@ -224,10 +224,10 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       },
     });
 
-    host.bind({
+    bind({
       on: {
         change: (e: Event) => {
-          if (e.target === host.el) return;
+          if (e.target === el) return;
 
           e.stopPropagation();
           selectRadio((e.target as HTMLElement).getAttribute('value') ?? '', e);

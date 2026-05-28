@@ -99,7 +99,7 @@ describe('Template: HTML System', () => {
       const first = html`<div>${signal(1)}</div>`;
       const second = html`<div>${signal(2)}</div>`;
 
-      expect(first.__html).toBe(second.__html);
+      expect(first.html).toBe(second.html);
     });
 
     it('should preserve adjacent tag whitespace in compiled output', async () => {

@@ -10,8 +10,8 @@ describe('template caching', () => {
     const first = html`<div>${getter}</div>`;
     const second = html`<div>${getter}</div>`;
 
-    const firstBinding = first.__bindings.find((binding) => binding.type === 'html');
-    const secondBinding = second.__bindings.find((binding) => binding.type === 'html');
+    const firstBinding = first.bindings.find((binding) => binding.type === 'html');
+    const secondBinding = second.bindings.find((binding) => binding.type === 'html');
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
@@ -23,8 +23,8 @@ describe('template caching', () => {
     const first = html`<div>${render}</div>`;
     const second = html`<div>${render}</div>`;
 
-    const firstBinding = first.__bindings.find((binding) => binding.type === 'html');
-    const secondBinding = second.__bindings.find((binding) => binding.type === 'html');
+    const firstBinding = first.bindings.find((binding) => binding.type === 'html');
+    const secondBinding = second.bindings.find((binding) => binding.type === 'html');
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
@@ -36,8 +36,8 @@ describe('template caching', () => {
     const first = html`<div>${source}</div>`;
     const second = html`<div>${source}</div>`;
 
-    const firstBinding = first.__bindings.find((binding) => binding.type === 'html');
-    const secondBinding = second.__bindings.find((binding) => binding.type === 'html');
+    const firstBinding = first.bindings.find((binding) => binding.type === 'html');
+    const secondBinding = second.bindings.find((binding) => binding.type === 'html');
 
     expect(firstBinding?.type).toBe('html');
     expect(secondBinding?.type).toBe('html');
@@ -53,8 +53,8 @@ describe('template caching', () => {
     const result2 = tag`<div class="a">static</div>`;
 
     // Both have the same HTML structure (no bindings for static templates)
-    expect(result1.__html).toBe(result2.__html);
-    expect(result1.__bindings).toHaveLength(0);
-    expect(result2.__bindings).toHaveLength(0);
+    expect(result1.html).toBe(result2.html);
+    expect(result1.bindings).toHaveLength(0);
+    expect(result2.bindings).toHaveLength(0);
   });
 });

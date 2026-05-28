@@ -149,7 +149,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     required: prop.bool(false),
     size: prop.string(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el: _el, bind }) {
     // ============================================
     // State
     // ============================================
@@ -157,7 +157,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     const files = signal<File[]>([]);
     const isDragging = signal(false);
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const isDisabled = fCtxProps.disabled;
     const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
@@ -184,7 +184,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     // Sync host attributes for CSS selectors
     const isInvalid = computed(() => Boolean(props.error.value));
 
-    host.bind({
+    bind({
       attr: {
         'drag-over': () => (isDragging.value ? true : undefined),
         invalid: () => (isInvalid.value ? true : undefined),

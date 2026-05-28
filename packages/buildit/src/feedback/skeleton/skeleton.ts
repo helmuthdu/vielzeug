@@ -80,7 +80,7 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
     width: prop.string(),
   },
-  setup(props, { host }) {
+  setup(props, { el, bind }) {
     const isPaused = signal(false);
     const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));
@@ -98,31 +98,31 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
         const safeHeight = safeCSSLength(props.height.value);
         const safeRadius = safeCSSLength(props.radius.value);
 
-        if (safeWidth) host.el.style.setProperty('--skeleton-width', safeWidth);
-        else host.el.style.removeProperty('--skeleton-width');
+        if (safeWidth) el.style.setProperty('--skeleton-width', safeWidth);
+        else el.style.removeProperty('--skeleton-width');
 
-        if (safeHeight) host.el.style.setProperty('--skeleton-height', safeHeight);
-        else host.el.style.removeProperty('--skeleton-height');
+        if (safeHeight) el.style.setProperty('--skeleton-height', safeHeight);
+        else el.style.removeProperty('--skeleton-height');
 
-        if (safeRadius) host.el.style.setProperty('--skeleton-radius', safeRadius);
-        else host.el.style.removeProperty('--skeleton-radius');
+        if (safeRadius) el.style.setProperty('--skeleton-radius', safeRadius);
+        else el.style.removeProperty('--skeleton-radius');
 
-        const rawAnimated = host.el.getAttribute('animated');
+        const rawAnimated = el.getAttribute('animated');
         const isAnimated = rawAnimated !== 'false' && props.animated.value !== false;
 
-        host.el.setAttribute('data-animated', isAnimated ? 'true' : 'false');
+        el.setAttribute('data-animated', isAnimated ? 'true' : 'false');
       },
       { immediate: true },
     );
 
-    host.bind({
+    bind({
       attr: {
         'data-paused': () => (isPaused.value ? true : undefined),
       },
     });
 
     onMounted(() => {
-      const entry = intersectionObserver(host.el, { threshold: 0 });
+      const entry = intersectionObserver(el, { threshold: 0 });
 
       watch(entry, (e) => {
         const paused =

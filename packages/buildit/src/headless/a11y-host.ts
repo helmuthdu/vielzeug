@@ -11,7 +11,7 @@ import { effect } from '@vielzeug/stateit';
 //
 // Usage:
 // ```ts
-// const { stop } = createA11yHost(host.el, {
+// const { stop } = createA11yHost(el, {
 //   aria: {
 //     'aria-expanded': () => isOpen.value ? 'true' : 'false',
 //     'aria-controls': listboxId,          // static — set once
@@ -89,7 +89,7 @@ const resolveProp = (value: PropValue): unknown =>
  *
  * @example
  * ```ts
- * const { stop } = createA11yHost(host.el, {
+ * const { stop } = createA11yHost(el, {
  *   aria: {
  *     'aria-checked': () => checked.value ? 'true' : 'false',
  *     'aria-controls': listboxId,   // static

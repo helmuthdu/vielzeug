@@ -16,15 +16,13 @@ import { CF_ID_ATTR, createMarkerIdFactory, rekeyHtmlResult } from './utils/id';
 // Templates use the HTML as-is; no aggressive whitespace normalization
 
 // Slot patterns applied in priority order; first match wins
-const SLOT_PATTERNS = [
-  { kind: 'event' as const, regex: /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/ },
-  { kind: 'ref' as const, regex: /\s+ref\s*=\s*["']?$/ },
-  { kind: 'boolAttr' as const, regex: /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
-  { kind: 'attr' as const, regex: /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
-] as const;
+const EVENT_RE = /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/;
+const REF_RE = /\s+ref\s*=\s*["']?$/;
+const BOOL_ATTR_RE = /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
+const ATTR_RE = /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
 type CompiledTemplateSlot = {
-  kind: (typeof SLOT_PATTERNS)[number]['kind'] | 'node';
+  kind: 'event' | 'ref' | 'boolAttr' | 'attr' | 'node';
   mode?: 'attr' | 'bool';
   modifiers?: string[];
   // For 'event' and attribute slots
@@ -46,6 +44,31 @@ type CompiledTemplatePlan = {
 // and parsing is relatively expensive. Signal wrapping and computed derivation is
 // cheap enough that caching provides negligible benefit and adds complexity.
 const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan>();
+
+const detectSlot = (str: string): CompiledTemplateSlot => {
+  let m: RegExpExecArray | null;
+
+  if ((m = EVENT_RE.exec(str))) {
+    const prefix = str.slice(0, -m[0].length);
+    const parts = m[1].split('.');
+
+    return { kind: 'event', modifiers: parts.slice(1), name: parts[0], prefix, raw: str };
+  }
+
+  if ((m = REF_RE.exec(str))) {
+    return { kind: 'ref', prefix: str.slice(0, -m[0].length), raw: str };
+  }
+
+  if ((m = BOOL_ATTR_RE.exec(str))) {
+    return { kind: 'boolAttr', mode: 'bool', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+  }
+
+  if ((m = ATTR_RE.exec(str))) {
+    return { kind: 'attr', mode: 'attr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+  }
+
+  return { kind: 'node', prefix: str, raw: str };
+};
 
 /**
  * Apply event listener modifiers (prevent, stop, self, capture, once, passive).
@@ -93,7 +116,7 @@ const resolveDirectiveValue = (value: unknown): string => {
 
   if (value == null) return '';
 
-  if (isHtmlResult(value)) return value.__html;
+  if (isHtmlResult(value)) return value.html;
 
   return escapeHtml(String(value));
 };
@@ -163,38 +186,7 @@ const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan 
   const slots: CompiledTemplateSlot[] = [];
 
   for (let i = 0; i < strings.length - 1; i++) {
-    const str = strings[i];
-    let matched = false;
-
-    for (const pattern of SLOT_PATTERNS) {
-      const m = pattern.regex.exec(str);
-
-      if (!m) continue;
-
-      const prefix = str.slice(0, -m[0].length);
-
-      matched = true;
-
-      if (pattern.kind === 'event') {
-        const parts = m[1].split('.');
-        const eventName = parts[0];
-        const modifiers = parts.slice(1);
-
-        slots.push({ kind: 'event', modifiers, name: eventName, prefix, raw: str });
-      } else if (pattern.kind === 'ref') {
-        slots.push({ kind: 'ref', prefix, raw: str });
-      } else if (pattern.kind === 'boolAttr') {
-        slots.push({ kind: 'boolAttr', mode: 'bool', name: m[1], prefix, raw: str });
-      } else if (pattern.kind === 'attr') {
-        slots.push({ kind: 'attr', mode: 'attr', name: m[1], prefix, raw: str });
-      }
-
-      break;
-    }
-
-    if (!matched) {
-      slots.push({ kind: 'node', prefix: str, raw: str });
-    }
+    slots.push(detectSlot(strings[i]));
   }
 
   return { slots, tail: strings[strings.length - 1] ?? '' };

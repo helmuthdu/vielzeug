@@ -8,7 +8,7 @@ describe('component definition and rendering', () => {
       const tag = uniqueTag('test-basic');
 
       define(tag, {
-        setup: () => () => html`<div>Hello</div>`,
+        setup: () => html`<div>Hello</div>`,
       });
 
       expect(document.createElement(tag)).toBeInstanceOf(HTMLElement);
@@ -24,12 +24,12 @@ describe('component definition and rendering', () => {
       const tag = uniqueTag('test-dup');
 
       define(tag, {
-        setup: () => () => html`<div>First</div>`,
+        setup: () => html`<div>First</div>`,
       });
 
       expect(() => {
         define(tag, {
-          setup: () => () => html`<div>Second</div>`,
+          setup: () => html`<div>Second</div>`,
         });
       }).toThrow("define('");
     });

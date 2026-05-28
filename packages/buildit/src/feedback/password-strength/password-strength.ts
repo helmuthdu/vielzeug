@@ -69,7 +69,7 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
     value: prop.string(),
   },
 
-  setup(props, { host }) {
+  setup(props, { el: _el, bind }) {
     const defaultLabels: Record<PasswordStrengthLevel, string> = {
       empty: '',
       fair: 'Fair',
@@ -134,7 +134,7 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
     });
 
     // Sync level change to data-level attribute reactively
-    host.bind({
+    bind({
       attr: {
         'data-level': () => computeLevel(),
       },

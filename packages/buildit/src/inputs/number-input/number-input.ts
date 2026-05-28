@@ -110,9 +110,9 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
     value: prop.json(undefined as number | undefined),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el: _el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
     const isDisabled = fCtxProps.disabled;
     const isReadonly = computed(() => Boolean(props.readonly.value));
@@ -124,7 +124,7 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       if (committedValue.value !== nextValue) committedValue.value = nextValue;
     };
 
-    host.bind({
+    bind({
       attr: {
         size: fCtxProps.size,
         value: () => committedValue.value || null,

@@ -76,16 +76,16 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     retryable: prop.bool(false),
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup(props, { emit, host, slots: _slots }) {
+  setup(props, { emit, el, bind, slots: _slots }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);
 
     /** Checks direct light-DOM children for named slot assignments. */
     const checkSlots = () => {
-      hasLoadingSlot.value = host.el.querySelector('[slot="loading"]') !== null;
-      hasEmptySlot.value = host.el.querySelector('[slot="empty"]') !== null;
-      hasErrorSlot.value = host.el.querySelector('[slot="error"]') !== null;
+      hasLoadingSlot.value = el.querySelector('[slot="loading"]') !== null;
+      hasEmptySlot.value = el.querySelector('[slot="empty"]') !== null;
+      hasErrorSlot.value = el.querySelector('[slot="error"]') !== null;
     };
 
     checkSlots();
@@ -97,13 +97,13 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       // subtree is needed because a direct child's slot attribute may be reassigned after mount.
       const observer = new MutationObserver(checkSlots);
 
-      observer.observe(host.el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
+      observer.observe(el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
 
       return () => observer.disconnect();
     });
 
     // Keep host accessibility state in sync with async status.
-    host.bind({
+    bind({
       attr: {
         ariaBusy: () => (props.status!.value === 'loading' ? 'true' : 'false'),
         ariaLabel: () => (props.status!.value === 'loading' ? 'Loading…' : null),

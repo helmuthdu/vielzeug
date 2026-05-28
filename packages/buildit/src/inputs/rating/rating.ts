@@ -80,9 +80,9 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     solid: prop.bool(false),
     value: prop.number(0),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);
@@ -107,7 +107,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
-      return [...(host.el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
+      return [...(el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
     };
     const ratingControl = createSliderControl({
       max: computed(() => Number(props.max!.value) || 5),
@@ -116,8 +116,8 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     });
 
     function spawnSparkles(star: number) {
-      const layer = host.el.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
-      const btn = host.el.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
+      const layer = el.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
+      const btn = el.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
 
       if (!layer || !btn) return;
 
@@ -156,7 +156,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
       if (nextValue === normalizedValue.value) return;
 
       // Write through the host attribute; craftit handles host reflection.
-      host.el.setAttribute('value', String(nextValue));
+      el.setAttribute('value', String(nextValue));
       emit('change', { originalEvent, value: nextValue });
       triggerValidation('change');
       spawnSparkles(nextValue);
@@ -180,7 +180,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
-    host.bind({ attr: { size: fCtxProps.size } });
+    bind({ attr: { size: fCtxProps.size } });
 
     return html`
       <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">

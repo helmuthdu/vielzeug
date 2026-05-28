@@ -68,11 +68,11 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
     variant: prop.string<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>>(),
   },
-  setup(props, { emit, host }) {
-    const shadowRoot = host.el.shadowRoot;
+  setup(props, { emit, el, bind }) {
+    const shadowRoot = el.shadowRoot;
 
     // Reflect orientation to host so CSS and tests can read it
-    host.bind({ attr: { orientation: props.orientation } });
+    bind({ attr: { orientation: props.orientation } });
     // Provide context to all child bit-* form fields
     provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),

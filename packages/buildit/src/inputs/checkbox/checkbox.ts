@@ -92,9 +92,9 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
     const checkable = createCheckable({
@@ -104,7 +104,7 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       error: props.error,
       group: groupCtx,
       helper: props.helper,
-      host: host.el,
+      host: el,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -125,7 +125,7 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
 
     connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
 
-    applyCheckableBinding(host, fCtxProps.size, { checked, disabled, handleClick, handleKeydown, indeterminate });
+    applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown, indeterminate });
 
     return html`
       <div class="checkbox-wrapper" part="checkbox">

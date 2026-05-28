@@ -159,12 +159,10 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
     justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
     minColWidth: prop.string(),
     responsive: prop.bool(false),
-    rows: prop.string(
-      undefined as '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto' | undefined,
-    ),
+    rows: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto'>(),
   },
 
-  setup(props, { host }) {
+  setup(props, { el, bind: _bind }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
         return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
@@ -173,13 +171,13 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       return activeCols ? `repeat(${activeCols}, 1fr)` : null;
     };
     const updateCols = () => {
-      const w = host.el.offsetWidth;
+      const w = el.offsetWidth;
       const responsive = Boolean(props.responsive.value);
       const minW = props.minColWidth.value ?? '';
       let activeCols: string | undefined;
 
       for (const [key, cssVar] of BREAKPOINTS) {
-        if (w >= resolveBp(host.el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        if (w >= resolveBp(el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
           activeCols = props[key].value!;
           break;
         }
@@ -189,9 +187,9 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       const colsValue = computeCols(activeCols, responsive, minW);
 
       if (colsValue) {
-        host.el.style.setProperty('--_cols', colsValue);
+        el.style.setProperty('--_cols', colsValue);
       } else {
-        host.el.style.removeProperty('--_cols');
+        el.style.removeProperty('--_cols');
       }
     };
 
@@ -211,11 +209,11 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
     });
 
     const updateAreas = () => {
-      const w = host.el.offsetWidth;
+      const w = el.offsetWidth;
       let active = '';
 
       for (const [key, cssVar] of AREAS_BREAKPOINTS) {
-        if (w >= resolveBp(host.el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        if (w >= resolveBp(el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
           active = props[key].value!;
           break;
         }
@@ -223,9 +221,9 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       active ||= props.areas.value || '';
 
       if (active) {
-        host.el.style.setProperty('grid-template-areas', active);
+        el.style.setProperty('grid-template-areas', active);
       } else {
-        host.el.style.removeProperty('grid-template-areas');
+        el.style.removeProperty('grid-template-areas');
       }
     };
 
@@ -234,9 +232,9 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       const rows = props.rows.value;
 
       if (rows && rows !== 'auto') {
-        host.el.style.setProperty('--_rows', `repeat(${rows}, 1fr)`);
+        el.style.setProperty('--_rows', `repeat(${rows}, 1fr)`);
       } else {
-        host.el.style.removeProperty('--_rows');
+        el.style.removeProperty('--_rows');
       }
     });
     // Grid template areas (responsive)
@@ -254,7 +252,7 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
 
     // Also, update on element resize (drives breakpoint switching)
     onMounted(() => {
-      const size = resizeObserver(host.el);
+      const size = resizeObserver(el);
 
       effect(() => {
         void size.value;

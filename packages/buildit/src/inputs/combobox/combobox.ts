@@ -94,9 +94,9 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, host }) {
+  setup(props, { emit, el, bind }) {
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(host, props, formCtx);
+    const fCtxProps = useFormContext(bind, props, formCtx);
     const query = signal('');
 
     // Element refs needed by the composite option-list factory.
@@ -119,7 +119,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         value: props.value,
       },
       listFactory: (c) => ({
-        getBoundary: () => host.el,
+        getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
         getItems: () => filteredOptions.value,
         getOptionId: (index) => `${c.fieldId}-opt-${index}`,
@@ -156,7 +156,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     const insetLabelHidden = () => !choice.label.inset.show.value;
     const outsideLabelHidden = () => !choice.label.outside.show.value;
 
-    host.bind({
+    bind({
       attr: {
         open: () => (isOpen.value ? true : undefined),
         size: fCtxProps.size,
@@ -236,7 +236,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       },
     };
 
-    function readOptions(elements: Element[] = Array.from(host.el.children)) {
+    function readOptions(elements: Element[] = Array.from(el.children)) {
       slottedOptions.value = parseSlottedOptions(elements);
 
       if (!isMultiple()) {
@@ -529,7 +529,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         readOptions();
       });
 
-      observer.observe(host.el, {
+      observer.observe(el, {
         attributeFilter: ['disabled', 'label', 'value'],
         attributes: true,
         childList: true,
@@ -560,7 +560,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         optionList.set(focusedIdx);
       }
     };
-    const shadowRoot = host.el.shadowRoot;
+    const shadowRoot = el.shadowRoot;
 
     if (shadowRoot) {
       shadowRoot.addEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
