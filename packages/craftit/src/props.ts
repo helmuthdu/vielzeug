@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
-import { setAttr, toKebab } from './internal';
-import { currentElementOrThrow, effect } from './runtime';
+import { isStructuredValue, setAttr, toKebab } from './utils/dom';
+import { getCurrentElement, effect } from './runtime';
 
 export type PropOptions<T> = {
   parse?: (value: string | null) => T;
@@ -82,9 +82,6 @@ export const prop = {
 
 const isPropDef = (value: unknown): value is PropDef<unknown> =>
   typeof value === 'object' && value !== null && 'default' in value;
-
-const isStructuredValue = (value: unknown): boolean =>
-  Array.isArray(value) || (typeof value === 'object' && value !== null);
 
 export function normalizePropDefinition<T>(value: T | PropDef<T>): PropDef<T> {
   if (isPropDef(value)) {
@@ -170,7 +167,7 @@ const inferParserFromValue = <T>(defaultValue: T): ((value: string | null) => T)
 
 /** @internal Runtime prop registration (called by createProps) */
 const registerProp = <T>(propName: string, attrName: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
-  const el = currentElementOrThrow();
+  const el = getCurrentElement();
 
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 

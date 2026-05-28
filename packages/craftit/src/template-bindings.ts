@@ -10,18 +10,15 @@ import {
 } from '@vielzeug/stateit';
 
 import { isLiveSignal } from './directives/live';
+import { listen, removeNodes, runAll, setAttr, isStructuredValue } from './utils/dom';
+import { CF_ID_ATTR } from './utils/id';
 import {
-  CF_ID_ATTR,
   type AttrBinding,
   type Binding,
   type EventBinding,
   type HtmlBinding,
   type RefBinding,
-  listen,
-  removeNodes,
-  runAll,
-  setAttr,
-} from './internal';
+} from './types/bindings';
 import { propRegistry } from './props';
 
 export type RegisterCleanup = (fn: CleanupFn) => void;
@@ -82,9 +79,6 @@ export const findCommentMarker = (root: Node, marker: string): Comment | null =>
 
   return null;
 };
-
-const isStructuredValue = (value: unknown): value is object =>
-  Array.isArray(value) || (typeof value === 'object' && value !== null);
 
 const isNativeFormInput = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;

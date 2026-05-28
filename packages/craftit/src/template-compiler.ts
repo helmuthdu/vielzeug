@@ -1,18 +1,16 @@
 import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
+import { CF_ID_ATTR, createMarkerIdFactory, rekeyHtmlResult } from './utils/id';
+import { escapeHtml } from './utils/dom';
 import {
-  CF_ID_ATTR,
-  createMarkerIdFactory,
-  escapeHtml,
   htmlResult,
   isDirectiveResult,
   isHtmlResult,
-  rekeyHtmlResult,
   type Binding,
   type HTMLResult,
   type Ref,
   type RefCallback,
-} from './internal';
+} from './types/bindings';
 import { createAttrBinding } from './template-bindings';
 
 // Templates use the HTML as-is; no aggressive whitespace normalization

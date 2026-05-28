@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { currentElementOrThrow, effect } from './runtime';
+import { getCurrentElement, effect } from './runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
@@ -21,7 +21,7 @@ export type FormFieldHandle = {
 };
 
 export const defineField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
-  const host = currentElementOrThrow();
+  const host = getCurrentElement();
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {

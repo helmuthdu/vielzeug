@@ -7,7 +7,7 @@
 
 import { type ReadonlySignal, signal, type Signal } from '@vielzeug/stateit';
 
-import { currentElementOrThrow, onCleanup, onMounted } from './runtime';
+import { getCurrentElement, onCleanup, onMounted } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
   elements: (name?: SlotNames) => ReadonlySignal<Element[]>;
@@ -18,7 +18,7 @@ const SLOT_DEFAULT = 'default';
 const normalizeSlotName = (slotName: string | null | undefined): string => slotName || SLOT_DEFAULT;
 
 export const createSlots = (): ComponentSlots<string> => {
-  const host = currentElementOrThrow();
+  const host = getCurrentElement();
 
   type SlotEntry = {
     elements: Signal<Element[]>;

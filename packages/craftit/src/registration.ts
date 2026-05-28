@@ -1,16 +1,15 @@
 import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { createHost, createSlots, type ComponentHost, type ComponentSlots } from './host';
+import { createHost, type ComponentHost } from './host-bind';
+import { createSlots, type ComponentSlots } from './slots';
+import { createEmitFn, type EmitFn } from './utils/emit';
+import { type CSSResult, loadStylesheet } from './utils/css';
+import { toKebab } from './utils/dom';
 import {
-  createEmitFn,
-  type CSSResult,
-  type EmitFn,
   extractResult,
   type HTMLResult,
-  loadStylesheet,
-  toKebab,
-} from './internal';
+} from './types/bindings';
 import {
   createProps,
   isReflecting,
@@ -24,7 +23,7 @@ import {
   type PropOptions,
   type PropsDef,
 } from './props';
-import { currentElementOrThrow, type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
+import { getCurrentElement, type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
 import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
 
 // ─── Lifecycle event constants ────────────────────────────────────────────────────────────
@@ -75,6 +74,17 @@ type ComponentState = {
   templateResult: HTMLResult | null;
 };
 
+const createComponentState = (styles?: (string | CSSStyleSheet | CSSResult)[]): ComponentState => ({
+  mountCallbacks: [],
+  mountedCallbacksRan: false,
+  mountToken: 0,
+  scope: _scope(),
+  setupDone: false,
+  styles,
+  templateMounted: false,
+  templateResult: null,
+});
+
 class BaseElement extends HTMLElement {
   // Lifecycle: setup() runs on first connect and calls the user setup function which returns
   // an HTMLResult directly. _init() runs on every connect to apply styles, mount the template,
@@ -96,16 +106,7 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this._component = {
-      mountCallbacks: [],
-      mountedCallbacksRan: false,
-      mountToken: 0,
-      scope: _scope(),
-      setupDone: false,
-      styles: options?.styles,
-      templateMounted: false,
-      templateResult: null,
-    };
+    this._component = createComponentState(options?.styles);
   }
 
   connectedCallback(): void {
@@ -141,17 +142,16 @@ class BaseElement extends HTMLElement {
 
   disconnectedCallback(): void {
     this._component.mountToken++;
-    // Dispose scope to run all effect cleanups (event listeners, DOM effects, etc.).
-    // Note: setup() will re-run on the next connectedCallback — this is intentional.
-    // Signals created in setup() are in closures and survive reconnect naturally.
-    // Computeds created in setup() are scope-managed and will be recreated on reconnect.
     this._component.scope.dispose();
-    this._component.scope = _scope();
-    this._component.mountCallbacks = [];
-    this._component.mountedCallbacksRan = false;
-    this._component.templateMounted = false;
-    this._component.templateResult = null;
-    this._component.setupDone = false;
+    
+    // Reset component state while preserving shadow and styles
+    const state = createComponentState(this._component.styles);
+    this._component.scope = state.scope;
+    this._component.mountCallbacks = state.mountCallbacks;
+    this._component.mountedCallbacksRan = state.mountedCallbacksRan;
+    this._component.templateMounted = state.templateMounted;
+    this._component.templateResult = state.templateResult;
+    this._component.setupDone = state.setupDone;
 
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
   }
@@ -358,7 +358,7 @@ export function define<
     () => {
       const props = createSetupProps(normalizedPropDefs);
       const host = createHost();
-      const el = currentElementOrThrow();
+      const el = getCurrentElement();
       const emit = createEmitFn<Emits>(el);
       const slots = createSlots() as ComponentSlots<SlotNames>;
 

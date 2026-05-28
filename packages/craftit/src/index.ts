@@ -37,16 +37,27 @@ export {
   inject,
   injectStrict,
   provide,
+  type InjectionKey,
+} from './context';
+
+export {
   syncAria,
+  type SyncAriaOptions,
+} from './aria';
+
+export {
+  createHost,
   type ComponentHost,
-  type ComponentSlots,
   type HostBindConfig,
   type HostBindingValue,
   type HostPropDescriptor,
-  type InjectionKey,
   type ReflectConfig,
-  type SyncAriaOptions,
-} from './host';
+} from './host-bind';
+
+export {
+  createSlots,
+  type ComponentSlots,
+} from './slots';
 
 export { html } from './template-compiler';
 export { each } from './directives/each';
@@ -58,15 +69,25 @@ export { raw, setRawSanitizer } from './directives/raw';
 
 export {
   css,
+  type CSSResult,
+} from './utils/css';
+
+export {
   createId,
+} from './utils/id';
+
+export {
+  createEmitFn,
+  type EmitFn,
+} from './utils/emit';
+
+export {
   ref,
   refs,
-  type CSSResult,
-  type EmitFn,
-  type HTMLResult,
   type Ref,
-  type RefCallback,
   type Refs,
-} from './internal';
+  type RefCallback,
+  type HTMLResult,
+} from './types/bindings';
 
 export { intersectionObserver, mediaObserver, mutationObserver, resizeObserver } from './observers';

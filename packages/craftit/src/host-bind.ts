@@ -5,7 +5,7 @@
 
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { currentElementOrThrow, effect, onCleanup } from './runtime';
+import { getCurrentElement, effect, onCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
 
@@ -37,7 +37,7 @@ export type HostPropDescriptor<T = unknown> = {
 };
 
 type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
-type HostEventListener = (event: any) => void;
+type HostEventListener = (event: Event) => void;
 
 export type HostBindConfig = {
   attr?: ReflectConfig;
@@ -53,7 +53,7 @@ export type ComponentHost = {
 };
 
 export const createHost = (): ComponentHost => {
-  const el = currentElementOrThrow();
+  const el = getCurrentElement();
 
   const bind = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
     const disposers: Array<() => void> = [];

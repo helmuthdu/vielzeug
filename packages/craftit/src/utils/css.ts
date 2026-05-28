@@ -3,13 +3,14 @@
  */
 
 export type CSSResult = {
-  __craftitCssResult: true;
   content: string;
   toString(): string;
 };
 
+const cssResultBrand = new WeakSet<CSSResult>();
+
 export const isCssResult = (value: unknown): value is CSSResult =>
-  typeof value === 'object' && !!value && (value as CSSResult).__craftitCssResult === true;
+  typeof value === 'object' && value !== null && cssResultBrand.has(value as CSSResult);
 
 const cssResultToString = function (this: CSSResult): string {
   return this.content;
@@ -28,7 +29,9 @@ export const css = (strings: TemplateStringsArray, ...values: Array<CSSResult | 
     }
   }
 
-  return { __craftitCssResult: true as const, content: content.trim(), toString: cssResultToString };
+  const result: CSSResult = { content: content.trim(), toString: cssResultToString };
+  cssResultBrand.add(result);
+  return result;
 };
 
 const stylesheetStringCache = new Map<string, CSSStyleSheet>();

@@ -7,9 +7,8 @@
 import type { ReadonlySignal } from '@vielzeug/stateit';
 
 import { _resetRawSanitizer } from '../directives/raw';
-import { type HTMLResult } from '../internal';
+import { type HTMLResult } from '../types/bindings';
 import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
-import { fire as runtimeFire } from '../runtime';
 import { _resetIdCounter } from '../utils/id';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -355,30 +354,30 @@ const createPointerEvent = (type: string, init: PointerEventInit = {}): Event =>
  */
 export const fire = {
   blur: (el: Element, opts?: FocusEventInit) =>
-    runtimeFire.event(el, new FocusEvent('blur', { bubbles: true, ...opts })),
-  change: (el: Element, opts?: EventInit) => runtimeFire.event(el, new Event('change', { bubbles: true, ...opts })),
+    el.dispatchEvent(new FocusEvent('blur', { bubbles: true, ...opts })),
+  change: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('change', { bubbles: true, ...opts })),
   click: (el: Element, opts?: PointerEventInit) =>
-    runtimeFire.event(el, new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
   custom<D = unknown>(el: Element, name: string, detail?: D, opts?: Omit<CustomEventInit<D>, 'detail'>): void {
-    runtimeFire.event(el, new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
+    el.dispatchEvent(new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
   },
   focus: (el: Element, opts?: FocusEventInit) =>
-    runtimeFire.event(el, new FocusEvent('focus', { bubbles: true, ...opts })),
-  input: (el: Element, opts?: EventInit) => runtimeFire.event(el, new Event('input', { bubbles: true, ...opts })),
+    el.dispatchEvent(new FocusEvent('focus', { bubbles: true, ...opts })),
+  input: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('input', { bubbles: true, ...opts })),
   keyDown: (el: Element, opts?: KeyboardEventInit) =>
-    runtimeFire.event(el, new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
   keyUp: (el: Element, opts?: KeyboardEventInit) =>
-    runtimeFire.event(el, new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
   pointerDown: (el: Element, opts?: PointerEventInit) =>
-    runtimeFire.event(el, createPointerEvent('pointerdown', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(createPointerEvent('pointerdown', { bubbles: true, cancelable: true, ...opts })),
   pointerEnter: (el: Element, opts?: PointerEventInit) =>
-    runtimeFire.event(el, createPointerEvent('pointerenter', { bubbles: false, ...opts })),
+    el.dispatchEvent(createPointerEvent('pointerenter', { bubbles: false, ...opts })),
   pointerLeave: (el: Element, opts?: PointerEventInit) =>
-    runtimeFire.event(el, createPointerEvent('pointerleave', { bubbles: false, ...opts })),
+    el.dispatchEvent(createPointerEvent('pointerleave', { bubbles: false, ...opts })),
   pointerUp: (el: Element, opts?: PointerEventInit) =>
-    runtimeFire.event(el, createPointerEvent('pointerup', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(createPointerEvent('pointerup', { bubbles: true, cancelable: true, ...opts })),
   submit: (el: Element, opts?: EventInit) =>
-    runtimeFire.event(el, new Event('submit', { bubbles: true, cancelable: true, ...opts })),
+    el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true, ...opts })),
 } as const;
 
 // ─── User interactions ────────────────────────────────────────────────────────

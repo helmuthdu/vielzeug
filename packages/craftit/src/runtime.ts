@@ -8,9 +8,7 @@ import {
 } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { fire, listen as listenInternal } from './internal';
-
-export { fire };
+import { listen as listenInternal } from './utils/dom';
 
 // ─── Runtime context ─────────────────────────────────────────────────────────
 // A single context object replaces the previous two parallel globals
@@ -50,9 +48,6 @@ export const getCurrentElement = (): HTMLElement => {
 
   throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 };
-
-/** @internal — alias for internal callers that predate the rename */
-export const currentElementOrThrow = getCurrentElement;
 
 export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
   if (!currentContext) return false;

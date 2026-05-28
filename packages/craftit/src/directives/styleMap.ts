@@ -1,5 +1,7 @@
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
+import { toKebab } from '../utils/dom';
+
 type StyleInput =
   | string
   | number
@@ -24,8 +26,6 @@ const toStyleValue = (value: StyleInput): string => {
 // This is applied to both property names and values: semicolons end declarations
 // and braces are meaningful in stylesheet rules (but not inline style values).
 const UNSAFE_CSS_CHARS = /[;{}]/g;
-
-const toKebabCase = (name: string): string => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 
 /**
  * Builds a reactive inline style string from a style object.
@@ -56,7 +56,7 @@ export const styleMap = (record: Record<string, StyleInput>): ReadonlySignal<str
 
       if (!value) continue;
 
-      const safeName = toKebabCase(name).replace(UNSAFE_CSS_CHARS, '');
+      const safeName = toKebab(name).replace(UNSAFE_CSS_CHARS, '');
 
       if (!safeName) continue;
 

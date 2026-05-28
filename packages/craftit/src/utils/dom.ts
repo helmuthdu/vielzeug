@@ -102,6 +102,9 @@ export const listen = (
 
 export const toKebab = (str: string): string => str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
+export const isStructuredValue = (value: unknown): value is object =>
+  Array.isArray(value) || (typeof value === 'object' && value !== null);
+
 const ESC: Record<string, string> = { "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
 export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => ESC[c]);

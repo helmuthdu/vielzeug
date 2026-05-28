@@ -6,7 +6,7 @@
  */
 
 import { CRAFTIT_ERRORS } from './errors';
-import { currentElementOrThrow } from './runtime';
+import { getCurrentElement } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
@@ -15,7 +15,7 @@ export type InjectionKey<T> = symbol & {
 };
 
 export const provide = <T>(key: InjectionKey<T>, value: T): void => {
-  const el = currentElementOrThrow();
+  const el = getCurrentElement();
 
   if (!contextRegistry.has(el)) contextRegistry.set(el, new Map());
 
@@ -25,7 +25,7 @@ export const provide = <T>(key: InjectionKey<T>, value: T): void => {
 export function inject<T>(key: InjectionKey<T>): T | undefined;
 export function inject<T>(key: InjectionKey<T>, fallback: T): T;
 export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
-  let node: Node | null = currentElementOrThrow();
+  let node: Node | null = getCurrentElement();
 
   while (node) {
     if (node instanceof HTMLElement) {
@@ -47,7 +47,7 @@ export const injectStrict = <T>(key: InjectionKey<T>): T => {
 
   if (resolved !== undefined) return resolved;
 
-  const host = currentElementOrThrow();
+  const host = getCurrentElement();
 
   throw new Error(CRAFTIT_ERRORS.injectStrictFailed(String(key), host.localName));
 };

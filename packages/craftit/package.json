@@ -43,7 +43,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@vielzeug/floatit": "workspace:*",
     "@vielzeug/stateit": "workspace:*"
   },
   "devDependencies": {
