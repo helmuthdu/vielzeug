@@ -30,7 +30,9 @@ export const css = (strings: TemplateStringsArray, ...values: Array<CSSResult | 
   }
 
   const result: CSSResult = { content: content.trim(), toString: cssResultToString };
+
   cssResultBrand.add(result);
+
   return result;
 };
 

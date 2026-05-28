@@ -7,8 +7,8 @@
 import type { ReadonlySignal } from '@vielzeug/stateit';
 
 import { _resetRawSanitizer } from '../directives/raw';
-import { type HTMLResult } from '../types/bindings';
 import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
+import { type HTMLResult } from '../types/bindings';
 import { _resetIdCounter } from '../utils/id';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -353,16 +353,14 @@ const createPointerEvent = (type: string, init: PointerEventInit = {}): Event =>
  * fire.custom(el, 'value-change', 42);
  */
 export const fire = {
-  blur: (el: Element, opts?: FocusEventInit) =>
-    el.dispatchEvent(new FocusEvent('blur', { bubbles: true, ...opts })),
+  blur: (el: Element, opts?: FocusEventInit) => el.dispatchEvent(new FocusEvent('blur', { bubbles: true, ...opts })),
   change: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('change', { bubbles: true, ...opts })),
   click: (el: Element, opts?: PointerEventInit) =>
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
   custom<D = unknown>(el: Element, name: string, detail?: D, opts?: Omit<CustomEventInit<D>, 'detail'>): void {
     el.dispatchEvent(new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
   },
-  focus: (el: Element, opts?: FocusEventInit) =>
-    el.dispatchEvent(new FocusEvent('focus', { bubbles: true, ...opts })),
+  focus: (el: Element, opts?: FocusEventInit) => el.dispatchEvent(new FocusEvent('focus', { bubbles: true, ...opts })),
   input: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('input', { bubbles: true, ...opts })),
   keyDown: (el: Element, opts?: KeyboardEventInit) =>
     el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),

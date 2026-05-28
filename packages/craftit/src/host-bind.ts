@@ -37,7 +37,9 @@ export type HostPropDescriptor<T = unknown> = {
 };
 
 type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
-type HostEventListener = (event: Event) => void;
+// Bivariant callback allows consumers to use narrower event types
+// (e.g. KeyboardEvent, MouseEvent) while preserving runtime Event semantics.
+type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 
 export type HostBindConfig = {
   attr?: ReflectConfig;

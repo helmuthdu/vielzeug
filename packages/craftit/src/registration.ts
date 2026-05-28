@@ -2,14 +2,6 @@ import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@
 
 import { CRAFTIT_ERRORS } from './errors';
 import { createHost, type ComponentHost } from './host-bind';
-import { createSlots, type ComponentSlots } from './slots';
-import { createEmitFn, type EmitFn } from './utils/emit';
-import { type CSSResult, loadStylesheet } from './utils/css';
-import { toKebab } from './utils/dom';
-import {
-  extractResult,
-  type HTMLResult,
-} from './types/bindings';
 import {
   createProps,
   isReflecting,
@@ -24,7 +16,12 @@ import {
   type PropsDef,
 } from './props';
 import { getCurrentElement, type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
+import { createSlots, type ComponentSlots } from './slots';
 import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
+import { extractResult, type HTMLResult } from './types/bindings';
+import { type CSSResult, loadStylesheet } from './utils/css';
+import { toKebab } from './utils/dom';
+import { createEmitFn, type EmitFn } from './utils/emit';
 
 // ─── Lifecycle event constants ────────────────────────────────────────────────────────────
 
@@ -143,9 +140,10 @@ class BaseElement extends HTMLElement {
   disconnectedCallback(): void {
     this._component.mountToken++;
     this._component.scope.dispose();
-    
+
     // Reset component state while preserving shadow and styles
     const state = createComponentState(this._component.styles);
+
     this._component.scope = state.scope;
     this._component.mountCallbacks = state.mountCallbacks;
     this._component.mountedCallbacksRan = state.mountedCallbacksRan;

@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
-import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 import { getCurrentElement, effect } from './runtime';
+import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
 export type PropOptions<T> = {
   parse?: (value: string | null) => T;

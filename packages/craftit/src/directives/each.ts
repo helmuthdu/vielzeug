@@ -9,22 +9,19 @@ import {
 } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from '../errors';
+import { applyBindingsWithTargets, indexBindingTargets, parseHTML, type RegisterCleanup } from '../template-bindings';
+import { applyHtmlBinding } from '../template-bindings';
 import {
   createDirectiveResult,
-  createMarkerIdFactory,
-  escapeHtml,
   extractResult,
   htmlResult,
   isHtmlResult,
-  removeNodes,
-  rekeyHtmlResult,
-  runAll,
   type Binding,
   type DirectiveResult,
   type HTMLResult,
-} from '../internal';
-import { applyBindingsWithTargets, indexBindingTargets, parseHTML, type RegisterCleanup } from '../template-bindings';
-import { applyHtmlBinding } from '../template-bindings';
+} from '../types/bindings';
+import { escapeHtml, removeNodes, runAll } from '../utils/dom';
+import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
 
 const toResultEntry = (value: string | HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } =>
   isHtmlResult(value) ? rekeyHtmlResult(value, getNextId) : { bindings: [], html: escapeHtml(value) };

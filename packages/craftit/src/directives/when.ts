@@ -1,6 +1,6 @@
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../internal';
+import type { HTMLResult } from '../types/bindings';
 
 type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 

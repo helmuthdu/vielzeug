@@ -21,6 +21,7 @@ const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false 
 export const createEmitFn = <T extends Record<string, unknown>>(el: HTMLElement): EmitFn<T> => {
   return ((event: keyof T, ...rest: unknown[]) => {
     const customEventInit = rest.length > 0 ? { ...DEFAULT_FIRE_OPTIONS, detail: rest[0] } : DEFAULT_FIRE_OPTIONS;
+
     el.dispatchEvent(new CustomEvent<unknown>(String(event), customEventInit));
   }) as EmitFn<T>;
 };
