@@ -99,7 +99,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
 
-    const { choice, cleanup, optionList } = createComposite<ComboboxOptionItem>({
+    const abortSignal = toAbortSignal(onCleanup);
+    const { choice, optionList } = createComposite<ComboboxOptionItem>({
       field: {
         disabled: fCtxProps.disabled,
         error: props.error,
@@ -123,12 +124,13 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         manageAriaExpanded: false,
         onClose: (reason) => {
           emit('close', { reason });
-          restoreQueryFromSelection();
+          if (!abortSignal.aborted) restoreQueryFromSelection();
           c.triggerValidation('blur');
         },
         onOpen: (reason) => emit('open', { reason }),
         restoreFocus: false,
       }),
+      signal: abortSignal,
     });
 
     const {
@@ -656,7 +658,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     });
 
     onCleanup(() => {
-      cleanup();
       shadowRoot?.removeEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
       stopListboxListeners?.();
       stopListboxListeners = null;

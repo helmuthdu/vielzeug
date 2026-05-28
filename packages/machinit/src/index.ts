@@ -31,7 +31,7 @@ export type TransitionDef<State extends string, Ctx extends object, Ev extends M
 export type StateNode<State extends string, EventType extends string, Ctx extends object> = {
   entry?: ActionFn<Ctx>;
   exit?: ActionFn<Ctx>;
-  on?: Partial<Record<EventType, TransitionDef<State, Ctx>>>;
+  on?: Partial<Record<EventType, TransitionDef<State, Ctx> | Array<TransitionDef<State, Ctx>>>>;
 };
 
 export type MachineConfig<State extends string, EventType extends string, Ctx extends object> = {
@@ -49,9 +49,8 @@ export type MachineSnapshot<State extends string, Ctx extends object> = {
 export interface MachineInstance<State extends string, EventType extends string, Ctx extends object> {
   readonly context: ReadonlySignal<Ctx>;
   readonly state: ReadonlySignal<State>;
-  can(event: { [key: string]: unknown; type: EventType }): boolean;
+  can(eventOrType: { [key: string]: unknown; type: EventType } | EventType): boolean;
   getSnapshot(): MachineSnapshot<State, Ctx>;
-  matches(state: State): boolean;
   send(eventOrType: { [key: string]: unknown; type: EventType } | EventType, payload?: object): boolean;
   subscribe(listener: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;
@@ -97,20 +96,14 @@ export const assign =
  *   },
  * });
  */
-export const setup = <Ctx extends object = Record<never, never>, Ev extends MachineEvent = MachineEvent>() => {
-  const assignHelper = (fn: (args: ActionArgs<Ctx, Ev>) => Partial<Ctx>): ActionFn<Ctx, Ev> => (args) => {
-    Object.assign(args.context, fn(args));
-  };
-
-  return {
-    action: (fn: ActionFn<Ctx, Ev>): ActionFn<Ctx, Ev> => fn,
-    assign: assignHelper,
-    create: <State extends string, EventType extends Ev extends { type: infer T } ? T : string>(
-      config: MachineConfig<State, EventType, Ctx>,
-    ): MachineInstance<State, EventType, Ctx> => createMachine(config),
-    guard: (fn: GuardFn<Ctx, Ev>): GuardFn<Ctx, Ev> => fn,
-  };
-};
+export const setup = <Ctx extends object = Record<never, never>, Ev extends MachineEvent = MachineEvent>() => ({
+  action: (fn: ActionFn<Ctx, Ev>): ActionFn<Ctx, Ev> => fn,
+  assign: assign<Ctx, Ev>,
+  create: <State extends string, EventType extends Ev extends { type: infer T } ? T : string>(
+    config: MachineConfig<State, EventType, Ctx>,
+  ): MachineInstance<State, EventType, Ctx> => createMachine(config),
+  guard: (fn: GuardFn<Ctx, Ev>): GuardFn<Ctx, Ev> => fn,
+});
 
 // ── Internal types for `const` inference ─────────────────────────────────────
 
@@ -120,7 +113,11 @@ type RawGuardFn = (args: { context: any; event: any }) => boolean;
 
 type RawTransitionDef = { actions?: RawActionFn[]; guard?: RawGuardFn; target: string };
 
-type RawStateNode = { entry?: RawActionFn; exit?: RawActionFn; on?: Record<string, RawTransitionDef> };
+type RawStateNode = {
+  entry?: RawActionFn;
+  exit?: RawActionFn;
+  on?: Record<string, RawTransitionDef | Array<RawTransitionDef>>;
+};
 
 type RawMachineConfig = { context?: object; initial: string; onTransition?: (info: any) => void; states: Record<string, RawStateNode> };
 
@@ -144,8 +141,9 @@ const INIT_EVENT: MachineEvent = { type: '$init' };
  * - `.state` and `.context` are `ReadonlySignal` — subscribe via `effect()` or `.subscribe()`.
  * - `send()` returns `true` if the transition was taken, `false` otherwise.
  * - `can()` checks transition availability without side effects.
- * - Lifecycle order per transition: `exit` → `actions` → state change → `entry`.
+ * - Lifecycle order per transition: `exit` → `actions` → state change → `entry` → `onTransition`.
  * - All signal writes are batched — subscribers are notified once per `send()`.
+ * - Guard-based routing: if `on` value is an array, first passing guard wins.
  *
  * @example
  * const traffic = createMachine({
@@ -178,9 +176,12 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
       throw new Error(`[machinit] initial state "${config.initial}" not found in states`);
     }
     for (const [name, node] of Object.entries(states)) {
-      for (const [ev, tr] of Object.entries(node.on ?? {})) {
-        if (!(tr.target in states)) {
-          throw new Error(`[machinit] state "${name}" event "${ev}" targets unknown state "${tr.target}"`);
+      for (const [ev, raw] of Object.entries(node.on ?? {})) {
+        const defs = Array.isArray(raw) ? raw : [raw];
+        for (const tr of defs) {
+          if (!(tr.target in states)) {
+            throw new Error(`[machinit] state "${name}" event "${ev}" targets unknown state "${tr.target}"`);
+          }
         }
       }
     }
@@ -191,62 +192,56 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
 
     const event = typeof eventOrType === 'string' ? ({ type: eventOrType, ...payload } as Ev) : eventOrType;
     const currentNode = states[state_.value];
-    const tr = currentNode.on?.[event.type];
+    const raw = currentNode.on?.[event.type];
 
+    if (!raw) return false;
+
+    const defs = Array.isArray(raw) ? raw : [raw];
+    const draft = { ...context_.value } as Ctx;
+
+    // Find first transition whose guard passes (or no guard)
+    const tr = defs.find((d) => !d.guard || d.guard({ context: draft, event }));
     if (!tr) return false;
-
-    const guardContext = { ...context_.value } as Ctx;
-    if (tr.guard && !tr.guard({ context: guardContext, event })) return false;
 
     const targetNode = states[tr.target];
     const from = state_.value;
 
     batch(() => {
-      const draft = { ...context_.value } as Ctx;
-
       currentNode.exit?.({ context: draft, event });
       tr.actions?.forEach((fn) => fn({ context: draft, event }));
       state_.value = tr.target as State;
       targetNode.entry?.({ context: draft, event });
       context_.value = draft;
+      config.onTransition?.({ event, from, to: tr.target as State });
     });
-
-    config.onTransition?.({ event, from, to: tr.target as State });
 
     return true;
   };
 
-  const can = (event: Ev | string): boolean => {
-    const ev = typeof event === 'string' ? ({ type: event } as Ev) : event;
-    const tr = states[state_.value].on?.[ev.type];
+  const can = (eventOrType: Ev | string): boolean => {
+    const ev = typeof eventOrType === 'string' ? ({ type: eventOrType } as Ev) : eventOrType;
+    const raw = states[state_.value].on?.[ev.type];
 
-    if (!tr) return false;
+    if (!raw) return false;
 
-    return !tr.guard || tr.guard({ context: { ...context_.value } as Ctx, event: ev });
+    const defs = Array.isArray(raw) ? raw : [raw];
+    const draft = { ...context_.value } as Ctx;
+
+    return defs.some((d) => !d.guard || d.guard({ context: draft, event: ev }));
   };
 
-  const matches = (state: State): boolean => state_.value === state;
-
   const getSnapshot = (): MachineSnapshot<State, Ctx> => ({
-    context: context_.value,
+    context: { ...context_.value },
     state: state_.value,
   });
 
   const subscribe = (listener: (snapshot: MachineSnapshot<State, Ctx>) => void): (() => void) => {
-    let isFirst = true;
-    let isDisposed = false;
+    let active = true;
     const subscription = createEffect(() => {
-      if (!isDisposed) {
-        if (isFirst) {
-          isFirst = false;
-          listener(getSnapshot());
-        } else {
-          listener(getSnapshot());
-        }
-      }
+      if (active) listener(getSnapshot());
     });
     return () => {
-      isDisposed = true;
+      active = false;
       subscription.dispose();
     };
   };
@@ -265,12 +260,13 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
     can,
     context: readonly(context_),
     getSnapshot,
-    matches,
     send,
     state: readonly(state_),
     subscribe,
     [Symbol.dispose]: () => {
       disposed = true;
+      state_.dispose();
+      context_.dispose();
     },
   };
 };

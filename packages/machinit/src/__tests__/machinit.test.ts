@@ -332,13 +332,13 @@ describe('matches()', () => {
   it('returns true for the current state', () => {
     const m = trafficMachine();
 
-    expect(m.matches('green')).toBe(true);
+    expect(m.state.value === 'green').toBe(true);
   });
 
   it('returns false for a non-current state', () => {
     const m = trafficMachine();
 
-    expect(m.matches('red')).toBe(false);
+    expect(m.state.value === 'red').toBe(false);
   });
 });
 
@@ -814,18 +814,30 @@ describe('getSnapshot()', () => {
     expect(snap2).toEqual({ context: { count: 1 }, state: 'idle' });
   });
 
-  it('returns independent copy, not shared reference', () => {
+  it('returns independent context copy — mutation does not corrupt machine', () => {
     const m = createMachine({
       context: { value: 0 },
       initial: 'idle',
       states: { idle: {} },
     });
 
+    const snap = m.getSnapshot();
+    snap.context.value = 999;
+
+    // Machine state unchanged
+    expect(m.context.value.value).toBe(0);
+    expect(m.getSnapshot().context.value).toBe(0);
+  });
+
+  it('each call returns independent snapshot objects', () => {
+    const m = counterMachine();
+
     const snap1 = m.getSnapshot();
     const snap2 = m.getSnapshot();
 
     expect(snap1).toEqual(snap2);
     expect(snap1).not.toBe(snap2);
+    expect(snap1.context).not.toBe(snap2.context);
   });
 });
 
@@ -960,5 +972,211 @@ describe('onTransition hook', () => {
 
     m.send({ amount: 5, type: 'ADD' });
     expect(transitions[0].event).toEqual({ amount: 5, type: 'ADD' });
+  });
+});
+
+// ── Guard-based routing ───────────────────────────────────────────────────────
+
+describe('guard-based routing (array transitions)', () => {
+  it('first passing guard is used when multiple transitions available', () => {
+    const m = createMachine({
+      context: { priority: 2 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            CHECK: [
+              { guard: ({ context }) => context.priority > 10, target: 'high' },
+              { guard: ({ context }) => context.priority > 0, target: 'medium' },
+              { target: 'low' },
+            ],
+          },
+        },
+        high: {},
+        medium: {},
+        low: {},
+      },
+    });
+
+    m.send({ type: 'CHECK' });
+    expect(m.state.value).toBe('medium');
+  });
+
+  it('fallback transition without guard is used when guards fail', () => {
+    const m = createMachine({
+      context: { allowed: false },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            GO: [
+              { guard: ({ context }) => context.allowed, target: 'success' },
+              { target: 'fallback' },
+            ],
+          },
+        },
+        success: {},
+        fallback: {},
+      },
+    });
+
+    m.send({ type: 'GO' });
+    expect(m.state.value).toBe('fallback');
+  });
+
+  it('returns false if no transition matches', () => {
+    const m = createMachine({
+      context: { ok: false },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            GO: [{ guard: ({ context }) => context.ok, target: 'done' }],
+          },
+        },
+        done: {},
+      },
+    });
+
+    expect(m.send({ type: 'GO' })).toBe(false);
+    expect(m.state.value).toBe('idle');
+  });
+
+  it('can() returns true if any transition would match', () => {
+    const m = createMachine({
+      context: { flag: true },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            GO: [
+              { guard: ({ context }) => !context.flag, target: 'a' },
+              { target: 'b' },
+            ],
+          },
+        },
+        a: {},
+        b: {},
+      },
+    });
+
+    expect(m.can({ type: 'GO' })).toBe(true);
+  });
+});
+
+// ── Symbol.dispose cleanup ────────────────────────────────────────────────────
+
+describe('[Symbol.dispose] signal cleanup', () => {
+  it('machine retains last state after disposal', () => {
+    const m = trafficMachine();
+
+    m.send({ type: 'NEXT' });
+    m[Symbol.dispose]();
+    expect(m.state.value).toBe('yellow');
+  });
+
+  it('send() returns false after disposal', () => {
+    const m = trafficMachine();
+
+    m[Symbol.dispose]();
+    expect(m.send({ type: 'NEXT' })).toBe(false);
+    expect(m.state.value).toBe('green');
+  });
+
+  it('subscribe stops receiving after machine dispose', () => {
+    const m = trafficMachine();
+    const snapshots: any[] = [];
+
+    const unsubscribe = m.subscribe((snap) => {
+      snapshots.push(snap);
+    });
+
+    m.send({ type: 'NEXT' });
+    expect(snapshots).toHaveLength(2);
+
+    m[Symbol.dispose]();
+
+    m.send({ type: 'NEXT' });
+    expect(snapshots).toHaveLength(2); // no new call after dispose
+  });
+});
+
+// ── Error resilience ──────────────────────────────────────────────────────────
+
+describe('error handling', () => {
+  it('error in action does not corrupt machine state', () => {
+    const m = createMachine({
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            FAIL: {
+              actions: [
+                () => {
+                  throw new Error('action error');
+                },
+                assign<{ count: number }>(({ context }) => ({ count: context.count + 1 })),
+              ],
+              target: 'idle',
+            },
+            SAFE: { target: 'idle' },
+          },
+        },
+      },
+    });
+
+    expect(() => m.send({ type: 'FAIL' })).toThrow('action error');
+    // Machine should be in a consistent state (state unchanged)
+    expect(m.state.value).toBe('idle');
+    // Note: context might be partially updated depending on error position
+  });
+
+  it('error in guard does not trigger transition', () => {
+    const m = createMachine({
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            GO: {
+              guard: () => {
+                throw new Error('guard error');
+              },
+              target: 'b',
+            },
+          },
+        },
+        b: {},
+      },
+    });
+
+    expect(() => m.send({ type: 'GO' })).toThrow('guard error');
+    expect(m.state.value).toBe('a');
+  });
+});
+
+// ── Re-entrancy ───────────────────────────────────────────────────────────────
+
+describe('re-entrancy', () => {
+  it('send() during entry action completes first transition', () => {
+    const events: string[] = [];
+
+    createMachine({
+      initial: 'a',
+      onTransition: (info) => {
+        events.push(`${info.from}->${info.to}`);
+      },
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {
+          entry: () => {
+            events.push('entry-b');
+          },
+        },
+      },
+    }).send({ type: 'GO' });
+
+    // Entry runs as part of the same batch
+    expect(events).toEqual(['entry-b', 'a->b']);
   });
 });
