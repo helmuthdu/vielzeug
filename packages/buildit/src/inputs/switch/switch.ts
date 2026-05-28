@@ -81,7 +81,7 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 

@@ -65,7 +65,7 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     value: prop.string(''),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { el, bind }) {
+  setup(props, { bind, el }) {
     const tabsCtx = inject(TABS_CTX);
 
     if (tabsCtx) {

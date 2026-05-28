@@ -1,25 +1,24 @@
-import { effect, signal, type ReadonlySignal } from '@vielzeug/stateit';
+import { effect, signal, untrack, type ReadonlySignal } from '@vielzeug/stateit';
 
 import { onCleanup } from './runtime';
 import { htmlResult, type HTMLResult } from './types/bindings';
 
 export type SuspendOptions<T> = {
   /**
-   * Template to render while the async function is pending.
-   */
-  fallback?: () => HTMLResult | string;
-  /**
    * Template to render when the async function rejects.
    */
   error?: (err: unknown) => HTMLResult | string;
+  /**
+   * Template to render while the async function is pending.
+   */
+  fallback?: () => HTMLResult | string;
   /**
    * Render the resolved value as an HTMLResult.
    */
   render: (value: T) => HTMLResult | string;
 };
 
-const toHtmlResult = (v: HTMLResult | string): HTMLResult =>
-  typeof v === 'string' ? htmlResult(v) : v;
+const toHtmlResult = (v: HTMLResult | string): HTMLResult => (typeof v === 'string' ? htmlResult(v) : v);
 
 /**
  * Run an async function and return a `ReadonlySignal<HTMLResult>` that transitions
@@ -46,10 +45,7 @@ const toHtmlResult = (v: HTMLResult | string): HTMLResult =>
  * });
  * ```
  */
-export function suspend<T>(
-  asyncFn: () => Promise<T>,
-  options: SuspendOptions<T>,
-): ReadonlySignal<HTMLResult> {
+export function suspend<T>(asyncFn: () => Promise<T>, options: SuspendOptions<T>): ReadonlySignal<HTMLResult> {
   const { error: onError, fallback, render } = options;
   const result = signal<HTMLResult>(fallback ? toHtmlResult(fallback()) : htmlResult(''));
 
@@ -59,7 +55,7 @@ export function suspend<T>(
     // fetch, and apply a cancelled guard to discard stale responses.
     let cancelled = false;
 
-    if (fallback) result.value = toHtmlResult(fallback());
+    if (fallback) result.value = untrack(() => toHtmlResult(fallback!()));
 
     asyncFn().then(
       (value) => {

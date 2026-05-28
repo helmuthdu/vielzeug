@@ -45,11 +45,12 @@ export interface FlushOptions {
  * ```
  */
 export async function flush(options: FlushOptions = {}): Promise<void> {
-  const { maxTurns = 12, debug = false } = options;
+  const { debug = false, maxTurns = 12 } = options;
 
   const drainMicrotasks = async (turns: number, label: string): Promise<void> => {
     for (let i = 0; i < turns; i++) {
       if (debug) console.debug(`[flush] ${label} turn ${i + 1}/${turns}`);
+
       await Promise.resolve();
       await new Promise<void>((resolve) => queueMicrotask(resolve));
     }

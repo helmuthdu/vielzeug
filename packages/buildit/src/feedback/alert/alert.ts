@@ -95,7 +95,7 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
     horizontal: prop.bool(false),
     variant: prop.string<'solid' | 'flat' | 'bordered'>(),
   },
-  setup(props, { emit, el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, emit, slots }) {
     const handleDismiss = (e: MouseEvent) => {
       if (!props.dismissible.value) return;
 

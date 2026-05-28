@@ -17,7 +17,7 @@ import { register } from './test-utils';
 describe('core/host.ts', () => {
   describe('Host bind API', () => {
     it('applies host attrs and classes from object-style config', async () => {
-      const { element, flush } = await mount((_props, { el: _el, bind }) => {
+      const { element, flush } = await mount((_props, { bind, el: _el }) => {
         const open = signal(false);
 
         bind({
@@ -48,7 +48,7 @@ describe('core/host.ts', () => {
     });
 
     it('applies class records with static and reactive values', async () => {
-      const { element, flush } = await mount((_props, { el: _el, bind }) => {
+      const { element, flush } = await mount((_props, { bind, el: _el }) => {
         const open = signal(false);
         const active = signal(true);
 
@@ -74,7 +74,7 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding exposes reactive get/set on the host element', async () => {
-      const { element, flush } = await mount((_props, { el: _el, bind }) => {
+      const { element, flush } = await mount((_props, { bind, el: _el }) => {
         const internalValue = signal('initial');
 
         bind({
@@ -100,7 +100,7 @@ describe('core/host.ts', () => {
     });
 
     it('supports style and prop bindings via host.bind', async () => {
-      const { element, flush } = await mount((_props, { el: _el, bind }) => {
+      const { element, flush } = await mount((_props, { bind, el: _el }) => {
         const color = signal('rgb(255, 0, 0)');
 
         bind({
@@ -128,7 +128,7 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding is cleaned up on component destroy', async () => {
-      const { destroy, element } = await mount((_props, { el: _el, bind }) => {
+      const { destroy, element } = await mount((_props, { bind, el: _el }) => {
         bind({
           prop: {
             value: {
@@ -150,7 +150,7 @@ describe('core/host.ts', () => {
     it('keeps the latest prop binding active when overlapping bindings target the same property', async () => {
       const tag = `test-host-bind-overlap-${Math.random().toString(36).slice(2)}`;
 
-      register(tag, (_props, { el: _el, bind }) => {
+      register(tag, (_props, { bind, el: _el }) => {
         const baseCleanup = bind({
           prop: {
             value: {
@@ -184,7 +184,7 @@ describe('core/host.ts', () => {
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
 
-      const { element } = await mount((_props, { el: _el, bind }) => {
+      const { element } = await mount((_props, { bind, el: _el }) => {
         bind(
           {
             on: {

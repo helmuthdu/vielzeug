@@ -211,7 +211,7 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
     max: prop.number(5),
     total: prop.json(undefined as number | undefined),
   },
-  setup(props, { el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, slots }) {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {

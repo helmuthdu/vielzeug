@@ -1,4 +1,13 @@
-import { batch, computed, effect as rawEffect, isSignal, untrack, type ReadonlySignal } from '@vielzeug/stateit';
+import {
+  batch,
+  computed,
+  effect as rawEffect,
+  isSignal,
+  signal,
+  untrack,
+  type ReadonlySignal,
+  type Signal,
+} from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from '../errors';
 import {
@@ -24,8 +33,10 @@ import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
 /** Signal, getter function, or plain array. */
 type MaybeReactiveArray<T> = ReadonlySignal<T[]> | (() => T[]) | T[];
 
-type ItemEntry = {
+type ItemEntry<T> = {
   cleanups: (() => void)[];
+  data: Signal<T>;
+  index: Signal<number>;
   nodes: Node[];
 };
 
@@ -36,22 +47,29 @@ const toHtmlResult = (value: string | HTMLResult): HTMLResult =>
 
 // ─── Keyed item lifecycle ─────────────────────────────────────────────────────
 
+/**
+ * Create a keyed item: mount its nodes and wire up bindings.
+ * Returns an ItemEntry containing the reactive signals and cleanup list.
+ * Cleanup runs via removeItem() — not via the outer registerCleanup.
+ */
 const createItem = <T>(
   item: T,
   index: number,
-  render: (item: T, index: number) => string | HTMLResult,
+  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => string | HTMLResult,
   getNextId: () => string,
   parent: ParentNode,
   insertBefore: Node,
-  registerCleanup: RegisterCleanup,
-): ItemEntry => {
-  const raw = render(item, index);
+): ItemEntry<T> => {
+  const dataSignal: Signal<T> = signal(item);
+  const indexSignal: Signal<number> = signal(index);
+
+  const raw = render(dataSignal, indexSignal);
   const rekeyed = rekeyHtmlResult(isHtmlResult(raw) ? raw : htmlResult(escapeHtml(String(raw))), getNextId);
 
   const fragment = parseHTML(rekeyed.html);
   const itemNodes = Array.from(fragment.childNodes);
 
-  // Move nodes to real DOM BEFORE applying html bindings
+  // Move nodes to real DOM first so DirectiveBindings get the correct parentNode
   for (const node of itemNodes) {
     parent.insertBefore(node, insertBefore);
   }
@@ -61,22 +79,23 @@ const createItem = <T>(
 
   if (rekeyed.bindings.length > 0) {
     const deferredHtmlBindings: HtmlBinding[] = [];
+    const targets = indexBindingTargets(itemNodes);
 
-    applyBindingsWithTargets(rekeyed.bindings, registerItemCleanup, indexBindingTargets(itemNodes), {
+    applyBindingsWithTargets(rekeyed.bindings, registerItemCleanup, targets, {
       onHtml: (b) => deferredHtmlBindings.push(b),
     });
 
     for (const b of deferredHtmlBindings) {
-      applyHtmlBinding(parent as unknown as Node, b, registerItemCleanup);
+      // Use the comment's own parentElement as search root to avoid a UID collision:
+      // the each() anchor comment in the parent has the same uid as the item's first binding.
+      const comment = targets.comments.get(b.uid);
+      const searchRoot = (comment?.parentElement ?? parent) as Node;
+
+      applyHtmlBinding(searchRoot, b, registerItemCleanup);
     }
   }
 
-  registerCleanup(() => {
-    runAll(cleanups);
-    removeNodes(itemNodes);
-  });
-
-  return { cleanups, nodes: itemNodes };
+  return { cleanups, data: dataSignal, index: indexSignal, nodes: itemNodes };
 };
 
 // ─── API ─────────────────────────────────────────────────────────────────────
@@ -90,17 +109,28 @@ const createItem = <T>(
  * Accepts a signal, getter function, or plain array as the source.
  *
  * @param source   - Signal, getter function, or plain array of items.
- * @param key      - Returns a stable unique key for each item (used for diff tracking).
- * @param render   - Returns the HTML template for each item.
+ * @param key      - Returns a stable unique key for each item.
+ * @param render   - Called once per new key. Receives reactive signals so bindings
+ *                   inside the template update in-place without DOM teardown.
+ *                   Use `${item}` for primitive items (TextBinding), or
+ *                   `${() => item.value.prop}` for object properties.
+ *                   For structural changes within an item, use `when()` inside
+ *                   the render function.
  * @param fallback - Optional: rendered when the list is empty.
  *
  * @example
- * html`${each(items, (item) => item.id, (item) => html`<li>${item.name}</li>`)}`
+ * ```ts
+ * html`${each(
+ *   items,
+ *   (item) => item.id,
+ *   (item) => html`<li>${item} — ${() => item.value.label}</li>`,
+ * )}`
+ * ```
  */
 export function each<T>(
   source: MaybeReactiveArray<T>,
   key: (item: T, index: number) => string | number,
-  render: (item: T, index: number) => string | HTMLResult,
+  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => string | HTMLResult,
   fallback?: () => string | HTMLResult,
 ): DirectiveResult {
   const normalized: ReadonlySignal<T[]> = Array.isArray(source)
@@ -123,7 +153,7 @@ export function each<T>(
     const globalIdFactory = createMarkerIdFactory();
 
     let currentKeys: (string | number)[] = [];
-    const keyedItems = new Map<string | number, ItemEntry>();
+    const keyedItems = new Map<string | number, ItemEntry<T>>();
 
     // Fallback tracking: key sentinel for the fallback content
     const FALLBACK_KEY = '__each_fallback__';
@@ -149,17 +179,11 @@ export function each<T>(
           currentKeys = [];
 
           if (fallback) {
-            const fallbackEntry = createItem(
-              null,
-              0,
-              () => toHtmlResult(fallback()),
-              globalIdFactory,
-              parent,
-              endMarker,
-              (fn) => keyedItems.get(FALLBACK_KEY)?.cleanups.push(fn),
+            const entry = untrack(() =>
+              createItem(null as unknown as T, 0, () => toHtmlResult(fallback()), globalIdFactory, parent, endMarker),
             );
 
-            keyedItems.set(FALLBACK_KEY, fallbackEntry);
+            keyedItems.set(FALLBACK_KEY, entry);
             currentKeys = [FALLBACK_KEY];
           }
 
@@ -194,84 +218,25 @@ export function each<T>(
           }
         }
 
-        // Create or update items
+        // Update existing or create new items
         for (let i = 0; i < newItems.length; i++) {
           const k = newKeys[i];
 
           if (keyedItems.has(k)) {
-            // Re-render existing item and replace DOM
-            const existing = keyedItems.get(k)!;
-            const raw = render(newItems[i], i);
-            const rekeyed = rekeyHtmlResult(
-              isHtmlResult(raw) ? raw : htmlResult(escapeHtml(String(raw))),
-              globalIdFactory,
-            );
+            // Existing key: update the reactive signals in-place.
+            // Bindings inside the render template react automatically — no DOM teardown.
+            const entry = keyedItems.get(k)!;
 
-            // Insert a placeholder to mark insertion position before removing old nodes
-            const placeholder = document.createComment('');
-
-            parent.insertBefore(placeholder, existing.nodes[0]);
-
-            // Remove old item
-            runAll(existing.cleanups);
-            removeNodes(existing.nodes);
-            keyedItems.delete(k);
-
-            // Create new item nodes at the placeholder position
-            const fragment = parseHTML(rekeyed.html);
-            const itemNodes = Array.from(fragment.childNodes);
-            const cleanups: (() => void)[] = [];
-            const registerItemCleanup: RegisterCleanup = (fn) => cleanups.push(fn);
-
-            for (const node of itemNodes) {
-              parent.insertBefore(node, placeholder);
-            }
-
-            placeholder.remove();
-
-            if (rekeyed.bindings.length > 0) {
-              const deferredHtmlBindings: HtmlBinding[] = [];
-
-              applyBindingsWithTargets(rekeyed.bindings, registerItemCleanup, indexBindingTargets(itemNodes), {
-                onHtml: (b) => deferredHtmlBindings.push(b),
-              });
-
-              for (const b of deferredHtmlBindings) {
-                applyHtmlBinding(parent as unknown as Node, b, registerItemCleanup);
-              }
-            }
-
-            keyedItems.set(k, { cleanups, nodes: itemNodes });
+            entry.data.value = newItems[i];
+            entry.index.value = i;
           } else {
-            const cleanups: (() => void)[] = [];
-            const registerItemCleanup: RegisterCleanup = (fn) => cleanups.push(fn);
+            // New key: mount DOM nodes and set up bindings.
+            // untrack() prevents computed() signals created inside createItem (e.g. html_signal,
+            // attrSignal) from registering disposal cleanups on outerSub. Without this, outerSub's
+            // teardown would dispose those computeds on re-run, breaking the reactive chain.
+            const entry = untrack(() => createItem(newItems[i], i, render, globalIdFactory, parent, endMarker));
 
-            const raw = render(newItems[i], i);
-            const rekeyed = rekeyHtmlResult(
-              isHtmlResult(raw) ? raw : htmlResult(escapeHtml(String(raw))),
-              globalIdFactory,
-            );
-
-            const fragment = parseHTML(rekeyed.html);
-            const itemNodes = Array.from(fragment.childNodes);
-
-            for (const node of itemNodes) {
-              parent.insertBefore(node, endMarker);
-            }
-
-            if (rekeyed.bindings.length > 0) {
-              const deferredHtmlBindings: HtmlBinding[] = [];
-
-              applyBindingsWithTargets(rekeyed.bindings, registerItemCleanup, indexBindingTargets(itemNodes), {
-                onHtml: (b) => deferredHtmlBindings.push(b),
-              });
-
-              for (const b of deferredHtmlBindings) {
-                applyHtmlBinding(parent as unknown as Node, b, registerItemCleanup);
-              }
-            }
-
-            keyedItems.set(k, { cleanups, nodes: itemNodes });
+            keyedItems.set(k, entry);
           }
         }
 
@@ -296,11 +261,7 @@ export function each<T>(
       });
     };
 
-    const stop = rawEffect(() => {
-      const items = normalized.value;
-
-      untrack(() => update(items));
-    });
+    const stop = rawEffect(() => update(normalized.value));
 
     registerCleanup(stop);
     registerCleanup(() => {
@@ -309,6 +270,7 @@ export function each<T>(
       }
 
       endMarker.remove();
+      currentKeys = [];
     });
   });
 }

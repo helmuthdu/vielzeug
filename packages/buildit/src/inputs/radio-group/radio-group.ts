@@ -113,7 +113,7 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
     size: prop.string(),
     value: prop.string(),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);

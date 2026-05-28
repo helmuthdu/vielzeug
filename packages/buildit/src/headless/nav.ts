@@ -151,8 +151,12 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
 
     const start: number =
       current < 0
-        ? (direction === 'forward' ? 0 : items.length - 1)
-        : (direction === 'forward' ? current + 1 : current - 1);
+        ? direction === 'forward'
+          ? 0
+          : items.length - 1
+        : direction === 'forward'
+          ? current + 1
+          : current - 1;
     const idx = findEnabledIndex(items, start, direction);
 
     if (idx >= 0) return commitIndex(idx);

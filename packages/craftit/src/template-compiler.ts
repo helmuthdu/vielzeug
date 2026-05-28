@@ -88,15 +88,15 @@ const applyModifiers = (
           h(e);
         })(wrappedHandler);
         break;
+      case 'self':
+        wrappedHandler = ((h) => (e) => {
+          if (e.target === e.currentTarget) h(e);
+        })(wrappedHandler);
+        break;
       case 'stop':
         wrappedHandler = ((h) => (e) => {
           e.stopPropagation();
           h(e);
-        })(wrappedHandler);
-        break;
-      case 'self':
-        wrappedHandler = ((h) => (e) => {
-          if (e.target === e.currentTarget) h(e);
         })(wrappedHandler);
         break;
     }
@@ -105,7 +105,9 @@ const applyModifiers = (
   const options: AddEventListenerOptions = {};
 
   if (modifiers.includes('capture')) options.capture = true;
+
   if (modifiers.includes('once')) options.once = true;
+
   if (modifiers.includes('passive')) options.passive = true;
 
   return { handler: wrappedHandler, ...(Object.keys(options).length ? { options } : {}) };

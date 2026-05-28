@@ -1,5 +1,101 @@
-import { defineField, html, signal } from '../index';
+import { createForm, defineField, html, signal } from '../index';
 import { mount } from '../testing';
+
+describe('createForm()', () => {
+  it('valid is reactive — false when no fields registered', () => {
+    const form = createForm();
+
+    expect(form.valid.value).toBe(true); // vacuously true with no fields
+  });
+
+  it('valid reacts to registered field validity signals', () => {
+    const form = createForm();
+    const fieldValid = signal(false);
+
+    const unregister = form.registerField(fieldValid);
+
+    expect(form.valid.value).toBe(false);
+
+    fieldValid.value = true;
+    expect(form.valid.value).toBe(true);
+
+    unregister();
+    expect(form.valid.value).toBe(true); // field removed
+  });
+
+  it('valid reacts when field signal is removed via cleanup', () => {
+    const form = createForm();
+    const f1 = signal(true);
+    const f2 = signal(false);
+
+    form.registerField(f1);
+
+    const removeF2 = form.registerField(f2);
+
+    expect(form.valid.value).toBe(false);
+
+    removeF2();
+    expect(form.valid.value).toBe(true);
+  });
+
+  it('dirty is false at creation and after reset', () => {
+    const form = createForm();
+
+    expect(form.dirty.value).toBe(false);
+
+    // registering a field should NOT set dirty
+    form.registerField(signal(true));
+    expect(form.dirty.value).toBe(false);
+  });
+
+  it('reset sets dirty to false', () => {
+    const form = createForm();
+
+    form.dirty.value = true;
+    form.reset();
+    expect(form.dirty.value).toBe(false);
+  });
+
+  it('submitting toggles during async onSubmit', async () => {
+    let resolveFn!: () => void;
+    const submitted = new Promise<void>((res) => {
+      resolveFn = res;
+    });
+    const form = createForm({ onSubmit: () => submitted });
+
+    expect(form.submitting.value).toBe(false);
+
+    const p = form.submit();
+
+    expect(form.submitting.value).toBe(true);
+
+    resolveFn();
+    await p;
+    expect(form.submitting.value).toBe(false);
+  });
+
+  it('submit is idempotent when already submitting', async () => {
+    let callCount = 0;
+    let resolveFn!: () => void;
+    const submitted = new Promise<void>((res) => {
+      resolveFn = res;
+    });
+    const form = createForm({
+      onSubmit: async () => {
+        callCount++;
+        await submitted;
+      },
+    });
+
+    const p1 = form.submit();
+    const p2 = form.submit(); // duplicate — should be ignored
+
+    expect(callCount).toBe(1);
+    resolveFn();
+    await Promise.all([p1, p2]);
+    expect(callCount).toBe(1);
+  });
+});
 
 describe('component form integration', () => {
   describe('defineField()', () => {

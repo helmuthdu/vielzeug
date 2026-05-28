@@ -1,8 +1,8 @@
 import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS, createRuntimeError, reportRuntimeError, type CraftitRuntimeError } from './errors';
-import { ComponentPhase } from './lifecycle';
 import { createBind, type HostBindFn } from './host-bind';
+import { ComponentPhase } from './lifecycle';
 import {
   createProps,
   normalizePropDefinition,
@@ -172,13 +172,13 @@ class BaseElement extends HTMLElement {
   private _handleSetupError(error: unknown, operation: string = 'connectedCallback'): HTMLResult | void {
     const err = error instanceof Error ? error : new Error(String(error));
     const runtimeError = createRuntimeError({
-      code: 'SETUP_FAILED',
-      kind: 'setup',
-      phase: this._component.phase,
-      component: this.localName,
-      operation,
       cause: err,
+      code: 'SETUP_FAILED',
+      component: this.localName,
       hint: 'Check component setup function and prop definitions',
+      kind: 'setup',
+      operation,
+      phase: this._component.phase,
     });
 
     const options = (this.constructor as typeof BaseElement)._options;
@@ -217,6 +217,7 @@ class BaseElement extends HTMLElement {
       this._component.phase = ComponentPhase.SETUP_DONE;
     } catch (error) {
       const recoveryTemplate = this._handleSetupError(error);
+
       if (recoveryTemplate) {
         this._component.templateResult = recoveryTemplate;
         this._component.phase = ComponentPhase.SETUP_DONE;

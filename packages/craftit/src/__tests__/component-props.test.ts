@@ -132,7 +132,11 @@ describe('component props', () => {
 
     define<{ value?: string }>(tag, {
       props: {
-        value: { default: undefined as string | undefined, parse: (v: string | null) => v ?? undefined, reflect: false },
+        value: {
+          default: undefined as string | undefined,
+          parse: (v: string | null) => v ?? undefined,
+          reflect: false,
+        },
       },
       setup: (props) => {
         expectType<import('@vielzeug/stateit').ReadonlySignal<string | undefined>>(props.value);
@@ -153,7 +157,11 @@ describe('component props', () => {
     expect(() => {
       define<{ data?: Record<string, string> }>(objectTag, {
         props: {
-          data: { default: { a: '1' } as Record<string, string>, parse: (v: string | null) => v ? JSON.parse(v) as Record<string, string> : { a: '1' }, reflect: true },
+          data: {
+            default: { a: '1' } as Record<string, string>,
+            parse: (v: string | null) => (v ? (JSON.parse(v) as Record<string, string>) : { a: '1' }),
+            reflect: true,
+          },
         },
         setup: () => html`<div>invalid</div>`,
       });
@@ -162,7 +170,11 @@ describe('component props', () => {
     expect(() => {
       define<{ items?: string[] }>(arrayTag, {
         props: {
-          items: { default: ['x'] as string[], parse: (v: string | null) => v ? JSON.parse(v) as string[] : ['x'], reflect: true },
+          items: {
+            default: ['x'] as string[],
+            parse: (v: string | null) => (v ? (JSON.parse(v) as string[]) : ['x']),
+            reflect: true,
+          },
         },
         setup: () => html`<div>invalid</div>`,
       });
@@ -172,7 +184,9 @@ describe('component props', () => {
   it('infers typed prop signals from setup props', async () => {
     const { query } = await mount(
       (props) => {
-        expectType<ReturnType<typeof signal<number | undefined>>>(props.count as ReturnType<typeof signal<number | undefined>>);
+        expectType<ReturnType<typeof signal<number | undefined>>>(
+          props.count as ReturnType<typeof signal<number | undefined>>,
+        );
 
         return html`<div class="count">${props.count}</div>`;
       },

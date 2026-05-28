@@ -16,28 +16,15 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./svelte": {
-      "source": "./src/adapters/svelte.ts",
-      "types": "./dist/adapters/svelte.d.ts",
-      "import": "./dist/adapters/svelte.js",
-      "require": "./dist/adapters/svelte.cjs"
-    },
-    "./react": {
-      "source": "./src/adapters/react.ts",
-      "types": "./dist/adapters/react.d.ts",
-      "import": "./dist/adapters/react.js",
-      "require": "./dist/adapters/react.cjs"
-    },
-    "./vue": {
-      "source": "./src/adapters/vue.ts",
-      "types": "./dist/adapters/vue.d.ts",
-      "import": "./dist/adapters/vue.js",
-      "require": "./dist/adapters/vue.cjs"
+    "./ssr": {
+      "source": "./src/ssr/index.ts",
+      "types": "./dist/ssr/index.d.ts",
+      "import": "./dist/ssr/index.js",
+      "require": "./dist/ssr/index.cjs"
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:core && pnpm run build:types",
-    "build:core": "vite build --config vite.bundle.config.ts",
+    "build": "vite build && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",

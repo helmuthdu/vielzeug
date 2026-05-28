@@ -125,7 +125,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     value: prop.number(0),
     'value-text': prop.string(),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────

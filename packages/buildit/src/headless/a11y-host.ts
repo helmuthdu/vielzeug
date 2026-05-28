@@ -71,11 +71,9 @@ export type A11yHost = {
   stop: () => void;
 };
 
-const resolveAttr = (value: AttrValue): string | null | undefined =>
-  typeof value === 'function' ? value() : value;
+const resolveAttr = (value: AttrValue): string | null | undefined => (typeof value === 'function' ? value() : value);
 
-const resolveProp = (value: PropValue): unknown =>
-  typeof value === 'function' ? value() : value;
+const resolveProp = (value: PropValue): unknown => (typeof value === 'function' ? value() : value);
 
 /**
  * Creates a reactive manager that keeps a set of ARIA attributes, HTML
@@ -101,10 +99,10 @@ const resolveProp = (value: PropValue): unknown =>
  * ```
  */
 export const createA11yHost = (element: Element, options: A11yHostOptions): A11yHost => {
-  const attrEntries = [
-    ...Object.entries(options.aria ?? {}),
-    ...Object.entries(options.attrs ?? {}),
-  ] as [string, AttrValue][];
+  const attrEntries = [...Object.entries(options.aria ?? {}), ...Object.entries(options.attrs ?? {})] as [
+    string,
+    AttrValue,
+  ][];
 
   const propEntries = Object.entries(options.props ?? {}) as [string, PropValue][];
 

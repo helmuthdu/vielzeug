@@ -78,7 +78,7 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { emit, el, bind: _bind }) {
+  setup(props, { bind: _bind, el, emit }) {
     // Inherit size/variant from a parent bit-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 

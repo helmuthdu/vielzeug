@@ -180,7 +180,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       'bottom-start',
     ),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     let triggerEl: HTMLElement | null = null;

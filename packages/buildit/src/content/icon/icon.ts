@@ -127,7 +127,7 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
     solid: prop.bool(),
     strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
-  setup(props, { el: _el, bind }) {
+  setup(props, { bind, el: _el }) {
     bind({
       attr: {
         'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),

@@ -144,7 +144,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, el: _el, bind }) {
+  setup(props, { bind, el: _el, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const showPassword = signal(false);

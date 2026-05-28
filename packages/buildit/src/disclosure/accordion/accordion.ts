@@ -71,7 +71,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const focusedIndex = signal(0);
 
     const handleSelectionMode = (expandedItem: HTMLElement) => {

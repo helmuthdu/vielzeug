@@ -27,13 +27,17 @@ describe('component helpers and exports', () => {
   it('supports complex object defaults using prop.json()', async () => {
     const configDefault = { default: 'fallback', mode: 'dark' };
 
-    const { query } = await mount((props) => html`<div class="mode">${() => (props.config.value as typeof configDefault | undefined)?.mode ?? ''}</div>`, {
-      componentOptions: {
-        props: {
-          config: prop.json(configDefault as { default: string; mode: string } | undefined),
+    const { query } = await mount(
+      (props) =>
+        html`<div class="mode">${() => (props.config.value as typeof configDefault | undefined)?.mode ?? ''}</div>`,
+      {
+        componentOptions: {
+          props: {
+            config: prop.json(configDefault as { default: string; mode: string } | undefined),
+          },
         },
       },
-    });
+    );
 
     expect(query('.mode')?.textContent).toBe('dark');
   });

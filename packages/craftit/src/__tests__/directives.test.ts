@@ -3,19 +3,7 @@
  * Tests for core craftit directives: each, raw
  */
 
-import {
-  classMap,
-  computed,
-  each,
-  html,
-  live,
-  memo,
-  raw,
-  setRawSanitizer,
-  signal,
-  styleMap,
-  when,
-} from '../index';
+import { classMap, computed, each, html, live, memo, raw, setRawSanitizer, signal, styleMap, when } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -106,7 +94,7 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item,
-            (item) => html`<li>${item * 2}</li>`,
+            (item) => html`<li>${item.value * 2}</li>`,
           )}
         </ul>
       `;
@@ -151,7 +139,7 @@ describe('Directive: each()', () => {
           ${each(
             activeItems,
             (item) => item.id,
-            (item) => html`<li class="item">${item.name}</li>`,
+            (item) => html`<li class="item">${item.value.name}</li>`,
           )}
         </ul>
       `;
@@ -176,7 +164,7 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<span class="item">${item.value}</span>`,
+            (item) => html`<span class="item">${item.value.value}</span>`,
           )}
           <button class="after">After</button>
         </div>
@@ -211,7 +199,7 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
+            (item) => html`<div class="item" data-id="${() => item.value.id}">${() => item.value.value}</div>`,
           )}
         </div>
       `,
@@ -249,7 +237,7 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<span class="item">${item.value}</span>`,
+            (item) => html`<span class="item">${item.value.value}</span>`,
           )}
         </div>`,
     );
@@ -278,10 +266,13 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) =>
-              item.mode === 'button'
-                ? html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`
-                : html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
+            (item) => html`
+              ${when(
+                () => item.value.mode === 'button',
+                () => html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`,
+                () => html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
+              )}
+            `,
           )}
         </div>
       `,
@@ -308,7 +299,7 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<li class="item">${item.value}</li>`,
+            (item) => html`<li class="item">${item.value.value}</li>`,
             () => html`<li class="empty">Empty</li>`,
           )}
         </ul>
@@ -540,6 +531,27 @@ describe('Directive: when()', () => {
 
     expect(query('.off')?.textContent).toBe('Off');
     expect(query('.on')).toBeNull();
+  });
+
+  it('should render reactive bindings inside branches', async () => {
+    const title = signal('Hello');
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${when(
+            false,
+            () => html`<span class="on">${() => title.value}</span>`,
+            () => html`<span class="off">${() => title.value}</span>`,
+          )}
+        </div>`,
+    );
+
+    expect(query('.off')?.textContent?.trim()).toBe('Hello');
+
+    title.value = 'World';
+    await flush();
+
+    expect(query('.off')?.textContent?.trim()).toBe('World');
   });
 });
 

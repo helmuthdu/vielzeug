@@ -68,7 +68,7 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
     variant: prop.string<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>>(),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const shadowRoot = el.shadowRoot;
 
     // Reflect orientation to host so CSS and tests can read it

@@ -173,8 +173,6 @@ export type FieldBaseOptions = FieldCoreOptions & {
   labelPlacement?: ReadonlySignal<LabelPlacement>;
 };
 
-
-
 // ── Field handle ──────────────────────────────────────────────────────────────
 
 /**
@@ -182,8 +180,6 @@ export type FieldBaseOptions = FieldCoreOptions & {
  * and `ChoiceFieldHandle`.
  */
 export type FieldHandle = FieldCore & {
-  /** Reactive ARIA attribute signals for the underlying input element. */
-  aria: FieldAriaState;
   /**
    * Applies reactive ARIA bindings from `field.aria` to `element` in a single
    * `createA11yHost` effect. Wires `aria-labelledby`, `aria-describedby`,
@@ -199,6 +195,8 @@ export type FieldHandle = FieldCore & {
    * ```
    */
   applyAria: (element: Element, signal?: AbortSignal) => () => void;
+  /** Reactive ARIA attribute signals for the underlying input element. */
+  aria: FieldAriaState;
   /** Reactive error + helper assistive text. */
   assistive: ReadonlySignal<ErrorHelperState>;
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
@@ -217,7 +215,10 @@ export type FieldHandle = FieldCore & {
  *   (as `createTextField` does), or any other `ReadonlySignal<ErrorHelperState>`
  *   for fully custom assistive content. Defaults to a plain `ErrorHelperState`.
  */
-export const createField = (options: FieldBaseOptions, customAssistive?: ReadonlySignal<ErrorHelperState>): FieldHandle => {
+export const createField = (
+  options: FieldBaseOptions,
+  customAssistive?: ReadonlySignal<ErrorHelperState>,
+): FieldHandle => {
   const core = createFieldCore(options);
   const insetId = createStableId('label');
   const outsideId = `${insetId}-outside`;

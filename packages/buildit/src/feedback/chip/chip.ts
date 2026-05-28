@@ -165,7 +165,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     variant: prop.string<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>(),
   },
 
-  setup(props, { emit, el: _el, bind }) {
+  setup(props, { bind, el: _el, emit }) {
     // ============================================
     // State Management
     // ============================================

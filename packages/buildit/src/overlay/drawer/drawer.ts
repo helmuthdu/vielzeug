@@ -157,7 +157,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     size: prop.string<DrawerSize>(),
     title: prop.string(),
   },
-  setup(props, { emit, el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, emit, slots }) {
     const drawerLabelId = createStableId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();

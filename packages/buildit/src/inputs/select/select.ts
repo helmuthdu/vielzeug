@@ -166,7 +166,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const shadowRoot = el.shadowRoot;
     // ────────────────────────────────────────────────────────────────
     // State & Context

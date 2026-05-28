@@ -52,7 +52,6 @@ export type HostBindConfig = {
 export type HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
 
 export const createBind = (el: HTMLElement): HostBindFn => {
-
   const bind: HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
     const disposers: Array<() => void> = [];
 
@@ -145,7 +144,7 @@ function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (
   const cssName = name.startsWith('--') ? name : toKebab(name);
   let owned = false;
 
-  const setStyle = (v: any) => {
+  const setStyle = (v: string | null | undefined) => {
     if (v != null && v !== '') {
       owned = true;
       host.style.setProperty(cssName, String(v));

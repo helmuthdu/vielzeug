@@ -228,7 +228,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     striped: prop.bool(false),
   },
 
-  setup(props, { el, bind }) {
+  setup(props, { bind, el }) {
     bind({
       attr: {
         'aria-busy': props.loading,

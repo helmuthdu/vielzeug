@@ -9,10 +9,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   getConfig(__dirname, {
     entry: {
-      'src/adapters/react': resolve(__dirname, 'src/adapters/react.ts'),
-      'src/adapters/svelte': resolve(__dirname, 'src/adapters/svelte.ts'),
-      'src/adapters/vue': resolve(__dirname, 'src/adapters/vue.ts'),
       'src/index': resolve(__dirname, 'src/index.ts'),
+      'src/ssr/index': resolve(__dirname, 'src/ssr/index.ts'),
     },
     name: 'stateit',
   }),

@@ -5,6 +5,7 @@ export {
   memo,
   scope,
   signal,
+  syncedSignal,
   untrack,
   watch,
   type ReadonlySignal,
@@ -15,12 +16,7 @@ export {
 
 export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
-export {
-  createRuntimeError,
-  reportRuntimeError,
-  type CraftitErrorKind,
-  type CraftitRuntimeError,
-} from './errors';
+export { createRuntimeError, reportRuntimeError, type CraftitErrorKind, type CraftitRuntimeError } from './errors';
 
 export {
   define,

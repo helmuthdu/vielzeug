@@ -123,7 +123,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     required: prop.bool(false),
     values: prop.string(),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 

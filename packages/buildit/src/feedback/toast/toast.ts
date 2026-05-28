@@ -130,7 +130,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       'bottom-right',
     ),
   },
-  setup(props, { emit, el, bind: _bind }) {
+  setup(props, { bind: _bind, el, emit }) {
     const toasts = signal<NormalizedToast[]>([]);
     const exitingIds = signal<Set<string>>(new Set());
     const containerRef = ref<HTMLDivElement>();

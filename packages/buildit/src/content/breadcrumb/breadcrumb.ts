@@ -94,7 +94,7 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),
   },
-  setup(props, { el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, slots }) {
     // ────────────────────────────────────────────────────────────────
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────

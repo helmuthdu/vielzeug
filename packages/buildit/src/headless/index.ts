@@ -35,12 +35,7 @@ export {
 } from './field-base';
 
 // ── Text field ────────────────────────────────────────────────────────────────
-export {
-  createTextField,
-  type TextFieldDetach,
-  type TextFieldHandle,
-  type TextFieldOptions,
-} from './text-field';
+export { createTextField, type TextFieldDetach, type TextFieldHandle, type TextFieldOptions } from './text-field';
 
 // ── Choice field ──────────────────────────────────────────────────────────────
 export {

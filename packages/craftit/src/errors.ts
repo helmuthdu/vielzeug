@@ -11,20 +11,20 @@ export type CraftitErrorKind = 'setup' | 'binding' | 'prop' | 'context' | 'clean
  * Provides full context for debugging and programmatic error handling.
  */
 export type CraftitRuntimeError = {
-  /** Unique error code for programmatic handling (e.g., 'SETUP_FAILED') */
-  code: string;
-  /** Error category */
-  kind: CraftitErrorKind;
-  /** Component's lifecycle phase when error occurred */
-  phase: ComponentPhase;
-  /** Component tag name (e.g., 'my-component') */
-  component: string;
-  /** Operation name (e.g., 'connectedCallback', 'setAttrBinding', 'parseBoolProp') */
-  operation: string;
   /** Original error or error cause */
   cause: Error;
+  /** Unique error code for programmatic handling (e.g., 'SETUP_FAILED') */
+  code: string;
+  /** Component tag name (e.g., 'my-component') */
+  component: string;
   /** Optional: recovery hint for developer */
   hint?: string;
+  /** Error category */
+  kind: CraftitErrorKind;
+  /** Operation name (e.g., 'connectedCallback', 'setAttrBinding', 'parseBoolProp') */
+  operation: string;
+  /** Component's lifecycle phase when error occurred */
+  phase: ComponentPhase;
 };
 
 /**
@@ -44,22 +44,22 @@ export type CraftitRuntimeError = {
  * ```
  */
 export function createRuntimeError(input: {
-  code: string;
-  kind: CraftitErrorKind;
-  phase: ComponentPhase;
-  component: string;
-  operation: string;
   cause: Error;
+  code: string;
+  component: string;
   hint?: string;
+  kind: CraftitErrorKind;
+  operation: string;
+  phase: ComponentPhase;
 }): CraftitRuntimeError {
   return {
-    code: input.code,
-    kind: input.kind,
-    phase: input.phase,
-    component: input.component,
-    operation: input.operation,
     cause: input.cause,
+    code: input.code,
+    component: input.component,
     hint: input.hint,
+    kind: input.kind,
+    operation: input.operation,
+    phase: input.phase,
   };
 }
 
@@ -71,19 +71,19 @@ export function reportRuntimeError(error: CraftitRuntimeError, element: HTMLElem
   const message = `[${error.code}] <${error.component}> ${error.kind} error during ${error.operation} (phase: ${error.phase})`;
 
   console.error(message, {
-    error: error.cause,
     code: error.code,
-    kind: error.kind,
-    phase: error.phase,
-    operation: error.operation,
+    error: error.cause,
     hint: error.hint,
+    kind: error.kind,
+    operation: error.operation,
+    phase: error.phase,
   });
 
   element.dispatchEvent(
     new CustomEvent('craftit:error', {
-      detail: error,
       bubbles: true,
       composed: true,
+      detail: error,
     }),
   );
 }
@@ -104,6 +104,5 @@ export const CRAFTIT_ERRORS = {
   propInvalidReflect: 'Structured prop defaults cannot use reflect:true. Set reflect:false and sync explicitly.',
   styleReplaceFailed: 'Style sheet replace failed',
   unhandledComponentError: (tag: string): string => `<${tag}> threw an unhandled error during setup`,
-  validationFailed: (tag: string, errors: string[]): string =>
-    `Validation failed for <${tag}>:\n${errors.join('\n')}`,
+  validationFailed: (tag: string, errors: string[]): string => `Validation failed for <${tag}>:\n${errors.join('\n')}`,
 } as const;

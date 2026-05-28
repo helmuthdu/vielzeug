@@ -86,6 +86,12 @@ export type TextFieldHandle = FieldHandle & {
    * extends `ErrorHelperState` with `counter` and `maxLength` fields).
    */
   assistive: ReadonlySignal<AssistiveState>;
+  /**
+   * Stops the internal watcher that keeps the local value in sync with the
+   * external source signal. Call this when the field is destroyed to prevent
+   * the watcher from running after its lifetime.
+   */
+  cleanup: () => void;
   /** Clears the field value and fires synthetic input/change events. */
   clear: (event?: Event) => void;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
@@ -105,7 +111,7 @@ export type TextFieldHandle = FieldHandle & {
 };
 
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
-  const value = syncedSignal(options.value, (next) => String(next ?? ''));
+  const [value, stopValueSync] = syncedSignal(options.value, (next) => String(next ?? ''));
 
   // Use the richer AssistiveState (with counter) and pass it into createField
   // so all aria getters reference the same reactive assistive instance.
@@ -159,5 +165,5 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     return detach;
   };
 
-  return { ...field, assistive, clear, value, wire };
+  return { ...field, assistive, cleanup: stopValueSync, clear, value, wire };
 };

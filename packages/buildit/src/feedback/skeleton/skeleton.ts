@@ -80,7 +80,7 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
     width: prop.string(),
   },
-  setup(props, { el, bind }) {
+  setup(props, { bind, el }) {
     const isPaused = signal(false);
     const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));

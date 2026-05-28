@@ -1,26 +1,31 @@
 /**
- * Deeply compares two values for equality, including objects, arrays, and primitives.
- * Detects circular references and optimizes performance.
+ * Compares two values for equality.
+ *
+ * - `depth: 'deep'` (default) — recursive deep comparison. Supports plain objects, arrays,
+ *   `Date`, `Map`, `Set`, and circular references.
+ * - `depth: 'shallow'` — one-level-deep comparison. Nested objects are compared by reference.
  *
  * @example
  * ```ts
+ * // Deep (default)
  * isEqual([1, 2, 3], [1, 2, 3]); // true
- * isEqual([1, 2], [1, 2, 3]); // false
- * isEqual({ a: 1, b: 2 }, { a: 1, b: 2 }); // true
  * isEqual({ a: { b: 2 } }, { a: { b: 2 } }); // true
- * isEqual({ a: 1 }, { a: 2 }); // false
- * isEqual({ a: 1 }, { b: 1 }); // false
  * isEqual(new Date('2023-01-01'), new Date('2023-01-01')); // true
- * isEqual(new Date('2023-01-01'), new Date('2023-01-02')); // false
- * isEqual(new Date('2023-01-01'), 1); // false
+ *
+ * // Shallow
+ * const inner = { x: 1 };
+ * isEqual({ a: inner }, { a: inner }, { depth: 'shallow' }); // true
+ * isEqual({ a: { x: 1 } }, { a: { x: 1 } }, { depth: 'shallow' }); // false — different refs
+ * isEqual([1, 2, 3], [1, 2, 3], { depth: 'shallow' }); // true
  * ```
  *
  * @param a - First value to compare.
  * @param b - Second value to compare.
- * @returns Whether the values are deeply equal.
+ * @param options - Comparison options.
+ * @returns Whether the values are equal.
  */
-export function isEqual(a: unknown, b: unknown): boolean {
-  return safeIsEqual(a, b, new WeakMap());
+export function isEqual(a: unknown, b: unknown, options?: { depth?: 'deep' | 'shallow' }): boolean {
+  return options?.depth === 'shallow' ? shallowCompare(a, b) : safeIsEqual(a, b, new WeakMap());
 }
 
 function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): boolean {
@@ -84,6 +89,34 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
       !safeIsEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], visited)
     )
       return false;
+  }
+
+  return true;
+}
+
+function shallowCompare(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+
+    for (let i = 0; i < a.length; i++) {
+      if (!Object.is(a[i], b[i])) return false;
+    }
+
+    return true;
+  }
+
+  const aKeys = Object.keys(a as Record<string, unknown>);
+  const bObj = b as Record<string, unknown>;
+  const aObj = a as Record<string, unknown>;
+
+  if (aKeys.length !== Object.keys(bObj).length) return false;
+
+  for (const key of aKeys) {
+    if (!Object.prototype.hasOwnProperty.call(bObj, key) || !Object.is(aObj[key], bObj[key])) return false;
   }
 
   return true;

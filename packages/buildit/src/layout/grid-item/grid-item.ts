@@ -65,7 +65,7 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
     row: prop.string(),
     rowSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | 'full'>(),
   },
-  setup(props, { el: _el, bind }) {
+  setup(props, { bind, el: _el }) {
     const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;

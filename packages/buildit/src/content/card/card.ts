@@ -107,7 +107,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
   },
 
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     bind({
       attr: {
         ariaBusy: () => (props.loading.value ? 'true' : 'false'),

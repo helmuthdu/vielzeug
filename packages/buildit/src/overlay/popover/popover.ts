@@ -101,7 +101,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { emit, el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, emit, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);

@@ -7,11 +7,11 @@ import { guardsAndActionsExample } from './guards-and-actions';
 import { persistenceExample } from './persistence';
 
 export const machinitExamples = {
-  'basic-machine': basicMachineExample,
-  'guards-and-actions': guardsAndActionsExample,
-  'entry-exit-actions': entryExitActionsExample,
   'async-invokes': asyncInvokesExample,
+  'basic-machine': basicMachineExample,
   'context-validation': contextValidationExample,
-  'persistence': persistenceExample,
   'debug-tracing': debugTracingExample,
+  'entry-exit-actions': entryExitActionsExample,
+  'guards-and-actions': guardsAndActionsExample,
+  persistence: persistenceExample,
 };

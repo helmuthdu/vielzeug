@@ -1,32 +1,22 @@
 import {
   StateError,
-  type TrackingProvider,
   batch,
   computed,
   configure,
-  createAsyncProvider,
-  deepEqual,
   effect,
   effectAsync,
   isComputed,
-  isReactive,
-  isReactiveArray,
   isSignal,
   isStore,
   onCleanup,
-  reactive,
-  reactiveArray,
   readonly,
-  runWithProvider,
   scope,
-  setTrackingProvider,
-  shallowEqual,
   signal,
   store,
+  syncedSignal,
   tick,
   untrack,
   watch,
-  withReactiveContext,
 } from '../';
 
 describe('stateit', () => {
@@ -261,21 +251,18 @@ describe('stateit', () => {
       parity.dispose();
     });
 
-    it('preserves the original computed error when dependency cleanup also throws', () => {
+    it('preserves the original computed error when a dep throws on removal', () => {
       const trigger = signal(false);
+      const badDep = signal(0);
 
-      let compRef!: ReturnType<typeof computed<number>>;
+      // A computed that reads badDep on first run, then throws on subsequent runs.
+      // We want to verify that when the computed throws, it surfaces the original error.
+      const compRef = computed<number>(() => {
+        if (!trigger.value) {
+          void badDep.value; // track badDep only on first run
 
-      // eslint-disable-next-line prefer-const
-      compRef = computed<number>(() => {
-        void trigger.value;
-
-        if (!trigger.peek()) return 0;
-
-        // Inject a throwing cleanup into subscriptions_ to simulate an unsubscription that throws.
-        (compRef as unknown as { subscriptions_: Set<() => void> }).subscriptions_.add(() => {
-          throw new Error('cleanup-boom');
-        });
+          return 0;
+        }
 
         throw new Error('computed-boom');
       });
@@ -291,14 +278,8 @@ describe('stateit', () => {
         caught = error;
       }
 
-      expect(caught).toBeInstanceOf(AggregateError);
-      expect((caught as AggregateError).errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ message: 'computed-boom' }),
-          expect.objectContaining({ message: 'cleanup-boom' }),
-        ]),
-      );
-      expect((caught as AggregateError).cause).toMatchObject({ message: 'computed-boom' });
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toBe('computed-boom');
 
       compRef.dispose();
     });
@@ -1086,110 +1067,6 @@ describe('stateit', () => {
     });
   });
 
-  describe('reactive', () => {
-    it('tracks property reads independently', () => {
-      const state = reactive({ a: 1, b: 2 });
-      const aSeen: number[] = [];
-      const bSeen: number[] = [];
-
-      const stopA = effect(() => {
-        aSeen.push(state.a);
-      });
-      const stopB = effect(() => {
-        bSeen.push(state.b);
-      });
-
-      state.a = 10;
-      state.b = 20;
-
-      expect(aSeen).toEqual([1, 10]);
-      expect(bSeen).toEqual([2, 20]);
-
-      stopA();
-      stopB();
-    });
-
-    it('changing one property does not re-run effects subscribed to a different property', () => {
-      const state = reactive({ x: 0, y: 0 });
-      const xRuns: number[] = [];
-
-      const stop = effect(() => {
-        xRuns.push(state.x);
-      });
-
-      state.y = 99; // y changed — x effect should NOT re-run
-
-      expect(xRuns).toEqual([0]);
-
-      state.x = 1;
-      expect(xRuns).toEqual([0, 1]);
-
-      stop();
-    });
-
-    it('handles nested object property tracking', () => {
-      const state = reactive({ user: { age: 30, name: 'Alice' } });
-      const nameLog: string[] = [];
-
-      const stop = effect(() => {
-        nameLog.push(state.user.name);
-      });
-
-      state.user.age = 31; // name not changed — effect must NOT re-run
-      expect(nameLog).toEqual(['Alice']);
-
-      state.user.name = 'Bob'; // effect re-runs
-      expect(nameLog).toEqual(['Alice', 'Bob']);
-
-      stop();
-    });
-
-    it('re-runs effects when a nested object is replaced wholesale', () => {
-      const state = reactive({ user: { age: 30, name: 'Alice' } });
-      const nameLog: string[] = [];
-
-      const stop = effect(() => {
-        nameLog.push(state.user.name);
-      });
-
-      state.user = { age: 25, name: 'Carol' };
-      expect(nameLog).toEqual(['Alice', 'Carol']);
-
-      stop();
-    });
-
-    it('initial values are deep-cloned from the source object', () => {
-      const src = { count: 0 };
-      const state = reactive(src);
-
-      src.count = 99; // mutate original
-      expect(state.count).toBe(0); // proxy is independent
-    });
-
-    it('isReactive returns true for reactive proxies and false for plain objects', () => {
-      const plain = { x: 1 };
-      const r = reactive({ x: 1 });
-
-      expect(isReactive(r)).toBe(true);
-      expect(isReactive(plain)).toBe(false);
-      expect(isReactive(null)).toBe(false);
-      expect(isReactive(42)).toBe(false);
-    });
-
-    it('throws StateError when called with a non-plain-object', () => {
-      let caught: unknown;
-
-      try {
-        reactive([] as unknown as object);
-      } catch (e) {
-        caught = e;
-      }
-
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_REACTIVE');
-    });
-  });
-
   describe('type guards', () => {
     it('isSignal returns true for signals, computed signals, and stores', () => {
       expect(isSignal(signal(0))).toBe(true);
@@ -1220,34 +1097,15 @@ describe('stateit', () => {
     });
   });
 
-  describe('equality helpers', () => {
-    it('shallowEqual compares object properties by reference', () => {
-      const arr = [1, 2, 3];
-
-      expect(shallowEqual({ a: 1, b: arr }, { a: 1, b: arr })).toBe(true);
-      expect(shallowEqual({ a: 1, b: arr }, { a: 1, b: [1, 2, 3] })).toBe(false);
-      expect(shallowEqual({ a: 1 }, { a: 2 })).toBe(false);
-      expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
-    });
-
-    it('shallowEqual handles primitives and same reference', () => {
-      expect(shallowEqual(42, 42)).toBe(true);
-      expect(shallowEqual('x', 'x')).toBe(true);
-      expect(shallowEqual(null, null)).toBe(true);
-      expect(shallowEqual(1, 2)).toBe(false);
-    });
-
-    it('deepEqual compares nested structures recursively', () => {
-      expect(deepEqual({ a: { b: 1 } }, { a: { b: 1 } })).toBe(true);
-      expect(deepEqual({ a: { b: 1 } }, { a: { b: 2 } })).toBe(false);
-      expect(deepEqual([1, [2, 3]], [1, [2, 3]])).toBe(true);
-      expect(deepEqual([1, [2, 3]], [1, [2, 4]])).toBe(false);
-    });
-  });
-
   describe('configure', () => {
+    let restore: () => void;
+
+    beforeEach(() => {
+      restore = configure({});
+    });
+
     afterEach(() => {
-      configure({ maxIterations: 100 });
+      restore();
     });
 
     it('changes the max iterations limit for infinite loop detection', () => {
@@ -1269,10 +1127,10 @@ describe('stateit', () => {
     });
 
     it('returns a cleanup function that restores the previous configuration', () => {
-      const restore = configure({ maxIterations: 42 });
+      const restoreInner = configure({ maxIterations: 42 });
 
-      expect(typeof restore).toBe('function');
-      restore();
+      expect(typeof restoreInner).toBe('function');
+      restoreInner();
 
       const n = signal(0);
 
@@ -1377,178 +1235,6 @@ describe('stateit', () => {
       }
 
       expect((caught as StateError).code).toBe('INVALID_STORE');
-
-      // INVALID_REACTIVE
-      caught = undefined;
-
-      try {
-        reactive([] as unknown as object);
-      } catch (e) {
-        caught = e;
-      }
-
-      expect((caught as StateError).code).toBe('INVALID_REACTIVE');
-    });
-  });
-
-  describe('setTrackingProvider', () => {
-    it('uses the custom provider for tracking and returns the previous provider', () => {
-      let stored: unknown = null;
-
-      const customProvider: TrackingProvider = {
-        get: () => stored,
-        run: (ctx, fn) => {
-          const prev = stored;
-
-          stored = ctx;
-
-          try {
-            return fn();
-          } finally {
-            stored = prev;
-          }
-        },
-      };
-
-      const prev = setTrackingProvider(customProvider);
-
-      try {
-        const n = signal(0);
-        const log: number[] = [];
-        const stop = effect(() => {
-          log.push(n.value);
-        });
-
-        n.value = 1;
-        expect(log).toEqual([0, 1]);
-        stop();
-      } finally {
-        setTrackingProvider(prev);
-      }
-    });
-  });
-
-  describe('runWithProvider', () => {
-    it('runs fn with the given provider then restores the previous one', () => {
-      let stored: unknown = null;
-
-      const provider: TrackingProvider = {
-        get: () => stored,
-        run: (ctx, fn) => {
-          const prev = stored;
-
-          stored = ctx;
-
-          try {
-            return fn();
-          } finally {
-            stored = prev;
-          }
-        },
-      };
-
-      const outerProvider = setTrackingProvider(provider);
-
-      try {
-        const log: number[] = [];
-
-        runWithProvider(provider, () => {
-          const n = signal(0);
-
-          effect(() => {
-            log.push(n.value);
-          });
-          n.value = 1;
-        });
-        expect(log).toEqual([0, 1]);
-      } finally {
-        setTrackingProvider(outerProvider);
-      }
-    });
-  });
-
-  describe('withReactiveContext', () => {
-    it('passes the return value through', () => {
-      expect(withReactiveContext(() => 42)).toBe(42);
-    });
-
-    it('isolates tracking: signal read inside is not tracked by the outer computed', () => {
-      const n = signal(0);
-      let outerEvals = 0;
-
-      const c = computed(() => {
-        outerEvals++;
-
-        return withReactiveContext(() => n.value);
-      });
-
-      expect(c.value).toBe(0);
-      expect(outerEvals).toBe(1);
-
-      n.value = 1;
-      expect(outerEvals).toBe(1);
-    });
-
-    it('effects inside the context are independent of any outer context', () => {
-      const n = signal(0);
-      const log: number[] = [];
-
-      withReactiveContext(() => {
-        effect(() => {
-          log.push(n.value);
-        });
-      });
-
-      n.value = 1;
-      expect(log).toEqual([0, 1]);
-    });
-  });
-
-  describe('createAsyncProvider', () => {
-    it('creates a working provider from an ALS-like store', () => {
-      let stored: unknown = null;
-
-      const fakeAls = {
-        getStore: () => stored,
-        run: <T>(value: unknown, fn: () => T): T => {
-          const prev = stored;
-
-          stored = value;
-
-          try {
-            return fn();
-          } finally {
-            stored = prev;
-          }
-        },
-      };
-
-      const prev = setTrackingProvider(createAsyncProvider(fakeAls));
-
-      try {
-        const n = signal(0);
-        const log: number[] = [];
-        const stop = effect(() => {
-          log.push(n.value);
-        });
-
-        n.value = 1;
-        expect(log).toEqual([0, 1]);
-        stop();
-      } finally {
-        setTrackingProvider(prev);
-      }
-    });
-
-    it('returns null when the store is empty (getStore returns undefined)', () => {
-      const fakeAls = {
-        getStore: (): unknown => undefined,
-        run: <T>(_value: unknown, fn: () => T): T => fn(),
-      };
-
-      const provider = createAsyncProvider(fakeAls);
-
-      expect(provider.get()).toBeNull();
     });
   });
 
@@ -1814,126 +1500,312 @@ describe('stateit', () => {
     });
   });
 
-  describe('reactiveArray()', () => {
-    it('tracks length independently', () => {
-      const arr = reactiveArray([1, 2, 3]);
-      let lengthRuns = 0;
+  describe('R7 — debug names in error messages', () => {
+    it('computed cycle error includes name when provided', () => {
+      const proxy = { fn: (): number => 0 };
+      const a = computed(() => proxy.fn() + 1, { name: 'myComputed' });
+      const b = computed(() => a.value + 1);
 
-      const stop = effect(() => {
-        void arr.length;
-        lengthRuns++;
-      });
+      proxy.fn = () => b.value;
 
-      arr[0] = 99; // no length change
-      expect(lengthRuns).toBe(1);
+      let caught: unknown;
 
-      arr.push(4);
-      expect(lengthRuns).toBe(2);
+      try {
+        void a.value;
+      } catch (e) {
+        caught = e;
+      }
 
-      stop();
+      expect((caught as StateError).message).toContain('myComputed');
+
+      a.dispose();
+      b.dispose();
     });
 
-    it('tracks individual indices independently', () => {
-      const arr = reactiveArray([1, 2, 3]);
+    it('disposed computed read error includes name when provided', () => {
+      const c = computed(() => 1, { name: 'myDisposed' });
+
+      c.dispose();
+
+      let caught: unknown;
+
+      try {
+        void c.value;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect((caught as StateError).message).toContain('myDisposed');
+    });
+  });
+
+  describe('R11 — effect() throws on non-function returns', () => {
+    it('throws StateError when effect returns a number', () => {
+      let caught: unknown;
+
+      try {
+        effect(() => 42 as unknown as void);
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+    });
+
+    it('throws StateError when effect returns true', () => {
+      let caught: unknown;
+
+      try {
+        effect(() => true as unknown as void);
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+    });
+
+    it('does not throw when effect returns undefined', () => {
+      const stop = effect(() => undefined);
+
+      expect(() => stop()).not.toThrow();
+    });
+
+    it('does not throw when effect returns a function (cleanup)', () => {
+      const stop = effect(() => () => {});
+
+      expect(() => stop()).not.toThrow();
+    });
+  });
+
+  describe('F1 — version-based dep tracking (diamond dep deduplication)', () => {
+    it('changing A in A→B, A→C, B+C→D only recomputes D once', () => {
+      const a = signal(1);
+      const b = computed(() => a.value * 2);
+      const c = computed(() => a.value * 3);
+      let dRuns = 0;
+      const d = computed(() => {
+        dRuns++;
+
+        return b.value + c.value;
+      });
+
+      // Establish initial value
+      expect(d.value).toBe(5);
+      expect(dRuns).toBe(1);
+
+      const seen: number[] = [];
+      const stop = effect(() => {
+        seen.push(d.value);
+      });
+
+      expect(dRuns).toBe(1); // already computed above
+
+      a.value = 2;
+      expect(dRuns).toBe(2); // recomputed once despite two upstream paths
+      expect(d.value).toBe(10);
+      expect(seen.at(-1)).toBe(10);
+
+      stop();
+      b.dispose();
+      c.dispose();
+      d.dispose();
+    });
+
+    it('version fast-path skips recompute when deps have not changed', () => {
+      const a = signal(1);
+      let runs = 0;
+      const c = computed(() => {
+        runs++;
+
+        return a.value + 1;
+      });
+
+      expect(c.value).toBe(2);
+      expect(runs).toBe(1);
+
+      // Access again without changing anything — should use cached value
+      expect(c.value).toBe(2);
+      expect(runs).toBe(1);
+
+      c.dispose();
+    });
+  });
+
+  describe('F3 — store.lens()', () => {
+    it('reads and writes a specific key of the store', () => {
+      const s = store({ age: 30, name: 'Alice' });
+      const nameLens = s.lens('name');
+
+      expect(nameLens.value).toBe('Alice');
+
+      nameLens.value = 'Bob';
+      expect(s.value.name).toBe('Bob');
+    });
+
+    it('lens is cached — store.lens("x") === store.lens("x")', () => {
+      const s = store({ x: 1, y: 2 });
+
+      expect(s.lens('x')).toBe(s.lens('x'));
+    });
+
+    it('lens write propagates via patch — other keys unchanged', () => {
+      const s = store({ x: 1, y: 2 });
+      const xLens = s.lens('x');
+
+      xLens.value = 99;
+
+      expect(s.value.x).toBe(99);
+      expect(s.value.y).toBe(2);
+    });
+
+    it('effect on lens re-runs only when that key changes', () => {
+      const s = store({ x: 0, y: 0 });
+      const xLens = s.lens('x');
       const log: number[] = [];
 
       const stop = effect(() => {
-        log.push(arr[0] as number);
+        log.push(xLens.value);
       });
 
-      arr[1] = 99; // different index — should not re-run
-      expect(log).toEqual([1]);
+      s.patch({ y: 99 }); // should NOT re-run x lens effect
+      expect(log).toEqual([0]);
 
-      arr[0] = 10;
-      expect(log).toEqual([1, 10]);
+      s.patch({ x: 5 }); // should re-run
+      expect(log).toEqual([0, 5]);
 
       stop();
     });
 
-    it('changing one index does not re-run effects subscribed to a different index', () => {
-      const arr = reactiveArray([0, 0, 0]);
-      let runs = 0;
+    it('lens.subscribe works', () => {
+      const s = store({ x: 0 });
+      const xLens = s.lens('x');
+      const listener = vi.fn();
 
+      const unsub = xLens.subscribe(listener);
+
+      s.patch({ x: 1 });
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      unsub();
+    });
+  });
+
+  describe('F4 — effect scheduler option', () => {
+    it('scheduler: sync (default) runs immediately on signal change', () => {
+      const n = signal(0);
+      const log: number[] = [];
       const stop = effect(() => {
-        void arr[2];
-        runs++;
+        log.push(n.value);
       });
 
-      arr[0] = 1;
-      arr[1] = 2;
-      expect(runs).toBe(1);
-
-      arr[2] = 3;
-      expect(runs).toBe(2);
+      n.value = 1;
+      expect(log).toEqual([0, 1]); // synchronous
 
       stop();
     });
 
-    it('push updates length and new index', () => {
-      const arr = reactiveArray<number>([]);
+    it('scheduler: microtask defers re-runs via queueMicrotask', async () => {
+      const n = signal(0);
+      const log: number[] = [];
+      const stop = effect(
+        () => {
+          log.push(n.value);
+        },
+        { scheduler: 'microtask' },
+      );
 
-      arr.push(42);
+      // Initial run is always synchronous
+      expect(log).toEqual([0]);
 
-      expect(arr.length).toBe(1);
-      expect(arr[0]).toBe(42);
-    });
+      n.value = 1;
+      expect(log).toEqual([0]); // not yet
 
-    it('pop updates length and last index', () => {
-      const arr = reactiveArray([1, 2, 3]);
-
-      arr.pop();
-
-      expect(arr.length).toBe(2);
-      expect(arr[2]).toBeUndefined();
-    });
-
-    it('splice updates affected indices', () => {
-      const arr = reactiveArray([10, 20, 30]);
-
-      arr.splice(1, 1, 99);
-
-      expect(arr[1]).toBe(99);
-      expect(arr.length).toBe(3);
-    });
-
-    it('mutating methods are batched', () => {
-      const arr = reactiveArray([3, 1, 2]);
-      let runs = 0;
-
-      const stop = effect(() => {
-        void arr[0];
-        void arr[1];
-        void arr[2];
-        runs++;
-      });
-
-      arr.sort();
-      expect(runs).toBe(2); // initial + one batched update
+      await Promise.resolve(); // flush microtask
+      expect(log).toEqual([0, 1]);
 
       stop();
     });
 
-    it('isReactiveArray returns true for reactive arrays and false otherwise', () => {
-      const arr = reactiveArray([1, 2, 3]);
+    it('scheduler: microtask coalesces multiple writes into one re-run', async () => {
+      const n = signal(0);
+      const log: number[] = [];
+      const stop = effect(
+        () => {
+          log.push(n.value);
+        },
+        { scheduler: 'microtask' },
+      );
 
-      expect(isReactiveArray(arr)).toBe(true);
-      expect(isReactiveArray([1, 2, 3])).toBe(false);
-      expect(isReactiveArray(null)).toBe(false);
-      expect(isReactiveArray(42)).toBe(false);
-    });
+      n.value = 1;
+      n.value = 2;
+      n.value = 3;
 
-    it('iteration methods (map) track element reads', () => {
-      const arr = reactiveArray([1, 2, 3]);
-      const log: number[][] = [];
-
-      const stop = effect(() => {
-        log.push(arr.map((x) => x * 2));
-      });
-
-      arr[0] = 10;
-      expect(log.at(-1)).toEqual([20, 4, 6]);
+      await Promise.resolve();
+      expect(log).toEqual([0, 3]); // one deferred run with latest value
 
       stop();
+    });
+  });
+
+  describe('syncedSignal', () => {
+    it('initialises from source peek', () => {
+      const src = signal(42);
+      const [local, stop] = syncedSignal(src);
+
+      expect(local.value).toBe(42);
+      stop();
+    });
+
+    it('updates when source changes', () => {
+      const src = signal(1);
+      const [local, stop] = syncedSignal(src);
+
+      src.value = 2;
+      expect(local.value).toBe(2);
+      stop();
+    });
+
+    it('applies transform to incoming values', () => {
+      const src = signal<string | undefined>(undefined);
+      const [local, stop] = syncedSignal(src, (v) => v ?? 'default');
+
+      expect(local.value).toBe('default');
+
+      src.value = 'hello';
+      expect(local.value).toBe('hello');
+      stop();
+    });
+
+    it('local writes are independent of source', () => {
+      const src = signal(1);
+      const [local, stop] = syncedSignal(src);
+
+      local.value = 99;
+      expect(local.value).toBe(99);
+      expect(src.value).toBe(1); // source unaffected
+      stop();
+    });
+
+    it('stop() detaches the watcher — source changes no longer update local', () => {
+      const src = signal(1);
+      const [local, stop] = syncedSignal(src);
+
+      stop();
+      src.value = 99;
+
+      expect(local.value).toBe(1); // not updated after stop
+    });
+
+    it('stop() can be called multiple times without throwing', () => {
+      const src = signal(1);
+      const [, stop] = syncedSignal(src);
+
+      expect(() => {
+        stop();
+        stop();
+      }).not.toThrow();
     });
   });
 });

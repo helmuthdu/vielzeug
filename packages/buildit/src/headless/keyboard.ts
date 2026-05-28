@@ -104,10 +104,7 @@ export const createInteraction = (options: InteractionOptions): Interaction => {
   const isDisabled = (): boolean => Boolean(options.disabled?.());
   const keyboardKeys = options.keys ?? ['Enter', ' '];
   const keymap = Object.fromEntries(
-    keyboardKeys.map((key) => [
-      key,
-      (keyboardEvent: KeyboardEvent) => options.onPress?.(keyboardEvent, 'keyboard'),
-    ]),
+    keyboardKeys.map((key) => [key, (keyboardEvent: KeyboardEvent) => options.onPress?.(keyboardEvent, 'keyboard')]),
   );
 
   return {

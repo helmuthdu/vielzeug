@@ -107,7 +107,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     value: prop.string(),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const shadowRoot = el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();

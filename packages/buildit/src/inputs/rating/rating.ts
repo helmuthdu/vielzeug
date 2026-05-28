@@ -1,6 +1,4 @@
-import { computed, define, defineField, html, inject, prop, signal,
-} from '@vielzeug/craftit';
-
+import { computed, define, defineField, html, inject, prop, signal } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -80,7 +78,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     solid: prop.bool(false),
     value: prop.number(0),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 

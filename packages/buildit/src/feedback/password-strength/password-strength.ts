@@ -69,7 +69,7 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
     value: prop.string(),
   },
 
-  setup(props, { el: _el, bind }) {
+  setup(props, { bind, el: _el }) {
     const defaultLabels: Record<PasswordStrengthLevel, string> = {
       empty: '',
       fair: 'Fair',

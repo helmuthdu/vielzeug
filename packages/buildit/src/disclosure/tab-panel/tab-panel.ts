@@ -58,7 +58,7 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
     padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
     value: prop.string(''),
   },
-  setup(props, { el: _el, bind }) {
+  setup(props, { bind, el: _el }) {
     const tabsCtx = inject(TABS_CTX);
     const isActive = computed(() =>
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,

@@ -76,7 +76,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     retryable: prop.bool(false),
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup(props, { emit, el, bind, slots: _slots }) {
+  setup(props, { bind, el, emit, slots: _slots }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);

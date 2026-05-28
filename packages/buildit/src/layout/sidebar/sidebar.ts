@@ -196,15 +196,13 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
-  setup(props, { emit, el, bind, slots }) {
+  setup(props, { bind, el, emit, slots }) {
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
 
     const isControlled = signal(el.hasAttribute('collapsed'));
-    const collapsedState = signal(
-      isControlled.value ? el.hasAttribute('collapsed') : props['default-collapsed'].value,
-    );
+    const collapsedState = signal(isControlled.value ? el.hasAttribute('collapsed') : props['default-collapsed'].value);
     const isBottomNav = signal(false);
     const isMobileOpen = signal(false);
     const bottomNavItems = signal<BottomNavItem[]>([]);
@@ -681,7 +679,7 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       reflect: false,
     },
   },
-  setup(props, { el: _el, bind, slots }) {
+  setup(props, { bind, el: _el, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
@@ -819,7 +817,7 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { el: _el, bind, slots }) {
+  setup(props, { bind, el: _el, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX);

@@ -129,7 +129,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
-  setup(props, { emit, el, bind: _bind, slots }) {
+  setup(props, { bind: _bind, el, emit, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;

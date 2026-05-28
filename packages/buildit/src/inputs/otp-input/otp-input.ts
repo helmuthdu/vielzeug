@@ -87,7 +87,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     value: prop.string(),
     variant: prop.string<Exclude<VisualVariant, 'text' | 'frost' | 'glass'>>(),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);

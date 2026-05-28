@@ -101,7 +101,7 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     'total-pages': prop.number(1),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { emit, el, bind: _bind }) {
+  setup(props, { bind: _bind, el, emit }) {
     function goTo(page: number) {
       const total = props['total-pages'].value || 1;
       const next = Math.min(Math.max(1, page), total);

@@ -19,6 +19,8 @@
  */
 export const toAbortSignal = (onCleanup: (fn: () => void) => void): AbortSignal => {
   const controller = new AbortController();
+
   onCleanup(() => controller.abort());
+
   return controller.signal;
 };

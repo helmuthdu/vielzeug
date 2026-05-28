@@ -94,7 +94,7 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
     variant: prop.string<'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'>(),
     weight: prop.string<'normal' | 'medium' | 'semibold' | 'bold'>(),
   },
-  setup(props, { el: _el, bind }) {
+  setup(props, { bind, el: _el }) {
     bind({
       attr: {
         'aria-level': () => {

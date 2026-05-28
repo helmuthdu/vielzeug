@@ -76,8 +76,10 @@ export type CheckableHandle = {
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   devAssert(!!options.host, HeadlessError.MISSING_HOST, 'createCheckable: host element is required');
 
-  const checked = syncedSignal(options.checked, (v) => Boolean(v));
-  const indeterminate = options.indeterminate ? syncedSignal(options.indeterminate, (v) => Boolean(v)) : signal(false);
+  const [checked, stopCheckedSync] = syncedSignal(options.checked, (v) => Boolean(v));
+  const [indeterminate, stopIndeterminateSync] = options.indeterminate
+    ? syncedSignal(options.indeterminate, (v) => Boolean(v))
+    : [signal(false), () => {}];
 
   const checkableFormValue = computed<string | null>(() =>
     indeterminate.value ? null : checked.value ? (options.value.value ?? '') : null,
@@ -141,8 +143,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     aria: {
       'aria-checked': () =>
         options.role === 'checkbox' && indeterminate.value ? 'mixed' : checked.value ? 'true' : 'false',
-      'aria-describedby': () =>
-        assistive.value.errorText || assistive.value.helperText ? assistiveId : undefined,
+      'aria-describedby': () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : undefined),
       'aria-disabled': () => (core.disabled.value ? 'true' : undefined),
       'aria-invalid': () => (assistive.value.errorText ? 'true' : undefined),
       'aria-labelledby': () => {
@@ -164,6 +165,8 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   });
 
   const cleanup = (): void => {
+    stopCheckedSync();
+    stopIndeterminateSync();
     stopAriaEffect();
   };
 

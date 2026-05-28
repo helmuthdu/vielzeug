@@ -1,4 +1,4 @@
-import { signal, type ReadonlySignal } from '@vielzeug/stateit';
+import { computed, signal, type ReadonlySignal } from '@vielzeug/stateit';
 
 import { createContext, inject, provide } from './context';
 
@@ -7,21 +7,21 @@ import { createContext, inject, provide } from './context';
  * and injected by child field components.
  */
 export type FormContextValue = {
-  /** Whether all fields in the form are valid. */
-  readonly valid: ReadonlySignal<boolean>;
-  /** Whether the form is currently submitting. */
-  readonly submitting: ReadonlySignal<boolean>;
   /** Whether any field has been touched (interacted with). */
   readonly dirty: ReadonlySignal<boolean>;
-  /** Submit the form programmatically. */
-  submit(): void;
-  /** Reset all registered field values. */
-  reset(): void;
   /**
    * Register a field's validity signal with the form context.
    * Returns a cleanup function.
    */
   registerField(validity: ReadonlySignal<boolean>): () => void;
+  /** Reset all registered field values. */
+  reset(): void;
+  /** Submit the form programmatically. */
+  submit(): void;
+  /** Whether the form is currently submitting. */
+  readonly submitting: ReadonlySignal<boolean>;
+  /** Whether all fields in the form are valid. */
+  readonly valid: ReadonlySignal<boolean>;
 };
 
 export const FORM_CONTEXT_KEY = createContext<FormContextValue>('craftit:form-context');
@@ -41,19 +41,17 @@ export const FORM_CONTEXT_KEY = createContext<FormContextValue>('craftit:form-co
  * });
  * ```
  */
-export function createForm(options: {
-  onSubmit?: (e?: Event) => void | Promise<void>;
-  onReset?: () => void;
-} = {}): FormContextValue {
-  const fieldValiditySignals: Array<ReadonlySignal<boolean>> = [];
+export function createForm(
+  options: {
+    onReset?: () => void;
+    onSubmit?: (e?: Event) => void | Promise<void>;
+  } = {},
+): FormContextValue {
+  const fieldValiditySignals = signal<Array<ReadonlySignal<boolean>>>([]);
   const submitting = signal(false);
   const dirty = signal(false);
 
-  const valid: ReadonlySignal<boolean> = {
-    get value() {
-      return fieldValiditySignals.every((s) => s.value);
-    },
-  } as ReadonlySignal<boolean>;
+  const valid = computed(() => fieldValiditySignals.value.every((s) => s.value));
 
   const submit = async (e?: Event): Promise<void> => {
     e?.preventDefault();
@@ -75,13 +73,10 @@ export function createForm(options: {
   };
 
   const registerField = (validity: ReadonlySignal<boolean>): (() => void) => {
-    fieldValiditySignals.push(validity);
-    dirty.value = true;
+    fieldValiditySignals.value = [...fieldValiditySignals.value, validity];
 
     return () => {
-      const idx = fieldValiditySignals.indexOf(validity);
-
-      if (idx !== -1) fieldValiditySignals.splice(idx, 1);
+      fieldValiditySignals.value = fieldValiditySignals.value.filter((s) => s !== validity);
     };
   };
 

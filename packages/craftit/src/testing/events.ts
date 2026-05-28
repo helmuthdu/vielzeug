@@ -38,11 +38,11 @@ export const fire = {
   focus: (el: Element, _name?: string, opts?: FocusEventInit) =>
     el.dispatchEvent(new FocusEvent('focus', { bubbles: true, ...opts })),
   input: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('input', { bubbles: true, ...opts })),
-  keyDown: (el: Element, opts?: KeyboardEventInit) =>
-    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
   /** Fire a KeyboardEvent with a given type (keydown, keyup, keypress). */
   keyboard: (el: Element, type: string, opts?: KeyboardEventInit) =>
     el.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, ...opts })),
+  keyDown: (el: Element, opts?: KeyboardEventInit) =>
+    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
   keyUp: (el: Element, opts?: KeyboardEventInit) =>
     el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
   /** Fire a MouseEvent with a given type (click, mousedown, etc.). */

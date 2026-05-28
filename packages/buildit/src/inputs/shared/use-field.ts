@@ -1,6 +1,6 @@
 import type { TextFieldHandle, TextFieldOptions } from '../../headless';
-import { createTextField, toAbortSignal } from '../../headless';
 
+import { createTextField, toAbortSignal } from '../../headless';
 import { connectFormField } from './connect-form-field';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

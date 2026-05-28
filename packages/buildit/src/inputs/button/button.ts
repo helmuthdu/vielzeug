@@ -115,7 +115,7 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
-  setup(props, { emit, el, bind }) {
+  setup(props, { bind, el, emit }) {
     // Derive effective color/size/variant — prefer group context, fall back to own prop.
     const groupCtx = inject(BUTTON_GROUP_CTX);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);

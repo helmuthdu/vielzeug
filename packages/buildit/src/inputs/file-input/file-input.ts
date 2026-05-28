@@ -11,7 +11,6 @@ import {
   signal,
   onMounted,
 } from '@vielzeug/craftit';
-
 import { createDropZone } from '@vielzeug/dragit';
 
 import { createInteraction, createStableId } from '../../headless';
@@ -149,7 +148,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     required: prop.bool(false),
     size: prop.string(),
   },
-  setup(props, { emit, el: _el, bind }) {
+  setup(props, { bind, el: _el, emit }) {
     // ============================================
     // State
     // ============================================

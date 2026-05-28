@@ -13,6 +13,7 @@
 export type { PropsDef } from '@vielzeug/craftit';
 
 import { prop } from '@vielzeug/craftit';
+
 import type { SizeConfig } from '../styles/mixins/shape.css';
 
 // ── Shared types ──────────────────────────────────────────────────────────────

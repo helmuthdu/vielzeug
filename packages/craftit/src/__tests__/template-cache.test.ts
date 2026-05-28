@@ -46,8 +46,7 @@ describe('template caching', () => {
   it('reuses the compiled template plan for identical template strings', () => {
     // Template plan cache (WeakMap on TemplateStringsArray) means identical template
     // tag references produce the same slot/prefix plan across calls.
-    const tag = (strings: TemplateStringsArray, ...values: unknown[]) =>
-      html(strings, ...values);
+    const tag = (strings: TemplateStringsArray, ...values: unknown[]) => html(strings, ...values);
 
     const result1 = tag`<div class="a">static</div>`;
     const result2 = tag`<div class="a">static</div>`;

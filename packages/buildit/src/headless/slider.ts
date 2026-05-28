@@ -85,11 +85,7 @@ export const createSliderControl = (options: SliderControlOptions): SliderContro
     return null;
   };
 
-  const handleKeydown = (
-    event: KeyboardEvent,
-    currentValue: number,
-    onCommit: (value: number) => void,
-  ): boolean => {
+  const handleKeydown = (event: KeyboardEvent, currentValue: number, onCommit: (value: number) => void): boolean => {
     if (options.disabled?.value || options.readonly?.value) return false;
 
     const next = nextFromKey(event.key, currentValue);
