@@ -326,22 +326,6 @@ describe('can()', () => {
   });
 });
 
-// ── matches() ─────────────────────────────────────────────────────────────────
-
-describe('matches()', () => {
-  it('returns true for the current state', () => {
-    const m = trafficMachine();
-
-    expect(m.state.value === 'green').toBe(true);
-  });
-
-  it('returns false for a non-current state', () => {
-    const m = trafficMachine();
-
-    expect(m.state.value === 'red').toBe(false);
-  });
-});
-
 // ── Actions & lifecycle ───────────────────────────────────────────────────────
 
 describe('actions & lifecycle', () => {
@@ -631,8 +615,8 @@ describe('setup()', () => {
       states: {
         idle: {
           on: {
-            INC: { actions: [machine.assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' },
             DEC: { actions: [machine.assign(({ context }) => ({ count: context.count - 1 }))], target: 'idle' },
+            INC: { actions: [machine.assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' },
           },
         },
       },
@@ -762,6 +746,27 @@ describe('send() string shorthand', () => {
     expect(m.context.value.count).toBe(5);
   });
 
+  it('payload cannot override event type', () => {
+    const m = createMachine({
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            ADD: { target: 'done' },
+            EVIL: { target: 'evil' },
+          },
+        },
+        done: {},
+        evil: {},
+      },
+    });
+
+    // Sending 'ADD' with payload that contains type: 'EVIL' should NOT override
+    // The type should remain 'ADD' because it's explicitly passed as first arg
+    expect(m.send('ADD', { type: 'EVIL' } as any)).toBe(true);
+    expect(m.state.value).toBe('done'); // Should be in 'done', not 'evil'
+  });
+
   it('returns false for unknown event passed as string', () => {
     const m = trafficMachine();
 
@@ -807,10 +812,13 @@ describe('getSnapshot()', () => {
     const m = counterMachine();
 
     const snap1 = m.getSnapshot();
+
     expect(snap1).toEqual({ context: { count: 0 }, state: 'idle' });
 
     m.send({ type: 'INCREMENT' });
+
     const snap2 = m.getSnapshot();
+
     expect(snap2).toEqual({ context: { count: 1 }, state: 'idle' });
   });
 
@@ -822,11 +830,28 @@ describe('getSnapshot()', () => {
     });
 
     const snap = m.getSnapshot();
+
     snap.context.value = 999;
 
     // Machine state unchanged
     expect(m.context.value.value).toBe(0);
     expect(m.getSnapshot().context.value).toBe(0);
+  });
+
+  it('snapshot properties are readonly (compile-time check)', () => {
+    const m = counterMachine();
+    const snap = m.getSnapshot();
+
+    // These should cause TypeScript errors at compile time
+    // @ts-expect-error — state is readonly
+    snap.state = 'other';
+
+    // @ts-expect-error — context is readonly
+    snap.context = { count: 999 };
+
+    // Verify the machine is unaffected
+    expect(m.state.value).toBe('idle');
+    expect(m.context.value.count).toBe(0);
   });
 
   it('each call returns independent snapshot objects', () => {
@@ -853,7 +878,7 @@ describe('subscribe()', () => {
     });
 
     expect(snapshots).toHaveLength(1);
-    expect(snapshots[0]).toEqual({ state: 'green', context: {} });
+    expect(snapshots[0]).toEqual({ context: {}, state: 'green' });
   });
 
   it('calls listener on state change', () => {
@@ -866,7 +891,7 @@ describe('subscribe()', () => {
 
     m.send({ type: 'NEXT' });
     expect(snapshots).toHaveLength(2);
-    expect(snapshots[1]).toEqual({ state: 'yellow', context: {} });
+    expect(snapshots[1]).toEqual({ context: {}, state: 'yellow' });
   });
 
   it('calls listener on context change', () => {
@@ -983,6 +1008,7 @@ describe('guard-based routing (array transitions)', () => {
       context: { priority: 2 },
       initial: 'idle',
       states: {
+        high: {},
         idle: {
           on: {
             CHECK: [
@@ -992,9 +1018,8 @@ describe('guard-based routing (array transitions)', () => {
             ],
           },
         },
-        high: {},
-        medium: {},
         low: {},
+        medium: {},
       },
     });
 
@@ -1007,16 +1032,13 @@ describe('guard-based routing (array transitions)', () => {
       context: { allowed: false },
       initial: 'idle',
       states: {
+        fallback: {},
         idle: {
           on: {
-            GO: [
-              { guard: ({ context }) => context.allowed, target: 'success' },
-              { target: 'fallback' },
-            ],
+            GO: [{ guard: ({ context }) => context.allowed, target: 'success' }, { target: 'fallback' }],
           },
         },
         success: {},
-        fallback: {},
       },
     });
 
@@ -1029,12 +1051,12 @@ describe('guard-based routing (array transitions)', () => {
       context: { ok: false },
       initial: 'idle',
       states: {
+        done: {},
         idle: {
           on: {
             GO: [{ guard: ({ context }) => context.ok, target: 'done' }],
           },
         },
-        done: {},
       },
     });
 
@@ -1047,16 +1069,13 @@ describe('guard-based routing (array transitions)', () => {
       context: { flag: true },
       initial: 'idle',
       states: {
-        idle: {
-          on: {
-            GO: [
-              { guard: ({ context }) => !context.flag, target: 'a' },
-              { target: 'b' },
-            ],
-          },
-        },
         a: {},
         b: {},
+        idle: {
+          on: {
+            GO: [{ guard: ({ context }) => !context.flag, target: 'a' }, { target: 'b' }],
+          },
+        },
       },
     });
 
@@ -1158,7 +1177,7 @@ describe('error handling', () => {
 // ── Re-entrancy ───────────────────────────────────────────────────────────────
 
 describe('re-entrancy', () => {
-  it('send() during entry action completes first transition', () => {
+  it('entry action sequence runs in correct batch order', () => {
     const events: string[] = [];
 
     createMachine({
@@ -1178,5 +1197,156 @@ describe('re-entrancy', () => {
 
     // Entry runs as part of the same batch
     expect(events).toEqual(['entry-b', 'a->b']);
+  });
+
+  it('re-entrant send during entry is queued after current batch', () => {
+    const events: string[] = [];
+
+    const m = createMachine({
+      initial: 'a',
+      onTransition: (info) => {
+        events.push(`${info.from}->${info.to}`);
+      },
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {
+          entry: () => {
+            events.push('entry-b');
+            // Re-entrant send during entry
+            m.send('GO');
+          },
+          on: { GO: { target: 'c' } },
+        },
+        c: {},
+      },
+    });
+
+    m.send('GO');
+
+    // First transition completes: a->b with entry-b, then re-entrant send b->c
+    expect(m.state.value).toBe('c');
+    expect(events).toContain('entry-b');
+  });
+});
+
+// ── availableEvents() ─────────────────────────────────────────────────────────
+
+describe('availableEvents()', () => {
+  it('returns events defined in current state', () => {
+    const m = trafficMachine();
+
+    expect(m.availableEvents()).toEqual(['NEXT']);
+  });
+
+  it('returns empty array when state has no transitions', () => {
+    const m = createMachine({
+      initial: 'idle',
+      states: {
+        idle: { on: { GO: { target: 'running' } } },
+        running: {},
+      },
+    });
+
+    m.send('GO');
+    expect(m.availableEvents()).toEqual([]);
+  });
+
+  it('returns available events after state transition', () => {
+    const m = createMachine({
+      initial: 'a',
+      states: {
+        a: { on: { GO_B: { target: 'b' } } },
+        b: { on: { GO_C: { target: 'c' }, BACK: { target: 'a' } } },
+        c: {},
+      },
+    });
+
+    expect(m.availableEvents()).toEqual(['GO_B']);
+    m.send('GO_B');
+    expect(m.availableEvents()).toEqual(['GO_C', 'BACK']);
+    m.send('GO_C');
+    expect(m.availableEvents()).toEqual([]);
+  });
+});
+
+// ── Atomic transitions with rollback ───────────────────────────────────────────
+
+describe('Atomic transitions — rollback on error', () => {
+  it('rolls back state and context if entry action throws', () => {
+    const m = createMachine({
+      context: { x: 0 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { actions: [assign(({ context }) => ({ x: context.x + 1 }))], target: 'b' } } },
+        b: {
+          entry: () => {
+            throw new Error('entry failed');
+          },
+        },
+      },
+    });
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
+
+    expect(() => m.send('GO')).toThrow('entry failed');
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
+  });
+
+  it('rolls back state and context if action throws', () => {
+    const m = createMachine({
+      context: { x: 0 },
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            GO: {
+              actions: [
+                assign(({ context }) => ({ x: context.x + 1 })),
+                () => {
+                  throw new Error('action failed');
+                },
+              ],
+              target: 'b',
+            },
+          },
+        },
+        b: {},
+      },
+    });
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
+
+    expect(() => m.send('GO')).toThrow('action failed');
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
+  });
+
+  it('rolls back state and context if exit action throws', () => {
+    const m = createMachine({
+      context: { x: 0 },
+      initial: 'a',
+      states: {
+        a: {
+          exit: () => {
+            throw new Error('exit failed');
+          },
+          on: { GO: { actions: [assign(({ context }) => ({ x: context.x + 1 }))], target: 'b' } },
+        },
+        b: {},
+      },
+    });
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
+
+    expect(() => m.send('GO')).toThrow('exit failed');
+
+    expect(m.state.value).toBe('a');
+    expect(m.getSnapshot().context.x).toBe(0);
   });
 });

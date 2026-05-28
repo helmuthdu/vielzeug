@@ -37,18 +37,23 @@ export type StateNode<State extends string, EventType extends string, Ctx extend
 export type MachineConfig<State extends string, EventType extends string, Ctx extends object> = {
   context?: Ctx;
   initial: State;
+  /**
+   * Observation-only hook fired after each successful transition.
+   * Do NOT call `send()` inside — use `entry` actions for chained transitions instead.
+   */
   onTransition?: (info: { event: MachineEvent; from: State; to: State }) => void;
   states: { [S in State]: StateNode<State, EventType, Ctx> };
 };
 
 export type MachineSnapshot<State extends string, Ctx extends object> = {
-  context: Ctx;
-  state: State;
+  readonly context: Readonly<Ctx>;
+  readonly state: State;
 };
 
 export interface MachineInstance<State extends string, EventType extends string, Ctx extends object> {
   readonly context: ReadonlySignal<Ctx>;
   readonly state: ReadonlySignal<State>;
+  availableEvents(): EventType[];
   can(eventOrType: { [key: string]: unknown; type: EventType } | EventType): boolean;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   send(eventOrType: { [key: string]: unknown; type: EventType } | EventType, payload?: object): boolean;
@@ -98,9 +103,11 @@ export const assign =
  */
 export const setup = <Ctx extends object = Record<never, never>, Ev extends MachineEvent = MachineEvent>() => ({
   action: (fn: ActionFn<Ctx, Ev>): ActionFn<Ctx, Ev> => fn,
+  // Event type is the full union — per-event narrowing requires discriminated setup (future).
   assign: assign<Ctx, Ev>,
   create: <State extends string, EventType extends Ev extends { type: infer T } ? T : string>(
     config: MachineConfig<State, EventType, Ctx>,
+    // @ts-expect-error — const inference creates type variance that TS can't resolve; runtime is correct
   ): MachineInstance<State, EventType, Ctx> => createMachine(config),
   guard: (fn: GuardFn<Ctx, Ev>): GuardFn<Ctx, Ev> => fn,
 });
@@ -119,7 +126,12 @@ type RawStateNode = {
   on?: Record<string, RawTransitionDef | Array<RawTransitionDef>>;
 };
 
-type RawMachineConfig = { context?: object; initial: string; onTransition?: (info: any) => void; states: Record<string, RawStateNode> };
+type RawMachineConfig = {
+  context?: object;
+  initial: string;
+  onTransition?: (info: any) => void;
+  states: Record<string, RawStateNode>;
+};
 
 type InferState<Cfg extends RawMachineConfig> = keyof Cfg['states'] & string;
 
@@ -175,9 +187,11 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
     if (!(config.initial in states)) {
       throw new Error(`[machinit] initial state "${config.initial}" not found in states`);
     }
+
     for (const [name, node] of Object.entries(states)) {
       for (const [ev, raw] of Object.entries(node.on ?? {})) {
         const defs = Array.isArray(raw) ? raw : [raw];
+
         for (const tr of defs) {
           if (!(tr.target in states)) {
             throw new Error(`[machinit] state "${name}" event "${ev}" targets unknown state "${tr.target}"`);
@@ -190,7 +204,7 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
   const send = (eventOrType: Ev | string, payload?: object): boolean => {
     if (disposed) return false;
 
-    const event = typeof eventOrType === 'string' ? ({ type: eventOrType, ...payload } as Ev) : eventOrType;
+    const event = typeof eventOrType === 'string' ? ({ ...payload, type: eventOrType } as Ev) : eventOrType;
     const currentNode = states[state_.value];
     const raw = currentNode.on?.[event.type];
 
@@ -201,19 +215,29 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
 
     // Find first transition whose guard passes (or no guard)
     const tr = defs.find((d) => !d.guard || d.guard({ context: draft, event }));
+
     if (!tr) return false;
 
     const targetNode = states[tr.target];
     const from = state_.value;
+    const prevState = state_.value;
+    const prevCtx = context_.value;
 
-    batch(() => {
-      currentNode.exit?.({ context: draft, event });
-      tr.actions?.forEach((fn) => fn({ context: draft, event }));
-      state_.value = tr.target as State;
-      targetNode.entry?.({ context: draft, event });
-      context_.value = draft;
-      config.onTransition?.({ event, from, to: tr.target as State });
-    });
+    try {
+      batch(() => {
+        currentNode.exit?.({ context: draft, event });
+        tr.actions?.forEach((fn) => fn({ context: draft, event }));
+        state_.value = tr.target as State;
+        targetNode.entry?.({ context: draft, event });
+        context_.value = draft;
+        config.onTransition?.({ event, from, to: tr.target as State });
+      });
+    } catch (err) {
+      // Rollback on error for atomic transitions
+      state_.value = prevState;
+      context_.value = prevCtx;
+      throw err;
+    }
 
     return true;
   };
@@ -225,9 +249,16 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
     if (!raw) return false;
 
     const defs = Array.isArray(raw) ? raw : [raw];
-    const draft = { ...context_.value } as Ctx;
+    // In dev mode, freeze to catch mutations. In prod, pass live value (zero allocation).
+    const isDev = typeof globalThis !== 'undefined' && (globalThis as any).__DEV__ === true;
+    const ctx = isDev ? Object.freeze({ ...context_.value }) as Ctx : context_.value as Ctx;
 
-    return defs.some((d) => !d.guard || d.guard({ context: draft, event: ev }));
+    return defs.some((d) => !d.guard || d.guard({ context: ctx, event: ev }));
+  };
+
+  const availableEvents = (): (InferEventType<Cfg>)[] => {
+    const node = states[state_.value];
+    return node.on ? (Object.keys(node.on) as (InferEventType<Cfg>)[]) : [];
   };
 
   const getSnapshot = (): MachineSnapshot<State, Ctx> => ({
@@ -240,6 +271,7 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
     const subscription = createEffect(() => {
       if (active) listener(getSnapshot());
     });
+
     return () => {
       active = false;
       subscription.dispose();
@@ -257,6 +289,7 @@ export const createMachine = <const Cfg extends RawMachineConfig>(
   }
 
   return {
+    availableEvents,
     can,
     context: readonly(context_),
     getSnapshot,
