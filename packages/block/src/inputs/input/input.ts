@@ -1,6 +1,9 @@
+import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
+
 import type { TextFieldProps } from '../../shared/config';
 import type { InputType, VisualVariant } from '../../types';
 
+import '../../content/icon/icon';
 import {
   FIELD_SIZE_PRESET,
   disablableBundle,
@@ -8,7 +11,6 @@ import {
   sizableBundle,
   themableBundle,
 } from '../../shared/config';
-import '../../content/icon/icon';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -21,8 +23,6 @@ import {
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { useTextField } from '../shared/use-field';
 import componentStyles from './input.css?inline';
-
-import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
 
 /** Input component properties */
 

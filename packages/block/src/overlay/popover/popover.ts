@@ -1,3 +1,6 @@
+import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
+import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/orbit';
+
 import {
   createOverlayControl,
   createStableId,
@@ -8,9 +11,6 @@ import {
 import { disablableBundle } from '../../shared/config';
 import { reducedMotionMixin } from '../../styles';
 import styles from './popover.css?inline';
-
-import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
-import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/orbit';
 
 export type PopoverTrigger = 'click' | 'hover' | 'focus';
 

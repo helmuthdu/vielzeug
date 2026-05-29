@@ -1,3 +1,5 @@
+import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
 import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
@@ -8,8 +10,6 @@ import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './switch.css?inline';
-
-import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
 
 export type BitSwitchEvents = {
   change: CheckableChangePayload;

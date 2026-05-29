@@ -1,3 +1,14 @@
+import {
+  batch,
+  computed,
+  effect as rawEffect,
+  isSignal,
+  signal,
+  untrack,
+  type ReadonlySignal,
+  type Signal,
+} from '@vielzeug/ripple';
+
 import { CRAFTIT_ERRORS } from '../errors';
 import {
   applyBindingsWithTargets,
@@ -16,17 +27,6 @@ import {
 } from '../types/bindings';
 import { escapeHtml, removeNodes, runAll } from '../utils/dom';
 import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
-
-import {
-  batch,
-  computed,
-  effect as rawEffect,
-  isSignal,
-  signal,
-  untrack,
-  type ReadonlySignal,
-  type Signal,
-} from '@vielzeug/ripple';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

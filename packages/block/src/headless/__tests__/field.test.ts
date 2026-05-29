@@ -1,13 +1,12 @@
+import { html } from '@vielzeug/craft';
+import { mount } from '@vielzeug/craft/testing';
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
 import { createAssistiveState } from '../text-field';
 import { createTextField } from '../text-field';
-
-import { html } from '@vielzeug/craft';
-import { mount } from '@vielzeug/craft/testing';
-import { signal } from '@vielzeug/ripple';
 
 describe('field controls', () => {
   describe('createTextField()', () => {

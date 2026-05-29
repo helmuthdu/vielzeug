@@ -1,12 +1,12 @@
+import { define, prop, computed, html, signal, watch, onMounted } from '@vielzeug/craft';
+import { intersectionObserver } from '@vielzeug/craft/observers';
+
 import type { ComponentSize } from '../../types';
 
 import { sizableBundle } from '../../shared/config';
 import { reducedMotionMixin } from '../../styles';
 import { safeCSSLength } from '../../utils';
 import componentStyles from './skeleton.css?inline';
-
-import { define, prop, computed, html, signal, watch, onMounted } from '@vielzeug/craft';
-import { intersectionObserver } from '@vielzeug/craft/observers';
 
 /** Skeleton loader component properties */
 export type BitSkeletonProps = {

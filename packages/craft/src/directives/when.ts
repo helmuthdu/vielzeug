@@ -1,3 +1,5 @@
+import { computed, effect as rawEffect, isSignal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
+
 import {
   applyBindingsWithTargets,
   applyHtmlBinding,
@@ -15,8 +17,6 @@ import {
 } from '../types/bindings';
 import { escapeHtml, removeNodes, runAll } from '../utils/dom';
 import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
-
-import { computed, effect as rawEffect, isSignal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
 
 type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 

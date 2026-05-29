@@ -1,9 +1,9 @@
+import { define, prop, html } from '@vielzeug/craft';
+
 import type { ThemeColor } from '../../types';
 
 import { colorThemeMixin } from '../../styles';
 import componentStyles from './separator.css?inline';
-
-import { define, prop, html } from '@vielzeug/craft';
 
 /** Separator component properties */
 export type BitSeparatorProps = {

@@ -1,17 +1,4 @@
 import {
-  createListControl,
-  createStableId,
-  type ChoiceChangeDetail,
-  getChoiceLabel,
-  getLightChildrenByTag,
-  setBooleanAttribute,
-  setMaybeAttribute,
-} from '../../headless';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
-import componentStyles from './radio-group.css?inline';
-
-import {
   createContext,
   define,
   effect,
@@ -24,6 +11,19 @@ import {
   watch,
   when,
 } from '@vielzeug/craft';
+
+import {
+  createListControl,
+  createStableId,
+  type ChoiceChangeDetail,
+  getChoiceLabel,
+  getLightChildrenByTag,
+  setBooleanAttribute,
+  setMaybeAttribute,
+} from '../../headless';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
+import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
 export type BitRadioGroupProps = {

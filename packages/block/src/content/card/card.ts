@@ -1,11 +1,11 @@
+import { define, effect, html, prop } from '@vielzeug/craft';
+
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
 import { createInteraction } from '../../headless';
 import { disablableBundle, loadableBundle, themableBundle } from '../../shared/config';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
-
-import { define, effect, html, prop } from '@vielzeug/craft';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], input, select, textarea, summary, [role="button"], [role="link"], [contenteditable=""], [contenteditable="true"]';

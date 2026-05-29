@@ -1,6 +1,6 @@
-import styles from './grid-item.css?inline';
-
 import { define, html, computed, prop } from '@vielzeug/craft';
+
+import styles from './grid-item.css?inline';
 
 /** Grid item component properties */
 export type BitGridItemProps = {

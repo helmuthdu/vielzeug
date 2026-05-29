@@ -1,8 +1,7 @@
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { html } from '../template-compiler';
-
-import { signal } from '@vielzeug/ripple';
 
 describe('template caching', () => {
   it('produces html bindings for plain getter interpolations', () => {

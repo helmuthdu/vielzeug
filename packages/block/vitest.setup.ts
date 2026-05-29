@@ -1,6 +1,5 @@
-import axe from 'axe-core';
-
 import { install } from '@vielzeug/craft/testing';
+import axe from 'axe-core';
 
 const FORM_VALUE_SYMBOL = Symbol.for('vielzeug.test.formValue');
 const ATTACH_INTERNALS_PATCHED = Symbol.for('vielzeug.test.attachInternalsPatched');

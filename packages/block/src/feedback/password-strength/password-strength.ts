@@ -1,8 +1,8 @@
-import { reducedMotionMixin } from '../../styles';
-import componentStyles from './password-strength.css?inline';
-
 import { computed, define, html } from '@vielzeug/craft';
 import { prop } from '@vielzeug/craft';
+
+import { reducedMotionMixin } from '../../styles';
+import componentStyles from './password-strength.css?inline';
 
 /** Scoring levels for password strength. */
 export type PasswordStrengthLevel = 'empty' | 'weak' | 'fair' | 'good' | 'strong';

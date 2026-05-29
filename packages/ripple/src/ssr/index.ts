@@ -18,6 +18,7 @@
  */
 
 import { _installTrackingHook } from '../tracking';
+import type { AsyncLocalStorage as AsyncLocalStorageType } from 'async_hooks';
 
 type TrackingContext = import('../types').TrackingCtx;
 
@@ -65,7 +66,7 @@ export const createAsyncProvider = (): TrackingProvider => {
   // Dynamic import so this module can be bundled for environments without AsyncLocalStorage.
   // In browser builds, this code path should never be reached.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { AsyncLocalStorage } = require('async_hooks') as { AsyncLocalStorage: new <T>() => AsyncLocalStorage<T> };
+  const { AsyncLocalStorage } = require('async_hooks') as { AsyncLocalStorage: typeof AsyncLocalStorageType };
   const storage = new AsyncLocalStorage<TrackingContext | null>();
 
   return {

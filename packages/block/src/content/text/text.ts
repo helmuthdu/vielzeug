@@ -1,6 +1,6 @@
-import styles from './text.css?inline';
-
 import { define, prop, html } from '@vielzeug/craft';
+
+import styles from './text.css?inline';
 
 /** Text component properties */
 export type BitTextProps = {

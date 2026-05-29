@@ -5,10 +5,10 @@
  * Static values are applied once; getter functions are tracked as reactive effects.
  */
 
+import { effect as rawEffect } from '@vielzeug/ripple';
+
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
-
-import { effect as rawEffect } from '@vielzeug/ripple';
 
 type AriaValue = string | number | boolean | null | undefined | (() => string | number | boolean | null | undefined);
 

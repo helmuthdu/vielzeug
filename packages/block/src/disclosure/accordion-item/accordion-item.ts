@@ -1,11 +1,11 @@
+import { define, effect, html, inject, prop, ref, onMounted } from '@vielzeug/craft';
+
 import type { ComponentSize, VisualVariant } from '../../types';
 
-import { coarsePointerMixin } from '../../styles';
 import '../../content/icon/icon';
+import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
-
-import { define, effect, html, inject, prop, ref, onMounted } from '@vielzeug/craft';
 
 /** Accordion item component properties */
 

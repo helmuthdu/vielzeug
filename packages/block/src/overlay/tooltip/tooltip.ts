@@ -1,14 +1,14 @@
 import type { Placement } from '@vielzeug/orbit';
 
+import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
+import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
+
 import type { ComponentSize } from '../../types';
 
 import { createOverlayControl, createStableId, parseStringTriggers } from '../../headless';
 import { disablableBundle, sizableBundle } from '../../shared/config';
 import { forcedColorsMixin } from '../../styles';
 import styles from './tooltip.css?inline';
-
-import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
-import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';

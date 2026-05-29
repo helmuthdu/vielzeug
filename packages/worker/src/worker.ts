@@ -291,7 +291,7 @@ class Slot<TInput, TOutput> {
   }
 }
 
-class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
+class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
   private closePromise?: Promise<void>;
   private completedCount = 0;
   private readonly maxQueue: number | undefined;
@@ -493,5 +493,5 @@ export function createWorker<TInput, TOutput>(
   fn: TaskFn<TInput, TOutput>,
   options?: WorkerOptions,
 ): WorkerHandle<TInput, TOutput> {
-  return new WorkitImpl(fn, options);
+  return new WorkerImpl(fn, options);
 }

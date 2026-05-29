@@ -1,12 +1,12 @@
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import { computed, define, html, prop } from '@vielzeug/craft';
 
 import '../icon/icon';
 import '../../inputs/button/button';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
 import { sizableBundle, themableBundle } from '../../shared/config';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './pagination.css?inline';
-
-import { computed, define, html, prop } from '@vielzeug/craft';
 
 export type BitPaginationEvents = {
   change: { page: number };

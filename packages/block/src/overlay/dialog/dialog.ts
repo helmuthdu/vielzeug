@@ -1,12 +1,12 @@
+import { define, html, prop, ref, onMounted } from '@vielzeug/craft';
+
 import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
 import type { PaddingSize, RoundedSize } from '../../types';
 
 import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
-import componentStyles from './dialog.css?inline';
 import '../../content/icon/icon';
-
-import { define, html, prop, ref, onMounted } from '@vielzeug/craft';
+import componentStyles from './dialog.css?inline';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 type DialogBackdrop = 'opaque' | 'blur' | 'transparent';

@@ -1,3 +1,5 @@
+import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createListControl } from '../../headless';
@@ -5,8 +7,6 @@ import { disablableBundle, sizableBundle, themableBundle } from '../../shared/co
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './otp-input.css?inline';
-
-import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craft';
 
 export type BitOtpInputEvents = {
   change: { complete: boolean; originalEvent?: Event; value: string };

@@ -14,13 +14,13 @@ export type {
   ReadonlySignal,
   Scope,
   Signal,
-  StateErrorCode,
   Store,
   Subscription,
   WatchOptions,
 } from './types';
 
 export { StateError } from './error';
+export type { StateErrorCode } from './error';
 export { configure } from './config';
 
 // Core primitives

@@ -1,6 +1,6 @@
-import itemStyles from './breadcrumb-item.css?inline';
-
 import { define, prop, effect, html } from '@vielzeug/craft';
+
+import itemStyles from './breadcrumb-item.css?inline';
 
 export type BitBreadcrumbProps = {
   label?: string;

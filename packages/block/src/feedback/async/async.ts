@@ -1,9 +1,9 @@
-import { reducedMotionMixin } from '../../styles';
-import '../../content/icon/icon';
-import componentStyles from './async.css?inline';
-import '../skeleton/skeleton';
-
 import { define, prop, html, type ReadonlySignal, onMounted, signal, when } from '@vielzeug/craft';
+
+import '../../content/icon/icon';
+import { reducedMotionMixin } from '../../styles';
+import '../skeleton/skeleton';
+import componentStyles from './async.css?inline';
 
 export type AsyncStatus = 'idle' | 'loading' | 'empty' | 'error' | 'success';
 

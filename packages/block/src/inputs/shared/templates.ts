@@ -1,8 +1,8 @@
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
-import type { ErrorHelperState } from '../../headless';
-
 import { html } from '@vielzeug/craft';
+
+import type { ErrorHelperState } from '../../headless';
 
 /**
  * Renders the standard assistive text region (helper/error) used across all

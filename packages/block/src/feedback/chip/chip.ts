@@ -1,5 +1,8 @@
+import { define, prop, computed, html, signal, watch } from '@vielzeug/craft';
+
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import '../../content/icon/icon';
 import {
   colorThemeMixin,
   disabledStateMixin,
@@ -7,13 +10,10 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import '../../content/icon/icon';
 // ============================================
 // Styles
 // ============================================
 import componentStyles from './chip.css?inline';
-
-import { define, prop, computed, html, signal, watch } from '@vielzeug/craft';
 
 // ============================================
 // Types

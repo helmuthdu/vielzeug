@@ -1,8 +1,8 @@
+import { define, prop, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craft';
+
 import type { ComponentSize, VisualVariant } from '../../types';
 
 import { createListControl } from '../../headless';
-
-import { define, prop, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craft';
 
 /** Context provided by bit-accordion to its bit-accordion-item children. */
 export type AccordionContext = {

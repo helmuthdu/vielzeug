@@ -1,10 +1,10 @@
+import { computed, define, html, prop, provide } from '@vielzeug/craft';
+
 import type { ValidationTrigger } from '../../headless';
 import type { ComponentSize, VisualVariant } from '../../types';
 
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
-
-import { computed, define, html, prop, provide } from '@vielzeug/craft';
 
 /** Form component properties */
 export type BitFormProps = {

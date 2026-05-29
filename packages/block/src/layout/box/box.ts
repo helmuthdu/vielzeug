@@ -1,9 +1,9 @@
+import { define, prop, html } from '@vielzeug/craft';
+
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
 import { frostVariantMixin, rainbowEffectMixin, surfaceMixins } from '../../styles';
 import componentStyles from './box.css?inline';
-
-import { define, prop, html } from '@vielzeug/craft';
 
 /** Box component properties */
 export type BitBoxProps = {

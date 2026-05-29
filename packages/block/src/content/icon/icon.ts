@@ -1,8 +1,7 @@
+import { define, prop, computed, html, raw } from '@vielzeug/craft';
 import * as lucideModule from 'lucide';
 
 import styles from './icon.css?inline';
-
-import { define, prop, computed, html, raw } from '@vielzeug/craft';
 
 export type IconNode = Array<[string, Record<string, string | number | undefined>]>;
 

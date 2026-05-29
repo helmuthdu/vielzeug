@@ -1,9 +1,3 @@
-import { isLiveSignal } from './directives/live';
-import { propRegistry } from './props';
-import { type AttrBinding, type Binding, type EventBinding, type HtmlBinding, type RefBinding } from './types/bindings';
-import { listen, removeNodes, runAll, setAttr, isStructuredValue } from './utils/dom';
-import { CF_ID_ATTR } from './utils/id';
-
 import {
   batch,
   computed,
@@ -14,6 +8,12 @@ import {
   type ReadonlySignal,
   untrack,
 } from '@vielzeug/ripple';
+
+import { isLiveSignal } from './directives/live';
+import { propRegistry } from './props';
+import { type AttrBinding, type Binding, type EventBinding, type HtmlBinding, type RefBinding } from './types/bindings';
+import { listen, removeNodes, runAll, setAttr, isStructuredValue } from './utils/dom';
+import { CF_ID_ATTR } from './utils/id';
 
 export type RegisterCleanup = (fn: CleanupFn) => void;
 

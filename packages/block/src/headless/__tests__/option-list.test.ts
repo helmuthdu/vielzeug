@@ -1,9 +1,8 @@
+import { html } from '@vielzeug/craft';
+import { mount } from '@vielzeug/craft/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type OptionListOptions, createOptionList } from '../option-list';
-
-import { html } from '@vielzeug/craft';
-import { mount } from '@vielzeug/craft/testing';
 
 type Item = { label: string; value: string };
 

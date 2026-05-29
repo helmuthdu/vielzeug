@@ -1,3 +1,18 @@
+import {
+  computed,
+  createContext,
+  define,
+  defineField,
+  effect,
+  html,
+  inject,
+  prop,
+  provide,
+  type ReadonlySignal,
+  signal,
+  when,
+} from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
@@ -14,21 +29,6 @@ import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../sty
 import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './checkbox-group.css?inline';
-
-import {
-  computed,
-  createContext,
-  define,
-  defineField,
-  effect,
-  html,
-  inject,
-  prop,
-  provide,
-  type ReadonlySignal,
-  signal,
-  when,
-} from '@vielzeug/craft';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 

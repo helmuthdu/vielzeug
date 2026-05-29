@@ -1,11 +1,3 @@
-import type { ComponentSize, ThemeColor } from '../../types';
-
-import { createSliderControl, createStableId } from '../../headless';
-import { SLIDER_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
-import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
-import componentStyles from './slider.css?inline';
-
 import {
   computed,
   define,
@@ -20,6 +12,14 @@ import {
   onMounted,
   prop,
 } from '@vielzeug/craft';
+
+import type { ComponentSize, ThemeColor } from '../../types';
+
+import { createSliderControl, createStableId } from '../../headless';
+import { SLIDER_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { FORM_CTX, useFormContext } from '../shared/form-context';
+import componentStyles from './slider.css?inline';
 
 const guard =
   <E extends Event = Event>(condition: () => unknown, handler: (e: E) => void): ((e: E) => void) =>

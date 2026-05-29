@@ -1,10 +1,10 @@
+import { define, computed, html, prop } from '@vielzeug/craft';
+
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './badge.css?inline';
-
-import { define, computed, html, prop } from '@vielzeug/craft';
 
 type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;
 

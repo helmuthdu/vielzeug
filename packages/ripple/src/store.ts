@@ -25,7 +25,7 @@ class LensImpl<T extends object, K extends keyof T & string> implements Signal<T
   }
 
   set value(next: T[K]) {
-    this.store_.patch({ [this.key_]: next } as Partial<T>);
+    this.store_.patch({ [this.key_]: next } as unknown as Partial<T>);
   }
 
   peek(): T[K] {

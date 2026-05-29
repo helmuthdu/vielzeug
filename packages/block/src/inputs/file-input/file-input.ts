@@ -1,3 +1,18 @@
+import {
+  computed,
+  define,
+  defineField,
+  html,
+  inject,
+  onEvent,
+  onCleanup,
+  prop,
+  ref,
+  signal,
+  onMounted,
+} from '@vielzeug/craft';
+import { createDropZone } from '@vielzeug/grip';
+
 import { createInteraction, createStableId } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared/config';
 import {
@@ -11,9 +26,6 @@ import {
 } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './file-input.css?inline';
-
-import { computed, define, defineField, html, inject, onEvent, onCleanup, prop, ref, signal, onMounted } from '@vielzeug/craft';
-import { createDropZone } from '@vielzeug/grip';
 
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';

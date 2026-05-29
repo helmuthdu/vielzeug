@@ -1,6 +1,6 @@
-import type { ToastItem } from './toast';
-
 import { type Fixture, mount, waitFor } from '@vielzeug/craft/testing';
+
+import type { ToastItem } from './toast';
 
 describe('bit-toast', () => {
   let fixture: Fixture<HTMLElement & { add(toast: ToastItem): string; dismiss(id: string): void }>;

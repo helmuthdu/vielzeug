@@ -1,6 +1,6 @@
-import type { BitMenuItemProps } from './menu';
-
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
+
+import type { BitMenuItemProps } from './menu';
 
 type MenuItemElement = HTMLElement & BitMenuItemProps;
 

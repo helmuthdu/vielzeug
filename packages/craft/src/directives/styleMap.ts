@@ -1,6 +1,6 @@
-import { toKebab } from '../utils/dom';
-
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+
+import { toKebab } from '../utils/dom';
 
 type StyleInput =
   | string

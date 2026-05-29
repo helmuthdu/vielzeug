@@ -1,3 +1,5 @@
+import { define, prop, computed, defineField, html, inject } from '@vielzeug/craft';
+
 import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
@@ -15,8 +17,6 @@ import {
 import { computeSafeRel } from '../../utils';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
 import componentStyles from './button.css?inline';
-
-import { define, prop, computed, defineField, html, inject } from '@vielzeug/craft';
 
 const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 

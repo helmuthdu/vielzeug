@@ -1,8 +1,8 @@
+import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craft';
+
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';
-
-import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craft';
 
 const TAB_PANEL_PADDING_PRESET: Record<string, string> = {
   '2xl': 'var(--size-12)',

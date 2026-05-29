@@ -1,7 +1,7 @@
+import { signal } from '@vielzeug/ripple';
+
 import { createListControl, type ListNavigationOptions } from '../nav';
 import { createOverlayControl, type OverlayControlOptions } from '../overlay';
-
-import { signal } from '@vielzeug/ripple';
 
 /**
  * Creates a `ListControl` with a pre-wired index signal.

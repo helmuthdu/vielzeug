@@ -1,8 +1,8 @@
-import type { ValidationTrigger } from '../../headless';
-import type { ComponentSize, VisualVariant } from '../../types';
-
 import { type HostBindFn, createContext, type ReadonlySignal } from '@vielzeug/craft';
 import { computed } from '@vielzeug/ripple';
+
+import type { ValidationTrigger } from '../../headless';
+import type { ComponentSize, VisualVariant } from '../../types';
 
 export type FormContext = {
   /** Whether all child fields are disabled */

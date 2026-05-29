@@ -1,7 +1,9 @@
+import { define, html, prop } from '@vielzeug/craft';
+
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
-import { awaitExit } from '../../overlay/shared/await-exit';
 import '../../content/icon/icon';
+import { awaitExit } from '../../overlay/shared/await-exit';
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
   coarsePointerMixin,
@@ -12,8 +14,6 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import componentStyles from './alert.css?inline';
-
-import { define, html, prop } from '@vielzeug/craft';
 
 export type BitAlertEvents = {
   dismiss: { originalEvent: MouseEvent };

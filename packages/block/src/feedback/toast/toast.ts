@@ -1,3 +1,5 @@
+import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craft';
+
 import type { SwipeControl } from '../../headless';
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -5,8 +7,6 @@ import { createSwipeControl } from '../../headless';
 import { reducedMotionMixin } from '../../styles';
 import { awaitExit } from '../../utils';
 import componentStyles from './toast.css?inline';
-
-import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craft';
 
 /** Toast container properties */
 

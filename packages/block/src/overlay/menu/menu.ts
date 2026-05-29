@@ -1,5 +1,7 @@
 import type { Placement } from '@vielzeug/orbit';
 
+import { computed, define, effect, html, onMounted, prop, syncAria, watch } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
@@ -14,8 +16,6 @@ import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styl
 import menuItemStyles from './menu-item.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
 import componentStyles from './menu.css?inline';
-
-import { computed, define, effect, html, onMounted, prop, syncAria, watch } from '@vielzeug/craft';
 
 // ── Types ─────────────────────────────────────────────────────────────
 

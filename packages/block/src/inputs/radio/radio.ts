@@ -1,3 +1,5 @@
+import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
 import { type CheckableChangePayload, createCheckable, createListControl, toAbortSignal } from '../../headless';
@@ -14,8 +16,6 @@ import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './radio.css?inline';
-
-import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
 
 /** Radio component properties */
 

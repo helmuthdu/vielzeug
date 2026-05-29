@@ -3,11 +3,11 @@
  * applied directly to the component's host element.
  */
 
+import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+
 import { effect, onCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
-
-import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
 /**
  * Describes a reactive or static host binding value.

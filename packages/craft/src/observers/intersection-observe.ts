@@ -1,6 +1,6 @@
-import { onCleanup } from '../runtime';
-
 import { signal, type ReadonlySignal } from '@vielzeug/ripple';
+
+import { onCleanup } from '../runtime';
 
 /**
  * Observes an element's intersection with the viewport (or a given root) via

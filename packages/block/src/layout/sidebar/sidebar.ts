@@ -1,7 +1,3 @@
-import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
-import { computeSafeRel } from '../../utils';
-import '../../content/icon/icon';
-
 import {
   define,
   computed,
@@ -16,6 +12,10 @@ import {
   prop,
 } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
+
+import '../../content/icon/icon';
+import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
+import { computeSafeRel } from '../../utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
+import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
-
-import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 

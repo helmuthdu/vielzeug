@@ -1,3 +1,5 @@
+import { type ReadonlySignal, effect, signal } from '@vielzeug/ripple';
+
 import { devAssert, HeadlessError } from './dev';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import {
@@ -7,8 +9,6 @@ import {
   createOverlayControl,
 } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
-
-import { type ReadonlySignal, effect, signal } from '@vielzeug/ripple';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

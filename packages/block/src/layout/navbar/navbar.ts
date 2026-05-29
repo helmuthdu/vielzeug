@@ -1,17 +1,3 @@
-import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  elevationMixin,
-  frostVariantMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-} from '../../styles';
-import { computeSafeRel } from '../../utils';
-import '../../content/icon/icon';
-import navbarStyles from './navbar.css?inline';
-
 import {
   computed,
   createContext,
@@ -27,6 +13,20 @@ import {
   prop,
 } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
+
+import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+
+import '../../content/icon/icon';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  elevationMixin,
+  frostVariantMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+} from '../../styles';
+import { computeSafeRel } from '../../utils';
+import navbarStyles from './navbar.css?inline';
 
 type NavbarMode = 'floating' | 'sticky';
 

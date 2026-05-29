@@ -1,3 +1,5 @@
+import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
+
 import { CRAFTIT_ERRORS, createRuntimeError, reportRuntimeError, type CraftitRuntimeError } from './errors';
 import { createBind, type HostBindFn } from './host-bind';
 import { ComponentPhase } from './lifecycle';
@@ -20,8 +22,6 @@ import { extractResult, type HTMLResult } from './types/bindings';
 import { type CSSResult, loadStylesheet } from './utils/css';
 import { toKebab } from './utils/dom';
 import { createEmitFn, type EmitFn } from './utils/emit';
-
-import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 
 // ─── Lifecycle event constants ────────────────────────────────────────────────────────────
 

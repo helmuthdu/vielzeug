@@ -1,3 +1,4 @@
+import { effect } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -10,8 +11,6 @@ import {
   type MachineSnapshot,
   type MachineConfig,
 } from '../index.js';
-
-import { effect } from '@vielzeug/ripple';
 
 type TrafficEvent = { type: 'NEXT' };
 

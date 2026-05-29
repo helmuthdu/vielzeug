@@ -1,8 +1,10 @@
+import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
 import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
-import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import '../../content/icon/icon';
+import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -16,8 +18,6 @@ import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './checkbox.css?inline';
-
-import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
 
 export type BitCheckboxEvents = {
   change: CheckableChangePayload;

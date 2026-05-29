@@ -1,10 +1,10 @@
+import { define, prop, computed, effect, html, inject } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
-
-import { define, prop, computed, effect, html, inject } from '@vielzeug/craft';
 
 export type BitTabItemProps = {
   /** Whether this tab is currently selected (set by bit-tabs) */

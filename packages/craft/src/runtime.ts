@@ -1,6 +1,3 @@
-import { CRAFTIT_ERRORS } from './errors';
-import { listen as listenInternal } from './utils/dom';
-
 import {
   effect as _effect,
   onCleanup as _onCleanup,
@@ -9,6 +6,9 @@ import {
   type ReadonlySignal,
   type Subscription,
 } from '@vielzeug/ripple';
+
+import { CRAFTIT_ERRORS } from './errors';
+import { listen as listenInternal } from './utils/dom';
 
 // ─── Runtime context ─────────────────────────────────────────────────────────
 // A single context object replaces the previous two parallel globals

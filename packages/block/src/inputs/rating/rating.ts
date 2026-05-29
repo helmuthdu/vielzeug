@@ -1,13 +1,13 @@
+import { computed, define, defineField, html, inject, prop, signal } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { createSliderControl } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import '../../content/icon/icon';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './rating.css?inline';
-
-import { computed, define, defineField, html, inject, prop, signal } from '@vielzeug/craft';
 
 export type BitRatingEvents = {
   change: { originalEvent?: Event; value: number };

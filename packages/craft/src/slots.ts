@@ -5,9 +5,9 @@
  * `slots.elements(name?)`: Signal<Element[]> — assigned elements for a slot (flattened).
  */
 
-import { getCurrentElement, onCleanup, onMounted } from './runtime';
-
 import { type ReadonlySignal, signal, type Signal } from '@vielzeug/ripple';
+
+import { getCurrentElement, onCleanup, onMounted } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
   elements: (name?: SlotNames) => ReadonlySignal<Element[]>;

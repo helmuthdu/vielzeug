@@ -1,8 +1,8 @@
+import { type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
+
 import { CRAFTIT_ERRORS } from './errors';
 import { getCurrentElement, effect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
-
-import { type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
 
 export type PropsDef<T extends Record<string, unknown>> = {
   // All props must be explicitly defined via prop.* helpers or PropDef objects

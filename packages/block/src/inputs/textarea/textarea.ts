@@ -1,3 +1,5 @@
+import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
+
 import type { TextFieldProps } from '../../shared/config';
 import type { VisualVariant } from '../../types';
 
@@ -20,8 +22,6 @@ import {
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { useTextField } from '../shared/use-field';
 import componentStyles from './textarea.css?inline';
-
-import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
 
 /** Textarea component properties */
 

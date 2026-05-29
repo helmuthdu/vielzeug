@@ -1,7 +1,7 @@
+import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+
 import { createA11yHost } from './a11y-host';
 import { createStableId } from './id';
-
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 // ── Validation / context types ────────────────────────────────────────────────
 

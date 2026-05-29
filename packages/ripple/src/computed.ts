@@ -1,9 +1,9 @@
-import type { ComputedSignal, DepEntry, DirtyComputed, ReactiveOptions, Subscriber, Subscription } from './types';
+import type { ComputedSignal, DepEntry, DirtyComputed, ReactiveOptions, Subscription } from './types';
 
 import { StateError } from './error';
 import { IS_COMPUTED, IS_SIGNAL, UNINITIALIZED, ensureError } from './helpers';
 import { ReactiveNode } from './node';
-import { notifyNodeChange } from './scheduling';
+
 import { getTracking, withTracking } from './tracking';
 
 export class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T>, DirtyComputed {

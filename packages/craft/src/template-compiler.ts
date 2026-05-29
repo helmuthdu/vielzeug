@@ -1,3 +1,5 @@
+import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+
 import { createAttrBinding } from './template-bindings';
 import {
   htmlResult,
@@ -10,8 +12,6 @@ import {
 } from './types/bindings';
 import { escapeHtml } from './utils/dom';
 import { CF_ID_ATTR, createMarkerIdFactory, rekeyHtmlResult } from './utils/id';
-
-import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 // Templates use the HTML as-is; no aggressive whitespace normalization
 

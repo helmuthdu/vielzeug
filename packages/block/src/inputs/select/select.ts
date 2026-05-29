@@ -1,10 +1,24 @@
+import {
+  computed,
+  define,
+  defineField,
+  html,
+  inject,
+  onCleanup,
+  prop,
+  signal,
+  watch,
+  onMounted,
+} from '@vielzeug/craft';
+
 import type { DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
 import type { ChoiceChangeDetail } from '../../headless';
 import type { SelectableFieldProps } from '../../shared/config';
-import type { VisualVariant } from '../../types';
 
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
+import type { VisualVariant } from '../../types';
+
 import { createComposite, toAbortSignal } from '../../headless';
 import {
   FIELD_SIZE_PRESET,
@@ -26,8 +40,6 @@ import {
 import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './select.css?inline';
-
-import { computed, define, defineField, html, inject, onCleanup, prop, signal, watch, onMounted } from '@vielzeug/craft';
 
 // ── Types ─────────────────────────────────────────────────────────────
 

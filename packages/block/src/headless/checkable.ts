@@ -1,3 +1,5 @@
+import { type ReadonlySignal, type Signal, computed, signal, syncedSignal } from '@vielzeug/ripple';
+
 import type { ValidationTrigger } from './field-base';
 
 import { createA11yHost } from './a11y-host';
@@ -5,8 +7,6 @@ import { devAssert, HeadlessError } from './dev';
 import { createErrorHelperState, createFieldCore, type ErrorHelperState, type FieldCoreOptions } from './field-base';
 import { createStableId } from './id';
 import { createInteraction } from './keyboard';
-
-import { type ReadonlySignal, type Signal, computed, signal, syncedSignal } from '@vielzeug/ripple';
 
 // ── Checkable control ─────────────────────────────────────────────────────────
 

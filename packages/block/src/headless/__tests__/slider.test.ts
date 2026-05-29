@@ -1,6 +1,6 @@
-import { createSliderControl } from '../slider';
-
 import { signal } from '@vielzeug/ripple';
+
+import { createSliderControl } from '../slider';
 
 describe('createSliderControl', () => {
   it('snaps and clamps values', () => {

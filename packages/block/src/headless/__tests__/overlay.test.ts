@@ -1,6 +1,6 @@
-import { createOverlayControl } from '../index';
-
 import { signal } from '@vielzeug/ripple';
+
+import { createOverlayControl } from '../index';
 
 describe('createOverlayControl', () => {
   it('opens with programmatic reason by default', () => {

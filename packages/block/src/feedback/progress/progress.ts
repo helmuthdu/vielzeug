@@ -1,10 +1,10 @@
+import { define, prop, computed, effect, html, styleMap, when } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './progress.css?inline';
-
-import { define, prop, computed, effect, html, styleMap, when } from '@vielzeug/craft';
 
 /** Progress bar component properties */
 export type BitProgressProps = {

@@ -1,12 +1,12 @@
+import { define, prop, computed, effect, html, signal, watch } from '@vielzeug/craft';
+
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
-import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import '../icon/icon';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
-
-import { define, prop, computed, effect, html, signal, watch } from '@vielzeug/craft';
 
 export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away';
 

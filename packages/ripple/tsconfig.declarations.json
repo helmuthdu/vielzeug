@@ -3,7 +3,8 @@
   "compilerOptions": {
     "customConditions": [],
     "declarationDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "types": ["node"]
   },
   "include": [
     "src/**/*.ts",

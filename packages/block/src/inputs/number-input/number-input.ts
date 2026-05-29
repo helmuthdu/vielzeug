@@ -1,16 +1,16 @@
+import { computed, define, defineField, html, inject, prop, signal, watch } from '@vielzeug/craft';
+
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createSpinnerControl } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import '../../content/icon/icon';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import styles from './number-input.css?inline';
 // Ensure child components are registered
 import '../button/button';
 import '../input/input';
-
-import { computed, define, defineField, html, inject, prop, signal, watch } from '@vielzeug/craft';
+import styles from './number-input.css?inline';
 
 export type BitNumberInputEvents = {
   change: { originalEvent?: Event; value: number | null };

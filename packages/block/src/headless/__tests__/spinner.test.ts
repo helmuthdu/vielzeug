@@ -1,6 +1,6 @@
-import { createSpinnerControl } from '../spinner';
-
 import { signal } from '@vielzeug/ripple';
+
+import { createSpinnerControl } from '../spinner';
 
 describe('createSpinnerControl', () => {
   it('increments/decrements and clamps to min/max', () => {

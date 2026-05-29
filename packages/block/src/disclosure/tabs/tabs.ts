@@ -1,10 +1,3 @@
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-
-import { createListControl, createInteraction } from '../../headless';
-import { sizableBundle, themableBundle } from '../../shared/config';
-import { colorThemeMixin } from '../../styles';
-import styles from './tabs.css?inline';
-
 import {
   computed,
   createContext,
@@ -18,6 +11,13 @@ import {
   watch,
   onMounted,
 } from '@vielzeug/craft';
+
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { createListControl, createInteraction } from '../../headless';
+import { sizableBundle, themableBundle } from '../../shared/config';
+import { colorThemeMixin } from '../../styles';
+import styles from './tabs.css?inline';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
 export type TabsContext = {

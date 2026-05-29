@@ -1,7 +1,7 @@
+import { effect, signal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
+
 import { onCleanup } from './runtime';
 import { htmlResult, type HTMLResult } from './types/bindings';
-
-import { effect, signal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
 
 export type SuspendOptions<T> = {
   /**

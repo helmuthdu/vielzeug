@@ -1,3 +1,5 @@
+import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+
 import {
   createField,
   type ErrorHelperState,
@@ -6,8 +8,6 @@ import {
   type FieldBaseOptions,
   type LabelState,
 } from './field-base';
-
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
 
 // ── Choice change event payload ──────────────────────────────────────────────────────────────
 

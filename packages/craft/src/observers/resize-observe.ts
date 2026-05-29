@@ -1,6 +1,6 @@
-import { onCleanup } from '../runtime';
-
 import { signal, type ReadonlySignal } from '@vielzeug/ripple';
+
+import { onCleanup } from '../runtime';
 
 /**
  * Observes an element's content-box size via `ResizeObserver`.

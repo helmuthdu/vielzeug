@@ -1,3 +1,5 @@
+import { computed, define, defineField, effect, html, inject, onCleanup, prop, signal } from '@vielzeug/craft';
+
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
@@ -21,10 +23,8 @@ import {
 import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
-import componentStyles from './combobox.css?inline';
 import '../../feedback/chip/chip';
-
-import { computed, define, defineField, effect, html, inject, onCleanup, prop, signal } from '@vielzeug/craft';
+import componentStyles from './combobox.css?inline';
 
 export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
 

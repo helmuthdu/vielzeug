@@ -1,7 +1,7 @@
+import { define, createContext, html, provide, type ReadonlySignal, prop } from '@vielzeug/craft';
+
 import { sizableBundle, themableBundle } from '../../shared/config';
 import styles from './button-group.css?inline';
-
-import { define, createContext, html, provide, type ReadonlySignal, prop } from '@vielzeug/craft';
 
 /** Button group properties */
 export type BitButtonGroupProps = {

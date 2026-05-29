@@ -1,7 +1,7 @@
+import { effect as rawEffect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
 import { removeNodes } from '../utils/dom';
-
-import { effect as rawEffect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 type RawSanitizer = (html: string) => string;
 

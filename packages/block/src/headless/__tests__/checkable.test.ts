@@ -1,8 +1,7 @@
+import { signal } from '@vielzeug/ripple';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createCheckable } from '../checkable';
-
-import { signal } from '@vielzeug/ripple';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

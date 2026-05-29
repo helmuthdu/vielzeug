@@ -1,12 +1,12 @@
+import { define, onEvent, html, prop, ref, onMounted } from '@vielzeug/craft';
+
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 
 import { createStableId, createSwipeControl } from '../../headless';
-import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import '../../content/icon/icon';
+import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
-
-import { define, onEvent, html, prop, ref, onMounted } from '@vielzeug/craft';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 type DrawerSize = 'sm' | 'lg' | 'full';
