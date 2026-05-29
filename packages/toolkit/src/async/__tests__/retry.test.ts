@@ -6,7 +6,7 @@ vi.mock('../sleep', () => ({
 }));
 
 vi.mock('../../../logger', () => ({
-  Logit: {
+  Rune: {
     warn: vi.fn(),
   },
 }));

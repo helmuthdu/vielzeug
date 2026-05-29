@@ -1,8 +1,8 @@
-import type { LogitInstance } from '../../../packages/logit/src/logit';
+import type { LogitInstance } from '../../../packages/rune/src/rune';
 
 declare global {
   interface Window {
-    Logit: LogitInstance;
+    Rune: LogitInstance;
   }
 }
 

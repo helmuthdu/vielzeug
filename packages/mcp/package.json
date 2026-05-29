@@ -1,0 +1,40 @@
+{
+  "name": "@vielzeug/mcp",
+  "version": "3.0.1",
+  "type": "module",
+  "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
+  "bin": {
+    "vielzeug-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "data",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "pnpm run prepare:data && tsc --watch",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
+    "prebuild": "pnpm run prepare:data",
+    "prepublishOnly": "pnpm run build",
+    "pretest": "pnpm run prepare:data",
+    "start": "node dist/cli.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.6"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

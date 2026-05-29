@@ -189,8 +189,8 @@ Use clear, descriptive commit messages:
 # Format: <type>(<package>): <description>
 
 git commit -m "feat(deposit): add TTL support for records"
-git commit -m "fix(fetchit): correct timeout handling"
-git commit -m "docs(formit): update validation examples"
+git commit -m "fix(courier): correct timeout handling"
+git commit -m "docs(forge): update validation examples"
 ```
 
 **Common types:**
@@ -228,19 +228,19 @@ git push origin your-branch-name
 ```
 vielzeug/
 ├── packages/          # All packages
-│   ├── buildit/       # UI Library
-│   ├── craftit/       # Web components
+│   ├── block/       # UI Library
+│   ├── craft/       # Web components
 │   ├── deposit/       # Client-side storage
-│   ├── fetchit/       # HTTP client
-│   ├── formit/        # Form management
-│   ├── i18nit/        # Internationalization
-│   ├── logit/         # Logging
+│   ├── courier/       # HTTP client
+│   ├── forge/        # Form management
+│   ├── lingua/        # Internationalization
+│   ├── rune/         # Logging
 │   ├── permit/        # Permissions
-│   ├── routeit/       # Routing
+│   ├── route/       # Routing
 │   ├── storeit/        # State management
 │   ├── toolkit/       # Utilities
-│   ├── validit/       # Validation
-│   └── wireit/        # Dependency injection
+│   ├── sieve/       # Validation
+│   └── wired/        # Dependency injection
 └── docs/              # VitePress documentation
 ```
 

@@ -125,14 +125,14 @@
 <!-- Check all packages that are affected by this PR -->
 
 - [ ] @vielzeug/deposit
-- [ ] @vielzeug/fetchit
-- [ ] @vielzeug/formit
-- [ ] @vielzeug/i18nit
-- [ ] @vielzeug/logit
+- [ ] /courier
+- [ ] /forge
+- [ ] /lingua
+- [ ] /rune
 - [ ] @vielzeug/permit
 - [ ] @vielzeug/toolkit
-- [ ] @vielzeug/validit
-- [ ] @vielzeug/wireit
+- [ ] /sieve
+- [ ] /wired
 - [ ] Documentation
 - [ ] Build/CI
 - [ ] Other: _____

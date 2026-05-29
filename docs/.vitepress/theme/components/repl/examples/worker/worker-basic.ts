@@ -1,0 +1,4 @@
+export const workerBasicExample = {
+  code: "import { createWorker } from '/worker'\n\n// IMPORTANT: The task function CANNOT reference outer-scope variables.\n// It is serialized via .toString() and runs in an isolated Worker scope.\nconst worker = createWorker((input) => {\n  // This runs in a Web Worker — no access to outer variables\n  const { numbers } = input\n  return numbers.reduce((sum, n) => sum + n, 0)\n})\n\nasync function run() {\n  console.log('Worker concurrency:', worker.concurrency)\n  console.log('Worker status:', worker.status)\n\n  const result = await worker.run({ numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })\n  console.log('Sum of 1-10:', result)\n\n  const result2 = await worker.run({ numbers: Array.from({ length: 100 }, (_, i) => i + 1) })\n  console.log('Sum of 1-100:', result2)\n\n  worker.dispose()\n  console.log('Worker status after dispose:', worker.status)\n}\n\nrun()",
+  name: 'createWorker - Basic',
+};

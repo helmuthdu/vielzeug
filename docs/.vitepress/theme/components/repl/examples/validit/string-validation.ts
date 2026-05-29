@@ -1,4 +1,0 @@
-export const stringValidationExample = {
-  code: "import { v } from '@vielzeug/validit'\n\nconst checks = [\n  { name: 'email', schema: v.string().email(), value: 'user@example.com' },\n  { name: 'url', schema: v.string().url(), value: 'https://example.com' },\n  { name: 'uuid', schema: v.string().uuid(), value: '550e8400-e29b-41d4-a716-446655440000' },\n  { name: 'min', schema: v.string().min(3), value: 'abc' },\n  { name: 'max', schema: v.string().max(10), value: 'short' },\n  { name: 'length', schema: v.string().length(5), value: 'exact' },\n  { name: 'regex', schema: v.string().regex(/^[A-Z]+$/), value: 'HELLO' }\n]\n\nchecks.forEach(({ name, schema, value }) => {\n  const result = schema.safeParse(value)\n  console.log(`${name}: ${result.success}`)\n})",
-  name: 'String Validation',
-};

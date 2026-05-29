@@ -66,15 +66,15 @@ export type MigrationFn = (ctx: MigrationContext) => void;
 /* -------------------- Plugin / integration types -------------------- */
 
 /**
- * Minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
- * Pass a logit Logger instance directly — no adapter needed:
+ * Minimal logger interface satisfied structurally by `/rune` Logger.
+ * Pass a rune Logger instance directly — no adapter needed:
  *
  * ```ts
- * import { createLogger } from '@vielzeug/logit';
+ * import { createLogger } from '@vielzeug/rune';
  * const db = createMemory({ schema, logger: createLogger('db') });
  * ```
  *
- * Deposit only emits error-level logs, so a single logit-compatible `error`
+ * Deposit only emits error-level logs, so a single rune-compatible `error`
  * method is enough.
  */
 export interface DepositLogger {
@@ -83,11 +83,11 @@ export interface DepositLogger {
 
 /**
  * Minimal synchronous validator interface satisfied structurally by
- * `@vielzeug/validit` Schema.
- * Pass a validit schema directly — no adapter needed:
+ * `/sieve` Schema.
+ * Pass a sieve schema directly — no adapter needed:
  *
  * ```ts
- * import { v } from '@vielzeug/validit';
+ * import { s } from '@vielzeug/sieve';
  * const db = createMemory({
  *   schema: { users: table<User>('id') },
  *   validators: { users: v.object({ id: v.number(), name: v.string() }) },
@@ -112,11 +112,11 @@ export type TableValidators<S extends AnySchema> = {
 
 /**
  * Minimal writable-signal interface satisfied structurally by
- * `@vielzeug/stateit` `Signal<T>` and `Store<T>`.
- * Pass a stateit signal directly — no adapter needed:
+ * `/ripple` `Signal<T>` and `Store<T>`.
+ * Pass a ripple signal directly — no adapter needed:
  *
  * ```ts
- * import { signal } from '@vielzeug/stateit';
+ * import { signal } from '@vielzeug/ripple';
  * const usersSignal = signal<User[]>([]);
  *
  * const db = createMemory({

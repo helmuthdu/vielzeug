@@ -3,7 +3,7 @@ description: Minimal authorization engine with deterministic precedence, wildcar
 package: permit
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
-related: [logit, routeit, wireit]
+related: [rune, route, wired]
 exports: [createPermit, owns]
 ---
 
@@ -22,7 +22,7 @@ exports: [createPermit, owns]
 
 **When to use:** Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 
-**Related:** [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/routeit](https://vielzeug.dev/routeit/) · [@vielzeug/wireit](https://vielzeug.dev/wireit/)
+**Related:** [@vielzeug/rune](https://vielzeug.dev/rune/) · [@vielzeug/route](https://vielzeug.dev/route/) · [@vielzeug/wired](https://vielzeug.dev/wired/)
 
 </details>
 

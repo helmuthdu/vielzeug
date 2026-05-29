@@ -1,0 +1,4 @@
+export const arrayValidationExample = {
+  code: "import { s } from '/sieve'\n\nconst tagSchema = s.array(s.string()).min(1).max(5)\nconst numberSchema = s.array(s.number())\nconst userSchema = s.array(s.object({\n  id: s.number(),\n  name: s.string()\n}))\n\n// Valid arrays\nconsole.log('Tags:', tagSchema.safeParse(['js', 'ts']).success)\nconsole.log('Numbers:', numberSchema.safeParse([1, 2, 3]).success)\nconsole.log('Users:', userSchema.safeParse([\n  { id: 1, name: 'Alice' },\n  { id: 2, name: 'Bob' }\n]).success)\n\n// Invalid arrays\nconsole.log('\\nEmpty tags:', tagSchema.safeParse([]).success)\nconsole.log('Too many tags:',\n  tagSchema.safeParse(['a', 'b', 'c', 'd', 'e', 'f']).success)\nconsole.log('Invalid user:', userSchema.safeParse([\n  { id: 'invalid', name: 'Alice' }\n]).success)",
+  name: 'Array Validation',
+};

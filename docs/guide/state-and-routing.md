@@ -1,11 +1,11 @@
 ---
 title: State and Routing
-description: Compose Stateit and Routeit for reactive, URL-driven application state.
+description: Compose Ripple and Route for reactive, URL-driven application state.
 ---
 
 # State and Routing
 
-This guide combines `@vielzeug/stateit` and `@vielzeug/routeit` so route changes and app state stay synchronized.
+This guide combines `@vielzeug/ripple` and `@vielzeug/route` so route changes and app state stay synchronized.
 Reactive state means derived values update automatically when source values change.
 
 ## Problem
@@ -16,15 +16,15 @@ You need to keep URL params, selected views, and reactive state consistent witho
 
 | Step           | Package             | Responsibility                                  |
 | -------------- | ------------------- | ----------------------------------------------- |
-| Reactive store | `@vielzeug/stateit` | Hold current route state and derived UI data    |
-| Navigation     | `@vielzeug/routeit` | Match paths and trigger handlers on URL changes |
+| Reactive store | `@vielzeug/ripple` | Hold current route state and derived UI data    |
+| Navigation     | `@vielzeug/route` | Match paths and trigger handlers on URL changes |
 | Sync layer     | Both                | Keep route params and store values in lockstep  |
 
 ## Runnable Example
 
 ```ts
-import { computed, signal } from '@vielzeug/stateit';
-import { createRouter } from '@vielzeug/routeit';
+import { computed, signal } from '@vielzeug/ripple';
+import { createRouter } from '@vielzeug/route';
 
 const userId = signal<string | null>(null);
 const activeTab = signal<'overview' | 'settings'>('overview');
@@ -78,7 +78,7 @@ const router = createRouter({
 
 ## See Also
 
-- [Stateit](../stateit/)
-- [Routeit](../routeit/)
-- [Eventit](../eventit/)
+- [Ripple](../ripple/)
+- [Route](../route/)
+- [Relay](../relay/)
 - [Building a Typed Form Flow](./building-a-typed-form-flow)

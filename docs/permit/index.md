@@ -4,7 +4,7 @@ description: Minimal authorization engine with deterministic precedence, wildcar
 package: permit
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
-related: [logit, routeit, wireit]
+related: [rune, route, wired]
 exports: [createPermit, owns]
 ---
 
@@ -25,7 +25,7 @@ exports: [createPermit, owns]
 
 **When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
 
-**Related:** [Logit](/logit/) · [Routeit](/routeit/) · [Wireit](/wireit/)
+**Related:** [Rune](/rune/) · [Route](/route/) · [Wired](/wired/)
 
 </details>
 
@@ -135,8 +135,8 @@ bound.rulesInScope('posts');
 
 ## See Also
 
-- [Routeit](../routeit/index.md) for route-level authorization middleware.
-- [Logit](../logit/index.md) for structured audit logs of permission checks.
-- [Eventit](../eventit/index.md) for event-driven permission workflows.
+- [Route](../route/index.md) for route-level authorization middleware.
+- [Rune](../rune/index.md) for structured audit logs of permission checks.
+- [Relay](../relay/index.md) for event-driven permission workflows.
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

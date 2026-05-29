@@ -158,10 +158,10 @@ const stop = db.observeMany(
 
 ## Reactive Signals (`signals` plugin)
 
-Wire `@vielzeug/stateit` signals at construction time. The signal is kept in sync with the table automatically — no `observe()` boilerplate needed.
+Wire `@vielzeug/ripple` signals at construction time. The signal is kept in sync with the table automatically — no `observe()` boilerplate needed.
 
 ```ts
-import { signal } from '@vielzeug/stateit';
+import { signal } from '@vielzeug/ripple';
 import { createIndexedDB, table } from '@vielzeug/deposit';
 
 type User = { id: number; name: string };
@@ -177,11 +177,11 @@ const db = createIndexedDB({
 });
 
 // usersSignal.value is always in sync with the users table.
-// In a craftit/buildit component or effect:
+// In a craft/block component or effect:
 // effect(() => renderList(usersSignal.value));
 ```
 
-The signal is updated via `signal.update(() => snapshot)` on every table change. Any object with `update(fn)` satisfies the `ReactiveSignal<T>` interface structurally — no import of `@vielzeug/stateit` is needed in the deposit layer.
+The signal is updated via `signal.update(() => snapshot)` on every table change. Any object with `update(fn)` satisfies the `ReactiveSignal<T>` interface structurally — no import of `@vielzeug/ripple` is needed in the deposit layer.
 
 Signals are wired immediately on construction and cleaned up on `dispose()`.
 
@@ -385,10 +385,10 @@ void db;
 
 ## Logger Plugin
 
-Pass a `@vielzeug/logit` logger (or any object with `error(...)`). Observer notification errors are routed to `logger.error`.
+Pass a `@vielzeug/rune` logger (or any object with `error(...)`). Observer notification errors are routed to `logger.error`.
 
 ```ts
-import { createLogger } from '@vielzeug/logit';
+import { createLogger } from '@vielzeug/rune';
 import { createIndexedDB } from '@vielzeug/deposit';
 
 const db = createIndexedDB({
@@ -401,10 +401,10 @@ const db = createIndexedDB({
 
 ## Validation Plugin
 
-Pass a `@vielzeug/validit` schema per table. `parse` runs before every `put`, `putAll`, `update`, and `upsert`.
+Pass a `@vielzeug/sieve` schema per table. `parse` runs before every `put`, `putAll`, `update`, and `upsert`.
 
 ```ts
-import { v } from '@vielzeug/validit';
+import { s } from '@vielzeug/sieve';
 import { createMemory, table } from '@vielzeug/deposit';
 
 type User = { id: number; name: string };

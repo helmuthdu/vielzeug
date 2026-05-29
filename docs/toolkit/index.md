@@ -121,8 +121,8 @@ Toolkit favors a curated, typed utility surface over an everything-and-the-kitch
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [Fetchit](/fetchit/)
-- [Stateit](/stateit/)
-- [Validit](/validit/)
+- [Courier](/courier/)
+- [Ripple](/ripple/)
+- [Sieve](/sieve/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

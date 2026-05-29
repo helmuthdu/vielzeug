@@ -1,44 +1,44 @@
-import { craftitTypes } from './craftit';
+import { courierTypes } from './courier';
+import { craftTypes } from './craft';
 import { depositTypes } from './deposit';
-import { dragitTypes } from './dragit';
-import { eventitTypes } from './eventit';
-import { fetchitTypes } from './fetchit';
-import { floatitTypes } from './floatit';
-import { formitTypes } from './formit';
-import { i18nitTypes } from './i18nit';
-import { logitTypes } from './logit';
-import { machinitTypes } from './machinit';
+import { forgeTypes } from './forge';
+import { gripTypes } from './grip';
+import { linguaTypes } from './lingua';
+import { machineTypes } from './machine';
+import { orbitTypes } from './orbit';
 import { permitTypes } from './permit';
-import { routeitTypes } from './routeit';
-import { sourceitTypes } from './sourceit';
-import { stateitTypes } from './stateit';
-import { timitTypes } from './timit';
+import { relayTypes } from './relay';
+import { rippleTypes } from './ripple';
+import { routeTypes } from './route';
+import { runeTypes } from './rune';
+import { scrollTypes } from './scroll';
+import { sieveTypes } from './sieve';
+import { sourcererTypes } from './sourcerer';
+import { tempoTypes } from './tempo';
 import { toolkitTypes } from './toolkit';
-import { validitTypes } from './validit';
-import { virtualitTypes } from './virtualit';
-import { wireitTypes } from './wireit';
-import { workitTypes } from './workit';
+import { wiredTypes } from './wired';
+import { workerTypes } from './worker';
 
 export const libraryTypes = {
-  craftit: craftitTypes,
+  courier: courierTypes,
+  craft: craftTypes,
   deposit: depositTypes,
-  dragit: dragitTypes,
-  eventit: eventitTypes,
-  fetchit: fetchitTypes,
-  floatit: floatitTypes,
-  formit: formitTypes,
-  i18nit: i18nitTypes,
-  logit: logitTypes,
-  machinit: machinitTypes,
+  forge: forgeTypes,
+  grip: gripTypes,
+  lingua: linguaTypes,
+  machine: machineTypes,
+  orbit: orbitTypes,
   permit: permitTypes,
-  routeit: routeitTypes,
-  sourceit: sourceitTypes,
-  stateit: stateitTypes,
-  timit: timitTypes,
-  validit: validitTypes,
-  virtualit: virtualitTypes,
-  wireit: wireitTypes,
-  workit: workitTypes,
+  relay: relayTypes,
+  ripple: rippleTypes,
+  route: routeTypes,
+  rune: runeTypes,
+  scroll: scrollTypes,
+  sieve: sieveTypes,
+  sourcerer: sourcererTypes,
+  tempo: tempoTypes,
+  wired: wiredTypes,
+  worker: workerTypes,
 };
 
 export { toolkitTypes };

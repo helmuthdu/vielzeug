@@ -24,6 +24,6 @@ permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
 
 ### Related
 
-- [Request Middleware (Logit)](/logit/examples/request-middleware)
-- [Auth and Guards (Routeit)](/routeit/examples/auth-and-guards)
+- [Request Middleware (Rune)](@vielzeug/rune/examples/request-middleware)
+- [Auth and Guards (Route)](@vielzeug/route/examples/auth-and-guards)
 - [Blog Roles](./blog-roles.md)

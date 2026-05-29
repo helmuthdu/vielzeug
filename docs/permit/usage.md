@@ -293,13 +293,13 @@ function usePermit(user: { value: User | null }, resource: string, action: strin
 
 ## Working with Other Vielzeug Libraries
 
-### With Routeit
+### With Route
 
-Use permit guards inside Routeit middleware to protect routes.
+Use permit guards inside Route middleware to protect routes.
 
 ```ts
 import { createPermit } from '@vielzeug/permit';
-import { createRouter } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/route';
 
 type User = { id: string; roles: string[] };
 
@@ -324,13 +324,13 @@ const router = createRouter({
 });
 ```
 
-### With Logit
+### With Rune
 
 Use permit's `logger` option to audit every access decision.
 
 ```ts
 import { createPermit } from '@vielzeug/permit';
-import { createLogger } from '@vielzeug/logit';
+import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'permit' });
 

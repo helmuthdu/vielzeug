@@ -29,6 +29,6 @@ permit.can(null, 'posts', 'read');
 
 ### Related
 
-- [Auth and Guards (Routeit)](/routeit/examples/auth-and-guards)
+- [Auth and Guards (Route)](@vielzeug/route/examples/auth-and-guards)
 - [Wildcard Action](./wildcard-action.md)
 - [Inheritance and Overrides](./inheritance-and-overrides.md)

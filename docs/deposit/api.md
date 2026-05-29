@@ -403,7 +403,7 @@ All plugins use structural interfaces. Pass the actual library object directly �
 
 ### `DepositLogger`
 
-A minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
+A minimal logger interface satisfied structurally by `@vielzeug/rune` Logger.
 
 ```ts
 interface DepositLogger {
@@ -411,7 +411,7 @@ interface DepositLogger {
 }
 ```
 
-Pass a logit Logger instance directly — no adapter needed.
+Pass a rune Logger instance directly — no adapter needed.
 
 ### `ReactiveSignal` / `TableSignals`
 
@@ -425,10 +425,10 @@ type TableSignals<S extends AnySchema> = {
 };
 ```
 
-`@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy `ReactiveSignal<T>` structurally. Signals are wired at construction time and cleaned up on `dispose()`.
+`@vielzeug/ripple` `Signal<T>` and `Store<T>` both satisfy `ReactiveSignal<T>` structurally. Signals are wired at construction time and cleaned up on `dispose()`.
 
 ```ts
-import { signal } from '@vielzeug/stateit';
+import { signal } from '@vielzeug/ripple';
 
 const usersSignal = signal<User[]>([]);
 
@@ -447,7 +447,7 @@ type TableValidators<S extends AnySchema> = {
 };
 ```
 
-A `@vielzeug/validit` schema satisfies `RecordValidator` directly. Any object with `parse` works. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+A `@vielzeug/sieve` schema satisfies `RecordValidator` directly. Any object with `parse` works. Validators run before every `put`, `putAll`, `update`, and `upsert`.
 
 ### `MetricsEvent`
 

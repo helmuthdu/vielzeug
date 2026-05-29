@@ -239,15 +239,15 @@ Show the integration as a realistic code block, not a reference to "see the X do
 ````md
 ## Working with Other Vielzeug Libraries
 
-### With Validit
+### With Sieve
 
 <One sentence explaining why you'd combine these two.>
 
 \```ts
-import { createForm, schemaValidator } from '@vielzeug/formit';
-import { v } from '@vielzeug/validit';
+import { createForm, schemaValidator } from '@vielzeug/forge';
+import { s } from '@vielzeug/sieve';
 
-const schema = v.object({ email: v.string().email() });
+const schema = s.object({ email: s.string().email() });
 const form = createForm({ validator: schemaValidator(schema), defaultValues: { email: '' } });
 \```
 ````
@@ -458,10 +458,10 @@ Use em-dash (—) as the separator in titles, except for individual example file
 
 These fields enable AI agents (via the MCpit MCP server) to discover and understand packages programmatically:
 
-- **`package`:** Package folder name without `@vielzeug/` prefix (e.g., `stateit`, `fetchit`). Always required.
+- **`package`:** Package folder name without `@vielzeug/` prefix (e.g., `ripple`, `courier`). Always required.
 - **`category`:** One of the 12 canonical categories: `state`, `ui`, `forms`, `validation`, `http`, `storage`, `routing`, `auth`, `di`, `logging`, `i18n`, `events`, `workers`, `utilities`, `data`, `time`.
 - **`keywords`:** Searchable terms (e.g., `[signals, reactive, state-management]`). Used by MCpit's `search-packages` tool.
-- **`related`:** Related package slugs (e.g., `[validit, stateit]`). Must exist as real packages. Used in Quick Reference links.
+- **`related`:** Related package slugs (e.g., `[sieve, ripple]`). Must exist as real packages. Used in Quick Reference links.
 - **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and MCpit metadata.
 
 ---
@@ -474,7 +474,7 @@ The **MCpit** MCP (Model Context Protocol) server reads the metadata from `index
 - **Get structured context** about each package (exports, related libraries, available doc pages, source availability)
 - **Read full documentation** (index, api, usage, examples pages)
 - **View source API** (`src/index.ts`)
-- **Find components** (Buildit only)
+- **Find components** (Block only)
 
 ### MCpit Tools That Use Your Metadata
 
@@ -496,18 +496,18 @@ When you publish `@vielzeug/<pkg>`, ensure:
 2. **All four doc pages exist** (or are intentionally omitted with reason): `index.md`, `api.md`, `usage.md`, `examples.md`
 3. **Quick Reference block is present** in `index.md` after the `#` heading
 
-Example: When an AI agent runs MCpit's `get-package` tool with `packageSlug: "stateit"`, MCpit returns:
+Example: When an AI agent runs MCpit's `get-package` tool with `packageSlug: "ripple"`, MCpit returns:
 
 ```json
 {
-  "slug": "stateit",
-  "name": "@vielzeug/stateit",
+  "slug": "ripple",
+  "name": "@vielzeug/ripple",
   "version": "3.0.1",
   "category": "state",
   "description": "Reactive signals, computed, effects, and stores...",
   "keywords": ["signals", "reactive", "state-management", "effects"],
   "exports": ["signal", "computed", "effect", "store"],
-  "related": ["craftit", "formit"],
+  "related": ["craft", "forge"],
   "availableDocPages": ["index", "api", "usage", "examples"],
   "hasSource": true
 }

@@ -75,6 +75,6 @@ const dates = range(0, 5).map((day) => {
 
 ## See Also
 
-- [Sourceit Overview](/sourceit/): Build reactive paginated data sources.
+- [Sourcerer Overview](/sourcerer/): Build reactive paginated data sources.
 - [clamp](./clamp.md): Restrict a number to a specific range.
 - [sum](./sum.md): Calculate the total of a generated range.

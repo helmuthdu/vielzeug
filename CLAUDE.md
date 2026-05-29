@@ -54,10 +54,10 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 ### Package Dependency Graph (notable edges)
 
 ```
-buildit → craftit → stateit, floatit
-deposit → logit, toolkit
-fetchit → toolkit
-permit  → logit
+block → craft → ripple, orbit
+deposit → rune, toolkit
+courier → toolkit
+permit  → rune
 ```
 
 All other packages are fully independent.
@@ -66,11 +66,11 @@ All other packages are fully independent.
 
 | Category | Packages |
 |---|---|
-| State & Reactivity | `stateit` (signals/computed/effects), `craftit` (web components + reactive state), `formit` (form state + validation) |
-| HTTP & Storage | `fetchit` (HTTP client, caching, mutations), `deposit` (IndexedDB + LocalStorage unified API) |
-| UI Primitives | `buildit` (accessible web components built on craftit), `floatit` (tooltip/popover positioning), `dragit` (drag-and-drop), `virtualit` (virtual list engine) |
-| Routing & i18n | `routeit` (client-side router + middleware), `i18nit` (i18n + pluralization) |
-| Cross-cutting | `validit` (schema validation), `permit` (RBAC), `eventit` (typed event bus), `logit` (structured logging), `wireit` (DI container), `toolkit` (75+ utility functions), `workit` (Web Worker pool), `timit`, `sourceit` |
+| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation) |
+| HTTP & Storage | `courier` (HTTP client, caching, mutations), `deposit` (IndexedDB + LocalStorage unified API) |
+| UI Primitives | `block` (accessible web components built on craft), `orbit` (tooltip/popover positioning), `grip` (drag-and-drop), `scroll` (virtual list engine) |
+| Routing & i18n | `route` (client-side router + middleware), `lingua` (i18n + pluralization) |
+| Cross-cutting | `sieve` (schema validation), `permit` (RBAC), `relay` (typed event bus), `rune` (structured logging), `wired` (DI container), `toolkit` (75+ utility functions), `worker` (Web Worker pool), `tempo`, `sourcerer` |
 
 ### Standard Package Layout
 
@@ -93,6 +93,6 @@ packages/<name>/
 - **Zero external dependencies** per package (inter-package deps are allowed)
 - **ESLint Perfectionist plugin** enforces sorted imports and object keys — run `pnpm fix` if linting fails on ordering
 - **Prettier**: 120-char line width, 2-space indent, trailing commas
-- **Commit style**: conventional commits, e.g. `feat(fetchit): add retry logic`
+- **Commit style**: conventional commits, e.g. `feat(courier): add retry logic`
 - **Pre-commit hook** (lefthook) runs lint + related tests on staged files automatically
 - Node 22 required (see `.nvmrc`)

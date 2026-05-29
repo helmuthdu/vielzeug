@@ -13,14 +13,14 @@
   "pnpmVersion": "10.33.4",
   "projects": [
     {
-      "packageName": "@vielzeug/buildit",
-      "projectFolder": "packages/buildit",
+      "packageName": "@vielzeug/block",
+      "projectFolder": "packages/block",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/craftit",
-      "projectFolder": "packages/craftit",
+      "packageName": "@vielzeug/craft",
+      "projectFolder": "packages/craft",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -31,38 +31,38 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/eventit",
-      "projectFolder": "packages/eventit",
+      "packageName": "@vielzeug/relay",
+      "projectFolder": "packages/relay",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/fetchit",
-      "projectFolder": "packages/fetchit",
+      "packageName": "@vielzeug/courier",
+      "projectFolder": "packages/courier",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/floatit",
-      "projectFolder": "packages/floatit",
+      "packageName": "@vielzeug/orbit",
+      "projectFolder": "packages/orbit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/formit",
-      "projectFolder": "packages/formit",
+      "packageName": "@vielzeug/forge",
+      "projectFolder": "packages/forge",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/i18nit",
-      "projectFolder": "packages/i18nit",
+      "packageName": "@vielzeug/lingua",
+      "projectFolder": "packages/lingua",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/logit",
-      "projectFolder": "packages/logit",
+      "packageName": "@vielzeug/rune",
+      "projectFolder": "packages/rune",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -73,20 +73,20 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/routeit",
-      "projectFolder": "packages/routeit",
+      "packageName": "@vielzeug/route",
+      "projectFolder": "packages/route",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/stateit",
-      "projectFolder": "packages/stateit",
+      "packageName": "@vielzeug/ripple",
+      "projectFolder": "packages/ripple",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/sourceit",
-      "projectFolder": "packages/sourceit",
+      "packageName": "@vielzeug/sourcerer",
+      "projectFolder": "packages/sourcerer",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -97,50 +97,50 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/timit",
-      "projectFolder": "packages/timit",
+      "packageName": "@vielzeug/tempo",
+      "projectFolder": "packages/tempo",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/validit",
-      "projectFolder": "packages/validit",
+      "packageName": "@vielzeug/sieve",
+      "projectFolder": "packages/sieve",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/wireit",
-      "projectFolder": "packages/wireit",
+      "packageName": "@vielzeug/wired",
+      "projectFolder": "packages/wired",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/workit",
-      "projectFolder": "packages/workit",
+      "packageName": "@vielzeug/worker",
+      "projectFolder": "packages/worker",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/virtualit",
-      "projectFolder": "packages/virtualit",
+      "packageName": "@vielzeug/scroll",
+      "projectFolder": "packages/scroll",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/dragit",
-      "projectFolder": "packages/dragit",
+      "packageName": "@vielzeug/grip",
+      "projectFolder": "packages/grip",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/mcpit",
-      "projectFolder": "packages/mcpit",
+      "packageName": "@vielzeug/mcp",
+      "projectFolder": "packages/mcp",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/machinit",
-      "projectFolder": "packages/machinit",
+      "packageName": "@vielzeug/machine",
+      "projectFolder": "packages/machine",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

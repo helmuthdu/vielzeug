@@ -1,0 +1,4 @@
+export const batchUntrackExample = {
+  code: "import { signal, effect, batch, untrack } from '/ripple'\n\nconst a = signal(1)\nconst b = signal(2)\n\nlet effectRuns = 0\neffect(() => {\n  // Reading a and b makes them dependencies\n  const sum = a.value + b.value\n  effectRuns++\n  console.log(`Effect run #${effectRuns}: sum = ${sum}`)\n})\n\n// Without batch: each write triggers the effect\na.value = 10  // run #2\nb.value = 20  // run #3\n\n// Batch: flush only once after the block\nbatch(() => {\n  a.value = 100\n  b.value = 200\n})  // run #4 (single run for both updates)\n\n// untrack: read without registering dependency\neffect(() => {\n  const tracked = a.value        // tracked\n  const peeked = untrack(() => b.value)  // NOT tracked\n  console.log('peeked b:', peeked)\n})\n\nb.value = 999  // won't re-run the untrack effect",
+  name: 'Batch & Untrack',
+};

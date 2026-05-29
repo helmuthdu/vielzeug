@@ -65,8 +65,8 @@ describe('signals plugin (ReactiveSignal)', () => {
     expect(postUpdates).toBe(0); // posts signal not touched
   });
 
-  test('stateit-shaped signal satisfies ReactiveSignal structurally', () => {
-    // Simulates a stateit Signal<User[]>: has update(fn) among other methods
+  test('ripple-shaped signal satisfies ReactiveSignal structurally', () => {
+    // Simulates a ripple Signal<User[]>: has update(fn) among other methods
     const noop = () => {};
     const stateitLike = {
       peek: () => [] as User[],

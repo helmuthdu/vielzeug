@@ -1,41 +1,41 @@
+import { courierExamples } from './courier';
 import { depositExamples } from './deposit';
-import { dragitExamples } from './dragit';
-import { eventitExamples } from './eventit';
-import { fetchitExamples } from './fetchit';
-import { floatitExamples } from './floatit';
-import { formitExamples } from './formit';
-import { i18nitExamples } from './i18nit';
-import { logitExamples } from './logit';
-import { machinitExamples } from './machinit';
+import { forgeExamples } from './forge';
+import { gripExamples } from './grip';
+import { linguaExamples } from './lingua';
+import { machineExamples } from './machine';
+import { orbitExamples } from './orbit';
 import { permitExamples } from './permit';
-import { routeitExamples } from './routeit';
-import { sourceitExamples } from './sourceit';
-import { stateitExamples } from './stateit';
-import { timitExamples } from './timit';
+import { relayExamples } from './relay';
+import { rippleExamples } from './ripple';
+import { routeExamples } from './route';
+import { runeExamples } from './rune';
+import { scrollExamples } from './scroll';
+import { sieveExamples } from './sieve';
+import { sourcererExamples } from './sourcerer';
+import { tempoExamples } from './tempo';
 import { toolkitExamples } from './toolkit';
-import { validitExamples } from './validit';
-import { virtualitExamples } from './virtualit';
-import { wireitExamples } from './wireit';
-import { workitExamples } from './workit';
+import { wiredExamples } from './wired';
+import { workerExamples } from './worker';
 
 export const examples = {
+  courier: courierExamples,
   deposit: depositExamples,
-  dragit: dragitExamples,
-  eventit: eventitExamples,
-  fetchit: fetchitExamples,
-  floatit: floatitExamples,
-  formit: formitExamples,
-  i18nit: i18nitExamples,
-  logit: logitExamples,
-  machinit: machinitExamples,
+  forge: forgeExamples,
+  grip: gripExamples,
+  lingua: linguaExamples,
+  machine: machineExamples,
+  orbit: orbitExamples,
   permit: permitExamples,
-  routeit: routeitExamples,
-  sourceit: sourceitExamples,
-  stateit: stateitExamples,
-  timit: timitExamples,
+  relay: relayExamples,
+  ripple: rippleExamples,
+  route: routeExamples,
+  rune: runeExamples,
+  scroll: scrollExamples,
+  sieve: sieveExamples,
+  sourcerer: sourcererExamples,
+  tempo: tempoExamples,
   toolkit: toolkitExamples,
-  validit: validitExamples,
-  virtualit: virtualitExamples,
-  wireit: wireitExamples,
-  workit: workitExamples,
+  wired: wiredExamples,
+  worker: workerExamples,
 };

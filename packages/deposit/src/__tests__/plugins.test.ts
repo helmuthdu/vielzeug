@@ -181,7 +181,7 @@ describe('RecordValidator (validators) plugin', () => {
     db.dispose();
   });
 
-  test('a validit-shaped schema satisfies RecordValidator structurally', async () => {
+  test('a sieve-shaped schema satisfies RecordValidator structurally', async () => {
     const validitLike = {
       parse(value: unknown) {
         const r = value as Record<string, unknown>;
@@ -199,8 +199,8 @@ describe('RecordValidator (validators) plugin', () => {
     db.dispose();
   });
 
-  test('a logit-shaped logger satisfies DepositLogger structurally', () => {
-    // Simulate the shape of a logit Logger without importing logit
+  test('a rune-shaped logger satisfies DepositLogger structurally', () => {
+    // Simulate the shape of a rune Logger without importing rune
     const logitLike = {
       bindings: {},
       child: () => logitLike,

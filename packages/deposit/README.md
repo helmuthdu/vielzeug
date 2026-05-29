@@ -3,7 +3,7 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 package: deposit
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
-related: [fetchit, logit, stateit, validit, toolkit]
+related: [courier, rune, ripple, sieve, toolkit]
 exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
@@ -22,7 +22,7 @@ exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemor
 
 **When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/validit](https://vielzeug.dev/validit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
+**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/rune](https://vielzeug.dev/rune/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/sieve](https://vielzeug.dev/sieve/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
 
 </details>
 

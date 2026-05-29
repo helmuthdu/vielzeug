@@ -4,7 +4,7 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 package: deposit
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
-related: [fetchit, logit, stateit, validit, toolkit]
+related: [courier, rune, ripple, sieve, toolkit]
 exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
@@ -25,7 +25,7 @@ exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemor
 
 **When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Stateit](/stateit/) · [Validit](/validit/) · [Toolkit](/toolkit/)
+**Related:** [Courier](/courier/) · [Rune](/rune/) · [Ripple](/ripple/) · [Sieve](/sieve/) · [Toolkit](/toolkit/)
 
 </details>
 
@@ -87,7 +87,7 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 - TTL on any write — enforced via the branded `TtlMs` type; use `ttl.*` helpers
 - Reactive reads via `observe(table, listener)` and `watch(table)` async iterator
 - Deferred-notification `batch()` for multi-table writes; atomic IDB transactions for IndexedDB
-- Signal plugin: wire any `@vielzeug/stateit` signal directly — no glue code
+- Signal plugin: wire any `@vielzeug/ripple` signal directly — no glue code
 - Validation, structured logging, and metrics hooks — all zero-dependency structural interfaces
 
 ## Features
@@ -129,9 +129,9 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 
 ## See Also
 
-- [Stateit](/stateit/)
-- [Fetchit](/fetchit/)
-- [Logit](/logit/)
-- [Validit](/validit/)
+- [Ripple](/ripple/)
+- [Courier](/courier/)
+- [Rune](/rune/)
+- [Sieve](/sieve/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

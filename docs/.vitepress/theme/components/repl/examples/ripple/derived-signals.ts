@@ -1,0 +1,4 @@
+export const derivedSignalsExample = {
+  code: "import { signal, computed } from '/ripple'\n\nconst price = signal(100)\nconst quantity = signal(2)\nconst taxRate = signal(0.1)\n\n// computed() can derive from multiple source signals\nconst subtotal = computed(() => price.value * quantity.value)\nconst tax = computed(() => subtotal.value * taxRate.value)\nconst total = computed(() => subtotal.value + tax.value)\n\nconsole.log('Subtotal:', subtotal.value)\nconsole.log('Tax:', tax.value)\nconsole.log('Total:', total.value)\n\n// Update sources — all derived values re-compute\nprice.value = 150\nconsole.log('After price change:')\nconsole.log('Subtotal:', subtotal.value)\nconsole.log('Total:', total.value)\n\nsubtotal.dispose()\ntax.dispose()\ntotal.dispose()",
+  name: 'Derived Signals',
+};

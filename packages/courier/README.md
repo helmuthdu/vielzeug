@@ -1,0 +1,77 @@
+---
+description: Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
+package: courier
+category: http
+keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors]
+related: [sieve, ripple, deposit]
+exports: [createApi, createCourier, createMutation, createQuery, createStream, createTransportCore, HttpError]
+---
+
+# /courier
+
+> Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
+
+[![npm version](https://img.shields.io/npm/v//courier)](https://www.npmjs.com/package//courier) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `/courier` &nbsp;·&nbsp; **Category:** Http
+
+**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`
+
+**When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
+
+**Related:** [@vielzeug/sieve](https://vielzeug.dev/sieve/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/deposit](https://vielzeug.dev/deposit/)
+
+</details>
+
+`/courier` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+
+## Installation
+
+```sh
+pnpm add /courier
+npm install /courier
+yarn add /courier
+```
+
+## Quick Start
+
+```ts
+import { createCourier } from '/courier';
+
+type NewUser = { name: string };
+type User = { id: number; name: string };
+
+const client = createCourier({
+  baseUrl: 'https://api.example.com',
+  query: { staleTime: 5_000 },
+});
+
+const user = await client.query.fetch({
+  key: ['users', 1],
+  fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+});
+
+const createUser = client.mutation((input: NewUser, signal) =>
+  client.api.post<User>('/users', { body: input, signal }),
+);
+
+const nextUser = await createUser.mutate({ name: 'Alice' });
+client.query.set(['users', nextUser.id], nextUser);
+client.query.invalidate(['users']);
+```
+
+## Documentation
+
+Full docs: https://vielzeug.dev/courier/
+
+- [Overview](https://vielzeug.dev/courier/)
+- [Usage Guide](https://vielzeug.dev/courier/usage)
+- [API Reference](https://vielzeug.dev/courier/api)
+- [Examples](https://vielzeug.dev/courier/examples)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

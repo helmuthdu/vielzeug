@@ -70,4 +70,4 @@ console.log(byRole, byId, pages, sorted, tags, compacted, admins, members, paire
 
 - `filterMap` maps values and skips only `undefined` results.
 - `compact` removes all falsy values, including `0`, `''`, and `false`.
-- For reactive pagination/search sources, use Sourceit: [overview](/sourceit/) and [usage](/sourceit/usage).
+- For reactive pagination/search sources, use Sourcerer: [overview](/sourcerer/) and [usage](@vielzeug/sourcerer/usage).

@@ -184,4 +184,4 @@ description: Complete API reference for the current Toolkit surface.
 
 ## Note
 
-Reactive paginated source models are available in `@vielzeug/sourceit` via `createLocalSource()` and `createRemoteSource()`.
+Reactive paginated source models are available in `@vielzeug/sourcerer` via `createLocalSource()` and `createRemoteSource()`.

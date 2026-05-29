@@ -1,0 +1,4 @@
+export const fieldBindingExample = {
+  code: "import { createForm } from '/forge'\n\nconst form = createForm({\n  defaultValues: {\n    firstName: '',\n    lastName: '',\n    email: '',\n  },\n  mode: 'onTouched',\n  validators: {\n    email: (value) => (!String(value).includes('@') ? 'Invalid email' : undefined),\n  },\n})\n\nconst firstNameBind = form.bind('firstName')\nconst emailBind = form.bind('email')\n\nconsole.log('Initial binding state:', {\n  firstName: firstNameBind.value,\n  emailError: emailBind.error,\n})\n\nfirstNameBind.onChange('John')\nemailBind.onChange('john')\nconsole.log('After typing:', form.values())\n\nemailBind.onBlur()\nawait form.validateField('email')\nconsole.log('After blur validation:', form.field('email'))\n\nemailBind.onChange('john@example.com')\nawait form.validateField('email')\nconsole.log('After fixing email:', form.field('email'))",
+  name: 'Field Binding for Inputs',
+};

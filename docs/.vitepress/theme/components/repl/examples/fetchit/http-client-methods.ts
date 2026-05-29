@@ -1,4 +1,0 @@
-export const httpClientMethodsExample = {
-  code: "import { createApi } from '@vielzeug/fetchit'\n\nconst http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })\n\n// GET\nconst post = await http.get('/posts/1')\nconsole.log('GET:', post.title)\n\n// POST\nconst created = await http.post('/posts', {\n  body: { title: 'New Post', body: 'Content', userId: 1 },\n})\nconsole.log('POST id:', created.id)\n\n// PUT\nconst updated = await http.put('/posts/1', {\n  body: { id: 1, title: 'Updated', body: 'New content', userId: 1 },\n})\nconsole.log('PUT:', updated.title)\n\n// PATCH\nconst patched = await http.patch('/posts/1', {\n  body: { title: 'Patched Title' },\n})\nconsole.log('PATCH:', patched.title)\n\n// DELETE\nawait http.delete('/posts/1')\nconsole.log('DELETE: Success')",
-  name: 'HTTP Client - All Methods',
-};

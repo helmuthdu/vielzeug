@@ -333,17 +333,17 @@ export function buildAdapterOps<S extends AnySchema>(
      * via the deps object at construction time and returns a plain batch function.
      */
     buildBatch?: (deps: BatchDeps<S>) => BatchImpl<S>;
-    /** Structured logger. A @vielzeug/logit Logger satisfies DepositLogger directly. */
+    /** Structured logger. A /rune Logger satisfies DepositLogger directly. */
     logger?: DepositLogger;
     onCrossTabMessage?: (notify: (table: keyof S) => void) => (() => void) | undefined;
     onMetrics?: (event: MetricsEvent) => void;
     onMutation?: (table: keyof S) => void;
     /**
-     * Per-table reactive signals. A @vielzeug/stateit Signal<T[]> satisfies ReactiveSignal directly.
+     * Per-table reactive signals. A /ripple Signal<T[]> satisfies ReactiveSignal directly.
      * Each signal is kept in sync with its table automatically via observe().
      */
     signals?: TableSignals<S>;
-    /** Per-table validators. A @vielzeug/validit Schema satisfies this directly via `parse()`. */
+    /** Per-table validators. A /sieve Schema satisfies this directly via `parse()`. */
     validators?: TableValidators<S>;
   },
 ): Adapter<S> {

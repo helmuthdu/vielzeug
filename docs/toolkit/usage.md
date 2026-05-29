@@ -215,7 +215,7 @@ const byRole = computed(() => groupBy(users.value, (u) => u.role));
 - `pick` selects object properties only (`pick(obj, keys)`).
 - Use `partial` when adapting multi-arg APIs to unary composition flows.
 - For cancellation-aware async work, pass `AbortSignal` through your callback stack.
-- Use `createLocalSource` and `createRemoteSource` from `@vielzeug/sourceit` for reactive paginated sources.
+- Use `createLocalSource` and `createRemoteSource` from `@vielzeug/sourcerer` for reactive paginated sources.
 
 ## Performance Tips
 

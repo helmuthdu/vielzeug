@@ -10,26 +10,26 @@ importers:
 
   .: {}
 
-  ../../packages/buildit:
+  ../../packages/block:
     dependencies:
-      '@vielzeug/craftit':
+      '@vielzeug/craft':
         specifier: workspace:*
-        version: link:../craftit
-      '@vielzeug/dragit':
+        version: link:../craft
+      '@vielzeug/grip':
         specifier: workspace:*
-        version: link:../dragit
-      '@vielzeug/floatit':
+        version: link:../grip
+      '@vielzeug/orbit':
         specifier: workspace:*
-        version: link:../floatit
-      '@vielzeug/stateit':
+        version: link:../orbit
+      '@vielzeug/ripple':
         specifier: workspace:*
-        version: link:../stateit
+        version: link:../ripple
+      '@vielzeug/scroll':
+        specifier: workspace:*
+        version: link:../scroll
       '@vielzeug/toolkit':
         specifier: workspace:*
         version: link:../toolkit
-      '@vielzeug/virtualit':
-        specifier: workspace:*
-        version: link:../virtualit
       lucide:
         specifier: ^1.16.0
         version: 1.16.0
@@ -56,14 +56,26 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/craftit:
+  ../../packages/courier:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/craft:
     dependencies:
-      '@vielzeug/floatit':
+      '@vielzeug/ripple':
         specifier: workspace:*
-        version: link:../floatit
-      '@vielzeug/stateit':
-        specifier: workspace:*
-        version: link:../stateit
+        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -99,7 +111,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/dragit:
+  ../../packages/forge:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -114,7 +126,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/eventit:
+  ../../packages/grip:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -129,7 +141,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/fetchit:
+  ../../packages/lingua:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -144,7 +156,11 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/floatit:
+  ../../packages/machine:
+    dependencies:
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -159,52 +175,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/formit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
-
-  ../../packages/i18nit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
-
-  ../../packages/logit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
-
-  ../../packages/mcpit:
+  ../../packages/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
@@ -216,6 +187,21 @@ importers:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/orbit:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
       vitest:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
@@ -235,7 +221,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/routeit:
+  ../../packages/relay:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -250,7 +236,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/sourceit:
+  ../../packages/ripple:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -265,7 +251,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/stateit:
+  ../../packages/route:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -280,7 +266,67 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/timit:
+  ../../packages/rune:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/scroll:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/sieve:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/sourcerer:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
+  ../../packages/tempo:
     dependencies:
       '@js-temporal/polyfill':
         specifier: ^0.5.1
@@ -314,7 +360,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/validit:
+  ../../packages/wired:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -329,37 +375,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
-  ../../packages/virtualit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
-
-  ../../packages/wireit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
-
-  ../../packages/workit:
+  ../../packages/worker:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0

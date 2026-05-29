@@ -341,10 +341,10 @@ All four adapters accept the same optional plugin options at construction time. 
 
 ### Reactive Signals (`signals`)
 
-Wire `@vielzeug/stateit` signals directly. Each signal is automatically kept in sync with its table via `observe()` and cleaned up on `dispose()`.
+Wire `@vielzeug/ripple` signals directly. Each signal is automatically kept in sync with its table via `observe()` and cleaned up on `dispose()`.
 
 ```ts
-import { signal } from '@vielzeug/stateit';
+import { signal } from '@vielzeug/ripple';
 import { createMemory } from '@vielzeug/deposit';
 
 const usersSignal = signal<User[]>([]);
@@ -357,14 +357,14 @@ const db = createMemory({
 // usersSignal.value is now always in sync with the users table
 ```
 
-Any object with an `update(fn: (current: T) => T): void` method satisfies `ReactiveSignal<T>` structurally. `@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy this directly.
+Any object with an `update(fn: (current: T) => T): void` method satisfies `ReactiveSignal<T>` structurally. `@vielzeug/ripple` `Signal<T>` and `Store<T>` both satisfy this directly.
 
 ### Logger (`logger`)
 
-Pass a `@vielzeug/logit` logger or any object with an `error(...)` method. Observer notification errors are routed to `logger.error`.
+Pass a `@vielzeug/rune` logger or any object with an `error(...)` method. Observer notification errors are routed to `logger.error`.
 
 ```ts
-import { createLogger } from '@vielzeug/logit';
+import { createLogger } from '@vielzeug/rune';
 import { createMemory } from '@vielzeug/deposit';
 
 const db = createMemory({
@@ -375,10 +375,10 @@ const db = createMemory({
 
 ### Record Validation (`validators`)
 
-Pass a `@vielzeug/validit` schema or any object with `parse(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+Pass a `@vielzeug/sieve` schema or any object with `parse(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
 
 ```ts
-import { v } from '@vielzeug/validit';
+import { s } from '@vielzeug/sieve';
 import { createMemory } from '@vielzeug/deposit';
 
 const db = createMemory({
