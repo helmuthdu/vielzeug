@@ -159,41 +159,6 @@ type PropMeta<T = unknown> = {
 
 export const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
 
-const reflectingAttrs = new WeakMap<HTMLElement, Set<string>>();
-
-const markReflecting = (el: HTMLElement, name: string): void => {
-  let names = reflectingAttrs.get(el);
-
-  if (!names) {
-    names = new Set<string>();
-    reflectingAttrs.set(el, names);
-  }
-
-  names.add(name);
-};
-
-const unmarkReflecting = (el: HTMLElement, name: string): void => {
-  const names = reflectingAttrs.get(el);
-
-  if (!names) return;
-
-  names.delete(name);
-
-  if (names.size === 0) reflectingAttrs.delete(el);
-};
-
-export const isReflecting = (el: HTMLElement, name: string): boolean => reflectingAttrs.get(el)?.has(name) ?? false;
-
-const reflectAttribute = (el: HTMLElement, attrName: string, fn: () => void): void => {
-  markReflecting(el, attrName);
-
-  try {
-    fn();
-  } finally {
-    unmarkReflecting(el, attrName);
-  }
-};
-
 /** @internal Runtime prop registration (called by createProps) */
 const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
   const el = getCurrentElement();
@@ -233,15 +198,13 @@ const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>
     effect(() => {
       const v = s.value;
 
-      reflectAttribute(el, attrName, () => {
-        if (v == null) {
-          el.removeAttribute(attrName);
-        } else if (typeof v === 'boolean') {
-          el.toggleAttribute(attrName, v);
-        } else {
-          setAttr(el, attrName, v);
-        }
-      });
+      if (v == null) {
+        el.removeAttribute(attrName);
+      } else if (typeof v === 'boolean') {
+        el.toggleAttribute(attrName, v);
+      } else {
+        setAttr(el, attrName, v);
+      }
     });
   }
 

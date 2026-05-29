@@ -14,13 +14,11 @@ export type OverlayOpenReason = 'click' | 'focus' | 'hover' | 'keyboard' | 'prog
 export type DialogCloseReason = 'escape' | 'outsideClick' | 'programmatic' | 'swipe' | 'trigger';
 /** Close reasons valid for dropdown overlays (no swipe). */
 export type DropdownCloseReason = Exclude<DialogCloseReason, 'swipe'>;
-/** Union of all possible close reasons. Use DialogCloseReason or DropdownCloseReason for tighter typing. */
-export type OverlayCloseReason = DialogCloseReason;
 
 /** Detail shape for overlay open events emitted by components. */
 export type OverlayOpenDetail = { reason: OverlayOpenReason };
 /** Detail shape for overlay close events emitted by components. */
-export type OverlayCloseDetail = { reason: OverlayCloseReason };
+export type OverlayCloseDetail = { reason: DialogCloseReason };
 
 export type OverlayPositioner = {
   floating: () => HTMLElement | null;
@@ -36,11 +34,11 @@ export type OverlayControlOptions = {
   getTrigger?: () => HTMLElement | null;
   isDisabled?: () => boolean;
   isOpen: () => boolean;
-  onClose?: (reason: OverlayCloseReason) => void;
+  onClose?: (reason: DialogCloseReason) => void;
   onOpen?: (reason: OverlayOpenReason) => void;
   positioner?: OverlayPositioner;
   restoreFocus?: boolean | (() => boolean);
-  setOpen: ((next: true, reason: OverlayOpenReason) => void) & ((next: false, reason: OverlayCloseReason) => void);
+  setOpen: ((next: true, reason: OverlayOpenReason) => void) & ((next: false, reason: DialogCloseReason) => void);
   /**
    * Optional `AbortSignal`. When provided, `cleanup()` is called automatically
    * on abort (closes the overlay, removes all listeners).
@@ -55,7 +53,7 @@ export type OverlayControl = {
    * @param reason — why it's closing (default `'programmatic'`)
    * @param restoreFocus — override per-call focus restoration (default: uses `restoreFocus` option)
    */
-  close(reason?: OverlayCloseReason, restoreFocus?: boolean): void;
+  close(reason?: DialogCloseReason, restoreFocus?: boolean): void;
   /**
    * Opens the overlay.
    * @param reason — why it's opening (default `'programmatic'`)
@@ -66,7 +64,7 @@ export type OverlayControl = {
    * - Opens with `openReason` (default `'click'`).
    * - Closes with `closeReason` (default `'trigger'`).
    */
-  toggle(openReason?: OverlayOpenReason, closeReason?: OverlayCloseReason): void;
+  toggle(openReason?: OverlayOpenReason, closeReason?: DialogCloseReason): void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -119,7 +117,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     options.onOpen?.(reason);
   };
 
-  const close = (reason: OverlayCloseReason = 'programmatic', restoreFocus?: boolean): void => {
+  const close = (reason: DialogCloseReason = 'programmatic', restoreFocus?: boolean): void => {
     if (!options.isOpen()) return;
 
     options.setOpen(false, reason);
@@ -137,7 +135,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     options.onClose?.(reason);
   };
 
-  const toggle = (openReason: OverlayOpenReason = 'click', closeReason: OverlayCloseReason = 'trigger'): void => {
+  const toggle = (openReason: OverlayOpenReason = 'click', closeReason: DialogCloseReason = 'trigger'): void => {
     if (options.isOpen()) {
       close(closeReason);
     } else {

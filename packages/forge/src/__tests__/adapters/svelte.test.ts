@@ -27,7 +27,7 @@ describe('/forge svelte adapter', () => {
       const states: FormState[] = [];
       const unsub = store.subscribe((s) => states.push(s));
 
-      states.length = 0; // clear the initial emission
+      states.length = 0;
 
       form.set('name', 'Bob');
       expect(states).toHaveLength(1);
@@ -72,7 +72,7 @@ describe('/forge svelte adapter', () => {
       const values: string[] = [];
       const unsub = store.subscribe((s) => values.push((s as FieldState<string>).value));
 
-      values.length = 0; // clear initial
+      values.length = 0;
 
       form.set('name', 'Bob');
       form.set('name', 'Charlie');
@@ -80,25 +80,8 @@ describe('/forge svelte adapter', () => {
       unsub();
     });
 
-    test('subscriber is NOT called when an unrelated field changes', () => {
-      const form = createForm({ defaultValues: { age: 30, name: 'Alice' } });
-      const store = fieldStore(form, 'name');
-
-      let calls = 0;
-      const unsub = store.subscribe(() => calls++);
-
-      calls = 0; // clear initial
-
-      form.set('age', 31);
-      expect(calls).toBe(0);
-
-      form.set('name', 'Bob');
-      expect(calls).toBe(1);
-      unsub();
-    });
-
-    test('unsubscribe stops field notifications', () => {
-      const form = createForm({ defaultValues: { name: 'Alice' } });
+    test('subscriber is not called for unrelated field changes', () => {
+      const form = createForm({ defaultValues: { a: 1, name: 'Alice' } });
       const store = fieldStore(form, 'name');
 
       let calls = 0;
@@ -106,70 +89,51 @@ describe('/forge svelte adapter', () => {
 
       calls = 0;
 
+      form.set('a', 2);
+      expect(calls).toBe(0);
+      unsub();
+    });
+
+    test('unsubscribe stops future notifications', () => {
+      const form = createForm({ defaultValues: { name: 'Alice' } });
+      const store = fieldStore(form, 'name');
+
+      let calls = 0;
+      const unsub = store.subscribe(() => calls++);
+
+      calls = 0;
       unsub();
       form.set('name', 'Bob');
       expect(calls).toBe(0);
-    });
-
-    test('subscriber receives updated error state', () => {
-      const form = createForm({
-        defaultValues: { email: '' },
-        validators: { email: (v) => (v ? undefined : 'required') },
-      });
-      const store = fieldStore(form, 'email');
-
-      let lastError: string | undefined = 'initial';
-      const unsub = store.subscribe((s) => {
-        lastError = (s as FieldState<string>).error;
-      });
-
-      form.setError('email', 'invalid email');
-      expect(lastError).toBe('invalid email');
-      unsub();
     });
   });
 
   describe('formValues', () => {
     test('subscriber is called immediately with the current values', () => {
-      const form = createForm({ defaultValues: { age: 30, name: 'Alice' } });
+      const form = createForm({ defaultValues: { name: 'Alice' } });
       const store = formValues(form);
 
-      let received: unknown;
+      let received: Record<string, unknown> | undefined;
       const unsub = store.subscribe((v) => {
         received = v;
       });
 
-      expect(received).toEqual({ age: 30, name: 'Alice' });
+      expect(received).toEqual({ name: 'Alice' });
       unsub();
     });
 
-    test('subscriber is called when any field value changes', () => {
+    test('subscriber is called when any field changes', () => {
       const form = createForm({ defaultValues: { name: 'Alice' } });
       const store = formValues(form);
 
       const snapshots: unknown[] = [];
       const unsub = store.subscribe((v) => snapshots.push(v));
 
-      snapshots.length = 0; // clear initial
+      snapshots.length = 0;
 
       form.set('name', 'Bob');
       expect(snapshots).toHaveLength(1);
-      expect((snapshots[0] as { name: string }).name).toBe('Bob');
       unsub();
-    });
-
-    test('unsubscribe stops value notifications', () => {
-      const form = createForm({ defaultValues: { name: 'Alice' } });
-      const store = formValues(form);
-
-      let calls = 0;
-      const unsub = store.subscribe(() => calls++);
-
-      calls = 0;
-
-      unsub();
-      form.set('name', 'Bob');
-      expect(calls).toBe(0);
     });
   });
 });

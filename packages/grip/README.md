@@ -4,7 +4,7 @@ package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [craft, scroll, block]
-exports: [createDropZone, createSortable]
+exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 ---
 
 # /grip
@@ -62,6 +62,7 @@ using sortable = createSortable({
   keyboard: true,
   autoScroll: { edgeThreshold: 40, speed: 24 },
   dragImage: (id, item) => item,
+  dragImageOffset: [8, 8],
   onReorder: (ids) => {
     saveOrder(ids);
   },

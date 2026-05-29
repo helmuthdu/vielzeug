@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Custom Error Boundary'
-description: 'Collect and report listener errors from an Relay bus without stopping other listeners.'
+description: 'Custom error boundary example for @vielzeug/relay.'
 ---
 
 ## Custom Error Boundary

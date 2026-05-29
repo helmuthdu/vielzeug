@@ -1,38 +1,82 @@
-import type { ComputedSignal, ReactiveOptions, Signal, Store, Subscription } from './types';
+import type { ComputedSignal, PathValue, ReactiveOptions, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
 import { StateError } from './error';
 import { IS_SIGNAL, IS_STORE } from './helpers';
 import { SignalImpl } from './signal';
 
-// ── LensImpl ──────────────────────────────────────────────────────────────────
+// ── Nested path helpers ───────────────────────────────────────────────────────
 
-class LensImpl<T extends object, K extends keyof T & string> implements Signal<T[K]> {
-  [IS_SIGNAL] = true;
+const getNestedValue = (obj: unknown, parts: string[]): unknown => {
+  let current = obj;
 
-  private readonly keyComputed_: ComputedSignal<T[K]>;
-  private readonly store_: StoreImpl<T>;
-  private readonly key_: K;
+  for (const key of parts) {
+    if (current == null || typeof current !== 'object') return undefined;
 
-  constructor(store: StoreImpl<T>, key: K) {
-    this.store_ = store;
-    this.key_ = key;
-    this.keyComputed_ = computed(() => store.value[key]);
+    current = (current as Record<string, unknown>)[key];
   }
 
-  get value(): T[K] {
+  return current;
+};
+
+const setNestedValue = <T>(obj: T, parts: string[], value: unknown): T => {
+  if (parts.length === 0) return value as T;
+
+  if (obj === null || typeof obj !== 'object') {
+    throw new StateError(
+      'INVALID_STORE',
+      'Cannot write to a nested path through a null or non-object intermediate value.',
+    );
+  }
+
+  const [key, ...rest] = parts;
+  const currentObj = obj as Record<string, unknown>;
+
+  return { ...currentObj, [key!]: setNestedValue(currentObj[key!], rest, value) } as T;
+};
+
+// ── LensImpl ──────────────────────────────────────────────────────────────────
+
+/**
+ * A writable signal scoped to a specific path within a store.
+ * Single-key paths (`'name'`) and nested paths (`'user.address.city'`) are both supported.
+ * The internal computed fires only when the value at that path changes.
+ */
+class LensImpl<T extends object, V> implements Signal<V> {
+  [IS_SIGNAL] = true;
+
+  private readonly keyComputed_: ComputedSignal<V>;
+  private readonly store_: StoreImpl<T>;
+  private readonly parts_: string[];
+  private readonly evict_: () => void;
+
+  constructor(store: StoreImpl<T>, parts: string[], evict: () => void) {
+    this.store_ = store;
+    this.parts_ = parts;
+    this.evict_ = evict;
+    this.keyComputed_ = computed(() => getNestedValue(store.value, parts) as V);
+  }
+
+  get value(): V {
     return this.keyComputed_.value;
   }
 
-  set value(next: T[K]) {
-    this.store_.patch({ [this.key_]: next } as unknown as Partial<T>);
+  set value(next: V) {
+    // Use update() so the same-reference no-op applies at the path level too.
+    this.store_.update((state) => {
+      const current = getNestedValue(state, this.parts_) as V;
+
+      if (Object.is(current, next)) return state;
+
+      return setNestedValue(state, this.parts_, next);
+    });
   }
 
-  peek(): T[K] {
-    return this.store_.peek()[this.key_];
+  peek(): V {
+    return getNestedValue(this.store_.peek(), this.parts_) as V;
   }
 
-  update(fn: (current: T[K]) => T[K]): void {
+  update(fn: (current: V) => V): void {
     this.value = fn(this.peek());
   }
 
@@ -40,11 +84,21 @@ class LensImpl<T extends object, K extends keyof T & string> implements Signal<T
     return this.keyComputed_.subscribe(listener);
   }
 
-  derive<U>(fn: (value: T[K]) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return this.keyComputed_.derive(fn, options);
+  map<U>(fn: (value: V) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
+    return this.keyComputed_.map(fn, options);
+  }
+
+  filter<U extends V>(predicate: (value: V) => value is U): ComputedSignal<U | undefined>;
+  filter(predicate: (value: V) => boolean): ComputedSignal<V | undefined>;
+  filter(predicate: (value: V) => boolean): ComputedSignal<V | undefined> {
+    return this.keyComputed_.filter(predicate);
   }
 
   dispose(): void {
+    // Evict first — if a subscriber is notified synchronously during computed disposal,
+    // a concurrent store.lens(path) call will create a fresh live lens rather than
+    // returning the half-disposed one.
+    this.evict_();
     this.keyComputed_.dispose();
   }
 
@@ -77,8 +131,18 @@ class StoreImpl<T extends object> implements Store<T> {
 
   readonly subscribe = (listener: () => void): Subscription => this.signal_.subscribe(listener);
 
-  derive<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
+  map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
     return computed(() => fn(this.value), options);
+  }
+
+  filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined> {
+    return computed(() => {
+      const v = this.value;
+
+      return predicate(v) ? v : undefined;
+    });
   }
 
   patch(partial: Partial<T>): void {
@@ -96,13 +160,8 @@ class StoreImpl<T extends object> implements Store<T> {
     const current = this.peek();
     const next = fn(current);
 
-    if (next === current) {
-      throw new StateError(
-        'INVALID_STORE',
-        'store.update() must return a new object — returning the same reference has no effect. ' +
-          'Use store.patch() for partial updates, or spread: { ...state, key: newValue }.',
-      );
-    }
+    // Same reference → no change. Silently no-op (consistent with signal equality semantics).
+    if (next === current) return;
 
     this.signal_.value = next;
   }
@@ -111,32 +170,25 @@ class StoreImpl<T extends object> implements Store<T> {
     this.signal_.value = structuredClone(this.initial_);
   }
 
-  select<U>(selector: (state: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return this.derive(selector, options);
-  }
-
   /**
-   * Returns a writable `Signal` scoped to a single property of the store.
-   * Reads and subscribes to only that property — unrelated patches do not notify this signal.
-   * Writes call `store.patch()` under the hood.
-   *
-   * The lens is cached per key — `store.lens('x') === store.lens('x')`.
+   * Returns a writable `Signal` scoped to a property or dot-separated nested path.
+   * The lens is cached — `store.lens('x') === store.lens('x')`.
    *
    * @example
    * ```ts
-   * const userStore = store({ name: 'Alice', age: 30 });
-   * const nameLens = userStore.lens('name');
-   *
-   * console.log(nameLens.value); // 'Alice'
-   * nameLens.value = 'Bob';       // equivalent to userStore.patch({ name: 'Bob' })
+   * const s = store({ user: { name: 'Alice', address: { city: 'NY' } } });
+   * const name = s.lens('user.name');         // Signal<string>
+   * const city = s.lens('user.address.city'); // Signal<string>
+   * city.value = 'LA'; // immutably updates the nested path
    * ```
    */
-  lens<K extends keyof T & string>(key: K): Signal<T[K]> {
-    if (this.lensCache_.has(key)) return this.lensCache_.get(key) as Signal<T[K]>;
+  lens<P extends string>(path: P): Signal<PathValue<T, P>> {
+    if (this.lensCache_.has(path)) return this.lensCache_.get(path) as Signal<PathValue<T, P>>;
 
-    const lens = new LensImpl<T, K>(this, key);
+    const parts = path.split('.');
+    const lens = new LensImpl<T, PathValue<T, P>>(this, parts, () => this.lensCache_.delete(path));
 
-    this.lensCache_.set(key, lens as unknown as Signal<unknown>);
+    this.lensCache_.set(path, lens as unknown as Signal<unknown>);
 
     return lens;
   }

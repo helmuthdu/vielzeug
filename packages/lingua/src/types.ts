@@ -94,6 +94,27 @@ export type I18n<M extends Messages = Messages> = {
   /** Check if a key exists. Accepts literal keys from M, or any dynamic string. */
   has(key: MessageLeafKeys<M> | AnyKey): boolean;
   readonly locale: Locale;
+  /**
+   * Merges additional messages into a locale's catalog. Keys from `source` are applied
+   * on top of any existing translated keys — previously registered keys are preserved.
+   *
+   * If the locale has a pending dynamic load in progress, `merge` waits for it to complete
+   * before applying the new keys, ensuring no base catalog keys are lost.
+   *
+   * Useful for per-route or per-feature lazy loading of translation subsets without
+   * discarding the base catalog.
+   *
+   * **Calling `register()` after `merge()`** replaces the entire catalog for that locale,
+   * discarding all previously merged keys. `register` is always a full replacement.
+   *
+   * **Concurrent `merge()` calls** on the same locale are safe (single-threaded JS event
+   * loop). Keys are applied in microtask completion order; the last write wins per key.
+   *
+   * @example
+   * // Load route-specific translations on top of the global English catalog.
+   * await i18n.merge('en', async () => import('./routes/settings.i18n.json'));
+   */
+  merge(locale: Locale, source: LocaleSource<M>): Promise<void>;
   preload(locale: Locale): Promise<void>;
   register(locale: Locale, source: LocaleSource<M>): void;
   /**

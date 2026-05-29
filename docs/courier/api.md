@@ -15,9 +15,16 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `createCourier()`       | Create a unified client with shared transport        | Sync           | REST timeout defaults to 30s; streams default to `Infinity`  |
 | `createStream()`        | Open SSE or readable HTTP streams                    | Sync           | `reconnect: true` means up to 5 reconnects after a failure   |
 | `createTransportCore()` | Expose the shared transport internals                | Sync           | Advanced use only; powers both `createApi()` and `createStream()` |
+| `bindRefetch()`         | Opt-in focus/reconnect revalidation binding          | Sync           | Returns unbind fn; call it on cleanup                        |
+| `createBatcher()`       | DataLoader-style request coalescing                  | Sync           | `resolve()` must return results in the same order as keys    |
+| `withBearerAuth()`      | Interceptor preset for Bearer token injection        | Sync           | Accepts static string or async token factory                 |
+| `withRequestId()`       | Interceptor preset adding a unique request ID header | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`        |
+| `withLogging()`         | Interceptor preset logging method/URL/status/ms      | Sync           | Defaults to `console.debug`; override with `logger` option   |
+| `persistQueryCache()`   | Subscribe to cache and write successful entries      | Sync           | Eagerly persists existing successful entries on setup        |
+| `hydrateQueryCache()`   | Read persisted entries and seed the cache            | Async          | Restores original `updatedAt`; respect `maxAge`              |
 | `HttpError`             | Structured HTTP/network/abort/timeout errors         | Sync           | Prefer `HttpError.is(err, status?)` for narrowing            |
 
-## Package Entry Points
+## Package Entry Point
 
 | Import              | Purpose            |
 | ------------------- | ------------------ |
@@ -32,6 +39,8 @@ createApi(opts?: TransportOptions, sharedTransport?: TransportCore): ApiClient;
 ```
 
 Creates an HTTP client. When `sharedTransport` is provided, the client reuses the same interceptor pipeline, headers, timeout, and cancellation lifecycle as other Courier clients.
+
+**Returns:** `ApiClient`
 
 **Parameters — `TransportOptions`:**
 
@@ -60,6 +69,17 @@ Creates an HTTP client. When `sharedTransport` is provided, the client reuses th
 | `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                                    |
 | `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`; enables `using` declarations                 |
 
+**Example:**
+
+```ts
+import { createApi } from '@vielzeug/courier';
+
+const api = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
+const user = await api.get<User>('/users/{id}', { params: { id: 1 } });
+```
+
+---
+
 ### `createQuery()`
 
 ```ts
@@ -68,37 +88,50 @@ createQuery(options?: QueryClientOptions): QueryClient;
 
 Creates a query client with caching, deduplication, prefix invalidation, and reactive subscriptions.
 
+**Returns:** `QueryClient`
+
 **Parameters — `QueryClientOptions`:**
 
-| Option               | Type                            | Default     | Description                                                                |
-| -------------------- | ------------------------------- | ----------- | -------------------------------------------------------------------------- |
-| `staleTime`          | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches |
-| `gcTime`             | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC   |
-| `maxAttempts`        | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries           |
-| `retryDelay`         | `number \| (attempt) => number` | full jitter | Delay between retries                                                      |
-| `shouldRetry`        | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                       |
-| `refetchOnFocus`     | `boolean`                       | `false`     | Revalidate stale observed entries when the document regains focus          |
-| `refetchOnReconnect` | `boolean`                       | `false`     | Revalidate stale observed entries when the network comes back online       |
+| Option        | Type                            | Default     | Description                                                                     |
+| ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches  |
+| `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC        |
+| `maxAttempts` | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries                |
+| `retryDelay`  | `number \| (attempt) => number` | full jitter | Delay between retries                                                           |
+| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                            |
 
 **Methods:**
 
 | Method             | Signature                                     | Description                                                                 |
 | ------------------ | --------------------------------------------- | --------------------------------------------------------------------------- |
-| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T \| undefined>` | Fetch with caching, deduplication, and retry                              |
+| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T \| undefined>` | Fetch with caching, deduplication, and retry                    |
 | `prefetch`         | `(options) => Promise<void>`                  | Warm cache using fetch semantics                                            |
 | `get`              | `<T>(key) => T \| undefined`                  | Read cached data                                                            |
-| `set`              | `<T>(key, data \| updater, opts?) => void`   | Set or update cached data                                                   |
+| `set`              | `<T>(key, data \| updater, opts?) => void`    | Set or update cached data; `opts.updatedAt` restores a historical timestamp |
 | `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                                         |
-| `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe` | Subscribe immediately to state changes                                      |
+| `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe` | Subscribe to future state changes; **not** called immediately on attach     |
 | `watch`            | `<T, S>(key, opts?) => SyncStore<QueryState<S>>` | Build a framework-friendly external store without an immediate callback  |
 | `invalidate`       | `(key) => void`                               | Evict or background-revalidate a key/prefix                                 |
 | `cancel`           | `(key) => void`                               | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success |
 | `clear`            | `() => void`                                  | Clear all entries; active subscribers see `'idle'`                          |
+| `refetchStale`     | `() => void`                                  | Manually revalidate all stale observed entries                              |
 | `dispose`          | `() => void`                                  | Cancel all in-flight requests and clear all timers                          |
 | `disposed`         | `boolean` (getter)                            | Whether `dispose()` has been called                                         |
 | `[Symbol.dispose]` | —                                             | Delegates to `dispose()`                                                    |
 
-### `createMutation()`
+**Example:**
+
+```ts
+import { createQuery } from '@vielzeug/courier';
+
+const qc = createQuery({ staleTime: 30_000 });
+const user = await qc.fetch({
+  key: ['users', 1],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+});
+```
+
+---
 
 ```ts
 createMutation<TData, TVariables = void>(
@@ -108,6 +141,8 @@ createMutation<TData, TVariables = void>(
 ```
 
 Creates a standalone, observable mutation handle.
+
+**Returns:** `Mutation<TData, TVariables>`
 
 **`MutationOptions<TData>`:**
 
@@ -132,13 +167,28 @@ Creates a standalone, observable mutation handle.
 | `toStore`   | `() => SyncStore<MutationState<TData>>`           | Build a framework-friendly external store               |
 | `reset`     | `() => void`                                      | Reset back to the idle state                            |
 
-### `createCourier()`
+**Example:**
+
+```ts
+import { createMutation } from '@vielzeug/courier';
+
+const addUser = createMutation(
+  (input: NewUser, signal: AbortSignal) => api.post<User>('/users', { body: input, signal }),
+  { onSuccess: (user) => qc.set(['users', user.id], user) },
+);
+
+await addUser.mutate({ name: 'Alice' });
+```
+
+---
 
 ```ts
 createCourier(opts?: CourierOptions): Courier;
 ```
 
 Creates a unified Courier client backed by one shared transport.
+
+**Returns:** `Courier`
 
 **`CourierOptions`:**
 
@@ -166,13 +216,31 @@ Creates a unified Courier client backed by one shared transport.
 | `disposed`         | `boolean`                                       | Whether the shared transport is disposed                 |
 | `[Symbol.dispose]` | —                                               | Delegates to `dispose()`                                 |
 
-### `createStream()`
+**Example:**
+
+```ts
+import { createCourier } from '@vielzeug/courier';
+
+const client = createCourier({
+  baseUrl: 'https://api.example.com',
+  query: { staleTime: 30_000 },
+});
+
+const user = await client.query.fetch({
+  key: ['users', 1],
+  fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+});
+```
+
+---
 
 ```ts
 createStream(opts?: TransportOptions, sharedTransport?: TransportCore): StreamClient;
 ```
 
 Creates a streaming client for SSE and readable HTTP responses. Like `createApi()`, it can reuse a shared `TransportCore`.
+
+**Returns:** `StreamClient`
 
 **Stream methods:**
 
@@ -188,13 +256,26 @@ Creates a streaming client for SSE and readable HTTP responses. Like `createApi(
 | `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                              |
 | `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`                                         |
 
-### `createTransportCore()`
+**Example:**
+
+```ts
+import { createStream } from '@vielzeug/courier';
+
+const stream = createStream({ baseUrl: 'https://api.example.com' });
+const source = stream.sse<{ message: { text: string } }>('/events', { reconnect: true });
+source.on('message', (data) => console.log(data.text));
+source.close();
+```
+
+---
 
 ```ts
 createTransportCore(opts?: TransportOptions): TransportCore;
 ```
 
 Exposes the shared transport used internally by both `createApi()` and `createStream()`.
+
+**Returns:** `TransportCore`
 
 **TransportCore methods:**
 
@@ -212,9 +293,24 @@ Exposes the shared transport used internally by both `createApi()` and `createSt
 | `timeout`    | `number`                                                 | Shared default timeout                       |
 | `disposed`   | `boolean`                                                | Whether the transport is disposed            |
 
-## `HttpError`
+**Example:**
 
-Thrown for non-2xx HTTP responses and network-level failures.
+```ts
+import { createApi, createStream, createTransportCore } from '@vielzeug/courier';
+
+// Share one interceptor pipeline across api and stream
+const transport = createTransportCore({ baseUrl: 'https://api.example.com' });
+transport.use(async (ctx, next) => { /* shared middleware */ return next(ctx); });
+
+const api = createApi({}, transport);
+const stream = createStream({}, transport);
+```
+
+## Errors
+
+### `HttpError`
+
+Thrown for non-2xx HTTP responses, network failures, abort, and timeout.
 
 - `kind`: `'http' | 'network' | 'abort' | 'timeout'`
 - `status`, `method`, `url`, `data`, `response`, `headers`
@@ -251,11 +347,11 @@ type TransportOptions = {
 ### `HttpRequestConfig<P>`
 
 ```ts
-type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> &
-  Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'> & {
-    headers?: Record<string, string>;
-    signal?: AbortSignal;
-  };
+type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
+  fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+};
 ```
 
 `CourierRequestConfig<P>` adds:
@@ -270,6 +366,8 @@ type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> &
 | `timeout`      | `number`         | Per-request timeout override                                            |
 
 Idempotent requests (`GET`, `HEAD`, `OPTIONS`, `DELETE`) dedupe by **method + URL + responseType**. Request headers are no longer part of the automatic dedupe key.
+
+---
 
 ### `StreamRequestConfig<P>`
 
@@ -314,7 +412,7 @@ type ReconnectOptions = {
 - default `maxAttempts` is `5`
 - clean server closes do **not** reset the reconnect budget
 
-## Query and Mutation Types
+## Types
 
 ### `QueryOptions<T>`
 
@@ -342,8 +440,6 @@ type PrefetchOptions<T> = QueryOptions<T> & {
 ```ts
 type QueryClientOptions = {
   gcTime?: number;
-  refetchOnFocus?: boolean;
-  refetchOnReconnect?: boolean;
   staleTime?: number;
 } & RetryOptions;
 ```
@@ -376,8 +472,6 @@ type RetryOptions = {
 ```
 
 `maxAttempts: 1` means one try with no retries.
-
-## State and Store Types
 
 ### `SyncStore<T>`
 
@@ -436,10 +530,6 @@ type SseSource<TEvents extends Record<string, unknown> = Record<string, string>>
 };
 ```
 
-## Transport and Client Types
-
-### `FetchContext` and `Interceptor`
-
 ```ts
 type FetchContext = { init: RequestInit; url: string };
 type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
@@ -456,22 +546,189 @@ type Courier = ReturnType<typeof createCourier>;
 type TransportCore = ReturnType<typeof createTransportCore>;
 ```
 
-## Retry Utilities
+### `BatcherOptions<K, V>`
 
 ```ts
-const NO_RETRY = 1;
-
-toError(err: unknown): Error;
-sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void>;
-runWithRetry<T>(
-  fn: () => Promise<T>,
-  maxAttempts: number,
-  retryDelay?: number | ((attempt: number) => number),
-  shouldRetry?: (error: unknown, attempt: number) => boolean,
-  signal?: AbortSignal,
-): Promise<T>;
+type BatcherOptions<K, V> = {
+  maxSize?: number;
+  resolve: (keys: K[]) => Promise<V[]>;
+  window?: number;
+};
 ```
 
-- `NO_RETRY` is the canonical constant for a single attempt with no retries
-- `runWithRetry()` uses full-jitter exponential backoff by default
-- `attempt` passed to `retryDelay` and `shouldRetry` is zero-based
+### `Batcher<K, V>`
+
+```ts
+type Batcher<K, V> = {
+  dispose(): void;
+  load(key: K): Promise<V>;
+};
+```
+
+### `PersistOptions`
+
+```ts
+interface PersistOptions {
+  include?: (key: QueryKey) => boolean;
+  maxAge?: number;
+  onError?: (err: unknown, key: QueryKey) => void;
+  prefix?: string;
+  storage: PersistStorage;
+}
+```
+
+### `PersistStorage`
+
+```ts
+interface PersistStorage {
+  getItem(key: string): Promise<string | null> | string | null;
+```ts
+type PersistStorage = {
+  getItem(key: string): Promise<string | null> | string | null;
+  removeItem(key: string): Promise<void> | void;
+  setItem(key: string, value: string): Promise<void> | void;
+};
+```
+
+## Utility Functions
+
+### `bindRefetch()`
+
+```ts
+bindRefetch(qc: { refetchStale(): void }): () => void;
+```
+
+Wires up `qc.refetchStale()` to browser lifecycle events — `document visibilitychange` (when tab becomes visible) and `window online`. Returns an unbind function. Fully opt-in.
+
+**Returns:** `() => void` (unbind function)
+
+**Example:**
+
+```ts
+import { bindRefetch, createQuery } from '@vielzeug/courier';
+
+const qc = createQuery({ staleTime: 30_000 });
+const unbind = bindRefetch(qc);
+
+// On cleanup:
+unbind();
+```
+
+---
+
+### `createBatcher()`
+
+```ts
+createBatcher<K, V>(opts: BatcherOptions<K, V>): Batcher<K, V>;
+
+type BatcherOptions<K, V> = {
+  maxSize?: number;        // default: 25
+  resolve: (keys: K[]) => Promise<V[]>;
+  window?: number;         // ms, default: 0 (next microtask)
+};
+
+type Batcher<K, V> = {
+  load(key: K): Promise<V>;
+  dispose(): void;
+};
+```
+
+`resolve()` must return results in the **same order** as `keys`. A length mismatch rejects all pending promises. After `dispose()`, any subsequent `load()` call rejects immediately.
+
+**Returns:** `Batcher<K, V>`
+
+**Example:**
+
+```ts
+import { createBatcher } from '@vielzeug/courier';
+
+const userLoader = createBatcher<number, User>({
+  resolve: async (ids) => api.post<User[]>('/users/batch', { body: { ids } }),
+});
+
+const [alice, bob] = await Promise.all([userLoader.load(1), userLoader.load(2)]);
+```
+
+---
+
+### Built-in Interceptor Presets
+
+```ts
+withBearerAuth(token: string | (() => string | Promise<string>)): Interceptor;
+withRequestId(opts?: { header?: string; generate?: () => string }): Interceptor;
+withLogging(opts?: {
+  logger?: (msg: string, meta: { duration: number; method: string; status: number; url: string }) => void;
+}): Interceptor;
+```
+
+`withBearerAuth` accepts a static token or an async factory (for token refresh flows). It correctly handles all `HeadersInit` forms — plain object, `Headers` instance, or array of tuples.
+
+`withRequestId` defaults to `x-request-id` populated with `crypto.randomUUID()`.
+
+`withLogging` defaults to `console.debug`.
+
+**Example:**
+
+```ts
+import { withBearerAuth, withLogging, withRequestId } from '@vielzeug/courier';
+
+api.use(withBearerAuth(async () => tokenStore.getAccessToken()));
+api.use(withRequestId());
+api.use(withLogging());
+```
+
+---
+
+### `persistQueryCache()` and `hydrateQueryCache()`
+
+```ts
+persistQueryCache(
+  qc: QueryClient,
+  opts: PersistOptions & { keys: QueryKey[] },
+): () => void;
+
+hydrateQueryCache(
+  qc: QueryClient,
+  opts: PersistOptions & { keys: QueryKey[] },
+): Promise<void>;
+
+interface PersistOptions {
+  include?: (key: QueryKey) => boolean;
+  maxAge?: number;
+  onError?: (err: unknown, key: QueryKey) => void;
+  prefix?: string;       // default: 'courier:'
+  storage: PersistStorage;
+}
+
+interface PersistStorage {
+  getItem(key: string): Promise<string | null> | string | null;
+  removeItem(key: string): Promise<void> | void;
+  setItem(key: string, value: string): Promise<void> | void;
+}
+```
+
+- `persistQueryCache` returns a stop function. It eagerly persists any already-successful entries on setup.
+- `hydrateQueryCache` restores the original `updatedAt` timestamp so staleTime checks are accurate after hydration.
+- `maxAge` (ms) — entries older than `Date.now() - maxAge` are skipped during hydration.
+- `onError` is called for each failing storage operation; errors are silently swallowed when omitted.
+
+**Returns:** `persistQueryCache` returns `() => void` (stop function); `hydrateQueryCache` returns `Promise<void>`
+
+**Example:**
+
+```ts
+import { createQuery, hydrateQueryCache, persistQueryCache } from '@vielzeug/courier';
+
+const qc = createQuery({ staleTime: 60_000 });
+
+await hydrateQueryCache(qc, {
+  keys: [['users', userId]],
+  maxAge: 24 * 60 * 60_000,
+  storage: localStorage,
+});
+
+const stop = persistQueryCache(qc, {
+  keys: [['users', userId]],
+  storage: localStorage,
+});
+```

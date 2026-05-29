@@ -11,18 +11,14 @@ Users can add or remove repeating entries — such as multiple phone numbers or 
 
 ### Solution
 
-Form with dynamically added/removed fields.
+Store repeating entries as an array field and use `form.array()` for mutations:
 
-```typescript
+```ts
 import { createForm } from '@vielzeug/forge';
 
-type TeamMember = {
-  name: string;
-  email: string;
-  role: string;
-};
+type TeamMember = { name: string; email: string; role: string };
 
-const dynamicForm = createForm({
+const form = createForm({
   defaultValues: {
     teamName: '',
     members: [] as TeamMember[],
@@ -32,32 +28,22 @@ const dynamicForm = createForm({
   },
 });
 
-// Add a team member
+const members = form.array('members');
+
 function addMember() {
-  const members = dynamicForm.get<TeamMember[]>('members') ?? [];
-  dynamicForm.set('members', [...members, { name: '', email: '', role: 'member' }]);
+  members.append({ name: '', email: '', role: 'member' });
 }
 
-// Remove a team member
 function removeMember(index: number) {
-  const members = dynamicForm.get<TeamMember[]>('members') ?? [];
-  dynamicForm.set(
-    'members',
-    members.filter((_, i) => i !== index),
-  );
+  members.remove(index);
 }
 
-// Update a team member
-function updateMember(index: number, field: keyof TeamMember, value: string) {
-  const members = dynamicForm.get<TeamMember[]>('members') ?? [];
-  const updated = [...members];
-  updated[index] = { ...updated[index], [field]: value };
-  dynamicForm.set('members', updated);
+function moveMemberUp(index: number) {
+  if (index > 0) members.move(index, index - 1);
 }
 
-// Submit
 async function submitTeam() {
-  const result = await dynamicForm.submit(async (values) => {
+  const result = await form.submit(async (values) => {
     const response = await fetch('/api/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,21 +52,18 @@ async function submitTeam() {
     return response.json();
   });
 
-  if (!result.ok) {
-    return;
-  }
+  if (!result.ok) return;
 }
 ```
 
-
 ### Pitfalls
 
-- Calling `removeField(name)` before reading the field value discards its data. Read the current value first if you need to process it before removal.
-- Generating field names from array indices (`phone_0`, `phone_1`) causes stale validation state when items are reordered. Use stable IDs (e.g., UUIDs) as field keys instead.
-- After `addField()`, the new field's `touched` state is `false`. Validators still run on submit for all fields, including ones the user has never touched — this is intentional but may show errors on fields the user has not seen yet.
+- Array items are stored as a whole array — `form.set('members', newArray)` or `form.array('members').remove(i)`. Do not register validators on array-item dot-path keys like `members.0.email`; register them on the parent key `members` instead.
+- `members.remove(i)` shifts all subsequent indices — if you hold a cached validator or connection for index `i`, refresh it after removal.
+- After `members.append(...)`, the new item's `touched` state is `false`. Validators still run on submit for all fields, including ones the user has never touched.
 
 ### Related
 
-- [Best Practices](./best-practices.md)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
 - [Form with Conditional Fields](./form-with-conditional-fields.md)
+- [Contact Form with File Upload](./contact-form-with-file-upload.md)
+- [Multi-Step Wizard](./multi-step-wizard.md)

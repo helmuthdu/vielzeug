@@ -10,7 +10,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { configure, reset, s, withMessages, withMessagesAsync } from '../index';
+import { configure, reset, s, withMessages } from '../index';
 
 // ---------------------------------------------------------------------------
 // Prototype mutation — relaxed ObjectSchema
@@ -220,64 +220,5 @@ describe('configure() logger option', () => {
 
     expect(spy).toHaveBeenCalledOnce();
     spy.mockRestore();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// withMessagesAsync — async boundary safety
-// ---------------------------------------------------------------------------
-
-describe('withMessagesAsync()', () => {
-  it('applies custom messages to async validators within fn', async () => {
-    const result = await withMessagesAsync({ string: { type: () => 'CUSTOM_STRING_TYPE_ERROR' } }, () =>
-      s.string().safeParseAsync(42),
-    );
-
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('CUSTOM_STRING_TYPE_ERROR');
-  });
-
-  it('restores previous messages after fn resolves', async () => {
-    await withMessagesAsync({ string: { type: () => 'SCOPED' } }, async () => {});
-
-    const result = s.string().safeParse(42);
-
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Expected string');
-  });
-
-  it('restores previous messages even when fn rejects', async () => {
-    await withMessagesAsync({ string: { type: () => 'SCOPED' } }, async () => {
-      throw new Error('oops');
-    }).catch(() => {});
-
-    const result = s.string().safeParse(42);
-
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Expected string');
-  });
-
-  it('respects nested withMessages calls', async () => {
-    let innerMessage = '';
-
-    await withMessagesAsync({ number: { type: () => 'OUTER' } }, async () => {
-      withMessages({ number: { type: () => 'INNER' } }, () => {
-        const r = s.number().safeParse('x');
-
-        if (!r.success) innerMessage = r.error.issues[0]!.message;
-      });
-    });
-
-    expect(innerMessage).toBe('INNER');
-
-    // After both scopes are done, back to default
-    const result = s.number().safeParse('x');
-
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Expected number');
   });
 });

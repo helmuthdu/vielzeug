@@ -1,4 +1,4 @@
-import type { AnySchema, InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -185,12 +185,37 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
   }
 
+  /**
+   * Alias for the default strict mode — rejects unknown keys.
+   * Useful after calling `.relaxed()` to return a new strict schema.
+   */
+  strict(): ObjectSchema<T> {
+    return this._rebuildWith(this.shape, false) as unknown as ObjectSchema<T>;
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    const fields: Record<string, SchemaDescriptor> = {};
+
+    for (const [key, schema] of Object.entries(this.shape)) {
+      fields[key] = schema.describe();
+    }
+
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      fields,
+      kind: 'object',
+      strict: !this._isRelaxed,
+    };
+  }
+
   protected override _toSchemaBase(): Record<string, unknown> {
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
 
     for (const [key, schema] of Object.entries(this.shape)) {
-      properties[key] = schema.schema();
+      properties[key] = schema.toJsonSchema();
 
       if (!schema.isOptional) required.push(key);
     }

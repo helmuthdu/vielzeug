@@ -9,6 +9,10 @@ export type ExchangeRate = {
   to: string; // Target currency code
 };
 
+/** Precision factor used to convert a floating-point rate to a bigint. 10^10 gives 10 decimal digits. */
+const RATE_PRECISION = 10_000_000_000n;
+const RATE_PRECISION_NUMBER = Number(RATE_PRECISION);
+
 /**
  * Converts money from one currency to another using the provided exchange rate.
  * Maintains precision by using bigint arithmetic.
@@ -32,10 +36,8 @@ export function exchange(money: Money, rate: ExchangeRate): Money {
     throw new Error(`Currency mismatch: expected ${rate.from}, got ${money.currency}`);
   }
 
-  // Convert rate to avoid floating point issues
-  // Multiply by 1000000 for precision, then divide back
-  const rateBigInt = BigInt(Math.round(rate.rate * 1000000));
-  const convertedAmount = (money.amount * rateBigInt) / 1000000n;
+  const rateBigInt = BigInt(Math.round(rate.rate * RATE_PRECISION_NUMBER));
+  const convertedAmount = (money.amount * rateBigInt) / RATE_PRECISION;
 
   return {
     amount: convertedAmount,

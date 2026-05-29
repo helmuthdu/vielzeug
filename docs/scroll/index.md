@@ -5,7 +5,7 @@ package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
 related: [grip, craft, block]
-exports: [createVirtualizer, Virtualizer]
+exports: [createVirtualizer, createDomVirtualList, Virtualizer, DomVirtualListController]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -19,9 +19,9 @@ exports: [createVirtualizer, Virtualizer]
 <details>
 <summary>⚡ Quick Reference</summary>
 
-**Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** Ui Performance
+**Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
 
-**Key exports:** `createVirtualizer`, `Virtualizer`
+**Key exports:** `createVirtualizer`, `createDomVirtualList`, `Virtualizer`
 
 **When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
 
@@ -155,15 +155,11 @@ const virt = createVirtualizer(scrollEl, {
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-### Prerequisites
+Requires a browser DOM environment with a fixed-height scroll container (`overflow: auto`) and a positioned inner list element. Items must be positioned absolutely from virtual item offsets.
 
-- Browser DOM environment with scroll container measurement.
-- A fixed-height scroll container with `overflow: auto` and a positioned inner list layer.
-- Item renderer that applies absolute positioning from virtual item offsets.
+## How It Works
 
-### How It Works
-
-Scroll maintains a `Float64Array` prefix-sum of item offsets. On every scroll event it runs two binary searches — one for the first visible index, one for the last — to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
+Scroll maintains a prefix-sum offset array. On every scroll event it runs two binary searches — one for the first visible index, one for the last — to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
 
 ```text
 Items:    [0]  [1]  [2]  [3]  [4]  [5]  [6]  ...
@@ -183,8 +179,8 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 
 ## See Also
 
-- [Block](/block/)
-- [Craft](/craft/)
-- [Grip](/grip/)
+- [Block](/block/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
+- [Craft](/craft/) — web-component authoring layer; use with Scroll to build virtualizing custom elements
+- [Grip](/grip/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

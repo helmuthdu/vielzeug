@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — Web Component with craft'
-description: 'Web Component with craft examples for grip.'
+description: 'Web component with Craft example for @vielzeug/grip.'
 ---
 
 ## Web Component with craft
@@ -48,9 +48,9 @@ define('my-dropzone', (props) => {
 
 ### Pitfalls
 
-- `makeSortable()` must be called after the element is connected to the DOM — inside `onMounted`, not the constructor. The scroll container does not exist before connection.
-- Each Craft component instance needs its own sortable instance. Sharing one across instances causes them to manipulate each other's DOM.
-- Return the sortable's `dispose` from `onMounted` so Craft calls it in `disconnectedCallback` automatically.
+- `createSortable()` and `createDropZone()` must be called after the element is connected to the DOM — inside `mount()`, not during component definition. The container element does not exist before connection.
+- Each component instance needs its own `createSortable()` / `createDropZone()` instance. Sharing one across instances causes them to manipulate each other's DOM.
+- Call `onCleanup(() => sortable.destroy())` (or `zone.destroy()`) inside `mount()` so the listener is removed when the component disconnects.
 
 ### Related
 - [With Craft Component (Orbit)](@vielzeug/orbit/examples/with-craft-component)

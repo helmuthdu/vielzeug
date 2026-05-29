@@ -32,8 +32,7 @@ function ensureController() {
 
   controller = createDomVirtualList<Option>({
     estimateSize: 36,
-    getListElement: () => document.querySelector<HTMLElement>('[role="listbox"]'),
-    getScrollElement: () => document.querySelector<HTMLElement>('.dropdown'),
+    listElement: document.querySelector<HTMLElement>('[role="listbox"]')!,
     overscan: { start: 4, end: 4 },
     render: ({ items, listEl, virtualItems }) => {
       listEl.replaceChildren();
@@ -54,6 +53,7 @@ function ensureController() {
         listEl.appendChild(row);
       }
     },
+    scrollElement: document.querySelector<HTMLElement>('.dropdown')!,
   });
 
   return controller;
@@ -82,6 +82,12 @@ function destroyCombobox() {
 ```
 
 ---
+
+### Pitfalls
+
+- Calling `setActive(true)` before `setItems()` on an empty list is a no-op — the virtualizer only spawns when there are items. Always call `setItems` before opening the dropdown.
+- Holding a stale `controller` reference after `destroyCombobox()` and then calling `setItems()` or `setTarget()` on it is a no-op because the controller guards against post-destroy calls. Re-create the controller instead.
+- Lazy-initializing the controller inside `ensureController()` every time the dropdown opens means the reference held by click handlers can become stale if `destroy()` is called mid-session. Use a module-level variable and check for `null` before each call.
 
 ### Related
 

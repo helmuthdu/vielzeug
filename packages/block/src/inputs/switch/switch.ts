@@ -5,10 +5,10 @@ import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
 import { SWITCH_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './switch.css?inline';
 
 export type BitSwitchEvents = {

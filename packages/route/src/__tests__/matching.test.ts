@@ -2,7 +2,7 @@
  * Route matching — URL pattern semantics and route table compilation.
  * Tests run through the router to validate end-to-end matching behaviour.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('path patterns', () => {
@@ -168,7 +168,7 @@ describe('route table', () => {
 
     await settle();
 
-    expect(router.state.matches.at(-1)?.meta).toEqual({ title: 'Page' });
+    expect(router.getSnapshot().matches.at(-1)?.meta).toEqual({ title: 'Page' });
     router.dispose();
   });
 
@@ -181,7 +181,7 @@ describe('route table', () => {
 
     await settle();
 
-    expect(router.state.matches.at(-1)?.component).toBe(pageComponent);
+    expect(router.getSnapshot().matches.at(-1)?.component).toBe(pageComponent);
     router.dispose();
   });
 

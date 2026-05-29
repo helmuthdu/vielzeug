@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Module Logger Pattern'
-description: 'Module Logger Pattern examples for rune.'
+description: 'Module Logger Pattern example for @vielzeug/rune.'
 ---
 
 ## Module Logger Pattern
@@ -10,6 +10,8 @@ description: 'Module Logger Pattern examples for rune.'
 Log entries from different modules are mixed in the output, making it hard to filter by origin. Each module should create its own logger with a fixed namespace so entries can be filtered without additional context.
 
 ### Solution
+
+Use `Rune.scope(name)` to create a fixed-namespace logger for each module and export it as a named constant.
 
 ```ts
 import { Rune } from '@vielzeug/rune';
@@ -36,3 +38,4 @@ log.auth.warn('token expiring');
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Production Setup](./production-setup.md)
 - [React Integration](./react-integration.md)
+- [Request Middleware (Courier)](/courier/examples/request-middleware)

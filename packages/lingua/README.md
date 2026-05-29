@@ -58,13 +58,20 @@ const i18n = createI18n({
   },
 });
 
-await i18n.preload('de');
 await i18n.setLocale('de');
 
 i18n.t('greeting', { name: 'Alice' });
 i18n.tp('inbox', 3);
 
-const fmt = createFormatter(i18n);
+// Scope reduces key repetition inside a namespace
+const nav = i18n.scope('nav');
+nav.t('home'); // resolves 'nav.home'
+
+// Merge route-specific keys on top of the base catalog
+await i18n.merge('en', () => import('./routes/settings.i18n.json').then((m) => m.default));
+
+// Formatter bound to the current locale — follows locale changes automatically
+const fmt = createFormatter(() => i18n.locale);
 fmt.currency(19.99, 'EUR');
 ```
 

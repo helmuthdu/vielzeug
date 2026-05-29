@@ -30,7 +30,6 @@ packages/<name>/
 
 ```
 @vielzeug/block  → @vielzeug/craft → @vielzeug/ripple, @vielzeug/orbit
-@vielzeug/deposit  → @vielzeug/rune, @vielzeug/toolkit
 @vielzeug/courier  → @vielzeug/toolkit
 @vielzeug/permit   → @vielzeug/rune
 ```

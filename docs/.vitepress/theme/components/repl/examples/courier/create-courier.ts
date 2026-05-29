@@ -1,4 +1,42 @@
 export const createCourierExample = {
-  code: "import { createCourier } from '/courier'\n\n// Single shared transport — interceptors apply to both api and stream\nconst client = createCourier({\n  baseUrl: 'https://jsonplaceholder.typicode.com',\n  timeout: 8000,\n  query: { staleTime: 10_000, gcTime: 300_000 },\n})\n\n// Shared interceptor: logs every request (REST + SSE)\nclient.use(async (ctx, next) => {\n  console.log('→', ctx.url)\n  const res = await next(ctx)\n  console.log('←', ctx.url, res.status)\n  return res\n})\n\n// REST via client.api\nconst post = await client.api.get('/posts/1')\nconsole.log('Post:', post.title)\n\n// Cached query via client.query\nconst user = await client.query.fetch({\n  key: ['users', 1],\n  fn: ({ signal }) => client.api.get('/users/1', { signal }),\n})\nconsole.log('User:', user?.name)\n\n// Mutation via client.mutation\nconst createPost = client.mutation(\n  (input, signal) => client.api.post('/posts', { body: input, signal }),\n  {\n    onSuccess: (data) => console.log('Created id:', data.id),\n  }\n)\n\nawait createPost.mutate({ title: 'Hello from createCourier' })\n\n// Global header update (applies to both api and stream)\nclient.headers({ authorization: 'Bearer refreshed-token' })\nconsole.log('✓ Token updated globally')\n\nclient.dispose()",
+  code: `import { createCourier, withBearerAuth, withLogging } from '/courier'
+
+// Single shared transport — interceptors, headers, and timeout apply to both api and stream
+const client = createCourier({
+  baseUrl: 'https://jsonplaceholder.typicode.com',
+  timeout: 8000,
+  query: { staleTime: 10_000, gcTime: 300_000 },
+})
+
+// Built-in interceptor presets (applied to every REST + SSE request)
+client.use(withBearerAuth('my-token'))
+client.use(withLogging())
+
+// REST via client.api
+const post = await client.api.get('/posts/1')
+console.log('Post:', post.title)
+
+// Cached query via client.query
+const user = await client.query.fetch({
+  key: ['users', 1],
+  fn: ({ signal }) => client.api.get('/users/1', { signal }),
+})
+console.log('User:', user?.name)
+
+// Mutation via client.mutation (inherits mutationDefaults from createCourier)
+const createPost = client.mutation(
+  (input, signal) => client.api.post('/posts', { body: input, signal }),
+  {
+    onSuccess: (data) => console.log('Created id:', data.id),
+  }
+)
+
+await createPost.mutate({ title: 'Hello from createCourier' })
+
+// Update shared headers at runtime (applies to both api and stream)
+client.headers({ 'x-tenant': 'acme' })
+console.log('✓ Shared header added')
+
+client.dispose()`,
   name: 'createCourier - Unified Client',
 };

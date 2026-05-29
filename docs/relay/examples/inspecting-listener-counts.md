@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Inspecting listener counts'
-description: 'Inspecting listener counts examples for relay.'
+description: 'Inspecting listener counts example for @vielzeug/relay.'
 ---
 
 ## Inspecting listener counts

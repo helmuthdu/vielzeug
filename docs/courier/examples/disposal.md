@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Disposal'
-description: 'Disposal examples for courier.'
+description: 'Disposal example for @vielzeug/courier.'
 ---
 
 ## Disposal
@@ -10,6 +10,8 @@ description: 'Disposal examples for courier.'
 A component starts an HTTP request and is unmounted before the response arrives. Continuing to update state on a destroyed component produces warnings or errors — you need to cancel in-flight requests on teardown.
 
 ### Solution
+
+Use the `signal` from `QueryFnContext` or pass a controller signal to `mutate()`, and call `cancelAll()` or `dispose()` on teardown to abort in-flight requests.
 
 ```ts
 const api = createApi({ baseUrl: 'https://api.example.com' });

@@ -17,15 +17,26 @@ export type SetOptions = {
   touched?: boolean;
 };
 
-/** Generic form state snapshot. `TValues` types the `dirtyFields` array as typed dot-notation keys. */
 export type FormState = {
   errors: Readonly<Record<string, string>>;
   isDirty: boolean;
+  /** `true` while an async `defaultValues` factory is resolving. */
+  isLoading: boolean;
   isSubmitting: boolean;
   isTouched: boolean;
   isValid: boolean;
   isValidating: boolean;
   submitCount: number;
+  /**
+   * Field names that are currently touched, as full dot-notation paths.
+   * On a scoped form these are still full paths (e.g. `"address.city"`, not `"city"`).
+   * Prefer calling `scopedForm.validate()` rather than passing `state.touchedFields`
+   * directly to `scopedForm.validateFields()` — the latter expects relative paths and
+   * double-prefixing an already-prefixed key targets a non-existent field.
+   *
+   * On a root form: `form.validateFields([...state.touchedFields])` works as expected.
+   */
+  touchedFields: readonly string[];
   /** Field names that currently have an active async validation run. Useful for per-field loading indicators. */
   validatingFields: readonly string[];
 };
@@ -35,10 +46,9 @@ export type SubscribeOptions = {
   sync?: boolean;
 };
 
-/** Shared field used for root-level / form-level validation errors. */
+/** Shared field key for root-level / form-level validation errors. */
 export const FORM_ERROR = '_form' as const;
 
-/** The result returned by `form.validateAll()`, `form.validateTouched()`, and `form.validateFields(...)`. */
 export type ValidateResult = {
   errors: Readonly<Record<string, string>>;
   valid: boolean;
@@ -50,10 +60,12 @@ export type SubmitResult<TResult = void> =
 
 /* -------------------- Utility Types -------------------- */
 
+// Internal — not re-exported from index.ts. TypeScript inlines this in generated declarations.
+type DeepPartial<T> = T extends Record<string, unknown> ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+
 /**
  * Recursively extracts all dot-notation leaf keys from a values shape.
- * Depth-limited to 5: TypeScript compilation time grows non-linearly beyond this point,
- * and most real form schemas don't exceed 3–4 levels. Falls back to `string` beyond the limit.
+ * Depth-limited to 5: TypeScript compilation time grows non-linearly beyond this point.
  */
 export type FlatKeyOf<
   T extends Record<string, unknown>,
@@ -84,30 +96,53 @@ export type TypeAtPath<T, K extends string> = K extends `${infer Head}.${infer T
     ? T[K]
     : unknown;
 
-/**
- * Recursively makes all properties of T optional, including nested objects.
- * Useful for partial server response merges via `form.patch()`.
- */
-export type DeepPartial<T> = T extends Record<string, unknown> ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
-
-/** Field error keys include field paths plus reserved `_form` for root-level/form-level issues. */
+/** Field error keys include field paths plus the reserved `_form` key for root-level issues. */
 export type ErrorKeyOf<TValues extends Record<string, unknown>> = FlatKeyOf<TValues> | typeof FORM_ERROR;
 
-/** Structural interface for Zod/Valibot/Standard-Schema-compatible schemas. */
+/**
+ * Structural interface for safeParse-compatible schemas.
+ * Works with `@vielzeug/sieve`, Zod, Valibot, and any Standard Schema compliant library.
+ */
 export type SafeParseSchema = {
   safeParse(
     data: unknown,
   ): { success: true } | { error: { issues: { message: string; path: (string | number)[] }[] }; success: false };
 };
 
-/** The object returned by `form.wire()`. Getters are live — they always read current form state. */
-export type WireResult<V = unknown> = {
+/** The type of values accessible at a scoped sub-form prefix. */
+export type ScopedValues<TValues, P extends string> =
+  TypeAtPath<TValues, P> extends Record<string, unknown>
+    ? TypeAtPath<TValues, P> & Record<string, unknown>
+    : Record<string, unknown>;
+
+/**
+ * The live connection object returned by `form.connect()`.
+ * Getters re-evaluate on every property access — store the object once per field, do not destructure.
+ */
+export type ConnectionResult<V = unknown> = {
   readonly dirty: boolean;
   readonly error: string | undefined;
   onBlur(): void;
   onChange(value: V): void;
   readonly touched: boolean;
   readonly value: V;
+};
+
+/** Per-field or global validation trigger configuration. */
+export type ConnectOptions = {
+  /**
+   * Debounce auto-triggered validation by this many milliseconds.
+   * Useful for async validators on `onChange` to avoid a request per keystroke. Default: 0.
+   */
+  debounce?: number;
+  /** Auto-mark the field as touched when it loses focus. Default: **true**. */
+  touchOnBlur?: boolean;
+  /** Validate the field automatically when it loses focus. Default: false. */
+  validateOnBlur?: boolean;
+  /** Validate the field automatically after each value change. Default: false. */
+  validateOnChange?: boolean;
+  /** Validate on change only after the field has been touched at least once. */
+  validateOnTouch?: boolean;
 };
 
 export type ArrayField = {
@@ -128,54 +163,58 @@ export type FieldState<V = unknown> = {
 };
 
 export type FormOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  defaultValues?: TValues;
   /**
-   * Default wire behavior applied when `wire(name, config)` omits specific options.
+   * Default connect behavior applied when `connect(name, config)` omits specific options.
    * Use `ValidationModes` presets for common strategies:
    * - `ValidationModes.onSubmit` (default) — validates only on submit
    * - `ValidationModes.onBlur` — validates each field on blur
    * - `ValidationModes.onChange` — validates each field on every change
    * - `ValidationModes.onTouched` — validates on blur first, then on every change once touched
    */
-  validate?: WireConfig;
-  /** Form-level validator. Use `schemaValidator(schema)` to adapt a safeParse-compatible schema. */
-  validator?: FormValidator<TValues>;
+  connect?: ConnectOptions;
+  /**
+   * Initial form values. May be a static object or an async factory function.
+   * While a factory is pending, `form.state.isLoading` is `true` and the form is read-only.
+   */
+  defaultValues?: TValues | (() => Promise<TValues>);
+  /**
+   * Form-level validator. Accepts either:
+   * - A `FormValidator` function
+   * - Any `safeParse`-compatible schema (auto-detected, works with `@vielzeug/sieve`, Zod, Valibot)
+   *
+   * Use `schemaValidator(schema)` explicitly when you need custom error mapping.
+   */
+  validator?: FormValidator<TValues> | SafeParseSchema;
   /** Field-level validators keyed by field name or dot-notation path. */
   validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
 };
 
-export type WireConfig = {
-  /**
-   * Debounce auto-triggered validation by this many milliseconds.
-   * Useful for async validators on `onChange` to avoid a request per keystroke. Default: 0.
-   */
-  debounce?: number;
-  touchOnBlur?: boolean;
-  /** Validate the field automatically when it loses focus. Default: false. */
-  validateOnBlur?: boolean;
-  /** Validate the field automatically after each value change. Default: false. */
-  validateOnChange?: boolean;
-  /** Validate on change only after the field has been touched at least once. */
-  validateOnTouch?: boolean;
-};
-
-/** Named presets for common validation trigger strategies. Pass to `createForm({ validate: ValidationModes.onBlur })`. */
+/** Named presets for common validation trigger strategies. Pass to `createForm({ connect: ValidationModes.onBlur })`. */
 export const ValidationModes = {
   onBlur: { touchOnBlur: true, validateOnBlur: true },
   onChange: { touchOnBlur: true, validateOnChange: true },
   onSubmit: { touchOnBlur: true },
   onTouched: { touchOnBlur: true, validateOnBlur: true, validateOnTouch: true },
-} as const satisfies Record<string, WireConfig>;
+} as const satisfies Record<string, ConnectOptions>;
 
 export interface Form<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  /** Returns a cached `ArrayField` helper for mutating array-valued fields. */
   array(name: FlatKeyOf<TValues>): ArrayField;
   batch(fn: () => void): void;
   /** Clear a single field error. No-op if the field has no error. */
   clearError(name: ErrorKeyOf<TValues>): void;
+  /**
+   * Returns a live connection object for a field (DOM event handlers + live getters).
+   * Call once per field and store the result — each call creates a new object.
+   * Do not destructure: getters re-evaluate on every property access.
+   */
+  connect<K extends FlatKeyOf<TValues>>(name: K, config?: ConnectOptions): ConnectionResult<TypeAtPath<TValues, K>>;
   dispose(): void;
   readonly disposed: boolean;
   field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>;
   get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>;
+  /** `true` while an async `defaultValues` factory is resolving. Mirrors `state.isLoading`. */
+  readonly isLoading: boolean;
   /**
    * Merge a partial server response into the form: updates both the store and the baseline
    * for each provided field, marking them clean. Fields not included in `partial` are untouched.
@@ -190,6 +229,21 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   resetField(name: FlatKeyOf<TValues>): void;
   /** Replace the entire error map. Use `undefined` values to omit entries. */
   resetErrors(errors?: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void;
+  /**
+   * Returns a scoped sub-form whose field paths are relative to `prefix`.
+   * `scopedForm.get('city')` is equivalent to `form.get('${prefix}.city')`.
+   * The scoped form shares state and lifecycle with the parent — `dispose()` on a scoped
+   * form is a no-op; call `parentForm.dispose()` to tear down the whole form.
+   *
+   * **Call once and store the result.** Each call creates a new object; calling it inside a
+   * reactive render function or computed property will produce stale subscription closures.
+   *
+   * **`state` is shared**: `scopedForm.state` returns the full form state. `state.errors`,
+   * `state.isValid`, `state.touchedFields`, and `state.isDirty` reflect the entire form,
+   * not just the scoped fields. Use `scopedForm.validate()` or `scopedForm.submit()` for
+   * scoped validity checks — these correctly isolate results to the prefix.
+   */
+  scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>>;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
   /** Set a field error. */
   setError(name: ErrorKeyOf<TValues>, message: string): void;
@@ -214,19 +268,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   untouch(name: FlatKeyOf<TValues>): void;
   /** Mark all fields as untouched. */
   untouchAll(): void;
-  /** Validate all registered field validators and the optional form validator. */
-  validateAll(signal?: AbortSignal): Promise<ValidateResult>;
-  /** Validate a single field validator. Does not run the form-level validator. */
-  validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
-  /** Validate provided field validators only. Does not run the form-level validator. */
-  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
-  /** Validate touched field validators only. Does not run the form-level validator. */
-  validateTouched(signal?: AbortSignal): Promise<ValidateResult>;
-  values(): TValues;
   /**
-   * Returns a live wire object for a field (handlers + live getters).
-   * @note Vanilla-JS helper — not reactive in component frameworks. Call once per field and store
-   * the result; each call creates a new object with new closure references.
+   * Validate all registered field validators and the optional form validator. Clears all errors first.
+   *
+   * **On a scoped form** (returned by `scope()`): validates only the fields within the scope
+   * and does _not_ run the form-level validator. Errors and `valid` reflect only scoped fields;
+   * pre-existing errors on sibling or parent fields are not included.
    */
-  wire<K extends FlatKeyOf<TValues>>(name: K, config?: WireConfig): WireResult<TypeAtPath<TValues, K>>;
+  validate(signal?: AbortSignal): Promise<ValidateResult>;
+  /** Validate a single field. Preserves other fields' errors. Does not run the form-level validator. */
+  validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
+  /** Validate specific fields. Preserves other fields' errors. Does not run the form-level validator. */
+  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
+  values(): TValues;
 }

@@ -3,7 +3,7 @@ import { type ReadonlySignal, effect, signal } from '@vielzeug/ripple';
 import { devAssert, HeadlessError } from './dev';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import {
-  type OverlayCloseReason,
+  type DialogCloseReason,
   type OverlayOpenReason,
   type OverlayPositioner,
   createOverlayControl,
@@ -66,7 +66,7 @@ export type OptionListOptions<T extends BaseOptionItem> = {
    */
   manageAriaExpanded?: boolean;
   // ── Events ──────────────────────────────────────────────────────────────────
-  onClose?: (reason: OverlayCloseReason) => void;
+  onClose?: (reason: DialogCloseReason) => void;
   onNavigate?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
   onOpen?: (reason: OverlayOpenReason) => void;
   /**
@@ -91,7 +91,7 @@ export type OptionListOptions<T extends BaseOptionItem> = {
 
 export type OptionListHandle<T extends BaseOptionItem> = {
   cleanup(): void;
-  close(reason?: OverlayCloseReason): void;
+  close(reason?: DialogCloseReason): void;
   first(): void;
   /**
    * Focused item index (read-only). Write via `set(index)` to update through
@@ -116,7 +116,7 @@ export type OptionListHandle<T extends BaseOptionItem> = {
    * - Opens with `openReason` (default `'click'`).
    * - Closes with `closeReason` (default `'trigger'`).
    */
-  toggle(openReason?: OverlayOpenReason, closeReason?: OverlayCloseReason): void;
+  toggle(openReason?: OverlayOpenReason, closeReason?: DialogCloseReason): void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────────────

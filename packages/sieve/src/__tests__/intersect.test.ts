@@ -53,8 +53,8 @@ describe('s.intersect()', () => {
 
 describe('s.intersect() — async', () => {
   it('runs async refinements on all branches', async () => {
-    const a = s.string().check(async (s) => s.length >= 3 || 'Too short');
-    const b = s.string().check(async (s) => s.length <= 10 || 'Too long');
+    const a = s.string().checkAsync(async (s) => s.length >= 3 || 'Too short');
+    const b = s.string().checkAsync(async (s) => s.length <= 10 || 'Too long');
     const schema = s.intersect(a, b);
 
     expect(await schema.parseAsync('hello')).toBe('hello');

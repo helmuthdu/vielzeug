@@ -3,9 +3,9 @@ title: Ripple — Reactive signals and state management
 description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope]
+keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens]
 related: [craft, forge, relay]
-exports: [signal, computed, effect, watch, batch, store, untrack, scope, writable, derived, isSignal]
+exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, scope, onCleanup, readonly, isSignal, isComputed, isStore]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [signal, computed, effect, watch, batch, store, untrack, scope, writabl
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `watch`, `batch`, `store`, `untrack`, `scope`, `writable`, `derived`, `isSignal`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `watch`, `batch`, `store`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
@@ -57,13 +57,11 @@ yarn add @vielzeug/ripple
 
 ## Quick Start
 
-### Signals API
-
 ```ts
 import { signal, computed, effect, watch, batch } from '@vielzeug/ripple';
 
 const count = signal(0);
-const doubled = computed(() => count.value * 2);
+const doubled = count.map((n) => n * 2);     // returns ComputedSignal<number>
 
 // Side-effect: runs immediately and re-runs on change
 const sub = effect(() => {
@@ -79,53 +77,44 @@ const stopWatch = watch(count, (next, prev) => {
 
 batch(() => {
   count.value = 10;
-  count.value = 20; // only one notification
+  count.value = 20; // one notification fires with the final value
 });
 
-sub.dispose(); // dispose effect
-stopWatch.dispose(); // unsubscribe watch
-doubled.dispose(); // dispose computed
+sub.dispose();
+stopWatch.dispose();
+doubled.dispose();
 ```
 
-### Stores API
-
 ```ts
-import { store, watch, batch, computed } from '@vielzeug/ripple';
+import { store, watch, batch } from '@vielzeug/ripple';
 
-const counter = store({ count: 0 });
+const counter = store({ count: 0, label: 'counter' });
 
 // Read
 console.log(counter.value.count); // 0
 
-// Watch all changes
-const stopWatch = watch(counter, (curr, prev) => {
-  console.log(`${prev.count} → ${curr.count}`);
+// Watch a typed lens — only fires when that path changes
+const countLens = counter.lens('count');      // Signal<number>
+const stopWatch = watch(countLens, (next, prev) => {
+  console.log('count:', prev, '→', next);
 });
 
-// Watch a selected slice — use computed() for a derived slice
-const countSignal = computed(() => counter.value.count);
-watch(countSignal, (count, prev) => {
-  console.log('count:', prev, '→', count);
-});
+// Derived slice via combinator
+const label = counter.map((s) => s.label);   // ComputedSignal<string>
 
-// Partial patch
-counter.patch({ count: 1 });
-
-// Updater function
+// Mutations
+counter.patch({ count: 1 });                 // shallow merge
 counter.update((s) => ({ ...s, count: s.count + 1 }));
+countLens.value = 10;                        // write directly through the lens
 
-// Batch: one notification for all writes
 batch(() => {
-  counter.patch({ count: 10 });
-  counter.update((s) => ({ ...s, count: s.count + 1 }));
+  counter.patch({ count: 5 });
+  counter.patch({ label: 'done' });
 });
 
-// Reset to original initial state
 counter.reset();
-
-// Clean up
 stopWatch.dispose();
-countSignal.dispose();
+label.dispose();
 ```
 
 ## Why Ripple?
@@ -162,38 +151,26 @@ count.value = 1; // notifies automatically
 
 ## Features
 
-### Signals
-
 - **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; use `untrack(fn)` for non-subscribing reads
-- **`computed(fn, options?)`** — lazy derived signal; glitch-free: effects always observe a consistent snapshot; call `.dispose()` to stop tracking
-- **`effect(fn)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
+- **`computed(fn, options?)`** — lazy derived signal; glitch-free; call `.dispose()` to stop tracking
+- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; options: `scheduler`, `maxIterations`, `name`, `trace`
+- **`effectAsync(fn, options?)`** — async side-effect with an `AbortSignal` that fires on re-run or dispose
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
-- **`batch(fn)`** — flush all notifications once after bulk updates
+- **`batch(fn, options?)`** — flush all notifications once after bulk updates; `maxIterations` option for loop guard
 - **`untrack(fn)`** — read signals inside an effect without creating subscriptions
 - **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
-- **`scope()`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release everything with `scope.dispose()`
-- **`isSignal(v)`** — type guard
-
-### Stores
-
-- **`store(init)`** — structured reactive object container
+- **`scope()`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
+- **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level
+- **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
+- **`.map<U>(fn, options?)`** — combinator on all signal types; creates a derived `ComputedSignal<U>`
+- **`.filter(predicate)`** — combinator on all signal types; creates a `ComputedSignal<T | undefined>` via a predicate
+- **`store(init, options?)`** — structured reactive object container
 - **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
-- **`.update(fn)`** — derive next state from current via an updater function
+- **`.update(fn)`** — derive next state from current; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
-- **Zero dependencies** — no supply chain risk; < 2 kB gzipped
-
-### Ergonomics
-
-- **`Subscription`** — all dispose handles support `.dispose()`, direct call `()`, and `[Symbol.dispose]` (`using` declarations)
-- **`Scope`** — all scope handles support `.dispose()` and `[Symbol.dispose]` (`using` declarations)
-- **Built-in loop guard** — internal protection against infinite reactive loops (100 iterations)
-
-### Reliability & Type Safety
-
-- **Strict signal detection** — `isSignal()` uses an internal symbol marker, not duck-typing
+- **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
-- **Consistent error handling** — all errors prefixed with `[ripple]` and aggregated when multiple occur
-- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations)
+- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
 ## Compatibility
@@ -213,8 +190,8 @@ count.value = 1; // notifies automatically
 
 ## See Also
 
-- [Route](/route/)
-- [Forge](/forge/)
-- [Relay](/relay/)
+- [Craft](/craft/) — web-component authoring framework built on ripple; owns `memo` and `syncedSignal`
+- [Forge](/forge/) — typed form state that uses signals for field reactivity and submission tracking
+- [Relay](/relay/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -1,349 +1,106 @@
 import type { RouteBranchDef, RouteRecord } from './router-internal';
 import type {
   BeforeLeaveBlocker,
+  DataFn,
+  HandlerContext,
   HistoryDriver,
   IsActiveOptions,
-  Middleware,
   NavigateOptions,
   NamedNavigationTarget,
-  NavigationStatus,
-  NavigationTarget,
-  PathParams,
   QueryParams,
   RawNavigationTarget,
-  DataFn,
-  RouterErrorContext,
+  ResolvedQueryParams,
   RouteContext,
-  RouteDefinition,
   RouteHandler,
   RouteLocation,
-  RouteMatch,
   RouteMatchBranch,
   RouteName,
   RouteParams,
   RoutePathByName,
   RouteState,
   RouteTable,
+  RouterErrorContext,
   RouterOptions,
   Unsubscribe,
 } from './types';
 
+import { compileRoutes } from './compile';
+import { createBrowserHistory } from './history';
+import { buildUrl, joinPaths, matchRouteFor, matchesPrefix, normalizePath, parseQuery } from './path';
 import {
-  buildUrl,
-  compilePathMatcher,
-  joinPaths,
-  matchRouteFor,
-  matchesPrefix,
-  normalizePath,
-  parseQuery,
-} from './path';
+  buildMatchBranch,
+  buildPreloadKey,
+  createRouteContext,
+  createRouteState,
+  executeMiddlewarePipeline,
+  getRouteByName,
+  readLocation,
+  reportError,
+  resolveTarget,
+  stripBase,
+} from './resolve';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Internal types ───────────────────────────────────────────────────────────
 
-function getRouteByName<TRoutes extends RouteTable>(
-  name: string,
-  routesByName: ReadonlyMap<string, RouteRecord<TRoutes>>,
-): RouteRecord<TRoutes> {
-  const route = routesByName.get(name);
+/** Lazy-resolved values stored per branchDef index (avoids mutating compiled records). */
+type HydrationOverride<TMeta, TComponent> = {
+  component?: TComponent;
+  dataFn?: DataFn;
+  handler?: RouteHandler;
+  meta?: TMeta;
+};
 
-  if (route) return route;
+type HydrationState<TMeta, TComponent> = {
+  done: boolean;
+  overrides: Map<number, HydrationOverride<TMeta, TComponent>>;
+  work?: Promise<void>;
+};
 
-  const available = [...routesByName.keys()].join(', ');
-
-  throw new Error(
-    available
-      ? `[route] Unknown route name: ${name}. Available routes: ${available}`
-      : `[route] Unknown route name: ${name}`,
-  );
-}
-
-function createRouteState(input: {
-  error?: unknown;
-  location: RouteLocation;
-  matches: RouteMatchBranch;
-  status: NavigationStatus;
-}): RouteState {
-  const state: RouteState = {
-    ...(input.error !== undefined ? { error: input.error } : {}),
-    location: {
-      hash: input.location.hash,
-      historyState: input.location.historyState,
-      pathname: input.location.pathname,
-      query: input.location.query,
-    },
-    matches: [...input.matches],
-    status: input.status,
-  };
-
-  return state;
-}
-
-function buildMatchBranch(
-  branchDefs: readonly RouteBranchDef[],
-  params: RouteParams,
-  pathname: string,
-  dataResults: unknown[],
-): RouteMatchBranch {
-  return branchDefs.map(
-    (def, i): RouteMatch => ({
-      component: def.component,
-      data: dataResults[i],
-      meta: def.meta,
-      name: def.name,
-      params: { ...params },
-      pathname,
-    }),
-  );
-}
-
-function resolveTarget<TRoutes extends RouteTable>(
-  target: NavigationTarget,
-  routesByName: ReadonlyMap<string, RouteRecord<TRoutes>>,
-): string {
-  if ('path' in target) return target.path;
-
-  const route = getRouteByName(target.name, routesByName);
-  const path = buildUrl('/', route.path, target.params, target.query);
-
-  return target.hash ? `${path}#${target.hash}` : path;
-}
-
-function stripBase(pathname: string, base = '/'): string {
-  const normalizedPath = normalizePath(pathname);
-  const normalizedBase = normalizePath(base);
-
-  if (normalizedBase === '/') return normalizedPath;
-
-  if (normalizedPath === normalizedBase) return '/';
-
-  const prefix = `${normalizedBase}/`;
-
-  return normalizedPath.startsWith(prefix)
-    ? normalizePath(normalizedPath.slice(normalizedBase.length))
-    : normalizedPath;
-}
-
-async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
-  context: RouteContext<RouteParams, TRoutes>,
-  middleware: readonly Middleware<TRoutes>[],
-  terminal: () => Promise<void>,
-): Promise<void> {
-  async function dispatch(index: number): Promise<void> {
-    if (index < middleware.length) {
-      let called = false;
-
-      await middleware[index]!(context, async () => {
-        if (called) throw new Error('[route] next() called multiple times');
-
-        called = true;
-        await dispatch(index + 1);
-      });
-
-      return;
-    }
-
-    await terminal();
-  }
-
-  await dispatch(0);
-}
-
-function readLocation(base: string, history: HistoryDriver): RouteLocation {
-  return {
-    hash: history.location.hash.replace(/^#/, ''),
-    historyState: history.location.state,
-    pathname: stripBase(history.location.pathname || '/', base),
-    query: parseQuery(history.location.search || ''),
-  };
-}
-
-type PreparedRoute<TRoutes extends RouteTable = RouteTable> =
+type PreparedRoute<TRoutes extends RouteTable, TMeta, TComponent> =
   | {
-      branch: RouteMatchBranch;
+      branch: RouteMatchBranch<TMeta, TComponent>;
       location: RouteLocation;
       params: RouteParams;
-      record: RouteRecord<TRoutes>;
+      record: RouteRecord<TRoutes, TMeta, TComponent>;
+      resolvedQuery: ResolvedQueryParams;
       type: 'matched';
     }
   | { location: RouteLocation; params: RouteParams; type: 'unmatched' }
   | { location: RouteLocation; params: RouteParams; redirectTo: string; type: 'redirect' };
 
-type CompiledRoutes<TRoutes extends RouteTable = RouteTable> = {
-  records: readonly RouteRecord<TRoutes>[];
-  routesByName: ReadonlyMap<string, RouteRecord<TRoutes>>;
-};
+// ─── Router class ─────────────────────────────────────────────────────────────
 
-function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): CompiledRoutes<TRoutes> {
-  const globalMiddleware: Middleware<TRoutes>[] = [...(options.middleware ?? [])];
-  const records: RouteRecord<TRoutes>[] = [];
+class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> {
+  /** Maximum number of unconsumed preload results to keep in memory. */
+  static readonly #PRELOAD_MAX = 20;
 
-  const compile = (
-    name: string,
-    route: RouteDefinition,
-    ancestorPath: string,
-    ancestorBranchDefs: RouteBranchDef[],
-    ancestorMiddleware: RouteRecord<TRoutes>['middleware'],
-  ): void => {
-    if (route.index && route.path !== undefined) {
-      throw new Error(`[route] Route "${name}" cannot define both index and path`);
-    }
-
-    if (!route.index && route.path === undefined) {
-      throw new Error(`[route] Route "${name}" must define path or set index: true`);
-    }
-
-    const ownPath = route.index
-      ? ancestorPath
-      : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
-
-    const branchDefs: RouteBranchDef[] = [
-      ...ancestorBranchDefs,
-      {
-        component: route.component,
-        dataFn: route.data,
-        handler: route.handler,
-        lazy: route.lazy,
-        meta: route.meta,
-        name,
-      },
-    ];
-    const ownMiddleware: Middleware<TRoutes>[] = [
-      ...ancestorMiddleware,
-      ...((route.middleware ?? []) as unknown as Middleware<TRoutes>[]),
-    ];
-
-    if (route.children) {
-      for (const [childName, childRoute] of Object.entries(route.children)) {
-        compile(`${name}.${childName}`, childRoute, ownPath, branchDefs, ownMiddleware);
-      }
-    }
-
-    if (route.handler !== undefined || route.lazy !== undefined || route.redirect !== undefined || !route.children) {
-      const leaf = branchDefs[branchDefs.length - 1]!;
-
-      records.push({
-        branchDefs,
-        coerceSearch: route.coerceSearch,
-        hasData: branchDefs.some((def) => def.dataFn != null),
-        hasLazy: branchDefs.some((def) => def.lazy != null),
-        leaf,
-        matcher: compilePathMatcher(ownPath),
-        middleware: [...globalMiddleware, ...ownMiddleware],
-        path: ownPath,
-        redirect: route.redirect,
-      });
-    }
-  };
-
-  for (const [name, route] of Object.entries(options.routes)) {
-    compile(name, route, '/', [], []);
-  }
-
-  const namesSeen = new Set<string>();
-
-  for (const record of records) {
-    if (namesSeen.has(record.leaf.name)) {
-      throw new Error(
-        `[route] Duplicate route name: "${record.leaf.name}". A top-level route key must not coincide with a nested route's dot-notation name.`,
-      );
-    }
-
-    namesSeen.add(record.leaf.name);
-  }
-
-  return {
-    records,
-    routesByName: new Map(records.map((r) => [r.leaf.name, r])),
-  };
-}
-
-// ─── History drivers ──────────────────────────────────────────────────────────
-
-/** Creates a history driver backed by the browser History API. */
-export function createBrowserHistory(): HistoryDriver {
-  return {
-    get location() {
-      return {
-        hash: window.location.hash,
-        pathname: window.location.pathname,
-        search: window.location.search,
-        // State lives on window.history.state, not window.location.
-        state: window.history.state,
-      };
-    },
-    push(url, state) {
-      window.history.pushState(state, '', url);
-    },
-    replace(url, state) {
-      window.history.replaceState(state, '', url);
-    },
-    subscribe(listener) {
-      window.addEventListener('popstate', listener);
-
-      return () => window.removeEventListener('popstate', listener);
-    },
-  };
-}
-
-type MemoryLocation = { hash: string; pathname: string; search: string; state: unknown };
-
-/** Creates an in-memory history driver. Suitable for SSR, tests, and non-browser environments. */
-export function createMemoryHistory(initialPath = '/'): HistoryDriver {
-  const parsed = new URL(initialPath, 'http://localhost');
-  const stack: MemoryLocation[] = [
-    { hash: parsed.hash, pathname: parsed.pathname, search: parsed.search, state: null },
-  ];
-  let cursor = 0;
-  const listeners = new Set<() => void>();
-
-  return {
-    get location(): MemoryLocation {
-      return stack[cursor]!;
-    },
-    push(url, state = null) {
-      const p = new URL(url, 'http://localhost');
-
-      stack.splice(cursor + 1);
-      stack.push({ hash: p.hash, pathname: p.pathname, search: p.search, state });
-      cursor = stack.length - 1;
-      listeners.forEach((l) => l());
-    },
-    replace(url, state = null) {
-      const p = new URL(url, 'http://localhost');
-
-      stack[cursor] = { hash: p.hash, pathname: p.pathname, search: p.search, state };
-      listeners.forEach((l) => l());
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-
-      return () => listeners.delete(listener);
-    },
-  };
-}
-
-// ─── Router ───────────────────────────────────────────────────────────────────
-
-export class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #base: string;
   readonly #history: HistoryDriver;
-  readonly #records: readonly RouteRecord<TRoutes>[];
-  readonly #routesByName: ReadonlyMap<string, RouteRecord<TRoutes>>;
-  readonly #scroll?: RouterOptions['scroll'];
+  readonly #records: readonly RouteRecord<TRoutes, TMeta, TComponent>[];
+  readonly #routesByName: ReadonlyMap<string, RouteRecord<TRoutes, TMeta, TComponent>>;
+  readonly #scroll?: RouterOptions<TRoutes, TMeta, TComponent>['scroll'];
   readonly #useViewTransition: boolean;
-  readonly #onError?: RouterOptions<TRoutes>['onError'];
+  readonly #onError?: RouterOptions<TRoutes, TMeta, TComponent>['onError'];
 
+  // Mutable navigation state
   #abortController: AbortController | null = null;
   readonly #beforeLeaveBlockers = new Set<BeforeLeaveBlocker>();
-  #currentState: RouteState;
+  #currentState: RouteState<TMeta, TComponent>;
   #disposed = false;
   #lastHref = '/';
-  readonly #listeners = new Set<(state: RouteState) => void>();
+  readonly #listeners = new Set<(state: RouteState<TMeta, TComponent>) => void>();
   #navigationId = 0;
-  readonly #preloadCache = new Map<string, Promise<void>>();
+
+  // Lazy hydration: stores resolved overrides per record (never mutates compiled RouteRecord)
+  readonly #hydrationCache = new Map<RouteRecord<TRoutes, TMeta, TComponent>, HydrationState<TMeta, TComponent>>();
+
+  // Preload: in-flight deduplication and consume-once result cache
+  readonly #preloadInflight = new Map<string, Promise<void>>();
+  readonly #preloadResults = new Map<string, unknown[]>();
+
   readonly #unlistenHistory: () => void;
 
-  constructor(options: RouterOptions<TRoutes>) {
+  constructor(options: RouterOptions<TRoutes, TMeta, TComponent>) {
     const compiled = compileRoutes(options);
 
     this.#base = normalizePath(options.base ?? '/');
@@ -353,9 +110,9 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     this.#onError = options.onError;
     this.#records = compiled.records;
     this.#routesByName = compiled.routesByName;
-    this.#currentState = createRouteState({
+    this.#currentState = createRouteState<TMeta, TComponent>({
       location: { hash: '', historyState: null, pathname: '/', query: {} },
-      matches: [],
+      matches: [] as RouteMatchBranch<TMeta, TComponent>,
       status: 'idle',
     });
     this.#unlistenHistory = this.#registerHistoryListener();
@@ -366,13 +123,229 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     this.#runInBackground(this.#handleRoute(), { source: 'initial-navigation' });
   }
 
-  get state(): RouteState {
+  // ─── Public state ─────────────────────────────────────────────────────────
+
+  /**
+   * Returns the current immutable router state snapshot.
+   *
+   * Compatible with React's `useSyncExternalStore`:
+   * ```ts
+   * const state = useSyncExternalStore(
+   *   (cb) => router.subscribe(cb),
+   *   () => router.getSnapshot()
+   * );
+   * ```
+   */
+  getSnapshot(): RouteState<TMeta, TComponent> {
     return this.#currentState;
   }
+
+  // ─── Subscription ─────────────────────────────────────────────────────────
+
+  /**
+   * Subscribe to state changes. The listener is called on each subsequent state change;
+   * use `getSnapshot()` to read the current value immediately.
+   */
+  subscribe(listener: (state: RouteState<TMeta, TComponent>) => void): Unsubscribe {
+    this.#assertNotDisposed();
+    this.#listeners.add(listener);
+
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  }
+
+  // ─── Navigation ───────────────────────────────────────────────────────────
+
+  /**
+   * Navigate using a named route target or a raw path target.
+   *
+   * If the route handler throws, the navigation is considered committed — state reflects
+   * the destination with `status: 'idle'` and the browser URL is updated — but the
+   * returned Promise rejects with the handler error. `status` is NOT set to `'error'`.
+   */
+  navigate(target: NamedNavigationTarget<TRoutes> | RawNavigationTarget, options?: NavigateOptions): Promise<void> {
+    const destination = resolveTarget(target, this.#routesByName);
+
+    return this.#navigateToPath(destination, options);
+  }
+
+  // ─── URL helpers ──────────────────────────────────────────────────────────
+
+  /** Build a URL for a named route, including optional params and query string. */
+  url<Name extends RouteName<TRoutes>>(
+    name: Name,
+    params?: PathParams<RoutePathByName<TRoutes, Name>>,
+    query?: QueryParams,
+  ): string {
+    const route = getRouteByName(name, this.#routesByName);
+
+    return buildUrl(this.#base, route.path, params, query);
+  }
+
+  /** Returns true when the current location matches the named route by prefix (default) or exactly. */
+  isActive<Name extends RouteName<TRoutes>>(name: Name, options: IsActiveOptions = {}): boolean {
+    const route = getRouteByName(name, this.#routesByName);
+    const pathname = stripBase(normalizePath(this.#history.location.pathname), this.#base);
+    const exact = options.exact ?? false;
+
+    return exact ? matchRouteFor(pathname, [route]).record != null : matchesPrefix(pathname, route);
+  }
+
+  /** Resolve a pathname to the matching route branch without running middleware or handlers. Returns null for redirects or no match. */
+  resolve(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
+    const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
+    const { params, record } = matchRouteFor(normalizedPathname, this.#records);
+
+    if (!record || record.redirect) return null;
+
+    const defs = this.#effectiveDefs(record);
+    const branch = buildMatchBranch(
+      defs,
+      params,
+      normalizedPathname,
+      defs.map(() => undefined),
+    );
+
+    return branch.length ? branch : null;
+  }
+
+  /**
+   * Resolve a URL to a matched route state including data loader results, without
+   * modifying router state or history. Follows declarative redirects.
+   *
+   * Note: lazy route modules are resolved as a side effect of this call.
+   * Useful for SSR data pre-fetching.
+   *
+   * @param signal - Optional abort signal to cancel in-flight data loaders.
+   */
+  async match(url: string, signal?: AbortSignal): Promise<RouteState<TMeta, TComponent> | null> {
+    const prepared = await this.#resolveUrl(url);
+
+    if (prepared.type !== 'matched') return null;
+
+    const { branch, location, params, record, resolvedQuery } = prepared;
+    const defs = this.#effectiveDefs(record);
+    const hasData = defs.some((d) => d.dataFn != null);
+    let dataResults: unknown[] = defs.map(() => undefined);
+    let error: unknown;
+    let status: 'error' | 'idle' = 'idle';
+
+    if (hasData) {
+      const effectiveSignal = signal ?? new AbortController().signal;
+      const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
+
+      try {
+        dataResults = await this.#runDataLoaders(defs, context, effectiveSignal);
+      } catch (e) {
+        error = e;
+        status = 'error';
+      }
+    }
+
+    return createRouteState<TMeta, TComponent>({
+      ...(error !== undefined ? { error } : {}),
+      location,
+      matches: buildMatchBranch(defs, params, location.pathname, dataResults),
+      status,
+    });
+  }
+
+  // ─── Preload ──────────────────────────────────────────────────────────────
+
+  /**
+   * Eagerly execute the data loaders for a named route without navigating.
+   * Results are cached and reused during the next navigation to the same route.
+   * Concurrent calls for the same route are deduplicated.
+   */
+  async preload<Name extends RouteName<TRoutes>>(
+    name: Name,
+    params?: PathParams<RoutePathByName<TRoutes, Name>>,
+  ): Promise<void> {
+    const route = getRouteByName(name, this.#routesByName);
+    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams);
+
+    const inflight = this.#preloadInflight.get(cacheKey);
+
+    if (inflight) return inflight;
+
+    const controller = new AbortController();
+    const work = this.#doPreload(cacheKey, controller.signal).finally(() => {
+      this.#preloadInflight.delete(cacheKey);
+    });
+
+    this.#preloadInflight.set(cacheKey, work);
+
+    try {
+      return await work;
+    } catch (error) {
+      this.#reportError(error, { source: 'preload' });
+      throw error;
+    }
+  }
+
+  // ─── Navigation guards ────────────────────────────────────────────────────
+
+  /**
+   * Register a global leave guard. Called before user-triggered navigation attempts.
+   * Return `false` to cancel; `true` to allow.
+   * Returns a function that removes the guard.
+   */
+  beforeLeave(blocker: BeforeLeaveBlocker): Unsubscribe {
+    this.#assertNotDisposed();
+    this.#beforeLeaveBlockers.add(blocker);
+
+    return () => {
+      this.#beforeLeaveBlockers.delete(blocker);
+    };
+  }
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
+
+  /** Dispose event listeners and prevent further router interaction. Idempotent. */
+  dispose(): void {
+    if (this.#disposed) return;
+
+    this.#disposed = true;
+    // Bump navigationId so any in-flight isCurrent() checks return false,
+    // preventing post-dispose state mutations, scroll callbacks, and listener calls.
+    this.#navigationId++;
+    this.#beforeLeaveBlockers.clear();
+    this.#listeners.clear();
+    this.#abortController?.abort();
+    this.#abortController = null;
+    this.#unlistenHistory();
+  }
+
+  [Symbol.dispose](): void {
+    this.dispose();
+  }
+
+  // ─── Private: assertions ──────────────────────────────────────────────────
 
   #assertNotDisposed(): void {
     if (this.#disposed) throw new Error('[route] Router is disposed');
   }
+
+  // ─── Private: effective defs (compiled + hydration overrides) ─────────────
+
+  /**
+   * Returns branchDefs merged with any lazy-resolved overrides.
+   * The compiled RouteRecord is never mutated.
+   */
+  #effectiveDefs(record: RouteRecord<TRoutes, TMeta, TComponent>): readonly RouteBranchDef<TMeta, TComponent>[] {
+    const state = this.#hydrationCache.get(record);
+
+    if (!state?.overrides.size) return record.branchDefs;
+
+    return record.branchDefs.map((def, i) => {
+      const override = state.overrides.get(i);
+
+      return override ? { ...def, ...override } : def;
+    });
+  }
+
+  // ─── Private: history listener ────────────────────────────────────────────
 
   #registerHistoryListener(): () => void {
     return this.#history.subscribe(() => {
@@ -399,20 +372,10 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     await this.#handleRoute();
   }
 
-  #notifyListeners(): void {
-    this.#listeners.forEach((listener) => listener(this.#currentState));
-  }
+  // ─── Private: error handling ──────────────────────────────────────────────
 
   #reportError(error: unknown, context: RouterErrorContext): void {
-    if (this.#onError) {
-      this.#onError(error, context);
-
-      return;
-    }
-
-    queueMicrotask(() => {
-      throw error;
-    });
+    reportError(error, context, this.#onError);
   }
 
   #runInBackground(promise: Promise<void>, context: RouterErrorContext): void {
@@ -421,12 +384,36 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     });
   }
 
-  #isNavigationCurrent(id: number): boolean {
-    return id === this.#navigationId;
+  // ─── Private: listener notification ──────────────────────────────────────
+
+  #notifyListeners(): void {
+    this.#listeners.forEach((listener) => listener(this.#currentState));
   }
 
+  // ─── Private: navigation guards ───────────────────────────────────────────
+
   async #runBeforeLeaveBlockers(): Promise<boolean> {
-    const blockers = [...this.#beforeLeaveBlockers];
+    // Per-route guards first (most specific): leaf → root.
+    // Global guards after (least specific), preserving registration order.
+    const blockers: BeforeLeaveBlocker[] = [];
+
+    const leafMatch = this.#currentState.matches.at(-1);
+
+    if (leafMatch) {
+      const record = this.#routesByName.get(leafMatch.name);
+
+      if (record) {
+        const defs = this.#effectiveDefs(record);
+
+        for (let i = defs.length - 1; i >= 0; i--) {
+          const { onLeave } = defs[i]!;
+
+          if (onLeave) blockers.push(onLeave);
+        }
+      }
+    }
+
+    blockers.push(...this.#beforeLeaveBlockers);
 
     for (const blocker of blockers) {
       const allowed = await blocker();
@@ -437,13 +424,78 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     return true;
   }
 
+  // ─── Private: lazy hydration ──────────────────────────────────────────────
+
+  async #hydrateLazy(record: RouteRecord<TRoutes, TMeta, TComponent>): Promise<void> {
+    const hasLazy = record.branchDefs.some((d) => d.lazy != null);
+
+    if (!hasLazy) return;
+
+    let state = this.#hydrationCache.get(record);
+
+    if (state?.done) return;
+
+    if (state?.work) {
+      await state.work;
+
+      return;
+    }
+
+    state = { done: false, overrides: new Map() };
+    this.#hydrationCache.set(record, state);
+
+    const capturedState = state;
+
+    const work = (async (): Promise<void> => {
+      type LazyMod = Awaited<ReturnType<NonNullable<RouteBranchDef<TMeta, TComponent>['lazy']>>>;
+
+      // Import all lazy nodes in parallel — all-or-nothing: overrides are committed
+      // only after every import succeeds, leaving the record intact on partial failure.
+      const lazyEntries = record.branchDefs.map((def, i) => ({ def, i })).filter(({ def }) => def.lazy != null);
+
+      const resolved: Array<{ index: number; mod: LazyMod }> = await Promise.all(
+        lazyEntries.map(async ({ def, i }) => ({ index: i, mod: await def.lazy!() })),
+      );
+
+      // All imports succeeded — write overrides to the hydration cache.
+      for (const { index, mod } of resolved) {
+        const override: HydrationOverride<TMeta, TComponent> = {};
+
+        if (mod.handler !== undefined) override.handler = mod.handler;
+
+        if (mod.data !== undefined) override.dataFn = mod.data;
+
+        if (mod.component !== undefined) override.component = mod.component as TComponent;
+
+        if (mod.meta !== undefined) override.meta = mod.meta as TMeta;
+
+        capturedState.overrides.set(index, override);
+      }
+
+      capturedState.done = true;
+      capturedState.work = undefined;
+    })();
+
+    state.work = work;
+
+    try {
+      await work;
+    } catch (err) {
+      // Remove the entry so the next navigation can retry the lazy import.
+      this.#hydrationCache.delete(record);
+      throw err;
+    }
+  }
+
+  // ─── Private: data loaders ────────────────────────────────────────────────
+
   async #runDataLoaders(
-    record: RouteRecord<TRoutes>,
-    context: Omit<RouteContext<RouteParams, TRoutes>, 'data'>,
+    defs: readonly RouteBranchDef<TMeta, TComponent>[],
+    context: RouteContext<RouteParams, TRoutes>,
     signal: AbortSignal,
   ): Promise<unknown[]> {
     return Promise.all(
-      record.branchDefs.map((def) => {
+      defs.map((def) => {
         if (!def.dataFn) return undefined;
 
         const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
@@ -453,55 +505,67 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     );
   }
 
-  async #hydrateLazy(record: RouteRecord<TRoutes>): Promise<void> {
-    if (record.hydrationWork) {
-      await record.hydrationWork;
+  // ─── Private: preload result cache ────────────────────────────────────────
 
-      return;
+  #setPreloadResult(key: string, results: unknown[]): void {
+    if (this.#preloadResults.size >= Router.#PRELOAD_MAX) {
+      // Map preserves insertion order — delete the oldest entry.
+      const oldest = this.#preloadResults.keys().next().value as string;
+
+      this.#preloadResults.delete(oldest);
     }
 
-    if (!record.hasLazy) return;
-
-    const work = (async (): Promise<void> => {
-      // Collect all lazy modules before mutating the record so that a failed
-      // import leaves the record intact and the next navigation can retry.
-      type LazyMod = Awaited<ReturnType<NonNullable<RouteBranchDef['lazy']>>>;
-
-      const resolved: Array<{ def: RouteBranchDef; mod: LazyMod }> = [];
-
-      for (const def of record.branchDefs) {
-        if (!def.lazy) continue;
-
-        resolved.push({ def, mod: await def.lazy() });
-      }
-
-      // All imports succeeded — commit mutations.
-      for (const { def, mod } of resolved) {
-        def.lazy = undefined;
-
-        if (mod.handler !== undefined) def.handler = mod.handler;
-
-        if (mod.data !== undefined) def.dataFn = mod.data;
-
-        if (mod.component !== undefined) def.component = mod.component;
-
-        if (mod.meta !== undefined) def.meta = mod.meta;
-      }
-
-      record.hasLazy = false;
-      record.hasData = record.branchDefs.some((d) => d.dataFn != null);
-    })();
-
-    record.hydrationWork = work;
-
-    try {
-      await work;
-    } finally {
-      record.hydrationWork = undefined;
-    }
+    this.#preloadResults.set(key, results);
   }
 
-  async #prepareRoute(location: RouteLocation): Promise<PreparedRoute<TRoutes>> {
+  // ─── Private: URL resolution ──────────────────────────────────────────────
+
+  /** Parse a URL, call #prepareRoute, and follow declarative redirects up to 5 hops. */
+  async #resolveUrl(url: string): Promise<PreparedRoute<TRoutes, TMeta, TComponent>> {
+    let destination = url;
+
+    for (let i = 0; i < 5; i += 1) {
+      const parsed = new URL(destination, 'http://localhost');
+      const location: RouteLocation = {
+        hash: parsed.hash.replace(/^#/, ''),
+        historyState: null,
+        pathname: stripBase(parsed.pathname, this.#base),
+        query: parseQuery(parsed.search),
+      };
+
+      const prepared = await this.#prepareRoute(location);
+
+      if (prepared.type !== 'redirect') return prepared;
+
+      destination = this.#resolveDestination(prepared.redirectTo);
+    }
+
+    throw new Error('[route] Redirect loop detected');
+  }
+
+  // ─── Private: preload ─────────────────────────────────────────────────────
+
+  async #doPreload(startUrl: string, signal?: AbortSignal): Promise<void> {
+    const prepared = await this.#resolveUrl(startUrl);
+
+    if (prepared.type !== 'matched') return;
+
+    const { branch, location, params, record, resolvedQuery } = prepared;
+    const defs = this.#effectiveDefs(record);
+    const hasData = defs.some((d) => d.dataFn != null);
+
+    if (!hasData) return;
+
+    const effectiveSignal = signal ?? new AbortController().signal;
+    const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
+    const results = await this.#runDataLoaders(defs, context, effectiveSignal);
+
+    this.#setPreloadResult(buildPreloadKey(this.#base, record.path, params), results);
+  }
+
+  // ─── Private: route preparation ───────────────────────────────────────────
+
+  async #prepareRoute(location: RouteLocation): Promise<PreparedRoute<TRoutes, TMeta, TComponent>> {
     const { params, record } = matchRouteFor(location.pathname, this.#records);
 
     if (!record) {
@@ -509,120 +573,134 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     }
 
     if (record.redirect) {
-      return { location, params, redirectTo: resolveTarget(record.redirect, this.#routesByName), type: 'redirect' };
+      return {
+        location,
+        params,
+        redirectTo: resolveTarget(record.redirect, this.#routesByName),
+        type: 'redirect',
+      };
     }
 
-    let query = location.query;
+    let resolvedQuery: ResolvedQueryParams = location.query;
 
     if (record.coerceSearch) {
       try {
-        query = record.coerceSearch(location.query);
+        resolvedQuery = record.coerceSearch(location.query);
       } catch {
-        // Keep raw query when coercion fails.
+        resolvedQuery = location.query;
       }
     }
 
-    const preparedLocation = query === location.query ? location : { ...location, query };
-
     await this.#hydrateLazy(record);
+
+    const defs = this.#effectiveDefs(record);
 
     return {
       branch: buildMatchBranch(
-        record.branchDefs,
+        defs,
         params,
-        preparedLocation.pathname,
-        record.branchDefs.map(() => undefined),
+        location.pathname,
+        defs.map(() => undefined),
       ),
-      location: preparedLocation,
+      location,
       params,
       record,
+      resolvedQuery,
       type: 'matched',
     };
   }
 
-  #createRouteContext(
-    location: RouteLocation,
-    params: RouteParams,
-    matches: RouteMatchBranch,
-  ): RouteContext<RouteParams, TRoutes> {
-    return {
-      hash: location.hash,
-      historyState: location.historyState,
-      locals: {},
-      matches,
-      navigate: (target, options) => this.navigate(target, options),
-      params,
-      pathname: location.pathname,
-      query: location.query,
-    };
-  }
+  // ─── Private: terminal (data + handler) ───────────────────────────────────
 
   async #runTerminal(
-    record: RouteRecord<TRoutes>,
+    record: RouteRecord<TRoutes, TMeta, TComponent>,
     context: RouteContext<RouteParams, TRoutes>,
     location: RouteLocation,
     params: RouteParams,
-    initialBranch: RouteMatchBranch,
+    initialBranch: RouteMatchBranch<TMeta, TComponent>,
     signal: AbortSignal,
     isCurrent: () => boolean,
   ): Promise<void> {
     if (!isCurrent()) return;
 
-    let dataResults: unknown[] = record.branchDefs.map(() => undefined);
-    let status: NavigationStatus = 'idle';
+    const defs = this.#effectiveDefs(record);
+    const hasData = defs.some((d) => d.dataFn != null);
+    let dataResults: unknown[] = defs.map(() => undefined);
 
-    if (record.hasData) {
-      this.#currentState = createRouteState({
-        location,
-        matches: initialBranch,
-        status: 'loading',
-      });
-      this.#notifyListeners();
+    if (hasData) {
+      const preloadKey = buildPreloadKey(this.#base, record.path, params);
+      const cached = this.#preloadResults.get(preloadKey);
 
-      try {
-        dataResults = await this.#runDataLoaders(record, context, signal);
-      } catch (error) {
-        status = 'error';
-        this.#currentState = createRouteState({
-          error,
+      if (cached) {
+        this.#preloadResults.delete(preloadKey);
+        dataResults = cached;
+      } else {
+        // Emit loading state while data is in-flight.
+        this.#currentState = createRouteState<TMeta, TComponent>({
           location,
-          matches: buildMatchBranch(record.branchDefs, params, location.pathname, dataResults),
-          status,
+          matches: initialBranch,
+          status: 'loading',
         });
-        throw error;
+        this.#notifyListeners();
+
+        try {
+          dataResults = await this.#runDataLoaders(defs, context, signal);
+        } catch (error) {
+          this.#currentState = createRouteState<TMeta, TComponent>({
+            error,
+            location,
+            matches: buildMatchBranch(defs, params, location.pathname, dataResults),
+            status: 'error',
+          });
+          // Do not call #notifyListeners here — the finally block in #handleRoute does it once.
+          throw error;
+        }
       }
     }
 
     if (!isCurrent()) return;
 
-    const finalBranch = buildMatchBranch(record.branchDefs, params, location.pathname, dataResults);
+    const finalBranch = buildMatchBranch(defs, params, location.pathname, dataResults);
 
-    this.#currentState = createRouteState({ location, matches: finalBranch, status });
+    this.#currentState = createRouteState<TMeta, TComponent>({ location, matches: finalBranch, status: 'idle' });
 
-    if (record.leaf.handler) {
-      const leafData = dataResults[dataResults.length - 1];
-      const handler = record.leaf.handler as unknown as RouteHandler<RouteParams, TRoutes>;
+    const leaf = defs[defs.length - 1]!;
 
-      await handler({ ...context, data: leafData, matches: finalBranch });
+    if (leaf.handler) {
+      const handler = leaf.handler as unknown as RouteHandler<RouteParams, TRoutes>;
+      const handlerCtx: HandlerContext<RouteParams, TRoutes> = {
+        ...context,
+        data: dataResults[dataResults.length - 1],
+        matches: finalBranch,
+      };
+
+      await handler(handlerCtx);
     }
   }
 
-  async #runWithTransition(run: () => Promise<void>, useTransition?: boolean): Promise<void> {
-    type ViewTransitionDocument = Document & {
-      startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
-    };
+  // ─── Private: view transitions ────────────────────────────────────────────
 
-    const documentWithTransition = document as ViewTransitionDocument;
+  async #runWithTransition(run: () => Promise<void>, useTransition?: boolean): Promise<void> {
     const shouldUseTransition = useTransition ?? this.#useViewTransition;
 
-    if (shouldUseTransition && documentWithTransition.startViewTransition) {
-      await documentWithTransition.startViewTransition(run).finished;
+    if (shouldUseTransition && typeof document !== 'undefined') {
+      type ViewTransitionDocument = Document & {
+        startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
+      };
 
-      return;
+      const doc = document as ViewTransitionDocument;
+
+      if (doc.startViewTransition) {
+        await doc.startViewTransition(run).finished;
+
+        return;
+      }
     }
 
     await run();
   }
+
+  // ─── Private: main navigation orchestrator ────────────────────────────────
 
   async #handleRoute(useTransition?: boolean, redirectDepth = 0): Promise<void> {
     this.#abortController?.abort();
@@ -631,10 +709,11 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
     this.#abortController = controller;
 
-    const navigationId = ++this.#navigationId;
+    const navId = ++this.#navigationId;
     const prevState = this.#currentState;
+    const isCurrent = (): boolean => this.#navigationId === navId;
+
     const prepared = await this.#prepareRoute(readLocation(this.#base, this.#history));
-    const isCurrent = (): boolean => this.#isNavigationCurrent(navigationId);
 
     if (!isCurrent()) return;
 
@@ -646,15 +725,10 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
       return;
     }
 
-    const location = prepared.location;
-    const params = prepared.params;
-    const record = prepared.type === 'matched' ? prepared.record : undefined;
-    const initialBranch = prepared.type === 'matched' ? prepared.branch : [];
-
-    if (!record) {
-      this.#currentState = createRouteState({
-        location,
-        matches: [],
+    if (prepared.type === 'unmatched') {
+      this.#currentState = createRouteState<TMeta, TComponent>({
+        location: prepared.location,
+        matches: [] as RouteMatchBranch<TMeta, TComponent>,
         status: 'idle',
       });
       this.#notifyListeners();
@@ -663,16 +737,19 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
       return;
     }
 
+    const { branch, location, params, record, resolvedQuery } = prepared;
     let committed = false;
 
     const run = async (): Promise<void> => {
       if (!isCurrent()) return;
 
-      const context = this.#createRouteContext(location, params, initialBranch);
+      const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, (target, options) =>
+        this.navigate(target, options),
+      );
 
       await executeMiddlewarePipeline(context, record.middleware, async () => {
         committed = true;
-        await this.#runTerminal(record, context, location, params, initialBranch, controller.signal, isCurrent);
+        await this.#runTerminal(record, context, location, params, branch, controller.signal, isCurrent);
       });
     };
 
@@ -686,7 +763,9 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     }
   }
 
-  #applyScroll(to: RouteState, from: RouteState): void {
+  // ─── Private: scroll ─────────────────────────────────────────────────────
+
+  #applyScroll(to: RouteState<TMeta, TComponent>, from: RouteState<TMeta, TComponent>): void {
     if (!this.#scroll || typeof window === 'undefined') return;
 
     const decision = this.#scroll(to, from);
@@ -702,12 +781,13 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     window.scrollTo(decision.x, decision.y);
   }
 
+  // ─── Private: destination resolution ─────────────────────────────────────
+
   #resolveDestination(path: string): string {
     const parsed = new URL(path, 'http://localhost');
     const normalizedPath = stripBase(parsed.pathname, this.#base);
-    const joinedPath = joinPaths(this.#base, normalizedPath);
 
-    return `${joinedPath}${parsed.search}${parsed.hash}`;
+    return `${joinPaths(this.#base, normalizedPath)}${parsed.search}${parsed.hash}`;
   }
 
   async #navigateToPath(
@@ -724,7 +804,6 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
     const prevLastHref = this.#lastHref;
 
-    // Check leave blockers before mutating history.
     if (!internalNavigation) {
       const allowed = await this.#runBeforeLeaveBlockers();
 
@@ -742,201 +821,36 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     try {
       await this.#handleRoute(options.viewTransition, redirectDepth);
     } catch (err) {
-      // Restore lastHref so the caller can retry the same destination after a
-      // transient failure (e.g. failed lazy import or throwing data loader).
+      // Restore #lastHref to the pre-navigation value so the same destination
+      // can be retried after a transient failure. The history entry that was
+      // pushed is left in place intentionally — back-button navigation still works.
       this.#lastHref = prevLastHref;
       throw err;
     }
   }
-
-  /** Navigate using a named route target or a raw path target. */
-  navigate(target: NamedNavigationTarget<TRoutes> | RawNavigationTarget, options?: NavigateOptions): Promise<void> {
-    const destination = resolveTarget(target, this.#routesByName);
-
-    return this.#navigateToPath(destination, options);
-  }
-
-  /** Build a URL for a named route, including optional params and query string. */
-  url<Name extends RouteName<TRoutes>>(
-    name: Name,
-    params?: PathParams<RoutePathByName<TRoutes, Name>>,
-    query?: QueryParams,
-  ): string {
-    const route = getRouteByName(name, this.#routesByName);
-
-    return buildUrl(this.#base, route.path, params, query);
-  }
-
-  /** Returns true when the current location matches the named route by prefix (default) or exactly. */
-  isActive<Name extends RouteName<TRoutes>>(name: Name, options: IsActiveOptions = {}): boolean {
-    const route = getRouteByName(name, this.#routesByName);
-    const pathname = stripBase(normalizePath(this.#history.location.pathname), this.#base);
-    const exact = options.exact ?? false;
-
-    return exact ? matchRouteFor(pathname, [route]).record != null : matchesPrefix(pathname, route);
-  }
-
-  /** Resolve a pathname to the matching route branch without running middleware or handlers. */
-  resolve(pathname: string): RouteMatchBranch | null {
-    const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
-    const { params, record } = matchRouteFor(normalizedPathname, this.#records);
-
-    if (!record || record.redirect) return null;
-
-    const branch = buildMatchBranch(
-      record.branchDefs,
-      params,
-      normalizedPathname,
-      record.branchDefs.map(() => undefined),
-    );
-
-    return branch.length ? branch : null;
-  }
-
-  /**
-   * Eagerly execute the data loaders for a named route without navigating.
-   * Useful for hover-prefetch. Results are discarded; calling navigate() afterward
-   * will run the loaders again with a fresh AbortSignal.
-   */
-  async preload<Name extends RouteName<TRoutes>>(
-    name: Name,
-    params?: PathParams<RoutePathByName<TRoutes, Name>>,
-  ): Promise<void> {
-    const route = getRouteByName(name, this.#routesByName);
-    const cacheKey = buildUrl(this.#base, route.path, params as RouteParams);
-
-    if (this.#preloadCache.has(cacheKey)) return this.#preloadCache.get(cacheKey);
-
-    const signal = new AbortController().signal;
-    const work = (async (): Promise<void> => {
-      let destination = cacheKey;
-
-      for (let i = 0; i < 5; i += 1) {
-        const parsed = new URL(destination, 'http://localhost');
-        const location: RouteLocation = {
-          hash: parsed.hash.replace(/^#/, ''),
-          historyState: null,
-          pathname: stripBase(parsed.pathname, this.#base),
-          query: parseQuery(parsed.search),
-        };
-        const prepared = await this.#prepareRoute(location);
-
-        if (prepared.type === 'redirect') {
-          destination = this.#resolveDestination(prepared.redirectTo);
-          continue;
-        }
-
-        if (prepared.type !== 'matched' || !prepared.record.hasData) return;
-
-        await this.#runDataLoaders(
-          prepared.record,
-          {
-            hash: prepared.location.hash,
-            historyState: null,
-            locals: {},
-            matches: prepared.branch,
-            navigate: () => Promise.resolve(),
-            params: prepared.params,
-            pathname: prepared.location.pathname,
-            query: prepared.location.query,
-          },
-          signal,
-        );
-
-        return;
-      }
-
-      throw new Error('[route] preload redirect loop detected');
-    })();
-    const trackedWork = work.catch((error) => {
-      this.#reportError(error, { source: 'preload' });
-      throw error;
-    });
-
-    this.#preloadCache.set(cacheKey, trackedWork);
-
-    // Keep fire-and-forget preload calls from triggering unhandled rejection warnings.
-    const cleanup = trackedWork.finally(() => this.#preloadCache.delete(cacheKey));
-
-    cleanup.catch(() => undefined);
-    trackedWork.catch(() => undefined);
-
-    return trackedWork;
-  }
-
-  /**
-   * Register a leave guard. Called before user-triggered navigation attempts.
-   * Return `false` to cancel; `true` to allow. Multiple guards can be active.
-   * Returns a function that removes the guard.
-   */
-  beforeLeave(blocker: BeforeLeaveBlocker): Unsubscribe {
-    this.#assertNotDisposed();
-    this.#beforeLeaveBlockers.add(blocker);
-
-    return () => {
-      this.#beforeLeaveBlockers.delete(blocker);
-    };
-  }
-
-  /** Subscribe to state changes. The listener is called immediately with the current state. */
-  subscribe(listener: (state: RouteState) => void): Unsubscribe {
-    this.#assertNotDisposed();
-    this.#listeners.add(listener);
-    listener(this.#currentState);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
-
-  /**
-   * Returns `{ subscribe, getSnapshot }` for React's `useSyncExternalStore`.
-   *
-   * Unlike `router.subscribe`, the returned `subscribe` only sends change notifications.
-   * React reads the initial value from `getSnapshot`.
-   */
-  toStore(): {
-    getSnapshot: () => RouteState;
-    subscribe: (onStoreChange: () => void) => Unsubscribe;
-  } {
-    return {
-      getSnapshot: () => this.state,
-      subscribe: (onStoreChange) => {
-        let isInitialCall = true;
-
-        return this.subscribe(() => {
-          if (isInitialCall) {
-            isInitialCall = false;
-
-            return;
-          }
-
-          onStoreChange();
-        });
-      },
-    };
-  }
-
-  /** Dispose event listeners and prevent further router interaction. */
-  dispose(): void {
-    if (this.#disposed) return;
-
-    this.#disposed = true;
-    // Invalidate any in-flight navigation so isCurrent() checks return false,
-    // preventing post-dispose state mutations, scroll callbacks, and listener calls.
-    this.#navigationId++;
-    this.#beforeLeaveBlockers.clear();
-    this.#listeners.clear();
-    this.#abortController?.abort();
-    this.#abortController = null;
-    this.#unlistenHistory();
-  }
-
-  [Symbol.dispose](): void {
-    this.dispose();
-  }
 }
 
-export function createRouter<const TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): Router<TRoutes> {
+// PathParams re-export for url() type signature
+type PathParams<T extends string> = import('./types').PathParams<T>;
+
+// ─── Public factory ───────────────────────────────────────────────────────────
+
+/**
+ * Create a new router instance from a route table.
+ *
+ * @example
+ * const router = createRouter({
+ *   routes: {
+ *     home: { path: '/', handler: () => renderHome() },
+ *     userDetail: { path: '/users/:id', data: fetchUser, handler: renderUser },
+ *   },
+ * });
+ */
+export function createRouter<const TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown>(
+  options: RouterOptions<TRoutes, TMeta, TComponent>,
+): Router<TRoutes, TMeta, TComponent> {
   return new Router(options);
 }
+
+// Export the Router type (not the constructor value) for type annotations.
+export type { Router };

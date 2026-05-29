@@ -97,7 +97,7 @@ describe('form subscriptions', () => {
     aCalls = 0;
     bCalls = 0;
 
-    await form.validateTouched();
+    await form.validateFields([...form.state.touchedFields]);
 
     expect(aCalls).toBe(1);
     expect(bCalls).toBe(0);
@@ -111,7 +111,7 @@ describe('form lifecycle', () => {
     form.dispose();
 
     expect(() => form.set('x', 2)).toThrow('Cannot modify a disposed form');
-    expect(() => form.wire('x')).toThrow('Cannot modify a disposed form');
+    expect(() => form.connect('x')).toThrow('Cannot modify a disposed form');
   });
 
   test('subscribe and subscribeField become no-ops after dispose', () => {
@@ -121,5 +121,51 @@ describe('form lifecycle', () => {
 
     expect(() => form.subscribe(() => {})).not.toThrow();
     expect(() => form.subscribeField('x', () => {})).not.toThrow();
+  });
+});
+
+describe('batch() error handling', () => {
+  test('subscribers still receive notification after batch callback throws', () => {
+    const form = createForm({ defaultValues: { x: 1, y: 2 } });
+
+    const states: number[] = [];
+
+    form.subscribe((s) => states.push((s.errors as Record<string, string>)['x'] ? 1 : 0));
+    states.length = 0;
+
+    try {
+      form.batch(() => {
+        form.set('x', 99);
+        throw new Error('oops');
+      });
+    } catch {
+      // expected
+    }
+
+    // Notification should have fired with the partially mutated state (x=99)
+    expect(states).toHaveLength(1);
+    expect(form.get('x')).toBe(99);
+  });
+
+  test('pending flags are drained after batch callback throws', () => {
+    const form = createForm({ defaultValues: { a: 1 } });
+
+    let calls = 0;
+
+    form.subscribe(() => calls++);
+    calls = 0;
+
+    try {
+      form.batch(() => {
+        form.set('a', 2);
+        throw new Error('fail');
+      });
+    } catch {
+      // expected
+    }
+
+    // A subsequent normal mutation should still trigger exactly one notification
+    form.set('a', 3);
+    expect(calls).toBe(2); // one from the throw, one from the subsequent set
   });
 });

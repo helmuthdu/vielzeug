@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — File Uploads'
-description: 'File Uploads examples for courier.'
+description: 'File Uploads example for @vielzeug/courier.'
 ---
 
 ## File Uploads
@@ -10,6 +10,8 @@ description: 'File Uploads examples for courier.'
 You need to send one or more files to the server as `multipart/form-data` and report upload progress to the user in real time.
 
 ### Solution
+
+Pass a `FormData` body to `api.post()` — Courier detects non-JSON body types and skips `Content-Type: application/json` serialization automatically.
 
 ```ts
 const api = createApi({ baseUrl: 'https://api.example.com' });

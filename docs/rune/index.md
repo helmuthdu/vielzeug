@@ -1,11 +1,11 @@
 ---
 title: Rune — Structured logging for TypeScript
-description: Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+description: Browser/Node logger with levels, namespaces, pluggable transports, lazy bindings, and timing helpers.
 package: rune
 category: logging
-keywords: [logging, console, structured, scoped, remote-logging, levels, namespaces]
+keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, relay, worker]
-exports: [createLogger]
+exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, lazy]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -29,7 +29,7 @@ exports: [createLogger]
 
 </details>
 
-`@vielzeug/rune` is a zero-dependency logger that augments the native console with level filtering, namespace scopes, styled badges, and optional remote forwarding.
+`@vielzeug/rune` is a zero-dependency logger built around a pluggable transport pipeline. It augments the native console with level filtering, namespace scopes, structured log entries, styled badges, lazy bindings, and flexible delivery via composable transport factories.
 
 
 ## Installation
@@ -53,24 +53,43 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { createLogger, Rune } from '@vielzeug/rune';
+import { Rune, createLogger, lazy } from '@vielzeug/rune';
+import { consoleTransport, remoteTransport, jsonTransport } from '@vielzeug/rune';
 
+// Default logger — uses consoleTransport() automatically
 Rune.info('Boot complete');
 Rune.warn('Cache stale');
-Rune.fatal(new Error('unrecoverable')); // auto-serializes Error
+Rune.fatal(new Error('unrecoverable')); // Error auto-serialized
 
+// Namespaced scopes
 const api = Rune.scope('api');
 api.info({ method: 'GET', path: '/users' }, 'request');
 
-// pin fields to every call — ideal for per-request context
-const reqLog = api.withBindings({ requestId: 'abc-123' });
-reqLog.info('processing');
+// Pinned bindings — lazy() only evaluates when the level passes
+const reqLog = api.withBindings({
+  requestId: 'abc-123',
+  diagnostics: lazy(() => buildDiagnostics()),
+});
+reqLog.debug('processing'); // diagnostics() called only here
 
-const workerLog = createLogger({ logLevel: 'warn', namespace: 'worker' });
+// Structured timing — emits a debug entry with { duration_ms }
+await reqLog.time('db.query', () => runQuery());
 
-await workerLog.groupCollapsed('Job', async () => {
-  await workerLog.time('process', () => runJob());
-  workerLog.info('Done');
+// Custom transport pipeline
+const serverLog = createLogger({
+  logLevel: 'info',
+  namespace: 'server',
+  transports: [
+    consoleTransport({ variant: 'text', timestamp: true }),
+    remoteTransport(async (type, data) => {
+      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+    }, { level: 'error' }),
+  ],
+});
+
+// Node.js: structured JSON for log aggregation
+const nodeLog = createLogger({
+  transports: [jsonTransport({ level: 'warn' })],
 });
 ```
 
@@ -87,18 +106,27 @@ fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg 
 
 // After — Rune
 import { Rune } from '@vielzeug/rune';
-const api = Rune.scope('api');
-api.info({ data }, 'GET /users'); // filtered by log level, styled, optionally remote
+import { consoleTransport, remoteTransport } from '@vielzeug/rune';
+
+const api = Rune.scope('api').child({
+  transports: [
+    consoleTransport({ level: 'debug' }),
+    remoteTransport(sendToCollector, { level: 'error' }),
+  ],
+});
+api.info({ data }, 'GET /users');
 ```
 
-| Feature           | Rune                                       | Winston       | Pino       | console |
-| ----------------- | ------------------------------------------- | ------------- | ---------- | ------- |
-| Bundle size       | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
-| Browser support   | ✅                                          | ❌            | ❌         | ✅      |
-| Scoped loggers    | ✅                                          | Manual        | Child      | ❌      |
-| Remote logging    | ✅ Built-in                                 | ✅ Transports | ✅ Streams | ❌      |
-| Styled output     | ✅ CSS badges                               | Text only     | Text only  | Manual  |
-| Zero dependencies | ✅                                          | ❌ (15+)      | ❌ (5+)    | N/A     |
+| Feature               | Rune                                        | Winston       | Pino       | console |
+| --------------------- | ------------------------------------------- | ------------- | ---------- | ------- |
+| Bundle size           | <PackageInfo package="rune" type="size" />  | ~44 kB        | ~4 kB      | 0 kB    |
+| Browser support       | ✅                                          | ❌            | ❌         | ✅      |
+| Scoped loggers        | ✅                                          | Manual        | Child      | ❌      |
+| Pluggable transports  | ✅ Built-in factories                       | ✅ Transports | ✅ Streams | ❌      |
+| Structured log entry  | ✅ `LogEntry` type                          | Partial       | ✅          | ❌      |
+| Lazy bindings         | ✅ `lazy(fn)`                               | ❌            | ❌         | ❌      |
+| Styled output         | ✅ CSS badges                               | Text only     | Text only  | Manual  |
+| Zero dependencies     | ✅                                          | ❌ (15+)      | ❌ (5+)    | N/A     |
 
 **Use Rune when** you need isomorphic logging (browser + Node.js), namespaced module loggers, or remote error delivery without a heavy dependency chain.
 
@@ -110,11 +138,13 @@ api.info({ data }, 'GET /users'); // filtered by log level, styled, optionally r
 - Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
 - Auto-serializes `Error` objects into `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line
+- Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
 - Namespace composition (`scope`) and isolated clones (`child`)
-- Styled browser output (`symbol`, `icon`, `text`)
-- `time()`, `group()`, and `groupCollapsed()` wrappers that auto-close on throw/reject
-- Structured remote payload: `{ level, message, context, env, namespace?, timestamp? }`
-- Non-blocking remote forwarding with separate remote level threshold
+- Pluggable transport pipeline: `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
+- Styled browser output (`symbol`, `icon`, `text`) via `consoleTransport`
+- Structured `time()` wrapper: emits `{ duration_ms }` as a debug entry through all transports
+- `group()` and `groupCollapsed()` wrappers that auto-close on throw/reject
+- `LogEntry` type — the shared contract between logger and transports
 - Zero dependencies — <PackageInfo package="rune" type="size" /> gzipped
 
 ## Compatibility

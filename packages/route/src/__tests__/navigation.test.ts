@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
 import { createDeferred, settle } from './test-utils';
 
@@ -276,7 +276,7 @@ describe('Navigation', () => {
       mockLocation.search = '?q=test';
       await boot(router);
 
-      expect(router.state).toEqual(
+      expect(router.getSnapshot()).toEqual(
         expect.objectContaining({
           location: {
             hash: '',
@@ -287,7 +287,7 @@ describe('Navigation', () => {
           status: 'idle',
         }),
       );
-      expect(router.state.matches.at(-1)).toEqual(
+      expect(router.getSnapshot().matches.at(-1)).toEqual(
         expect.objectContaining({
           meta: { foo: 'bar' },
           name: 'userDetail',
@@ -297,7 +297,7 @@ describe('Navigation', () => {
       );
     });
 
-    it('subscribe() fires immediately and on subsequent navigations', async () => {
+    it('subscribe() does not fire immediately; fires on subsequent navigations', async () => {
       const listener = vi.fn();
       const router = createRouter({
         routes: {
@@ -309,12 +309,13 @@ describe('Navigation', () => {
       mockLocation.pathname = '/';
       await boot(router);
 
+      expect(router.getSnapshot().location.pathname).toBe('/');
+
       router.subscribe(listener);
       await router.navigate({ name: 'about' });
 
-      expect(listener).toHaveBeenCalledTimes(2);
-      expect(listener.mock.calls[0]?.[0].location.pathname).toBe('/');
-      expect(listener.mock.calls[1]?.[0].location.pathname).toBe('/about');
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0].location.pathname).toBe('/about');
     });
   });
 
@@ -424,7 +425,7 @@ describe('Navigation', () => {
       await router.navigate({ path: '/fast' });
       await slowNav;
 
-      expect(router.state.location.pathname).toBe('/fast');
+      expect(router.getSnapshot().location.pathname).toBe('/fast');
       router.dispose();
     });
 
@@ -459,8 +460,30 @@ describe('Navigation', () => {
       await slowNav;
 
       expect(firstSignal?.aborted).toBe(true);
-      expect(router.state.location.pathname).toBe('/fast');
+      expect(router.getSnapshot().location.pathname).toBe('/fast');
       router.dispose();
     });
+  });
+});
+
+describe('handler error propagation', () => {
+  it('a throwing handler propagates the error to the navigate() caller', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        bad: {
+          handler: () => {
+            throw new Error('handler boom');
+          },
+          path: '/bad',
+        },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+    await expect(router.navigate({ path: '/bad' })).rejects.toThrow('handler boom');
+    router.dispose();
   });
 });

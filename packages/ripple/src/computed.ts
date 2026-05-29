@@ -1,12 +1,24 @@
-import type { ComputedSignal, DepEntry, DirtyComputed, ReactiveOptions, Subscription } from './types';
+import type {
+  ComputedSignal,
+  DepEntry,
+  DepSource,
+  DirtyComputed,
+  ReactiveNode,
+  ReactiveOptions,
+  Subscriber,
+  Subscription,
+} from './types';
 
 import { StateError } from './error';
-import { IS_COMPUTED, IS_SIGNAL, UNINITIALIZED, ensureError } from './helpers';
-import { ReactiveNode } from './node';
+import { IS_COMPUTED, IS_SIGNAL, UNINITIALIZED, ensureError, toSubscription } from './helpers';
+import { getTracking, trackSource, withTracking } from './tracking';
 
-import { getTracking, withTracking } from './tracking';
+export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSource, ReactiveNode {
+  version = 0;
+  readonly name: string | undefined;
+  [IS_SIGNAL] = true;
+  [IS_COMPUTED] = true;
 
-export class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T>, DirtyComputed {
   private value_: T | typeof UNINITIALIZED = UNINITIALIZED;
   private dirty_ = true;
   private computing_ = false;
@@ -14,13 +26,50 @@ export class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T>, 
   private deps_: DepEntry[] = [];
   private compute_: () => T;
   private equals_: (a: unknown, b: unknown) => boolean;
-  [IS_SIGNAL] = true;
-  [IS_COMPUTED] = true;
+  private computedSubs_ = new Set<DirtyComputed>();
+  private subscribers_ = new Set<Subscriber>();
 
   constructor(compute: () => T, equals?: (a: T, b: T) => boolean, name?: string) {
-    super(name);
+    this.name = name;
     this.compute_ = compute;
     this.equals_ = equals !== undefined ? (a, b) => equals(a as T, b as T) : Object.is;
+  }
+
+  private track(): void {
+    trackSource(this);
+  }
+
+  addComputedSub(c: DirtyComputed): void {
+    this.computedSubs_.add(c);
+  }
+
+  removeComputedSub(c: DirtyComputed): void {
+    this.computedSubs_.delete(c);
+  }
+
+  addEffectSub(subscriber: Subscriber): void {
+    this.subscribers_.add(subscriber);
+  }
+
+  removeEffectSub(subscriber: Subscriber): void {
+    this.subscribers_.delete(subscriber);
+  }
+
+  private clearSubscribers(): void {
+    this.computedSubs_.clear();
+    this.subscribers_.clear();
+  }
+
+  hasSubscribers(): boolean {
+    return this.computedSubs_.size > 0 || this.subscribers_.size > 0;
+  }
+
+  computedSubs(): ReadonlySet<DirtyComputed> {
+    return this.computedSubs_;
+  }
+
+  subscribers(): ReadonlySet<Subscriber> {
+    return this.subscribers_;
   }
 
   markDirty(): boolean {
@@ -58,13 +107,7 @@ export class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T>, 
       const newDeps: DepEntry[] = [];
 
       const next = withTracking(
-        {
-          cleanups: null,
-          computed: this as unknown as DirtyComputed,
-          depCollector: newDeps,
-          effect: null,
-          subscriptions: null,
-        },
+        { computed: this as unknown as DirtyComputed, depCollector: newDeps, kind: 'computed' },
         this.compute_,
       );
 
@@ -149,12 +192,25 @@ export class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T>, 
     }
 
     this.refreshIfDirty();
+    this.subscribers_.add(listener);
 
-    return super.subscribe(listener);
+    return toSubscription(() => {
+      this.subscribers_.delete(listener);
+    });
   };
 
-  derive<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
+  map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
     return computed(() => fn(this.value), options);
+  }
+
+  filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined> {
+    return computed(() => {
+      const v = this.value;
+
+      return predicate(v) ? v : undefined;
+    });
   }
 
   dispose(): void {
@@ -180,7 +236,8 @@ export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): Com
   const comp = new ComputedImpl(compute, options?.equals, options?.name);
   const ctx = getTracking();
 
-  if (ctx !== null && ctx.cleanups !== null) {
+  // Auto-dispose when created inside an effect or scope — they own the lifetime.
+  if (ctx !== null && ctx.kind !== 'computed') {
     ctx.cleanups.push(() => comp.dispose());
   }
 

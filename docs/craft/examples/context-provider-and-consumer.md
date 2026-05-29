@@ -1,6 +1,6 @@
 ---
 title: 'Craft Examples — Context Provider and Consumer'
-description: 'Context Provider and Consumer examples for craft.'
+description: 'Context Provider and Consumer example for @vielzeug/craft.'
 ---
 
 ## Context Provider and Consumer
@@ -10,6 +10,8 @@ description: 'Context Provider and Consumer examples for craft.'
 You have parent and child custom elements that need to share data without threading it through attributes on every intermediate element. Prop-drilling through N layers of markup becomes fragile as the tree grows.
 
 ### Solution
+
+Use `createContext()`, `provide()`, and `inject()` to share reactive state through the component tree.
 
 ```ts
 import { createContext, define, html, inject, provide, signal } from '@vielzeug/craft';
@@ -22,7 +24,7 @@ define('theme-provider', {
 
     provide(THEME_CTX, theme);
 
-    return () => html`
+    return html`
       <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
       <slot></slot>
     `;
@@ -33,21 +35,19 @@ define('theme-label', {
   setup() {
     const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
-    return () => html`<p>Theme: ${theme}</p>`;
+    return html`<p>Theme: ${theme}</p>`;
   },
 });
 ```
 
-
 ### Pitfalls
 
 - The provider must be an ancestor in the custom element tree, not just the DOM tree. A child appended outside the provider's shadow root cannot find the context.
-- Context is resolved when the child connects. Setting context values after a child is already connected has no effect unless the child explicitly re-reads it.
-- Multiple providers with the same key cause the nearest ancestor to win. Use distinct, namespaced key strings to avoid accidental shadowing.
+- Providing a plain value (not a signal) means consumers get a snapshot, not live updates. Wrap mutable state in a `signal()` before providing.
+- Multiple providers with the same key cause the nearest ancestor to win. Use distinct key strings to avoid accidental shadowing.
 
 ### Related
-- [DI Container (Wired)](/wired/)
 
+- [Wired — DI Container](/wired/) for application-level dependency injection beyond component trees
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
-- [Observers in mount()](./observers-in-onmount.md)

@@ -6,8 +6,8 @@ import { scopedLoggingExample } from './scoped-logging';
 
 export const runeExamples = {
   'basic-logging': basicLoggingExample,
-  configuration: configurationExample,
-  'data-logging': dataLoggingExample,
-  'log-levels': logLevelsExample,
-  'scoped-logging': scopedLoggingExample,
+  'lazy-and-timing': dataLoggingExample,
+  'level-filtering': logLevelsExample,
+  'scoped-loggers': scopedLoggingExample,
+  'transport-pipeline': configurationExample,
 };

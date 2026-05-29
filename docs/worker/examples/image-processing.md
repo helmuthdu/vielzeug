@@ -1,6 +1,6 @@
 ---
 title: 'Worker Examples — Image Processing'
-description: 'Image Processing examples for worker.'
+description: 'Image Processing example for @vielzeug/worker.'
 ---
 
 ## Image Processing
@@ -44,3 +44,14 @@ async function convertToGrayscale(imageData: ImageData): Promise<ImageData> {
 // Don't forget to dispose when done:
 // imagePool.dispose();
 ```
+
+### Pitfalls
+
+- Not using transferables — `imageData.data` is structured-cloned into the worker, doubling memory usage for large images. Pass `imageData.data.buffer` as a transferable instead; see [Using Transferables](./using-transferables.md).
+- Calling `imagePool.dispose()` while multiple `convertToGrayscale` calls are still in flight terminates all in-progress tasks with `WorkerError` code `'terminated'`. Dispose only after all outstanding promises have settled.
+
+### Related
+
+- [Using Transferables](./using-transferables.md) — reduce memory overhead by transferring pixel buffers
+- [Cancellable Batch](./cancellable-batch.md) — cancel in-flight image tasks on navigation
+- [Data Transformation Pipeline](./data-transformation-pipeline.md) — apply sequential transforms to a dataset

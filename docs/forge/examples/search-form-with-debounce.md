@@ -11,45 +11,36 @@ A search input should trigger an API query as the user types, but not on every k
 
 ### Solution
 
-Search form with debounced API calls.
+Use `connect()` with `validateOnChange` and `debounce` to schedule async work after the user stops typing:
 
-```typescript
+```ts
 import { createForm } from '@vielzeug/forge';
 
-const searchForm = createForm({
-  defaultValues: {
-    query: '',
-    category: 'all',
-    sortBy: 'relevance',
-  },
+const form = createForm({
+  defaultValues: { query: '', category: 'all', sortBy: 'relevance' },
 });
 
-let searchTimeout: ReturnType<typeof setTimeout>;
+const queryConn = form.connect('query', {
+  validateOnChange: true,
+  debounce: 300,
+});
 
-// Subscribe and debounce search
-searchForm.subscribe(() => {
-  clearTimeout(searchTimeout);
-
-  const query = searchForm.get('query');
-
-  if (!query || query.length < 2) {
+// Register an async "validator" that runs the search and updates results
+form.setValidator('query', async (value, signal) => {
+  if (!value || String(value).length < 2) {
     updateResultsUI([]);
-    return;
+    return undefined;
   }
 
-  searchTimeout = setTimeout(async () => {
-    try {
-      const category = searchForm.get('category');
-      const sortBy = searchForm.get('sortBy');
+  const category = form.get('category');
+  const sortBy = form.get('sortBy');
+  const url = `/api/search?q=${encodeURIComponent(String(value))}&category=${category}&sort=${sortBy}`;
 
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&category=${category}&sort=${sortBy}`);
+  const response = await fetch(url, { signal });
+  const results = await response.json();
 
-      const results = await response.json();
-      updateResultsUI(results);
-    } catch (error) {
-      console.error('Search failed:', error);
-    }
-  }, 300);
+  updateResultsUI(results);
+  return undefined; // no error to display
 });
 
 function updateResultsUI(results: unknown[]) {
@@ -59,13 +50,12 @@ function updateResultsUI(results: unknown[]) {
 
 ### Pitfalls
 
-- The debounced function captures the field value via closure. If the component unmounts between the delay and the function firing, the API call still runs and may update unmounted state. Cancel on unmount.
-- Using `subscribeForm` to trigger the search fires the callback on every field change, including programmatic writes. Add a dirty check if you only want user-initiated changes to trigger a search.
-- Each keystroke must cancel the previous pending debounce timer, not create a new one. Use a single stable debounced function reference rather than creating a new one per event.
+- The validator receives an `AbortSignal`. Always pass it to `fetch` so stale requests are cancelled automatically when a newer keystroke triggers a new run.
+- Subscribing to the full form state and triggering search inside `subscribe()` fires on every field change, including programmatic writes. Using `subscribeField('query', ...)` scopes the trigger correctly.
+- Setting `debounce` too low defeats the purpose; 200–500 ms is a reasonable default for remote searches.
 
 ### Related
-- [CRUD Operations (Courier)](@vielzeug/courier/examples/crud-operations)
 
-- [Best Practices](./best-practices.md)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
+- [CRUD Operations (Courier)](/courier/examples/)
+- [Login Form](./login-form.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

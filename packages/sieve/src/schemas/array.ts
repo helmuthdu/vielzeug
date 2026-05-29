@@ -1,14 +1,10 @@
-import type { Issue, MessageFn } from '../core';
+import type { Issue, MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class ArraySchema<T> extends Schema<T[]> {
   readonly itemSchema: Schema<T, any>;
-  /** @internal JSON Schema annotation — populated by min()/length()/nonEmpty() */
-  _minItems?: number;
-  /** @internal JSON Schema annotation — populated by max()/length() */
-  _maxItems?: number;
 
   constructor(itemSchema: Schema<T, any>) {
     super();
@@ -73,50 +69,52 @@ export class ArraySchema<T> extends Schema<T[]> {
     length: number,
     message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
   ): this {
-    const next = this._addValidator((value) => {
-      if ((value as unknown[]).length >= length) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as unknown[]).length >= length) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as unknown[] }), {
-        min: length,
-      });
-    }) as ArraySchema<any>;
-
-    next._minItems = next._minItems === undefined ? length : Math.max(next._minItems, length);
-
-    return next as this;
+        return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as unknown[] }), {
+          min: length,
+        });
+      },
+      (ann) => ({
+        ...ann,
+        minItems: ann['minItems'] === undefined ? length : Math.max(ann['minItems'] as number, length),
+      }),
+    );
   }
 
   max(
     length: number,
     message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
   ): this {
-    const next = this._addValidator((value) => {
-      if ((value as unknown[]).length <= length) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as unknown[]).length <= length) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as unknown[] }), {
-        max: length,
-      });
-    }) as ArraySchema<any>;
-
-    next._maxItems = next._maxItems === undefined ? length : Math.min(next._maxItems, length);
-
-    return next as this;
+        return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as unknown[] }), {
+          max: length,
+        });
+      },
+      (ann) => ({
+        ...ann,
+        maxItems: ann['maxItems'] === undefined ? length : Math.min(ann['maxItems'] as number, length),
+      }),
+    );
   }
 
   length(
     exact: number,
     message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
   ): this {
-    const next = this._addValidator((value) => {
-      if ((value as unknown[]).length === exact) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as unknown[]).length === exact) return null;
 
-      return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as unknown[] }), { exact });
-    }) as ArraySchema<any>;
-
-    next._minItems = exact;
-    next._maxItems = exact;
-
-    return next as this;
+        return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as unknown[] }), { exact });
+      },
+      (ann) => ({ ...ann, maxItems: exact, minItems: exact }),
+    );
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {
@@ -124,7 +122,7 @@ export class ArraySchema<T> extends Schema<T[]> {
   }
 
   unique(message: MessageFn<{ value: unknown[] }> = () => _messages().array.unique()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as unknown[];
 
       if (new Set(typed).size === typed.length) return null;
@@ -134,13 +132,28 @@ export class ArraySchema<T> extends Schema<T[]> {
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    const base: Record<string, unknown> = { items: this.itemSchema.schema(), type: 'array' };
+    const ann = this._annotations;
+    const base: Record<string, unknown> = { items: this.itemSchema.toJsonSchema(), type: 'array' };
 
-    if (this._minItems !== undefined) base['minItems'] = this._minItems;
+    if (ann['minItems'] !== undefined) base['minItems'] = ann['minItems'];
 
-    if (this._maxItems !== undefined) base['maxItems'] = this._maxItems;
+    if (ann['maxItems'] !== undefined) base['maxItems'] = ann['maxItems'];
 
     return base;
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    const ann = this._annotations;
+
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      ...(ann['maxItems'] !== undefined ? { maxItems: ann['maxItems'] as number } : {}),
+      ...(ann['minItems'] !== undefined ? { minItems: ann['minItems'] as number } : {}),
+      items: this.itemSchema.describe(),
+      kind: 'array',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
@@ -158,8 +171,8 @@ export class ArraySchema<T> extends Schema<T[]> {
 
     return (
       this.itemSchema.equals(o.itemSchema as import('../core').AnySchema) &&
-      this._minItems === o._minItems &&
-      this._maxItems === o._maxItems
+      this._annotations['minItems'] === other._annotations['minItems'] &&
+      this._annotations['maxItems'] === other._annotations['maxItems']
     );
   }
 }

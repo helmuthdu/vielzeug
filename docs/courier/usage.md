@@ -209,6 +209,28 @@ removeLog();
 
 An interceptor can short-circuit the chain by returning a `Response` without calling `next(ctx)`.
 
+### Built-in Interceptor Presets
+
+Three ready-to-use presets are exported:
+
+```ts
+import { withBearerAuth, withLogging, withRequestId } from '@vielzeug/courier';
+
+// Inject a Bearer token — static or async (useful for refresh flows)
+client.use(withBearerAuth('my-token'));
+client.use(withBearerAuth(async () => tokenStore.getAccessToken()));
+
+// Add a unique request ID header (default: x-request-id populated with crypto.randomUUID())
+client.use(withRequestId());
+client.use(withRequestId({ header: 'x-trace-id', generate: () => ulid() }));
+
+// Log method, URL, status, and duration to console.debug
+client.use(withLogging());
+client.use(withLogging({ logger: (msg, meta) => structuredLogger.info(msg, meta) }));
+```
+
+`withBearerAuth` handles `undefined`, plain object, array-of-tuples, and `Headers` instance inputs in `ctx.init.headers` — no manual spread required.
+
 ## Query Client
 
 `createQuery()` provides cache-backed reads with request deduplication, prefix invalidation, and reactive subscriptions for any async data source.
@@ -216,16 +238,12 @@ An interceptor can short-circuit the chain by returning a `Response` without cal
 ### Creating a Query Client
 
 ```ts
-import { NO_RETRY, createQuery } from '@vielzeug/courier';
+import { createQuery } from '@vielzeug/courier';
 
 const qc = createQuery({
-  staleTime: 0,
-  gcTime: 300_000,
-  maxAttempts: NO_RETRY,
-  retryDelay: undefined,
-  shouldRetry: undefined,
-  refetchOnFocus: false,
-  refetchOnReconnect: false,
+  staleTime: 0,      // ms to serve from cache before refetching (default: 0 = always stale)
+  gcTime: 300_000,   // ms before an unobserved entry is GC'd (default: 5 min)
+  maxAttempts: 1,    // 1 = one try with no retries
 });
 ```
 
@@ -258,7 +276,7 @@ const user = await qc.fetch({
 Per-fetch retry options override `createQuery()` defaults when provided.
 
 ::: tip Retry semantics
-`maxAttempts: 3` means **3 total attempts**. `maxAttempts: 1` or `NO_RETRY` means one try with no retries.
+`maxAttempts: 3` means **3 total attempts**. `maxAttempts: 1` means one try with no retries.
 :::
 
 ### Conditional Fetching
@@ -319,15 +337,19 @@ await qc.prefetch({
 ```ts
 const cached = qc.get<User>(['users', 1]);
 
+// Set a value (updatedAt defaults to Date.now())
 qc.set(['users', 1], { id: 1, name: 'Alice' });
 qc.set<User[]>(['users'], (old = []) => [...old, newUser]);
+
+// Restore a persisted entry with its original timestamp so staleTime checks are accurate
+qc.set(['users', 1], persistedData, { updatedAt: storedTimestamp });
 
 const state = qc.getState<User>(['users', 1]);
 ```
 
 ### `subscribe(key, listener, opts?)`
 
-Subscribes to live `QueryState` updates for a key. It fires immediately with the current state and is best for imperative listeners.
+Subscribes to live `QueryState` updates for a key. The listener is **not** called immediately on subscription — it fires only when the state next changes. Use `getState(key)` or `watch(key).peek()` to read the current snapshot synchronously before subscribing.
 
 ```ts
 const unsub = qc.subscribe<User>(['users', 1], (state) => {
@@ -400,17 +422,21 @@ qc.clear();
 
 ### Background Revalidation
 
-Enable automatic revalidation of stale observed entries when the tab regains focus or the network reconnects.
+`refetchStale()` revalidates all stale observed entries. Use `bindRefetch()` to wire it up to browser lifecycle events — tab visibility and network reconnection:
 
 ```ts
-const qc = createQuery({
-  staleTime: 30_000,
-  refetchOnFocus: true,
-  refetchOnReconnect: true,
-});
+import { bindRefetch, createQuery } from '@vielzeug/courier';
+
+const qc = createQuery({ staleTime: 30_000 });
+
+// Returns an unbind function — call it on cleanup to remove the listeners
+const unbind = bindRefetch(qc);
+
+// later, e.g. on logout or component teardown:
+unbind();
 ```
 
-Only entries with active observers are revalidated automatically. `qc.dispose()` removes the event listeners.
+`bindRefetch` attaches a `visibilitychange` listener (fires when `document.visibilityState` becomes `'visible'`) and an `online` listener on `window`. Only entries with active subscribers that are past their `staleTime` are revalidated. Error entries with stale data are also eligible once their `updatedAt` age exceeds `staleTime`.
 
 ### Stable Key Serialization
 
@@ -441,7 +467,106 @@ qc.dispose();
 api.dispose();
 ```
 
-## Mutation
+## Query Cache Persistence
+
+Persist successful cache entries across page reloads with `persistQueryCache()` and `hydrateQueryCache()`.
+
+```ts
+import { createQuery, hydrateQueryCache, persistQueryCache } from '@vielzeug/courier';
+
+const qc = createQuery({ staleTime: 60_000 });
+
+// Hydrate on page load (before any fetch calls)
+await hydrateQueryCache(qc, {
+  keys: [['users', userId], ['settings']],
+  storage: localStorage,
+});
+
+// Wire up persistence for future writes (also eagerly persists any already-successful entries)
+const stopPersisting = persistQueryCache(qc, {
+  keys: [['users', userId], ['settings']],
+  storage: localStorage,
+});
+
+// Stop on logout
+stopPersisting();
+qc.clear();
+```
+
+**`PersistOptions`:**
+
+| Option     | Type                           | Default      | Description                                                                        |
+| ---------- | ------------------------------ | ------------ | ---------------------------------------------------------------------------------- |
+| `storage`  | `PersistStorage`               | required     | Any sync or async `getItem` / `setItem` / `removeItem` backend                    |
+| `keys`     | `QueryKey[]`                   | required     | Which keys to persist or hydrate                                                   |
+| `include`  | `(key: QueryKey) => boolean`   | all keys     | Predicate applied consistently in both persist and hydrate                         |
+| `prefix`   | `string`                       | `'courier:'` | Storage key namespace to avoid collisions                                          |
+| `maxAge`   | `number`                       | —           | Max entry age in ms during hydration; entries older than this are skipped          |
+| `onError`  | `(err, key) => void`           | silent       | Called when a storage read or write fails                                          |
+
+`hydrateQueryCache` restores the original `updatedAt` timestamp so staleTime checks after hydration are accurate — 55-second-old hydrated data with `staleTime: 60_000` will be refetched after 5 more seconds, not after a full 60 seconds.
+
+```ts
+// Custom async storage (IndexedDB adapter)
+const idbStorage: PersistStorage = {
+  getItem: (key) => idb.get(key),
+  setItem: (key, value) => idb.put(key, value),
+  removeItem: (key) => idb.delete(key),
+};
+
+await hydrateQueryCache(qc, {
+  keys: [['products']],
+  maxAge: 24 * 60 * 60_000, // skip entries older than 1 day
+  onError: (err, key) => console.warn('Hydration failed for', key, err),
+  storage: idbStorage,
+});
+```
+
+## DataLoader-Style Batcher
+
+`createBatcher()` coalesces individual `load()` calls made within the same scheduling window into a single `resolve()` call, eliminating N+1 request patterns.
+
+```ts
+import { createBatcher } from '@vielzeug/courier';
+
+const userLoader = createBatcher({
+  resolve: async (ids: number[]) =>
+    api.post<User[]>('/users/batch', { body: { ids } }),
+});
+
+// These three calls collapse into one POST /users/batch { ids: [1, 2, 3] }
+const [alice, bob, carol] = await Promise.all([
+  userLoader.load(1),
+  userLoader.load(2),
+  userLoader.load(3),
+]);
+```
+
+**Options:**
+
+| Option     | Type                           | Default | Description                                                                                    |
+| ---------- | ------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
+| `resolve`  | `(keys: K[]) => Promise<V[]>`  | required | Execute a batch and return results **in the same order as `keys`**                           |
+| `maxSize`  | `number`                       | `25`    | Force-flush when the queue reaches this size                                                   |
+| `window`   | `number`                       | `0`     | Scheduling window in ms. `0` = next microtask; positive value coalesces across async ticks    |
+
+```ts
+// Custom window and batch size
+const loader = createBatcher({
+  maxSize: 100,
+  resolve: async (keys) => fetchBatch(keys),
+  window: 16, // collect for one animation frame
+});
+
+// Dispose — rejects all queued promises and prevents further use
+loader.dispose();
+```
+
+::: warning Result ordering
+`resolve()` **must** return an array in the same order as `keys`. A length mismatch rejects all pending promises.
+:::
+
+## Mutations
 
 When using `createCourier()`, create mutations directly from the client — no extra import needed:
 
@@ -562,103 +687,6 @@ for await (const msg of stream.readable<ChatMessage>('/chat', {
 
 `parse: 'text'` is the default. Streaming connections default to `Infinity` timeout per connection unless you pass `timeout` explicitly.
 
-## Framework Store Integration
-
-Courier exposes a minimal external-store contract compatible with any framework.
-
-::: code-group
-
-```tsx [React]
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { createCourier } from '@vielzeug/courier';
-
-const client = createCourier({
-  baseUrl: 'https://api.example.com',
-  query: { staleTime: 30_000 },
-});
-
-type User = { id: number; name: string };
-
-function useUserName(id: number) {
-  const store = useMemo(
-    () =>
-      client.query.watch<User, string>(['users', id], {
-        select: (user) => user?.name,
-        placeholderData: 'Loading…',
-      }),
-    [id],
-  );
-
-  useEffect(() => {
-    void client.query.fetch({
-      key: ['users', id],
-      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
-    });
-  }, [id]);
-
-  return useSyncExternalStore(store.subscribe, store.peek);
-}
-```
-
-```ts [Vue 3]
-import { onScopeDispose, shallowRef, watchEffect } from 'vue';
-import { createCourier } from '@vielzeug/courier';
-
-const client = createCourier({ baseUrl: 'https://api.example.com' });
-
-type User = { id: number; name: string };
-
-function useUserName(id: number) {
-  const store = client.query.watch<User, string>(['users', id], {
-    select: (user) => user?.name,
-    placeholderData: 'Loading…',
-  });
-  const name = shallowRef(store.peek().data);
-  const stop = store.subscribe(() => {
-    name.value = store.peek().data;
-  });
-
-  watchEffect(() => {
-    void client.query.fetch({
-      key: ['users', id],
-      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
-    });
-  });
-
-  onScopeDispose(stop);
-
-  return { name };
-}
-```
-
-```ts [Svelte]
-import { readable } from 'svelte/store';
-import { createCourier } from '@vielzeug/courier';
-
-const client = createCourier({ baseUrl: 'https://api.example.com' });
-
-type User = { id: number; name: string };
-
-export function userNameStore(id: number) {
-  const store = client.query.watch<User, string>(['users', id], {
-    select: (user) => user?.name,
-    placeholderData: 'Loading…',
-  });
-
-  void client.query.fetch({
-    key: ['users', id],
-    fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
-  });
-
-  return readable(store.peek(), (set) => {
-    set(store.peek());
-    return store.subscribe(() => set(store.peek()));
-  });
-}
-```
-
-:::
-
 ## Error Handling
 
 All non-2xx responses and network failures throw an `HttpError`.
@@ -755,8 +783,106 @@ await retryingQc.fetch({
 
 - `maxAttempts: 1` means one try and no retries.
 - Use `dedupe: false` when method + URL + response type are the same but you explicitly want separate requests.
-- `watch()` does not emit immediately; call `peek()` for the initial snapshot.
+- `subscribe()` does **not** emit immediately; call `getState(key)` for the current snapshot first.
+- `watch()` does **not** emit immediately; call `peek()` for the initial snapshot.
 - Long-lived streams default to `Infinity` timeout per connection.
+
+## Framework Integration
+
+Courier exposes a minimal external-store contract compatible with any framework.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { createCourier } from '@vielzeug/courier';
+
+const client = createCourier({
+  baseUrl: 'https://api.example.com',
+  query: { staleTime: 30_000 },
+});
+
+type User = { id: number; name: string };
+
+function useUserName(id: number) {
+  const store = useMemo(
+    () =>
+      client.query.watch<User, string>(['users', id], {
+        select: (user) => user?.name,
+        placeholderData: 'Loading…',
+      }),
+    [id],
+  );
+
+  useEffect(() => {
+    void client.query.fetch({
+      key: ['users', id],
+      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    });
+  }, [id]);
+
+  return useSyncExternalStore(store.subscribe, store.peek);
+}
+```
+
+```ts [Vue 3]
+import { onScopeDispose, shallowRef, watchEffect } from 'vue';
+import { createCourier } from '@vielzeug/courier';
+
+const client = createCourier({ baseUrl: 'https://api.example.com' });
+
+type User = { id: number; name: string };
+
+function useUserName(id: number) {
+  const store = client.query.watch<User, string>(['users', id], {
+    select: (user) => user?.name,
+    placeholderData: 'Loading…',
+  });
+  const name = shallowRef(store.peek().data);
+  const stop = store.subscribe(() => {
+    name.value = store.peek().data;
+  });
+
+  watchEffect(() => {
+    void client.query.fetch({
+      key: ['users', id],
+      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    });
+  });
+
+  onScopeDispose(stop);
+
+  return { name };
+}
+```
+
+```ts [Svelte]
+import { readable } from 'svelte/store';
+import { createCourier } from '@vielzeug/courier';
+
+const client = createCourier({ baseUrl: 'https://api.example.com' });
+
+type User = { id: number; name: string };
+
+export function userNameStore(id: number) {
+  const store = client.query.watch<User, string>(['users', id], {
+    select: (user) => user?.name,
+    placeholderData: 'Loading…',
+  });
+
+  void client.query.fetch({
+    key: ['users', id],
+    fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+  });
+
+  return readable(store.peek(), (set) => {
+    set(store.peek());
+    return store.subscribe(() => set(store.peek()));
+  });
+}
+```
+
+:::
 
 ## Working with Other Vielzeug Libraries
 
@@ -809,6 +935,9 @@ effect(() => console.log('user:', userStore.value.user?.name));
 - Use `qc.invalidate([prefix])` after successful mutations to refresh related cached data.
 - Always pass the `signal` from query and mutation functions to the underlying request.
 - Use `dedupe: false` when you intentionally want separate in-flight requests for the same method + URL + response type.
+- `subscribe()` does **not** fire immediately. Call `getState(key)` or `watch(key).peek()` to read the current snapshot before subscribing.
 - Use `qc.watch()` and `mutation.toStore()` for framework bindings; keep `subscribe()` for imperative listeners.
+- Use `bindRefetch(qc)` instead of `refetchOnFocus`/`refetchOnReconnect` options — it is fully opt-in and the returned unbind function gives you explicit control.
 - Remember the timeout split: REST requests default to 30s, SSE and readable streams default to `Infinity` per connection.
+- When using `persistQueryCache`, call it **after** `hydrateQueryCache` resolves. Already-successful entries are eagerly persisted on setup.
 - Dispose long-lived clients in server-side code and tests to avoid leaking listeners or in-flight work.

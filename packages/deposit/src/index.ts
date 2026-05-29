@@ -1,4 +1,5 @@
 export { createIndexedDB } from './adapters/indexeddb';
+export type { IndexedDbAdapter } from './adapters/indexeddb';
 export { createMemory } from './adapters/memory';
 export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
 export {
@@ -15,6 +16,7 @@ export { table } from './types';
 export type {
   Adapter,
   AnySchema,
+  BaseAdapterOptions,
   DebugInfo,
   DebugStats,
   DepositLogger,

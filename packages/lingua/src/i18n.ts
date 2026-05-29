@@ -23,12 +23,30 @@ type PluralRuleSelector = { select: (count: number) => string };
 type PluralCaches = Map<string, PluralRuleSelector>;
 type LocaleRecord<M extends Messages> =
   | { kind: 'dynamic'; loader: Loader<M>; loadingTask?: Promise<void> }
-  | { kind: 'static'; messages: M };
+  | { flat: Map<string, string>; kind: 'static' };
+
+// Accumulates entries into `result` (defaults to a new Map). Passing the map
+// down avoids allocating an intermediate Map per nesting level.
+function flatten(messages: Messages, result = new Map<string, string>(), prefix?: string): Map<string, string> {
+  for (const [key, value] of Object.entries(messages)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === 'string') {
+      result.set(fullKey, value);
+    } else {
+      flatten(value as Messages, result, fullKey);
+    }
+  }
+
+  return result;
+}
 
 function makeRecord<M extends Messages>(source: LocaleSource<M>): LocaleRecord<M> {
-  return typeof source === 'function'
-    ? { kind: 'dynamic', loader: source as Loader<M> }
-    : { kind: 'static', messages: source as M };
+  if (typeof source === 'function') {
+    return { kind: 'dynamic', loader: source as Loader<M> };
+  }
+
+  return { flat: flatten(source as M), kind: 'static' };
 }
 
 const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}-]+)\}/gu;
@@ -36,12 +54,17 @@ const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}-]+)\}/gu;
 const CARDINAL_FALLBACK: PluralRuleSelector = { select: (n) => (n === 1 ? 'one' : 'other') };
 
 function canon(locale: string): string {
+  let canonical: string | undefined;
+
   try {
-    return Intl.getCanonicalLocales(locale)[0] ?? 'en';
+    [canonical] = Intl.getCanonicalLocales(locale);
   } catch {
-    // Invalid BCP 47 tag — reject rather than store arbitrary strings as locale keys.
-    return 'en';
+    // Invalid BCP 47 tag — canonical stays undefined, guard below throws.
   }
+
+  if (!canonical) throw new Error(`[lingua/E004] Invalid BCP 47 locale tag: "${locale}".`);
+
+  return canonical;
 }
 
 function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]; set: Set<Locale> } {
@@ -107,6 +130,9 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   const fallback = Array.isArray(cfg.fallback) ? cfg.fallback.map(canon) : cfg.fallback ? [canon(cfg.fallback)] : [];
 
   const registry = new Map<Locale, LocaleRecord<M>>();
+  // Populated during catalog initialization and register() calls — not by merge().
+  // Used for reference-equality dedup: register() with the same source object is a no-op.
+  const registrationSources = new Map<Locale, LocaleSource<M>>();
   const subscribers = new Set<(snapshot: I18nSnapshot) => void>();
   const pluralCache: PluralCaches = new Map();
   const onMissing =
@@ -124,7 +150,6 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   let { chain: activeChain, set: activeChainSet } = buildLocaleChain(locale, fallback);
   let switchId = 0;
   let _fmt: Formatter | undefined;
-  const scopeCache = new Map<string, ScopedI18n>();
 
   const bump = (): void => {
     version++;
@@ -142,30 +167,14 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   };
 
   const findMessage = (key: string): string | undefined => {
-    const parts = key.split('.');
-
     for (const candidate of activeChain) {
       const entry = registry.get(candidate);
 
       if (entry?.kind !== 'static') continue;
 
-      let value: unknown = entry.messages;
+      const value = entry.flat.get(key);
 
-      for (const part of parts) {
-        if (value == null || typeof value !== 'object') {
-          value = undefined;
-          break;
-        }
-
-        if (!Object.hasOwn(value as object, part)) {
-          value = undefined;
-          break;
-        }
-
-        value = (value as Record<string, unknown>)[part];
-      }
-
-      if (typeof value === 'string') return value;
+      if (value !== undefined) return value;
     }
 
     return undefined;
@@ -173,16 +182,12 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
   const register = (loc: Locale, source: LocaleSource<M>): void => {
     const normalized = canon(loc);
-    const existing = registry.get(normalized);
 
-    // Skip if the source reference hasn't changed — avoids spurious subscriber notifications.
-    if (
-      (existing?.kind === 'static' && source === existing.messages) ||
-      (existing?.kind === 'dynamic' && source === existing.loader)
-    ) {
-      return;
-    }
+    // Skip if the same source reference is already registered — avoids rebuilding
+    // the flat map and notifying subscribers when nothing has actually changed.
+    if (registrationSources.get(normalized) === source) return;
 
+    registrationSources.set(normalized, source);
     registry.set(normalized, makeRecord(source));
 
     if (activeChainSet.has(normalized)) bump();
@@ -190,7 +195,11 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
   if (cfg.catalogs) {
     for (const [loc, source] of Object.entries(cfg.catalogs)) {
-      registry.set(canon(loc), makeRecord(source as LocaleSource<M>));
+      const normalized = canon(loc);
+      const typedSource = source as LocaleSource<M>;
+
+      registrationSources.set(normalized, typedSource);
+      registry.set(normalized, makeRecord(typedSource));
     }
   }
 
@@ -210,7 +219,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
         // Discard if the entry was replaced by a concurrent register() call.
         if (registry.get(normalized) !== entry) return;
 
-        registry.set(normalized, { kind: 'static', messages });
+        registry.set(normalized, { flat: flatten(messages), kind: 'static' });
 
         if (activeChainSet.has(normalized)) bump();
       },
@@ -223,6 +232,35 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     );
 
     return entry.loadingTask;
+  };
+
+  const merge = async (loc: Locale, source: LocaleSource<M>): Promise<void> => {
+    const normalized = canon(loc);
+
+    // Wait for any in-flight dynamic load to complete before merging, so base
+    // catalog keys are preserved rather than overwritten by the merge source.
+    const existing = registry.get(normalized);
+
+    if (existing?.kind === 'dynamic') {
+      await preload(normalized);
+    }
+
+    // Load the merge source (static or async loader).
+    const mergeMessages = typeof source === 'function' ? await (source as Loader<M>)() : (source as M);
+    const mergeFlat = flatten(mergeMessages);
+
+    // Apply merged keys on top of the current catalog, or create a new one.
+    const current = registry.get(normalized);
+
+    if (current?.kind === 'static') {
+      for (const [key, value] of mergeFlat) {
+        current.flat.set(key, value);
+      }
+    } else {
+      registry.set(normalized, { flat: mergeFlat, kind: 'static' });
+    }
+
+    if (activeChainSet.has(normalized)) bump();
   };
 
   const translate = (key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string => {
@@ -286,24 +324,20 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       return locale;
     },
 
+    merge,
+
     preload,
 
     register,
 
     scope(prefix: MessageBranchKeys<M> | AnyKey): ScopedI18n {
       const pre = String(prefix);
-      let cached = scopeCache.get(pre);
 
-      if (!cached) {
-        cached = {
-          has: (key) => findMessage(`${pre}.${key}`) !== undefined,
-          t: (key, vars?) => translate(`${pre}.${key}`, vars),
-          tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
-        };
-        scopeCache.set(pre, cached);
-      }
-
-      return cached;
+      return {
+        has: (key) => findMessage(`${pre}.${key}`) !== undefined,
+        t: (key, vars?) => translate(`${pre}.${key}`, vars),
+        tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
+      };
     },
 
     async setLocale(next: Locale): Promise<void> {

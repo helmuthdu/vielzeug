@@ -11,7 +11,7 @@ describe('public api', () => {
     expect(toolkit.indexBy).toBeTypeOf('function');
     expect(toolkit.sample).toBeTypeOf('function');
     expect(toolkit.partial).toBeTypeOf('function');
-    expect(toolkit.and).toBeTypeOf('function');
+    expect(toolkit.allOf).toBeTypeOf('function');
     expect(toolkit.isGreaterThan).toBeTypeOf('function');
   });
 
@@ -37,9 +37,12 @@ describe('public api', () => {
     expect('keyBy' in arrayApi).toBe(false);
 
     expect('partial' in functionApi).toBe(true);
-    expect('and' in functionApi).toBe(true);
-    expect('or' in functionApi).toBe(true);
-    expect('not' in functionApi).toBe(true);
+    expect('allOf' in functionApi).toBe(true);
+    expect('anyOf' in functionApi).toBe(true);
+    expect('noneOf' in functionApi).toBe(true);
+    expect('and' in functionApi).toBe(false);
+    expect('or' in functionApi).toBe(false);
+    expect('not' in functionApi).toBe(false);
     expect('configure' in functionApi).toBe(false);
     expect('flip' in functionApi).toBe(false);
 

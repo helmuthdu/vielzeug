@@ -14,11 +14,11 @@ import { defineMachine, interpret } from '@vielzeug/machine';
 
 type Event = { type: 'TOGGLE' };
 
-const machine = defineMachine<'on' | 'off', Record<string, never>, Event>({
+const machine = defineMachine<'off' | 'on', Record<string, never>, Event>({
   initial: 'on',
   states: {
-    on: { on: { TOGGLE: [{ target: 'off' }] } },
-    off: { on: { TOGGLE: [{ target: 'on' }] } },
+    off: { on: { TOGGLE: { target: 'on' } } },
+    on: { on: { TOGGLE: { target: 'off' } } },
   },
 });
 
@@ -28,76 +28,47 @@ m.send({ type: 'TOGGLE' }); // state changes to 'off'
 
 ### With Context
 
-Context holds data that changes during transitions.
+Context holds data that changes during transitions. Use `assign()` to update it.
 
 ```ts
-type Event = { type: 'INC' } | { type: 'DEC' };
+import { assign, defineMachine, interpret } from '@vielzeug/machine';
+
+type Event = { type: 'DEC' } | { type: 'INC' };
 type Context = { count: number };
 
 const machine = defineMachine<'idle', Context, Event>({
-  initial: 'idle',
   context: { count: 0 },
+  initial: 'idle',
   states: {
     idle: {
       on: {
-        INC: [
-          {
-            target: 'idle',
-            actions: [assign(({ context }) => ({ count: context.count + 1 }))],
-          },
-        ],
-        DEC: [
-          {
-            target: 'idle',
-            actions: [assign(({ context }) => ({ count: context.count - 1 }))],
-          },
-        ],
+        DEC: { actions: [assign(({ context }) => ({ count: context.count - 1 }))], target: 'idle' },
+        INC: { actions: [assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' },
       },
     },
   },
 });
 ```
 
-## Transitions and Guards
+## Transition Syntax
 
-### Basic Transitions
+### Shorthand — single transition
+
+When there is exactly one possible transition for an event, pass it directly as an object:
 
 ```ts
 states: {
   idle: {
     on: {
-      START: [{ target: 'running' }],
+      GO: { target: 'active' },
     },
   },
 }
 ```
 
-### Guarded Transitions
+### Array — multiple guarded transitions
 
-Guards decide whether a transition occurs based on context and event.
-
-```ts
-type Event = { type: 'SUBMIT'; value: number };
-
-states: {
-  form: {
-    on: {
-      SUBMIT: [
-        {
-          guard: ({ event }) => event.value > 0,
-          target: 'processing',
-          actions: [assign(({ event }) => ({ input: event.value }))],
-        },
-        // No matching guard → transition rejected
-      ],
-    },
-  },
-}
-```
-
-### Multiple Transitions for One Event
-
-Process the first matching transition (guard passes).
+When multiple transitions are possible (processed in order, first guard wins), use an array:
 
 ```ts
 states: {
@@ -106,11 +77,11 @@ states: {
       PAY: [
         {
           guard: ({ context }) => context.balance >= context.total,
-          target: 'success',
           actions: [assign(({ context }) => ({ balance: context.balance - context.total }))],
+          target: 'success',
         },
         {
-          // Fallback if guard fails
+          // fallback when guard fails
           target: 'insufficient_funds',
         },
       ],
@@ -119,49 +90,80 @@ states: {
 }
 ```
 
+## Guards
+
+Guards decide whether a transition occurs based on current context and the event payload.
+
+```ts
+type Event = { type: 'SUBMIT'; value: number };
+
+states: {
+  form: {
+    on: {
+      SUBMIT: {
+        guard: ({ event }) => event.value > 0,
+        actions: [assign(({ event }) => ({ input: event.value }))],
+        target: 'processing',
+      },
+    },
+  },
+}
+```
+
+::: tip
+Guards must be pure functions. Side effects belong in `actions`, not `guard`.
+:::
+
 ## Actions
 
-Actions run during transitions. They modify context and have access to the current state and triggering event.
+Actions run during transitions to update context. Multiple actions execute in order.
 
-### Using assign()
+### `assign()`
 
-`assign()` merges partial context updates.
+`assign()` shallow-merges partial context updates. For nested objects, spread explicitly:
 
 ```ts
 import { assign } from '@vielzeug/machine';
 
-actions: [assign(({ context, event }) => ({ user: event.name, updated: Date.now() }))],
+// Flat context update
+actions: [assign(({ context }) => ({ count: context.count + 1 }))],
+
+// Nested context — spread the nested property
+actions: [assign(({ context }) => ({ config: { ...context.config, debug: true } }))],
 ```
 
-### Custom Actions
+### Custom actions
 
-Actions are just functions that mutate context.
+Actions are plain functions that mutate the context draft:
 
 ```ts
-const logTransition = ({ context, event }: ActionArgs<Context, Event>) => {
-  console.log(`Transition triggered by ${event.type}`);
-  context.log = `Last event: ${event.type}`;
+import type { ActionArgs } from '@vielzeug/machine';
+
+const logEvent = ({ context, event }: ActionArgs<Context, Event>) => {
+  context.lastEvent = event.type;
+  context.updatedAt = Date.now();
 };
 
-actions: [logTransition, assign(({ context }) => ({ processed: true }))],
+actions: [logEvent, assign(({ context }) => ({ processed: true }))],
 ```
 
 ## Entry and Exit Actions
 
-Run actions when entering or leaving a state.
+`entry` runs when a state is entered. `exit` runs when a state is left. Both fire on self-transitions too.
+
+Entry receives only `{ context }` — it does not receive the triggering event. For event-dependent logic on transition, use transition `actions` instead.
 
 ```ts
 states: {
   active: {
     entry: ({ context }) => {
-      console.log('Entered active state');
       context.startTime = Date.now();
     },
-    exit: ({ context }) => {
-      console.log('Exited active state, duration:', Date.now() - context.startTime);
+    exit: ({ context, event }) => {
+      context.duration = Date.now() - context.startTime;
     },
     on: {
-      STOP: [{ target: 'idle' }],
+      STOP: { target: 'idle' },
     },
   },
 }
@@ -169,9 +171,9 @@ states: {
 
 ## Async Invokes
 
-Invokes run promises and dispatch events on completion or error.
+Invokes run a Promise when a state is entered and dispatch an event when it settles.
 
-### Basic Invoke
+### Basic invoke
 
 ```ts
 states: {
@@ -180,73 +182,73 @@ states: {
       {
         src: async () => fetch('/api/data').then(r => r.json()),
         onDone: (result) => ({ type: 'DATA_READY', data: result }),
-        onError: (error) => ({ type: 'DATA_ERROR', error: String(error) }),
+        onError: (error) => ({ type: 'DATA_ERROR', message: String(error) }),
       },
     ],
     on: {
-      DATA_READY: [{ target: 'idle', actions: [assign(({ event }) => ({ data: event.data }))] }],
-      DATA_ERROR: [{ target: 'error' }],
+      DATA_READY: { actions: [assign(({ event }) => ({ data: event.data }))], target: 'idle' },
+      DATA_ERROR:  { target: 'error' },
     },
   },
 }
 ```
 
-### Cancellation
+### Cancellation with `AbortSignal`
 
-Invokes are cancelled when exiting the state. Use `signal.aborted` to detect cancellation.
+Invokes are automatically aborted when the state is exited. Pass `signal` to fetch or any `AbortSignal`-aware API:
 
 ```ts
-src: async ({ signal }) => {
-  const response = await fetch('/data', { signal });
+src: async ({ context, signal }) => {
+  const response = await fetch(`/api/${context.userId}/items`, { signal });
   return response.json();
 },
 ```
 
-### Access to Context and Event
+### Multiple invokes
+
+A state can run multiple invokes in parallel:
 
 ```ts
-src: async ({ context, event, signal }) => {
-  // Use context to customize the request
-  const url = `/api/${context.userId}/items?filter=${context.filter}`;
-  const response = await fetch(url, { signal });
-  return response.json();
-},
+invoke: [
+  { src: async () => fetchUser(), onDone: (user) => ({ type: 'USER_LOADED', user }) },
+  { src: async () => fetchPermissions(), onDone: (perms) => ({ type: 'PERMS_LOADED', perms }) },
+],
 ```
 
 ## Context Validation
 
-Validate context at initialization, hydration, and transitions.
+Validate context at initialization, hydration, and on every transition.
 
 ```ts
 type Context = { count: number; name: string };
 
-const validator = (value: unknown): value is Context =>
+const isValidContext = (value: unknown): value is Context =>
   typeof value === 'object' &&
   value !== null &&
-  typeof (value as any).count === 'number' &&
-  typeof (value as any).name === 'string';
+  typeof (value as Context).count === 'number' &&
+  typeof (value as Context).name === 'string';
 
 const machine = defineMachine<State, Context, Event>({
   context: { count: 0, name: 'app' },
-  validateContext: validator,
+  validateContext: isValidContext,
   // ...
 });
 ```
 
-Invalid context throws `MachinitError` with code `MACHINIT_INVALID_VALIDATE_CONTEXT`.
+When validation fails, a `MachineError` with code `MACHINE_INVALID_VALIDATE_CONTEXT` is thrown. The machine state and context are **unchanged** — the transition is rolled back before any signals are updated.
 
 ## Persistence
 
-Save and restore machine state using an adapter.
+Save and restore machine state across sessions using a persistence adapter.
 
-### Local Storage Example
+### Local Storage
 
 ```ts
 const m = interpret(machine, {
   persistence: {
     load: () => {
-      const data = localStorage.getItem('machine:state');
-      return data ? JSON.parse(data) : undefined;
+      const raw = localStorage.getItem('machine:state');
+      return raw ? (JSON.parse(raw) as MachineSnapshot<State, Context>) : undefined;
     },
     save: (snapshot) => {
       localStorage.setItem('machine:state', JSON.stringify(snapshot));
@@ -258,51 +260,84 @@ const m = interpret(machine, {
 });
 ```
 
-### Snapshot Validation
+### Snapshot validation
 
-Validate restored context:
+Validate restored context on hydration to guard against stale or corrupt storage:
 
 ```ts
 const m = interpret(machine, {
   persistence: { load, save, clear },
-  validateSnapshot: validator,
+  validateSnapshot: isValidContext,
 });
 ```
 
+### Explicit persistence clearing
+
+Disposal does **not** clear persistence — the machine may be recreated (e.g. after HMR or component remount) and should resume from the last saved state. Call `clearPersistence()` explicitly when you want to reset:
+
+```ts
+m.clearPersistence(); // removes stored snapshot via adapter.clear()
+```
+
+## Checking State
+
+### `matches()` — check multiple states at once
+
+```ts
+const m = interpret(machine);
+
+m.matches('idle');              // true if current state is 'idle'
+m.matches('loading', 'error'); // true if in either state
+```
+
+### `can()` — check if an event is valid right now
+
+```ts
+m.can({ type: 'SUBMIT' }); // true if a transition exists for SUBMIT in the current state
+```
+
+::: tip
+`can()` evaluates guards against the current context but does **not** fire any debug hooks. It is a pure read — use it freely for UI conditional rendering.
+:::
+
 ## Debugging and Tracing
 
-### Debug Hooks
+### Debug hooks
 
-Optional callbacks for observability (zero overhead when not used).
+Optional callbacks for observability. They have zero overhead when not provided.
 
 ```ts
 const m = interpret(machine, {
   debug: {
-    onEvaluateGuard: (info) => {
-      console.log(`Guard in ${info.from} for transition to ${info.target}: ${info.passed}`);
+    onEvaluateGuard: ({ from, target, passed }) => {
+      console.log(`Guard: ${from} → ${target} = ${passed}`);
     },
-    onTransitionSkipped: (info) => {
-      console.log(`Event ${info.event.type} in ${info.from}: ${info.reason}`);
+    onTransitionSkipped: ({ event, from }) => {
+      console.log(`${event.type} in ${from}: no matching transition`);
     },
-    onInvokeStart: (info) => {
-      console.log(`Started invoke in ${info.state}`);
-    },
-    onInvokeDone: (info) => {
-      console.log(`Invoke completed:`, info.result);
-    },
-    onInvokeError: (info) => {
-      console.log(`Invoke failed:`, info.error);
-    },
-    onInvokeAbort: (info) => {
-      console.log(`Invoke aborted`);
-    },
+    onInvokeStart: ({ state, invokeId }) => console.log(`invoke #${invokeId} started in ${state}`),
+    onInvokeDone:  ({ invokeId, result })  => console.log(`invoke #${invokeId} done`, result),
+    onInvokeError: ({ invokeId, error })   => console.error(`invoke #${invokeId} failed`, error),
+    onInvokeAbort: ({ invokeId })          => console.log(`invoke #${invokeId} aborted`),
   },
 });
 ```
 
-### Trace Buffer
+### `onTransition` callback
 
-Keep a circular history of transitions.
+For lightweight observation without full debug hooks, use `onTransition` in `InterpretOptions`:
+
+```ts
+const m = interpret(machine, {
+  onTransition: ({ from, to, event }) => {
+    analytics.track('state_change', { from, to, event: event.type });
+  },
+});
+```
+
+### Transition trace buffer
+
+Keep a ring buffer of the last N transitions:
 
 ```ts
 const m = interpret(machine, { traceLimit: 50 });
@@ -312,186 +347,321 @@ m.send({ type: 'BACK' });
 
 console.log(m.getTrace());
 // [
-//   { from: 'idle', to: 'active', event: { type: 'GO' }, timestamp: 1234567890, ... },
-//   { from: 'active', to: 'idle', event: { type: 'BACK' }, timestamp: 1234567891, ... },
+//   { from: 'idle', to: 'active', event: { type: 'GO' }, timestamp: 1234567890 },
+//   { from: 'active', to: 'idle', event: { type: 'BACK' }, timestamp: 1234567891 },
 // ]
 ```
 
+When the buffer is full, the oldest entry is overwritten. The array returned by `getTrace()` is always in chronological order.
+
 ## Testing
 
-### Pure Transition Resolution
+### Pure transition resolution
 
-`resolveTransition()` tests transition logic without side effects.
+`resolveTransition()` is a pure function — it resolves which `TransitionDef` would apply without running any actions, entry/exit handlers, or invokes. Use it to unit-test guard logic:
 
 ```ts
 import { resolveTransition } from '@vielzeug/machine';
 
-const result = resolveTransition(machine, {
-  state: 'idle',
+const transition = resolveTransition(machine, {
   context: { authorized: false },
-  event: { type: 'LOGIN', password: 'wrong' },
+  event: { type: 'LOGIN' },
+  state: 'idle',
 });
 
-expect(result).toBeUndefined(); // Guard failed, no transition
+expect(transition).toBeUndefined(); // guard failed
 ```
 
-### Checking Availability
+When a transition matches, the resolved `TransitionDef` is returned directly:
 
-Use `can()` to check if an event is acceptable.
+```ts
+const transition = resolveTransition(machine, {
+  context: { authorized: true },
+  event: { type: 'LOGIN' },
+  state: 'idle',
+});
+
+expect(transition?.target).toBe('dashboard');
+```
+
+### Snapshot testing
 
 ```ts
 const m = interpret(machine);
 
-expect(m.can({ type: 'GO' })).toBe(true);
-m.send({ type: 'GO' });
-expect(m.can({ type: 'GO' })).toBe(false); // Already in target state
-```
-
-### Snapshot Testing
-
-```ts
-const m = interpret(machine);
-
-const snapshot1 = m.getSnapshot();
+const before = m.getSnapshot();
 m.send({ type: 'UPDATE', value: 10 });
-const snapshot2 = m.getSnapshot();
+const after = m.getSnapshot();
 
-expect(snapshot1).not.toEqual(snapshot2);
+expect(before.context.value).toBe(0);
+expect(after.context.value).toBe(10);
 ```
 
 ## Disposal
 
-Always dispose machines when done to clean up subscriptions and abort ongoing invokes.
+Always dispose machines to clean up signals and abort any in-flight invokes.
 
 ```ts
 const m = interpret(machine);
 
 // ... use machine
 
-m[Symbol.dispose](); // Cleanup
-// or with using (JavaScript 2024+)
-// await using m = interpret(machine);
+m[Symbol.dispose](); // aborts invokes, disposes reactive signals
+
+// Or with the explicit resource management proposal (ES2024+):
+{
+  using m = interpret(machine);
+  m.send({ type: 'GO' });
+} // m[Symbol.dispose]() called automatically
 ```
+
+::: warning
+Disposal does **not** clear persisted state. Call `m.clearPersistence()` explicitly if you want to remove the stored snapshot.
+:::
 
 ## Common Patterns
 
 ### Traffic Light
 
 ```ts
-type Event = { type: 'NEXT' } | { type: 'EMERGENCY' };
+type Event = { type: 'EMERGENCY' } | { type: 'NEXT' };
 
-const trafficLight = defineMachine<'red' | 'yellow' | 'green', Record<string, never>, Event>({
+const trafficLight = defineMachine<'green' | 'red' | 'yellow', Record<string, never>, Event>({
   initial: 'red',
   states: {
-    red: {
-      on: {
-        NEXT: [{ target: 'green' }],
-        EMERGENCY: [{ target: 'red' }],
-      },
-    },
-    green: {
-      on: {
-        NEXT: [{ target: 'yellow' }],
-        EMERGENCY: [{ target: 'red' }],
-      },
-    },
-    yellow: {
-      on: {
-        NEXT: [{ target: 'red' }],
-        EMERGENCY: [{ target: 'red' }],
-      },
-    },
+    green:  { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'yellow' } } },
+    red:    { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'green'  } } },
+    yellow: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'red'    } } },
   },
 });
 ```
 
-### Login Flow
+### Auth flow with async login
 
 ```ts
 type Context = { attempts: number; user?: { id: string; token: string } };
 type Event =
-  | { type: 'SUBMIT'; email: string; password: string }
+  | { email: string; password: string; type: 'SUBMIT' }
   | { type: 'LOGOUT' }
   | { type: 'AUTH_SUCCESS'; user: { id: string; token: string } }
   | { type: 'AUTH_FAILED' };
 
-const auth = defineMachine<'unauthenticated' | 'loading' | 'authenticated' | 'error', Context, Event>({
-  initial: 'unauthenticated',
+const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthenticated', Context, Event>({
   context: { attempts: 0 },
+  initial: 'unauthenticated',
   states: {
-    unauthenticated: {
-      on: {
-        SUBMIT: [
-          {
-            guard: ({ context }) => context.attempts < 3,
-            target: 'loading',
-            actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))],
-          },
-        ],
-      },
-    },
-    loading: {
-      invoke: [
-        {
-          src: async ({ event }) => {
-            return fetch('/auth/login', {
-              method: 'POST',
-              body: JSON.stringify({ email: event.email, password: event.password }),
-            }).then(r => r.json());
-          },
-          onDone: (user) => ({ type: 'AUTH_SUCCESS', user }),
-          onError: () => ({ type: 'AUTH_FAILED' }),
-        },
-      ],
-      on: {
-        AUTH_SUCCESS: [
-          {
-            target: 'authenticated',
-            actions: [assign(({ event }) => ({ user: event.user }))],
-          },
-        ],
-        AUTH_FAILED: [{ target: 'unauthenticated' }],
-      },
-    },
     authenticated: {
       on: {
-        LOGOUT: [{ target: 'unauthenticated', actions: [assign(() => ({ user: undefined }))] }],
+        LOGOUT: { actions: [assign(() => ({ user: undefined }))], target: 'unauthenticated' },
       },
     },
     error: {},
+    loading: {
+      invoke: [
+        {
+          onDone:  (user)  => ({ type: 'AUTH_SUCCESS', user: user as { id: string; token: string } }),
+          onError: ()      => ({ type: 'AUTH_FAILED' }),
+          src: async ({ event }) => {
+            if (event.type !== 'SUBMIT') throw new Error('unexpected');
+            return fetch('/auth/login', {
+              body: JSON.stringify({ email: event.email, password: event.password }),
+              method: 'POST',
+            }).then(r => r.json());
+          },
+        },
+      ],
+      on: {
+        AUTH_FAILED:  { target: 'unauthenticated' },
+        AUTH_SUCCESS: { actions: [assign(({ event }) => ({ user: event.user }))], target: 'authenticated' },
+      },
+    },
+    unauthenticated: {
+      on: {
+        SUBMIT: {
+          actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))],
+          guard: ({ context }) => context.attempts < 3,
+          target: 'loading',
+        },
+      },
+    },
   },
 });
 ```
 
-### Timeout Pattern
+### Timeout with entry/exit
 
 ```ts
-type Context = { timeoutId?: NodeJS.Timeout };
+let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
 states: {
   idle: {
-    entry: ({ context }) => {
-      context.timeoutId = setTimeout(() => {
-        m.send({ type: 'TIMEOUT' });
-      }, 5000);
+    entry: () => {
+      timeoutId = setTimeout(() => m.send({ type: 'TIMEOUT' }), 5_000);
     },
-    exit: ({ context }) => {
-      if (context.timeoutId) clearTimeout(context.timeoutId);
+    exit: () => {
+      clearTimeout(timeoutId);
     },
     on: {
-      ACTIVATE: [{ target: 'active' }],
+      ACTIVATE: { target: 'active' },
+      TIMEOUT:  { target: 'expired' },
     },
   },
 }
 ```
 
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef, useState } from 'react';
+import { interpret } from '@vielzeug/machine';
+import { trafficMachine } from './machine';
+
+function TrafficLight() {
+  const machineRef = useRef<ReturnType<typeof interpret<typeof trafficMachine>> | null>(null);
+  const [state, setState] = useState('red');
+
+  useEffect(() => {
+    const m = interpret(trafficMachine, {
+      onTransition: ({ to }) => setState(to),
+    });
+    machineRef.current = m;
+
+    return () => {
+      m[Symbol.dispose]();
+    };
+  }, []);
+
+  return (
+    <div>
+      <p>Current: {state}</p>
+      <button onClick={() => machineRef.current?.send({ type: 'NEXT' })}>Next</button>
+    </div>
+  );
+}
+```
+
+```ts [Vue 3]
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
+import { interpret } from '@vielzeug/machine';
+import { trafficMachine } from './machine';
+
+const state = ref('red');
+let m: ReturnType<typeof interpret<typeof trafficMachine>>;
+
+onMounted(() => {
+  m = interpret(trafficMachine, {
+    onTransition: ({ to }) => { state.value = to; },
+  });
+});
+
+onUnmounted(() => {
+  m?.[Symbol.dispose]();
+});
+</script>
+
+<template>
+  <div>
+    <p>Current: {{ state }}</p>
+    <button @click="m?.send({ type: 'NEXT' })">Next</button>
+  </div>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+import { onDestroy, onMount } from 'svelte';
+import { interpret } from '@vielzeug/machine';
+import { trafficMachine } from './machine';
+
+let state = 'red';
+let m: ReturnType<typeof interpret<typeof trafficMachine>>;
+
+onMount(() => {
+  m = interpret(trafficMachine, {
+    onTransition: ({ to }) => { state = to; },
+  });
+});
+
+onDestroy(() => {
+  m?.[Symbol.dispose]();
+});
+</script>
+
+<p>Current: {state}</p>
+<button on:click={() => m?.send({ type: 'NEXT' })}>Next</button>
+```
+
+:::
+
+## Working with Other Vielzeug Libraries
+
+### With `@vielzeug/ripple`
+
+`state` and `context` are `ReadonlySignal` values from `@vielzeug/ripple`. Use `effect()` to drive reactive UI from machine state:
+
+```ts
+import { effect } from '@vielzeug/ripple';
+import { defineMachine, interpret } from '@vielzeug/machine';
+
+const playerMachine = defineMachine({
+  context: { volume: 1 },
+  initial: 'paused',
+  states: {
+    paused:  { on: { PLAY:  { target: 'playing' } } },
+    playing: { on: { PAUSE: { target: 'paused'  } } },
+  },
+});
+
+const m = interpret(playerMachine);
+
+// Drive DOM updates reactively — runs synchronously on each transition
+effect(() => {
+  document.getElementById('play-btn')!.textContent =
+    m.state.value === 'playing' ? 'Pause' : 'Play';
+});
+
+m.send({ type: 'PLAY' }); // effect runs immediately
+```
+
+### With `@vielzeug/relay`
+
+Use `@vielzeug/relay` to bridge machine transitions to a shared event bus — useful for cross-machine coordination:
+
+```ts
+import { createBus } from '@vielzeug/relay';
+import { defineMachine, interpret } from '@vielzeug/machine';
+
+const bus = createBus<{ 'auth:logout': void; 'auth:login': { userId: string } }>();
+
+const authMachine = defineMachine({
+  context: { userId: '' as string },
+  initial: 'anonymous',
+  states: {
+    anonymous: { on: { LOGIN: { target: 'authenticated', actions: [
+      assign(({ context, event }) => { context.userId = (event as any).userId; }),
+    ] } } },
+    authenticated: { on: { LOGOUT: { target: 'anonymous' } } },
+  },
+});
+
+const m = interpret(authMachine, {
+  onTransition: ({ to, event }) => {
+    if (to === 'anonymous') bus.emit('auth:logout', undefined);
+    if (to === 'authenticated') bus.emit('auth:login', { userId: (event as any).userId });
+  },
+});
+```
+
 ## Best Practices
 
-- **Define events as discriminated unions.** This ensures type safety and makes all possible events explicit.
-- **Keep guards simple and pure.** Side effects belong in actions, not guards. Guards should only read context and event.
-- **Use `assign()` for context updates.** It handles merging and is compatible with tracing and persistence.
-- **Dispose machines when done.** Call `m[Symbol.dispose]()` to clean up invokes, listeners, and prevent memory leaks.
-- **Test transitions with `resolveTransition()`.** It's a pure function; test transition logic independently without running the full machine.
-- **Validate snapshots on restore.** Pass a `validateSnapshot` function to `interpret()` to ensure hydrated context is valid.
-- **Use persistence only for data, not secrets.** Snapshots contain context; store them securely and never in localStorage for auth tokens.
-- **Keep state machines simple and focused.** If a state machine has more than 10–15 states, consider splitting it or simplifying the domain logic.
+- **Use discriminated event unions.** TypeScript infers payload types per transition from the event type string.
+- **Keep guards pure.** Guards must not produce side effects. All mutation belongs in `actions`.
+- **Use `assign()` for context updates.** Do not mutate `args.context` directly outside `assign()` or custom action functions.
+- **Prefer shorthand transition syntax** (`on: { GO: { target: 'active' } }`) for single transitions. Use arrays only when you need multiple guarded alternatives.
+- **Dispose machines when done.** Always call `m[Symbol.dispose]()` to prevent memory leaks and abort dangling invokes.
+- **Test with `resolveTransition()`.** Unit-test guard logic in isolation without spinning up a full machine instance.
+- **Validate snapshots on restore.** Pass `validateSnapshot` to guard against stale or malformed persisted state.
+- **Keep machines focused.** A machine with more than 10–15 states is usually a sign it should be split.

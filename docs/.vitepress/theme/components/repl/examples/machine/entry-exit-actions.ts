@@ -11,7 +11,7 @@ const connectionMachine = defineMachine({
     disconnected: {
       entry: () => log('[disconnected] entry: socket closed'),
       on: {
-        CONNECT: [{ target: 'connecting' }],
+        CONNECT: { target: 'connecting' },
       },
     },
     connecting: {
@@ -26,19 +26,19 @@ const connectionMachine = defineMachine({
         onError: (error) => ({ type: 'CONNECT_FAIL', error: String(error) }),
       }],
       on: {
-        CONNECTED:    [{ target: 'connected',     actions: [assign(({ event }) => ({ lastError: '' }))] }],
-        CONNECT_FAIL: [{ target: 'disconnected',  actions: [assign(({ event }) => ({ lastError: event.error }))] }],
+        CONNECTED:    { target: 'connected',    actions: [assign(() => ({ lastError: '' }))] },
+        CONNECT_FAIL: { target: 'disconnected', actions: [assign(({ event }) => ({ lastError: event.error }))] },
       },
     },
     connected: {
       entry: ({ context }) => log('[connected] entry: ready (reconnects: ' + context.reconnects + ')'),
       exit:  () => log('[connected] exit:  connection lost'),
       on: {
-        DISCONNECT: [{ target: 'disconnected' }],
-        ERROR: [{
+        DISCONNECT: { target: 'disconnected' },
+        ERROR: {
           target: 'connecting',
           actions: [assign(({ context }) => ({ reconnects: context.reconnects + 1 }))],
-        }],
+        },
       },
     },
   },

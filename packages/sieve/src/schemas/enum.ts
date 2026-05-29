@@ -1,4 +1,5 @@
 import type { ValidateFn } from '../core';
+import type { SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -25,6 +26,16 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
 
   protected override _toSchemaBase(): Record<string, unknown> {
     return { enum: [...this.values] };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'enum',
+      values: this.values,
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

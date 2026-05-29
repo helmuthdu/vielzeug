@@ -37,10 +37,6 @@ export type PrefetchOptions<T> = QueryOptions<T> & {
 
 export type QueryClientOptions = {
   gcTime?: number;
-  /** Revalidate stale observed entries when the document regains focus. */
-  refetchOnFocus?: boolean;
-  /** Revalidate stale observed entries when the network comes back online. */
-  refetchOnReconnect?: boolean;
   staleTime?: number;
 } & RetryOptions;
 
@@ -51,20 +47,29 @@ type QueryObserver<T, S> = {
   select?: (data: T | undefined) => S | undefined;
 };
 
+// Fetch configuration stored separately from cache state so entry data fields
+// are never mutated by late-arriving fetchQuery calls from different callers.
+type FetchConfig<T = unknown> = {
+  fn: (ctx: QueryFnContext) => Promise<T>;
+  gcTime: number;
+  maxAttempts: number;
+  retryDelay: RetryOptions['retryDelay'];
+  shouldRetry: RetryOptions['shouldRetry'];
+  staleTime: number;
+};
+
 type CacheEntry<T = unknown> = {
   data: T | undefined;
   error: Error | null;
-  fn: ((ctx: QueryFnContext) => Promise<T>) | undefined;
-  gcTime: number;
   hash: string;
   inflight: { controller: AbortController; promise: Promise<T> } | null;
   isFetching: boolean;
   key: QueryKey;
-  maxAttempts: number;
+  // Last config used to successfully start a fetch — used for background revalidation.
+  lastConfig: FetchConfig<T> | undefined;
   observers: Set<QueryObserver<T, unknown>>;
-  retryDelay: RetryOptions['retryDelay'];
-  shouldRetry: RetryOptions['shouldRetry'];
-  staleTime: number;
+  // Pre-computed per-segment hashes for O(1) prefix matching in invalidate().
+  segmentHashes: readonly string[];
   status: EntryStatus;
   updatedAt: number | undefined;
 };
@@ -155,7 +160,7 @@ export function createQuery(opts?: QueryClientOptions) {
       // trigger a notification when the selected result is identical.
       const shouldSkip = typed.select
         ? metaUnchanged && dataUnchanged
-        : metaUnchanged && prev!.updatedAt === next.updatedAt && dataUnchanged;
+        : metaUnchanged && prev?.updatedAt === next.updatedAt && dataUnchanged;
 
       if (shouldSkip) {
         continue;
@@ -175,14 +180,14 @@ export function createQuery(opts?: QueryClientOptions) {
     gcTimers.delete(hash);
   }
 
-  function scheduleGc<T>(entry: CacheEntry<T>) {
+  function scheduleGc<T>(entry: CacheEntry<T>, gcTime: number) {
     cancelGc(entry.hash);
 
     if (entry.observers.size > 0) {
       return;
     }
 
-    if (entry.gcTime === 0) {
+    if (gcTime === 0) {
       entries.delete(entry.hash);
 
       return;
@@ -197,12 +202,12 @@ export function createQuery(opts?: QueryClientOptions) {
 
       entries.delete(entry.hash);
       gcTimers.delete(entry.hash);
-    }, entry.gcTime);
+    }, gcTime);
 
     gcTimers.set(entry.hash, timer);
   }
 
-  function ensureEntry<T>(key: QueryKey, gcTime = gcTimeDefault): CacheEntry<T> {
+  function ensureEntry<T>(key: QueryKey): CacheEntry<T> {
     const hash = stableStringify(key);
     let entry = entries.get(hash) as CacheEntry<T> | undefined;
 
@@ -210,17 +215,13 @@ export function createQuery(opts?: QueryClientOptions) {
       entry = {
         data: undefined,
         error: null,
-        fn: undefined,
-        gcTime,
         hash,
         inflight: null,
         isFetching: false,
         key,
-        maxAttempts: maxAttemptsDefault,
+        lastConfig: undefined,
         observers: new Set(),
-        retryDelay: retryDelayDefault,
-        shouldRetry: shouldRetryDefault,
-        staleTime: staleTimeDefault,
+        segmentHashes: key.map(stableStringify),
         status: 'idle',
         updatedAt: undefined,
       };
@@ -236,10 +237,10 @@ export function createQuery(opts?: QueryClientOptions) {
     entries.delete(entry.hash);
   }
 
-  function isKeyOrPrefix(entryKey: QueryKey, prefixHash: readonly string[]): boolean {
-    if (prefixHash.length > entryKey.length) return false;
+  function isKeyOrPrefix(entry: CacheEntry, prefixHash: readonly string[]): boolean {
+    if (prefixHash.length > entry.segmentHashes.length) return false;
 
-    return prefixHash.every((seg, i) => seg === stableStringify(entryKey[i]));
+    return prefixHash.every((seg, i) => seg === entry.segmentHashes[i]);
   }
 
   function markFetching<T>(entry: CacheEntry<T>) {
@@ -253,18 +254,18 @@ export function createQuery(opts?: QueryClientOptions) {
     notify(entry);
   }
 
-  function commitSuccess<T>(entry: CacheEntry<T>, data: T) {
+  function commitSuccess<T>(entry: CacheEntry<T>, data: T, gcTime: number) {
     entry.data = data;
     entry.error = null;
     entry.status = 'success';
     entry.updatedAt = Date.now();
     entry.isFetching = false;
     entry.inflight = null;
-    scheduleGc(entry);
+    scheduleGc(entry, gcTime);
     notify(entry);
   }
 
-  function rollback<T>(entry: CacheEntry<T>, previous: EntrySnapshot<T>) {
+  function rollback<T>(entry: CacheEntry<T>, previous: EntrySnapshot<T>, gcTime: number) {
     entry.data = previous.data;
     entry.error = previous.error;
     entry.status = previous.status;
@@ -278,31 +279,26 @@ export function createQuery(opts?: QueryClientOptions) {
       return;
     }
 
-    scheduleGc(entry);
+    scheduleGc(entry, gcTime);
     notify(entry);
   }
 
-  function commitError<T>(entry: CacheEntry<T>, error: Error) {
+  function commitError<T>(entry: CacheEntry<T>, error: Error, gcTime: number) {
     entry.error = error;
     entry.status = 'error';
     entry.updatedAt = Date.now();
     entry.isFetching = false;
     entry.inflight = null;
-    scheduleGc(entry);
+    scheduleGc(entry, gcTime);
     notify(entry);
   }
 
-  // Internal: starts the network fetch for an entry whose fn and retry config are already
-  // set. Does not touch any entry config field — safe to call from background revalidation
-  // paths (invalidate, focus, reconnect) without corrupting user-visible metadata.
-  function startFetch<T>(entry: CacheEntry<T>): Promise<T> {
-    // Guard against re-entrant calls (e.g. a synchronous observer callback that
-    // calls qc.fetch() for the same key during markFetching's notify round).
+  // Internal: starts the network fetch for an entry using the given FetchConfig.
+  // Safe to call from background revalidation paths without corrupting cache state.
+  function startFetch<T>(entry: CacheEntry<T>, config: FetchConfig<T>): Promise<T> {
     if (entry.inflight) return entry.inflight.promise;
 
-    const queryFn = entry.fn as (ctx: QueryFnContext) => Promise<T>;
-    const queryKey = entry.key;
-    const { maxAttempts, retryDelay, shouldRetry } = entry;
+    const { fn, gcTime, maxAttempts, retryDelay, shouldRetry } = config;
     const controller = new AbortController();
     const prev: EntrySnapshot<T> = {
       data: entry.data,
@@ -311,19 +307,26 @@ export function createQuery(opts?: QueryClientOptions) {
       updatedAt: entry.updatedAt,
     };
 
-    markFetching(entry);
+    // Record config for background revalidation before any async work begins.
+    // Always update — even on failure — so invalidate()/refetchStale() always use
+    // the most recent fn and options rather than a stale successful config.
+    entry.lastConfig = config;
 
+    // Create the promise and assign it to inflight BEFORE calling markFetching.
+    // markFetching notifies observers synchronously; assigning inflight first closes
+    // the re-entrancy window — any qc.fetch() for the same key triggered during the
+    // notification round returns this promise instead of spawning a second fetch.
     const promise = (async () => {
       try {
         const data = await runWithRetry(
-          () => queryFn({ key: queryKey, signal: controller.signal }),
+          () => fn({ key: entry.key, signal: controller.signal }),
           maxAttempts,
           retryDelay,
           shouldRetry,
           controller.signal,
         );
 
-        commitSuccess(entry, data);
+        commitSuccess(entry, data, gcTime);
 
         return data;
       } catch (err) {
@@ -331,9 +334,9 @@ export function createQuery(opts?: QueryClientOptions) {
         const isAborted = controller.signal.aborted || error.name === 'AbortError';
 
         if (isAborted) {
-          rollback(entry, prev);
+          rollback(entry, prev, gcTime);
         } else {
-          commitError(entry, error);
+          commitError(entry, error, gcTime);
         }
 
         throw error;
@@ -341,6 +344,7 @@ export function createQuery(opts?: QueryClientOptions) {
     })();
 
     entry.inflight = { controller, promise };
+    markFetching(entry);
 
     return promise;
   }
@@ -350,21 +354,18 @@ export function createQuery(opts?: QueryClientOptions) {
 
     const {
       enabled = true,
-      fn: queryFn,
+      fn,
       gcTime = gcTimeDefault,
       initialData,
-      key: queryKey,
+      key,
       maxAttempts = maxAttemptsDefault,
       retryDelay = retryDelayDefault,
       shouldRetry = shouldRetryDefault,
       staleTime = staleTimeDefault,
     } = options;
 
-    const entry = ensureEntry<T>(queryKey, gcTime);
-
-    entry.gcTime = gcTime;
-    entry.fn = queryFn;
-    entry.staleTime = staleTime;
+    const entry = ensureEntry<T>(key);
+    const config: FetchConfig<T> = { fn, gcTime, maxAttempts, retryDelay, shouldRetry, staleTime };
 
     if (initialData !== undefined && entry.data === undefined) {
       const initVal = resolveValue(initialData);
@@ -387,16 +388,20 @@ export function createQuery(opts?: QueryClientOptions) {
       Date.now() - entry.updatedAt < staleTime &&
       !entry.isFetching
     ) {
+      // Store config for future background revalidation even on a cache hit.
+      entry.lastConfig = config;
+
       return entry.data as T | undefined;
     }
 
+    // Record the most recent config before the inflight check so background
+    // revalidation after the current fetch completes uses the latest fn and options,
+    // even when this call joins an already-running request.
+    entry.lastConfig = config;
+
     if (entry.inflight) return entry.inflight.promise;
 
-    entry.maxAttempts = maxAttempts;
-    entry.retryDelay = retryDelay;
-    entry.shouldRetry = shouldRetry;
-
-    return startFetch(entry);
+    return startFetch(entry, config);
   }
 
   function evictEntry<T>(entry: CacheEntry<T>) {
@@ -418,8 +423,8 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function revalidateObservedEntry<T>(entry: CacheEntry<T>) {
-    if (entry.fn === undefined) {
-      // No stored fn means this entry was seeded via set() alone. Fall back to
+    if (!entry.lastConfig) {
+      // No stored config means this entry was seeded via set() alone. Fall back to
       // explicit eviction so the entry resets to idle and subscribers are notified.
       evictEntry(entry);
 
@@ -428,14 +433,14 @@ export function createQuery(opts?: QueryClientOptions) {
 
     if (entry.isFetching) return;
 
-    startFetch(entry).catch(() => {});
+    startFetch(entry, entry.lastConfig as FetchConfig<T>).catch(() => {});
   }
 
   function invalidate(key: QueryKey) {
     const prefixHash = key.map(stableStringify);
 
-    for (const [, entry] of entries) {
-      if (isKeyOrPrefix(entry.key, prefixHash)) {
+    for (const entry of [...entries.values()]) {
+      if (isKeyOrPrefix(entry, prefixHash)) {
         if (entry.observers.size > 0) {
           revalidateObservedEntry(entry);
           continue;
@@ -447,24 +452,31 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function clearCache() {
-    for (const [, entry] of entries) {
+    for (const entry of [...entries.values()]) {
       evictEntry(entry);
     }
   }
 
-  function set<T>(key: QueryKey, data: T, opts?: { gcTime?: number }): void;
-  function set<T>(key: QueryKey, updater: (old: T | undefined) => T, opts?: { gcTime?: number }): void;
-  function set<T>(key: QueryKey, dataOrUpdater: T | ((old: T | undefined) => T), opts?: { gcTime?: number }) {
+  function set<T>(key: QueryKey, data: T, opts?: { gcTime?: number; updatedAt?: number }): void;
+  function set<T>(
+    key: QueryKey,
+    updater: (old: T | undefined) => T,
+    opts?: { gcTime?: number; updatedAt?: number },
+  ): void;
+  function set<T>(
+    key: QueryKey,
+    dataOrUpdater: T | ((old: T | undefined) => T),
+    opts?: { gcTime?: number; updatedAt?: number },
+  ) {
     const entry = ensureEntry<T>(key);
-    const gcTime = opts?.gcTime ?? entry.gcTime;
+    const gcTime = opts?.gcTime ?? entry.lastConfig?.gcTime ?? gcTimeDefault;
 
     entry.data =
       typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old: T | undefined) => T)(entry.data) : dataOrUpdater;
     entry.error = null;
     entry.status = 'success';
-    entry.updatedAt = Date.now();
-    entry.gcTime = gcTime;
-    scheduleGc(entry);
+    entry.updatedAt = opts?.updatedAt ?? Date.now();
+    scheduleGc(entry, gcTime);
     notify(entry);
   }
 
@@ -480,6 +492,12 @@ export function createQuery(opts?: QueryClientOptions) {
     return toBaseState(entry);
   }
 
+  /**
+   * Registers a listener for state changes on `key`. The listener is **not** called
+   * immediately on subscription — it fires only when the state next changes.
+   * Use `getState(key)` or `watch(key).peek()` to read the current value synchronously
+   * before setting up a subscription.
+   */
   function subscribe<T = unknown, S = T>(
     key: QueryKey,
     listener: (state: QueryState<S>) => void,
@@ -495,7 +513,6 @@ export function createQuery(opts?: QueryClientOptions) {
     cancelGc(entry.hash);
 
     observer.previous = toObserverState(entry, observer);
-    listener(observer.previous);
 
     entry.observers.add(observer as QueryObserver<T, unknown>);
 
@@ -503,7 +520,7 @@ export function createQuery(opts?: QueryClientOptions) {
       entry.observers.delete(observer as QueryObserver<T, unknown>);
 
       if (entry.observers.size === 0) {
-        scheduleGc(entry);
+        scheduleGc(entry, entry.lastConfig?.gcTime ?? gcTimeDefault);
       }
     };
   }
@@ -541,7 +558,7 @@ export function createQuery(opts?: QueryClientOptions) {
           entry.observers.delete(observer as QueryObserver<T, unknown>);
 
           if (entry.observers.size === 0) {
-            scheduleGc(entry);
+            scheduleGc(entry, entry.lastConfig?.gcTime ?? gcTimeDefault);
           }
         };
       },
@@ -567,46 +584,29 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function isStaleAndRevalidatable(entry: CacheEntry): boolean {
-    if (entry.observers.size === 0 || entry.fn === undefined || entry.isFetching) return false;
+    if (entry.observers.size === 0 || !entry.lastConfig || entry.isFetching) return false;
 
     // A success entry is stale when its data is older than staleTime.
     if (entry.status === 'success' && entry.updatedAt !== undefined) {
-      return Date.now() - entry.updatedAt >= entry.staleTime;
+      return Date.now() - entry.updatedAt >= entry.lastConfig.staleTime;
     }
 
-    // An error entry that still holds usable stale data (from a previous successful fetch)
-    // should also revalidate on reconnect/focus so the app can recover automatically.
-    if (entry.status === 'error' && entry.data !== undefined) {
-      return true;
+    // An error entry that still holds stale data (from a previous successful fetch) is also
+    // eligible for revalidation, but respects the same staleTime guard to prevent hammering
+    // the server on repeated focus/reconnect events.
+    if (entry.status === 'error' && entry.data !== undefined && entry.updatedAt !== undefined) {
+      return Date.now() - entry.updatedAt >= entry.lastConfig.staleTime;
     }
 
     return false;
   }
 
-  function refetchStaleEntries() {
+  function refetchStale() {
     for (const [, entry] of entries) {
       if (isStaleAndRevalidatable(entry)) {
-        startFetch(entry).catch(() => {});
+        startFetch(entry, entry.lastConfig as FetchConfig<unknown>).catch(() => {});
       }
     }
-  }
-
-  let focusHandler: (() => void) | null = null;
-  let reconnectHandler: (() => void) | null = null;
-
-  // Note: refetchOnFocus and refetchOnReconnect attach global event listeners.
-  // Always call dispose() when a QueryClient is no longer needed to remove them
-  // and prevent memory leaks, especially with per-route or per-component clients.
-  if (opts?.refetchOnFocus && typeof document !== 'undefined') {
-    focusHandler = () => {
-      if (document.visibilityState === 'visible') refetchStaleEntries();
-    };
-    document.addEventListener('visibilitychange', focusHandler);
-  }
-
-  if (opts?.refetchOnReconnect && typeof window !== 'undefined') {
-    reconnectHandler = refetchStaleEntries;
-    window.addEventListener('online', reconnectHandler);
   }
 
   return {
@@ -614,10 +614,6 @@ export function createQuery(opts?: QueryClientOptions) {
     clear: clearCache,
     dispose(): void {
       disposed = true;
-
-      if (focusHandler) document.removeEventListener('visibilitychange', focusHandler);
-
-      if (reconnectHandler) window.removeEventListener('online', reconnectHandler);
 
       for (const [, entry] of entries) {
         // Clear observers first so in-flight rollbacks triggered by abort cannot
@@ -641,6 +637,7 @@ export function createQuery(opts?: QueryClientOptions) {
     getState,
     invalidate,
     prefetch: prefetchQuery,
+    refetchStale,
     set,
     subscribe,
     [Symbol.dispose](): void {

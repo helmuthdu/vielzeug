@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Error Handling Patterns'
-description: 'Error Handling Patterns examples for courier.'
+description: 'Error Handling Patterns example for @vielzeug/courier.'
 ---
 
 ## Error Handling Patterns
@@ -11,7 +11,9 @@ HTTP errors (4xx, 5xx), network failures, and timeouts need different recovery s
 
 ### Solution
 
-### Status-code branching
+Use `HttpError.is()` to narrow by kind and status code at each call site, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior per error class.
+
+#### Status-code branching
 
 ```ts
 import { HttpError } from '@vielzeug/courier';

@@ -1,4 +1,44 @@
 export const nextValueExample = {
-  code: "import { signal, watch, untrack } from '/ripple'\n\nfunction waitFor(get, predicate) {\n  return new Promise((resolve) => {\n    const current = untrack(get)\n\n    if (predicate(current)) {\n      resolve(current)\n      return\n    }\n\n    const stop = watch(get, (next) => {\n      if (predicate(next)) {\n        stop()\n        resolve(next)\n      }\n    })\n  })\n}\n\nasync function run() {\n  const status = signal('idle')\n\n  const waitForDone = waitFor(() => status.value, (v) => v === 'done')\n\n  // Simulate async state transitions\n  setTimeout(() => { status.value = 'loading'; console.log('→ loading') }, 100)\n  setTimeout(() => { status.value = 'done'; console.log('→ done') }, 300)\n\n  const finalStatus = await waitForDone\n  console.log('Resolved to:', finalStatus)\n\n  // Wait for a simple next change\n  const counter = signal(0)\n  const next = waitFor(() => counter.value, (v) => v !== 0)\n  counter.value = 42\n  console.log('Next value:', await next)\n}\n\nvoid run()",
-  name: 'nextValue - Await Signal Change',
+  code: `import { signal, watch, untrack } from '/ripple'
+
+// Bridge reactive state into async code with watch()
+function waitFor(get, predicate) {
+  return new Promise((resolve) => {
+    const current = untrack(get)
+
+    if (predicate(current)) {
+      resolve(current)
+      return
+    }
+
+    const stop = watch(get, (next) => {
+      if (predicate(next)) {
+        stop()
+        resolve(next)
+      }
+    })
+  })
+}
+
+async function run() {
+  const status = signal('idle')
+
+  const waitForDone = waitFor(() => status.value, (v) => v === 'done')
+
+  // Simulate async state transitions
+  setTimeout(() => { status.value = 'loading'; console.log('→ loading') }, 100)
+  setTimeout(() => { status.value = 'done'; console.log('→ done') }, 300)
+
+  const finalStatus = await waitForDone
+  console.log('Resolved to:', finalStatus)
+
+  // Await a simple next change
+  const counter = signal(0)
+  const next = waitFor(() => counter.value, (v) => v !== 0)
+  counter.value = 42
+  console.log('Next value:', await next)
+}
+
+void run()`,
+  name: 'Async Workflows with watch()',
 };

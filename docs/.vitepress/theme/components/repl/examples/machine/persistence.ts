@@ -15,25 +15,25 @@ const cartMachine = defineMachine({
   states: {
     shopping: {
       on: {
-        ADD_ITEM: [{
+        ADD_ITEM: {
           target: 'shopping',
           actions: [assign(({ context, event }) => {
             const items = [...context.items, { id: event.id, price: event.price }]
             return { items, total: items.reduce((s, i) => s + i.price, 0) }
           })],
-        }],
-        REMOVE_ITEM: [{
+        },
+        REMOVE_ITEM: {
           target: 'shopping',
           actions: [assign(({ context, event }) => {
             const items = context.items.filter(i => i.id !== event.id)
             return { items, total: items.reduce((s, i) => s + i.price, 0) }
           })],
-        }],
-        CHECKOUT: [{ guard: ({ context }) => context.items.length > 0, target: 'checkout' }],
+        },
+        CHECKOUT: { guard: ({ context }) => context.items.length > 0, target: 'checkout' },
       },
     },
     checkout: {
-      on: { CANCEL: [{ target: 'shopping' }] },
+      on: { CANCEL: { target: 'shopping' } },
     },
   },
 })

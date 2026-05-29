@@ -1,6 +1,6 @@
 ---
 title: Mcp — Usage Guide
-description: Install, run, and connect AI clients to the current Vielzeug MCP server implementation.
+description: Install, run, and connect AI clients to the Vielzeug MCP server.
 ---
 
 [[toc]]
@@ -9,47 +9,29 @@ description: Install, run, and connect AI clients to the current Vielzeug MCP se
 Start with the [Overview](./index.md), then use this page for setup and client configuration.
 :::
 
-## Quick setup (standalone)
+## Basic Usage
 
-`@vielzeug/mcp` ships with bundled snapshot data, so no Vielzeug checkout is required for normal use.
+Run the server over stdio (the default transport):
 
 ```sh
 npx -y @vielzeug/mcp
 ```
 
-HTTP mode:
+That is enough for Claude Desktop or Copilot Chat to connect and start calling tools.
 
-```sh
-npx -y @vielzeug/mcp --port 3100
-```
-
-CLI helpers:
-
-```sh
-npx -y @vielzeug/mcp --help
-npx -y @vielzeug/mcp --version
-```
-
-## Quick setup (monorepo development)
-
-Use this mode only when developing `mcp` itself.
-
-```sh
-cd /path/to/vielzeug/packages/mcp
-pnpm build
-pnpm test
-node dist/cli.js
-```
-
-## Transport modes
+## Transport Modes
 
 ### Stdio (default)
 
-The MCP server communicates over stdin/stdout and is ideal for local clients such as Claude Desktop and Copilot Chat.
+The server communicates over stdin/stdout. Use this for local clients.
 
-### HTTP / Streamable HTTP (`--port`)
+```sh
+npx -y @vielzeug/mcp
+```
 
-Run with `--port <number>` to expose an HTTP endpoint for remote agents.
+### HTTP / Streamable HTTP
+
+Run with `--port` to expose an HTTP endpoint for remote agents.
 
 ```sh
 npx -y @vielzeug/mcp --port 3100
@@ -58,7 +40,7 @@ npx -y @vielzeug/mcp --port 3100
 HTTP endpoints:
 
 - MCP endpoint: `http://localhost:3100/`
-- Health endpoint: `http://localhost:3100/health`
+- Health check: `http://localhost:3100/health`
 
 ## Connect Claude Desktop
 
@@ -69,7 +51,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "vielzeug": {
       "command": "npx",
-      "args": ["-y", "/mcp"]
+      "args": ["-y", "@vielzeug/mcp"]
     }
   }
 }
@@ -79,23 +61,21 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Create or extend `.vscode/mcp.json` in your workspace root.
 
-### Stdio
+::: code-group
 
-```json
+```json [Stdio]
 {
   "servers": {
     "vielzeug": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "/mcp"]
+      "args": ["-y", "@vielzeug/mcp"]
     }
   }
 }
 ```
 
-### HTTP
-
-```json
+```json [HTTP]
 {
   "servers": {
     "vielzeug": {
@@ -106,30 +86,54 @@ Create or extend `.vscode/mcp.json` in your workspace root.
 }
 ```
 
-## Recommended tool workflow
+:::
 
-Typical AI-agent flow:
+## Recommended Tool Workflow
 
-1. `list-packages` to inspect package catalog and available pages
-2. `search-packages` to find relevant packages by capability
-3. `get-package` for structured metadata of the selected package
-4. `get-docs` with `page: "usage"`, `"api"`, or `"examples"` for docs
-5. `get-source` for `src/index.ts`
+Typical AI-agent pattern from discovery to code generation:
+
+```
+list-packages                           → scan catalog, note availableDocPages
+search-packages { query: "forms" }      → find relevant packages by capability
+list-packages { packageSlug: "forge" }  → structured metadata for one package
+get-docs { packageSlug: "forge", page: "usage" }     → how-to guide
+get-docs { packageSlug: "forge", page: "api" }       → full API reference
+get-source { packageSlug: "forge" }                  → exact exported signatures
+```
 
 For Block component queries:
 
-1. `list-components`
-2. `get-component`
+```
+list-components                              → enumerate available tag names
+get-component { tagName: "bit-input" }       → full CEM declaration
+```
 
-## Keeping bundled data fresh (monorepo)
+## Monorepo Development
 
-Bundled data is regenerated before `build` and `test` in `packages/mcp`.
+Use this mode only when developing `@vielzeug/mcp` itself.
+
+```sh
+cd packages/mcp
+pnpm build   # compile TypeScript
+pnpm test    # run test suite (regenerates bundled data first)
+node dist/cli.js
+```
+
+Bundled data is regenerated automatically before `build` and `test`.
 
 Manual refresh:
 
 ```sh
-cd /path/to/vielzeug/packages/mcp
+cd packages/mcp
 pnpm run prepare:data
 ```
 
-If Block component metadata is missing in results, build `@vielzeug/block` first so `packages/block/dist/custom-elements.json` is available when bundling.
+If `list-components` returns an error about missing Block metadata, build `@vielzeug/block` first so `packages/block/dist/custom-elements.json` is available during bundling.
+
+## Best Practices
+
+- Call `list-packages` first to discover `availableDocPages` before calling `get-docs` — not every package has every page.
+- Prefer `search-packages` over iterating `list-packages` manually when looking for a capability.
+- Use `get-source` for the exact public API surface; do not infer exports from docs alone.
+- In HTTP mode, check `/health` before routing traffic to verify the server is up.
+- Pin a version in production (`npx @vielzeug/mcp@3.0.1`) to avoid surprise data changes from snapshot updates.

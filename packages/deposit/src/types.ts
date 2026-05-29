@@ -147,6 +147,27 @@ export type TableSignals<S extends AnySchema> = {
 
 export type Observer<T> = (records: T[]) => void;
 
+/* -------------------- Shared adapter options -------------------- */
+
+/**
+ * Common options shared by all adapter factories.
+ * Individual adapters extend this with adapter-specific fields.
+ */
+export type BaseAdapterOptions<S extends AnySchema> = {
+  /** Structured logger. A /rune Logger satisfies DepositLogger directly. */
+  logger?: DepositLogger;
+  /** Performance monitoring hook. Called after every operation with duration in ms. */
+  onMetrics?: (event: MetricsEvent) => void;
+  schema: S;
+  /**
+   * Per-table reactive signals. A /ripple Signal<T[]> satisfies ReactiveSignal directly.
+   * Each signal is kept in sync with its table automatically via observe().
+   */
+  signals?: TableSignals<S>;
+  /** Per-table validators. A /sieve Schema satisfies this directly via `parse()`. */
+  validators?: TableValidators<S>;
+};
+
 /* -------------------- Metrics -------------------- */
 
 export type MetricsEvent = {
@@ -160,9 +181,7 @@ export type MetricsEvent = {
     | 'get'
     | 'getAll'
     | 'getMany'
-    | 'getOrDefault'
     | 'has'
-    | 'iterate'
     | 'put'
     | 'putAll'
     | 'query'
@@ -218,17 +237,6 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
     ttl?: TtlMs,
   ): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  /**
-   * Iterate over all live records in a table using `for await…of`.
-   *
-   * **All records are loaded into memory before iteration begins** — every adapter
-   * materializes the full table first. Breaking out of the loop skips processing
-   * the remaining slice, but does not reduce peak memory usage.
-   *
-   * Prefer `query().filter(…).toArray()` or `query().first()` when you only need a
-   * filtered subset, and `query().delete()` for bulk removals.
-   */
-  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
   query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;

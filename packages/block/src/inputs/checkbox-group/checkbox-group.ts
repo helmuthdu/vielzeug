@@ -26,8 +26,8 @@ import {
 } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────

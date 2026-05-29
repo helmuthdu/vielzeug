@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Testing'
-description: 'Testing examples for rune.'
+description: 'Testing example for @vielzeug/rune.'
 ---
 
 ## Testing
@@ -11,19 +11,63 @@ You want to assert in unit tests that specific messages were logged at the right
 
 ### Solution
 
-```ts
-import { Rune } from '@vielzeug/rune';
-import { afterEach, expect, it, vi } from 'vitest';
+Use a test transport to capture log entries directly. This gives full access to the `LogEntry` structure (level, message, context, bindings) without brittle console output assertions.
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+```ts
+import { createLogger } from '@vielzeug/rune';
+import type { LogEntry, Transport } from '@vielzeug/rune';
+import { expect, it } from 'vitest';
+
+function createTestTransport() {
+  const entries: LogEntry[] = [];
+  const transport: Transport = (entry) => entries.push(entry);
+  return { entries, transport };
+}
 
 it('emits errors when enabled', () => {
-  const log = Rune.child({ logLevel: 'error' });
-  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const { entries, transport } = createTestTransport();
+  const log = createLogger({ logLevel: 'error', transports: [transport] });
 
   log.error('failure');
+
+  expect(entries).toHaveLength(1);
+  expect(entries[0].level).toBe('error');
+  expect(entries[0].message).toBe('failure');
+});
+
+it('suppresses debug when logLevel is warn', () => {
+  const { entries, transport } = createTestTransport();
+  const log = createLogger({ logLevel: 'warn', transports: [transport] });
+
+  log.debug('silent');
+  log.warn('loud');
+
+  expect(entries).toHaveLength(1);
+});
+
+it('includes pinned bindings in every entry', () => {
+  const { entries, transport } = createTestTransport();
+  const log = createLogger({ transports: [transport] }).withBindings({ requestId: 'abc' });
+
+  log.info('ok');
+
+  expect(entries[0].bindings).toMatchObject({ requestId: 'abc' });
+});
+```
+
+When testing `consoleTransport` output directly, spy on the relevant `console` method:
+
+```ts
+import { afterEach, expect, it, vi } from 'vitest';
+import { consoleTransport, createLogger } from '@vielzeug/rune';
+
+afterEach(() => vi.restoreAllMocks());
+
+it('writes error to console.error', () => {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const log = createLogger({ transports: [consoleTransport({ timestamp: false })] });
+
+  log.error('boom');
 
   expect(spy).toHaveBeenCalled();
 });
@@ -41,3 +85,4 @@ it('emits errors when enabled', () => {
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
+- [Testing Patterns (Sieve)](/sieve/examples/)

@@ -7,7 +7,7 @@ description: 'Build an in-memory paginated list with filtering and sorting using
 
 ### Problem
 
-You have an in-memory dataset you need to paginate, filter, and sort — without sending requests to a server. The filtering and sort logic change at runtime based on user input, and page state must reset correctly when filters change.
+You have an in-memory dataset you need to paginate, filter, and sort without sending requests to a server. The filtering and sort logic change at runtime based on user input, and page state must reset correctly when filters change.
 
 ### Solution
 
@@ -28,33 +28,52 @@ const products: Product[] = [
 const source = createLocalSource(products, { limit: 2 });
 
 // Filter to items whose name contains 'ap' (case-insensitive)
-source.setFilter(filterContains((p) => p.name, 'ap'));
+await source.setFilter(filterContains((p) => p.name, 'ap'));
 
 // Sort by price ascending
-source.setSort(sortBy((p) => p.price, 'asc'));
+await source.setSort(sortBy((p) => p.price, 'asc'));
 
-console.log(source.current);  // [{ id: 1, name: 'Apple', price: 2 }, { id: 4, name: 'Apricot', price: 4 }]
-console.log(source.meta.totalItems);  // 2 (only items matching the filter)
-
-source.next();  // advances to page 2 (empty — only 2 matching items)
+console.log(source.current);
+// [{ id: 1, name: 'Apple', price: 2 }, { id: 4, name: 'Apricot', price: 4 }]
+console.log(source.meta.totalItems); // 2 (only items matching the filter)
 ```
 
-To apply filter and sort together without intermediate page resets, use `batch()`:
+### Apply filter and sort atomically
+
+Use `update()` to change multiple fields in a single recompute — no intermediate page resets.
 
 ```ts
-source.batch((ctx) => {
-  ctx.setFilter(filterContains((p) => p.name, 'ap'));
-  ctx.setSort(sortBy((p) => p.price, 'asc'));
+await source.update({
+  filter: filterContains((p) => p.name, 'ap'),
+  sort: sortBy((p) => p.price, 'asc'),
 });
+```
+
+### Compose predicates
+
+```ts
+import { and, filterContains, filterRange } from '@vielzeug/sourcerer';
+
+await source.setFilter(
+  and(
+    filterContains((p) => p.name, 'a'),
+    filterRange((p) => p.price, { max: 3 }),
+  ),
+);
 ```
 
 ### Pitfalls
 
 - `filterContains()` is case-insensitive by default. For exact matching, pass a custom predicate: `source.setFilter((p) => p.name === 'Apple')`.
-- `source.current` returns a new array on each access. Cache it in a variable if you read it multiple times in the same render.
-- Calling `setFilter()` and `setSort()` in separate statements triggers two page resets. Wrap both in `source.batch()` to apply them atomically.
+- Calling `setFilter()` and `setSort()` in separate statements triggers two independent recomputes. Use `update({ filter, sort })` to apply them atomically.
+- The default `searchFn` uses fuzzy matching. For exact substring matching in tests or precise UIs, provide a custom `searchFn`:
+  ```ts
+  createLocalSource(data, {
+    searchFn: (items, q) => items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase())),
+  });
+  ```
 
 ### Related
 
-- [Sourcerer + Ripple](./sourcerer-with-ripple.md)
+- [Reactive Controls with Ripple](./sourceit-with-stateit.md)
 - [Remote Search with URL State](./remote-search-with-url-state.md)

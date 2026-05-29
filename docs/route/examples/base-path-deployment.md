@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — Base Path Deployment'
-description: Deploy a Route SPA under a subdirectory using the base option.
+description: 'Base path deployment example for @vielzeug/route.'
 ---
 
 ## Base Path Deployment
 
-Set `base` once and keep route definitions base-agnostic.
+### Problem
+
+Hosting an SPA under a subdirectory (e.g., `/my-app`) requires every `pushState` call and route definition to carry the prefix, coupling deployment details into application code.
+
+### Solution
+
+Set `base` once at router creation. All route definitions, `url()`, `navigate()`, and `resolve()` are then base-agnostic.
 
 ```ts
 import { createRouter } from '@vielzeug/route';
@@ -20,12 +26,18 @@ const router = createRouter({
   },
 });
 
-await router.navigate({ name: 'about' }); // pushes /my-app/about
-const href = router.url('userDetail', { id: '7' }); // /my-app/users/7
-const match = router.resolve('/my-app/users/7');
-// [
-//   { component: undefined, name: 'userDetail', params: { id: '7' }, pathname: '/users/7', data: undefined, meta: undefined },
-// ]
+await router.navigate({ name: 'about' });           // pushes /my-app/about
+const href = router.url('userDetail', { id: '7' }); // '/my-app/users/7'
+const branch = router.resolve('/my-app/users/7');   // strips base: params.id = '7'
 ```
 
-Remember to configure server rewrites so deep links under `/my-app/*` return your SPA entry file.
+### Pitfalls
+
+- The server must rewrite all requests under `/my-app/*` to serve the SPA entry file. Without this, direct link access to `/my-app/about` returns 404.
+- When using `resolve()`, always pass the full URL including the base prefix. Route strips the base internally.
+- Do not set `base` in development if `vite.config.ts` already sets `base: '/my-app'`; double-prefixing breaks all navigation.
+
+### Related
+
+- [Route Table Basics](./route-table-basics.md)
+- [Raw Path Targets](./raw-path-targets.md)

@@ -1,4 +1,4 @@
-import type { AnySchema, Issue, ParseResult } from '../core';
+import type { AnySchema, Issue, ParseResult, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -139,13 +139,24 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    const prefixItems = this.items.map((s) => s.schema());
+    const prefixItems = this.items.map((s) => s.toJsonSchema());
     const base: Record<string, unknown> = { prefixItems, type: 'array' };
 
-    if (this.restSchema !== null) base['items'] = this.restSchema.schema();
+    if (this.restSchema !== null) base['items'] = this.restSchema.toJsonSchema();
     else base['items'] = false;
 
     return base;
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      items: this.items.map((s) => s.describe()),
+      kind: 'tuple',
+      rest: this.restSchema !== null ? this.restSchema.describe() : null,
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

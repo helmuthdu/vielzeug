@@ -12,9 +12,9 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './radio.css?inline';
 
 /** Radio component properties */

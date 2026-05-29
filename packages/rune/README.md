@@ -1,67 +1,81 @@
 ---
-description: Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+description: Structured browser/Node logger with levels, namespaces, pluggable transports, lazy bindings, and timing helpers.
 package: rune
 category: logging
-keywords: [logging, console, structured, scoped, remote-logging, levels, namespaces]
+keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, relay, worker]
-exports: [createLogger]
+exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport]
 ---
 
-# /rune
+# @vielzeug/rune
 
-> Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+> Structured browser/Node logger with levels, namespaces, pluggable transports, lazy bindings, and timing helpers.
 
-[![npm version](https://img.shields.io/npm/v//rune)](https://www.npmjs.com/package//rune) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/rune)](https://www.npmjs.com/package/@vielzeug/rune) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/rune` &nbsp;·&nbsp; **Category:** Logging
+**Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
 
-**Key exports:** `createLogger`
+**Key exports:** `createLogger`, `Rune`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
 
-**When to use:** Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+**When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and a pluggable transport pipeline.
 
 **Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/relay](https://vielzeug.dev/relay/) · [@vielzeug/worker](https://vielzeug.dev/worker/)
 
 </details>
 
-`/rune` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/rune` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /rune
-npm install /rune
-yarn add /rune
+pnpm add @vielzeug/rune
+npm install @vielzeug/rune
+yarn add @vielzeug/rune
 ```
 
 ## Quick Start
 
 ```ts
-import { createLogger, Rune } from '/rune';
+import { Rune, createLogger, lazy } from '@vielzeug/rune';
+import { consoleTransport, jsonTransport, remoteTransport } from '@vielzeug/rune';
 
-Rune.info({ port: 3000 }, 'Server started');
-Rune.warn('High memory usage');
+// Default singleton — uses consoleTransport() automatically
+Rune.info({ port: 3000 }, 'server started');
+Rune.warn('cache stale');
 Rune.error(new Error('connection lost')); // auto-serializes Error
-Rune.fatal('unrecoverable state');
 
+// Namespaced scopes
 const api = Rune.scope('api');
-api.info({ method: 'GET', path: '/users' }, 'incoming request');
+api.info({ method: 'GET', path: '/users' }, 'request');
 
-// pin fields to every call in a request context
-const reqLog = api.withBindings({ requestId: 'abc-123' });
-reqLog.info('processing');
-reqLog.warn('slow query');
+// Pinned bindings — lazy() evaluates only when the level passes
+const reqLog = api.withBindings({
+  requestId: 'abc-123',
+  diagnostics: lazy(() => buildDiagnostics()),
+});
+reqLog.debug('processing'); // diagnostics() called only here
 
-const log = createLogger({ logLevel: 'warn', namespace: 'Worker' });
+// Structured timing — emits { duration_ms } as a debug entry
+const users = await reqLog.time('db.query', () => db.query('SELECT * FROM users'));
 
-if (log.enabled('debug')) {
-  log.debug({ diagnostics: buildDiagnostics() }, 'diagnostics');
-}
+// Custom transport pipeline
+const log = createLogger({
+  logLevel: 'info',
+  namespace: 'server',
+  transports: [
+    consoleTransport({ variant: 'symbol', timestamp: true }),
+    remoteTransport(async (type, data) => {
+      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+    }, { level: 'error' }),
+  ],
+});
 
-await log.time('sync-task', async () => {
-  await runTask();
+// Node.js: NDJSON for log aggregation (ELK, Datadog, etc.)
+const nodeLog = createLogger({
+  transports: [jsonTransport({ level: 'warn' })],
 });
 ```
 

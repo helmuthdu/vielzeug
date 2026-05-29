@@ -1,7 +1,7 @@
 /**
  * data() loaders — passing results to handlers, context shape, loading state.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -54,7 +54,7 @@ describe('data() loader', () => {
     );
   });
 
-  it('stores the data result in the leaf node of router.state.matches', async () => {
+  it('stores the data result in the leaf node of router.getSnapshot().matches', async () => {
     mockLocation.pathname = '/items/7';
 
     const router = await boot(
@@ -69,7 +69,7 @@ describe('data() loader', () => {
       }),
     );
 
-    expect(router.state.matches.at(-1)?.data).toEqual({ id: '7' });
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ id: '7' });
   });
 
   it('emits loading state to subscribers while data is in-flight', async () => {

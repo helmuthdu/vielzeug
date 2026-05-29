@@ -28,12 +28,6 @@
       "import": "./dist/async/index.js",
       "require": "./dist/async/index.cjs"
     },
-    "./date": {
-      "source": "./src/date/index.ts",
-      "types": "./dist/date/index.d.ts",
-      "import": "./dist/date/index.js",
-      "require": "./dist/date/index.cjs"
-    },
     "./function": {
       "source": "./src/function/index.ts",
       "types": "./dist/function/index.d.ts",

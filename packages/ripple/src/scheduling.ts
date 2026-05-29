@@ -1,9 +1,9 @@
-import type { ReactiveNode } from './node';
-import type { DirtyComputed, Subscriber } from './types';
+import type { BatchOptions, DirtyComputed, ReactiveNode, Subscriber } from './types';
 
-import { config } from './config';
 import { StateError } from './error';
 import { _NONE, ensureError, runAll } from './helpers';
+
+export const DEFAULT_MAX_ITERATIONS = 100;
 
 let batchDepth = 0;
 const pendingSubscribers = new Set<Subscriber>();
@@ -117,12 +117,12 @@ const flushDirtyComputeds = (): void => {
   }
 };
 
-const flushEffects = (): void => {
+const flushEffects = (maxIterations: number): void => {
   let iterations = 0;
 
   while (pendingSubscribers.size > 0 || dirtyQueue.size > 0) {
-    if (++iterations > config.maxIterations) {
-      throw new StateError('INFINITE_LOOP', `infinite flush loop (> ${config.maxIterations} iterations)`);
+    if (++iterations > maxIterations) {
+      throw new StateError('INFINITE_LOOP', `infinite flush loop (> ${maxIterations} iterations)`);
     }
 
     if (dirtyQueue.size > 0) flushDirtyComputeds();
@@ -141,10 +141,15 @@ export const notifyNodeChange = (node: ReactiveNode): void => {
 
   queueNode(node);
 
-  if (batchDepth === 0) flushEffects();
+  if (batchDepth === 0) flushEffects(DEFAULT_MAX_ITERATIONS);
 };
 
-export const batch = <T>(fn: () => T): T => {
+export const batch = <T>(fn: () => T, options?: BatchOptions): T => {
+  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+  // In nested batch() calls, only the outermost call triggers flushEffects (when batchDepth
+  // reaches zero). The inner call's maxIterations is therefore ignored — the outermost
+  // call's limit applies to the full flush.
+
   batchDepth++;
 
   let result: T | undefined;
@@ -160,7 +165,7 @@ export const batch = <T>(fn: () => T): T => {
 
   if (batchDepth === 0) {
     try {
-      flushEffects();
+      flushEffects(maxIterations);
     } catch (flushError) {
       if (bodyError !== _NONE) {
         throw new AggregateError([bodyError, flushError], '[ripple] batch error with flush errors', {

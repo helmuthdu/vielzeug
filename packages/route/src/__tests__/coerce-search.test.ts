@@ -1,7 +1,7 @@
 /**
  * coerceSearch — per-route query string coercion.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('coerceSearch', () => {

@@ -1,5 +1,5 @@
 export const contextValidationExample = {
-  code: `import { defineMachine, interpret, assign, MachinitError } from '/machine'
+  code: `import { defineMachine, interpret, assign, MachineError } from '/machine'
 
 // Context validator — called on init and after every transition
 function isValidProfile(ctx) {
@@ -19,20 +19,20 @@ const profileMachine = defineMachine({
   states: {
     idle: {
       on: {
-        UPDATE: [{
+        UPDATE: {
           target: 'idle',
           actions: [assign(({ event }) => ({
             username: event.username ?? 'guest',
             age:      event.age      ?? 0,
             tags:     event.tags     ?? [],
           }))],
-        }],
-        ACTIVATE: [{ target: 'active', guard: ({ context }) => context.username !== 'guest' }],
+        },
+        ACTIVATE: { target: 'active', guard: ({ context }) => context.username !== 'guest' },
       },
     },
     active: {
       on: {
-        DEACTIVATE: [{ target: 'idle' }],
+        DEACTIVATE: { target: 'idle' },
       },
     },
   },
@@ -58,7 +58,7 @@ try {
     validateSnapshot: isValidProfile,
   })
 } catch (err) {
-  console.log('Snapshot rejected:', err instanceof MachinitError, err.code)
+  console.log('Snapshot rejected:', err instanceof MachineError, err.code)
 }`,
   name: 'Context Validation',
 };

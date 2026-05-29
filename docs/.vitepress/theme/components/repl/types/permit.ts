@@ -18,11 +18,11 @@ declare module '@vielzeug/permit' {
   export type PermitPredicate<TData = unknown> = (ctx: RuleContext<TData>) => boolean;
 
   export type PermitRule<TAction extends string = string, TData = unknown> = {
-    action: TAction | typeof WILDCARD;
+    action: TAction | '*';
     effect: 'allow' | 'deny';
     priority?: number;
-    resource: string;
-    role: string;
+    resource: string | '*';
+    role: string | readonly string[];
     when?: PermitPredicate<TData>;
   };
 
@@ -49,19 +49,18 @@ declare module '@vielzeug/permit' {
     logger?: (context: PermitLoggerContext<TAction, TData>) => void;
   };
 
-  type BoundPermit<TAction extends string = string, TData = unknown> = {
-    allowedActions(resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
+  export type BoundPermit<TAction extends string = string, TData = unknown> = {
+    allowedActions(resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
     can(resource: string, action: TAction, data?: TData): boolean;
     canAll(resource: string, actions: readonly TAction[], data?: TData): boolean;
     canAny(resource: string, actions: readonly TAction[], data?: TData): boolean;
     checkAll(checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[];
     explain(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData>;
-    forUser(principal: UserPrincipal): BoundPermit<TAction, TData>;
     rulesInScope(resource: string, data?: TData): PermitRule<TAction, TData>[];
   };
 
   export type Permit<TAction extends string = string, TData = unknown> = {
-    allowedActions(principal: Principal, resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
+    allowedActions(principal: Principal, resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
     can(principal: Principal, resource: string, action: TAction, data?: TData): boolean;
     canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
     canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
@@ -76,8 +75,8 @@ declare module '@vielzeug/permit' {
     options?: PermitOptions<TAction, TData>
   ): Permit<TAction, TData>;
 
-  export function owns<TData extends Record<string, unknown>, K extends keyof TData & string>(
-    attributeKey: K
+  export function owns<TData = unknown>(
+    attributeKey: keyof TData & string
   ): PermitPredicate<TData>;
 }
 `;

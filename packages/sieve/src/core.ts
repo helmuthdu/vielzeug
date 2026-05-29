@@ -1,4 +1,4 @@
-import { _messages, _warn } from './messages';
+import { _messages } from './messages';
 
 /* -------------------- Error Codes -------------------- */
 
@@ -115,7 +115,8 @@ export type FlatErrorFirst = { message: string; path: (string | number)[] };
 
 /**
  * Visitor map for schema.walk(). Container handlers receive already-walked children (type R).
- * Provide `unknown` as a catch-all fallback for unrecognised schema kinds.
+ * All handlers are optional — unmatched kinds fall through to the `unknown` fallback.
+ * Throws if no handler matches and no `unknown` fallback is provided.
  */
 export type SchemaWalker<R> = {
   array?: (schema: AnySchema, item: R) => R;
@@ -143,6 +144,47 @@ export type SchemaWalker<R> = {
   unknown?: (schema: AnySchema) => R;
   variant?: (schema: AnySchema, branches: Record<string, R>) => R;
 };
+
+/* -------------------- Schema Descriptor (typed introspection) -------------------- */
+
+type BaseDescriptor = {
+  description?: string;
+  isNullable?: boolean;
+  isOptional?: boolean;
+};
+
+export type SchemaDescriptor = BaseDescriptor &
+  (
+    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' | 'instanceof' }
+    | {
+        contentEncoding?: string;
+        format?: string;
+        kind: 'string';
+        maxLength?: number;
+        minLength?: number;
+        pattern?: string | null;
+      }
+    | {
+        exclusiveMaximum?: number;
+        exclusiveMinimum?: number;
+        kind: 'number';
+        maximum?: number;
+        minimum?: number;
+        multipleOf?: number;
+        typeHint?: 'integer';
+      }
+    | { kind: 'literal'; value: string | number | boolean | null | undefined }
+    | { kind: 'enum'; values: readonly (string | number)[] }
+    | { items: SchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number }
+    | { items: SchemaDescriptor[]; kind: 'tuple'; rest: SchemaDescriptor | null }
+    | { fields: Record<string, SchemaDescriptor>; kind: 'object'; strict: boolean }
+    | { key: SchemaDescriptor; kind: 'record'; value: SchemaDescriptor }
+    | { item: SchemaDescriptor; kind: 'set' }
+    | { key: SchemaDescriptor; kind: 'map'; value: SchemaDescriptor }
+    | { branches: SchemaDescriptor[]; kind: 'union' | 'intersect' }
+    | { branches: Record<string, SchemaDescriptor>; discriminator: string; kind: 'variant' }
+    | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
+  );
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') return false;
@@ -252,14 +294,42 @@ function normalizeCheckResult(result: CheckFnResult, ctxIssues: Issue[]): Issue[
 export class ValidationError extends Error {
   readonly issues: Issue[];
 
-  constructor(issues: Issue[]) {
-    super(formatIssues(issues));
+  constructor(issues: Issue[], cause?: unknown) {
+    super(formatIssues(issues), { cause });
     this.name = 'ValidationError';
     this.issues = issues;
   }
 
   static is(value: unknown): value is ValidationError {
     return value instanceof ValidationError;
+  }
+
+  /**
+   * Returns the union branch errors from the most-specific failing branch.
+   * When parsing against a union, this surfaces the branch with the fewest issues
+   * at the deepest path — the branch that "came closest" to matching.
+   */
+  bestMatch(): Issue[] | null {
+    const unionIssue = this.issues.find(
+      (i): i is Extract<Issue, { code: 'invalid_union' }> => i.code === ErrorCode.invalid_union,
+    );
+
+    if (!unionIssue) return null;
+
+    const branches = unionIssue.params.errors;
+
+    if (branches.length === 0) return null;
+
+    // Score: prefer branches with deeper errors (more fields parsed) and fewer issues
+    const scored = branches.map((branchIssues) => {
+      const maxDepth = branchIssues.reduce((d, i) => Math.max(d, i.path.length), 0);
+
+      return { issues: branchIssues, score: maxDepth * 1000 - branchIssues.length };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    return scored[0]!.issues;
   }
 
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {
@@ -347,6 +417,12 @@ const _schemaCache = new WeakMap<object, JsonSchema>();
 
 export class Schema<Output = unknown, Input = Output> {
   protected state: SchemaState<Output>;
+  /**
+   * JSON Schema annotation fields populated by constraint methods (min, max, pattern, etc.).
+   * Subclasses access this in `_toSchemaBase()` and `_describeImpl()` to build schema output.
+   * Use `_addConstraint()` to atomically add a validator and update annotations.
+   */
+  protected _annotations: Record<string, unknown> = {};
 
   constructor(typeValidator?: ValidateFn) {
     this.state = defaultState<Output>();
@@ -408,16 +484,42 @@ export class Schema<Output = unknown, Input = Output> {
     }
   }
 
-  *parseEach(items: Iterable<unknown>): Generator<ParseResult<Output>> {
-    for (const item of items) yield this.safeParse(item);
-  }
+  /**
+   * Adds a synchronous validator. Two overload forms:
+   *
+   * **Predicate form** — pass a boolean-returning function and an optional error message.
+   * This replaces the old `refine()` method.
+   * ```ts
+   * s.string().check(v => v.includes('@'), 'Must contain @')
+   * ```
+   *
+   * **Context form** — full access to `ctx.addIssue()` for multi-issue, path-aware validation.
+   * ```ts
+   * s.object({ a: s.string(), b: s.string() }).check((d, ctx) => {
+   *   if (d.a === d.b) ctx.addIssue({ code: 'custom', message: 'Must differ', path: ['a'] });
+   * })
+   * ```
+   *
+   * For async validators, use `checkAsync()` instead.
+   */
+  check(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
+  check(fn: (value: Output, ctx: CheckContext) => CheckFnResult): this;
+  check(
+    fn: ((value: Output, ctx: CheckContext) => CheckFnResult) | ((value: Output) => boolean),
+    message?: MessageFn<{ value: Output }>,
+  ): this {
+    if (message !== undefined) {
+      // Predicate form (replaces refine())
+      const predicate = fn as (value: Output) => boolean;
 
-  async *parseEachAsync(items: Iterable<unknown> | AsyncIterable<unknown>): AsyncGenerator<ParseResult<Output>> {
-    for await (const item of items) yield await this.safeParseAsync(item);
-  }
+      return this._addValidator((value) => {
+        if (predicate(value as Output)) return null;
 
-  check(fn: (value: Output, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
-    /* R2: validator receives only value, no path */
+        return fail(ErrorCode.custom, resolveMessage(message, { value: value as Output }));
+      });
+    }
+
+    const checkFn = fn as (value: Output, ctx: CheckContext) => CheckFnResult;
     const validator: ValidateFn = (value) => {
       const ctxIssues: Issue[] = [];
       const ctx: CheckContext = {
@@ -425,9 +527,11 @@ export class Schema<Output = unknown, Input = Output> {
           ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue);
         },
       };
-      const result = fn(value as Output, ctx);
+      const result = checkFn(value as Output, ctx);
 
-      if (result instanceof Promise) return result.then((r) => normalizeCheckResult(r, ctxIssues));
+      if ((result as unknown) instanceof Promise) {
+        throw new Error('check() callback returned a Promise. Use checkAsync() for async validation.');
+      }
 
       return normalizeCheckResult(result, ctxIssues);
     };
@@ -436,34 +540,59 @@ export class Schema<Output = unknown, Input = Output> {
   }
 
   /**
-   * Adds a synchronous predicate validator. A simpler alternative to `check()` for pure boolean checks.
+   * Adds an async validator. The schema must be used with `parseAsync()` / `safeParseAsync()`.
    *
-   * @example
    * ```ts
-   * v.string().refine(s => s.startsWith('http'), 'Must start with http');
+   * const schema = s.string().checkAsync(async (v) => {
+   *   const exists = await db.users.exists({ email: v });
+   *   return exists || 'Email already registered';
+   * });
+   * await schema.parseAsync('alice@example.com');
    * ```
    */
-  refine(
-    predicate: (value: Output) => boolean,
-    message: MessageFn<{ value: Output }> = () => _messages().check.default(),
-  ): this {
-    return this._addValidator((value) => {
-      if (predicate(value as Output)) return null;
+  checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this {
+    const validator: ValidateFn = (value) => {
+      const ctxIssues: Issue[] = [];
+      const ctx: CheckContext = {
+        addIssue: (issue) => {
+          ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue);
+        },
+      };
 
-      return fail(ErrorCode.custom, resolveMessage(message, { value: value as Output }));
-    });
+      return fn(value as Output, ctx).then((r) => normalizeCheckResult(r, ctxIssues));
+    };
+
+    return this._addValidator(validator);
   }
 
-  /* F2: optional/nullable/nullish return typed wrapper schemas preserving subtype */
+  /* optional/nullable/nullish return typed wrapper schemas preserving subtype.
+     If this schema is already a WrapperSchema, the modes are merged to avoid double-wrapping:
+       optional + nullable → nullish, optional + optional → optional, etc. */
   optional(): WrapperSchema<this, 'optional'> {
+    if (this instanceof WrapperSchema) {
+      const merged = this.mode === 'nullable' || this.mode === 'nullish' ? 'nullish' : 'optional';
+
+      return new WrapperSchema(this.inner, merged) as unknown as WrapperSchema<this, 'optional'>;
+    }
+
     return new WrapperSchema(this, 'optional');
   }
 
   nullable(): WrapperSchema<this, 'nullable'> {
+    if (this instanceof WrapperSchema) {
+      const merged = this.mode === 'optional' || this.mode === 'nullish' ? 'nullish' : 'nullable';
+
+      return new WrapperSchema(this.inner, merged) as unknown as WrapperSchema<this, 'nullable'>;
+    }
+
     return new WrapperSchema(this, 'nullable');
   }
 
   nullish(): WrapperSchema<this, 'nullish'> {
+    if (this instanceof WrapperSchema) {
+      return new WrapperSchema(this.inner, 'nullish') as unknown as WrapperSchema<this, 'nullish'>;
+    }
+
     return new WrapperSchema(this, 'nullish');
   }
 
@@ -512,12 +641,30 @@ export class Schema<Output = unknown, Input = Output> {
     return new PipeSchema<B, Input>(this, next);
   }
 
-  describe(description: string): this {
-    const cloned = this._clone();
+  /** @overload Set a human-readable description on this schema (fluent setter). */
+  describe(description: string): this;
+  /** @overload Return a typed introspection descriptor for this schema. */
+  describe(): SchemaDescriptor;
+  describe(description?: string): this | SchemaDescriptor {
+    if (description !== undefined) {
+      const cloned = this._clone();
 
-    cloned.state.description = description;
+      cloned.state.description = description;
 
-    return cloned;
+      return cloned;
+    }
+
+    return this._describeImpl();
+  }
+
+  /** Override in subclasses to customize introspection output. */
+  protected _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'any',
+    };
   }
 
   get description(): string | undefined {
@@ -543,7 +690,7 @@ export class Schema<Output = unknown, Input = Output> {
    * Unrepresentable schemas (Date, Map, Set, instanceof, lazy) emit `{ $comment: '...' }`.
    * Result is memoized — each distinct schema instance caches its output.
    */
-  schema(): JsonSchema {
+  toJsonSchema(): JsonSchema {
     let cached = _schemaCache.get(this);
 
     if (cached === undefined) {
@@ -564,6 +711,7 @@ export class Schema<Output = unknown, Input = Output> {
   /**
    * Traverse this schema tree with a typed visitor.
    * Container visitors receive already-walked children as the last argument(s).
+   * Throws only if no handler matches AND no `unknown` fallback is provided.
    *
    * @example
    * ```ts
@@ -655,9 +803,7 @@ export class Schema<Output = unknown, Input = Output> {
       const result = validate(value);
 
       if (result instanceof Promise) {
-        throw new Error(
-          'A check() callback returned a Promise in a sync parse context. Use parseAsync() or safeParseAsync() for async validation.',
-        );
+        throw new Error('check() callback returned a Promise. Use checkAsync() for async validation.');
       }
 
       if (result) {
@@ -702,8 +848,40 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
+  /**
+   * Adds a constraint validator and optionally merges JSON Schema annotation fields.
+   * Use in concrete schema methods (min, max, email, etc.) instead of manually calling
+   * `_addValidator()` + updating annotation fields separately.
+   *
+   * @example
+   * ```ts
+   * min(n: number): this {
+   *   return this._addConstraint(
+   *     (v) => (v as string).length >= n ? null : fail(ErrorCode.too_small, ..., { min: n }),
+   *     (ann) => ({ ...ann, minLength: ann.minLength === undefined ? n : Math.max(ann.minLength as number, n) })
+   *   );
+   * }
+   * ```
+   */
+  protected _addConstraint(
+    validator: ValidateFn,
+    mergeAnnotations?: (current: Record<string, unknown>) => Record<string, unknown>,
+  ): this {
+    const next = this._addValidator(validator);
+
+    if (mergeAnnotations) {
+      next._annotations = mergeAnnotations({ ...next._annotations });
+    }
+
+    return next;
+  }
+
   protected _construct(state: SchemaState<any>): this {
-    return Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
+    const next = Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
+
+    next._annotations = { ...this._annotations };
+
+    return next;
   }
 
   protected _clone(): this {
@@ -809,9 +987,7 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
   }
 
   protected override _toSchemaBase(): JsonSchema {
-    // Delegate to inner.schema() so chained wrappers (e.g. .nullable().optional())
-    // inherit the inner’s nullable JSON Schema wrapping correctly.
-    return this.inner.schema();
+    return this.inner.toJsonSchema();
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
@@ -824,6 +1000,17 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
     if (this.mode === 'nullish' && visitor.nullish) return visitor.nullish(this, innerR);
 
     return super._walk(visitor);
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    const inner = this.inner.describe();
+
+    return {
+      ...inner,
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+    };
   }
 
   protected override _equalsImpl(other: AnySchema): boolean {
@@ -878,13 +1065,24 @@ export class PipeSchema<Output, Input> extends Schema<Output, Input> {
   }
 
   protected override _toSchemaBase(): JsonSchema {
-    return { allOf: [this.from.schema(), this.to.schema()] };
+    return { allOf: [this.from.toJsonSchema(), this.to.toJsonSchema()] };
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
     if (visitor.pipe) return visitor.pipe(this, this.from.walk(visitor), this.to.walk(visitor));
 
     return super._walk(visitor);
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      from: this.from.describe(),
+      kind: 'pipe',
+      to: this.to.describe(),
+    };
   }
 
   protected override _equalsImpl(other: AnySchema): boolean {

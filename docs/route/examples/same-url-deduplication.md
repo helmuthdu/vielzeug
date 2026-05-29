@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — Same-URL Deduplication'
-description: Skip redundant history entries and rerun when needed with force.
+description: 'Same-URL deduplication example for @vielzeug/route.'
 ---
 
 ## Same-URL Deduplication
 
-Route skips navigation when the computed destination equals the current URL.
+### Problem
+
+Calling `navigate()` on a reactive signal or click handler multiple times triggers redundant handler runs, unnecessary data loads, and scroll-to-top on every call.
+
+### Solution
+
+Route skips navigation when the resolved URL is identical to the current URL. Use `force: true` to override this for explicit refresh interactions.
 
 ```ts
 import { createRouter } from '@vielzeug/route';
@@ -24,8 +30,17 @@ const router = createRouter({
 });
 
 await router.navigate({ name: 'feed' });
-await router.navigate({ name: 'feed' }); // no-op
+await router.navigate({ name: 'feed' }); // no-op — same URL
 await router.navigate({ name: 'feed' }, { force: true }); // re-runs feed handler
 ```
 
-Use `force` for explicit refresh interactions like a manual "Reload" button.
+### Pitfalls
+
+- Hash changes count as a different URL: `/feed` and `/feed#top` are distinct, so navigating between them is not deduplicated.
+- `force: true` bypasses the dedup check but still runs leave guards and data loaders from scratch.
+- Query-string changes also break deduplication: `/feed?page=1` and `/feed?page=2` are different URLs.
+
+### Related
+
+- [Route Table Basics](./route-table-basics.md)
+- [Raw Path Targets](./raw-path-targets.md)

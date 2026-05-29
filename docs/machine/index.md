@@ -5,7 +5,7 @@ package: machine
 category: state
 keywords: [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging]
 related: [ripple, relay, permit]
-exports: [defineMachine, interpret, resolveTransition, assign, MachinitError]
+exports: [defineMachine, interpret, resolveTransition, assign, MachineError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -19,13 +19,13 @@ exports: [defineMachine, interpret, resolveTransition, assign, MachinitError]
 <details>
 <summary>⚡ Quick Reference</summary>
 
-**Package:** `@vielzeug/machine` · **Category:** State
+**Package:** `@vielzeug/machine` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `defineMachine`, `interpret`, `resolveTransition`, `assign`, `MachinitError`
+**Key exports:** `defineMachine`, `interpret`, `resolveTransition`, `assign`, `MachineError`
 
 **When to use:** Complex application state with discrete states, guarded transitions, async side effects, and persistence.
 
-**Related:** [Ripple](/ripple/) · [Relay](/relay/) · [Permit](/permit/)
+**Related:** [Ripple](/ripple/) &nbsp;·&nbsp; [Relay](/relay/) &nbsp;·&nbsp; [Permit](/permit/)
 
 </details>
 
@@ -52,43 +52,38 @@ yarn add @vielzeug/machine
 ## Quick Start
 
 ```ts
-import { defineMachine, interpret, assign } from '@vielzeug/machine';
+import { assign, defineMachine, interpret } from '@vielzeug/machine';
 
 type Event = { type: 'START' } | { type: 'COMPLETE'; result: string };
+type Context = { count: number };
 
-type Counter = { count: number };
-
-const machine = defineMachine<'idle' | 'active', Counter, Event>({
-  initial: 'idle',
+const machine = defineMachine<'active' | 'idle', Context, Event>({
   context: { count: 0 },
+  initial: 'idle',
   states: {
-    idle: {
-      on: {
-        START: [{ target: 'active' }],
-      },
-    },
     active: {
       on: {
-        COMPLETE: [
-          {
-            target: 'idle',
-            actions: [assign(({ event }) => ({ count: event.result.length }))],
-          },
-        ],
+        COMPLETE: {
+          actions: [assign(({ event }) => ({ count: event.result.length }))],
+          target: 'idle',
+        },
       },
+    },
+    idle: {
+      on: { START: { target: 'active' } },
     },
   },
 });
 
 const m = interpret(machine);
 
-console.log(m.state.value); // 'idle'
+console.log(m.state.value);        // 'idle'
 console.log(m.context.value.count); // 0
 
 m.send({ type: 'START' });
 m.send({ type: 'COMPLETE', result: 'hello' });
 
-console.log(m.state.value); // 'idle'
+console.log(m.state.value);        // 'idle'
 console.log(m.context.value.count); // 5
 ```
 
@@ -99,37 +94,37 @@ Manual state management leads to invalid state combinations, unreachable code pa
 ```ts
 // Before — manual state management
 type LoaderState = {
-  status: 'idle' | 'loading' | 'success' | 'error';
   data?: string;
   error?: Error;
   isRetrying?: boolean;
+  status: 'error' | 'idle' | 'loading' | 'success';
 };
 // Multiple invalid state combinations are possible.
 
 // After — FSM enforces valid state combinations
 type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
 
-const loader = defineMachine<'idle' | 'loading' | 'success' | 'error', Context, Event>({
-  initial: 'idle',
+const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', Context, Event>({
   context: { data: '', error: undefined },
+  initial: 'idle',
   states: {
-    idle: { on: { FETCH: [{ target: 'loading' }] } },
-    loading: { on: { DONE: [{ target: 'success' }], FAIL: [{ target: 'error' }] } },
-    success: { on: { FETCH: [{ target: 'loading' }] } },
-    error: { on: { FETCH: [{ target: 'loading' }] } },
+    error: { on: { FETCH: { target: 'loading' } } },
+    idle: { on: { FETCH: { target: 'loading' } } },
+    loading: { on: { DONE: { target: 'success' }, FAIL: { target: 'error' } } },
+    success: { on: { FETCH: { target: 'loading' } } },
   },
 });
 // Now success && error is impossible. State is always valid.
 ```
 
-| Feature                   | Machine                               | xstate              | zustand             |
-| ------------------------- | -------------------------------------- | ------------------- | ------------------- |
-| Bundle size               | <PackageInfo package="machine" type="size" /> | ~15 KB              | ~2 KB               |
-| Zero dependencies         | ✅                                     | ❌ 5+ deps          | ✅                  |
-| Typed discriminated events | ✅                                     | ⚠️ Partial          | ❌                  |
-| Reactive signals          | ✅ Native                              | ❌ Observer pattern | ✅ Native           |
-| Persistence adapter       | ✅ Pluggable                           | ✅                  | ✅                  |
-| Deep context cloning      | ✅                                     | ✅                  | ❌                  |
+| Feature                    | Machine                                        | xstate              | zustand    |
+| -------------------------- | ---------------------------------------------- | ------------------- | ---------- |
+| Bundle size                | <PackageInfo package="machine" type="size" />  | ~15 KB              | ~2 KB      |
+| Zero dependencies          | ✅                                             | ❌ 5+ deps          | ✅         |
+| Typed discriminated events | ✅                                             | ⚠️ Partial          | ❌         |
+| Reactive signals           | ✅ Native                                      | ❌ Observer pattern | ✅ Native  |
+| Persistence adapter        | ✅ Pluggable                                   | ✅                  | ✅         |
+| Context isolation          | ✅ Cloned on every transition                  | ✅                  | ❌         |
 
 **Use Machine when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
 
@@ -139,15 +134,16 @@ const loader = defineMachine<'idle' | 'loading' | 'success' | 'error', Context, 
 
 - `defineMachine()` — Create immutable, validated FSM definitions
 - `interpret()` — Spawn reactive machine instances from definitions
+- **Shorthand transitions** — Single transition or array, your choice
 - **Typed events** — Discriminated unions with TypeScript inference
 - **Reactive state** — State and context are `@vielzeug/ripple` signals
 - **Async invokes** — Native Promise support with onDone/onError handlers
-- **Persistence** — Snapshot save/load/clear adapter pattern
-- **Tracing** — Circular buffer of transitions for debugging
-- **Debug hooks** — Optional lifecycle callbacks with zero overhead
-- **Event queue** — FIFO processing with infinite-loop guards
-- **Deep cloning** — Snapshots prevent external context mutations
-- **Pure resolver** — Test transition logic independently
+- **Persistence** — Snapshot save/load adapter; explicit `clearPersistence()` control
+- **Tracing** — Ring buffer of transitions for debugging
+- **Debug hooks** — Optional lifecycle callbacks with zero overhead when omitted
+- **Event queue** — FIFO processing with configurable infinite-loop guard
+- **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure
+- **Pure resolver** — Test transition logic independently with `resolveTransition()`
 
 ## Compatibility
 

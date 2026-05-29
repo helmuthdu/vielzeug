@@ -21,7 +21,7 @@ exports: [createPermit, owns]
 
 **Package:** `@vielzeug/permit` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createPermit`, `owns`
+**Key exports:** `createPermit`, `owns`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
 
@@ -56,7 +56,8 @@ yarn add @vielzeug/permit
 import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
 const permit = createPermit<'read' | 'update', { authorId: string }>([
-  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow' },
+  // Multi-role rule: viewer and editor can both read
+  { role: ['viewer', 'editor'], resource: 'posts', action: 'read',   effect: 'allow' },
   {
     role: 'editor',
     resource: 'posts',
@@ -74,6 +75,7 @@ permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' 
 const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
 
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.explain('posts', 'update', { authorId: 'u2' });
 bound.checkAll([
   { resource: 'posts', action: 'read' },
@@ -109,10 +111,11 @@ bound.rulesInScope('posts');
 ## Features
 
 - One rule primitive: `PermitRule` passed to `createPermit(rules)`
+- **Multi-role rules**: `role` accepts a string or an array of strings (OR semantics)
 - Decision methods: `permit.can`, `permit.canAll`, `permit.canAny`, `permit.explain`
 - Batch decisions: `permit.checkAll(principal, checks)`
 - Rule introspection: `permit.rulesInScope(principal, resource, data?)`
-- Action enumeration: `permit.allowedActions(principal, resource, data?, knownActions?)`
+- Action enumeration: `permit.allowedActions(principal, resource, knownActions, data?)`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
 - Ownership helper via `owns(attributeKey)`

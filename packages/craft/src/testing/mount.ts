@@ -7,6 +7,7 @@ import type { ReadonlySignal } from '@vielzeug/ripple';
 import { _resetRawSanitizer } from '../directives/raw';
 import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
 import { type HTMLResult } from '../types/bindings';
+import { _clearStylesheetCache } from '../utils/css';
 import { _resetIdCounter } from '../utils/id';
 import { flush, type FlushOptions } from './flush';
 import { queryAllByText, queryByText, type QueryScope } from './query';
@@ -264,6 +265,8 @@ export function cleanup(): void {
   for (const el of _mountedElements) el.remove();
   _mountedElements.length = 0;
   _resetRawSanitizer();
+  _clearStylesheetCache();
+  _resetIdCounter();
 }
 
 /** @internal re-export for within() */

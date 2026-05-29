@@ -5,7 +5,7 @@ description: Complete API reference for the current Toolkit surface.
 
 [[toc]]
 
-## Package Entry
+## Package Entry Point
 
 | Import              | Purpose                    |
 | ------------------- | -------------------------- |
@@ -15,24 +15,39 @@ description: Complete API reference for the current Toolkit surface.
 
 <!-- markdownlint-disable MD060 -->
 
-| Category | Exports                                                                                                                                                                                                                                                                                 |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Array    | `chunk`, `compact`, `contains`, `countBy`, `difference`, `drop`, `dropLast`, `filterMap`, `first`, `flatten`, `groupBy`, `indexBy`, `intersection`, `last`, `partition`, `replace`, `rotate`, `sample`, `search`, `sort`, `take`, `takeLast`, `toggle`, `union`, `uniq`, `unzip`, `zip` |
-| Async    | `abortable`, `attempt`, `defer`, `parallel`, `queue`, `retry`, `sleep`, `timeout`, `waitFor`, `Scheduler`, `polyfillScheduler`                                                                                                                                                          |
-| Date     | `expires`, `interval`, `timeDiff`                                                                                                                                                                                                                                                       |
-| Function | `assert`, `compare`, `compareBy`, `compose`, `constant`, `curry`, `debounce`, `identity`, `memo`, `negate`, `once`, `partial`, `pipe`, `and`, `or`, `not`, `tap`, `throttle`                                                                                                            |
-| Math     | `abs`, `allocate`, `average`, `clamp`, `gcd`, `lcm`, `lerp`, `linspace`, `max`, `median`, `min`, `mod`, `normalize`, `percent`, `range`, `round`, `standardDeviation`, `sum`, `variance`                                                                                                |
-| Money    | `currency`, `exchange`, `Money`                                                                                                                                                                                                                                                         |
-| Object   | `DELETED`, `stash`, `deepClone`, `defaults`, `diff`, `deepMerge`, `shallowMerge`, `entries`, `filterValues`, `fromEntries`, `get`, `has`, `invert`, `keys`, `mapKeys`, `mapValues`, `omit`, `parseJSON`, `pick`, `prune`, `seek`, `values`                                         |
-| Random   | `draw`, `random`, `shuffle`, `uuid`                                                                                                                                                                                                                                                     |
-| String   | `camelCase`, `endsWith`, `escape`, `kebabCase`, `pad`, `pascalCase`, `similarity`, `snakeCase`, `startsWith`, `titleCase`, `truncate`, `unescape`, `words`                                                                                                                              |
-| Typed    | `is` namespace, `isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin`                                                                                                                                                                                  |
+| Symbol | Purpose | Execution | Common gotcha |
+| --- | --- | --- | --- |
+| `chunk(input, size?)` | Split array or string into pages | Sync | Returns `string[]` for string input, `T[][]` for arrays |
+| `filterMap(array, fn)` | Map + filter in one pass, skipping `undefined` | Sync | Return `undefined` to drop an item; `null` is kept |
+| `groupBy(array, selector)` | Group items into a record by key | Sync | Key must be a `PropertyKey` |
+| `search(array, query, tone?)` | Fuzzy search over any array | Sync | `tone` is a 0–1 similarity threshold (default `0.6`) |
+| `sort(array, selectors)` | Multi-key sort without mutation | Sync | Pass an object `{ key: 'asc' }` or a comparator |
+| `uniq(array, selector?)` | Deduplicate by value or key | Sync | Uses deep equality without a selector |
+| `attempt(fn, options?)` | Retry with timeout, signal, backoff | Async | Returns `AttemptResult<T>`, never throws |
+| `parallel(array, fn, options?)` | Bounded async fan-out | Async | `limit` defaults to unbounded |
+| `queue(options?)` | Serialise async jobs with concurrency cap | Async | `.onIdle()` resolves when queue drains |
+| `retry(fn, options?)` | Retry a throwing async function | Async | Unlike `attempt`, it rethrows on exhaustion |
+| `allOf(...predicates)` | AND combinator — all must pass | Sync | Zero predicates → vacuous truth (always `true`) |
+| `anyOf(...predicates)` | OR combinator — at least one must pass | Sync | Zero predicates → vacuous falsity (always `false`) |
+| `noneOf(...predicates)` | NOR combinator — none must pass | Sync | Single predicate is equivalent to logical NOT |
+| `debounce(fn, delay?)` | Delay execution until input settles | Sync | Returns a new function; reuse it across renders |
+| `memo(fn, options?)` | Memoize with optional TTL and size cap | Sync | Pass a `key` function when arguments are objects |
+| `partial(fn, ...args)` | Bind leading arguments | Sync | Type-safe — remaining params are inferred |
+| `assert(condition, message?)` | Throw if condition is falsy | Sync | Accepts an options object for custom error type |
+| `diff(prev?, curr?)` | Structural diff between two objects | Sync | Returns `DELETED` symbol for removed keys |
+| `parseJSON(json, options?)` | Safe JSON parse with fallback | Sync | Accepts `string \| null \| undefined`; returns `undefined` on failure |
+| `stash(options)` | TTL-aware key-value cache with GC | Sync | Key is a tuple — supply a `hash` function |
+| `deepMerge(...items)` | Recursive object merge | Sync | Arrays are concatenated, not replaced |
+| `currency(money, options?)` | Format a `Money` value as a locale string | Sync | `amount` is `bigint` in minor units |
+| `exchange(money, rate)` | Convert `Money` between currencies | Sync | Uses integer arithmetic to avoid float drift |
+| `Scheduler` | `scheduler.postTask()` polyfill | Async | Does not install on `globalThis` |
+| `is` namespace | Type-narrowing predicate collection | Sync | `is.equal` does deep equality |
 
 <!-- markdownlint-enable MD060 -->
 
 ## Array
 
-- `chunk(input, size?, options?)`
+- `chunk(input, size?)`
 - `compact(array)`
 - `contains(array, value)`
 - `countBy(array, selector)`
@@ -76,13 +91,14 @@ description: Complete API reference for the current Toolkit surface.
 
 ## Date
 
-- `expires(date, days?)`
-- `interval(start, end, options?)`
-- `timeDiff(a, b?, allowedUnits?)`
+Date utilities (`expires`, `timeDiff`, `dateRange`) have moved to [`@vielzeug/tempo`](/tempo/).
 
 ## Function
 
+- `allOf(...predicates)`
+- `anyOf(...predicates)`
 - `assert(condition, message?, options?)`
+- `assertAll(conditions, message?, options?)`
 - `compare(a, b)`
 - `compareBy(selectors)`
 - `compose(...fns)`
@@ -91,13 +107,10 @@ description: Complete API reference for the current Toolkit surface.
 - `debounce(fn, delay?)`
 - `identity(value)`
 - `memo(fn, options?)`
-- `negate(predicate)`
+- `noneOf(...predicates)`
 - `once(fn)`
 - `partial(fn, ...args)`
 - `pipe(...fns)`
-- `and(...predicates)`
-- `or(...predicates)`
-- `not(predicate)`
 - `tap(value, callback)`
 - `throttle(fn, delay?, options?)`
 
@@ -131,7 +144,6 @@ description: Complete API reference for the current Toolkit surface.
 
 ## Object
 
-- `DELETED`
 - `stash(options)`
 - `deepClone(value)`
 - `defaults(target, ...sources)`
@@ -151,7 +163,6 @@ description: Complete API reference for the current Toolkit surface.
 - `parseJSON(json, options?)`
 - `pick(obj, keys)`
 - `prune(value)`
-- `seek(item, query, tone?)`
 - `values(obj)`
 
 ## Random
@@ -182,6 +193,23 @@ description: Complete API reference for the current Toolkit surface.
 - `is` namespace: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.greaterThan`, `is.greaterThanOrEqual`, `is.lessThan`, `is.lessThanOrEqual`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`, `is.within`
 - Standalone predicates: `isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin`
 
-## Note
+## Types
 
-Reactive paginated source models are available in `@vielzeug/sourcerer` via `createLocalSource()` and `createRemoteSource()`.
+```ts
+export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
+export type Sorter<T> = (a: T, b: T) => number;
+export type Fn<Args extends unknown[] = unknown[], Result = unknown> = (...args: Args) => Result;
+export type Obj = Record<string, unknown>;
+export type Primitive = string | number | boolean;
+export type Money = { amount: bigint; currency: string };
+export type AttemptResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
+export type TaskPriority = 'background' | 'user-blocking' | 'user-visible';
+export type TimeDiffUnit = 'day' | 'hour' | 'millisecond' | 'minute' | 'month' | 'second' | 'week' | 'year';
+export const DELETED: unique symbol;
+```
+
+## See Also
+
+- [`@vielzeug/tempo`](/tempo/) — date/time utilities (`expires`, `timeDiff`, `dateRange`)
+- [`@vielzeug/sourcerer`](/sourcerer/) — reactive paginated sources (`createLocalSource`, `createRemoteSource`)
+- [`@vielzeug/sieve`](/sieve/) — schema validation to pair with `parseJSON` and `assert`

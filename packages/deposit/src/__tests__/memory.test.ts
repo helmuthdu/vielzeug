@@ -196,21 +196,17 @@ describe('Memory adapter', () => {
     expect(events.some((e) => e.operation === 'get' && e.table === 'users')).toBe(true);
   });
 
-  test('onMetrics emits iterate event after full iteration', async () => {
+  test('onMetrics emits getAll event', async () => {
     const events: MetricsEvent[] = [];
     const db2 = createMemory({ onMetrics: (e) => events.push(e), schema: userSchema });
 
     await db2.put('users', { id: 1, name: 'Alice' });
     await db2.put('users', { id: 2, name: 'Bob' });
 
-    const results: User[] = [];
-
-    for await (const r of db2.iterate('users')) {
-      results.push(r);
-    }
+    const results = await db2.getAll('users');
 
     expect(results).toHaveLength(2);
-    expect(events.some((e) => e.operation === 'iterate' && e.table === 'users')).toBe(true);
+    expect(events.some((e) => e.operation === 'getAll' && e.table === 'users')).toBe(true);
   });
 
   test('onMetrics emits query and queryDelete events for query().delete()', async () => {

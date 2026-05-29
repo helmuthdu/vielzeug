@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Request Middleware'
-description: 'Request Middleware examples for rune.'
+description: 'Request Middleware example for @vielzeug/rune.'
 ---
 
 ## Request Middleware
@@ -10,6 +10,8 @@ description: 'Request Middleware examples for rune.'
 Every log entry produced during an HTTP request should carry the request ID and authenticated user ID — without threading a logger parameter through every function that runs during the request.
 
 ### Solution
+
+Use `withBindings({ requestId, ip })` inside the middleware to create a request-scoped logger that pins those fields to every downstream call.
 
 ```ts
 import { Rune } from '@vielzeug/rune';
@@ -41,9 +43,9 @@ export function requestLogger(req, res, next) {
 - Using `console.log` alongside the structured logger bypasses the transport and formatter, producing mixed formats in log aggregators.
 
 ### Related
-- [Authentication (Courier)](@vielzeug/courier/examples/authentication)
-- [Request Scoping (Relay)](@vielzeug/relay/examples/request-scoping)
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
+- [Authentication (Courier)](/courier/examples/authentication)
+- [Event Bus (Relay)](/relay/)

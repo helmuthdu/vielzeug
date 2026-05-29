@@ -1,34 +1,23 @@
-import type { MessageFn } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, resolveMessage } from '../core';
+import { ErrorCode, Schema, fail, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   constructor() {
-    super((value) =>
-      typeof value === 'bigint'
-        ? null
-        : [{ code: ErrorCode.invalid_type, message: _messages().bigint.type(), path: [] }],
-    );
+    super((value) => (typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, _messages().bigint.type())));
   }
 
   min(
     minimum: bigint,
     message: MessageFn<{ min: bigint; value: bigint }> = (ctx) => _messages().bigint.min(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed >= minimum) return null;
 
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { min: minimum, value: typed }),
-          params: { min: minimum },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_small, resolveMessage(message, { min: minimum, value: typed }), { min: minimum });
     });
   }
 
@@ -36,82 +25,52 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     maximum: bigint,
     message: MessageFn<{ max: bigint; value: bigint }> = (ctx) => _messages().bigint.max(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed <= maximum) return null;
 
-      return [
-        {
-          code: ErrorCode.too_big,
-          message: resolveMessage(message, { max: maximum, value: typed }),
-          params: { max: maximum },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_big, resolveMessage(message, { max: maximum, value: typed }), { max: maximum });
     });
   }
 
   positive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.positive()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed > 0n) return null;
 
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { value: typed }),
-          params: { exclusive: true, min: 0n },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_small, resolveMessage(message, { value: typed }), { exclusive: true, min: 0n });
     });
   }
 
   negative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.negative()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed < 0n) return null;
 
-      return [
-        {
-          code: ErrorCode.too_big,
-          message: resolveMessage(message, { value: typed }),
-          params: { exclusive: true, max: 0n },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_big, resolveMessage(message, { value: typed }), { exclusive: true, max: 0n });
     });
   }
 
   nonNegative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonNegative()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed >= 0n) return null;
 
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { value: typed }),
-          params: { min: 0n },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_small, resolveMessage(message, { value: typed }), { min: 0n });
     });
   }
 
   nonPositive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonPositive()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed <= 0n) return null;
 
-      return [
-        { code: ErrorCode.too_big, message: resolveMessage(message, { value: typed }), params: { max: 0n }, path: [] },
-      ];
+      return fail(ErrorCode.too_big, resolveMessage(message, { value: typed }), { max: 0n });
     });
   }
 
@@ -119,19 +78,12 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     step: bigint,
     message: MessageFn<{ step: bigint; value: bigint }> = (ctx) => _messages().bigint.multipleOf(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as bigint;
 
       if (typed % step === 0n) return null;
 
-      return [
-        {
-          code: ErrorCode.invalid_multiple_of,
-          message: resolveMessage(message, { step, value: typed }),
-          params: { step },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.invalid_multiple_of, resolveMessage(message, { step, value: typed }), { step });
     });
   }
 
@@ -145,10 +97,17 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     return super._walk(visitor);
   }
 
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof BigIntSchema)) return false;
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'bigint',
+    };
+  }
 
-    return super._equalsImpl(other);
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    return other instanceof BigIntSchema;
   }
 
   static coerce(): BigIntSchema<unknown> {

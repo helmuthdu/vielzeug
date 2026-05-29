@@ -11,32 +11,29 @@ A login form must validate email format and password presence, display inline er
 
 ### Solution
 
-Complete login form with validation and error handling.
+Use `createForm()` with per-field `validators` and a `ValidationModes` preset on `connect()` to trigger validation on blur and report errors next to each input.
 
-```typescript
-import { createForm } from '@vielzeug/forge';
+```ts
+import { createForm, ValidationModes } from '@vielzeug/forge';
 
-const loginForm = createForm({
+const form = createForm({
   defaultValues: {
     email: '',
     password: '',
     rememberMe: false,
   },
+  connect: ValidationModes.onBlur,
   validators: {
-    email: [
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
-    ],
-    password: [
-      (v) => (!v ? 'Password is required' : undefined),
-      (v) => (v && String(v).length < 8 ? 'Password must be at least 8 characters' : undefined),
-    ],
+    email: (v) => (!v ? 'Email is required' : !String(v).includes('@') ? 'Invalid email format' : undefined),
+    password: (v) => (!v ? 'Password is required' : String(v).length < 8 ? 'Min 8 characters' : undefined),
   },
 });
 
-// Handle submission
+const emailConn = form.connect('email');
+const passwordConn = form.connect('password');
+
 async function handleLogin() {
-  const result = await loginForm.submit(async (values) => {
+  const result = await form.submit(async (values) => {
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -44,35 +41,30 @@ async function handleLogin() {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message);
+      const { message } = await response.json();
+      throw new Error(message);
     }
 
     return response.json();
   });
 
   if (!result.ok) {
-    console.log('Validation errors:', result.errors);
+    // Validation errors are already set on form.state.errors — no manual wiring needed
     return;
   }
 
-  // Success – redirect or update UI
-  console.log('Login successful:', result.value);
   window.location.href = '/dashboard';
 }
 ```
 
-
 ### Pitfalls
 
-- Disabling submit based solely on `!state.isValid` prevents submission before the user has attempted anything. Use `!state.isValid && state.submitCount > 0` to only block re-submission after a failed attempt.
-- `form.submit()` does not throw on validation failure — it returns `{ ok: false, errors }`. A try/catch around `submit()` only catches exceptions thrown inside your async submit handler.
-- `form.setError('password', '...')` adds an error message but does not clear the field value. Call `form.set('password', '')` separately if you want to reset the input.
+- Disabling submit based solely on `!state.isValid` prevents submission before the user has attempted anything. Use `!state.isValid && state.submitCount > 0` to block re-submission only after a failed attempt.
+- `form.submit()` does not throw on validation failure — it returns `{ ok: false, errors }`. A `try/catch` around `submit()` only catches exceptions thrown inside your async handler.
+- `form.setError('password', '...')` adds an error message but does not clear the field value. Call `form.set('password', '')` separately if you also want to reset the input.
 
 ### Related
-- [Schema Validation with Sieve](/sieve/)
-- [Handling HTTP Errors (Courier)](@vielzeug/courier/examples/error-handling-patterns)
 
-- [Best Practices](./best-practices.md)
+- [Schema Validation with Sieve](/sieve/)
+- [Registration Form](./registration-form.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)
-- [Dynamic Form Fields](./dynamic-form-fields.md)

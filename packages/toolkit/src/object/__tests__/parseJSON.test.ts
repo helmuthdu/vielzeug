@@ -24,13 +24,6 @@ describe('parseJSON', () => {
     expect(onError).toHaveBeenCalledWith(expect.any(SyntaxError));
   });
 
-  it('should return the input if it is not a string', () => {
-    const input = { a: 1, b: 2 };
-    const result = parseJSON(input);
-
-    expect(result).toEqual(input);
-  });
-
   it('should return undefined if no default value is provided and parsing fails', () => {
     const json = 'invalid';
     const result = parseJSON(json);
@@ -38,10 +31,16 @@ describe('parseJSON', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should return the default value if the parsed value is null or undefined', () => {
-    const json = null;
+  it('should return the default value for null input', () => {
     const defaultValue = { a: 0 };
-    const result = parseJSON(json, { defaultValue });
+    const result = parseJSON(null, { defaultValue });
+
+    expect(result).toEqual(defaultValue);
+  });
+
+  it('should return the default value for undefined input', () => {
+    const defaultValue = { a: 0 };
+    const result = parseJSON(undefined, { defaultValue });
 
     expect(result).toEqual(defaultValue);
   });
@@ -60,5 +59,14 @@ describe('parseJSON', () => {
     const result = parseJSON(json, { validator });
 
     expect(result).toEqual({ a: 1, b: 2 });
+  });
+
+  it('should return defaultValue when validator rejects the parsed result', () => {
+    const json = '{"a":"not-a-number"}';
+    const defaultValue = { a: 0 };
+    const validator = (value: any) => typeof value.a === 'number';
+    const result = parseJSON(json, { defaultValue, validator });
+
+    expect(result).toEqual(defaultValue);
   });
 });

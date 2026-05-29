@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — Vue 3 Integration'
-description: Minimal Composition API setup for route with RouterView/RouterLink patterns.
+description: 'Vue 3 integration example for @vielzeug/route.'
 ---
 
 ## Vue 3 Integration
 
-Export a single `useRouter()` composable from `router.ts`. It returns reactive route state and bound router actions, so components import one symbol and call one composable.
+### Problem
+
+Vue's reactivity system needs both an initial value and change notifications from the router. `ref()` on a deeply nested immutable object adds unnecessary tracking overhead.
+
+### Solution
+
+Use `shallowRef(router.getSnapshot())` initialized at module scope and update via `router.subscribe()`. Expose a single `useRouter()` composable.
 
 ```ts
 // router.ts
@@ -20,7 +26,7 @@ const router = createRouter({
   },
 });
 
-const state = shallowRef(router.state);
+const state = shallowRef(router.getSnapshot());
 router.subscribe((next) => {
   state.value = next;
 });
@@ -83,3 +89,13 @@ const active = computed(() => {
 ```
 
 This gives a Vue-Router-like DX (`useRouter()` composable, link + view) without an adapter package.
+
+### Pitfalls
+
+- Use `shallowRef` not `ref`. `RouteState` is a deep immutable object; deep tracking wastes memory and triggers false positives on object identity comparisons.
+- `isActive()` reads `history.location` directly, not the reactive ref. Add `void state.value` in the `active` computed (shown above) to force recomputation on every navigation.
+
+### Related
+
+- [React Integration](./react-integration.md)
+- [Svelte Integration](./svelte-integration.md)

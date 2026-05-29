@@ -9,7 +9,6 @@ Use these examples as copy/paste starting points for real applications.
 
 - [Array utilities](./examples/array.md)
 - [Async utilities](./examples/async.md)
-- [Date utilities](./examples/date.md)
 - [Function utilities](./examples/function.md)
 - [Math utilities](./examples/math.md)
 - [Money utilities](./examples/money.md)
@@ -17,6 +16,8 @@ Use these examples as copy/paste starting points for real applications.
 - [Random utilities](./examples/random.md)
 - [String utilities](./examples/string.md)
 - [Typed utilities](./examples/typed.md)
+
+> **Date utilities** (`expires`, `timeDiff`, `dateRange`) have moved to [`@vielzeug/tempo`](/tempo/examples/).
 
 ## Quick Example
 

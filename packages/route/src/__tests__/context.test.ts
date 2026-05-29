@@ -3,7 +3,7 @@
  */
 import type { RouteContext } from '../types';
 
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('route context', () => {
@@ -31,18 +31,20 @@ describe('route context', () => {
     router.dispose();
   });
 
-  it('ctx.data is undefined during middleware (data runs after the middleware chain)', async () => {
-    let dataInMiddleware: unknown = 'NOT_SET';
+  it('handler receives data; middleware does not have a data property', async () => {
+    const handler = vi.fn();
+    let middlewareHasData = false;
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: {
           data: async () => ({ value: 42 }),
-          handler: vi.fn(),
+          handler,
           middleware: [
             async (ctx, next) => {
-              dataInMiddleware = ctx.data;
+              // ctx is RouteContext — data is not present (TypeScript prevents access)
+              middlewareHasData = 'data' in ctx;
               await next();
             },
           ],
@@ -53,7 +55,8 @@ describe('route context', () => {
 
     await settle();
 
-    expect(dataInMiddleware).toBeUndefined();
+    expect(middlewareHasData).toBe(false);
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: { value: 42 } }));
     router.dispose();
   });
 
@@ -149,8 +152,8 @@ describe('middleware pipeline', () => {
     await settle();
     await router.navigate({ path: '/protected' });
 
-    expect(router.state.location.pathname).toBe('/');
-    expect(router.state.status).toBe('idle');
+    expect(router.getSnapshot().location.pathname).toBe('/');
+    expect(router.getSnapshot().status).toBe('idle');
     router.dispose();
   });
 
@@ -171,8 +174,8 @@ describe('middleware pipeline', () => {
     await settle();
     await router.navigate({ path: '/protected' });
 
-    expect(router.state.location.pathname).toBe('/');
-    expect(router.state.status).toBe('idle');
+    expect(router.getSnapshot().location.pathname).toBe('/');
+    expect(router.getSnapshot().status).toBe('idle');
     router.dispose();
   });
 

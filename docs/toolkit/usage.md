@@ -63,7 +63,7 @@ const byId = indexBy([{ id: 1 }, { id: 2 }], (item) => item.id);
 ### Objects
 
 ```ts
-import { deepClone, defaults, diff, get, prune, parseJSON, seek, pick, omit, mapValues } from '@vielzeug/toolkit';
+import { deepClone, defaults, diff, get, prune, parseJSON, pick, omit, mapValues } from '@vielzeug/toolkit';
 
 const prev = { api: { host: 'localhost', port: 3000 }, secure: undefined as boolean | undefined };
 const curr = deepClone(prev);
@@ -74,20 +74,19 @@ const withDefaults = defaults(curr, { secure: true });
 const changes = diff(prev, curr); // { api: { port: 4000 } }
 const port = get(curr, 'api.port'); // 4000
 const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
-const parsed = parseJSON('{"ok":true}', { defaultValue: { ok: false } });
-const found = seek(curr, 'localhost', 0.6);
+const parsed = parseJSON('{\'ok\':\true}', { defaultValue: { ok: false } });
 
 const publicUser = pick({ id: 1, name: 'Alice', password: 'secret' }, ['id', 'name']);
 const internalUser = omit({ id: 1, name: 'Alice', password: 'secret' }, ['password']);
 const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
 
-console.log(withDefaults, changes, port, clean, parsed, found, publicUser, internalUser, renamed);
+console.log(withDefaults, changes, port, clean, parsed, publicUser, internalUser, renamed);
 ```
 
 ### Functions
 
 ```ts
-import { compose, debounce, memo, once, partial, pipe, throttle, negate, tap } from '@vielzeug/toolkit';
+import { compose, debounce, memo, once, partial, pipe, throttle, allOf, noneOf, tap } from '@vielzeug/toolkit';
 
 const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
@@ -106,7 +105,11 @@ const loadOnce = once(() => initApp());
 const expensive = memo((a: number, b: number) => a * b);
 const onInput = debounce((q: string) => console.log(q), 300);
 const onScroll = throttle(() => console.log(window.scrollY), 100);
-const odds = [1, 2, 3, 4, 5].filter(negate((n: number) => n % 2 === 0));
+const isWorkingAge = allOf<number>(
+  (age) => age >= 18,
+  (age) => age < 65,
+);
+const odds = [1, 2, 3, 4, 5].filter(noneOf((n: number) => n % 2 === 0));
 const value = tap(42, (n) => console.log('debug', n));
 ```
 
@@ -189,24 +192,78 @@ const value = cache.get(['user', 1]);
 
 ## Framework Integration
 
-### React
+::: code-group
 
-```tsx
+```tsx [React]
 import { debounce, filterMap } from '@vielzeug/toolkit';
 import { useMemo } from 'react';
 
-const visible = useMemo(() => filterMap(data, (item) => (item.hidden ? undefined : item)), [data]);
+// Stable debounced handler — recreated only once
 const onSearch = useMemo(() => debounce((q: string) => console.log(q), 250), []);
+const visible = useMemo(() => filterMap(data, (item) => (item.hidden ? undefined : item)), [data]);
 ```
 
-### Vue
-
-```ts
+```ts [Vue 3]
 import { computed, ref } from 'vue';
 import { groupBy } from '@vielzeug/toolkit';
 
 const users = ref<User[]>([]);
 const byRole = computed(() => groupBy(users.value, (u) => u.role));
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { groupBy } from '@vielzeug/toolkit';
+  import { onDestroy } from 'svelte';
+
+  export let users: User[] = [];
+  $: byRole = groupBy(users, (u) => u.role);
+</script>
+```
+
+:::
+
+## Working with Other Vielzeug Libraries
+
+### With Sieve
+
+Use `parseJSON` from toolkit together with `s` schemas from Sieve to parse and validate in one step.
+
+```ts
+import { parseJSON } from '@vielzeug/toolkit';
+import { s } from '@vielzeug/sieve';
+
+const UserSchema = s.object({ id: s.number(), name: s.string() });
+const raw = localStorage.getItem('user');
+const user = parseJSON(raw, {
+  validator: (v) => UserSchema.safeParse(v).ok,
+  defaultValue: null,
+});
+```
+
+### With Sourcerer
+
+Use `search` and `sort` from toolkit as the transform functions inside a `createLocalSource`.
+
+```ts
+import { search, sort } from '@vielzeug/toolkit';
+import { createLocalSource } from '@vielzeug/sourcerer';
+
+const source = createLocalSource(users, {
+  search: (items, query) => search(items, query),
+  sort: (items, key, dir) => sort(items, { [key]: dir }),
+});
+```
+
+### With Tempo
+
+Date utilities (`expires`, `timeDiff`, `dateRange`) are in `@vielzeug/tempo`.
+
+```ts
+import { expires, timeDiff } from '@vielzeug/tempo';
+
+const status = expires(token.expiresAt, 3); // 'SOON' | 'EXPIRED' | 'LATER' | 'NEVER'
+const { value, unit } = timeDiff(token.issuedAt); // e.g. { value: 2, unit: 'day' }
 ```
 
 ## Best Practices
@@ -216,9 +273,7 @@ const byRole = computed(() => groupBy(users.value, (u) => u.role));
 - Use `partial` when adapting multi-arg APIs to unary composition flows.
 - For cancellation-aware async work, pass `AbortSignal` through your callback stack.
 - Use `createLocalSource` and `createRemoteSource` from `@vielzeug/sourcerer` for reactive paginated sources.
-
-## Performance Tips
-
 - Reuse debounced/throttled functions instead of recreating them per render.
 - Use `queue` for explicit concurrency and `parallel` for bounded fan-out processing.
+- Prefer `memo` over ad-hoc caching; supply a `key` function when arguments are objects.
 - Prefer `is.match` for partial checks over repeated ad-hoc deep traversals.

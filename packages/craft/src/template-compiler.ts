@@ -11,6 +11,7 @@ import {
   type RefCallback,
 } from './types/bindings';
 import { escapeHtml } from './utils/dom';
+import { applyModifiers } from './utils/event-modifiers';
 import { CF_ID_ATTR, createMarkerIdFactory, rekeyHtmlResult } from './utils/id';
 
 // Templates use the HTML as-is; no aggressive whitespace normalization
@@ -70,49 +71,6 @@ const detectSlot = (str: string): CompiledTemplateSlot => {
   return { kind: 'node', prefix: str, raw: str };
 };
 
-/**
- * Apply event listener modifiers (prevent, stop, self, capture, once, passive).
- * Inlined for clarity rather than using wrapper function dict.
- */
-const applyModifiers = (
-  handler: (e: Event) => void,
-  modifiers: string[],
-): { handler: (e: Event) => void; options?: AddEventListenerOptions } => {
-  let wrappedHandler = handler;
-
-  for (const modifier of modifiers) {
-    switch (modifier) {
-      case 'prevent':
-        wrappedHandler = ((h) => (e) => {
-          e.preventDefault();
-          h(e);
-        })(wrappedHandler);
-        break;
-      case 'self':
-        wrappedHandler = ((h) => (e) => {
-          if (e.target === e.currentTarget) h(e);
-        })(wrappedHandler);
-        break;
-      case 'stop':
-        wrappedHandler = ((h) => (e) => {
-          e.stopPropagation();
-          h(e);
-        })(wrappedHandler);
-        break;
-    }
-  }
-
-  const options: AddEventListenerOptions = {};
-
-  if (modifiers.includes('capture')) options.capture = true;
-
-  if (modifiers.includes('once')) options.once = true;
-
-  if (modifiers.includes('passive')) options.passive = true;
-
-  return { handler: wrappedHandler, ...(Object.keys(options).length ? { options } : {}) };
-};
-
 const resolveDirectiveValue = (value: unknown): string => {
   if (typeof value === 'string') return escapeHtml(value);
 
@@ -124,64 +82,102 @@ const resolveDirectiveValue = (value: unknown): string => {
 };
 
 /**
- * Render HTML items (array or single) into html + bindings via a computed signal.
- * Used when a function getter returns HTML content that needs to be wrapped in a signal.
+ * Collect html and bindings from a list of items (array or single value).
  */
-const renderHtmlItems = (getter: () => unknown): ReadonlySignal<{ bindings: Binding[]; html: string }> => {
-  return computed(() => {
-    const res = getter();
-    const items = Array.isArray(res) ? res : [res];
-    const getNestedId = createMarkerIdFactory();
-    let html = '';
-    const bindings: Binding[] = [];
+const collectHtmlItems = (items: unknown[], getNextId: () => string): { bindings: Binding[]; html: string } => {
+  let html = '';
+  const bindings: Binding[] = [];
 
-    for (const item of items) {
-      if (isHtmlResult(item)) {
-        const entry = rekeyHtmlResult(item, getNestedId);
+  for (const item of items) {
+    if (isHtmlResult(item)) {
+      const entry = rekeyHtmlResult(item, getNextId);
 
-        html += entry.html;
-        bindings.push(...entry.bindings);
-      } else {
-        html += resolveDirectiveValue(item);
-      }
+      html += entry.html;
+      bindings.push(...entry.bindings);
+    } else {
+      html += resolveDirectiveValue(item);
     }
+  }
 
-    return { bindings, html };
-  });
+  return { bindings, html };
 };
 
 /**
- * Create a wrapped signal for HTML rendering that handles both function getters and signals.
- * No caching of intermediate signals—let ripple handle all signal optimization.
+ * Create a reactive signal that renders HTML items, for use with HtmlBinding.
  */
-const createHtmlWrapperSignal = (
-  value: unknown,
-): {
-  signal: ReadonlySignal<{ bindings: Binding[]; html: string }>;
-} | null => {
+const createReactiveHtmlSignal = (value: unknown): ReadonlySignal<{ bindings: Binding[]; html: string }> | null => {
   if (typeof value === 'function') {
-    return { signal: renderHtmlItems(value as () => unknown) };
+    return computed(() => {
+      const res = (value as () => unknown)();
+      const items = Array.isArray(res) ? res : [res];
+
+      return collectHtmlItems(items, createMarkerIdFactory());
+    });
   }
 
   if (isSignal(value) && isHtmlResult((value as ReadonlySignal<unknown>).value)) {
     const htmlSignal = value as ReadonlySignal<unknown>;
 
-    return {
-      signal: computed(() => {
-        const next = htmlSignal.value;
+    return computed(() => {
+      const next = htmlSignal.value;
 
-        if (!isHtmlResult(next)) {
-          return { bindings: [], html: resolveDirectiveValue(next) };
-        }
+      if (!isHtmlResult(next)) {
+        return { bindings: [], html: resolveDirectiveValue(next) };
+      }
 
-        const entry = rekeyHtmlResult(next, createMarkerIdFactory());
+      const entry = rekeyHtmlResult(next, createMarkerIdFactory());
 
-        return { bindings: entry.bindings, html: entry.html };
-      }),
-    };
+      return { bindings: entry.bindings, html: entry.html };
+    });
   }
 
   return null;
+};
+
+type NodeSlotResult =
+  | { bindings: Binding[]; html: string; kind: 'static' }
+  | { binding: Binding; html: string; kind: 'reactive' };
+
+/**
+ * Resolve a node-slot value into either static html+bindings or a reactive binding.
+ */
+const resolveNodeSlot = (value: unknown, getNextId: () => string): NodeSlotResult => {
+  // Reactive HTML (functions returning templates, signals of templates)
+  const reactiveSignal = createReactiveHtmlSignal(value);
+
+  if (reactiveSignal) {
+    const id = getNextId();
+
+    return { binding: { signal: reactiveSignal, type: 'html', uid: id }, html: `<!--${id}-->`, kind: 'reactive' };
+  }
+
+  // Plain signal → text binding
+  if (isSignal(value)) {
+    const id = getNextId();
+
+    return {
+      binding: { signal: value as Signal<unknown>, type: 'text', uid: id },
+      html: `<!--${id}-->`,
+      kind: 'reactive',
+    };
+  }
+
+  // Static array of items
+  if (Array.isArray(value)) {
+    const { bindings, html } = collectHtmlItems(value, getNextId);
+
+    return { bindings, html, kind: 'static' };
+  }
+
+  // Single static HTMLResult
+  if (isHtmlResult(value)) {
+    const entry = rekeyHtmlResult(value, getNextId);
+
+    return { bindings: entry.bindings, html: entry.html, kind: 'static' };
+  }
+
+  // Primitive static value
+  return { bindings: [], html: resolveDirectiveValue(value), kind: 'static' };
 };
 
 const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
@@ -289,45 +285,14 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
         continue;
       }
 
-      const htmlWrapper = createHtmlWrapperSignal(value);
+      const resolved = resolveNodeSlot(value, getNextId);
 
-      if (htmlWrapper) {
-        const id = getNextId();
+      result += slot.raw + resolved.html;
 
-        result += `${slot.raw}<!--${id}-->`;
-        bindings.push({ signal: htmlWrapper.signal, type: 'html', uid: id });
-        continue;
-      }
-
-      if (Array.isArray(value)) {
-        let combinedHtml = '';
-
-        for (const item of value) {
-          if (isHtmlResult(item)) {
-            const entry = rekeyHtmlResult(item, getNextId);
-
-            combinedHtml += entry.html;
-            bindings.push(...entry.bindings);
-          } else {
-            combinedHtml += resolveDirectiveValue(item);
-          }
-        }
-        result += slot.raw + combinedHtml;
-        continue;
-      }
-
-      if (isSignal(value)) {
-        const id = getNextId();
-
-        result += `${slot.raw}<!--${id}-->`;
-        bindings.push({ signal: value as Signal<unknown>, type: 'text', uid: id });
-      } else if (isHtmlResult(value)) {
-        const entry = rekeyHtmlResult(value, getNextId);
-
-        result += slot.raw + entry.html;
-        bindings.push(...entry.bindings);
+      if (resolved.kind === 'reactive') {
+        bindings.push(resolved.binding);
       } else {
-        result += slot.raw + resolveDirectiveValue(value);
+        bindings.push(...resolved.bindings);
       }
 
       continue;

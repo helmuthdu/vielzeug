@@ -11,7 +11,7 @@ A registration form needs a confirmed password field (both values must match) an
 
 ### Solution
 
-Registration form with async validation and password confirmation.
+Use `createForm()` with async field validators for uniqueness checks and a form-level `validator` to cross-validate the password confirmation field.
 
 ```typescript
 import { createForm } from '@vielzeug/forge';

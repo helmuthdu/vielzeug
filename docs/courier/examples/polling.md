@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Polling'
-description: 'Polling examples for courier.'
+description: 'Polling example for @vielzeug/courier.'
 ---
 
 ## Polling
@@ -10,6 +10,8 @@ description: 'Polling examples for courier.'
 You need to refresh data on a fixed interval — showing the latest server state without WebSockets or server-sent events. The interval must pause when the component is destroyed.
 
 ### Solution
+
+Use `setInterval` to call `qc.fetch()` repeatedly and clear the interval in your cleanup function to stop polling when the component is destroyed.
 
 ```ts
 const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the server

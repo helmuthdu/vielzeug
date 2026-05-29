@@ -12,10 +12,10 @@ const fetchMachine = defineMachine({
   states: {
     idle: {
       on: {
-        FETCH: [{
+        FETCH: {
           target: 'loading',
           actions: [assign(({ event }) => ({ userId: event.id, attempts: 1 }))],
-        }],
+        },
       },
     },
     loading: {
@@ -33,18 +33,18 @@ const fetchMachine = defineMachine({
         onError: (error)  => ({ type: 'FAILED', error: String(error) }),
       }],
       on: {
-        DONE:   [{ target: 'success', actions: [assign(({ event }) => ({ user: event.user,   error: '' }))] }],
-        FAILED: [{ target: 'error',   actions: [assign(({ event }) => ({ user: null, error: event.error }))] }],
+        DONE:   { target: 'success', actions: [assign(({ event }) => ({ user: event.user,   error: '' }))] },
+        FAILED: { target: 'error',   actions: [assign(({ event }) => ({ user: null, error: event.error }))] },
       },
     },
     success: {
       on: {
-        FETCH: [{ target: 'loading', actions: [assign(({ event }) => ({ userId: event.id }))] }],
+        FETCH: { target: 'loading', actions: [assign(({ event }) => ({ userId: event.id }))] },
       },
     },
     error: {
       on: {
-        RETRY: [{ target: 'loading', actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))] }],
+        RETRY: { target: 'loading', actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))] },
       },
     },
   },

@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — File upload drop zone'
-description: 'File upload drop zone examples for grip.'
+description: 'File upload drop zone example for @vielzeug/grip.'
 ---
 
 ## File upload drop zone
@@ -61,9 +61,9 @@ using zone = createDropZone({
 
 ### Pitfalls
 
-- `dragover` must call `e.preventDefault()` to mark the element as a valid drop target. Without it, `drop` never fires.
-- `e.dataTransfer.files` is a `FileList`, not an array. Convert with `Array.from()` before filtering or mapping.
-- `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Always provide a fallback to avoid silently rejecting valid files.
+- `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Extension-based accept patterns (e.g. `.pdf`) cannot be validated from `DataTransferItem` during drag — Grip lets them through pre-check and applies exact filtering at drop time.
+- `zone.hovered` is only `true` when the drag payload matches the `accept` filter. Drags carrying rejected types do not trigger `onHoverChange`.
+- Add `maxFiles` when you need to enforce an upload limit — excess files are automatically forwarded to `onDropRejected`.
 
 ### Related
 

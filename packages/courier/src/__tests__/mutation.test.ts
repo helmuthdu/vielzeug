@@ -43,11 +43,11 @@ describe('Mutation', () => {
       await addUser.mutate(undefined);
       unsub();
 
-      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
-      expect(states[0].isFetching).toBe(false);
-      expect(states[1].isFetching).toBe(true);
-      expect(states[2].isFetching).toBe(false);
-      expect(states[2].data).toEqual({ id: 1 });
+      // subscribe() no longer fires immediately — first notification is 'pending'
+      expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
+      expect(states[0].isFetching).toBe(true);
+      expect(states[1].isFetching).toBe(false);
+      expect(states[1].data).toEqual({ id: 1 });
     });
 
     it('reports idle -> fetching -> error state lifecycle and rejects the caller', async () => {
@@ -61,10 +61,11 @@ describe('Mutation', () => {
 
       await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
 
-      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
-      expect(states[1].isFetching).toBe(true);
-      expect(states[2].isFetching).toBe(false);
-      expect(states[2].error?.message).toContain('Server error');
+      // subscribe() no longer fires immediately — first notification is 'pending'
+      expect(states.map((s) => s.status)).toEqual(['pending', 'error']);
+      expect(states[0].isFetching).toBe(true);
+      expect(states[1].isFetching).toBe(false);
+      expect(states[1].error?.message).toContain('Server error');
     });
   });
 

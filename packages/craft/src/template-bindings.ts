@@ -1,5 +1,4 @@
 import {
-  batch,
   computed,
   effect as rawEffect,
   isSignal,
@@ -145,37 +144,49 @@ const signalEffect = (
   registerCleanup(rawEffect(() => update(signal.value)));
 };
 
+type AttrTarget =
+  | { el: HTMLInputElement; kind: 'formChecked' }
+  | { el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; kind: 'formValue' }
+  | { kind: 'generic' }
+  | { kind: 'prop'; meta: PropMetaLike };
+
+const resolveAttrTarget = (el: HTMLElement, name: string): AttrTarget => {
+  const meta = propRegistry.get(el)?.get(name) as PropMetaLike | undefined;
+
+  if (meta) return { kind: 'prop', meta };
+
+  if (name === 'value' && isNativeFormInput(el)) return { el, kind: 'formValue' };
+
+  if (name === 'checked' && el instanceof HTMLInputElement) return { el, kind: 'formChecked' };
+
+  return { kind: 'generic' };
+};
+
 export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
-  const meta = propRegistry.get(el)?.get(binding.name) as PropMetaLike | undefined;
+  const target = resolveAttrTarget(el, binding.name);
   const liveState: LiveWriteState = { last: undefined };
 
   const update = (value: unknown): void => {
-    if (!meta && isStructuredValue(value)) {
+    if (target.kind !== 'prop' && isStructuredValue(value)) {
       (el as unknown as Record<string, unknown>)[binding.name] = value;
 
       return;
     }
 
-    if (!meta && binding.name === 'value' && isNativeFormInput(el)) {
-      applyFormValue(el, value, binding.live, liveState);
-
-      return;
+    switch (target.kind) {
+      case 'formChecked':
+        applyCheckedValue(target.el, value, binding.live, liveState);
+        break;
+      case 'formValue':
+        applyFormValue(target.el, value, binding.live, liveState);
+        break;
+      case 'prop':
+        syncRegisteredProp(el, target.meta, binding, value);
+        break;
+      default:
+        if (binding.mode === 'bool') el.toggleAttribute(binding.name, Boolean(value));
+        else setAttr(el, binding.name, value);
     }
-
-    if (!meta && binding.name === 'checked' && el instanceof HTMLInputElement) {
-      applyCheckedValue(el, value, binding.live, liveState);
-
-      return;
-    }
-
-    if (!meta) {
-      if (binding.mode === 'bool') el.toggleAttribute(binding.name, Boolean(value));
-      else setAttr(el, binding.name, value);
-
-      return;
-    }
-
-    syncRegisteredProp(el, meta, binding, value);
   };
 
   if (binding.signal) {
@@ -309,6 +320,46 @@ export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: stri
 };
 
 /**
+ * Safely read a binding signal, suppressing disposed-signal errors during scope teardown.
+ */
+const readSignalSafe = <T>(sig: ReadonlySignal<T>): T | undefined => {
+  try {
+    return sig.value;
+  } catch (error) {
+    if (error instanceof StateError && error.code === 'DISPOSED_READ') return undefined;
+
+    throw error;
+  }
+};
+
+/**
+ * Replace the current HTML content at a marker with new parsed content and apply bindings.
+ */
+const replaceHtmlContent = (
+  marker: Comment,
+  root: Node,
+  html: string,
+  bindings: Binding[],
+  lastInsertedNodes: Node[],
+  registerInnerCleanup: RegisterCleanup,
+): Node[] => {
+  const container = (marker.parentElement || root) as ParentNode;
+
+  removeNodes(lastInsertedNodes);
+
+  const parsed = parseHTML(html);
+  const newNodes = Array.from(parsed.childNodes);
+
+  marker.after(parsed);
+
+  applyBindingsInContainer(container, bindings, registerInnerCleanup, {
+    onHtml: (binding) => applyHtmlBinding(container as unknown as Node, binding, registerInnerCleanup),
+  });
+
+  return newNodes;
+};
+
+/**
  * Sets up the reactive effect for an html-binding marker using full fragment replacement.
  */
 export const applyHtmlBinding = (root: Node, b: HtmlBinding, registerCleanup: RegisterCleanup): void => {
@@ -330,44 +381,22 @@ export const applyHtmlBinding = (root: Node, b: HtmlBinding, registerCleanup: Re
   let lastInsertedNodes: Node[] = [];
 
   const stop = rawEffect(() => {
-    batch(() => {
-      let data: HtmlBinding['signal']['value'];
+    const data = readSignalSafe(b.signal);
 
-      try {
-        data = b.signal.value;
-      } catch (error) {
-        // Silently skip reads from disposed computed signals (happens during scope teardown
-        // when effects briefly outlive their source computeds). Use the typed error code
-        // rather than string-matching on the message to avoid brittle cross-package coupling.
-        if (error instanceof StateError && error.code === 'DISPOSED_READ') return;
+    if (!data || data.html === lastHtml) return;
 
-        throw error;
-      }
+    lastHtml = data.html;
+    runCurrentCleanups();
 
-      if (data.html === lastHtml) {
-        return;
-      }
-
-      lastHtml = data.html;
-      runCurrentCleanups();
-
-      const { bindings, html } = data;
-      const container = (marker.parentElement || root) as ParentNode;
-
-      untrack(() => {
-        batch(() => {
-          removeNodes(lastInsertedNodes);
-
-          const parsed = parseHTML(html);
-
-          lastInsertedNodes = Array.from(parsed.childNodes);
-          marker.after(parsed);
-        });
-
-        applyBindingsInContainer(container, bindings, registerInnerCleanup, {
-          onHtml: (binding) => applyHtmlBinding(container as unknown as Node, binding, registerInnerCleanup),
-        });
-      });
+    untrack(() => {
+      lastInsertedNodes = replaceHtmlContent(
+        marker,
+        root,
+        data.html,
+        data.bindings,
+        lastInsertedNodes,
+        registerInnerCleanup,
+      );
     });
   });
 

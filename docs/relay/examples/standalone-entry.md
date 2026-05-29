@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Standalone entry'
-description: 'Standalone entry examples for relay.'
+description: 'Standalone entry example for @vielzeug/relay.'
 ---
 
 ## Standalone entry

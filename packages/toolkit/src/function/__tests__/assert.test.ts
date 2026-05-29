@@ -25,6 +25,31 @@ describe('assert', () => {
     );
   });
 
+  it('should handle circular references in args without throwing', () => {
+    const circular: Record<string, unknown> = { a: 1 };
+
+    circular['self'] = circular;
+
+    expect(() => assert(false, 'Circular', { args: circular })).toThrowError('Circular');
+  });
+
+  it('should include serializable keys when args contains circular references', () => {
+    const circular: Record<string, unknown> = { safe: 'value' };
+
+    circular['loop'] = circular;
+
+    let caughtError: Error | undefined;
+
+    try {
+      assert(false, 'Partial', { args: circular });
+    } catch (e) {
+      caughtError = e as Error;
+    }
+
+    expect(caughtError?.message).toContain('safe: "value"');
+    expect(caughtError?.message).toContain('loop: [circular]');
+  });
+
   it('should use the provided ErrorType', () => {
     class CustomError extends Error {}
 

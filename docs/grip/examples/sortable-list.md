@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — Sortable list'
-description: 'Sortable list examples for grip.'
+description: 'Sortable list example for @vielzeug/grip.'
 ---
 
 ## Sortable list
@@ -58,8 +58,8 @@ using sortable = createSortable({
 ### Pitfalls
 
 - If the list container has `touch-action: auto`, touch drags on mobile scroll the page instead of dragging. Set `touch-action: none` on drag handles.
-- Mutating the array directly (e.g., `splice`) without reading `sortend`'s `from` and `to` indices produces an out-of-sync UI. Always use the indices from the event payload.
-- Setting `animation: 0` disables the drop placeholder animation, making the insertion point visually ambiguous. Use a small non-zero value for clarity.
+- Do not call `sortable.sync()` while a drag is in progress. If your list re-renders, wait for `onDragEnd` before mutating the DOM and syncing.
+- `onReorder` fires only when the order actually changes. Do not assume it fires on every drop.
 
 ### Related
 

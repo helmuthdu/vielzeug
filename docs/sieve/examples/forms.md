@@ -1,15 +1,17 @@
 ---
-title: 'Sieve Examples — Forms'
-description: 'Form validation examples with sieve.'
+title: 'Sieve Examples — Form Validation'
+description: 'Form validation example for @vielzeug/sieve.'
 ---
 
-## Form validation examples
+## Form Validation
 
 ### Problem
 
 Validate a registration form, normalize browser values, and expose errors in a shape that maps directly into field-level UI.
 
-### Runnable Example
+### Solution
+
+Use `s.object()` combined with `.check()`, `s.coerce.boolean()`, and `flattenFirst()` to normalize browser form values and map validation errors to field-level UI.
 
 ```ts
 import { s, type Infer } from '@vielzeug/sieve';
@@ -54,21 +56,7 @@ if (parsed.success) {
 }
 ```
 
-### Expected Output
-
-```ts
-{
-  confirmPassword: 'Secret123',
-  email: 'ada@example.com',
-  name: 'Ada',
-  newsletter: true,
-  password: 'Secret123'
-}
-```
-
-If the passwords do not match, `formErrors` contains `['Passwords must match']` because the object-level check has no field path.
-
-### Common Pitfalls
+### Pitfalls
 
 - Validating raw form payloads with `s.boolean()` instead of `s.coerce.boolean()`.
 - Expecting cross-field object refinements to appear under a field key instead of `formErrors`.
@@ -79,22 +67,3 @@ If the passwords do not match, `formErrors` contains `['Passwords must match']` 
 - [API](./api.md)
 - [Async](./async.md)
 - [Unions](./unions.md)
-
-## Optional profile fields
-
-```ts
-const ProfileSchema = s.object({
-  displayName: s.string().min(1),
-  bio: s.string().max(280).optional(),
-  birthday: s.date().optional(),
-  website: s.string().url().optional(),
-});
-```
-
-## Partial updates
-
-```ts
-const ProfilePatchSchema = ProfileSchema.partial();
-
-ProfilePatchSchema.parse({ bio: 'Updated bio' });
-```

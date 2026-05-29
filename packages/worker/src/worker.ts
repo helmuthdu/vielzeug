@@ -1,5 +1,4 @@
-import { createAbortError } from './_internal';
-import { TaskQueue, type TaskQueueItem } from './_task-queue';
+import { type QueueItem, TaskQueue, createAbortError } from './_queue';
 
 export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
 
@@ -10,8 +9,8 @@ export type WorkerErrorCode = 'invalid_options' | 'queue_full' | 'task' | 'termi
 export type WorkerOptions = {
   /** Number of concurrent worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency when available. */
   concurrency?: number | 'auto';
-  /** Maximum queued tasks before run() rejects with WorkerError(code='queue_full'). */
-  maxQueue?: number | 'auto';
+  /** Maximum queued tasks before run() rejects with WorkerError(code='queue_full'). Default: unlimited. */
+  maxQueue?: number;
   /** Abort tasks after this many milliseconds. Default: none. */
   timeout?: number;
 };
@@ -26,6 +25,8 @@ export type RunOptions = {
 export type WorkerHandle<TInput, TOutput> = {
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
+  /** Number of slots currently executing a task. */
+  readonly active: number;
   /** Gracefully stop by waiting for queued/in-flight tasks to finish, then terminate workers. */
   close(): Promise<void>;
   /** Number of successfully completed tasks. */
@@ -33,6 +34,8 @@ export type WorkerHandle<TInput, TOutput> = {
   /** Number of worker slots. */
   readonly concurrency: number;
   dispose(): void;
+  /** Number of queued tasks waiting to run. */
+  readonly queued: number;
   /**
    * Execute the task function.
    *
@@ -40,12 +43,12 @@ export type WorkerHandle<TInput, TOutput> = {
    * scope. It cannot close over variables from the surrounding module.
    */
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  /** Number of queued tasks waiting to run. */
-  readonly size: number;
   /** Current state. */
   readonly status: WorkerStatus;
   /** Fraction of worker slots currently executing a task. */
   readonly utilization: number;
+  /** Pre-initialize all worker slots to reduce first-task latency. */
+  warmup(): void;
 };
 
 export class WorkerError extends Error {
@@ -58,9 +61,11 @@ export class WorkerError extends Error {
   }
 }
 
+// ─── Slot internals ───────────────────────────────────────────────────────────
+
 type SerializedError = { message: string; name: string; stack?: string };
 
-type SlotMessage<TOutput> = { error: SerializedError; id: number } | { id: number; result: TOutput };
+type SlotResponse<TOutput> = { error: SerializedError; id: number } | { id: number; result: TOutput };
 
 type PendingTask<TOutput> = {
   id: number;
@@ -70,7 +75,18 @@ type PendingTask<TOutput> = {
 };
 
 function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
-  return `const __fn=(${fn.toString()});self.onmessage=async function(event){const id=event.data.id;try{const result=await __fn(event.data.input);self.postMessage({id,result});}catch(error){const e=error instanceof Error?error:new Error(String(error));self.postMessage({id,error:{name:e.name,message:e.message,stack:e.stack}});}};`;
+  return `const __fn = (${fn.toString()});
+
+self.onmessage = async function (event) {
+  const { id, input } = event.data;
+  try {
+    const result = await __fn(input);
+    self.postMessage({ id, result });
+  } catch (error) {
+    const e = error instanceof Error ? error : new Error(String(error));
+    self.postMessage({ id, error: { name: e.name, message: e.message, stack: e.stack } });
+  }
+};`;
 }
 
 function resolveConcurrency(value: WorkerOptions['concurrency']): number {
@@ -93,60 +109,17 @@ function resolveOptions(options: WorkerOptions = {}): {
   timeout: number | undefined;
 } {
   const concurrency = resolveConcurrency(options.concurrency);
-  const { maxQueue: value, timeout } = options;
+  const { maxQueue, timeout } = options;
 
-  let resolvedTimeout: number | undefined;
-
-  if (timeout !== undefined) {
-    if (!Number.isFinite(timeout) || timeout <= 0) {
-      throw new WorkerError('invalid_options', '[worker] `timeout` must be a finite number greater than 0');
-    }
-
-    resolvedTimeout = timeout;
+  if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
+    throw new WorkerError('invalid_options', '[worker] `timeout` must be a finite number greater than 0');
   }
 
-  let maxQueue: number | undefined;
-
-  if (value === undefined) {
-    return { concurrency, maxQueue: undefined, timeout: resolvedTimeout };
+  if (maxQueue !== undefined && (!Number.isInteger(maxQueue) || maxQueue < 1)) {
+    throw new WorkerError('invalid_options', '[worker] `maxQueue` must be a positive integer');
   }
 
-  if (value === 'auto') {
-    maxQueue = concurrency * 2;
-  } else {
-    if (!Number.isInteger(value) || value < 1) {
-      throw new WorkerError('invalid_options', '[worker] `maxQueue` must be a positive integer or "auto"');
-    }
-
-    maxQueue = value;
-  }
-
-  return { concurrency, maxQueue, timeout: resolvedTimeout };
-}
-
-function createNativeWorker(fn: TaskFn<unknown, unknown>): Worker {
-  if (typeof globalThis.Worker !== 'function') {
-    throw new WorkerError('worker', '[worker] Worker API is unavailable in this runtime');
-  }
-
-  const source = fn.toString();
-
-  if (source.includes('[native code]')) {
-    throw new WorkerError('invalid_options', '[worker] Task function cannot be a bound or native function');
-  }
-
-  try {
-    const blob = new Blob([buildWorkerScript(fn)], { type: 'application/javascript' });
-    const url = URL.createObjectURL(blob);
-
-    try {
-      return new Worker(url);
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  } catch (error) {
-    throw new WorkerError('worker', '[worker] Failed to create Worker', error);
-  }
+  return { concurrency, maxQueue, timeout };
 }
 
 class Slot<TInput, TOutput> {
@@ -164,6 +137,16 @@ class Slot<TInput, TOutput> {
 
   get running(): boolean {
     return this.pending !== null;
+  }
+
+  warmup(): void {
+    if (!this.disposed && !this.worker) {
+      try {
+        this.ensureWorker();
+      } catch {
+        // Warmup is best-effort; errors surface on the first run() call instead.
+      }
+    }
   }
 
   run(input: TInput, transferables: Transferable[] = []): Promise<TOutput> {
@@ -205,64 +188,62 @@ class Slot<TInput, TOutput> {
     this.failPending(new WorkerError('terminated', '[worker] Worker was terminated'));
   }
 
-  private bindWorker(worker: Worker): void {
-    worker.onmessage = (event: MessageEvent<SlotMessage<TOutput>>) => {
+  private ensureWorker(): Worker {
+    if (this.worker) return this.worker;
+
+    if (typeof globalThis.Worker !== 'function') {
+      throw new WorkerError('worker', '[worker] Worker API is unavailable in this runtime');
+    }
+
+    const source = this.fn.toString();
+
+    if (source.includes('[native code]')) {
+      throw new WorkerError('invalid_options', '[worker] Task function cannot be a bound or native function');
+    }
+
+    let worker: Worker;
+
+    try {
+      const blob = new Blob([buildWorkerScript(this.fn as TaskFn<unknown, unknown>)], {
+        type: 'application/javascript',
+      });
+      const url = URL.createObjectURL(blob);
+
+      try {
+        worker = new Worker(url);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      throw new WorkerError('worker', '[worker] Failed to create Worker', error);
+    }
+
+    worker.onmessage = (event: MessageEvent<SlotResponse<TOutput>>) => {
       const pending = this.pending;
 
-      if (!pending) return;
-
-      const data = event.data as unknown;
-
-      if (data === null || typeof data !== 'object') {
-        return;
-      }
-
-      if (!('id' in data) || typeof (data as { id?: unknown }).id !== 'number') {
-        return;
-      }
-
-      if ((data as { id: number }).id !== pending.id) {
-        return;
-      }
+      if (!pending || event.data.id !== pending.id) return;
 
       clearTimeout(pending.timer);
       this.pending = null;
 
-      if (data !== null && typeof data === 'object' && 'error' in data) {
-        const serialized = (data as { error: SerializedError }).error;
-        const cause = new Error(serialized.message);
+      if ('error' in event.data) {
+        const { error } = event.data;
+        const cause = new Error(error.message);
 
-        cause.name = serialized.name;
+        cause.name = error.name;
 
-        if (serialized.stack) {
-          cause.stack = serialized.stack;
-        }
+        if (error.stack) cause.stack = error.stack;
 
-        pending.reject(new WorkerError('task', serialized.message, cause));
-
-        return;
+        pending.reject(new WorkerError('task', error.message, cause));
+      } else {
+        pending.resolve(event.data.result);
       }
-
-      if (data !== null && typeof data === 'object' && 'result' in data) {
-        pending.resolve((data as { result: TOutput }).result);
-
-        return;
-      }
-
-      pending.reject(new WorkerError('worker', '[worker] Invalid response received from worker'));
     };
 
     worker.onerror = (event: ErrorEvent) => {
       this.restart(new WorkerError('worker', event.message));
     };
-  }
 
-  private ensureWorker(): Worker {
-    if (this.worker) return this.worker;
-
-    const worker = createNativeWorker(this.fn as TaskFn<unknown, unknown>);
-
-    this.bindWorker(worker);
     this.worker = worker;
 
     return worker;
@@ -294,6 +275,7 @@ class Slot<TInput, TOutput> {
 class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
   private closePromise?: Promise<void>;
   private completedCount = 0;
+  private readonly idleResolvers: Array<() => void> = [];
   private readonly maxQueue: number | undefined;
   private readonly queue = new TaskQueue<TInput, TOutput>();
   private readonly slots: Slot<TInput, TOutput>[];
@@ -306,6 +288,10 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     this.slots = Array.from({ length: concurrency }, () => new Slot(fn, timeout));
   }
 
+  get active(): number {
+    return this.slots.reduce((n, slot) => n + Number(slot.running), 0);
+  }
+
   get completed(): number {
     return this.completedCount;
   }
@@ -314,7 +300,7 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     return this.slots.length;
   }
 
-  get size(): number {
+  get queued(): number {
     return this.queue.size;
   }
 
@@ -327,9 +313,13 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
   }
 
   get utilization(): number {
-    const active = this.slots.reduce((count, slot) => count + Number(slot.running), 0);
+    return this.active / this.slots.length;
+  }
 
-    return active / this.slots.length;
+  warmup(): void {
+    for (const slot of this.slots) {
+      slot.warmup();
+    }
   }
 
   close(): Promise<void> {
@@ -363,41 +353,40 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       return Promise.reject(createAbortError(signal));
     }
 
-    const item: TaskQueueItem<TInput, TOutput> = {
-      input,
-      reject: () => {},
-      resolve: () => {},
-      signal,
-      transferables,
-    };
+    let resolve!: (value: TOutput) => void;
+    let reject!: (reason: unknown) => void;
+
+    const promise = new Promise<TOutput>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+
+    const item: QueueItem<TInput, TOutput> = { input, reject, resolve, signal, transferables };
 
     if (!this.queue.enqueue(item, this.maxQueue)) {
       return Promise.reject(new WorkerError('queue_full', `[worker] Queue is full (${this.maxQueue})`));
     }
 
-    return new Promise<TOutput>((resolve, reject) => {
-      item.reject = reject;
-      item.resolve = resolve;
+    if (signal) {
+      const onAbort = () => {
+        if (!this.queue.remove(item)) return;
 
-      if (signal) {
-        const onAbort = () => {
-          if (!this.queue.remove(item)) return;
+        item.cleanupAbort?.();
+        reject(createAbortError(signal));
+        this.notifyIdle();
+      };
 
-          item.cleanupAbort?.();
-          reject(createAbortError(signal));
-          this.queue.notifyIdleIfReady(() => this.isIdle());
-        };
+      item.cleanupAbort = () => {
+        signal.removeEventListener('abort', onAbort);
+        item.cleanupAbort = undefined;
+      };
 
-        item.cleanupAbort = () => {
-          signal.removeEventListener('abort', onAbort);
-          item.cleanupAbort = undefined;
-        };
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
 
-        signal.addEventListener('abort', onAbort, { once: true });
-      }
+    this.drainLoop();
 
-      this.drainLoop();
-    });
+    return promise;
   }
 
   dispose(): void {
@@ -410,13 +399,17 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     }
 
     while (this.queue.size > 0) {
-      const item = this.queue.shift()!;
+      const item = this.queue.shift();
 
       item.cleanupAbort?.();
       item.reject(new WorkerError('terminated', '[worker] Worker was terminated'));
     }
 
-    this.queue.notifyIdleIfReady(() => this.isIdle());
+    const resolvers = this.idleResolvers.splice(0);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
   }
 
   [Symbol.dispose](): void {
@@ -427,11 +420,9 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     return this.close();
   }
 
-  private nextItem(): TaskQueueItem<TInput, TOutput> | undefined {
+  private nextItem(): QueueItem<TInput, TOutput> | undefined {
     while (this.queue.size > 0) {
       const item = this.queue.shift();
-
-      if (!item) return undefined;
 
       if (item.signal?.aborted) {
         item.cleanupAbort?.();
@@ -467,19 +458,30 @@ class WorkerImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       );
     }
 
-    this.queue.notifyIdleIfReady(() => this.isIdle());
+    // Notify in case all slots were already idle (no items dequeued this pass).
+    this.notifyIdle();
   }
 
   private isIdle(): boolean {
-    return !this.terminated && this.queue.size === 0 && this.slots.every((slot) => !slot.running);
+    return this.queue.size === 0 && this.slots.every((slot) => !slot.running);
+  }
+
+  private notifyIdle(): void {
+    if (!this.isIdle() || this.idleResolvers.length === 0) return;
+
+    const resolvers = this.idleResolvers.splice(0);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
   }
 
   private waitForIdle(): Promise<void> {
-    if (this.terminated || this.isIdle()) {
-      return Promise.resolve();
-    }
+    if (this.terminated || this.isIdle()) return Promise.resolve();
 
-    return this.queue.waitForIdle(() => this.isIdle());
+    return new Promise<void>((resolve) => {
+      this.idleResolvers.push(resolve);
+    });
   }
 }
 

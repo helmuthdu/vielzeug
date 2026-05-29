@@ -1,2 +1,199 @@
-export const orbitTypes =
-  "\ndeclare module '/orbit' {\n  export type Side = 'top' | 'bottom' | 'left' | 'right';\n  export type Alignment = 'start' | 'end';\n  export type Placement = Side | `${Side}-${Alignment}`;\n\n  export interface Rect {\n    x: number;\n    y: number;\n    width: number;\n    height: number;\n  }\n\n  export interface VirtualReference {\n    getBoundingClientRect: () => DOMRect | Rect;\n    getClientRects?: () => DOMRectList | DOMRect[];\n  }\n\n  export type ReferenceElement = Element | VirtualReference;\n\n  export interface SideObject {\n    top: number;\n    right: number;\n    bottom: number;\n    left: number;\n  }\n\n  export type Padding = number | Partial<SideObject>;\n\n  export interface ArrowData {\n    x?: number;\n    y?: number;\n    centerOffset: number;\n  }\n\n  export interface HideData {\n    escaped?: boolean;\n    escapedOffsets?: SideObject;\n    referenceHidden?: boolean;\n    referenceHiddenOffsets?: SideObject;\n  }\n\n  export interface MiddlewareData {\n    arrow?: ArrowData;\n    hide?: HideData;\n    [key: string]: unknown;\n  }\n\n  export interface MiddlewareState {\n    x: number;\n    y: number;\n    initialPlacement: Placement;\n    placement: Placement;\n    rects: { floating: Rect; reference: Rect };\n    elements: { floating: HTMLElement; reference: ReferenceElement };\n    middlewareData: MiddlewareData;\n  }\n\n  export type MiddlewareReset = {\n    placement?: Placement;\n    rects?: true | MiddlewareState['rects'];\n  };\n\n  export interface MiddlewareResult {\n    x?: number;\n    y?: number;\n    placement?: Placement;\n    data?: MiddlewareData;\n    reset?: MiddlewareReset;\n  }\n\n  export type Middleware = (state: MiddlewareState) => MiddlewareResult | void;\n\n  export interface FloatOptions {\n    placement?: Placement;\n    middleware?: Array<Middleware | null | undefined | false>;\n  }\n\n  export interface ComputePositionResult {\n    x: number;\n    y: number;\n    placement: Placement;\n    middlewareData: MiddlewareData;\n  }\n\n  export type Cleanup = () => void;\n\n  export interface DetectOverflowOptions {\n    boundary?: Element | Rect;\n    padding?: Padding;\n  }\n\n  export type OffsetConfig = {\n    crossAxis?: number;\n    mainAxis?: number;\n  };\n\n  export type OffsetValue = number | OffsetConfig | ((state: MiddlewareState) => number | OffsetConfig);\n\n  export interface FlipOptions extends DetectOverflowOptions {\n    fallbackPlacements?: Placement[];\n  }\n\n  export interface AutoPlacementOptions extends DetectOverflowOptions {\n    allowedPlacements?: Placement[];\n  }\n\n  export type ShiftOptions = DetectOverflowOptions;\n\n  export interface SizeApplyArgs {\n    availableWidth: number;\n    availableHeight: number;\n    elements: { floating: HTMLElement; reference: ReferenceElement };\n  }\n\n  export interface SizeOptions extends DetectOverflowOptions {\n    apply?: (args: SizeApplyArgs) => void;\n  }\n\n  export interface ArrowOptions {\n    element: HTMLElement;\n    padding?: Padding;\n  }\n\n  export interface HideOptions extends DetectOverflowOptions {\n    strategy?: 'referenceHidden' | 'escaped' | 'both';\n  }\n\n  export interface InlineOptions {\n    x?: number;\n    y?: number;\n    padding?: Padding;\n  }\n\n  export interface AutoUpdateOptions {\n    observeFloating?: boolean;\n    observeVisualViewport?: boolean;\n    animationFrame?: boolean;\n  }\n\n  export interface FloatRuntimeOptions extends FloatOptions, AutoUpdateOptions {\n    apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;\n  }\n\n  export function detectOverflow(state: MiddlewareState, options?: DetectOverflowOptions): SideObject;\n  export function computePosition(reference: ReferenceElement, floating: HTMLElement, config?: FloatOptions): ComputePositionResult;\n  export function offset(value: OffsetValue): Middleware;\n  export function flip(options?: FlipOptions): Middleware;\n  export function autoPlacement(options?: AutoPlacementOptions): Middleware;\n  export function shift(options?: ShiftOptions): Middleware;\n  export function size(options?: SizeOptions): Middleware;\n  export function arrow(options: ArrowOptions): Middleware;\n  export function hide(options?: HideOptions): Middleware;\n  export function inline(options?: InlineOptions): Middleware;\n  export function autoUpdate(reference: ReferenceElement, floating: HTMLElement, update: () => void, options?: AutoUpdateOptions): Cleanup;\n  export function float(reference: ReferenceElement, floating: HTMLElement, options?: FloatRuntimeOptions): Cleanup;\n}\n";
+export const orbitTypes = `
+declare module '/orbit' {
+  export type Side = 'top' | 'bottom' | 'left' | 'right';
+  export type Alignment = 'start' | 'end';
+  export type Placement = Side | \`\${Side}-\${Alignment}\`;
+
+  export interface Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+
+  export interface VirtualReference {
+    getBoundingClientRect: () => DOMRect | Rect;
+    getClientRects?: () => DOMRectList | DOMRect[];
+  }
+
+  export type ReferenceElement = Element | VirtualReference;
+
+  export interface SideObject {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  }
+
+  export type Padding = number | Partial<SideObject>;
+
+  export interface ArrowData {
+    x?: number;
+    y?: number;
+    centerOffset: number;
+  }
+
+  export interface HideData {
+    escaped?: boolean;
+    escapedOffsets?: SideObject;
+    referenceHidden?: boolean;
+    referenceHiddenOffsets?: SideObject;
+  }
+
+  export interface SizeData {
+    availableWidth: number;
+    availableHeight: number;
+  }
+
+  export interface MiddlewareData {
+    arrow?: ArrowData;
+    hide?: HideData;
+    size?: SizeData;
+    [key: string]: unknown;
+  }
+
+  export interface MiddlewareState {
+    x: number;
+    y: number;
+    initialPlacement: Placement;
+    placement: Placement;
+    rects: { floating: Rect; reference: Rect };
+    elements: { floating: HTMLElement; reference: ReferenceElement };
+    middlewareData: MiddlewareData;
+  }
+
+  export type MiddlewareReset =
+    | true
+    | {
+        placement?: Placement;
+        rects?: true | MiddlewareState['rects'];
+      };
+
+  export interface MiddlewareResult {
+    x?: number;
+    y?: number;
+    placement?: Placement;
+    data?: MiddlewareData;
+    reset?: MiddlewareReset;
+  }
+
+  export type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
+
+  export interface ComputePositionOptions {
+    placement?: Placement;
+    middleware?: Array<Middleware | null | undefined | false>;
+  }
+
+  export interface ComputePositionResult {
+    x: number;
+    y: number;
+    placement: Placement;
+    middlewareData: MiddlewareData;
+  }
+
+  export type Cleanup = () => void;
+
+  export interface DetectOverflowOptions {
+    boundary?: Element | Rect;
+    padding?: Padding;
+  }
+
+  export type OffsetConfig = {
+    crossAxis?: number;
+    mainAxis?: number;
+  };
+
+  export type OffsetValue = number | OffsetConfig | ((state: MiddlewareState) => number | OffsetConfig);
+
+  export interface FlipOptions extends DetectOverflowOptions {
+    fallbackPlacements?: Placement[];
+  }
+
+  export interface AutoPlacementOptions extends DetectOverflowOptions {
+    allowedPlacements?: Placement[];
+  }
+
+  export interface ShiftOptions extends DetectOverflowOptions {
+    mainAxis?: boolean;
+    crossAxis?: boolean;
+  }
+
+  export interface SizeApplyArgs extends SizeData {
+    elements: { floating: HTMLElement; reference: ReferenceElement };
+  }
+
+  export interface SizeOptions extends DetectOverflowOptions {
+    apply?: (args: SizeApplyArgs) => void;
+  }
+
+  export interface ArrowOptions {
+    element: HTMLElement;
+    padding?: Padding;
+  }
+
+  export interface HideOptions extends DetectOverflowOptions {
+    strategy?: 'referenceHidden' | 'escaped' | 'both';
+  }
+
+  export interface AutoUpdateOptions {
+    observeFloating?: boolean;
+    observeVisualViewport?: boolean;
+    animationFrame?: boolean;
+    throttle?: number;
+  }
+
+  export interface FloatOptions extends ComputePositionOptions {
+    apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;
+    autoUpdate?: AutoUpdateOptions | false;
+    preferCssAnchor?: boolean;
+  }
+
+  export function detectOverflow(state: MiddlewareState, options?: DetectOverflowOptions): SideObject;
+  export function computePosition(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): ComputePositionResult;
+  export function offset(value: OffsetValue): Middleware;
+  export function flip(options?: FlipOptions): Middleware;
+  export function autoPlacement(options?: AutoPlacementOptions): Middleware;
+  export function shift(options?: ShiftOptions): Middleware;
+  export function size(options?: SizeOptions): Middleware;
+  export function arrow(options: ArrowOptions): Middleware;
+  export function hide(options?: HideOptions): Middleware;
+  export function autoUpdate(reference: ReferenceElement, floating: HTMLElement, update: () => void, options?: AutoUpdateOptions): Cleanup;
+  export function float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): Cleanup;
+  export function getSide(placement: Placement): Side;
+  export function getAlignment(placement: Placement): Alignment | null;
+}
+
+declare module '/orbit/inline' {
+  import type { Middleware, Padding } from '/orbit';
+
+  export interface InlineOptions {
+    x?: number;
+    y?: number;
+    padding?: Padding;
+  }
+
+  export function inline(options?: InlineOptions): Middleware;
+}
+
+declare module '/orbit/presets' {
+  import type { Middleware, Placement } from '/orbit';
+
+  export interface PresetOptions {
+    offset?: number;
+    padding?: number;
+    placement?: Placement;
+  }
+
+  export interface PositioningPreset {
+    placement: Placement;
+    middleware: Middleware[];
+  }
+
+  export const presets: {
+    tooltip(options?: PresetOptions): PositioningPreset;
+    dropdown(options?: PresetOptions): PositioningPreset;
+    popover(options?: PresetOptions): PositioningPreset;
+    contextMenu(options?: PresetOptions): PositioningPreset;
+  };
+}
+`;

@@ -1,6 +1,6 @@
 ---
 title: 'Orbit Examples — Dropdown / Select'
-description: 'Dropdown / Select examples for orbit.'
+description: 'Dropdown / Select example for @vielzeug/orbit.'
 ---
 
 ## Dropdown / Select
@@ -56,7 +56,6 @@ function close() {
 - `autoUpdate` fires on scroll and resize. Throttle position updates if the dropdown contains heavy content that re-paints on repositioning.
 
 ### Related
-- [DOM Virtual List Combobox Pattern (Scroll)](@vielzeug/scroll/examples/dom-virtual-list-combobox-pattern)
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

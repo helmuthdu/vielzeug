@@ -11,11 +11,11 @@ Multiple UI elements — a search input, a role filter dropdown, a sort toggle �
 
 ### Solution
 
-Store filter, search, and sort settings in a Ripple `store` and use `effect()` to project them into the source whenever any value changes.
+Use `toSignals()` to expose the source as reactive Ripple signals, and store shared control state in a Ripple `store`. An `effect()` projects control changes into the source whenever any value changes.
 
 ```ts
 import { effect, store } from '@vielzeug/ripple';
-import { createLocalSource, sortBy } from '@vielzeug/sourcerer';
+import { createLocalSource, sortBy, toSignals } from '@vielzeug/sourcerer';
 
 type User = { id: number; name: string; role: 'admin' | 'member' };
 
@@ -27,6 +27,7 @@ const users: User[] = [
 ];
 
 const source = createLocalSource(users, { limit: 2 });
+const { current, meta, dispose } = toSignals(source);
 
 const controls = store({
   query: '',
@@ -34,38 +35,56 @@ const controls = store({
   sort: 'name' as 'name' | 'role',
 });
 
-// Reactively project shared UI state into the source model
+// Reactively project shared UI state into the source
 effect(() => {
-  source.batch((ctx) => {
-    ctx.search(controls.value.query);
-    ctx.setFilter(
+  void source.update({
+    filter:
       controls.value.role === 'all'
         ? undefined
         : (user) => user.role === controls.value.role,
-    );
-    ctx.setSort(
+    search: controls.value.query,
+    sort:
       controls.value.sort === 'name'
         ? sortBy((u) => u.name, 'asc')
         : sortBy((u) => u.role, 'asc'),
-    );
   });
 });
 
 // Any update to controls automatically re-filters/sorts/paginates the source
 controls.patch({ query: 'a' });
 controls.patch({ role: 'admin' });
-console.log(source.current);  // filtered + sorted page 1
-console.log(source.meta.totalItems);
+
+// current and meta update automatically via the signal adapters
+console.log(current.value);        // filtered + sorted page 1
+console.log(meta.value.totalItems);
+
+// Clean up when done
+dispose();
+```
+
+### Using `toSignals` for framework integration
+
+If you're using a framework with a reactive runtime (Vue, Solid, etc.), `toSignals()` lets you skip manual `subscribe()` wiring entirely.
+
+```ts
+import { toSignals } from '@vielzeug/sourcerer';
+
+const source = createRemoteSource({ fetch, limit: 20 });
+const { current, meta, dispose } = toSignals(source);
+
+// In a Vue composable:
+// current.value and meta.value are live — no subscribe/unsubscribe needed
 ```
 
 ### Pitfalls
 
-- The `effect()` runs immediately on creation. If the source has not yet loaded its initial data, the first filter application fires before data is available. Initialize the source before creating the effect.
-- Calling `source.batch()` inside the effect is required. Without it, each `ctx.search()` and `ctx.setFilter()` call resets pagination independently, causing multiple intermediate re-renders.
-- Modifying `controls` inside the `effect()` callback creates an infinite reactive loop. Only read from `controls` inside the effect; write to it from UI event handlers.
+- The `effect()` runs immediately on creation. Make sure the source is initialized before the effect is created.
+- Use `update()` inside the effect to apply all fields atomically — one recompute, one notification.
+- Do **not** write to `controls` inside the `effect()` callback — this creates an infinite reactive loop. Only read from `controls` in the effect; write from UI event handlers.
+- Always call `dispose()` when the component or page is torn down to release the signal subscriptions.
 
 ### Related
 
 - [Local Pagination and Filtering](./local-pagination-and-filtering.md)
-- [Signals (Ripple)](@vielzeug/ripple/examples/signals)
-- [Sourcerer + Courier](./sourcerer-with-courier.md)
+- [Ripple Signals](/ripple/examples/signals)
+- [Remote Data with Courier](./sourceit-with-fetchit.md)

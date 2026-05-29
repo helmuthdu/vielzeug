@@ -19,8 +19,13 @@ export type PermitRule<TAction extends string = string, TData = unknown> = {
   action: TAction | typeof WILDCARD;
   effect: 'allow' | 'deny';
   priority?: number;
-  resource: string;
-  role: string;
+  resource: string | typeof WILDCARD;
+  /**
+   * One role string or an array of role strings. A rule matches if the
+   * principal holds ANY of the listed roles (OR semantics). Use `WILDCARD`
+   * to match all authenticated principals.
+   */
+  role: string | readonly string[];
   when?: PermitPredicate<TData>;
 };
 
@@ -37,11 +42,12 @@ export type PermitCheck<TAction extends string = string, TData = unknown> = {
 export type Permit<TAction extends string = string, TData = unknown> = {
   /**
    * Returns allowed concrete actions for a principal on a resource.
+   * Pass `knownActions` to resolve wildcard-action rules.
    *
-   * IMPORTANT: If only wildcard actions match, this returns an empty array
-   * unless `knownActions` is provided.
+   * @remarks This is a side-effect-free enumeration helper and does **not**
+   * invoke the logger. Use `checkAll` if you need an auditable batch decision.
    */
-  allowedActions(principal: Principal, resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
+  allowedActions(principal: Principal, resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
   can(principal: Principal, resource: string, action: TAction, data?: TData): boolean;
   canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
   canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
@@ -54,17 +60,17 @@ export type Permit<TAction extends string = string, TData = unknown> = {
 export type BoundPermit<TAction extends string = string, TData = unknown> = {
   /**
    * Returns allowed concrete actions for the bound principal on a resource.
+   * Pass `knownActions` to resolve wildcard-action rules.
    *
-   * IMPORTANT: If only wildcard actions match, this returns an empty array
-   * unless `knownActions` is provided.
+   * @remarks This is a side-effect-free enumeration helper and does **not**
+   * invoke the logger. Use `checkAll` if you need an auditable batch decision.
    */
-  allowedActions(resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
+  allowedActions(resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
   can(resource: string, action: TAction, data?: TData): boolean;
   canAll(resource: string, actions: readonly TAction[], data?: TData): boolean;
   canAny(resource: string, actions: readonly TAction[], data?: TData): boolean;
   checkAll(checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[];
   explain(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData>;
-  forUser(principal: UserPrincipal): BoundPermit<TAction, TData>;
   rulesInScope(resource: string, data?: TData): PermitRule<TAction, TData>[];
 };
 

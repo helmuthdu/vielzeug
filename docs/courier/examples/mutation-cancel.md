@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Mutation Cancellation'
-description: 'Mutation cancellation examples for courier.'
+description: 'Mutation Cancel example for @vielzeug/courier.'
 ---
 
 ## Mutation Cancellation
@@ -10,6 +10,8 @@ description: 'Mutation cancellation examples for courier.'
 The user triggers a long-running mutation (e.g., a bulk operation) and then wants to cancel it. You need to abort the in-flight request cleanly and reset the UI to its pre-submit state.
 
 ### Solution
+
+Use `mutation.cancel()` to abort the active run and reset state, or pass an external `AbortSignal` via `mutate(vars, { signal })` for caller-controlled cancellation.
 
 ```ts
 const api = createApi({ baseUrl: 'https://api.example.com' });

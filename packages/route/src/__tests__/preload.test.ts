@@ -1,7 +1,7 @@
 /**
  * preload() — warm data loaders without navigating.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('preload', () => {
@@ -23,7 +23,7 @@ describe('preload', () => {
     expect(dataFn).toHaveBeenCalledTimes(1);
     // handler must NOT have been called – we didn't navigate
     expect(handler).not.toHaveBeenCalled();
-    expect(router.state.location.pathname).toBe('/');
+    expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
   });
 
@@ -90,6 +90,34 @@ describe('preload', () => {
     // Cache should be cleared after a failure — second call invokes the loader again.
     await router.preload('page');
     expect(calls).toBe(2);
+    router.dispose();
+  });
+
+  it('reuses preloaded results during the next navigation to that route', async () => {
+    let callCount = 0;
+    const dataFn = vi.fn(async () => {
+      callCount++;
+
+      return { loaded: true };
+    });
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: { data: dataFn, path: '/page' },
+      },
+    });
+
+    await settle();
+    await router.preload('page');
+    expect(callCount).toBe(1);
+
+    await router.navigate({ path: '/page' });
+
+    // Data loader must NOT be called again — preloaded result was reused.
+    expect(callCount).toBe(1);
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
     router.dispose();
   });
 });

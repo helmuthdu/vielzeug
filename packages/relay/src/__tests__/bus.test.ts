@@ -21,7 +21,7 @@ describe('createBus - subscription lifecycle', () => {
     expect(b).toHaveBeenCalledWith(42);
   });
 
-  it('deduplicates the same listener function for the same event', () => {
+  it('allows the same listener function to be registered multiple times', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
 
@@ -30,21 +30,26 @@ describe('createBus - subscription lifecycle', () => {
 
     bus.emit('count', 1);
 
-    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
-  it('returns the existing unsub for duplicate registration — not a noop', () => {
+  it('each registration returns an independent unsubscribe handle', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const unsub1 = bus.on('count', listener);
     const unsub2 = bus.on('count', listener);
 
-    expect(unsub1).toBe(unsub2);
+    expect(unsub1).not.toBe(unsub2);
 
-    unsub2();
+    unsub1();
     bus.emit('count', 1);
 
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledTimes(1); // second registration still active
+
+    unsub2();
+    bus.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledTimes(1); // both removed
   });
 
   it('unsubscribe is idempotent and only removes its own listener', () => {
@@ -63,14 +68,34 @@ describe('createBus - subscription lifecycle', () => {
     expect(kept).toHaveBeenCalledWith(5);
   });
 
+  it('idempotent unsub does not corrupt a subsequently registered listener', () => {
+    // Regression: the captured-set reference had size 0 on second unsub call, which
+    // would match the empty-set guard and delete the new event key from the map.
+    const bus = createBus<TestEvents>();
+    const first = vi.fn();
+    const second = vi.fn();
+    const unsub = bus.on('count', first);
+
+    unsub(); // first removed; event key cleaned up
+    bus.on('count', second); // new registration for same event
+    unsub(); // second call — must not remove second's entry
+
+    bus.emit('count', 1);
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith(1);
+  });
+
   it('does not register when the provided signal is already aborted', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const controller = new AbortController();
 
     controller.abort();
-    bus.on('count', listener, controller.signal);
 
+    const unsub = bus.on('count', listener, controller.signal);
+
+    unsub(); // noop unsub — should not throw
     bus.emit('count', 1);
 
     expect(listener).not.toHaveBeenCalled();
@@ -113,6 +138,34 @@ describe('createBus - subscription lifecycle', () => {
     bus.emit('count', 1);
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('once listener with signal does not fire after signal aborts', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    bus.once('count', listener, controller.signal);
+    controller.abort();
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('allows the same listener function to be registered via once() multiple times', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.once('count', listener);
+    bus.once('count', listener);
+
+    bus.emit('count', 1); // both once registrations fire
+
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    bus.emit('count', 2); // both consumed — no further calls
+
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
   it('removeAllListeners(event) removes only that event listeners', () => {
@@ -340,21 +393,6 @@ describe('createBus - wait', () => {
     await expect(pending).resolves.toBe(7);
     expect(() => controller.abort()).not.toThrow();
   });
-
-  it('returns noop unsub when called on an already-aborted signal', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-    const controller = new AbortController();
-
-    controller.abort();
-
-    const unsub = bus.on('count', listener, controller.signal);
-
-    unsub(); // should not throw
-    bus.emit('count', 1);
-
-    expect(listener).not.toHaveBeenCalled();
-  });
 });
 
 describe('createBus - waitAny', () => {
@@ -445,11 +483,11 @@ describe('createBus - events async generator', () => {
     await stream.return(undefined);
   });
 
-  it('throws RangeError when maxBuffer is not a positive number', async () => {
+  it('throws RangeError synchronously when maxBuffer is not a positive number', () => {
     const bus = createBus<TestEvents>();
 
-    await expect(bus.events('count', { maxBuffer: 0 }).next()).rejects.toThrow(RangeError);
-    await expect(bus.events('count', { maxBuffer: -1 }).next()).rejects.toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: -1 })).toThrow(RangeError);
   });
 
   it('drops oldest values when maxBuffer is exceeded', async () => {
@@ -552,5 +590,107 @@ describe('createBus - disposal', () => {
     bus[Symbol.dispose]();
 
     expect(bus.disposed).toBe(true);
+  });
+});
+
+describe('createBus - disposalSignal', () => {
+  it('starts as a live (non-aborted) signal', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(bus.disposalSignal.aborted).toBe(false);
+
+    bus.dispose();
+  });
+
+  it('fires with BusDisposedError reason when bus is disposed', () => {
+    const bus = createBus<TestEvents>();
+    const signal = bus.disposalSignal;
+
+    bus.dispose();
+
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBeInstanceOf(BusDisposedError);
+  });
+
+  it('is already aborted when read after disposal', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.dispose();
+
+    expect(bus.disposalSignal.aborted).toBe(true);
+  });
+
+  it('can be used to tie an external subscription to the bus lifetime', () => {
+    const bus = createBus<TestEvents>();
+    const other = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    other.on('count', listener, bus.disposalSignal);
+
+    other.emit('count', 1);
+    expect(listener).toHaveBeenCalledOnce();
+
+    bus.dispose(); // disposes bus → disposalSignal fires → unsubs from other
+
+    other.emit('count', 2);
+    expect(listener).toHaveBeenCalledOnce(); // no second call
+
+    other.dispose();
+  });
+});
+
+describe('createBus - debug mode', () => {
+  it('logs on() and off() to console.debug', () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ debug: true });
+
+    const unsub = bus.on('count', vi.fn());
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[relay:sub] on("count")'));
+
+    unsub();
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[relay:sub] off("count")'));
+
+    bus.dispose();
+    spy.mockRestore();
+  });
+
+  it('logs emit() to console.debug', () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ debug: true });
+
+    bus.emit('count', 42);
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[relay:emit] emit("count")'));
+
+    bus.dispose();
+    spy.mockRestore();
+  });
+
+  it('logs dispose() to console.debug', () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ debug: true });
+
+    bus.dispose();
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[relay:lifecycle] dispose()'));
+
+    spy.mockRestore();
+  });
+
+  it('does not log anything when debug is not set', () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const bus = createBus<TestEvents>();
+
+    const unsub = bus.on('count', vi.fn());
+
+    unsub();
+    bus.emit('count', 1);
+    bus.dispose();
+
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockRestore();
   });
 });

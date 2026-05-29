@@ -293,12 +293,10 @@ export function _messages(): Messages {
 
 /**
  * Run `fn` with a scoped message override. The original messages are restored
- * after `fn` returns (or throws).
- *
- * Note: this function is synchronous. Custom messages apply only to validators
- * that run synchronously within `fn`. Async validators (via `parseAsync`) that
- * start inside `fn` but resolve after it returns will use the restored messages.
- * Use `withMessagesAsync` when you need message scoping across async validators.
+ * after `fn` returns (or throws). Safe for synchronous code only — concurrent
+ * async operations (multiple `parseAsync` calls in parallel) can interfere since
+ * this relies on a module-level variable. Use per-constraint `message` parameters
+ * for async or concurrent scoping.
  */
 export function withMessages<T>(patch: DeepPartial<Messages>, fn: () => T): T {
   const saved = _activeMessages;
@@ -307,22 +305,6 @@ export function withMessages<T>(patch: DeepPartial<Messages>, fn: () => T): T {
 
   try {
     return fn();
-  } finally {
-    _activeMessages = saved;
-  }
-}
-
-/**
- * Async variant of `withMessages`. Awaits `fn` before restoring the original
- * messages, ensuring custom messages apply to all async validators within `fn`.
- */
-export async function withMessagesAsync<T>(patch: DeepPartial<Messages>, fn: () => Promise<T>): Promise<T> {
-  const saved = _activeMessages;
-
-  _activeMessages = mergeMessages(_defaultMessages, patch);
-
-  try {
-    return await fn();
   } finally {
     _activeMessages = saved;
   }

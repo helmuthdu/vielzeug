@@ -11,7 +11,7 @@ A contact form collects text fields and a file attachment. The file must be vali
 
 ### Solution
 
-Form with file upload and validation.
+Use `createForm()` with a `File` field validator combined with `toFormData()` to serialize the final values for a `multipart/form-data` request.
 
 ```typescript
 import { createForm, toFormData } from '@vielzeug/forge';

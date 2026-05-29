@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Handling disposal in async code'
-description: 'Handling disposal in async code examples for relay.'
+description: 'Handling disposal in async code example for @vielzeug/relay.'
 ---
 
 ## Handling disposal in async code

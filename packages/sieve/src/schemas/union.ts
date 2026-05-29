@@ -1,4 +1,4 @@
-import type { AnySchema, InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -62,7 +62,17 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    return { anyOf: this.schemas.map((s) => s.schema()) };
+    return { anyOf: this.schemas.map((s) => s.toJsonSchema()) };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      branches: this.schemas.map((s) => s.describe()),
+      kind: 'union',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

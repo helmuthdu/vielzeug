@@ -1,16 +1,17 @@
 ---
 title: Wired — Examples
-description: Practical examples and recipes for wired.
+description: Practical examples and recipes for @vielzeug/wired.
 ---
 
 [[toc]]
 
 ## Examples
 
-- [Async Providers](./examples/async-providers.md)
 - [Basic Setup](./examples/basic-setup.md)
-- [Batch Resolution](./examples/batch-resolution.md)
-- [Child Containers](./examples/child-containers.md)
-- [Dispose Lifecycle](./examples/dispose-lifecycle.md)
+- [Async Providers](./examples/async-providers.md)
 - [Lifetimes](./examples/lifetimes.md)
+- [Batch Resolution](./examples/batch-resolution.md)
 - [Multi Providers](./examples/multi-providers.md)
+- [Child Containers](./examples/child-containers.md)
+- [Sync Resolution](./examples/sync-resolution.md)
+- [Dispose Lifecycle](./examples/dispose-lifecycle.md)

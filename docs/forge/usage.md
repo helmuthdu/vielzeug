@@ -1,6 +1,6 @@
 ---
 title: Forge — Usage Guide
-description: Practical usage patterns for values, validation modes, submission, subscriptions, binding, and helpers.
+description: Practical usage patterns for values, validation, submission, subscriptions, connect, scope, and framework adapters.
 ---
 
 [[toc]]
@@ -31,7 +31,7 @@ const values = form.values();
 
 ## Typed Paths
 
-Forge is path-typed first. Prefer a concrete values shape so field paths and value types are inferred.
+Forge is path-typed first. Provide a concrete values shape so field paths and value types are inferred.
 
 ```ts
 type Values = {
@@ -43,7 +43,7 @@ const form = createForm<Values>({
   defaultValues: { email: '', profile: { age: 0, name: '' } },
 });
 
-form.set('profile.age', 42);
+form.set('profile.age', 42); // TypeScript error if type is wrong
 ```
 
 Dynamic shape escape hatch:
@@ -57,34 +57,44 @@ dynamicForm.set('custom.field', 'value');
 
 ```ts
 await form.validateField('password');
-await form.validateAll();
-await form.validateTouched();
+await form.validate();
 await form.validateFields(['email', 'password']);
 
 const controller = new AbortController();
-await form.validateAll(controller.signal);
+await form.validate(controller.signal);
 controller.abort();
 ```
 
-Validation result structure:
+Validation result:
 
 ```ts
 const result = await form.validateFields(['email']);
 
-console.log(result.valid); // whole-form validity after this run
+console.log(result.valid);  // true only if no errors exist after this run
 console.log(result.errors); // full current error map after the run
 ```
 
-Schema integration:
+Schema integration — pass a `safeParse`-compatible schema directly to `validator`:
 
 ```ts
-import { createForm, schemaValidator } from '@vielzeug/forge';
+import { createForm } from '@vielzeug/forge';
 import { s } from '@vielzeug/sieve';
 
 const schema = s.object({
   age: s.number().min(18, 'Must be 18+'),
   email: s.string().email('Invalid email'),
 });
+
+const form = createForm({
+  defaultValues: { age: 0, email: '' },
+  validator: schema, // auto-detected as a safeParse schema
+});
+```
+
+Use `schemaValidator(schema)` explicitly when you need custom error message transformation:
+
+```ts
+import { createForm, schemaValidator } from '@vielzeug/forge';
 
 const form = createForm({
   defaultValues: { age: 0, email: '' },
@@ -96,25 +106,122 @@ const form = createForm({
 
 ```ts
 const result = await form.submit(async (values) => {
-  await fetch('/api/submit', {
+  const res = await fetch('/api/submit', {
     body: JSON.stringify(values),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
   });
+  return res.json();
 });
 
 if (!result.ok && result.type === 'validation') {
   console.log(result.errors);
 }
 
-const second = await form.submit(async () => {});
-
-if (!second.ok && second.type === 'concurrent') {
-  console.log('Submission already in progress');
+if (result.ok) {
+  console.log(result.value); // typed return value from the handler
 }
 ```
 
-Submit always touches all known fields and runs full validation before calling the handler. Validation failures resolve to `{ ok: false, errors }`.
+`submit()` always:
+
+1. Marks all known fields touched
+2. Runs full validation
+3. If invalid: returns `{ ok: false, type: 'validation', errors }`
+4. If valid: calls the handler and returns `{ ok: true, value }`
+
+Calling `submit()` while a submission is already in progress throws — guard with `state.isSubmitting` if needed.
+
+## Async Default Values
+
+Pass an async factory to `defaultValues` to load initial state remotely. The form's `state.isLoading` / `form.isLoading` is `true` while the factory is pending.
+
+```ts
+const form = createForm({
+  defaultValues: async () => {
+    const res = await fetch('/api/user/me');
+    return res.json();
+  },
+});
+
+// isLoading is true until the factory resolves
+form.subscribe((state) => {
+  if (!state.isLoading) renderForm(form.values());
+});
+```
+
+## Connect (Field Binding)
+
+`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure.
+
+```ts
+const emailConn = form.connect('email');
+
+input.addEventListener('change', (e) => emailConn.onChange(e.target.value));
+input.addEventListener('blur', () => emailConn.onBlur());
+
+// Live getters re-evaluate on every access
+console.log(emailConn.value, emailConn.error, emailConn.touched, emailConn.dirty);
+```
+
+### Validation Modes
+
+Pass a `ConnectOptions` object (or a `ValidationModes` preset) to control when validation triggers:
+
+```ts
+import { createForm, ValidationModes } from '@vielzeug/forge';
+
+// Global default for all connect() calls
+const form = createForm({
+  defaultValues: { email: '', password: '' },
+  connect: ValidationModes.onBlur, // validate each field on blur
+});
+
+// Per-field override
+const emailConn = form.connect('email', ValidationModes.onChange);
+const passwordConn = form.connect('password', { validateOnBlur: true, debounce: 300 });
+```
+
+| Preset                           | `touchOnBlur` | `validateOnBlur` | `validateOnChange` | `validateOnTouch` |
+| -------------------------------- | ------------- | ---------------- | ------------------ | ----------------- |
+| `ValidationModes.onSubmit` (default) | ✅        | —                | —                  | —                 |
+| `ValidationModes.onBlur`         | ✅            | ✅               | —                  | —                 |
+| `ValidationModes.onChange`       | ✅            | —                | ✅                 | —                 |
+| `ValidationModes.onTouched`      | ✅            | ✅               | —                  | ✅                |
+
+`debounce` delays auto-triggered validation by a given number of milliseconds — useful for async validators on `onChange` to avoid one request per keystroke.
+
+## Scoped Sub-Forms
+
+`scope(prefix)` returns a sub-form whose field paths are relative to the prefix. All state and lifecycle is shared with the parent form.
+
+```ts
+const form = createForm({
+  defaultValues: {
+    name: 'Alice',
+    address: { city: 'New York', street: '123 Main St', zip: '10001' },
+  },
+  validators: {
+    'address.city': (v) => (!v ? 'City is required' : undefined),
+  },
+});
+
+// Store the result — each call creates a new object
+const address = form.scope('address');
+
+address.get('city');                     // same as form.get('address.city')
+address.set('city', 'Portland');         // same as form.set('address.city', 'Portland')
+address.connect('city');                 // same as form.connect('address.city')
+await address.validate();                // validates only address.* fields; returns scoped errors (no prefix)
+await address.submit((vals) => vals);    // validates and submits only address.* fields
+```
+
+**Key characteristics:**
+
+- `dispose()` on a scoped form is a no-op — call `parentForm.dispose()` to tear down.
+- `scope.state` returns the **full** form state. `state.errors`, `state.isValid`, and `state.touchedFields` reflect the entire form, not just the scoped fields.
+- `validate()` and `submit()` correctly isolate their results to the scoped prefix.
+- `touchedFields` in `state` contains full-prefixed paths. On a scoped form, prefer `scope.validate()` rather than `scope.validateFields([...state.touchedFields])` to avoid double-prefixing.
 
 ## Subscriptions
 
@@ -127,56 +234,99 @@ const stopEmail = form.subscribeField('email', (field) => {
   console.log(field.value, field.error, field.touched, field.dirty);
 });
 
-// subscriptions fire synchronously; use sync:true when you also want the current snapshot immediately
-form.subscribeField('email', () => {}, { sync: true });
+// Call with sync: true to also receive the current snapshot immediately
+form.subscribeField('email', (field) => updatePreview(String(field.value)), { sync: true });
 
 stopEmail();
 stopForm();
-
-// Value-only pattern via subscribeField
-const stopPreview = form.subscribeField('email', (field) => updatePreview(String(field.value ?? '')), { sync: true });
-stopPreview();
 ```
 
 Snapshot semantics:
 
 - `form.state` and `form.field(name)` return stable, frozen snapshots.
-- Reference identity stays the same until a relevant mutation occurs.
-- This makes subscriptions directly compatible with external-store patterns.
+- Reference identity is preserved until a relevant mutation occurs.
+- These are directly compatible with external-store patterns such as React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
+
+## Arrays
+
+```ts
+const items = form.array('items');
+
+items.append({ name: '' });
+items.prepend({ name: 'first' });
+items.insert(1, { name: 'middle' });
+items.remove(0);
+items.move(1, 0);
+items.swap(0, 1);
+items.replace(0, { name: 'updated' });
+```
+
+`form.array()` returns a cached helper — call it once and reuse.
+
+## Batching
+
+Wrap multiple mutations in `batch()` to emit only one notification:
+
+```ts
+form.batch(() => {
+  form.set('firstName', 'Alice');
+  form.set('lastName', 'Smith');
+  form.touch('firstName');
+});
+// subscribers notified once
+```
+
+## Reset, Replace, and Patch
+
+```ts
+form.reset();                           // restore all values to baseline; clear errors/touched/dirty
+form.replace({ email: '', name: '' });  // replace values and baseline together
+form.patch({ name: 'Alice' });          // merge specific fields into store and baseline (marks them clean)
+form.resetField('email');               // restore single field to baseline
+form.removeField('coupon');             // drop field entirely (value, touched, error, validator)
+```
+
+## Lifecycle
+
+```ts
+form.dispose();            // tear down: abort all pending validation, clear listeners
+console.log(form.disposed) // true after dispose()
+```
+
+After `dispose()`, all mutating APIs throw.
 
 ## Framework Integration
+
+Forge ships dedicated adapters for React, Vue, and Svelte.
 
 ::: code-group
 
 ```tsx [React]
+// lib/form-hooks.ts
 import { useSyncExternalStore } from 'react';
-import { createForm, type Form } from '@vielzeug/forge';
+import { createForgeHooks } from '@vielzeug/forge/react';
 
-// Reusable hooks
-function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
-  return useSyncExternalStore(
-    (notify) => form.subscribe(() => notify()),
-    () => form.state,
-  );
-}
+export const { useFormState, useField, useFormValues } = createForgeHooks(useSyncExternalStore);
 
-function useField<T extends Record<string, unknown>, K extends string & keyof T>(form: Form<T>, name: K) {
-  return useSyncExternalStore(
-    (notify) => form.subscribeField(name, () => notify()),
-    () => form.field(name),
-  );
-}
+// MyForm.tsx
+import { createForm } from '@vielzeug/forge';
+import { useFormState, useField } from './lib/form-hooks';
 
-// Component using the hooks
+const form = createForm({ defaultValues: { email: '', password: '' } });
+
 function LoginForm() {
-  const form = createForm({ defaultValues: { email: '', password: '' } });
   const state = useFormState(form);
-  const emailField = useField(form, 'email');
+  const email = useField(form, 'email');
+  const conn = form.connect('email', { touchOnBlur: true });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.submit(async (v) => console.log(v)); }}>
-      <input value={emailField.value as string} onChange={(e) => form.set('email', e.target.value)} onBlur={() => form.touch('email')} />
-      {emailField.error && <p>{emailField.error}</p>}
+    <form onSubmit={(e) => { e.preventDefault(); form.submit(handleLogin); }}>
+      <input
+        value={email.value as string}
+        onChange={(e) => conn.onChange(e.target.value)}
+        onBlur={() => conn.onBlur()}
+      />
+      {email.error && <p>{email.error}</p>}
       <button type="submit" disabled={state.isSubmitting}>Submit</button>
     </form>
   );
@@ -184,257 +334,89 @@ function LoginForm() {
 ```
 
 ```ts [Vue 3]
-import { shallowRef, onScopeDispose } from 'vue';
+// lib/form-composables.ts
+import { onScopeDispose, shallowRef } from 'vue';
+import { createForgeComposables } from '@vielzeug/forge/vue';
+
+export const { useFormState, useField, useFormValues } = createForgeComposables({ shallowRef, onScopeDispose });
+
+// MyForm.vue
 import { createForm } from '@vielzeug/forge';
+import { useFormState, useField } from './lib/form-composables';
 
-function useForm<T extends Record<string, unknown>>(defaultValues: T) {
-  const form = createForm({ defaultValues });
-  const state = shallowRef(form.state);
+const form = createForm({ defaultValues: { email: '' } });
 
-  const stop = form.subscribe((snapshot) => { state.value = snapshot; });
-  onScopeDispose(() => stop());
+export default {
+  setup() {
+    const state = useFormState(form);
+    const email = useField(form, 'email');
+    const conn = form.connect('email');
 
-  return { form, state };
-}
+    return { state, email, conn };
+  },
+};
 ```
 
 ```svelte [Svelte]
-<script lang="ts">
+<script>
   import { createForm } from '@vielzeug/forge';
+  import { formState, fieldStore } from '@vielzeug/forge/svelte';
 
-  const form = createForm({ defaultValues: { email: '', password: '' } });
-  const emailField = {
-    subscribe(run: (snapshot: ReturnType<typeof form.field>) => void) {
-      return form.subscribeField('email', run, { sync: true });
-    },
-  };
-
-  const formState = {
-    subscribe(run: (snapshot: typeof form.state) => void) {
-      return form.subscribe(run, { sync: true });
-    },
-  };
-
-  async function handleSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    await form.submit(async (values) => console.log(values));
-  }
+  const form = createForm({ defaultValues: { email: '' } });
+  const state = formState(form);
+  const email = fieldStore(form, 'email');
+  const conn = form.connect('email');
 </script>
 
-<form on:submit={handleSubmit}>
-  <input value={$emailField.value as string} on:input={(e) => form.set('email', (e.currentTarget as HTMLInputElement).value)} on:blur={() => form.touch('email')} />
-  <button type="submit" disabled={$formState.isSubmitting}>Submit</button>
+<form on:submit|preventDefault={() => form.submit(handleSubmit)}>
+  <input
+    bind:value={$email.value}
+    on:change={(e) => conn.onChange(e.target.value)}
+    on:blur={() => conn.onBlur()}
+  />
+  {#if $email.error}<span>{$email.error}</span>{/if}
+  <button disabled={$state.isSubmitting}>Submit</button>
 </form>
 ```
 
 :::
 
-### Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Touched and Error Controls
-
-```ts
-form.touch('email');
-form.untouch('email');
-form.touchAll();
-form.untouchAll();
-
-form.setError('email', 'Invalid email');
-form.resetErrors({ email: 'Invalid email', password: 'Too short' });
-form.setValidator('email', (value) => (!String(value).includes('@') ? 'Invalid email' : undefined));
-```
-
-## Bind
-
-`bind()` is a vanilla-DOM convenience helper. In React, Vue, Svelte, and similar frameworks, prefer subscriptions plus explicit `form.field(...)`, `form.set(...)`, and `form.touch(...)` calls.
-
-```ts
-const binding = form.bind('email');
-
-input.value = String(binding.value ?? '');
-input.onblur = binding.onBlur;
-input.oninput = (event) => {
-  binding.onChange((event.target as HTMLInputElement).value);
-};
-
-const fileForm = createForm({ defaultValues: { attachment: null as File | null } });
-const fileBinding = fileForm.bind('attachment', {
-  touchOnBlur: true,
-  validateOnBlur: true,
-});
-
-fileInput.onchange = (event) => {
-  fileBinding.onChange((event.target as HTMLInputElement).files?.[0] ?? null);
-};
-```
-
-Global bind defaults via `mode`:
-
-```ts
-// mode pre-populates bindDefaults for all bind() calls
-const form = createForm({
-  mode: 'onBlur', // 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'
-  defaultValues: { email: '' },
-  validators: { email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined) },
-});
-
-// No per-field config needed — validateOnBlur is inherited from mode
-const email = form.bind('email');
-```
-
-Explicit `bindDefaults` always takes precedence over `mode`.
-
-For grouped synchronous updates, wrap writes in `form.batch(() => { ... })` so subscribers observe one consolidated notification.
-
-Global bind defaults via `bindDefaults` (for fine-grained control):
-
-```ts
-const formWithDefaults = createForm({
-  bindDefaults: { touchOnBlur: true, validateOnBlur: true },
-  defaultValues: { email: '' },
-  validators: { email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined) },
-});
-
-const email = formWithDefaults.bind('email');
-```
-
-## Reset, Replace, and Remove
-
-```ts
-const form = createForm({ defaultValues: { email: '', name: '' } });
-
-form.reset();
-form.replace({ email: 'guest@example.com', name: 'Guest' });
-form.resetField('name');
-
-// removeField: drops value, baseline, state, and validator entirely
-form.removeField('name'); // use for conditional fields that are unmounted
-```
-
-When loading server data as the new source of truth, prefer `replace(values)` so subsequent `reset()` uses that new baseline.
-
-## Arrays and Files
-
-```ts
-const form = createForm({ defaultValues: { tags: ['a'] } });
-
-// All 7 array helpers
-form.array('tags').append('z'); // ['a', 'z']
-form.array('tags').prepend('first'); // ['first', 'a', 'z']
-form.array('tags').insert(1, 'mid'); // ['first', 'mid', 'a', 'z']
-form.array('tags').swap(0, 2); // ['a', 'mid', 'first', 'z']
-form.array('tags').replace(1, 'new'); // ['a', 'new', 'first', 'z']
-form.array('tags').remove(3); // ['a', 'new', 'first']
-form.array('tags').move(0, 2); // ['new', 'first', 'a']
-
-const fd = toFormData(form.values());
-```
-
-`toFormData` is optimized for browser submit APIs and multipart uploads.
-When you inspect multipart entries later, browsers may surface `Blob` parts as `File` instances.
-
 ## Working with Other Vielzeug Libraries
 
 ### With Sieve
 
-Use `schemaValidator()` to keep one shared schema for runtime validation and static type inference.
+Combine Sieve schemas with Forge to get typed validation rules without writing validator functions by hand.
 
 ```ts
 import { createForm, schemaValidator } from '@vielzeug/forge';
 import { s } from '@vielzeug/sieve';
 
 const schema = s.object({
-  email: s.string().email(),
-  password: s.string().min(8),
+  email: s.string().email('Invalid email'),
+  password: s.string().min(8, 'Min 8 characters'),
+  age: s.number().min(18, 'Must be 18+'),
 });
 
+// Pass the schema directly — Forge auto-detects safeParse
 const form = createForm({
-  defaultValues: { email: '', password: '' },
+  defaultValues: { email: '', password: '', age: 0 },
+  validator: schema,
+});
+
+// Or wrap with schemaValidator() for custom error transformation
+const form2 = createForm({
+  defaultValues: { email: '', password: '', age: 0 },
   validator: schemaValidator(schema),
 });
 ```
 
 ## Best Practices
 
-- Keep validators pure and deterministic.
-- Use `mode: 'onBlur'` or `mode: 'onTouched'` for most user-facing forms; reserve `mode: 'onChange'` for real-time search or filter forms.
-- Prefer `subscribeField(name, ...)` over `subscribe(...)` for field-level rendering.
-- Use `replace(values)` after loading server data to set a new baseline.
-- Use `removeField(name)` when unmounting conditional fields so their state does not leak into validation.
-- Use the `SubmitResult` returned from `submit()` when you want to handle validation failures without exceptions.
-- Call `dispose()` when the form lifecycle ends.
-
-### Connect a Schema Validator
-
-Use `schemaValidator()` to integrate any `safeParse`-compatible schema (e.g. Sieve, Zod):
-
-```ts
-import { s } from '@vielzeug/sieve';
-import { createForm, schemaValidator } from '@vielzeug/forge';
-
-const schema = s.object({
-  email: s.string().email('Invalid email'),
-  password: s.string().min(8, 'Min 8 characters'),
-  age: s.number().min(18, 'Must be 18 or older'),
-});
-
-const form = createForm({
-  defaultValues: { email: '', password: '', age: 0 },
-  validator: schemaValidator(schema),
-});
-
-const result = await form.submit(async (values) => {
-  await fetch('/api/register', { method: 'POST', body: JSON.stringify(values) });
-});
-if (!result.ok && result.type === 'validation') console.log(result.errors); // { email: '...', age: '...' }
-```
-
-### Stable Subscription Patterns
-
-```ts
-// ✅ React: useSyncExternalStore
-const state = useSyncExternalStore(
-  (notify) => form.subscribe(() => notify()),
-  () => form.state,
-);
-
-// ✅ Vue/Svelte: subscribe + cleanup in lifecycle hooks
-const stop = form.subscribe((snapshot) => { state.value = snapshot; });
-onUnmounted(stop);
-
-// ❌ subscribe without cleanup — leaks listeners
-form.subscribe(() => { /* ... */ });
-```
-
-### Use `bind()` Only for Vanilla DOM
-
-```tsx
-// ✅ Plain DOM / non-reactive usage
-const emailBinding = form.bind('email');
-input.value = String(emailBinding.value ?? '');
-input.addEventListener('blur', emailBinding.onBlur);
-input.addEventListener('change', (e) => emailBinding.onChange(e.target.value));
-
-// ✅ In frameworks, prefer explicit reactive reads/writes
-<input
-  value={String(form.field('email').value ?? '')}
-  onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.touch('email')}
-/>
-```
-
-### Show Errors Only After Touch
-
-```tsx
-// ✅ Only show after user interaction
-{form.field('email').touched && state.errors['email'] && (
-  <span>{state.errors['email']}</span>
-)}
-
-// ❌ Shows errors on page load before user types anything
-{state.errors['email'] && <span>{state.errors['email']}</span>}
-```
+- Call `connect()` once per field and store the result — never call it inside a render or update loop.
+- Call `scope()` once and store the result — each call creates a new binding object.
+- Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
+- Wrap multi-field mutations in `batch()` to emit a single subscriber notification.
+- Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
+- Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.
+- Use `replace()` after a successful async load instead of `reset()` — `replace()` updates the baseline so `isDirty` reflects changes against the new data.
+- Guard submit handlers with `state.isSubmitting` before the call, or check `result.ok` after — never assume success.

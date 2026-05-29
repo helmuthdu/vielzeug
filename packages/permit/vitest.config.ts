@@ -13,10 +13,9 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
     name: 'permit',
-    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     watch: false,
   },
 });

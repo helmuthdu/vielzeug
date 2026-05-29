@@ -10,29 +10,22 @@ const parsePositiveInt = (value: string | undefined, fallback: number) => {
   return parsed;
 };
 
-export const decodeLocalQueryParams = (params: QueryParamsInput, defaultLimit = 10): Partial<SourceQuery> => {
-  const rawPage = typeof params.page === 'string' ? params.page : undefined;
-  const rawLimit = typeof params.limit === 'string' ? params.limit : undefined;
-  const rawSearch = typeof params.search === 'string' ? params.search : undefined;
-
-  return {
-    limit: parsePositiveInt(rawLimit, defaultLimit),
-    page: parsePositiveInt(rawPage, 1),
-    search: rawSearch ?? '',
-  };
+export type DecodeQueryOptions = {
+  defaultLimit?: number;
+  strict?: boolean;
 };
 
-export const encodeLocalQueryParams = (query: SourceQuery): QueryParams => ({
-  ...(query.search && { search: query.search }),
-  limit: String(query.limit),
-  page: String(query.page),
-});
-
-const parseRemoteQuery = <TFilter, TSort>(
+/**
+ * Decodes URL query parameters into a partial source query object.
+ * Handles both local (page/limit/search) and remote (+ filter/sort) params.
+ * When `strict` is true, malformed filter/sort JSON params throw instead of being silently dropped.
+ */
+export const decodeQuery = <TFilter = unknown, TSort = unknown>(
   params: QueryParamsInput,
-  defaultLimit: number,
-  strict: boolean,
+  options: DecodeQueryOptions = {},
 ): Partial<RemoteSourceQuery<TFilter, TSort>> => {
+  const { defaultLimit = 10, strict = false } = options;
+
   const rawPage = typeof params.page === 'string' ? params.page : undefined;
   const rawLimit = typeof params.limit === 'string' ? params.limit : undefined;
   const rawSearch = typeof params.search === 'string' ? params.search : undefined;
@@ -75,26 +68,28 @@ const parseRemoteQuery = <TFilter, TSort>(
   };
 };
 
-export const decodeRemoteQueryParams = <TFilter = unknown, TSort = unknown>(
-  params: QueryParamsInput,
-  defaultLimit = 10,
-): Partial<RemoteSourceQuery<TFilter, TSort>> => {
-  return parseRemoteQuery<TFilter, TSort>(params, defaultLimit, false);
-};
+/**
+ * Encodes a source query into URL query parameters.
+ * Omits empty search. Serializes filter/sort as JSON when present.
+ */
+export const encodeQuery = <TFilter = unknown, TSort = unknown>(
+  query: SourceQuery | RemoteSourceQuery<TFilter, TSort>,
+): QueryParams => {
+  const base: QueryParams = {
+    ...(query.search && { search: query.search }),
+    limit: String(query.limit),
+    page: String(query.page),
+  };
 
-export const decodeRemoteQueryParamsStrict = <TFilter = unknown, TSort = unknown>(
-  params: QueryParamsInput,
-  defaultLimit = 10,
-): Partial<RemoteSourceQuery<TFilter, TSort>> => {
-  return parseRemoteQuery<TFilter, TSort>(params, defaultLimit, true);
-};
+  const remote = query as RemoteSourceQuery<TFilter, TSort>;
 
-export const encodeRemoteQueryParams = <TFilter = unknown, TSort = unknown>(
-  query: RemoteSourceQuery<TFilter, TSort>,
-): QueryParams => ({
-  ...(query.search && { search: query.search }),
-  limit: String(query.limit),
-  page: String(query.page),
-  ...(query.filter !== undefined && { filter: JSON.stringify(query.filter) }),
-  ...(query.sort !== undefined && { sort: JSON.stringify(query.sort) }),
-});
+  if (remote.filter !== undefined) {
+    base.filter = JSON.stringify(remote.filter);
+  }
+
+  if (remote.sort !== undefined) {
+    base.sort = JSON.stringify(remote.sort);
+  }
+
+  return base;
+};

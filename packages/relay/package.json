@@ -23,6 +23,7 @@
     }
   },
   "scripts": {
+    "bench": "vitest bench",
     "build": "vite build && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",

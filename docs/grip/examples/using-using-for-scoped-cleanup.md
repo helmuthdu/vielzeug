@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — Using `using` for scoped cleanup'
-description: 'Using `using` for scoped cleanup examples for grip.'
+description: 'Using `using` for scoped cleanup example for @vielzeug/grip.'
 ---
 
 ## Using `using` for scoped cleanup

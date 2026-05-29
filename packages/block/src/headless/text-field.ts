@@ -1,4 +1,5 @@
-import { type ReadonlySignal, type Signal, syncedSignal } from '@vielzeug/ripple';
+import { syncedSignal } from '@vielzeug/craft';
+import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import {
   createAssistiveState,
@@ -18,16 +19,21 @@ export { createAssistiveState } from './field-base';
 
 type TextFieldListenerOptions = {
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+  /**
+   * Called synchronously before value extraction on every input event.
+   * Use only for DOM side-effects (e.g. auto-resize measurement) that must
+   * run before the reactive value is updated.
+   */
+  onBeforeInput?: (event: Event) => void;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
-  onRawInput?: (event: Event) => void;
   triggerValidation?: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
 };
 
 const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => void) => {
-  const { element, onBlur, onChange, onFocus, onInput, onRawInput, triggerValidation } = options;
+  const { element, onBeforeInput, onBlur, onChange, onFocus, onInput, triggerValidation } = options;
   const cleanups: Array<() => void> = [];
 
   const on = <E extends Event>(type: string, handler: (event: E) => void): void => {
@@ -41,10 +47,10 @@ const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => voi
     });
   }
 
-  if (onInput || onRawInput) {
+  if (onInput || onBeforeInput) {
     on('input', (event: Event) => {
       event.stopPropagation();
-      onRawInput?.(event);
+      onBeforeInput?.(event);
       onInput?.(event, element.value);
     });
   }
@@ -72,11 +78,16 @@ export type TextFieldDetach = () => void;
 
 export type TextFieldOptions = FieldBaseOptions & {
   maxLength?: ReadonlySignal<number | undefined>;
+  /**
+   * Called synchronously before value extraction on every input event.
+   * Use only for DOM side-effects (e.g. auto-resize measurement) that must
+   * run before the reactive value is updated.
+   */
+  onBeforeInput?: (event: Event) => void;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
-  onRawInput?: (event: Event) => void;
   value: ReadonlySignal<string | undefined>;
 };
 
@@ -137,6 +148,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
 
     const rawDetach = attachTextFieldListeners({
       element,
+      onBeforeInput: options.onBeforeInput,
       onBlur: options.onBlur,
       onChange: (event, nextValue) => {
         value.value = nextValue;
@@ -147,7 +159,6 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
         value.value = nextValue;
         options.onInput?.(event, nextValue);
       },
-      onRawInput: options.onRawInput,
       triggerValidation: field.triggerValidation,
     });
 

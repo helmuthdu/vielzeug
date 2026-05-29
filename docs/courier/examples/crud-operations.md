@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — CRUD Operations'
-description: 'CRUD Operations examples for courier.'
+description: 'CRUD Operations example for @vielzeug/courier.'
 ---
 
 ## CRUD Operations
@@ -10,6 +10,8 @@ description: 'CRUD Operations examples for courier.'
 You need to perform the full create, read, update, delete lifecycle against a REST resource with typed request and response bodies, sharing a single base URL configuration.
 
 ### Solution
+
+Use `createApi()` with `createQuery()` for cached reads and `createMutation()` for writes, then update the cache with `qc.set()` and `qc.invalidate()` after each mutation.
 
 ```ts
 import { createApi, createMutation, createQuery } from '@vielzeug/courier';

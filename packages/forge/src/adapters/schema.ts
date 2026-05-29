@@ -1,8 +1,12 @@
 import { FORM_ERROR, type FormValidator, type SafeParseSchema } from '../types';
 
 /**
- * Adapts a `safeParse`-compatible schema (Zod, Valibot, Standard Schema) into a
- * `FormValidator` that can be passed to `createForm({ validator: schemaValidator(schema) })`.
+ * Adapts a `safeParse`-compatible schema into a `FormValidator`.
+ * Works with `@vielzeug/sieve`, Zod, Valibot, and Standard Schema compliant libraries.
+ *
+ * **Note:** When passing a schema directly to `createForm({ validator: mySchema })`, forge
+ * auto-detects `safeParse`-compatible schemas and wraps them automatically. Use this explicit
+ * adapter when you need custom error message transformation or error filtering.
  *
  * Root-level issues (path `[]`) are stored under the `_form` key.
  * When multiple issues target the same path, the first one wins.

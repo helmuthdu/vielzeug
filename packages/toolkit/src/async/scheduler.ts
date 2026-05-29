@@ -1,10 +1,11 @@
 /**
  * Scheduler.postTask helper for environments with or without native support.
  *
- * `new Scheduler()` guarantees that `globalThis.scheduler.postTask` exists,
- * using the native API when available and installing a small fallback otherwise.
+ * `new Scheduler()` provides a `postTask` method backed by the native
+ * `globalThis.scheduler` when available, or a private polyfill instance
+ * otherwise — without modifying `globalThis`.
  *
- * `polyfillScheduler()` remains available when explicit installation is preferred.
+ * `polyfillScheduler()` remains available when explicit global installation is preferred.
  *
  * The polyfill provides:
  * - Delayed execution via the `delay` option
@@ -88,8 +89,10 @@ export function polyfillScheduler(): void {
 /**
  * Lightweight scheduler wrapper.
  *
- * Creating an instance guarantees that a scheduler exists (native or polyfilled)
- * and exposes a stable postTask API.
+ * Creating an instance uses the native `globalThis.scheduler` when available
+ * and falls back to a private polyfill instance — without modifying
+ * `globalThis`. Call {@link polyfillScheduler} explicitly if you want to
+ * install the polyfill as a global side-effect.
  */
 export class Scheduler implements SchedulerLike {
   #scheduler: SchedulerLike;
@@ -97,11 +100,7 @@ export class Scheduler implements SchedulerLike {
   constructor() {
     const g = globalThis as unknown as SchedulerGlobal;
 
-    if (g.scheduler === undefined) {
-      polyfillScheduler();
-    }
-
-    this.#scheduler = (globalThis as unknown as SchedulerGlobal).scheduler!;
+    this.#scheduler = g.scheduler ?? createPolyfill();
   }
 
   postTask<T>(

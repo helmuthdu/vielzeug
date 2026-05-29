@@ -51,14 +51,17 @@ describe('form state and values', () => {
     expect(form.field('name').dirty).toBe(false);
   });
 
-  test('Date dirty tracking compares by timestamp', () => {
-    const form = createForm({ defaultValues: { dueAt: new Date('2024-01-01T00:00:00.000Z') } });
+  test('Date dirty tracking uses reference equality', () => {
+    const initial = new Date('2024-01-01T00:00:00.000Z');
+    const form = createForm({ defaultValues: { dueAt: initial } });
 
-    form.set('dueAt', new Date('2024-01-02T00:00:00.000Z'));
-    expect(form.field('dueAt').dirty).toBe(true);
-
-    form.set('dueAt', new Date('2024-01-01T00:00:00.000Z'));
+    // Same reference — not dirty
+    form.set('dueAt', initial);
     expect(form.field('dueAt').dirty).toBe(false);
+
+    // Different reference (even same timestamp) — dirty
+    form.set('dueAt', new Date('2024-01-01T00:00:00.000Z'));
+    expect(form.field('dueAt').dirty).toBe(true);
   });
 
   test('reset restores baseline values and clears meta state', () => {
@@ -241,7 +244,7 @@ describe('form state and values', () => {
     form.removeField('name');
     form.reset();
 
-    await expect(form.validateAll()).resolves.toEqual({ errors: {}, valid: true });
+    await expect(form.validate()).resolves.toEqual({ errors: {}, valid: true });
 
     expect(form.get('name')).toBeUndefined();
     expect(form.get('email')).toBe('');
@@ -320,5 +323,35 @@ describe('form patch', () => {
     expect(form.get('user.age')).toBe(30);
     expect(form.field('user.name').dirty).toBe(false);
     expect(form.field('user.age').dirty).toBe(false);
+  });
+
+  test('isLoading is true while async defaultValues resolves, false after', async () => {
+    let resolve!: (v: { name: string }) => void;
+    const factory = () =>
+      new Promise<{ name: string }>((res) => {
+        resolve = res;
+      });
+
+    const form = createForm({ defaultValues: factory });
+
+    expect(form.isLoading).toBe(true);
+    expect(form.state.isLoading).toBe(true);
+
+    resolve({ name: 'Alice' });
+    await Promise.resolve(); // flush microtask
+
+    // isLoading must be false and the values must be populated
+    await new Promise<void>((res) =>
+      form.subscribe(
+        (s) => {
+          if (!s.isLoading) res();
+        },
+        { sync: true },
+      ),
+    );
+
+    expect(form.isLoading).toBe(false);
+    expect(form.state.isLoading).toBe(false);
+    expect(form.get('name')).toBe('Alice');
   });
 });

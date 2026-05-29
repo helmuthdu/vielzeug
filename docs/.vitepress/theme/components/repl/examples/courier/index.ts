@@ -1,3 +1,5 @@
+import { batcherExample } from './batcher';
+import { cachePersistExample } from './cache-persist';
 import { createCourierExample } from './create-courier';
 import { httpClientBasicExample } from './http-client-basic';
 import { httpClientHeadersExample } from './http-client-headers';
@@ -12,6 +14,8 @@ import { streamReadableExample } from './stream-readable';
 import { streamSseExample } from './stream-sse';
 
 export const courierExamples = {
+  batcher: batcherExample,
+  'cache-persist': cachePersistExample,
   'create-courier': createCourierExample,
   'http-client-basic': httpClientBasicExample,
   'http-client-headers': httpClientHeadersExample,

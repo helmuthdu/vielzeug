@@ -43,9 +43,6 @@ export const createMeta = (state: {
 
   return {
     errorMessage: state.errorMessage,
-    hasNoItems: isEmpty,
-    isFirstPage: page <= 1,
-    isLastPage: page >= pages,
     isLoading: state.isLoading,
     isSearchPending: state.isSearchPending,
     itemEnd: end,

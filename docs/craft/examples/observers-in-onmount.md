@@ -1,11 +1,17 @@
 ---
 title: 'Craft Examples — Observers in onMounted()'
-description: 'Current Craft observer example using onMounted() and explicit DOM refs.'
+description: 'Observers in onMounted() example for @vielzeug/craft.'
 ---
 
 ## Observers in onMounted()
 
-Observer helpers from `@vielzeug/craft/observers` require real DOM nodes, so call them in `onMounted()` after refs have resolved.
+### Problem
+
+You need to observe element size, intersection, or media queries, but the observer helpers require real DOM nodes that don't exist during `setup()`.
+
+### Solution
+
+Call observer helpers inside `onMounted()` after refs have resolved.
 
 ```ts
 import { define, effect, html, onMounted, ref } from '@vielzeug/craft';
@@ -28,19 +34,18 @@ define('observed-panel', {
       });
     });
 
-    return () => html`<div ref=${panel}>Resize me</div>`;
+    return html`<div ref=${panel}>Resize me</div>`;
   },
 });
 ```
 
-## Notes
+### Pitfalls
 
-- Do not call these observer helpers before the target element exists.
-- `resizeObserver()` and `intersectionObserver()` need an actual element, not a nullable ref.
-- `mediaObserver()` is DOM-only as well because it uses `window.matchMedia`.
+- Calling `resizeObserver()` or `intersectionObserver()` before the element exists (outside `onMounted()`) will receive a null ref and observe nothing.
+- `mediaObserver()` uses `window.matchMedia` internally — it fails silently in SSR environments without a DOM shim.
 
 ### Related
 
+- [Ripple — Effects](/ripple/) for the reactive `effect()` used inside the observer callback
 - [Context provider and consumer](./context-provider-and-consumer.md)
 - [Counter component](./counter-component.md)
-- [Form-associated rating input](./form-associated-rating-input.md)

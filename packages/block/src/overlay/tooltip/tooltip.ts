@@ -1,22 +1,21 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
-import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
+import { computed, define, html, onMounted, prop, signal, syncAria } from '@vielzeug/craft';
 
 import type { ComponentSize } from '../../types';
 
-import { createOverlayControl, createStableId, parseStringTriggers } from '../../headless';
+import { createStableId, parseStringTriggers } from '../../headless';
 import { disablableBundle, sizableBundle } from '../../shared/config';
 import { forcedColorsMixin } from '../../styles';
+import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './tooltip.css?inline';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
-type TooltipTrigger = 'hover' | 'focus' | 'click';
+type TooltipTrigger = 'click' | 'focus' | 'hover';
 
-const TOOLTIP_OFFSET = 8; // gap from trigger to tooltip edge
-const LEFT_GAP_COMPENSATION = 4; // left placement looks visually tighter in practice
+const LEFT_GAP_COMPENSATION = 4;
 const DEFAULT_TOOLTIP_TRIGGERS: TooltipTrigger[] = ['hover', 'focus'];
-const VALID_TOOLTIP_TRIGGERS = new Set<TooltipTrigger>(['hover', 'focus', 'click']);
+const VALID_TOOLTIP_TRIGGERS = new Set<TooltipTrigger>(['click', 'focus', 'hover']);
 
 const parseDelayMs = (value: string | null): number => {
   if (value == null || value.trim() === '') return 0;
@@ -34,7 +33,7 @@ const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =
 
 /** Tooltip component properties */
 export type BitTooltipProps = {
-  /** Hide delay in ms (useful to keep tooltip open when moving focus between trigger and tooltip) */
+  /** Hide delay in ms */
   'close-delay'?: number;
   /** Tooltip text content */
   content?: string;
@@ -42,15 +41,15 @@ export type BitTooltipProps = {
   delay?: number;
   /** Disable the tooltip */
   disabled?: boolean;
-  /** Controlled open state. When provided, the tooltip acts as a controlled component and ignores trigger events for open/close. */
+  /** Controlled open state */
   open?: boolean;
   /** Preferred placement relative to trigger */
   placement?: TooltipPlacement;
   /** Tooltip size */
   size?: ComponentSize;
-  /** Which trigger(s) show/hide the tooltip — comma-separated if multiple, e.g. "hover,focus" */
+  /** Which trigger(s) show/hide the tooltip */
   trigger?: string;
-  /** Visual variant: 'dark' (default) or 'light' */
+  /** Visual variant */
   variant?: 'dark' | 'light';
 };
 
@@ -78,10 +77,6 @@ export type BitTooltipProps = {
  * <bit-tooltip content="Copy to clipboard">
  *   <button>Copy</button>
  * </bit-tooltip>
- *
- * <bit-tooltip placement="right" trigger="focus,hover" content="Required field">
- *   <input type="text" />
- * </bit-tooltip>
  * ```
  */
 export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
@@ -93,95 +88,55 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
     delay: { default: 0, parse: parseDelayMs },
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(['top', 'bottom', 'left', 'right'] as const, 'top'),
-    trigger: { default: 'hover,focus', parse: (value: string | null) => normalizeTriggers(value).join(',') },
+    trigger: prop.string('hover,focus'),
     variant: prop.string<'dark' | 'light'>(),
   },
-  setup(props, { bind: _bind, el, slots }) {
+  setup(props, { el, slots }) {
     const shadowRoot = el.shadowRoot;
-    const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
     const activePlacement = signal<TooltipPlacement>('top');
-    let showTimer: ReturnType<typeof setTimeout> | null = null;
-    let hideTimer: ReturnType<typeof setTimeout> | null = null;
-    let tooltipEl: HTMLElement | null = null;
     const tooltipId = createStableId('tooltip');
     const triggers = computed<TooltipTrigger[]>(() => normalizeTriggers(props.trigger.value));
-    const clearShowTimer = () => {
+    let tooltipEl: HTMLElement | null = null;
+    let showTimer: ReturnType<typeof setTimeout> | null = null;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearShowTimer = (): void => {
       if (!showTimer) return;
 
       clearTimeout(showTimer);
       showTimer = null;
     };
-    const clearHideTimer = () => {
+    const clearHideTimer = (): void => {
       if (!hideTimer) return;
 
       clearTimeout(hideTimer);
       hideTimer = null;
     };
 
-    function getTriggerEl(): HTMLElement | null {
-      // First slotted element is the trigger
-      const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      const assigned = slot?.assignedElements({ flatten: true });
-
-      const first = assigned?.[0];
-
-      return first instanceof HTMLElement ? first : null;
-    }
-    function updatePosition() {
-      if (!tooltipEl) return;
-
-      const triggerEl = getTriggerEl();
-
-      if (!triggerEl) return;
-
-      const { placement, x, y } = computePosition(triggerEl, tooltipEl, {
-        middleware: [offset(TOOLTIP_OFFSET), flip(), shift({ padding: 6 })],
-        placement: props.placement.value as Placement,
-      });
-
-      const side = placement.split('-')[0] as TooltipPlacement;
-      const adjustedX = side === 'left' ? x - LEFT_GAP_COMPENSATION : x;
-
-      tooltipEl.style.left = `${adjustedX}px`;
-      tooltipEl.style.top = `${y}px`;
-
-      activePlacement.value = side;
-    }
-
-    const overlay = createOverlayControl({
-      getBoundary: () => document.body,
+    const floating = useFloatingTrigger({
+      bindTriggerAria: (triggerEl) => syncAria(triggerEl, { describedby: () => tooltipId }, { autoCleanup: false }),
+      disabled: isDisabled,
       getPanel: () => tooltipEl,
-      getTrigger: getTriggerEl,
-      isDisabled: () => isDisabled.value,
-      isOpen: () => visible.value,
-      positioner: {
-        floating: () => tooltipEl,
-        reference: getTriggerEl,
-        update: updatePosition,
-      },
-      restoreFocus: false,
-      setOpen: (next) => {
-        if (next) {
-          visible.value = true;
+      offset: 8,
+      onPlacementChange: (p) => {
+        const side = p.split('-')[0] as TooltipPlacement;
 
-          if (tooltipEl && !tooltipEl.matches(':popover-open')) {
-            tooltipEl.showPopover();
-          }
+        activePlacement.value = side;
 
-          return;
-        }
-
-        visible.value = false;
-
-        if (tooltipEl?.matches(':popover-open')) {
-          tooltipEl.hidePopover();
+        if (side === 'left' && tooltipEl) {
+          tooltipEl.style.left = `${parseFloat(tooltipEl.style.left) - LEFT_GAP_COMPENSATION}px`;
         }
       },
+      openProp: props.open as typeof props.open & { value: boolean | undefined },
+      placement: computed(() => props.placement.value as Placement),
+      slot: () => shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null,
+      slotElements: slots.elements(),
+      triggers: computed(() => [] as TooltipTrigger[]),
     });
 
-    function show(reason: 'hover' | 'focus' | 'click' = 'hover') {
+    function show(): void {
       if (isControlled.value) return;
 
       if (isDisabled.value || (!props.content.value && !slots.has('content').value)) return;
@@ -189,14 +144,21 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
       clearHideTimer();
       clearShowTimer();
 
-      showTimer = setTimeout(
-        () => {
-          overlay.open(reason);
-        },
-        Number(props.delay.value) || 0,
-      );
+      const delay = Number(props.delay.value) || 0;
+
+      if (delay > 0) {
+        showTimer = setTimeout(() => {
+          showTimer = null;
+          floating.open('hover');
+          floating.updatePosition();
+        }, delay);
+      } else {
+        floating.open('hover');
+        floating.updatePosition();
+      }
     }
-    function hide() {
+
+    function hide(): void {
       if (isControlled.value) return;
 
       clearShowTimer();
@@ -205,100 +167,62 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
 
       if (closeDelay > 0) {
         clearHideTimer();
-
         hideTimer = setTimeout(() => {
           hideTimer = null;
-          closeNow();
+          floating.close('trigger');
         }, closeDelay);
       } else {
-        closeNow();
+        floating.close('trigger');
       }
-    }
-    function closeNow() {
-      overlay.close('trigger', false);
-    }
-    function toggleClick() {
-      if (visible.value) hide();
-      else show('click');
-    }
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') overlay.close('escape', false);
     }
 
     onMounted(() => {
-      const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      let triggerBinding: (() => void) | null = null;
+      // Manually bind trigger events so we can wrap show/hide with delay timers.
+      // useFloatingTrigger handles ARIA, positioning, controlled mode, and keyboard dismiss.
+      const triggerSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      let eventCleanups: Array<() => void> = [];
 
-      if (!slot) return;
+      const addEvent = (target: EventTarget, event: string, handler: EventListener): void => {
+        target.addEventListener(event, handler);
+        eventCleanups.push(() => target.removeEventListener(event, handler));
+      };
 
-      const bindTriggerEvents = () => {
-        triggerBinding?.();
-        triggerBinding = null;
+      const bindTriggerEvents = (): void => {
+        for (const cleanup of eventCleanups) cleanup();
+        eventCleanups = [];
 
-        const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+        const triggerEl = triggerSlot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
         if (!triggerEl) return;
-
-        const removeAria = syncAria(triggerEl, {
-          describedby: () => tooltipId,
-        });
-
-        const cleanups: Array<() => void> = [];
-        const add = (
-          target: EventTarget,
-          event: string,
-          listener: EventListener,
-          options?: AddEventListenerOptions,
-        ) => {
-          target.addEventListener(event, listener, options);
-          cleanups.push(() => target.removeEventListener(event, listener, options));
-        };
 
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          add(triggerEl, 'pointerenter', () => show('hover'));
-          add(triggerEl, 'pointerleave', hide as EventListener);
+          addEvent(triggerEl, 'pointerenter', show);
+          addEvent(triggerEl, 'pointerleave', hide);
         }
 
         if (t.includes('focus')) {
-          add(triggerEl, 'focusin', () => show('focus'));
-          add(triggerEl, 'focusout', hide as EventListener);
+          addEvent(triggerEl, 'focusin', show);
+          addEvent(triggerEl, 'focusout', hide);
         }
 
         if (t.includes('click')) {
-          add(triggerEl, 'click', toggleClick as EventListener);
+          addEvent(triggerEl, 'click', () => (floating.visible.value ? hide() : show()));
         }
-
-        // Keyboard escape to dismiss
-        add(document, 'keydown', handleKeydown as EventListener);
-
-        triggerBinding = () => {
-          removeAria();
-
-          for (const cleanup of cleanups) cleanup();
-        };
       };
 
-      watch(slots.elements(), bindTriggerEvents, { immediate: true });
-      // Controlled mode: watch the `open` prop and show/hide accordingly
-      watch(props.open, (openVal) => {
-        if (openVal === undefined || openVal === null) return;
+      triggerSlot?.addEventListener('slotchange', bindTriggerEvents);
+      bindTriggerEvents();
 
-        if (openVal) {
-          overlay.open('programmatic');
-        } else {
-          overlay.close('programmatic', false);
-        }
-      });
+      const destroyFloating = floating.mount();
 
       return () => {
-        triggerBinding?.();
-        triggerBinding = null;
-
+        triggerSlot?.removeEventListener('slotchange', bindTriggerEvents);
+        for (const cleanup of eventCleanups) cleanup();
         clearShowTimer();
         clearHideTimer();
-        overlay.cleanup();
+        destroyFloating();
       };
     });
 
@@ -310,11 +234,11 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
         id="${tooltipId}"
         role="tooltip"
         popover="manual"
-        ref=${(el: HTMLElement) => {
-          tooltipEl = el;
+        ref=${(ref: HTMLElement) => {
+          tooltipEl = ref;
         }}
         :data-placement="${activePlacement}"
-        :aria-hidden="${() => String(!visible.value)}">
+        :aria-hidden="${() => String(!floating.visible.value)}">
         <slot name="content"><span class="tooltip-text">${props.content}</span></slot>
       </div>
     `;

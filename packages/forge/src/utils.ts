@@ -40,9 +40,8 @@ export function flattenValues(obj: Record<string, unknown>, prefix = '', depth =
 
 /**
  * Reconstructs a nested object from a map of dot-notation keys.
- * Uses `Object.defineProperty` (not bracket assignment) so that the `__proto__` setter on
- * `Object.prototype` is never triggered. As a second defence, any key whose path includes an
- * unsafe segment is skipped entirely.
+ * Any key whose path includes an unsafe segment is skipped — `isSafeKey` is the single
+ * defence point, so plain bracket assignment is safe here.
  */
 export function unflattenValues(flat: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -56,18 +55,13 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
 
     for (let i = 0; i < parts.length - 1; i++) {
       if (!isPlainObject(obj[parts[i]])) {
-        Object.defineProperty(obj, parts[i], { configurable: true, enumerable: true, value: {}, writable: true });
+        obj[parts[i]] = {};
       }
 
       obj = obj[parts[i]] as Record<string, unknown>;
     }
 
-    Object.defineProperty(obj, parts[parts.length - 1], {
-      configurable: true,
-      enumerable: true,
-      value: val,
-      writable: true,
-    });
+    obj[parts[parts.length - 1]] = val;
   }
 
   return result;

@@ -29,9 +29,9 @@ export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
 
   while (node) {
     if (node instanceof HTMLElement) {
-      const v = contextRegistry.get(node)?.get(key);
+      const map = contextRegistry.get(node);
 
-      if (v !== undefined) return v as T;
+      if (map?.has(key)) return map.get(key) as T;
     }
 
     const root = node.getRootNode() as Node;
@@ -42,10 +42,12 @@ export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
   return rest.length > 0 ? rest[0] : undefined;
 }
 
-export const injectStrict = <T>(key: InjectionKey<T>): T => {
-  const resolved = inject<T>(key);
+const NOT_FOUND = Symbol('inject.not_found');
 
-  if (resolved !== undefined) return resolved;
+export const injectStrict = <T>(key: InjectionKey<T>): T => {
+  const resolved = inject<T>(key, NOT_FOUND as unknown as T);
+
+  if (resolved !== (NOT_FOUND as unknown)) return resolved;
 
   const host = getCurrentElement();
 

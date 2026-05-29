@@ -24,7 +24,7 @@ describe('schemaValidator adapter', () => {
       validator: schemaValidator(schema),
     });
 
-    const result = await form.validateAll();
+    const result = await form.validate();
 
     expect(result.valid).toBe(false);
     expect(result.errors).toEqual({ age: 'Must be 18+', email: 'Invalid email' });
@@ -36,7 +36,7 @@ describe('schemaValidator adapter', () => {
     };
     const form = createForm({ defaultValues: { email: 'a@b.com' }, validator: schemaValidator(schema) });
 
-    const result = await form.validateAll();
+    const result = await form.validate();
 
     expect(result).toEqual({ errors: {}, valid: true });
   });
@@ -55,7 +55,7 @@ describe('schemaValidator adapter', () => {
     };
     const form = createForm({ defaultValues: { email: '' }, validator: schemaValidator(schema) });
 
-    const result = await form.validateAll();
+    const result = await form.validate();
 
     expect(result.errors.email).toBe('First');
   });
@@ -71,7 +71,7 @@ describe('schemaValidator adapter', () => {
     };
     const form = createForm({ defaultValues: { confirm: '', password: '' }, validator: schemaValidator(schema) });
 
-    const result = await form.validateAll();
+    const result = await form.validate();
 
     expect(result.errors._form).toBe('Passwords do not match');
   });
@@ -90,8 +90,33 @@ describe('schemaValidator adapter', () => {
       validator: schemaValidator(schema),
     });
 
-    const result = await form.validateAll();
+    const result = await form.validate();
 
     expect(result.errors['addresses.0.street']).toBe('Street is required');
+  });
+
+  test('auto-detects safeParse-compatible schemas passed directly to validator option', async () => {
+    // Forge auto-wraps any object with a `safeParse` method — no explicit schemaValidator() call needed.
+    const schema = {
+      safeParse: (data: unknown) => {
+        const value = data as { name: string };
+
+        if (value.name) return { success: true as const };
+
+        return {
+          error: { issues: [{ message: 'Name required', path: ['name'] }] },
+          success: false as const,
+        };
+      },
+    };
+    const form = createForm({
+      defaultValues: { name: '' },
+      validator: schema, // direct schema — no schemaValidator() wrapper
+    });
+
+    const result = await form.validate();
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.name).toBe('Name required');
   });
 });

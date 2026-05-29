@@ -23,7 +23,7 @@ exports: [createForm]
 
 **Key exports:** `createForm`
 
-**When to use:** Typed form state with field validation, dirty tracking, submission handling, and file upload support. Works with any UI.
+**When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
 
 **Related:** [Sieve](/sieve/) · [Ripple](/ripple/) · [Courier](/courier/)
 
@@ -57,14 +57,13 @@ import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
   defaultValues: { email: '', password: '' },
-  mode: 'onBlur', // validate automatically on blur
   validators: {
     email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
     password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
   },
 });
 
-const { valid, errors } = await form.validateAll();
+const { valid, errors } = await form.validate();
 
 if (!valid) {
   console.log(errors);
@@ -78,16 +77,8 @@ const submission = await form.submit(async (values) => {
   });
 });
 
-if (!submission.ok) {
-  if (submission.type === 'validation') {
-    console.log(submission.errors);
-  }
-}
-
-const second = await form.submit(async () => {});
-
-if (!second.ok && second.type === 'concurrent') {
-  console.log('Submission already in progress');
+if (!submission.ok && submission.type === 'validation') {
+  console.log(submission.errors);
 }
 ```
 
@@ -98,31 +89,27 @@ Native form handling quickly grows repetitive when you need typed values, determ
 ```ts
 // Before: manual state and ad-hoc validation sequencing
 const errors: Record<string, string> = {};
-
 if (!email.includes('@')) errors.email = 'Invalid email';
 if (password.length < 8) errors.password = 'Too short';
-
-if (Object.keys(errors).length === 0) {
-  await submit({ email, password });
-}
+if (Object.keys(errors).length === 0) await submit({ email, password });
 
 // After: one form controller with explicit transitions
-const form = createForm({ defaultValues: { email: '', password: '' }, validators: { email: isEmail, password: min8 } });
-await form.validateAll();
+const form = createForm({
+  defaultValues: { email: '', password: '' },
+  validators: { email: isEmail, password: min8 },
+});
 await form.submit(submit);
 ```
 
-| Feature                       | Forge                                       | React Hook Form | VeeValidate |
+| Feature                       | Forge                                        | React Hook Form | VeeValidate |
 | ----------------------------- | -------------------------------------------- | --------------- | ----------- |
-| Bundle size                   | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
+| Bundle size                   | <PackageInfo package="forge" type="size" />  | ~9 kB           | ~16 kB      |
 | Framework-agnostic            | ✅                                           | React only      | Vue only    |
 | Typed dot-path APIs           | ✅                                           | Partial         | Partial     |
-| Global validation mode        | ✅                                           | ✅              | ✅          |
-| Unified validation entrypoint | ✅                                           | ❌              | ❌          |
 | Result-based submit flow      | ✅                                           | ❌              | ❌          |
 | Live field observation        | ✅                                           | ✅              | ✅          |
 | Full array helpers            | ✅                                           | ✅              | ✅          |
-| Conditional field removal     | ✅                                           | ✅              | Partial     |
+| Scoped sub-forms              | ✅                                           | ❌              | ❌          |
 | Form + field subscriptions    | ✅                                           | ✅              | ✅          |
 | Zero dependencies             | ✅                                           | ❌              | ❌          |
 
@@ -133,25 +120,28 @@ await form.submit(submit);
 ## Features
 
 - Typed field paths with compile-time value inference
-- Explicit validation API: `validateAll()`, `validateTouched()`, and `validateFields(fields)`
+- Explicit validation API: `validate()` and `validateFields(fields)`
 - Single-field validation with `validateField(name)`
-- Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
+- Per-connection validation triggers via `connect()` with `ValidationModes` presets
 - `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`
-- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
+- Schema integration: pass any `safeParse`-compatible schema directly to `validator`
+- `scope(prefix)` — scoped sub-forms that share parent state with relative field paths
 - `removeField(name)` — clean conditional field lifecycle
 - Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
 - Explicit synchronous subscriptions: `subscribe` and `subscribeField`
 - Stable frozen snapshots for `form.state` and `form.field(name)` (external-store friendly)
 - Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `resetErrors`
-- Mutation batching with `batch(fn)` and dynamic field validators via `setValidator(name, validator?)`
-- Baseline-safe reset/replace model
-- Browser-first utilities: vanilla-DOM `bind`, `toFormData`
+- Mutation batching with `batch(fn)` and dynamic field validators via `setValidator`
+- Baseline-safe `reset`/`replace`/`patch` model
+- Browser-first utility: `toFormData`
+- Ready-made adapters for React, Vue, and Svelte
 
 ## Compatibility
 
 | Environment | Support |
 | ----------- | ------- |
 | Browser     | ✅      |
+| Node.js 22+ | ✅      |
 
 ## Documentation
 

@@ -17,8 +17,9 @@
  * ```
  */
 
-import { _installTrackingHook } from '../tracking';
 import type { AsyncLocalStorage as AsyncLocalStorageType } from 'async_hooks';
+
+import { type TrackingHook, _installTrackingHook } from '../tracking';
 
 type TrackingContext = import('../types').TrackingCtx;
 
@@ -33,7 +34,7 @@ export interface TrackingProvider {
 
 let _currentProvider: TrackingProvider | null = null;
 
-const syncHook = {
+const syncHook: TrackingHook = {
   get: () => _currentProvider?.get() ?? null,
   run: <T>(ctx: TrackingContext | null, fn: () => T): T => {
     if (_currentProvider) return _currentProvider.run(ctx, fn);

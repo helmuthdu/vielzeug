@@ -4,8 +4,8 @@ import type { SwipeControl } from '../../headless';
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createSwipeControl } from '../../headless';
+import { awaitExit } from '../../overlay/shared/await-exit';
 import { reducedMotionMixin } from '../../styles';
-import { awaitExit } from '../../utils';
 import componentStyles from './toast.css?inline';
 
 /** Toast container properties */

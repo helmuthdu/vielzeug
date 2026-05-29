@@ -343,12 +343,16 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       if (!triggerEl) return;
 
       const cleanups: Array<() => void> = [];
-      const removeAria = syncAria(triggerEl, {
-        controls: () => menuId,
-        disabled: () => isDisabled.value,
-        expanded: () => String(isOpenSignal.value),
-        haspopup: 'menu',
-      });
+      const removeAria = syncAria(
+        triggerEl,
+        {
+          controls: () => menuId,
+          disabled: () => isDisabled.value,
+          expanded: () => String(isOpenSignal.value),
+          haspopup: 'menu',
+        },
+        { autoCleanup: false },
+      );
 
       const onTriggerClick = (event: MouseEvent) => {
         event.stopPropagation();

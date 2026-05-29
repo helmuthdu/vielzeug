@@ -1,4 +1,4 @@
-import { computed, define, defineField, html, inject, prop, signal, watch } from '@vielzeug/craft';
+import { computed, define, defineField, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -7,9 +7,7 @@ import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-// Ensure child components are registered
-import '../button/button';
-import '../input/input';
+import { useTextField } from '../shared/use-field';
 import styles from './number-input.css?inline';
 
 export type BitNumberInputEvents = {
@@ -35,13 +33,10 @@ export type BitNumberInputProps = {
   max?: number;
   /** Minimum allowed value */
   min?: number;
+  /** Form field name */
   name?: string;
-  /** Allow null/empty value */
-  nullable?: boolean;
   /** Placeholder text */
   placeholder?: string;
-  /** Form field name */
-
   /** Make the input read-only */
   readonly?: boolean;
   /** Component size */
@@ -103,7 +98,6 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
     max: prop.json(undefined as number | undefined),
     min: prop.json(undefined as number | undefined),
     name: prop.string(),
-    nullable: prop.bool(false),
     placeholder: prop.string(),
     readonly: prop.bool(false),
     step: prop.number(1),
@@ -116,34 +110,35 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
     const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
     const isDisabled = fCtxProps.disabled;
     const isReadonly = computed(() => Boolean(props.readonly.value));
-    const inputValue = signal<string>(normalizeValue(props.value.value));
-    const committedValue = signal<string>(normalizeValue(props.value.value));
-    const syncValueState = (nextValue: string) => {
-      if (inputValue.value !== nextValue) inputValue.value = nextValue;
+    const inputRef = ref<HTMLInputElement>();
 
-      if (committedValue.value !== nextValue) committedValue.value = nextValue;
-    };
+    const tf = useTextField(
+      {
+        disabled: fCtxProps.disabled,
+        error: undefined,
+        helper: undefined,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        onChange: (event, value) => {
+          const n = value !== '' ? Number.parseFloat(value) : null;
 
-    bind({
-      attr: {
-        size: fCtxProps.size,
-        value: () => committedValue.value || null,
-        variant: fCtxProps.variant,
+          commit(Number.isNaN(n ?? NaN) ? null : n, event);
+        },
+        onInput: (event, value) => {
+          const n = value !== '' ? Number.parseFloat(value) : null;
+
+          emit('input', { originalEvent: event, value: Number.isNaN(n ?? NaN) ? null : n });
+        },
+        prefix: 'number-input',
+        validateOn: formCtx?.validateOn,
+        value: computed(() => normalizeValue(props.value.value)),
       },
-    });
-
-    defineField({
-      disabled: isDisabled,
-      value: computed(() => (inputValue.value !== '' ? inputValue.value : null)),
-    });
-
-    watch(
-      props.value,
-      (v) => {
-        syncValueState(normalizeValue(v));
-      },
-      { immediate: true },
+      defineField,
+      onCleanup,
     );
+
+    const { abortSignal, aria, assistive, assistiveId, label, value: fieldValue } = tf;
+
     function clamp(n: number): number {
       const min = props.min.value;
       const max = props.max.value;
@@ -154,8 +149,9 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
       return n;
     }
+
     function parseValue(): number | null {
-      const v = inputValue.value.trim();
+      const v = fieldValue.value.trim();
 
       if (!v) return null;
 
@@ -163,11 +159,12 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
       return Number.isNaN(n) ? null : n;
     }
+
     function commit(val: number | null, originalEvent?: Event) {
       const clamped = val != null ? clamp(val) : null;
       const nextValue = clamped != null ? String(clamped) : '';
 
-      syncValueState(nextValue);
+      if (fieldValue.value !== nextValue) fieldValue.value = nextValue;
 
       emit('change', { originalEvent, value: clamped });
     }
@@ -183,9 +180,15 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       step: props.step,
     });
 
-    function handleKeydown(e: KeyboardEvent) {
-      spinner.handleKeydown(e);
-    }
+    onElement(inputRef, (el) => tf.wire(el, abortSignal));
+
+    bind({
+      attr: {
+        size: fCtxProps.size,
+        value: () => fieldValue.value || null,
+        variant: fCtxProps.variant,
+      },
+    });
 
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
@@ -200,7 +203,7 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
         :aria-label="${() => props.label.value}"
         :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
         :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
-        @keydown="${handleKeydown}">
+        @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
         <button
           type="button"
           part="decrement-btn"
@@ -209,50 +212,51 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
           @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
           <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
         </button>
-        <bit-input
-          part="input"
-          type="text"
-          inputmode="decimal"
-          aria-hidden="true"
-          :value="${inputValue}"
-          :label="${() => props.label.value}"
-          :label-placement="${() => props['label-placement'].value}"
-          :placeholder="${() => props.placeholder.value}"
-          :color="${() => props.color.value}"
-          :size="${() => props.size.value}"
-          :variant="${() => props.variant.value}"
-          ?disabled="${isDisabled}"
-          ?readonly="${isReadonly}"
-          @input="${(e: Event) => {
-            const v = (
-              e as CustomEvent<{
-                value?: string;
-              }>
-            ).detail?.value;
-
-            if (typeof v !== 'string') return;
-
-            inputValue.value = v;
-
-            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
-
-            emit('input', { originalEvent, value: parseValue() });
-          }}"
-          @change="${(e: Event) => {
-            const v = (
-              e as CustomEvent<{
-                value?: string;
-              }>
-            ).detail?.value;
-
-            if (typeof v !== 'string') return;
-
-            inputValue.value = v;
-
-            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
-
-            commit(parseValue(), originalEvent);
-          }}"></bit-input>
+        <div class="field-wrapper" part="field">
+          <label
+            class="label-outside"
+            for="${tf.fieldId}"
+            id="${label.outside.id}"
+            part="label"
+            ?hidden="${() => !label.outside.show.value}"
+            >${props.label}</label
+          >
+          <div class="field" part="input-wrapper">
+            <label
+              class="label-inset"
+              for="${tf.fieldId}"
+              id="${label.inset.id}"
+              part="label"
+              ?hidden="${() => !label.inset.show.value}"
+              >${props.label}</label
+            >
+            <input
+              part="input"
+              id="${tf.fieldId}"
+              type="text"
+              inputmode="decimal"
+              :name="${props.name}"
+              :placeholder="${props.placeholder}"
+              ?disabled="${isDisabled}"
+              ?readonly="${isReadonly}"
+              :value="${live(fieldValue)}"
+              :aria-labelledby="${aria.labelledBy}"
+              :aria-describedby="${aria.describedBy}"
+              :aria-errormessage="${aria.errorMessage}"
+              :aria-invalid="${aria.invalid}"
+              ref="${inputRef}" />
+          </div>
+          <div
+            class="helper-text"
+            id="${assistiveId}"
+            part="helper"
+            ?hidden="${() => !!assistive.value.errorText || !assistive.value.helperText}">
+            ${() => assistive.value.helperText}
+          </div>
+          <div class="helper-text" role="alert" part="error" ?hidden="${() => !assistive.value.errorText}">
+            ${() => assistive.value.errorText}
+          </div>
+        </div>
         <button
           type="button"
           part="increment-btn"

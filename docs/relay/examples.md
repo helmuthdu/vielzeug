@@ -15,4 +15,5 @@ description: Practical examples and recipes for relay.
 - [Handling Disposal In Async Code](./examples/handling-disposal-in-async-code.md)
 - [Request Scoping](./examples/request-scoping.md)
 - [Streaming With Events](./examples/streaming-with-events.md)
+- [Bus Bridging With pipeEvents](./examples/bus-bridging-with-pipeevents.md)
 - [Testing With Createtestbus](./examples/testing-with-createtestbus.md)

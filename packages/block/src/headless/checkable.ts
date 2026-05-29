@@ -1,4 +1,5 @@
-import { type ReadonlySignal, type Signal, computed, signal, syncedSignal } from '@vielzeug/ripple';
+import { syncedSignal } from '@vielzeug/craft';
+import { type ReadonlySignal, type Signal, computed, signal } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from './field-base';
 

@@ -1,19 +1,15 @@
 ---
 title: Craft — Usage Guide
-description: Practical Craft usage patterns for components, props, templates, slots, context, forms, controls, observers, and tests.
+description: Practical Craft usage patterns for components, props, templates, slots, context, forms, observers, and tests.
 ---
 
 [[toc]]
-
-::: tip New to Craft?
-Start with the [Overview](./index.md) for the package surface, then use this page for day-to-day authoring patterns.
-:::
 
 ## define and component structure
 
 `define(tag, definition)` registers a custom element and returns the tag name.
 
-Your `setup()` function receives prop signals and a typed context bag, then returns a template function.
+Your `setup()` function receives typed prop signals and a context bag, then returns an `HTMLResult` directly.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craft';
@@ -22,9 +18,25 @@ define('status-chip', {
   setup() {
     const online = signal(true);
 
-    return () => html`
-      <button @click=${() => (online.value = !online.value)}>${() => (online.value ? 'Online' : 'Offline')}</button>
+    return html`
+      <button @click=${() => (online.value = !online.value)}>
+        ${() => (online.value ? 'Online' : 'Offline')}
+      </button>
     `;
+  },
+});
+```
+
+The setup context bag provides `el`, `bind`, `emit`, and `slots`:
+
+```ts
+define('my-widget', {
+  setup(_props, { el, bind, emit, slots }) {
+    // el — the host HTMLElement
+    // bind — host binding helper (attr, class, style, prop, on)
+    // emit — typed event emitter
+    // slots — reactive slot observation
+    return html`<slot></slot>`;
   },
 });
 ```
@@ -69,7 +81,7 @@ define('deferred-init', {
       console.log('Found', items.length, 'items', tabIndex.value);
     });
 
-    return () => html`<div><slot name="items"></slot></div>`;
+    return html`<div><slot name="items"></slot></div>`;
   },
 });
 ```
@@ -78,9 +90,7 @@ For ref-driven DOM work, prefer `onElement()`.
 
 ## prop definitions
 
-Define props directly on the component. There is no `defineProps()` helper.
-
-Use `prop.*` helpers for common cases, or raw `PropDef` objects when you need custom parsing or `reflect: false`.
+Use `prop.*` helpers for common cases, or raw `PropDef` objects for custom parsing or `reflect: false`.
 
 ```ts
 import { define, html, prop } from '@vielzeug/craft';
@@ -93,8 +103,10 @@ define('x-button', {
     count: prop.number(0),
   },
   setup(props) {
-    return () => html`
-      <button ?disabled=${props.disabled} :data-variant=${props.variant}>${props.label} (${props.count})</button>
+    return html`
+      <button ?disabled=${props.disabled} :data-variant=${props.variant}>
+        ${props.label} (${props.count})
+      </button>
     `;
   },
 });
@@ -112,12 +124,12 @@ define('profile-name', {
     const name = signal('Alice');
     const inputRef = ref<HTMLInputElement>();
 
-    return () => html`
-      <label :title=${computed(() => `Current: ${name.value}`)}>Name</label>
+    return html`
+      <label :title=${computed(() => 'Current: ' + name.value)}>Name</label>
       <input
         ref=${inputRef}
-        .value=${name}
-        :aria-label=${() => `Current name ${name.value}`}
+        :value=${name}
+        :aria-label=${() => 'Current name ' + name.value}
         @input=${(event: Event) => {
           name.value = (event.target as HTMLInputElement).value;
         }} />
@@ -129,7 +141,7 @@ define('profile-name', {
 
 ## directives
 
-`html` supports `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, and `raw`.
+Craft includes `each`, `classMap`, `styleMap`, `when`, `live`, and `raw`.
 
 ```ts
 import { classMap, define, each, html, signal, styleMap, when } from '@vielzeug/craft';
@@ -139,7 +151,7 @@ define('task-list', {
     const tasks = signal([{ id: 1, text: 'Write tests' }]);
     const active = signal(true);
 
-    return () => html`
+    return html`
       <ul
         class="${classMap({ ready: () => tasks.value.length > 0 })}"
         :style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}>
@@ -148,14 +160,33 @@ define('task-list', {
           () => html`<li>Active</li>`,
           () => html`<li>Paused</li>`,
         )}
-        ${each(tasks, {
-          key: (task) => task.id,
-          render: (task) => html`<li>${task.text}</li>`,
-        })}
+        ${each(
+          tasks,
+          (task) => task.id,
+          (task) => html`<li>${() => task.value.text}</li>`,
+        )}
       </ul>
     `;
   },
 });
+```
+
+### each() API
+
+`each(source, key, render, fallback?)` takes positional arguments:
+
+- **source** — signal, getter, or plain array
+- **key** — function returning a unique key per item
+- **render** — receives reactive `item` and `index` signals
+- **fallback** — optional, rendered when the list is empty
+
+```ts
+each(
+  items,
+  (item) => item.id,
+  (item, index) => html`<li>#${index}: ${() => item.value.label}</li>`,
+  () => html`<li>No items</li>`,
+)
 ```
 
 ## live form bindings
@@ -169,35 +200,63 @@ define('live-search', {
   setup() {
     const query = signal('');
 
-    return () =>
-      html`<input
+    return html`
+      <input
         :value=${live(query)}
-        @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />`;
+        @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+    `;
   },
 });
 ```
 
 ## host bindings
 
-Use setup-context `host` when wiring the custom element itself.
+The setup context provides `bind` for wiring the host element.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craft';
 
 define('x-toggle', {
-  setup(_props, { host }) {
+  setup(_props, { bind }) {
     const open = signal(false);
 
-    host.bind({
+    bind({
       attr: { 'aria-expanded': () => String(open.value), role: 'button', tabindex: 0 },
       class: { 'is-open': open },
       on: { click: () => (open.value = !open.value) },
     });
 
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
 });
 ```
+
+The `bind` config supports `attr`, `class`, `style`, `prop`, and `on` sections. You can also call `createBind(el)` directly for advanced use cases outside setup context.
+
+## slots and emits
+
+```ts
+import { define, html, when } from '@vielzeug/craft';
+
+define('card-with-footer', {
+  slots: ['header', 'footer'] as const,
+  setup(_props, { slots, emit }) {
+    return html`
+      <div class="card">
+        <slot name="header"></slot>
+        <slot></slot>
+        ${when(
+          slots.has('footer'),
+          () => html`<footer><slot name="footer"></slot></footer>`,
+        )}
+      </div>
+      <button @click=${() => emit('action')}>Go</button>
+    `;
+  },
+});
+```
+
+When `slots` is declared as a `const` array, TypeScript narrows `slots.has()` and `slots.elements()` to only accept declared names.
 
 ## context provide/inject
 
@@ -211,7 +270,7 @@ define('count-provider', {
     const count = signal(0);
     provide(COUNT_CTX, count);
 
-    return () => html`<button @click=${() => count.value++}><slot></slot></button>`;
+    return html`<button @click=${() => count.value++}><slot></slot></button>`;
   },
 });
 
@@ -219,14 +278,60 @@ define('count-consumer', {
   setup() {
     const count = injectStrict(COUNT_CTX);
 
-    return () => html`<p>Count: ${count}</p>`;
+    return html`<p>Count: ${count}</p>`;
+  },
+});
+```
+
+## form-associated elements
+
+```ts
+import { define, defineField, html, prop, signal } from '@vielzeug/craft';
+
+define('rating-input', {
+  formAssociated: true,
+  setup() {
+    const value = signal(0);
+    const field = defineField({ value });
+
+    return html`
+      <button @click=${() => (value.value = 1)}>1</button>
+      <button @click=${() => (value.value = 2)}>2</button>
+      <button @click=${() => (value.value = 3)}>3</button>
+      <button @click=${() => field.reportValidity()}>Validate</button>
+      <p>Current: ${value}</p>
+    `;
+  },
+});
+```
+
+## suspend
+
+`suspend()` runs an async function and returns a reactive signal that transitions through loading → resolved/error states.
+
+```ts
+import { define, html, suspend } from '@vielzeug/craft';
+
+define('user-profile', {
+  props: { userId: prop.string('1') },
+  setup(props) {
+    const profile = suspend(
+      () => fetch('/api/users/' + props.userId.value).then((r) => r.json()),
+      {
+        fallback: () => html`<p>Loading…</p>`,
+        error: (e) => html`<p>Error: ${String(e)}</p>`,
+        render: (user) => html`<p>${user.name}</p>`,
+      },
+    );
+
+    return html`<div>${profile}</div>`;
   },
 });
 ```
 
 ## platform observers
 
-Observer helpers from `@vielzeug/craft/observers` should run in `onMounted()`.
+Observer helpers from `@vielzeug/craft/observers` require real DOM nodes, so call them in `onMounted()`.
 
 ```ts
 import { define, effect, html, onMounted, ref } from '@vielzeug/craft';
@@ -249,97 +354,101 @@ define('x-observed', {
       });
     });
 
-    return () => html`<div ref=${boxRef}>Observe me</div>`;
+    return html`<div ref=${boxRef}>Observe me</div>`;
   },
+});
+```
+
+## testing utilities
+
+Import from `@vielzeug/craft/testing`.
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { html, signal } from '@vielzeug/craft';
+import { cleanup, fire, flush, mount, waitFor } from '@vielzeug/craft/testing';
+
+describe('my-counter', () => {
+  afterEach(cleanup);
+
+  it('increments on click', async () => {
+    let count!: ReturnType<typeof signal<number>>;
+    const { query, act } = await mount(() => {
+      count = signal(0);
+      return html`<button @click=${() => count.value++}>${count}</button>`;
+    });
+
+    expect(query('button')?.textContent).toBe('0');
+
+    await act(() => fire.click(query('button')!));
+
+    expect(query('button')?.textContent).toBe('1');
+  });
 });
 ```
 
 ## Framework Integration
 
-Craft components are standard custom elements and work natively in any framework without adapters.
+Craft components are standard custom elements and work natively in any framework.
 
 ::: code-group
 
 ```tsx [React]
 // React 19+ supports custom elements natively.
-// For earlier versions, use react-to-webcomponent or a thin wrapper.
-import '@vielzeug/block'; // or your own craft components
+import '@vielzeug/block';
 
-// React 19 — custom element props are passed directly
 function App() {
-  return (
-    <div>
-      <x-toggle aria-label="Open menu" />
-      <count-provider>
-        <count-consumer />
-      </count-provider>
-    </div>
-  );
+  return <x-toggle aria-label="Open menu" />;
 }
 ```
 
 ```ts [Vue 3]
-// Vue 3 resolves custom elements by tag name automatically.
-// Mark your tags as custom elements so Vue does not warn about unknown components.
-// vite.config.ts: vue({ template: { compilerOptions: { isCustomElement: (t) => t.includes('-') } } })
+<script setup lang="ts">
+import '@vielzeug/block';
+import { ref } from 'vue';
 
-// In a component:
-// <template>
-//   <x-toggle :aria-label="label" @click="handleClick" />
-//   <count-provider>
-//     <count-consumer />
-//   </count-provider>
-// </template>
+const open = ref(false);
+</script>
+
+<template>
+  <x-toggle :aria-label="'Open menu'" @click="open = !open" />
+</template>
 ```
 
 ```svelte [Svelte]
-<!-- Svelte supports custom elements out of the box. -->
 <script>
-  import '@vielzeug/block'; // or your own craft components
-  let label = 'Open menu';
+  import '@vielzeug/block';
+
+  function handleClick() {
+    console.log('toggled');
+  }
 </script>
 
-<x-toggle aria-label={label} on:click={handleClick} />
-<count-provider>
-  <count-consumer />
-</count-provider>
+<x-toggle aria-label="Open menu" on:click={handleClick} />
 ```
 
 :::
 
-
-### Pitfalls
-
-- **React:** Complex object props cannot be passed as JSX attributes — they serialize to `[object Object]`. Use a `ref` and set them imperatively inside `useEffect`.
-- **Vue 3:** Without `isCustomElement` in your Vite config, Vue 3 logs "Unknown custom element" warnings for every Craft component. Set it once in `vite.config.ts`.
-- **Svelte:** Custom event names emitted via `dispatchEvent()` must match exactly in `on:event-name` — Svelte does not normalize casing.
-
 ## Working with Other Vielzeug Libraries
 
-### With Orbit
+### With Ripple
 
-Use `orbit` to position tooltips and popovers inside a craft component.
+Craft re-exports core ripple primitives, but you can import ripple directly for standalone reactive state outside components.
 
 ```ts
-import { define, html, onMounted, ref } from '@vielzeug/craft';
-import { computePosition, offset, flip } from '@vielzeug/orbit';
+import { signal, computed } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
-define('x-tooltip', {
+// Shared state created outside any component
+const theme = signal<'light' | 'dark'>('light');
+const isDark = computed(() => theme.value === 'dark');
+
+define('theme-toggle', {
   setup() {
-    const triggerRef = ref<HTMLElement>();
-    const tooltipRef = ref<HTMLElement>();
-
-    onMounted(() => {
-      const trigger = triggerRef.value!;
-      const tooltip = tooltipRef.value!;
-      computePosition(trigger, tooltip, { middleware: [offset(6), flip()] }).then(({ x, y }) => {
-        Object.assign(tooltip.style, { left: `${x}px`, top: `${y}px`, position: 'absolute' });
-      });
-    });
-
-    return () => html`
-      <button ref=${triggerRef}>Hover me</button>
-      <div ref=${tooltipRef} role="tooltip"><slot></slot></div>
+    return html`
+      <button @click=${() => (theme.value = isDark.value ? 'light' : 'dark')}>
+        ${() => (isDark.value ? '☀️' : '🌙')}
+      </button>
     `;
   },
 });
@@ -347,31 +456,25 @@ define('x-tooltip', {
 
 ### With Forge
 
-Use `forge` for form state and validation inside a craft form component.
+Use `@vielzeug/forge` for typed form state and validation alongside Craft's `defineField()` for form-associated elements.
 
 ```ts
-import { define, html } from '@vielzeug/craft';
 import { createForm } from '@vielzeug/forge';
+import { s } from '@vielzeug/sieve';
+import { define, html, provideFormContext } from '@vielzeug/craft';
 
-define('login-form', {
+define('signup-form', {
   setup() {
     const form = createForm({
       defaultValues: { email: '', password: '' },
-      validators: {
-        email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
-      },
+      validator: s.object({ email: s.string().email(), password: s.string().min(8) }),
     });
 
-    return () => html`
-      <form @submit=${async (e: SubmitEvent) => {
-        e.preventDefault();
-        await form.submit(async (values) => fetch('/api/login', { method: 'POST', body: JSON.stringify(values) }));
-      }}>
-        <input
-          name="email"
-          .value=${form.field('email').state.value}
-          @input=${(e: Event) => form.set('email', (e.target as HTMLInputElement).value)} />
-        <button type="submit">Login</button>
+    provideFormContext(form);
+
+    return html`
+      <form @submit.prevent=${() => form.submit()}>
+        <slot></slot>
       </form>
     `;
   },
@@ -380,10 +483,10 @@ define('login-form', {
 
 ## Best Practices
 
-- Prefer `onMounted()` for DOM-dependent work and `setup()` for reactive logic.
-- Use `effect()` inside `setup()` — not inside `onMounted()` — to keep reactive subscriptions tied to component lifetime.
+- Setup returns `html\`...\`` directly — not a function wrapping the template.
+- Use `effect()` inside `setup()` for reactive subscriptions tied to component lifetime.
 - Use `onElement(ref, cb)` instead of `onMounted` when the work is tied to a single DOM node.
-- Bind host attributes and classes via `host.bind()` rather than mutating the element directly.
+- Bind host attributes and classes via `bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor — avoid global context singletons.
 - Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, event listeners).
 - Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.

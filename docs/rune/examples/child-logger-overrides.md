@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Child Logger Overrides'
-description: 'Child Logger Overrides examples for rune.'
+description: 'Child Logger Overrides example for @vielzeug/rune.'
 ---
 
 ## Child Logger Overrides
@@ -10,6 +10,8 @@ description: 'Child Logger Overrides examples for rune.'
 A sub-module needs its own log level or namespace without losing the parent's configuration. Creating a child logger via `child()` or `withBindings()` scopes the override without affecting other callers.
 
 ### Solution
+
+Use `child(overrides)` to change level or namespace on a derived logger, or `withBindings(fields)` to pin request-scoped context on every call.
 
 ```ts
 import { createLogger } from '@vielzeug/rune';
@@ -38,3 +40,4 @@ reqLog.warn({ slow: true }, 'query took 2s');
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
 - [React Integration](./react-integration.md)
+- [Error Handling (Courier)](/courier/examples/error-handling-patterns)

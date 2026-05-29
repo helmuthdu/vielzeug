@@ -94,9 +94,9 @@ export function compilePathMatcher(path: string): RouteMatcher {
   };
 }
 
-export function matchRecord<TRoutes extends RouteTable = RouteTable>(
+export function matchRecord<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  record: RouteRecord<TRoutes>,
+  record: RouteRecord<TRoutes, TMeta, TComponent>,
 ): RouteParams | null {
   const match = record.matcher.pattern.exec(pathname);
 
@@ -113,10 +113,10 @@ export function matchRecord<TRoutes extends RouteTable = RouteTable>(
   return params;
 }
 
-export function matchRoute(
+export function matchRouteFor<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  records: readonly RouteRecord[],
-): { params: RouteParams; record?: RouteRecord } {
+  records: readonly RouteRecord<TRoutes, TMeta, TComponent>[],
+): { params: RouteParams; record?: RouteRecord<TRoutes, TMeta, TComponent> } {
   for (const record of records) {
     const params = matchRecord(pathname, record);
 
@@ -126,22 +126,9 @@ export function matchRoute(
   return { params: {} };
 }
 
-export function matchRouteFor<TRoutes extends RouteTable = RouteTable>(
+export function matchesPrefix<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  records: readonly RouteRecord<TRoutes>[],
-): { params: RouteParams; record?: RouteRecord<TRoutes> } {
-  for (const record of records) {
-    const params = matchRecord(pathname, record);
-
-    if (params) return { params, record };
-  }
-
-  return { params: {} };
-}
-
-export function matchesPrefix<TRoutes extends RouteTable = RouteTable>(
-  pathname: string,
-  record: RouteRecord<TRoutes>,
+  record: RouteRecord<TRoutes, TMeta, TComponent>,
 ): boolean {
   return record.matcher.prefixPattern.test(pathname);
 }

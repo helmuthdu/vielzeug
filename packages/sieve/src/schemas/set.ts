@@ -1,6 +1,6 @@
-import type { Issue, MessageFn, ParseResult, Schema as BaseSchema } from '../core';
+import type { Issue, MessageFn, ParseResult, Schema as BaseSchema, SchemaDescriptor } from '../core';
 
-import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
+import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
@@ -67,19 +67,12 @@ export class SetSchema<T> extends Schema<Set<T>> {
     size: number,
     message: MessageFn<{ min: number; value: Set<unknown> }> = (ctx) => _messages().set.min(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Set<unknown>;
 
       if (typed.size >= size) return null;
 
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { min: size, value: typed }),
-          params: { min: size },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_small, resolveMessage(message, { min: size, value: typed }), { min: size });
     });
   }
 
@@ -87,19 +80,12 @@ export class SetSchema<T> extends Schema<Set<T>> {
     size: number,
     message: MessageFn<{ max: number; value: Set<unknown> }> = (ctx) => _messages().set.max(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Set<unknown>;
 
       if (typed.size <= size) return null;
 
-      return [
-        {
-          code: ErrorCode.too_big,
-          message: resolveMessage(message, { max: size, value: typed }),
-          params: { max: size },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.too_big, resolveMessage(message, { max: size, value: typed }), { max: size });
     });
   }
 
@@ -107,32 +93,37 @@ export class SetSchema<T> extends Schema<Set<T>> {
     exact: number,
     message: MessageFn<{ exact: number; value: Set<unknown> }> = (ctx) => _messages().set.size(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Set<unknown>;
 
       if (typed.size === exact) return null;
 
-      return [
-        {
-          code: ErrorCode.invalid_length,
-          message: resolveMessage(message, { exact, value: typed }),
-          params: { exact },
-          path: [],
-        },
-      ];
+      return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: typed }), { exact });
     });
   }
 
   nonEmpty(message: MessageFn<{ min: number }> = () => _messages().set.nonEmpty()): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Set<unknown>;
 
       if (typed.size > 0) return null;
 
-      return [
-        { code: ErrorCode.too_small, message: resolveMessage(message, { min: 1 }), params: { min: 1 }, path: [] },
-      ];
+      return fail(ErrorCode.too_small, resolveMessage(message, { min: 1 }), { min: 1 });
     });
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { $comment: 'Set<T> — no JSON Schema equivalent' };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      item: this.itemSchema.describe(),
+      kind: 'set',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

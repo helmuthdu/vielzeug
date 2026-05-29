@@ -6,12 +6,12 @@ const i18n = createI18n({
   catalogs: {
     en: {
       greeting: 'Hello, {name}!',
-      deep: 'User: {user.name}',
+      status: '{user} has {count} unread messages',
     },
   },
 })
 
-console.log(i18n.t('greeting', { vars: { name: 'Bob' } }))
-console.log(i18n.t('deep', { vars: { user: { name: 'Alice' } } }))`,
+console.log(i18n.t('greeting', { name: 'Bob' }))
+console.log(i18n.t('status', { user: 'Alice', count: 5 }))`,
   name: 'Variable Interpolation',
 };

@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Optimistic Updates'
-description: 'Optimistic Updates examples for courier.'
+description: 'Optimistic Updates example for @vielzeug/courier.'
 ---
 
 ## Optimistic Updates
@@ -10,6 +10,8 @@ description: 'Optimistic Updates examples for courier.'
 To feel instant, the UI should reflect a mutation's expected result immediately — before the server confirms it. If the server rejects the change, the UI must roll back to the previous state.
 
 ### Solution
+
+Use `qc.set()` to write the optimistic value before calling `mutate()`, then call `qc.invalidate()` in the catch block to restore server state on failure.
 
 ```ts
 const userId = 1;

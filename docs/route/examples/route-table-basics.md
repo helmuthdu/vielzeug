@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — Route Table Basics'
-description: Define routes declaratively and navigate by route name.
+description: 'Route table basics example for @vielzeug/route.'
 ---
 
 ## Route Table Basics
 
-Build the router from one declarative table and use route names everywhere else. Nested routes and `data()` stay inside that same table.
+### Problem
+
+Routing logic scattered across event handlers leads to duplicated path strings and no single place to add cross-cutting concerns like middleware or data loading.
+
+### Solution
+
+Define all routes in one declarative table passed to `createRouter()`. Named routes eliminate duplicated path strings everywhere else in the app.
 
 ```ts
 import { createRouter } from '@vielzeug/route';
@@ -48,10 +54,14 @@ await router.navigate({ name: 'dashboard.settings' });
 const href = router.url('userDetail', { id: '42' }, { tab: 'profile' });
 ```
 
-Use object key order to control precedence for ambiguous routes. Nested children get compound names like `dashboard.settings`.
+### Pitfalls
+
+- Object key order controls match precedence. Place `notFound: { path: '*' }` last, or it will match every route.
+- Child route `path` values are relative to the parent. Omit the leading slash: `path: 'settings'`, not `path: '/settings'`.
+- A route key that contains a dot (e.g., `'user.detail'`) will clash with nested compound names. Avoid dots in top-level keys.
 
 ### Related
 
 - [Auth and Guards](./auth-and-guards.md)
-- [Page State (Ripple)](@vielzeug/ripple/examples/pattern-shared-module-store)
 - [Not Found and Error Boundary](./not-found-and-error-boundary.md)
+- [Ripple — reactive state](/ripple/)

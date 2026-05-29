@@ -16,11 +16,14 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 /** -------------------- Core Types -------------------- **/
 
 export type RouteParams = Record<string, string>;
-/** Raw URL query object parsed from the location/search string. */
+
+/** Raw URL query object parsed from the location search string. Values are always strings. */
 export type QueryParams = Record<string, string | string[]>;
-/** Query object after optional route-level coercion (e.g. numbers/booleans). */
+
+/** Query object after route-level coercion via `coerceSearch`. Values may be numbers or booleans. */
 export type ResolvedQueryValue = boolean | number | string;
 export type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQueryValue[]>;
+
 export type MaybePromise<T> = T | Promise<T>;
 export type NavigationStatus = 'idle' | 'loading' | 'error';
 export type IsActiveOptions = {
@@ -34,20 +37,24 @@ export type RouterErrorContext = {
   readonly source: RouterErrorSource;
 };
 
-/** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
-export type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (raw: ResolvedQueryParams) => Q;
+/**
+ * Per-route search-param coercion function.
+ * Receives raw parsed strings and returns typed values (e.g. numbers, booleans).
+ * Throwing inside this function falls back to the original raw query.
+ */
+export type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (raw: QueryParams) => Q;
 
-/** Blocker callback for `beforeLeave`. Return `true` to allow the navigation, `false` to cancel it. */
+/** Blocker callback for `beforeLeave` and route-level `onLeave`. Return `true` to allow, `false` to cancel. */
 export type BeforeLeaveBlocker = () => MaybePromise<boolean>;
 
 export type NavigateOptions = {
-  /** Navigate even if the destination URL matches the current URL */
+  /** Navigate even if the destination URL matches the current URL. */
   force?: boolean;
-  /** Replace the current history entry instead of pushing a new one */
+  /** Replace the current history entry instead of pushing a new one. */
   replace?: boolean;
-  /** Additional state stored with the history entry */
+  /** Additional state stored with the history entry. */
   state?: unknown;
-  /** Override the router-level `viewTransition` setting for this navigation */
+  /** Override the router-level `viewTransition` setting for this navigation. */
   viewTransition?: boolean;
 };
 
@@ -55,7 +62,7 @@ export type RawNavigationTarget = {
   path: string;
 };
 
-/** Named-route navigation target. */
+/** Named-route navigation target (untyped). Prefer `NamedNavigationTarget<TRoutes>` when the route table is available. */
 export type UntypedNamedNavigationTarget = {
   hash?: string;
   name: string;
@@ -65,13 +72,17 @@ export type UntypedNamedNavigationTarget = {
 
 export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarget;
 
+// ─── Route Context Types ──────────────────────────────────────────────────────
+
+/**
+ * Context available in middleware and data loaders.
+ * `query` reflects the coerced output of `coerceSearch` when defined, otherwise raw URL strings widened to ResolvedQueryParams.
+ */
 export type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
-  /** Result from the route's `data()` function. Available in the handler; undefined in middleware. */
-  readonly data?: unknown;
   readonly hash: string;
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
-  /** Mutable bag for passing data between middlewares */
+  /** Mutable bag for passing values between middleware functions. */
   locals: Record<string, unknown>;
   /** Matched branch for the current navigation. Leaf node is the active route. */
   readonly matches: RouteMatchBranch;
@@ -95,9 +106,20 @@ export type DataContext<
   readonly signal: AbortSignal;
 };
 
-/** Handler may be sync or async - async return values are implicitly awaited by the router. */
+/**
+ * Context passed to route `handler` functions. Extends RouteContext with the resolved
+ * data loader result. Available only inside handlers; not present during middleware.
+ */
+export type HandlerContext<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = RouteContext<Params, TRoutes> & {
+  readonly data: unknown;
+};
+
+/** Handler may be sync or async. Async return values are awaited by the router. */
 export type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
-  context: RouteContext<Params, TRoutes>,
+  context: HandlerContext<Params, TRoutes>,
 ) => MaybePromise<void>;
 
 /**
@@ -115,14 +137,21 @@ export type Middleware<TRoutes extends RouteTable = RouteTable> = (
   next: () => Promise<void>,
 ) => void | Promise<void>;
 
+// ─── Route Definition Types ───────────────────────────────────────────────────
+
 type RouteCommon = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
   /** Optional view payload for framework-level RouterView rendering. */
   component?: unknown;
   meta?: unknown;
-  /** Use `middleware` for auth guards, analytics, and error boundaries. */
+  /** Middleware for auth guards, analytics, and error boundaries. */
   middleware?: Middleware[];
+  /**
+   * Per-route leave guard. Called before navigating away from this matched route.
+   * Return `false` to block navigation. Unlike global `beforeLeave`, only fires when this specific route is active.
+   */
+  onLeave?: BeforeLeaveBlocker;
 };
 
 type PathRouteShape<Path extends string = string> = {
@@ -141,7 +170,7 @@ type RoutePathShape<Path extends string = string> = PathRouteShape<Path> | Index
 
 type ContentRouteDefinition<Path extends string = string> = RouteCommon &
   RoutePathShape<Path> & {
-    /** Normalize/coerce search params for this route. Throwing keeps the original search params unchanged. */
+    /** Normalize/coerce raw search params for this route. Throwing falls back to raw strings. */
     coerceSearch?: CoerceSearchFn;
     /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
     data?: DataFn<PathParams<Path>>;
@@ -166,6 +195,8 @@ export type RouteChildren = Record<string, RouteDefinition<string>>;
 export type RouteDefinition<Path extends string = string> =
   | ContentRouteDefinition<Path>
   | RedirectRouteDefinition<Path>;
+
+// ─── Type-safe route traversal ─────────────────────────────────────────────────
 
 type JoinPath<Parent extends string, Child extends string> = Child extends `/${string}`
   ? Child
@@ -220,7 +251,68 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
   };
 }[RouteName<TRoutes>];
 
-export type Unsubscribe = () => void;
+// ─── Route state types ─────────────────────────────────────────────────────────
+
+/**
+ * A single node in the matched route branch (root → leaf).
+ * `TMeta` and `TComponent` are router-level type parameters set at `createRouter` call.
+ */
+export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
+  /** Optional view payload copied from route `component` or lazy module output. */
+  readonly component: TComponent;
+  /** Result of the route's `data()` function, or `undefined` if none was defined. */
+  readonly data: unknown;
+  readonly meta: TMeta;
+  readonly name: string;
+  readonly params: RouteParams;
+  readonly pathname: string;
+};
+
+/** Ordered array of matched route nodes from the root layout down to the active leaf. */
+export type RouteMatchBranch<TMeta = unknown, TComponent = unknown> = readonly RouteMatch<TMeta, TComponent>[];
+
+export type RouteLocation = {
+  readonly hash: string;
+  /** State object stored on the history entry (mirrors `history.state`). */
+  readonly historyState: unknown;
+  readonly pathname: string;
+  /**
+   * Raw parsed query params — always string values from URL parsing.
+   * For coerced values (numbers, booleans), access `ctx.query` inside middleware or handlers.
+   */
+  readonly query: QueryParams;
+};
+
+export type RouteState<TMeta = unknown, TComponent = unknown> = {
+  /** The error thrown by a `data()` function. Only set when `status === 'error'`. */
+  readonly error?: unknown;
+  readonly location: RouteLocation;
+  /** Matched route branch from root to leaf, including per-node data loader results. */
+  readonly matches: RouteMatchBranch<TMeta, TComponent>;
+  /** `idle` after a successful navigation, `loading` while data is in-flight, `error` when a data loader threw. */
+  readonly status: NavigationStatus;
+};
+
+// ─── Router configuration ──────────────────────────────────────────────────────
+
+export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown> = {
+  /** Base path for all routes (default: '/'). */
+  base?: string;
+  /** Custom history driver. Defaults to `createBrowserHistory()`. */
+  history?: HistoryDriver;
+  /** Global middleware applied to every route. Use for authentication, analytics, and error boundaries. */
+  middleware?: Middleware<TRoutes>[];
+  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload). */
+  onError?: (error: unknown, context: RouterErrorContext) => void;
+  /** Declarative route table. Object key order determines match precedence — place specific routes before wildcards. */
+  routes: TRoutes;
+  /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
+  scroll?: (to: RouteState<TMeta, TComponent>, from: RouteState<TMeta, TComponent>) => ScrollDecision;
+  /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
+  viewTransition?: boolean;
+};
+
+// ─── History driver ────────────────────────────────────────────────────────────
 
 /** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs, `createMemoryHistory()` for SSR/tests. */
 export interface HistoryDriver {
@@ -236,52 +328,4 @@ export interface HistoryDriver {
   subscribe(listener: () => void): () => void;
 }
 
-/** A single node in the matched route branch (root → leaf). */
-export type RouteMatch = {
-  /** Optional view payload copied from route `component` or lazy module output. */
-  readonly component: unknown;
-  /** Result of the route's `data()` function, or `undefined` if none was defined. */
-  readonly data: unknown;
-  readonly meta: unknown;
-  readonly name: string;
-  readonly params: RouteParams;
-  readonly pathname: string;
-};
-
-/** Ordered array of matched route nodes from the root layout down to the active leaf. */
-export type RouteMatchBranch = readonly RouteMatch[];
-
-export type RouteLocation = {
-  readonly hash: string;
-  /** State object stored on the history entry (mirrors `history.state`). */
-  readonly historyState: unknown;
-  readonly pathname: string;
-  readonly query: ResolvedQueryParams;
-};
-
-export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
-  /** Base path for all routes (default: '/') */
-  base?: string;
-  /** Custom history driver. Defaults to `createBrowserHistory()`. */
-  history?: HistoryDriver;
-  /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
-  middleware?: Middleware<TRoutes>[];
-  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload). */
-  onError?: (error: unknown, context: RouterErrorContext) => void;
-  /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
-  routes: TRoutes;
-  /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
-  scroll?: (to: RouteState, from: RouteState) => ScrollDecision;
-  /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
-  viewTransition?: boolean;
-};
-
-export type RouteState = {
-  /** The error thrown by a `data()` function. Only set when `status === 'error'`. */
-  readonly error?: unknown;
-  readonly location: RouteLocation;
-  /** Matched route branch from root to leaf, including per-node data loader results. */
-  readonly matches: RouteMatchBranch;
-  /** `idle` after a successful navigation, `error` when a data loader threw. */
-  readonly status: NavigationStatus;
-};
+export type Unsubscribe = () => void;

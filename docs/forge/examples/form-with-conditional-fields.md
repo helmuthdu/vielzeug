@@ -11,7 +11,7 @@ Some fields should only appear when another field has a specific value — for e
 
 ### Solution
 
-Form with fields that show/hide based on other field values.
+Use `form.subscribe()` combined with `setError()` and `clearError()` to apply conditional validation rules that react to changes in a controlling field.
 
 ```typescript
 import { createForm } from '@vielzeug/forge';

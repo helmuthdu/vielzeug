@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — AI Token Stream'
-description: 'Consume an HTTP text or NDJSON stream with courier.'
+description: 'AI Token Stream example for @vielzeug/courier.'
 ---
 
 ## AI Token Stream
@@ -10,6 +10,8 @@ description: 'Consume an HTTP text or NDJSON stream with courier.'
 You need to consume a long-lived HTTP response such as an AI completion stream, either as raw text chunks or as newline-delimited JSON messages.
 
 ### Solution
+
+Use `stream.readable()` with `parse: 'ndjson'` to iterate over typed NDJSON chunks, or with the default `parse: 'text'` for raw text output.
 
 ```ts
 import { createStream } from '@vielzeug/courier';

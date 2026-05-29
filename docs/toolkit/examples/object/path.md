@@ -97,5 +97,4 @@ get(obj, 'e.f.g', undefined, { throwOnMissing: true }); // throws Error
 
 ## See Also
 
-- [seek](./seek.md): Recursively search object values by similarity score.
 - [defaults](./defaults.md): Apply fallback values before reading a nested path.

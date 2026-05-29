@@ -1,66 +1,79 @@
 ---
 title: 'Sourcerer Examples — URL-Synced List with Route'
-description: 'Keep Sourcerer query state (search, filters, pagination) in sync with Route URL navigation.'
+description: 'Keep source state (search, filters, pagination) in sync with URL query params via the Route router.'
 ---
 
 ## URL-Synced List with Route
 
 ### Problem
 
-When a user filters or paginates a list and navigates away, pressing the browser Back button resets the list to its initial state. List state should live in the URL so forward/backward navigation preserves exact pagination, search, and filter state.
+The Route router manages navigation state as a reactive signal. You want your list's search, filter, and page to be reflected in the URL so users can share and bookmark the current view — and have the router respond to browser back/forward navigation without manually re-reading `location.search`.
 
 ### Solution
 
-Subscribe to source state changes and call the router's `navigate` with `replace: true` to keep the URL in sync. On load, hydrate the source from the current route's query params.
+Restore source state from the active route's query params on mount, and push the current source state back into the URL after each user interaction using Route's `navigate()`.
 
 ```ts
-import { createRouter } from '@vielzeug/route';
-import { createRemoteSource, encodeRemoteQueryParams } from '@vielzeug/sourcerer';
+import { createRouter, navigate, useRoute } from '@vielzeug/route';
+import { createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 
-const router = createRouter({
-  routes: {
-    issues: { path: '/issues' },
+type Item = { id: number; name: string };
+type Filter = { category?: string };
+type Sort = { by: 'name'; dir: 'asc' | 'desc' };
+
+const source = createRemoteSource<Item, Filter, Sort>({
+  fetch: async ({ filter, limit, page, search, sort }, signal) => {
+    const res = await fetch('/api/items', {
+      method: 'POST',
+      signal,
+      body: JSON.stringify({ filter, limit, page, search, sort }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return res.json();
   },
-});
-
-const source = createRemoteSource({
-  fetch: ({ limit, page, search, sort }) =>
-    fetch(`/api/issues?${new URLSearchParams({ limit: String(limit), page: String(page), search: search ?? '' })}`)
-      .then((r) => r.json()),
-  sort: { by: 'updatedAt', dir: 'desc' },
   limit: 20,
+  autoFetch: false, // we'll restore from URL first
 });
 
-// Hydrate source from current URL on page load
-const route = router.state;
-await source.fromQueryParams(route.location.query);
-await source.ready();
+// Restore from the current URL once on mount
+const route = useRoute();
+await source.restore(decodeQuery<Filter, Sort>(route.query, { defaultLimit: 20 }));
 
-// Keep URL in sync after every user interaction
-const syncUrl = () => {
-  void router.navigate(
-    { name: 'issues', query: encodeRemoteQueryParams(source.toQuery()) },
-    { replace: true },
-  );
-};
+// Subscribe and push state back to the URL whenever source changes
+const stopSync = source.subscribe(() => {
+  if (source.meta.isLoading) return; // only sync when settled
+  const params = encodeQuery(source.toQuery());
+  navigate({ query: params, replace: true });
+});
+```
 
-const stop = source.subscribe(syncUrl);
+### Reacting to browser back/forward
 
-// Example interaction
-source.search('regression');
-await source.commit();
-await source.ready();
-// URL is now /issues?search=regression&page=1&...
+Route's router emits a navigation event when the URL changes via the browser's back/forward buttons. Listen for that to restore source state from the new URL:
+
+```ts
+import { onRouteChange } from '@vielzeug/route';
+
+const stopRouteSync = onRouteChange((route) => {
+  void source.restore(decodeQuery(route.query, { defaultLimit: 20 }));
+});
+
+// Clean up both subscriptions when leaving the page
+function teardown() {
+  stopSync();
+  stopRouteSync();
+}
 ```
 
 ### Pitfalls
 
-- `source.subscribe(syncUrl)` fires on every state change including internal transitions like `isLoading` toggling. Only call `navigate` when the serialized query string has actually changed to avoid redundant history entries.
-- Calling `router.navigate()` inside the subscription can create a feedback loop if the router emits a new route event that the subscription reacts to. Use a `syncing` flag to break the cycle.
-- `fromQueryParams()` uses `decodeRemoteQueryParams()` under the hood and expects a flat string-keyed query object.
+- Set `autoFetch: false` when you intend to restore from URL params on mount — otherwise Sourcerer fires an initial fetch before `restore()` runs, causing a wasted network request.
+- Use `replace: true` (not `push`) in `navigate()` for list state changes. Pushing every filter change floods the browser history and breaks the expected back-button behaviour.
+- Guard the `subscribe` callback with `if (source.meta.isLoading) return` to avoid URL churn while requests are in-flight.
+- `decodeQuery` is fault-tolerant by default. Pass `{ strict: true }` if you want malformed params to throw instead of being silently dropped.
 
 ### Related
 
 - [Remote Search with URL State](./remote-search-with-url-state.md)
-- [Route Table Basics (Route)](@vielzeug/route/examples/route-table-basics)
-- [Auth and Guards (Route)](@vielzeug/route/examples/auth-and-guards)
+- [Route — Middleware and Guards](/route/usage)
+- [Remote Data with Courier](./sourceit-with-fetchit.md)

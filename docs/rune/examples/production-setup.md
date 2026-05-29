@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Production Setup'
-description: 'Production Setup examples for rune.'
+description: 'Production Setup example for @vielzeug/rune.'
 ---
 
 ## Production Setup
@@ -11,27 +11,32 @@ In production you need structured JSON output for log aggregation, suppressed de
 
 ### Solution
 
+Use `child()` with environment-branched transports to route entries to `jsonTransport` and `remoteTransport` in production, and `consoleTransport` in development.
+
 ```ts
 import { Rune } from '@vielzeug/rune';
+import { consoleTransport, jsonTransport, remoteTransport } from '@vielzeug/rune';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
 export const appLog = Rune.child({
   logLevel: isProd ? 'warn' : 'debug',
-  timestamp: true,
-  variant: 'symbol',
-  remote: isProd
-    ? {
-        logLevel: 'error',
-        handler: async (type, data) => {
-          // data: { level, message, context, env, namespace?, timestamp? }
+  transports: isProd
+    ? [
+        // NDJSON to stdout for log aggregation (ELK, Datadog, CloudWatch)
+        jsonTransport({ level: 'warn' }),
+        // Forward errors to a remote endpoint
+        remoteTransport(async (type, data) => {
           await fetch('/api/logs', {
             body: JSON.stringify(data),
             method: 'POST',
           });
-        },
-      }
-    : undefined,
+        }, { level: 'error' }),
+      ]
+    : [consoleTransport()],
+}).withBindings({
+  service: 'my-app',
+  version: process.env?.APP_VERSION ?? 'dev',
 });
 ```
 
@@ -43,8 +48,8 @@ export const appLog = Rune.child({
 - Setting `logLevel: 'error'` in production suppresses warnings. Warnings often indicate misconfiguration or operational drift worth catching in staging. `logLevel: 'warn'` is a safer default.
 
 ### Related
-- [Error Handling Patterns (Courier)](@vielzeug/courier/examples/error-handling-patterns)
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [React Integration](./react-integration.md)
+- [Error Handling (Courier)](/courier/examples/error-handling-patterns)

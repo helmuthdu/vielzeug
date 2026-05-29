@@ -7,5 +7,10 @@ description: Practical examples and recipes for deposit.
 
 ## Examples
 
-- [Advanced Examples](./examples/advanced-examples.md)
-- [Basic Examples](./examples/basic-examples.md)
+- [CRUD](./examples/crud.md)
+- [Querying](./examples/querying.md)
+- [TTL and Pruning](./examples/ttl.md)
+- [Reactive Tables](./examples/reactive.md)
+- [Batch Writes](./examples/batch.md)
+- [Lazy Iteration](./examples/iterate.md)
+- [Plugins and Error Handling](./examples/plugins.md)

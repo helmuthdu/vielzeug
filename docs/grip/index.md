@@ -5,7 +5,7 @@ package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [craft, scroll, block]
-exports: [createDropZone, createSortable]
+exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createDropZone, createSortable]
 
 **Package:** `@vielzeug/grip` &nbsp;·&nbsp; **Category:** Ui Interaction
 
-**Key exports:** `createDropZone`, `createSortable`
+**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`
 
 **When to use:** File drop zones with MIME filtering, or sortable lists with keyboard and mouse support. Zero dependencies.
 
@@ -130,12 +130,14 @@ const zone = createDropZone({
 
 ## Features
 
-- **Counter-based hover state** — `onHoverChange` stays accurate when dragging over child elements; no spurious leave/enter flicker
+- **Counter-based hover state** — `onHoverChange` stays accurate when dragging over child elements; hover only activates when the drag payload passes the `accept` filter, with symmetric enter/leave pairing to prevent flicker
 - **MIME type pre-validation** — queries `dataTransfer.items` during drag to set `dropEffect='none'` before the drop; confirmed against `File.type` on drop
 - **Flexible accept patterns** — MIME types (`image/png`), wildcards (`image/*`), and file extensions (`.pdf`)
-- **`onDropRejected`** — separate callback for files that didn't match `accept`; enables rejection UX without extra filtering logic
+- **`maxFiles` limit** — cap the number of accepted files per drop; excess files are forwarded to `onDropRejected`
+- **`onDropRejected`** — separate callback for files that didn't match `accept` or exceeded `maxFiles`; enables rejection UX without extra filtering logic
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
+- **Custom drag preview** — pass an element or a `(id, item, event) => element | null` factory; control hotspot with `dragImageOffset`
 - **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
 - **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup

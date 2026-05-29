@@ -7,16 +7,16 @@ related: [block, sieve]
 exports: [createServer]
 ---
 
-# /mcp
+# @vielzeug/mcp
 
 > MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Block component metadata.
 
-[![npm version](https://img.shields.io/npm/v//mcp)](https://www.npmjs.com/package//mcp) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/mcp)](https://www.npmjs.com/package/@vielzeug/mcp) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/mcp` &nbsp;·&nbsp; **Category:** AI Tooling
+**Package:** `@vielzeug/mcp` &nbsp;·&nbsp; **Category:** AI Tooling
 
 **Key exports:** `createServer`
 
@@ -26,14 +26,14 @@ exports: [createServer]
 
 </details>
 
-`/mcp` is part of Vielzeug and ships with bundled snapshot data, so it runs without a local Vielzeug checkout.
+`@vielzeug/mcp` ships with bundled snapshot data, so it runs without a local Vielzeug checkout.
 
 ## Installation
 
 ```sh
-pnpm add /mcp
-npm install /mcp
-yarn add /mcp
+pnpm add @vielzeug/mcp
+npm install @vielzeug/mcp
+yarn add @vielzeug/mcp
 ```
 
 ## Quick Start
@@ -41,48 +41,56 @@ yarn add /mcp
 Run over stdio (default):
 
 ```sh
-npx -y /mcp
+npx -y @vielzeug/mcp
 ```
 
 Run over HTTP:
 
 ```sh
-npx -y /mcp --port 3100
+npx -y @vielzeug/mcp --port 3100
 ```
 
-Inspect CLI flags:
+CLI helpers:
 
 ```sh
-npx -y /mcp --help
-npx -y /mcp --version
+npx -y @vielzeug/mcp --help
+npx -y @vielzeug/mcp --version
 ```
 
-## Tool API
+## Tools
 
 | Tool | Input | Description |
 | --- | --- | --- |
-| `list-packages` | none | List all packages with metadata including `availableDocPages` and `hasSource` |
-| `get-package` | `packageSlug` | Get metadata for one package |
-| `get-docs` | `packageSlug`, `page?` | Read docs page (`index`, `api`, `usage`, `examples`) |
-| `get-source` | `packageSlug` | Read bundled `src/index.ts` text |
+| `list-packages` | `packageSlug?` | All packages with metadata; pass `packageSlug` to filter to one |
+| `get-docs` | `packageSlug`, `page?` | Docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
+| `get-source` | `packageSlug` | Bundled `src/index.ts` text |
 | `search-packages` | `query` | Ranked search across metadata, keywords, docs, and source |
-| `list-components` | none | List `/block` component tags |
-| `get-component` | `tagName` | Get full Block component declaration by tag |
+| `list-components` | — | Block component tags from bundled CEM metadata |
+| `get-component` | `tagName` | Full Block component CEM declaration by tag |
 
-## HTTP mode endpoints
+## Resources
+
+The server also exposes MCP Resources readable by URI:
+
+| URI pattern | MIME type | Content |
+| --- | --- | --- |
+| `vielzeug://docs/<slug>/<page>` | `text/markdown` | Documentation page |
+| `vielzeug://source/<slug>` | `text/x-typescript` | `src/index.ts` source |
+
+## HTTP mode
 
 - MCP endpoint: `http://localhost:<port>/`
-- Health endpoint: `http://localhost:<port>/health`
+- Health check: `http://localhost:<port>/health`
 
 ## Programmatic API
 
 `createServer(data)` is exported for custom runtime wiring.
 
 ```ts
-import { createServer } from '/mcp';
+import { createServer } from '@vielzeug/mcp';
+import { loadData } from '@vielzeug/mcp/data';
 
-// See docs for complete setup; this snippet documents the public symbol.
-void createServer;
+const server = createServer(loadData());
 ```
 
 ## Documentation

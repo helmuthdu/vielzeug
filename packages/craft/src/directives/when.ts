@@ -22,14 +22,6 @@ type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 
 type WhenRenderable = string | HTMLResult;
 
-const resolve = <T>(value: MaybeReactive<T>): T => {
-  if (typeof value === 'function') return (value as () => T)();
-
-  if (isSignal(value)) return value.value;
-
-  return value;
-};
-
 const toHtmlResult = (value: WhenRenderable): HTMLResult =>
   isHtmlResult(value) ? value : htmlResult(escapeHtml(String(value)));
 

@@ -1,21 +1,18 @@
 import type {
   Adapter,
   AnySchema,
-  DepositLogger,
-  MetricsEvent,
+  BaseAdapterOptions,
   MigrationFn,
   RecordOf,
-  TableSignals,
-  TableValidators,
   TransactionContext,
   TtlMs,
 } from '../types';
 
-import { buildAdapterOps, buildTxContext, type StorageBackend, type StorageCore } from '../adapter-core';
+import { buildAdapterOps, buildTxContext, type StorageBackend } from '../adapter-core';
 import { DepositDisposedError, DepositMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
-import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
+import { type StoredRecord, parseStored, readWithTtl, unwrapStored, wrapStored } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -50,10 +47,6 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
         }
       });
 
-    // Shared helper: preserves original Error instances (including DepositError subtypes)
-    // so callers retain instanceof checks, stack traces, and custom properties.
-    // Falls back to wrapTxError for non-Error thrown values (rare but possible).
-    // `message` lets each call site produce a context-specific error description.
     const rejectWithCallbackError = (fallbackCause: unknown, message = 'transaction failed'): void => {
       if (callbackError instanceof Error) {
         reject(callbackError);
@@ -81,25 +74,14 @@ async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObje
   const records: T[] = [];
 
   for (const raw of rawRecords) {
-    const parsed = parseStored<T>(raw as unknown);
+    const { value } = readWithTtl<T>(raw as unknown);
 
-    if (!parsed) continue;
-
-    const value = unwrapStored(parsed);
-
-    if (value !== undefined) {
-      records.push(value);
-    }
+    if (value !== undefined) records.push(value);
   }
 
   return records;
 }
 
-/**
- * Fetches records matching a primary-key range without a full table scan.
- * For `eq`, uses a single `store.get` instead of `store.getAll`. For `between` and `starts`,
- * uses an IDBKeyRange to let the storage engine do the filtering.
- */
 async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
   store: IDBObjectStore,
   range: NativeRange,
@@ -120,11 +102,7 @@ async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
   const records: T[] = [];
 
   for (const raw of rawRecords) {
-    const parsed = parseStored<T>(raw as unknown);
-
-    if (!parsed) continue;
-
-    const value = unwrapStored(parsed);
+    const { value } = readWithTtl<T>(raw as unknown);
 
     if (value !== undefined) records.push(value);
   }
@@ -147,25 +125,18 @@ function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBOb
         return;
       }
 
-      const parsed = parseStored<T>(cursor.value as unknown);
+      const { value } = readWithTtl<T>(cursor.value as unknown);
 
-      if (parsed && unwrapStored(parsed) !== undefined) {
-        count += 1;
-      }
+      if (value !== undefined) count += 1;
 
       cursor.continue();
     };
   });
 }
 
-/** Clear all records from a store unconditionally. */
 async function storeClear(store: IDBObjectStore): Promise<void> {
   await idbReq(store.clear());
 }
-
-/* -------------------- Per-store primitive helpers -------------------- */
-/* Shared between single-table withStore() callbacks and multi-table idbBatch txCore.
-   Keeping them here enables one code path for bug fixes rather than two separate copies. */
 
 async function storeGet<T extends Record<string, unknown>>(
   store: IDBObjectStore,
@@ -175,28 +146,25 @@ async function storeGet<T extends Record<string, unknown>>(
 
   if (raw == null) return undefined;
 
-  const parsed = parseStored<T>(raw);
+  const { value } = readWithTtl<T>(raw);
 
-  if (!parsed) return undefined;
-
-  return unwrapStored(parsed);
+  return value;
 }
 
-/** TTL-aware existence check — returns false for expired records (consistent with get). */
 async function storeHas<T extends Record<string, unknown>>(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
   const raw = await idbReq<unknown>(store.get(key));
 
   if (raw == null) return false;
 
-  const parsed = parseStored<T>(raw);
+  const { value } = readWithTtl<T>(raw);
 
-  return parsed ? unwrapStored(parsed) !== undefined : false;
+  return value !== undefined;
 }
 
 async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
-  const live = await storeHas(store, key); // TTL-aware: returns false for expired records
+  const live = await storeHas(store, key);
 
-  await idbReq(store.delete(key)); // always clean up the physical entry (no-op if missing)
+  await idbReq(store.delete(key));
 
   return live;
 }
@@ -204,8 +172,6 @@ async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boo
 async function storeDeleteMany(store: IDBObjectStore, keys: IDBValidKey[]): Promise<number> {
   if (keys.length === 0) return 0;
 
-  // Use storeDelete (TTL-aware) for each key so that expired records do not inflate the count.
-  // storeDelete also cleans up the physical IDB entry for expired records.
   const results = await Promise.all(keys.map((k) => storeDelete(store, k)));
 
   return results.filter(Boolean).length;
@@ -215,10 +181,6 @@ async function storePutAt<T>(store: IDBObjectStore, key: IDBValidKey, value: T, 
   await idbReq(store.put(wrapStored(value, ttl), key));
 }
 
-/**
- * Cursor-based pruning: deletes every TTL-expired record in a single readwrite transaction.
- * Unlike getAll(), this does not materialise records into memory.
- */
 function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     let deleted = 0;
@@ -246,19 +208,148 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
   });
 }
 
-type IndexedDbOptions<S extends AnySchema> = {
-  logger?: DepositLogger;
+/**
+ * F1: True cursor-based iteration for IndexedDB.
+ * Yields live records one-by-one using an IDB cursor, avoiding materializing the full table.
+ * This is memory-efficient for large tables — the cursor walks the store incrementally.
+ *
+ * Design: the cursor is opened *synchronously* in [Symbol.asyncIterator]() so that event
+ * handlers are wired immediately (no queueMicrotask races). The cursor is advanced *eagerly*
+ * before yielding — this keeps the IDB readonly transaction alive between consumer awaits,
+ * because IDB auto-commits when there are no pending requests.
+ */
+function iterateStoreWithCursor<T extends Record<string, unknown>>(store: IDBObjectStore): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      // Open the cursor synchronously so onsuccess/onerror are wired before any microtask.
+      const cursorRequest = store.openCursor();
+
+      // One-slot buffer: the cursor advances eagerly (keeping the tx alive), and the
+      // resolved value sits here until the consumer calls next().
+      //
+      // Error buffering uses a dedicated slot — the previous approach of repurposing
+      // pendingReject as a throwing closure silently swallowed errors because the
+      // stored function was only ever called as pendingReject?.(err), not throw-invoked.
+      let buffered: IteratorResult<T> | null = null;
+      let bufferedError: unknown = undefined;
+      let hasBufferedError = false;
+      let pendingResolve: ((r: IteratorResult<T>) => void) | null = null;
+      let pendingReject: ((e: unknown) => void) | null = null;
+
+      const deliver = (result: IteratorResult<T>): void => {
+        if (pendingResolve) {
+          const res = pendingResolve;
+
+          pendingResolve = null;
+          pendingReject = null;
+          res(result);
+        } else {
+          buffered = result;
+        }
+      };
+
+      cursorRequest.onerror = () => {
+        const err = cursorRequest.error ?? new Error('[deposit] IndexedDB cursor iteration failed');
+
+        if (pendingReject) {
+          const rej = pendingReject;
+
+          pendingResolve = null;
+          pendingReject = null;
+          rej(err);
+        } else {
+          // Consumer hasn't called next() yet — buffer the error for the next next() call.
+          hasBufferedError = true;
+          bufferedError = err;
+        }
+      };
+
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+
+        if (!cursor) {
+          deliver({ done: true, value: undefined });
+
+          return;
+        }
+
+        const { value } = readWithTtl<T>(cursor.value as unknown);
+
+        if (value !== undefined) {
+          // Advance the cursor eagerly BEFORE yielding so the IDB transaction
+          // stays open while the consumer processes the current value.
+          cursor.continue();
+          deliver({ done: false, value });
+        } else {
+          // Skip expired record — advance immediately without yielding.
+          cursor.continue();
+        }
+      };
+
+      return {
+        next(): Promise<IteratorResult<T>> {
+          if (hasBufferedError) {
+            const err = bufferedError;
+
+            hasBufferedError = false;
+            bufferedError = undefined;
+
+            return Promise.reject(err);
+          }
+
+          if (buffered !== null) {
+            const result = buffered;
+
+            buffered = null;
+
+            return Promise.resolve(result);
+          }
+
+          return new Promise<IteratorResult<T>>((res, rej) => {
+            pendingResolve = res;
+            pendingReject = rej;
+          });
+        },
+
+        return(value?: unknown): Promise<IteratorResult<T>> {
+          // Clean up pending waiters on early exit.
+          pendingResolve?.({ done: true, value: undefined });
+          pendingResolve = null;
+          pendingReject = null;
+          buffered = null;
+          hasBufferedError = false;
+          bufferedError = undefined;
+
+          return Promise.resolve({ done: true, value });
+        },
+
+        throw(err?: unknown): Promise<IteratorResult<T>> {
+          pendingReject?.(err);
+          pendingResolve = null;
+          pendingReject = null;
+          buffered = null;
+          hasBufferedError = false;
+          bufferedError = undefined;
+
+          return Promise.reject(err);
+        },
+      };
+    },
+  };
+}
+
+type IndexedDbOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   migrate?: MigrationFn;
   name: string;
-  onMetrics?: (event: MetricsEvent) => void;
-  schema: S;
-  signals?: TableSignals<S>;
-  validators?: TableValidators<S>;
   /** Schema version. Must be a positive integer. Increment when adding tables or changing the schema, then provide `migrate`. Defaults to 1. */
   version?: number;
 };
 
-export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
+export type IndexedDbAdapter<S extends AnySchema> = Adapter<S> & {
+  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
+};
+
+export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): IndexedDbAdapter<S> {
   const { logger, migrate, name, onMetrics, schema, signals, validators, version = 1 } = options;
 
   if (!Number.isInteger(version) || version < 1) {
@@ -326,9 +417,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
           const connection = request.result;
 
-          // Handle versionchange so an upgrading tab in another window is not blocked.
-          // When another tab opens this DB at a higher version, IDB fires `versionchange` here.
-          // Closing the connection allows the upgrade to proceed; the next operation will reconnect.
           connection.onversionchange = () => {
             connection.close();
             db = null;
@@ -380,7 +468,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const core: StorageBackend<S> = {
-    // clear returns void — the count/notify decision happens in buildTxContext.clear via core.count()
     clear: (table) => withStore(table, 'readwrite', storeClear),
 
     count: (table) => withStore(table, 'readonly', (s) => countLiveRecordsInStore<RecordOf<S, typeof table>>(s)),
@@ -408,8 +495,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     getByKeyRange: (table, range) =>
       withStore(table, 'readonly', (s) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(s, range)),
 
-    // getMany opens ONE readonly transaction and fires all key lookups in parallel within it,
-    // avoiding the N-transaction overhead of the N-individual-get fallback.
     getMany: (table, keys) =>
       keys.length === 0
         ? Promise.resolve([])
@@ -462,8 +547,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
     const dirtyTables = new Set<K>();
 
-    const txCore: StorageCore<S, K> = {
-      // clear returns void — count/notify decision is handled by buildTxContext.clear
+    const txCore: StorageBackend<S, K> = {
       clear: async (table) => {
         await idbReq(storeOf(table).clear());
       },
@@ -472,11 +556,11 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       deleteMany: (table, keys) => storeDeleteMany(storeOf(table), keys as IDBValidKey[]),
       get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
       getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table)),
-      // Within a batch all storeGet calls share the same IDB transaction — no extra cost.
       getByKeyRange: (table, range) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(storeOf(table), range),
       getMany: (table, keys) =>
         Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(storeOf(table), k as IDBValidKey))),
       has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
+      pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table)),
       put(table, value, ttl) {
         return storePutAt(storeOf(table), getRecordKey(schema, table, value) as IDBValidKey, value, ttl);
       },
@@ -498,7 +582,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     return result;
   };
 
-  return buildAdapterOps(schema, core, {
+  const adapter = buildAdapterOps(schema, core, {
     buildBatch:
       ({ notifyMutation, validate: validateFn }) =>
       (tables, fn) =>
@@ -523,7 +607,67 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     },
     onMetrics,
     onMutation: publish,
+    schema,
     signals,
     validators,
   });
+
+  /**
+   * F1: Attach cursor-based `iterate()` on top of the adapter.
+   * Opens a dedicated readonly transaction per call and streams records via IDB cursor —
+   * genuinely memory-efficient for large tables unlike the getAll()-then-yield pattern.
+   */
+  return {
+    ...adapter,
+    iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>> {
+      if (disposed) throw new DepositDisposedError(`"${name}" is disposed`);
+
+      // Each call opens a fresh transaction so iteration doesn't hold locks across awaits.
+      // We need to ensure the DB is connected before opening the transaction.
+      const getIterable = async (): Promise<AsyncIterable<RecordOf<S, K>>> => {
+        if (!db) await connect();
+
+        if (!db || disposed) throw new DepositDisposedError(`"${name}" is disposed`);
+
+        const idb = db;
+        const tx = idb.transaction(String(table), 'readonly');
+        const store = tx.objectStore(String(table));
+
+        return iterateStoreWithCursor<RecordOf<S, K>>(store);
+      };
+
+      // Return an AsyncIterable that resolves the inner iterable on first iteration.
+      return {
+        [Symbol.asyncIterator]() {
+          let inner: AsyncIterator<RecordOf<S, K>> | null = null;
+
+          const initInner = (): Promise<AsyncIterator<RecordOf<S, K>>> =>
+            getIterable().then((iterable) => {
+              inner = iterable[Symbol.asyncIterator]();
+
+              return inner;
+            });
+
+          return {
+            next(): Promise<IteratorResult<RecordOf<S, K>>> {
+              // Sync check avoids an extra Promise allocation on every iteration after the first.
+              if (inner) return inner.next();
+
+              return initInner().then((it) => it.next());
+            },
+            return(value?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
+              if (inner) return inner.return?.(value) ?? Promise.resolve({ done: true, value });
+
+              return Promise.resolve({ done: true, value });
+            },
+            throw(err?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
+              if (inner) return inner.throw?.(err) ?? Promise.reject(err);
+
+              return Promise.reject(err);
+            },
+          };
+        },
+      };
+    },
+  };
 }

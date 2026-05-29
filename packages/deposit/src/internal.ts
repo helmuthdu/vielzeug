@@ -1,6 +1,6 @@
 import type { AnySchema, KeyOf, RecordOf } from './types';
 
-import { DepositDisposedError, DepositError } from './errors';
+import { DepositDisposedError, DepositError, DepositScopeError } from './errors';
 
 type ObserverListener<T> = (records: T[]) => void;
 
@@ -126,9 +126,12 @@ export function createObserverHub<S extends AnySchema>(
 }
 
 /**
- * Creates an AsyncIterable that yields a snapshot on every call to `subscribe`'s listener.
+ * Creates an AsyncIterable that yields a snapshot on every mutation.
  * The first snapshot is emitted on the first `next()` call (lazy registration).
- * Only the latest pending snapshot is retained — slow consumers receive current state, not stale history.
+ *
+ * **Latest-only semantics:** if multiple mutations arrive while the consumer is
+ * not calling `next()`, only the most recent snapshot is retained. This prevents
+ * stale intermediate states from accumulating for slow consumers.
  */
 export function createWatchIterable<T>(
   subscribe: (listener: (snapshot: T[]) => void) => () => void,
@@ -138,12 +141,14 @@ export function createWatchIterable<T>(
       let pending: T[] | null = null;
       let waiting: ((value: IteratorResult<T[]>) => void) | null = null;
       let done = false;
-      let unobserve: (() => void) | null = null;
+      let unsubscribe: (() => void) | null = null;
 
       const finish = (): void => {
+        if (done) return;
+
         done = true;
-        unobserve?.();
-        unobserve = null;
+        unsubscribe?.();
+        unsubscribe = null;
 
         if (waiting) {
           waiting({ done: true, value: undefined });
@@ -151,26 +156,31 @@ export function createWatchIterable<T>(
         }
       };
 
-      /** Registers the observer on first use. Safe to call multiple times. */
-      const ensureObserving = (): void => {
-        if (unobserve || done) return;
+      const ensureSubscribed = (): void => {
+        if (unsubscribe || done) return;
 
-        unobserve = subscribe((snapshot) => {
+        // Lazy registration: observer is wired on first next() call.
+        unsubscribe = subscribe((snapshot) => {
+          if (done) return;
+
           if (waiting) {
+            // Consumer is actively waiting — deliver immediately.
             const resolve = waiting;
 
             waiting = null;
             resolve({ done: false, value: snapshot });
           } else {
-            pending = snapshot; // overwrite: only the latest state matters
+            // No consumer waiting — store latest only (overwrite any previous pending).
+            pending = snapshot;
           }
         });
       };
 
       return {
         async next(): Promise<IteratorResult<T[]>> {
-          // Lazy registration: observer is only wired when the consumer calls next().
-          ensureObserving();
+          if (done) return { done: true, value: undefined };
+
+          ensureSubscribed();
 
           if (pending !== null) {
             const value = pending;
@@ -179,8 +189,6 @@ export function createWatchIterable<T>(
 
             return { done: false, value };
           }
-
-          if (done) return { done: true, value: undefined };
 
           return new Promise<IteratorResult<T[]>>((resolve) => {
             waiting = resolve;
@@ -200,6 +208,96 @@ export function createWatchIterable<T>(
         },
       };
     },
+  };
+}
+
+/**
+ * Observes multiple tables simultaneously. The listener receives a combined snapshot
+ * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
+ * their first snapshot. Subsequent firings are coalesced per microtask.
+ *
+ * Extracted from `buildAdapterOps` to be independently testable and to reduce
+ * the cognitive load of the adapter-core factory.
+ */
+export function createObserveMany<S extends AnySchema>(
+  hub: ReturnType<typeof createObserverHub<S>>,
+  getAll: <K extends keyof S>(table: K) => Promise<RecordOf<S, K>[]>,
+  logger?: { error(msg: Error | string, context?: string): void },
+) {
+  return function observeMany<K extends keyof S>(
+    tables: readonly K[],
+    listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+    opts?: { immediate?: boolean },
+  ): () => void {
+    const distinctTables = [...new Set(tables.map(String))] as (keyof S)[];
+
+    if (distinctTables.length === 0) throw new DepositScopeError('observeMany requires at least one table');
+
+    const snapshotMap = new Map<string, RecordOf<S, keyof S>[]>();
+    let microtaskQueued = false;
+    let stopped = false;
+
+    const buildCombined = (): { [T in K]: RecordOf<S, T>[] } =>
+      Object.fromEntries(tables.map((t) => [String(t), snapshotMap.get(String(t)) ?? []])) as {
+        [T in K]: RecordOf<S, T>[];
+      };
+
+    const scheduleFlush = (): void => {
+      if (microtaskQueued || snapshotMap.size < distinctTables.length) return;
+
+      microtaskQueued = true;
+      queueMicrotask(() => {
+        microtaskQueued = false;
+
+        if (!stopped) listener(buildCombined());
+      });
+    };
+
+    let cleanupObservers: (() => void) | null = null;
+
+    void Promise.all(
+      distinctTables.map((t) =>
+        getAll(t)
+          .then((records) => {
+            if (!stopped) snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
+          })
+          .catch((err: unknown) => {
+            logger?.error(err instanceof Error ? err : new Error(String(err)), '[deposit] observeMany prefetch failed');
+
+            if (!stopped) snapshotMap.set(String(t), []);
+          }),
+      ),
+    ).then(() => {
+      if (stopped) return;
+
+      const stopFns = distinctTables.map((t) =>
+        hub.observe(
+          t,
+          (records) => {
+            snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
+            scheduleFlush();
+          },
+          { immediate: false },
+        ),
+      );
+
+      cleanupObservers = () => {
+        for (const s of stopFns) s();
+      };
+
+      if (stopped) {
+        cleanupObservers();
+
+        return;
+      }
+
+      if (opts?.immediate) scheduleFlush();
+    });
+
+    return () => {
+      stopped = true;
+      cleanupObservers?.();
+    };
   };
 }
 

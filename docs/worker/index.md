@@ -29,7 +29,7 @@ exports: [createWorker, createTestWorker]
 
 </details>
 
-**Worker** wraps Web Workers in a clean, fully typed async API. Define a task function once and worker handles worker creation, queuing, timeouts, cancellation, and pooling.
+`@vielzeug/worker` is a thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and AbortSignal cancellation.
 
 
 ## Installation
@@ -109,6 +109,8 @@ typedWorker.dispose();
 - **Timeout support** — reject tasks that exceed a configurable time limit
 - **AbortSignal** — cancel queued tasks with the standard `AbortController` API
 - **Transferables** — move large buffers to the Worker without a structured-clone copy
+- **Warmup** — pre-initialize worker slots with `warmup()` to eliminate first-task latency
+- **Metrics** — `active`, `queued`, `utilization`, and `completed` counters for observability
 - **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
 - **`WorkerError` hierarchy** — single `instanceof WorkerError` covers all error types
 - **Testing utilities** — `createTestWorker` runs tasks in-process with call recording
@@ -116,16 +118,12 @@ typedWorker.dispose();
 
 ## Compatibility
 
-- Browser: full support.
-- Node.js: `createWorker()` is safe, but `run()` requires a compatible Worker implementation.
-- SSR: `createWorker()` is safe, but `run()` requires a compatible Worker implementation.
-- Deno: support depends on Worker compatibility.
-
-### Prerequisites
-
-- Browser or compatible runtime with Web Worker support for off-main-thread execution.
-- Self-contained task functions (no closure over outer module state).
-- In non-browser runtimes, expect `run()` to reject with `WorkerError` unless a compatible Worker implementation exists.
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅ Full support |
+| Node.js     | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
+| SSR         | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
+| Deno        | ⚠️ Support depends on Worker compatibility |
 
 ## Documentation
 
@@ -135,8 +133,8 @@ typedWorker.dispose();
 
 ## See Also
 
-- [Courier](/courier/)
-- [Ripple](/ripple/)
-- [Relay](/relay/)
+- [Toolkit](/toolkit/) — utility functions useful inside self-contained task functions
+- [Ripple](/ripple/) — pair with reactive signals to drive UI from worker pool metrics
+- [Relay](/relay/) — emit typed events from worker task functions back to the main thread
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Streaming with `events()`'
-description: 'Streaming with `events()` examples for relay.'
+description: 'Streaming with `events()` example for @vielzeug/relay.'
 ---
 
 ## Streaming with `events()`
@@ -32,7 +32,7 @@ async function watchCart() {
 
 - `events()` starts listening when iteration begins (the first `next()` call), not when the generator object is created. Events emitted between construction and first iteration are lost.
 - Breaking out of the `for await` loop with `break` or `return` does not dispose the bus. Call `bus.dispose()` explicitly or wrap the loop in `try/finally`.
-- If the bus is disposed while the generator is awaiting the next event, the generator throws `BusDisposedError`. Wrap the `for await` in a try/catch to handle graceful teardown.
+- If the bus is disposed while the generator is awaiting the next event, the generator **returns cleanly** — no exception is thrown. The `for await` loop simply exits. There is no need to wrap it in `try/catch` for disposal.
 
 ### Related
 - [Async Workflows with watch (Ripple)](@vielzeug/ripple/examples/pattern-nextvalue-in-async-workflows)

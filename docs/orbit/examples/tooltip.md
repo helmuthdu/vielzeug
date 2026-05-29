@@ -1,6 +1,6 @@
 ---
 title: 'Orbit Examples — Tooltip'
-description: 'Tooltip examples for orbit.'
+description: 'Tooltip example for @vielzeug/orbit.'
 ---
 
 ## Tooltip

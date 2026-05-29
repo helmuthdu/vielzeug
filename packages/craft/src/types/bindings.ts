@@ -141,5 +141,5 @@ export const isHtmlResult = (value: unknown): value is HTMLResult =>
   typeof value === 'object' && value !== null && htmlResultBrand.has(value as object);
 
 export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
-  return typeof v === 'string' ? { bindings: [], html: s } : { bindings: v.bindings, html: v.html };
+  return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.bindings, html: v.html };
 }

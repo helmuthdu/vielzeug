@@ -6,21 +6,15 @@ export type Token<T = unknown> = symbol & { __type?: T };
 
 export type Lifetime = 'singleton' | 'transient' | 'scoped';
 
-export type ValueProvider<T> = { useValue: T };
+export type ValueOptions<T> = {
+  dispose?: (instance: T) => void | Promise<void>;
+  multi?: boolean;
+};
 
-type BaseProvider<T, Deps extends unknown[] = any[]> = {
+export type FactoryOptions<T, Deps extends unknown[] = []> = {
   deps?: { [K in keyof Deps]: Token<Deps[K]> };
   dispose?: (instance: T) => void | Promise<void>;
   lifetime?: Lifetime;
-};
-
-export type FactoryProvider<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
-  useFactory: (...deps: Deps) => T | Promise<T>;
-};
-
-export type Provider<T> = ValueProvider<T> | FactoryProvider<T>;
-
-export type ProviderOptions<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
   multi?: boolean;
 };
 
@@ -51,6 +45,25 @@ export class MultipleProvidersError extends Error {
   }
 }
 
+export class SyncResolutionError extends Error {
+  constructor(token: Token<any>, lifetime: Lifetime) {
+    const reason =
+      lifetime === 'transient'
+        ? 'transient factories are never cached'
+        : 'the instance has not been resolved yet; call await container.resolve() first';
+
+    super(`Token "${tokenName(token)}" cannot be resolved synchronously: ${reason}.`);
+    this.name = 'SyncResolutionError';
+  }
+}
+
+export class ScopedResolutionError extends Error {
+  constructor(token: Token<any>) {
+    super(`Token "${tokenName(token)}" uses scoped lifetime but was resolved on the root container.`);
+    this.name = 'ScopedResolutionError';
+  }
+}
+
 export class ContainerDisposedError extends Error {
   constructor() {
     super('Cannot use a disposed container.');
@@ -58,16 +71,32 @@ export class ContainerDisposedError extends Error {
   }
 }
 
-type Registration<T = unknown> = {
-  instance?: T;
-  promise?: Promise<T>;
-  provider: Provider<T>;
-  resolved?: boolean;
+// Internal types — not exported
+
+type ValueRegistration<T> = {
+  dispose?: (instance: T) => void | Promise<void>;
+  kind: 'value';
+  value: T;
 };
+
+type FactoryRegistration<T> = {
+  deps: Token<any>[];
+  dispose?: (instance: T) => void | Promise<void>;
+  factory: (...deps: any[]) => T | Promise<T>;
+  // Runtime cache state
+  instance?: T;
+  kind: 'factory';
+  lifetime: Lifetime;
+  promise?: Promise<T>;
+  resolved: boolean;
+};
+
+type Registration<T = unknown> = ValueRegistration<T> | FactoryRegistration<T>;
 
 export class Container {
   #registry = new Map<Token<any>, Registration<any>[]>();
-  #scoped = new Map<Registration<any>, Registration<any>>();
+  // scopeCache maps a root FactoryRegistration to a child-local copy for scoped lifetime
+  #scopeCache = new Map<FactoryRegistration<any>, FactoryRegistration<any>>();
   #parent?: Container;
   #disposed = false;
 
@@ -79,13 +108,20 @@ export class Container {
     if (this.#disposed) throw new ContainerDisposedError();
   }
 
-  #register<T>(token: Token<T>, provider: Provider<T>, { multi = false } = {}): this {
+  has<T>(token: Token<T>): boolean {
+    this.#assertNotDisposed();
+
+    return this.#getRegistrations(token).length > 0;
+  }
+
+  value<T>(token: Token<T>, val: T, opts?: ValueOptions<T>): this {
     this.#assertNotDisposed();
 
     const existing = this.#registry.get(token);
+    const reg: ValueRegistration<T> = { dispose: opts?.dispose, kind: 'value', value: val };
 
-    if (multi) {
-      this.#registry.set(token, existing ? [...existing, { provider }] : [{ provider }]);
+    if (opts?.multi) {
+      this.#registry.set(token, existing ? [...existing, reg] : [reg]);
 
       return this;
     }
@@ -94,23 +130,47 @@ export class Container {
       throw new Error(`Token "${tokenName(token)}" is already registered.`);
     }
 
-    this.#registry.set(token, [{ provider }]);
+    this.#registry.set(token, [reg]);
 
     return this;
   }
 
-  value<T>(token: Token<T>, val: T, opts?: { multi?: boolean }): this {
-    return this.#register(token, { useValue: val }, opts);
-  }
-
-  factory<T, Deps extends unknown[] = any[]>(
+  factory<T>(token: Token<T>, fn: () => T | Promise<T>, opts?: FactoryOptions<T, []>): this;
+  factory<T, Deps extends [unknown, ...unknown[]]>(
     token: Token<T>,
     fn: (...deps: Deps) => T | Promise<T>,
-    opts?: ProviderOptions<T, Deps>,
+    opts: FactoryOptions<T, Deps> & { deps: { [K in keyof Deps]: Token<Deps[K]> } },
+  ): this;
+  factory<T, Deps extends unknown[]>(
+    token: Token<T>,
+    fn: (...deps: any[]) => T | Promise<T>,
+    opts?: FactoryOptions<T, Deps>,
   ): this {
-    const { multi, ...providerOpts } = opts ?? {};
+    this.#assertNotDisposed();
 
-    return this.#register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { multi });
+    const existing = this.#registry.get(token);
+    const reg: FactoryRegistration<T> = {
+      deps: (opts?.deps as Token<any>[]) ?? [],
+      dispose: opts?.dispose,
+      factory: fn,
+      kind: 'factory',
+      lifetime: opts?.lifetime ?? 'singleton',
+      resolved: false,
+    };
+
+    if (opts?.multi) {
+      this.#registry.set(token, existing ? [...existing, reg] : [reg]);
+
+      return this;
+    }
+
+    if (existing && existing.length > 0) {
+      throw new Error(`Token "${tokenName(token)}" is already registered.`);
+    }
+
+    this.#registry.set(token, [reg]);
+
+    return this;
   }
 
   get disposed(): boolean {
@@ -129,6 +189,45 @@ export class Container {
     return this.#resolveToken(token, [], new Set());
   }
 
+  /**
+   * Resolve a token synchronously. Works for:
+   * - Value registrations (always)
+   * - Singleton and scoped instances that have already been resolved at least once
+   *
+   * Throws SyncResolutionError for:
+   * - Transient factories (never cached, always require async resolution)
+   * - Singleton/scoped factories that have not been resolved yet
+   *
+   * Throws ScopedResolutionError when called on the root container for a scoped token.
+   */
+  resolveSync<T>(token: Token<T>): T {
+    this.#assertNotDisposed();
+
+    const regs = this.#getRegistrations(token) as Registration<T>[];
+
+    if (regs.length === 0) throw new ProviderNotFoundError(token);
+
+    if (regs.length > 1) throw new MultipleProvidersError(token, regs.length);
+
+    return this.#resolveSyncReg(token, regs[0]);
+  }
+
+  #resolveSyncReg<T>(token: Token<T>, reg: Registration<T>): T {
+    if (reg.kind === 'value') return reg.value;
+
+    const { lifetime } = reg;
+
+    if (lifetime === 'scoped' && !this.#parent) throw new ScopedResolutionError(token);
+
+    // Read-only lookup — do not call #getScopedReg here, which would create a
+    // phantom cache entry as a side effect of what is semantically a read.
+    const cacheReg = lifetime === 'singleton' ? reg : lifetime === 'scoped' ? this.#scopeCache.get(reg) : undefined;
+
+    if (cacheReg?.resolved) return cacheReg.instance as T;
+
+    throw new SyncResolutionError(token, lifetime);
+  }
+
   async resolveMany<T>(token: Token<T>): Promise<T[]> {
     this.#assertNotDisposed();
 
@@ -136,7 +235,12 @@ export class Container {
 
     if (regs.length === 0) return [];
 
-    return Promise.all(regs.map((reg) => this.#resolveRegistration(token, reg, [token], new Set([token]))));
+    const stack = [token];
+    const seen = new Set([token]);
+
+    // stack and seen are never mutated — #resolveToken snapshots both before
+    // descending, so sharing them across concurrent Promise.all branches is safe.
+    return Promise.all(regs.map((reg) => this.#resolveReg(token, reg, stack, seen)));
   }
 
   async resolveOptional<T>(token: Token<T>): Promise<T | undefined> {
@@ -158,25 +262,24 @@ export class Container {
 
     try {
       const hooks: Promise<void>[] = [];
-      const registrations = [...this.#registry.values()].flat();
+      const registryRegs = [...this.#registry.values()].flat() as Registration<any>[];
+      const allRegs = [...registryRegs, ...this.#scopeCache.values()];
 
-      for (const reg of [...registrations, ...this.#scoped.values()]) {
-        const { instance, provider, resolved } = reg;
-
-        if (resolved && 'dispose' in provider && provider.dispose) {
-          hooks.push(Promise.resolve().then(() => provider.dispose!(instance as any)));
+      for (const reg of allRegs) {
+        if (reg.kind === 'value') {
+          if (reg.dispose) hooks.push(Promise.resolve().then(() => reg.dispose!(reg.value)));
+        } else if (reg.resolved && reg.dispose) {
+          hooks.push(Promise.resolve().then(() => reg.dispose!(reg.instance as any)));
         }
       }
 
       if (hooks.length > 0) {
         const outcomes = await Promise.allSettled(hooks);
 
-        failures = outcomes
-          .filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
-          .map((outcome) => outcome.reason);
+        failures = outcomes.filter((o): o is PromiseRejectedResult => o.status === 'rejected').map((o) => o.reason);
       }
     } finally {
-      this.#scoped.clear();
+      this.#scopeCache.clear();
       this.#registry.clear();
     }
 
@@ -201,12 +304,12 @@ export class Container {
     return this.#parent.#getRegistrations(token);
   }
 
-  #scopedReg<T>(source: Registration<T>): Registration<T> {
-    let local = this.#scoped.get(source) as Registration<T> | undefined;
+  #getScopedReg<T>(source: FactoryRegistration<T>): FactoryRegistration<T> {
+    let local = this.#scopeCache.get(source) as FactoryRegistration<T> | undefined;
 
     if (!local) {
-      local = { provider: source.provider };
-      this.#scoped.set(source, local);
+      local = { ...source, instance: undefined, promise: undefined, resolved: false };
+      this.#scopeCache.set(source, local);
     }
 
     return local;
@@ -221,37 +324,31 @@ export class Container {
 
     if (regs.length > 1) throw new MultipleProvidersError(token, regs.length);
 
-    return this.#resolveRegistration(token, regs[0], [...stack, token], new Set([...seen, token]));
+    // Snapshot the resolution path for this branch so sibling deps each get an
+    // accurate error path if a cycle is detected in their subtree.
+    const childStack = [...stack, token];
+    const childSeen = new Set([...seen, token]);
+
+    return this.#resolveReg(token, regs[0], childStack, childSeen);
   }
 
-  async #resolveRegistration<T>(
-    token: Token<T>,
-    reg: Registration<T>,
-    stack: Token<any>[],
-    seen: Set<Token<any>>,
-  ): Promise<T> {
-    const { provider } = reg;
+  async #resolveReg<T>(token: Token<T>, reg: Registration<T>, stack: Token<any>[], seen: Set<Token<any>>): Promise<T> {
+    if (reg.kind === 'value') return reg.value;
 
-    if ('useValue' in provider) return provider.useValue;
+    const { deps, factory, lifetime } = reg;
 
-    const { deps = [], lifetime = 'singleton' } = provider;
+    if (lifetime === 'scoped' && !this.#parent) throw new ScopedResolutionError(token);
 
-    if (lifetime === 'scoped' && !this.#parent) {
-      throw new Error(`Token "${tokenName(token)}" uses scoped lifetime but was resolved on the root container.`);
-    }
-
-    const cacheReg = lifetime === 'singleton' ? reg : lifetime === 'scoped' ? this.#scopedReg(reg) : undefined;
+    const cacheReg = lifetime === 'singleton' ? reg : lifetime === 'scoped' ? this.#getScopedReg(reg) : undefined;
 
     if (cacheReg?.resolved) return cacheReg.instance as T;
 
     if (cacheReg?.promise) return cacheReg.promise;
 
     const build = async (): Promise<T> => {
-      const args = await Promise.all(
-        (deps as Token<any>[]).map((dep) => this.#resolveToken(dep, stack, new Set(seen))),
-      );
+      const args = await Promise.all(deps.map((dep) => this.#resolveToken(dep, stack, seen)));
 
-      return (provider as FactoryProvider<T>).useFactory(...args);
+      return factory(...args);
     };
 
     if (!cacheReg) return build();

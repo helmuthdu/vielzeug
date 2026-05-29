@@ -1,9 +1,17 @@
 ---
-title: 'Lingua Examples — Error Handling'
-description: 'Handle preload/setLocale errors at the call site.'
+title: 'Lingua Examples — Diagnostics Hook'
+description: 'Diagnostics hook example for @vielzeug/lingua.'
 ---
 
-## Error Handling
+## Diagnostics Hook
+
+### Problem
+
+You want to surface missing translation keys and failed locale loads to a monitoring tool or developer console without crashing the UI.
+
+### Solution
+
+Use `onMissing` for key/variable misses and try/catch around `preload()` / `setLocale()` for loader errors. There is no global diagnostics bus by design; errors surface at the call site.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
@@ -14,17 +22,31 @@ const i18n = createI18n({
     en: { title: 'Home' },
     fr: () => fetch('/api/locales/fr').then((r) => r.json()),
   },
+  onMissing(info) {
+    // Send to your monitoring service
+    console.warn(`[i18n] missing ${info.type}:`, info);
+    return info.type === 'key' ? info.key : `{${info.varName}}`;
+  },
 });
 
 try {
   await i18n.preload('fr');
   await i18n.setLocale('fr');
 } catch (error) {
+  // Network failure or malformed JSON from the loader
   console.error('Could not switch locale', error);
+  await i18n.setLocale('en'); // fall back to default
 }
 ```
 
-## Notes
+### Pitfalls
 
-- The runtime has no diagnostics bus by design.
-- `preload()` and `setLocale()` reject on loading errors.
+- `onMissing` is called synchronously inside `t()` and `tp()`. Keep it fast — avoid network calls or heavy computation.
+- `onMissing` must return a `string`. Returning `undefined` or throwing will produce a runtime error in the translation pipeline.
+- `preload()` rejects if the loader throws. If you do not catch the rejection, the `setLocale()` call that follows will throw `[lingua/E001]` because the catalog was never stored.
+
+### Related
+
+- [Per-request Locale Handling](./per-request-locale-handling.md)
+- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Shared Instance Setup](./shared-instance-setup.md)

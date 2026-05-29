@@ -1,4 +1,4 @@
-import { createQuery, type QueryFnContext, type QueryState } from '../index';
+import { bindRefetch, createQuery, type QueryFnContext, type QueryState } from '../index';
 
 describe('Query Client', () => {
   afterEach(() => {
@@ -207,7 +207,7 @@ describe('Query Client', () => {
       expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
     });
 
-    it('subscribe() tracks isFetching through idle → fetching → success', async () => {
+    it('subscribe() tracks isFetching through fetching → success', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
 
@@ -216,13 +216,13 @@ describe('Query Client', () => {
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
       unsub();
 
-      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
-      expect(states[0].isFetching).toBe(false);
-      expect(states[1].isFetching).toBe(true);
-      expect(states[2].isFetching).toBe(false);
+      // subscribe() no longer fires immediately — first notification is the fetching state
+      expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
+      expect(states[0].isFetching).toBe(true);
+      expect(states[1].isFetching).toBe(false);
     });
 
-    it('subscribe() tracks isFetching through idle → fetching → error', async () => {
+    it('subscribe() tracks isFetching through fetching → error', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
 
@@ -236,9 +236,9 @@ describe('Query Client', () => {
         })
         .catch(() => {});
 
-      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
-      expect(states[1].isFetching).toBe(true);
-      expect(states[2].error?.message).toBe('boom');
+      expect(states.map((s) => s.status)).toEqual(['pending', 'error']);
+      expect(states[0].isFetching).toBe(true);
+      expect(states[1].error?.message).toBe('boom');
     });
 
     it('subscribe() cancels a pending GC timer to keep entry alive', async () => {
@@ -271,17 +271,33 @@ describe('Query Client', () => {
       vi.useRealTimers();
     });
 
-    it('refetchOnFocus registers and removes the visibilitychange listener', () => {
-      const addSpy = vi.spyOn(document, 'addEventListener');
-      const removeSpy = vi.spyOn(document, 'removeEventListener');
+    it('bindRefetch() triggers refetchStale() on visibilitychange', () => {
+      const qc = createQuery();
+      const spyRefetch = vi.spyOn(qc, 'refetchStale');
 
-      const qc = createQuery({ refetchOnFocus: true });
+      // Save and restore to avoid polluting subsequent tests
+      const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 
-      expect(addSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+      try {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
 
-      qc.dispose();
+        const unbind = bindRefetch(qc);
 
-      expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        expect(spyRefetch).toHaveBeenCalledTimes(1);
+
+        unbind();
+
+        // After unbind, further events must not trigger a call
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        expect(spyRefetch).toHaveBeenCalledTimes(1);
+      } finally {
+        if (originalDescriptor) {
+          Object.defineProperty(document, 'visibilityState', originalDescriptor);
+        }
+      }
     });
 
     it('subscribe() select() transforms the observed data shape', async () => {
@@ -405,17 +421,14 @@ describe('Query Client', () => {
       unsub3();
     });
 
-    it('refetchOnReconnect revalidates error entries that still hold stale data', async () => {
+    it('refetchStale() revalidates error entries that still hold stale data', async () => {
       vi.useFakeTimers();
 
-      const qc = createQuery({ refetchOnReconnect: true });
+      const qc = createQuery();
       let calls = 0;
       const unsub = qc.subscribe(['err-recovery'], () => {});
 
-      // Seed with successful data
-      qc.set(['err-recovery'], { id: 1 });
-
-      // Simulate a failed refetch that preserves previous data
+      // Seed with successful data then fail a refetch to arrive at error + stale data
       await qc.fetch({
         fn: async () => {
           calls++;
@@ -448,15 +461,89 @@ describe('Query Client', () => {
 
       const callsBefore = calls;
 
-      window.dispatchEvent(new Event('online'));
+      // refetchStale() is now the explicit API instead of hidden window 'online' listener
+      qc.refetchStale();
       await vi.runAllTimersAsync();
 
-      // Should have attempted a revalidation after reconnect
       expect(calls).toBeGreaterThan(callsBefore);
 
       unsub();
       qc.dispose();
       vi.useRealTimers();
+    });
+
+    it('refetchStale() skips error entries whose updatedAt is within staleTime', async () => {
+      vi.useFakeTimers();
+
+      const qc = createQuery();
+      const unsub = qc.subscribe(['key'], () => {});
+      let attempt = 0;
+
+      const fn = vi.fn(async () => {
+        if (++attempt === 1) return { id: 1 };
+
+        throw new Error('server error');
+      });
+
+      // Fetch successfully — lastConfig.staleTime = 60_000
+      await qc.fetch({ fn, key: ['key'], staleTime: 60_000 });
+
+      // invalidate() triggers background revalidation via entry.lastConfig which
+      // carries staleTime: 60_000. The fn fails on attempt 2 → error + stale data.
+      qc.invalidate(['key']);
+      await vi.runAllTimersAsync();
+
+      expect(qc.getState(['key'])).toMatchObject({ data: { id: 1 }, status: 'error' });
+
+      fn.mockClear();
+
+      // Error just happened — within staleTime — must NOT trigger a refetch
+      qc.refetchStale();
+      await vi.runAllTimersAsync();
+
+      expect(fn).not.toHaveBeenCalled();
+
+      // Advance past staleTime — now it must revalidate
+      vi.advanceTimersByTime(60_001);
+      qc.refetchStale();
+      await vi.runAllTimersAsync();
+
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      unsub();
+      qc.dispose();
+      vi.useRealTimers();
+    });
+
+    it('fetch() joining an in-flight request updates lastConfig', async () => {
+      const qc = createQuery();
+      let resolveFetch!: (v: { id: number }) => void;
+      const blocking = new Promise<{ id: number }>((r) => (resolveFetch = r));
+
+      // First fetch starts the in-flight request
+      const p1 = qc.fetch({ fn: () => blocking, key: ['x'], staleTime: 0 });
+
+      // Second fetch joins the in-flight request — with a different staleTime
+      const p2 = qc.fetch({ fn: () => blocking, key: ['x'], staleTime: 60_000 });
+
+      resolveFetch({ id: 1 });
+      await Promise.all([p1, p2]);
+
+      // After resolution the lastConfig must reflect the most recent fetch call (staleTime 60_000)
+      // so a subsequent fetch within that window is served from cache.
+      let extraCalls = 0;
+
+      await qc.fetch({
+        fn: async () => {
+          extraCalls++;
+
+          return { id: 2 };
+        },
+        key: ['x'],
+        staleTime: 60_000,
+      });
+
+      expect(extraCalls).toBe(0); // served from cache, no network call
     });
 
     it('[Symbol.dispose] delegates to dispose()', () => {
@@ -612,13 +699,14 @@ describe('Query Client', () => {
   describe('Selection', () => {
     it('select transforms the data seen by the listener', async () => {
       const qc = createQuery();
-
-      qc.set(['user', 1], { id: 1, name: 'Alice' });
-
       const names: (string | undefined)[] = [];
+
+      // subscribe first — listener won't fire until next state change (R6)
       const unsub = qc.subscribe<{ id: number; name: string }, string>(['user', 1], (s) => names.push(s.data), {
         select: (d) => d?.name,
       });
+
+      qc.set(['user', 1], { id: 1, name: 'Alice' });
 
       expect(names).toEqual(['Alice']);
       unsub();
@@ -628,16 +716,17 @@ describe('Query Client', () => {
       const qc = createQuery();
       let calls = 0;
 
-      qc.set(['user', 1], { id: 1, name: 'Alice', role: 'admin' });
-
+      // subscribe before any set — listener won't fire on subscribe (R6)
       const unsub = qc.subscribe<{ id: number; name: string; role: string }, string>(['user', 1], () => calls++, {
         select: (d) => d?.name,
       });
 
+      qc.set(['user', 1], { id: 1, name: 'Alice', role: 'admin' });
+
       // Update only `role` — name unchanged, listener must NOT fire again
       qc.set(['user', 1], { id: 1, name: 'Alice', role: 'editor' });
 
-      expect(calls).toBe(1); // only the initial fire
+      expect(calls).toBe(1); // only the first set fired
 
       // Update `name` — listener MUST fire
       qc.set(['user', 1], { id: 1, name: 'Bob', role: 'editor' });
@@ -654,7 +743,7 @@ describe('Query Client', () => {
 
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['user', 1] }).catch(() => {});
 
-      expect(statuses).toContain('idle');
+      // subscribe() no longer fires immediately — 'idle' is not captured
       expect(statuses).toContain('success');
 
       const fetchingState = qc.getState<{ id: number }>(['user', 1]);

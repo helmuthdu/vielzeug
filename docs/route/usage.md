@@ -70,14 +70,15 @@ Each route can provide these fields:
 | `path`         | Match pattern                                                              |
 | `children`     | Nested child routes                                                        |
 | `index`        | Default child route that inherits the parent path                          |
-| `component`    | Optional view payload exposed on `router.state.matches.at(-1)?.component`  |
+| `component`    | Optional view payload exposed on `router.getSnapshot().matches.at(-1)?.component`  |
 | `data`         | Abortable route data function that runs after middleware                   |
 | `handler`      | Final route handler                                                        |
 | `lazy`         | Lazy-load the module. Called once; result fills `handler`, `data`, `component`, `meta`. |
-| `meta`         | Static data exposed on `router.state.matches.at(-1)?.meta`                 |
+| `meta`         | Static data exposed on `router.getSnapshot().matches.at(-1)?.meta`                 |
 | `middleware`   | Route-specific middleware                                                  |
+| `onLeave`      | Per-route leave guard. Return `false` to block navigation away from this route. |
 | `redirect`     | Declarative permanent redirect. Resolved before middleware runs.           |
-| `coerceSearch` | Coerce search params. Return value replaces `ctx.query`.                   |
+| `coerceSearch` | Coerce raw URL search strings into typed values. Return value replaces `ctx.query`. Throw to leave the raw query unchanged. |
 
 Use wildcard routes for fallback behavior:
 
@@ -170,6 +171,38 @@ const routes = {
 };
 ```
 
+### Leave Guards
+
+Block navigation away from a specific route with the per-route `onLeave` field, or register a global guard with `router.beforeLeave()`.
+
+```ts
+const routes = {
+  editor: {
+    path: '/editor',
+    onLeave: async () => {
+      if (!form.isDirty) return true;
+      return confirm('Discard changes?');
+    },
+    handler: () => renderEditor(),
+  },
+};
+```
+
+Global guards are registered after the router is created:
+
+```ts
+const removeGuard = router.beforeLeave(async () => {
+  if (!analytics.pendingFlush) return true;
+  await analytics.flush();
+  return true;
+});
+
+// Remove when no longer needed:
+removeGuard();
+```
+
+When both are present, the per-route `onLeave` fires first (leaf → root), then the global `beforeLeave` guards in registration order.
+
 ### Data Loading
 
 Use `data()` for route-local data acquisition. It receives the same route context plus an `AbortSignal`.
@@ -201,7 +234,7 @@ The resolved object may contain `handler`, `data`, `component`, and/or `meta`. A
 
 ### Search Param Validation
 
-Validate and coerce `ctx.query` per route. Throw to leave the parsed query unchanged.
+Validate and coerce `ctx.query` per route. The function receives raw URL strings (`QueryParams`). Throw to leave the parsed query unchanged.
 
 ```ts
 const routes = {
@@ -218,7 +251,7 @@ const routes = {
 
 ### Error Boundaries
 
-Wrap `await next()` in middleware. The thrown error is also stored on `router.state.error`.
+Wrap `await next()` in middleware. The thrown error is also stored on `router.getSnapshot().error`.
 
 ```ts
 const boundary = async (ctx, next) => {
@@ -236,8 +269,9 @@ const router = createRouter({
 });
 
 // Check after navigation:
-if (router.state.status === 'error') {
-  console.error(router.state.error);
+const { status, error } = router.getSnapshot();
+if (status === 'error') {
+  console.error(error);
 }
 ```
 
@@ -263,7 +297,7 @@ Use these when a destination does not belong in the route table. The same `navig
 
 ### History State
 
-Attach arbitrary state to a history entry and read it back via `ctx.historyState` or `router.state.location.historyState`.
+Attach arbitrary state to a history entry and read it back via `ctx.historyState` or `router.getSnapshot().location.historyState`.
 
 ```ts
 await router.navigate({ name: 'userDetail', params: { id: '42' } }, { state: { from: 'search' } });
@@ -292,7 +326,7 @@ anchor.addEventListener('mouseenter', () => {
 });
 ```
 
-Concurrent calls for the same route+params are deduplicated. A subsequent `navigate()` re-runs the loaders with a fresh signal.
+Concurrent calls for the same route+params are deduplicated. Results are discarded after the next navigation; the loaders will run again with a fresh `AbortSignal` on the actual visit.
 
 ### Leave Guards
 
@@ -307,6 +341,8 @@ const removeGuard = router.beforeLeave(async () => {
 // Remove when the component unmounts:
 removeGuard();
 ```
+
+For guards that belong to a specific route, use `onLeave` in the route definition instead (see [Define Routes Once](#define-routes-once)).
 
 ## URLs and Active State
 
@@ -324,14 +360,36 @@ router.isActive('users', { exact: true });
 ## Resolve Without Navigating
 
 ```ts
-const match = router.resolve('/app/dashboard/settings');
+const branch = router.resolve('/app/dashboard/settings');
 
-if (match?.at(-1)?.name === 'dashboard.settings') {
+if (branch?.at(-1)?.name === 'dashboard.settings') {
   warmSettingsPanel();
 }
 ```
 
-`resolve()` strips the configured base automatically and returns the full matched branch.
+`resolve()` strips the configured base automatically and returns the full matched branch (root to leaf). Data loaders are not executed.
+
+## SSR Data Prefetch
+
+Use `router.match(url, signal?)` to resolve a full route state including data loader results without modifying router state or history. Ideal for server-side data prefetching.
+
+```ts
+const state = await router.match('/users/42');
+
+if (state) {
+  const data = state.matches.at(-1)?.data;
+  // serialize and send to the client
+}
+```
+
+Pass an `AbortSignal` to cancel in-flight loaders:
+
+```ts
+const controller = new AbortController();
+const state = await router.match('/users/42', controller.signal);
+```
+
+`match()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
 
 ## State and Subscriptions
 
@@ -340,19 +398,26 @@ router.subscribe((state) => {
   const leaf = state.matches.at(-1);
   document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
 });
+```
 
-router.state.location.pathname;
-router.state.location.query;
-router.state.location.hash;
-router.state.location.historyState; // state from the current history entry
-router.state.matches;
-router.state.status; // 'idle' | 'loading' | 'error'
-router.state.error; // only set when status === 'error'
+Use `router.getSnapshot()` to read the current state synchronously:
+
+```ts
+const { location, matches, status, error } = router.getSnapshot();
+
+location.pathname;
+location.query;        // raw parsed query strings (QueryParams)
+location.hash;
+location.historyState; // state from the current history entry
+
+matches;               // matched branch from root to leaf
+status;                // 'idle' | 'loading' | 'error'
+error;                 // only set when status === 'error'
 ```
 
 The state object is immutable. A successful navigation replaces it with a new snapshot.
 
-`router.state.matches` contains the matched branch from root to leaf. Access route metadata via the leaf match: `state.matches.at(-1)?.meta`.
+`matches` contains the matched branch from root to leaf. Access route metadata via the leaf match: `matches.at(-1)?.meta`. Note that `location.query` always contains raw string values from URL parsing. For coerced values, read `ctx.query` inside middleware or handlers.
 
 ## Scroll Restoration
 
@@ -396,7 +461,7 @@ const history = createMemoryHistory('/dashboard');
 const router = createRouter({ history, routes });
 
 await new Promise((r) => setTimeout(r, 0));
-assert(router.state.location.pathname === '/dashboard');
+assert(router.getSnapshot().location.pathname === '/dashboard');
 
 router.dispose();
 ```
@@ -411,17 +476,93 @@ Remove listeners, clear subscribers, and prevent future router usage.
 
 ## Framework Integration
 
-Route stays framework-agnostic. For complete, maintained integration patterns, use the dedicated examples:
+Route exposes `getSnapshot()` and `subscribe()`, which map directly to each framework's external-store primitives. Create the router once at module scope and bind actions outside the component lifecycle so references stay stable.
 
-- [React Integration](./examples/react-integration.md)
-- [Vue Integration](./examples/vue-integration.md)
-- [Svelte Integration](./examples/svelte-integration.md)
+::: code-group
 
-The current recommended pattern is:
+```tsx [React]
+import { createRouter } from '@vielzeug/route';
+import { useSyncExternalStore } from 'react';
 
-- **React:** one `useRouter()` hook that returns `{ state, navigate, url, isActive }`
-- **Vue:** one `useRouter()` composable with the same shape
-- **Svelte:** use the `router` store directly as `$router`
+const router = createRouter({
+  routes: {
+    home: { component: HomePage, path: '/' },
+    settings: { component: SettingsPage, path: '/settings' },
+    notFound: { component: NotFoundPage, path: '*' },
+  },
+});
+
+// Stable references outside the hook — do not recreate on every render.
+const getSnapshot = () => router.getSnapshot();
+const subscribe = (cb: () => void) => router.subscribe(cb);
+const navigate = router.navigate.bind(router);
+const url = router.url.bind(router);
+const isActive = router.isActive.bind(router);
+
+export function useRouter() {
+  const state = useSyncExternalStore(subscribe, getSnapshot);
+  return { isActive, navigate, state, url };
+}
+
+// RouterView.tsx
+export function RouterView() {
+  const { state } = useRouter();
+  const Component = state.matches.at(-1)?.component as React.ComponentType | undefined;
+  return Component ? <Component /> : null;
+}
+```
+
+```ts [Vue 3]
+import { createRouter } from '@vielzeug/route';
+import { readonly, shallowRef } from 'vue';
+
+const router = createRouter({
+  routes: {
+    home: { component: HomePage, path: '/' },
+    settings: { component: SettingsPage, path: '/settings' },
+    notFound: { component: NotFoundPage, path: '*' },
+  },
+});
+
+// shallowRef — no need to deep-track immutable route state.
+const state = shallowRef(router.getSnapshot());
+router.subscribe((next) => { state.value = next; });
+
+export function useRouter() {
+  return {
+    isActive: router.isActive.bind(router),
+    navigate: router.navigate.bind(router),
+    state: readonly(state),
+    url: router.url.bind(router),
+  };
+}
+```
+
+```svelte [Svelte]
+<!-- router.ts -->
+<script lang="ts" context="module">
+  import { createRouter } from '@vielzeug/route';
+  import { readable } from 'svelte/store';
+
+  const router = createRouter({
+    routes: {
+      home: { component: HomePage, path: '/' },
+      settings: { component: SettingsPage, path: '/settings' },
+      notFound: { component: NotFoundPage, path: '*' },
+    },
+  });
+
+  // readable injects the initial value; subscribe() drives updates.
+  export const routerState = readable(router.getSnapshot(), (set) => router.subscribe(set));
+  export const navigate = router.navigate.bind(router);
+  export const url = router.url.bind(router);
+  export const isActive = router.isActive.bind(router);
+</script>
+```
+
+:::
+
+For full RouterView and RouterLink patterns, see [React Integration](./examples/react-integration.md), [Vue Integration](./examples/vue-integration.md), and [Svelte Integration](./examples/svelte-integration.md).
 
 ## Working with Other Vielzeug Libraries
 
@@ -460,10 +601,10 @@ import { createRouter } from '@vielzeug/route';
 import { signal } from '@vielzeug/ripple';
 
 const router = createRouter({ /* ... */ });
-const currentRoute = signal(router.state.matches.at(-1)?.name ?? '');
+const currentRoute = signal(router.getSnapshot().matches.at(-1)?.name ?? '');
 
-router.subscribe(() => {
-  currentRoute.value = router.state.matches.at(-1)?.name ?? '';
+router.subscribe((state) => {
+  currentRoute.value = state.matches.at(-1)?.name ?? '';
 });
 ```
 

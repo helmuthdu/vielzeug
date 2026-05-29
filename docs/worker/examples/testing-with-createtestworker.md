@@ -1,6 +1,6 @@
 ---
 title: 'Worker Examples — Testing with createTestWorker'
-description: 'Testing with createTestWorker examples for worker.'
+description: 'Testing with createTestWorker example for @vielzeug/worker.'
 ---
 
 ## Testing with createTestWorker

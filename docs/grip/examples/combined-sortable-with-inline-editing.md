@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — Combined: sortable with inline editing'
-description: 'Combined: sortable with inline editing examples for grip.'
+description: 'Combined sortable with inline editing example for @vielzeug/grip.'
 ---
 
 ## Combined: sortable with inline editing

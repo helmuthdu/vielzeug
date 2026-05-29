@@ -1,20 +1,71 @@
-import type { ComputedSignal, ReactiveOptions, Signal, Subscription } from './types';
+import type {
+  ComputedSignal,
+  DepSource,
+  DirtyComputed,
+  ReactiveNode,
+  ReactiveOptions,
+  Signal,
+  Subscriber,
+  Subscription,
+} from './types';
 
 import { computed } from './computed';
 import { IS_SIGNAL, toSubscription } from './helpers';
-import { ReactiveNode } from './node';
 import { notifyNodeChange } from './scheduling';
+import { trackSource } from './tracking';
 
-export class SignalImpl<T> extends ReactiveNode implements Signal<T> {
+export class SignalImpl<T> implements Signal<T>, DepSource, ReactiveNode {
+  version = 0;
+  readonly name: string | undefined;
+  [IS_SIGNAL] = true;
+
   private value_: T;
   private equals_: (a: T, b: T) => boolean;
   private disposed_ = false;
-  [IS_SIGNAL] = true;
+  private computedSubs_ = new Set<DirtyComputed>();
+  private subscribers_ = new Set<Subscriber>();
 
   constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string) {
-    super(name);
+    this.name = name;
     this.value_ = initial;
     this.equals_ = equals ?? Object.is;
+  }
+
+  private track(): void {
+    trackSource(this);
+  }
+
+  addComputedSub(c: DirtyComputed): void {
+    this.computedSubs_.add(c);
+  }
+
+  removeComputedSub(c: DirtyComputed): void {
+    this.computedSubs_.delete(c);
+  }
+
+  addEffectSub(subscriber: Subscriber): void {
+    this.subscribers_.add(subscriber);
+  }
+
+  removeEffectSub(subscriber: Subscriber): void {
+    this.subscribers_.delete(subscriber);
+  }
+
+  private clearSubscribers(): void {
+    this.computedSubs_.clear();
+    this.subscribers_.clear();
+  }
+
+  hasSubscribers(): boolean {
+    return this.computedSubs_.size > 0 || this.subscribers_.size > 0;
+  }
+
+  computedSubs(): ReadonlySet<DirtyComputed> {
+    return this.computedSubs_;
+  }
+
+  subscribers(): ReadonlySet<Subscriber> {
+    return this.subscribers_;
   }
 
   get value(): T {
@@ -44,11 +95,25 @@ export class SignalImpl<T> extends ReactiveNode implements Signal<T> {
   readonly subscribe = (listener: () => void): Subscription => {
     if (this.disposed_) return toSubscription(() => {});
 
-    return super.subscribe(listener);
+    this.subscribers_.add(listener);
+
+    return toSubscription(() => {
+      this.subscribers_.delete(listener);
+    });
   };
 
-  derive<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
+  map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
     return computed(() => fn(this.value), options);
+  }
+
+  filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
+  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined> {
+    return computed(() => {
+      const v = this.value;
+
+      return predicate(v) ? v : undefined;
+    });
   }
 
   /**

@@ -1,32 +1,33 @@
 import type {
   Adapter,
   AnySchema,
+  BaseAdapterOptions,
   DebugInfo,
-  DepositLogger,
   KeyOf,
   MetricsEvent,
   RecordOf,
-  TableSignals,
-  TableValidators,
   TransactionContext,
   TtlMs,
 } from './types';
 
 import { DepositError, DepositScopeError } from './errors';
-import { createObserverHub, createWatchIterable, getRecordKey } from './internal';
+import { createObserveMany, createObserverHub, createWatchIterable, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
 import { assertTtlMs } from './ttl';
 
-/* -------------------- Internal backend protocols (adapter → runtime bridge) -------------------- */
+/* -------------------- Internal backend protocol -------------------- */
 
-/** @internal Storage operations subset — used by `buildTxContext` and the IDB batch transaction core. */
-export type StorageCore<S extends AnySchema, K extends keyof S = keyof S> = {
+/**
+ * @internal Full backend protocol implemented by each adapter.
+ * A single flat interface — no StorageCore/StorageBackend split.
+ */
+export type StorageBackend<S extends AnySchema, K extends keyof S = keyof S> = {
   clear<T extends K>(table: T): Promise<void>;
   /** Returns live (non-expired) record count for the table. */
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  /** Delete multiple records by key in a single operation. Returns the number physically removed. */
   deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  dispose?(): void;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   /**
@@ -36,44 +37,44 @@ export type StorageCore<S extends AnySchema, K extends keyof S = keyof S> = {
    */
   getByKeyRange?<T extends K>(table: T, range: NativeRange): Promise<RecordOf<S, T>[]>;
   /**
-   * Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`.
-   * Optional: adapters that can batch key lookups efficiently (e.g. IndexedDB single transaction) should
-   * implement this. Falls back to N individual `get` calls when absent.
+   * Optional: fetch multiple records by key in a single operation. Preserves key order; missing keys yield
+   * `undefined`. Falls back to N individual `get` calls when absent.
    */
   getMany?<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  /** Raw record count including TTL-expired entries. Used only for debug(). */
+  getRawCount?<T extends K>(table: T): Promise<number>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /**
+   * Optional: prune all expired records across all tables in a single atomic operation.
+   * When present, `pruneExpired()` delegates here instead of calling `pruneExpiredInTable` N times.
+   */
+  pruneAllExpired?(): Promise<Record<string, number>>;
+  pruneExpiredInTable<T extends K>(table: T): Promise<number>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
 };
 
-/** @internal Full backend protocol — `StorageCore` plus lifecycle and maintenance hooks. */
-export type StorageBackend<S extends AnySchema, K extends keyof S = keyof S> = StorageCore<S, K> & {
-  dispose?(): void;
-  /** Raw record count including TTL-expired entries. Used only for debug(). */
-  getRawCount?<T extends K>(table: T): Promise<number>;
-  /**
-   * Optional: prune all expired records across all tables in a single atomic operation.
-   * When present, `pruneExpired()` delegates here instead of calling `pruneExpiredInTable` N times.
-   * Implement this for adapters where a single multi-table operation is cheaper (e.g. IndexedDB).
-   */
-  pruneAllExpired?(): Promise<Record<string, number>>;
-  /** Explicitly prune expired records from the table. Returns the number of records deleted. */
-  pruneExpiredInTable<T extends K>(table: T): Promise<number>;
+/* -------------------- Exported types for adapter implementors -------------------- */
+
+export type BatchDeps<S extends AnySchema> = {
+  notifyMutation: (table: keyof S) => void;
+  validate: <K extends keyof S>(table: K, value: RecordOf<S, K>) => RecordOf<S, K>;
 };
 
-/* -------------------- Shared timestamp helper (avoids duplicated typeof performance checks) -------------------- */
+export type BatchImpl<S extends AnySchema> = <K extends keyof S, R>(
+  tables: readonly K[],
+  fn: (tx: TransactionContext<S, K>) => Promise<R>,
+) => Promise<R>;
+
+/* -------------------- Helpers -------------------- */
 
 const getTimestamp: () => number = typeof performance !== 'undefined' ? () => performance.now() : () => Date.now();
-
-/* -------------------- TTL resolution (explicit > schema default > none) -------------------- */
 
 function resolveTtl<S extends AnySchema, K extends keyof S>(schema: S, table: K, ttl?: TtlMs): TtlMs | undefined {
   if (ttl !== undefined) assertTtlMs(ttl, 'put/putAll');
 
   return ttl ?? schema[table].defaultTtl;
 }
-
-/* -------------------- Key validation (used in update/upsert) -------------------- */
 
 function verifyKey<S extends AnySchema, K extends keyof S>(
   schema: S,
@@ -91,10 +92,8 @@ function verifyKey<S extends AnySchema, K extends keyof S>(
   }
 }
 
-/* -------------------- Shared deleteMany builder (used in both tx and adapter query) -------------------- */
-
 function makeDeleteMany<S extends AnySchema, K extends keyof S>(
-  core: Pick<StorageCore<S, K>, 'deleteMany'>,
+  core: Pick<StorageBackend<S, K>, 'deleteMany'>,
   schema: S,
   table: K,
   onMutate: (table: K) => void,
@@ -111,31 +110,19 @@ function makeDeleteMany<S extends AnySchema, K extends keyof S>(
   };
 }
 
-/* -------------------- Exported dependency/factory types for adapter implementors -------------------- */
+function getManyWithFallback<S extends AnySchema, K extends keyof S>(
+  core: Pick<StorageBackend<S, K>, 'get' | 'getMany'>,
+  table: K,
+  keys: KeyOf<S, K>[],
+): Promise<Array<RecordOf<S, K> | undefined>> {
+  if (core.getMany) return core.getMany(table, keys);
 
-/**
- * Dependencies injected into the `buildBatch` factory by `buildAdapterOps`.
- * Adapter implementations receive this when constructing their native batch function.
- */
-export type BatchDeps<S extends AnySchema> = {
-  notifyMutation: (table: keyof S) => void;
-  validate: <K extends keyof S>(table: K, value: RecordOf<S, K>) => RecordOf<S, K>;
-};
-
-/**
- * The batch function signature returned by the `buildBatch` factory.
- * Accepts a set of tables and an async callback that receives a scoped TransactionContext.
- */
-export type BatchImpl<S extends AnySchema> = <K extends keyof S, R>(
-  tables: readonly K[],
-  fn: (tx: TransactionContext<S, K>) => Promise<R>,
-) => Promise<R>;
-
-/* -------------------- Query context builder (shared between tx and adapter paths) -------------------- */
+  return Promise.all(keys.map((k) => core.get(table, k)));
+}
 
 function buildQueryCtx<S extends AnySchema, K extends keyof S>(
   table: K,
-  core: Pick<StorageCore<S, K>, 'deleteMany' | 'getAll' | 'getByKeyRange'>,
+  core: Pick<StorageBackend<S, K>, 'deleteMany' | 'getAll' | 'getByKeyRange'>,
   schema: S,
   onMutate: (t: K) => void,
   wrapFetch?: <T>(fn: () => Promise<T>) => Promise<T>,
@@ -156,29 +143,17 @@ function buildQueryCtx<S extends AnySchema, K extends keyof S>(
   };
 }
 
-/* Fallback for optional getMany — lives here so both buildTxContext and any future path share one impl. */
-function getManyWithFallback<S extends AnySchema, K extends keyof S>(
-  core: Pick<StorageCore<S, K>, 'get' | 'getMany'>,
-  table: K,
-  keys: KeyOf<S, K>[],
-): Promise<Array<RecordOf<S, K> | undefined>> {
-  if (core.getMany) return core.getMany(table, keys);
-
-  return Promise.all(keys.map((k) => core.get(table, k)));
-}
-
-/* -------------------- buildTxContext: turns StorageCore into a TransactionContext -------------------- */
+/* -------------------- buildTxContext -------------------- */
 
 export function buildTxContext<S extends AnySchema, K extends keyof S>(
   schema: S,
-  core: StorageCore<S, K>,
+  core: StorageBackend<S, K>,
   onMutate: (table: K) => void,
   validate?: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   scope?: ReadonlySet<string>,
 ): TransactionContext<S, K> {
   const applyValidation = validate ?? ((_: K, v: RecordOf<S, K>) => v);
 
-  // scope is only set inside batch() — undefined at the top-level adapter, where all tables are open.
   const checkScope = scope
     ? (t: K): void => {
         if (!scope.has(String(t))) {
@@ -191,10 +166,6 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
     async clear(table) {
       checkScope(table);
 
-      // Use live count to decide whether clear is meaningful.
-      // core.count() also lazily evicts expired records as a side-effect, so after this
-      // call the table contains only live records (if any). This prevents spurious observer
-      // notifications when all records were already TTL-expired.
       const live = await core.count(table);
 
       if (live === 0) return;
@@ -260,16 +231,6 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
 
       return core.has(table, key);
     },
-    async *iterate(table) {
-      checkScope(table);
-
-      // NOTE: All adapters materialize the full table before yielding records.
-      // Early-exit (break) avoids iterating the remaining slice, but does not reduce memory usage.
-      // Use query().first() or query().filter(...).toArray() when memory efficiency matters.
-      for (const record of await core.getAll(table)) {
-        yield record;
-      }
-    },
     async put(table, value, ttl) {
       checkScope(table);
 
@@ -321,30 +282,15 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
   };
 }
 
-/* -------------------- buildAdapterOps: the single flat factory -------------------- */
+/* -------------------- buildAdapterOps -------------------- */
 
 export function buildAdapterOps<S extends AnySchema>(
   schema: S,
   core: StorageBackend<S>,
-  options?: {
-    /**
-     * Adapter-provided native batch override (e.g. a real IDB transaction). Falls back to a
-     * soft batch that defers observer notifications. Receives `notifyMutation` and `validate`
-     * via the deps object at construction time and returns a plain batch function.
-     */
+  options?: BaseAdapterOptions<S> & {
     buildBatch?: (deps: BatchDeps<S>) => BatchImpl<S>;
-    /** Structured logger. A /rune Logger satisfies DepositLogger directly. */
-    logger?: DepositLogger;
     onCrossTabMessage?: (notify: (table: keyof S) => void) => (() => void) | undefined;
-    onMetrics?: (event: MetricsEvent) => void;
     onMutation?: (table: keyof S) => void;
-    /**
-     * Per-table reactive signals. A /ripple Signal<T[]> satisfies ReactiveSignal directly.
-     * Each signal is kept in sync with its table automatically via observe().
-     */
-    signals?: TableSignals<S>;
-    /** Per-table validators. A /sieve Schema satisfies this directly via `parse()`. */
-    validators?: TableValidators<S>;
   },
 ): Adapter<S> {
   const { logger, onMetrics, signals, validators } = options ?? {};
@@ -364,7 +310,6 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const disconnectExternal = options?.onCrossTabMessage?.(observers.notify) ?? undefined;
 
-  /* -- Wire per-table reactive signals: each fires signal.update(() => snapshot) on change -- */
   if (signals) {
     for (const [tableName, signal] of Object.entries(signals)) {
       if (signal) {
@@ -379,7 +324,6 @@ export function buildAdapterOps<S extends AnySchema>(
     }
   }
 
-  /* -- Validation helper: no-op when no validator registered for the table -- */
   const validate = <K extends keyof S>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
     const validator = validators?.[table];
 
@@ -388,7 +332,7 @@ export function buildAdapterOps<S extends AnySchema>(
     return validator.parse(value) as RecordOf<S, K>;
   };
 
-  /* -- Metrics helper (uses shared getTimestamp constant) -- */
+  /* R5: Timed wrapper — only wraps when onMetrics is present, otherwise zero overhead. */
   const timed = <T>(table: string, op: MetricsEvent['operation'], fn: () => Promise<T>): Promise<T> => {
     if (!onMetrics) return fn();
 
@@ -397,13 +341,12 @@ export function buildAdapterOps<S extends AnySchema>(
     return fn().finally(() => onMetrics({ duration: getTimestamp() - start, operation: op, table }));
   };
 
-  /* -- Deferred batch: defers observer notifications until fn resolves. -- */
   const deferredBatch = async <K extends keyof S, R>(
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
     scope: ReadonlySet<string>,
   ): Promise<R> => {
     const dirty = new Set<K>();
-    const tx = buildTxContext<S, K>(schema, core as StorageCore<S, K>, (t) => dirty.add(t), validate, scope);
+    const tx = buildTxContext<S, K>(schema, core as StorageBackend<S, K>, (t) => dirty.add(t), validate, scope);
     const result = await fn(tx);
 
     for (const t of dirty) {
@@ -415,8 +358,9 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const nativeBatch = options?.buildBatch?.({ notifyMutation, validate });
 
-  /* -- Single tx context for delegation (keyof S scope, notifyMutation, validate) -- */
   const txCtx = buildTxContext<S, keyof S>(schema, core, notifyMutation, validate);
+
+  const observeMany = createObserveMany<S>(observers, (table) => core.getAll(table), logger);
 
   const adapter: Adapter<S> = {
     async batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
@@ -439,8 +383,6 @@ export function buildAdapterOps<S extends AnySchema>(
       const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const entries = await Promise.all(
         tableNames.map(async (name) => {
-          // getRawCount and count are separate calls — a write between them can make
-          // expiredCount slightly inaccurate. Acceptable for a diagnostic function.
           const raw = core.getRawCount ? await core.getRawCount(name) : undefined;
           const live = await core.count(name);
           const expiredCount = raw !== undefined ? raw - live : 0;
@@ -482,126 +424,11 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(String(table), 'has', () => txCtx.has(table, key));
     },
 
-    iterate(table) {
-      if (!onMetrics) return txCtx.iterate(table);
-
-      const start = getTimestamp();
-      const tableStr = String(table);
-
-      return (async function* () {
-        try {
-          for await (const record of txCtx.iterate(table)) {
-            yield record;
-          }
-        } finally {
-          onMetrics({ duration: getTimestamp() - start, operation: 'iterate', table: tableStr });
-        }
-      })();
-    },
-
     observe(table, listener, opts) {
       return observers.observe(table, listener, opts);
     },
 
-    observeMany<K extends keyof S>(
-      tables: readonly K[],
-      listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-      opts?: { immediate?: boolean },
-    ): () => void {
-      // Deduplicate: only register one observer per distinct table name.
-      const distinctTables = [...new Set(tables.map(String))] as (keyof S)[];
-
-      if (distinctTables.length === 0) throw new DepositScopeError('observeMany requires at least one table');
-
-      const snapshotMap = new Map<string, RecordOf<S, keyof S>[]>();
-      let microtaskQueued = false;
-      let stopped = false;
-
-      const buildCombined = (): { [T in K]: RecordOf<S, T>[] } =>
-        Object.fromEntries(tables.map((t) => [String(t), snapshotMap.get(String(t)) ?? []])) as {
-          [T in K]: RecordOf<S, T>[];
-        };
-
-      const scheduleFlush = (): void => {
-        if (microtaskQueued || snapshotMap.size < distinctTables.length) return;
-
-        microtaskQueued = true;
-        queueMicrotask(() => {
-          microtaskQueued = false;
-
-          if (!stopped) listener(buildCombined());
-        });
-      };
-
-      // Set by the prefetch .then() once observers are registered.
-      // `stop()` calls this if prefetch has already completed; otherwise, `stopped = true`
-      // prevents registration in the .then() and the double-check after assignment
-      // ensures no window where registered observers escape cleanup.
-      let cleanupObservers: (() => void) | null = null;
-
-      // Eagerly prefetch the current state of every distinct table. Observers are registered
-      // only AFTER all prefetches resolve, preventing a prefetch result from overwriting a
-      // mutation that arrived mid-flight through an already-wired observer.
-      //
-      // Per-table failures insert an empty-array fallback so snapshotMap always reaches
-      // distinctTables.length — without this, a single prefetch failure permanently silences
-      // the entire subscription (scheduleFlush guards on snapshotMap.size).
-      void Promise.all(
-        distinctTables.map((t) =>
-          core
-            .getAll(t)
-            .then((records) => {
-              if (!stopped) {
-                snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
-              }
-            })
-            .catch((err: unknown) => {
-              logger?.error(
-                err instanceof Error ? err : new Error(String(err)),
-                '[deposit] observeMany prefetch failed',
-              );
-
-              // Keep subscription live: treat a failed table as having an empty snapshot
-              // so snapshotMap.size reaches distinctTables.length and future mutations
-              // can still trigger the listener.
-              if (!stopped) snapshotMap.set(String(t), []);
-            }),
-        ),
-      ).then(() => {
-        if (stopped) return;
-
-        // Register change observers now that the snapshot map is fully populated.
-        const stopFns = distinctTables.map((t) =>
-          observers.observe(
-            t,
-            (records) => {
-              snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
-              scheduleFlush();
-            },
-            { immediate: false },
-          ),
-        );
-
-        cleanupObservers = () => {
-          for (const s of stopFns) s();
-        };
-
-        // Double-check: if stop() was called between the `if (stopped)` guard above
-        // and this assignment, clean up the just-registered observers immediately.
-        if (stopped) {
-          cleanupObservers();
-
-          return;
-        }
-
-        if (opts?.immediate) scheduleFlush();
-      });
-
-      return () => {
-        stopped = true;
-        cleanupObservers?.();
-      };
-    },
+    observeMany,
 
     async pruneExpired() {
       if (core.pruneAllExpired) {
@@ -649,17 +476,9 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(String(table), 'upsert', () => txCtx.upsert(table, key, fn, ttl));
     },
 
-    /**
-     * Observer registration is deferred until the first `next()` call (lazy registration).
-     * An abandoned iterable — one whose [Symbol.asyncIterator]() was called but next() was
-     * never invoked — does NOT register an observer, preventing the leak present with eager
-     * registration.
-     */
-    watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]> {
-      return createWatchIterable<RecordOf<S, K>>((listener) =>
-        observers.observe(table as keyof S, listener as (records: RecordOf<S, keyof S>[]) => void, {
-          immediate: true,
-        }),
+    watch(table) {
+      return createWatchIterable<RecordOf<S, typeof table>>((listener) =>
+        observers.observe(table, listener, { immediate: true }),
       );
     },
   };

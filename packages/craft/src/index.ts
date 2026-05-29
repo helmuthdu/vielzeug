@@ -2,10 +2,8 @@ export {
   batch,
   computed,
   isSignal,
-  memo,
   scope,
   signal,
-  syncedSignal,
   untrack,
   watch,
   type ReadonlySignal,
@@ -13,6 +11,8 @@ export {
   type Signal,
   type WatchOptions,
 } from '@vielzeug/ripple';
+
+export { memo, syncedSignal } from './reactive-utils';
 
 export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
 

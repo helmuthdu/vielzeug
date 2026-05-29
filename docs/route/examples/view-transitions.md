@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — View Transitions'
-description: Enable and customize View Transition API navigation animations.
+description: 'View transitions example for @vielzeug/route.'
 ---
 
 ## View Transitions
 
-Enable transitions globally or per navigation.
+### Problem
+
+The View Transition API requires wrapping every history push in `document.startViewTransition()`. Integrating this manually with a client-side router creates race conditions between animation callbacks and navigation state updates.
+
+### Solution
+
+Set `viewTransition: true` at router creation. Route automatically wraps each navigation commit in `document.startViewTransition()`. Override per navigation with `{ viewTransition: false }`.
 
 ```ts
 import { createRouter } from '@vielzeug/route';
@@ -19,11 +25,8 @@ const router = createRouter({
   },
 });
 
-// Global transitions are enabled by router option.
-await router.navigate({ name: 'settings' });
-
-// Override per call.
-await router.navigate({ name: 'home' }, { viewTransition: false });
+await router.navigate({ name: 'settings' });                          // uses transition
+await router.navigate({ name: 'home' }, { viewTransition: false });   // skips transition
 ```
 
 Optional CSS:
@@ -38,22 +41,22 @@ Optional CSS:
 }
 
 @keyframes fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 ```
 
-Route falls back to normal navigation when the API is unavailable.
+### Pitfalls
+
+- `document.startViewTransition` is not available in all browsers and is absent in Node.js test environments. Route falls back to a plain navigation silently, so tests always pass.
+- Transitions run synchronously during the commit phase of navigation. Heavy CSS animations block the next interaction until the transition resolves.
+- Per-navigation `{ viewTransition: false }` still runs `document.startViewTransition` if the router default is `true`; it means the transition is skipped for the DOM swap, not the API call.
+
+### Related
+
+- [Route Table Basics](./route-table-basics.md)

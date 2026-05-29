@@ -123,6 +123,48 @@ const count = signal(0);
 }
 ```
 
+---
+
+### Signal Combinators — `map` and `filter`
+
+Every signal type exposes `.map()` and `.filter()` combinators that create a `ComputedSignal` without needing to call `computed()` directly:
+
+```ts
+import { signal, store, watch } from '@vielzeug/ripple';
+
+// .map() — project to a derived type
+const count = signal(3);
+const doubled = count.map((n) => n * 2);  // ComputedSignal<number>
+console.log(doubled.value); // 6
+
+count.value = 5;
+console.log(doubled.value); // 10
+
+doubled.dispose();
+
+// .filter() — pass values matching a predicate, undefined otherwise
+const even = count.filter((n) => n % 2 === 0);
+console.log(even.value); // undefined (5 is odd)
+
+count.value = 8;
+console.log(even.value); // 8
+even.dispose();
+
+// Type-guard filter — narrow to a subtype
+const maybeStr = signal<string | null>(null);
+const str = maybeStr.filter((v): v is string => v !== null); // ComputedSignal<string | undefined>
+maybeStr.value = 'hello';
+console.log(str.value); // 'hello'
+str.dispose();
+
+// Works on stores too
+const cart = store({ items: 5, label: 'cart' });
+const itemCount = cart.map((s) => s.items); // ComputedSignal<number>
+watch(itemCount, (n) => console.log('items:', n));
+cart.patch({ items: 10 }); // → 'items: 10'
+itemCount.dispose();
+```
+
 
 ### Pitfalls
 

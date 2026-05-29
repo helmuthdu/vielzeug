@@ -1,21 +1,16 @@
-import { computed, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craft';
-import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/orbit';
+import { computed, define, html, onMounted, prop, syncAria } from '@vielzeug/craft';
+import { type Placement } from '@vielzeug/orbit';
 
-import {
-  createOverlayControl,
-  createStableId,
-  parseStringTriggers,
-  type OverlayCloseReason,
-  type OverlayOpenReason,
-} from '../../headless';
+import { createStableId, parseStringTriggers, type DialogCloseReason, type OverlayOpenReason } from '../../headless';
 import { disablableBundle } from '../../shared/config';
 import { reducedMotionMixin } from '../../styles';
+import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './popover.css?inline';
 
-export type PopoverTrigger = 'click' | 'hover' | 'focus';
+export type PopoverTrigger = 'click' | 'focus' | 'hover';
 
 const PANEL_OFFSET = 8;
-const VALID_TRIGGERS = new Set<PopoverTrigger>(['click', 'hover', 'focus']);
+const VALID_TRIGGERS = new Set<PopoverTrigger>(['click', 'focus', 'hover']);
 const DEFAULT_POPOVER_TRIGGERS: PopoverTrigger[] = ['click'];
 
 const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
@@ -23,7 +18,7 @@ const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
 
 export type BitPopoverEvents = {
   /** Emitted when the popover closes */
-  close: { reason: OverlayCloseReason };
+  close: { reason: DialogCloseReason };
   /** Emitted when the popover opens */
   open: { reason: OverlayOpenReason };
 };
@@ -40,41 +35,25 @@ export type BitPopoverProps = {
   open?: boolean;
   /** Preferred placement relative to the trigger */
   placement?: Placement;
-  /** Which trigger(s) open/close the popover — comma-separated */
+  /** Which trigger(s) open/close the popover */
   trigger?: string;
 };
 
 /**
- * A floating informational or interactive panel anchored to a trigger element.
- * Unlike tooltips, popovers support arbitrary interactive content via slots.
+ * A floating panel anchored to a trigger element.
  *
  * @element bit-popover
- *
  * @attr {string} placement - Preferred placement (default: 'bottom')
- * @attr {string} trigger - 'click' | 'hover' | 'focus' or comma-separated (default: 'click')
+ * @attr {string} trigger - 'click' | 'hover' | 'focus' (default: 'click')
  * @attr {boolean} open - Controlled open state
- * @attr {number} offset - Gap in px between trigger and panel (default: 8)
+ * @attr {number} offset - Gap in px (default: 8)
  * @attr {boolean} disabled - Disables the popover
  * @attr {string} label - aria-label on the panel
- *
- * @fires open - When the panel opens with detail: { reason }
- * @fires close - When the panel closes with detail: { reason }
- *
+ * @fires open - When the panel opens
+ * @fires close - When the panel closes
  * @slot - The trigger element
  * @slot content - Panel content
- *
- * @cssprop --popover-min-width - Min width of the panel
- * @cssprop --popover-max-width - Max width of the panel
- * @cssprop --popover-max-height - Max height of the panel
- *
  * @part panel - Panel container.
- * @example
- * ```html
- * <bit-popover>
- *   <button>Open</button>
- *   <div slot="content">Panel content here</div>
- * </bit-popover>
- * ```
  */
 export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
   props: {
@@ -84,229 +63,55 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     open: prop.json(undefined as boolean | undefined),
     placement: prop.oneOf(
       [
-        'top',
-        'top-start',
-        'top-end',
         'bottom',
-        'bottom-start',
         'bottom-end',
+        'bottom-start',
         'left',
-        'left-start',
         'left-end',
+        'left-start',
         'right',
-        'right-start',
         'right-end',
+        'right-start',
+        'top',
+        'top-end',
+        'top-start',
       ] as const,
       'bottom',
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { bind: _bind, el, emit, slots }) {
-    const visible = signal(false);
+  setup(props, { el, emit, slots }) {
+    const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
-    const isControlled = computed(() => props.open.value !== undefined);
-    const runIfUncontrolled = (action: () => void) => {
-      if (isControlled.value) return;
-
-      action();
-    };
     const panelId = createStableId('popover');
-    let panelEl: HTMLElement | null = null;
-    let currentTrigger: HTMLElement | null = null;
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
-    const overlay = createOverlayControl({
-      getBoundary: () => el,
+    let panelEl: HTMLElement | null = null;
+
+    const floating = useFloatingTrigger({
+      bindTriggerAria: (triggerEl) =>
+        syncAria(
+          triggerEl,
+          {
+            controls: () => panelId,
+            disabled: () => String(isDisabled.value),
+            expanded: () => String(floating.visible.value),
+            haspopup: 'dialog',
+          },
+          { autoCleanup: false },
+        ),
+      disabled: isDisabled,
       getPanel: () => panelEl,
-      getTrigger: () => currentTrigger,
-      isDisabled: () => isDisabled.value,
-      isOpen: () => visible.value,
+      offset: props.offset,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
-      positioner: {
-        floating: () => panelEl,
-        reference: () => currentTrigger,
-        update: updatePosition,
-      },
-      restoreFocus: false,
-      setOpen: (next) => {
-        if (isControlled.value) return;
-
-        if (next) {
-          showFloat();
-
-          return;
-        }
-
-        hideFloat();
-      },
+      openProp: props.open as typeof props.open & { value: boolean | undefined },
+      placement: computed(() => props.placement.value as Placement),
+      slot: () => shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null,
+      slotElements: slots.elements(),
+      triggers,
     });
 
-    function updatePosition() {
-      if (!panelEl || !currentTrigger) return;
-
-      const resolvedPlacement = computePosition(currentTrigger, panelEl, {
-        middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
-        placement: props.placement.value,
-      });
-
-      panelEl.style.left = `${resolvedPlacement.x}px`;
-      panelEl.style.top = `${resolvedPlacement.y}px`;
-      panelEl.dataset.placement = resolvedPlacement.placement;
-    }
-    /** Show the panel and start auto-updating its position. */
-    function showFloat() {
-      visible.value = true;
-
-      if (panelEl && !panelEl.matches(':popover-open')) panelEl.showPopover();
-
-      updatePosition();
-    }
-    /** Hide the panel and stop auto-updating its position. */
-    function hideFloat() {
-      visible.value = false;
-
-      if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
-    }
-    function open(reason: OverlayOpenReason = 'programmatic') {
-      runIfUncontrolled(() => overlay.open(reason));
-    }
-    function close(reason: OverlayCloseReason = 'trigger') {
-      runIfUncontrolled(() => overlay.close(reason, false));
-    }
-    function toggle() {
-      runIfUncontrolled(() => overlay.toggle());
-    }
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') close('escape');
-    }
-    function isPathInside(path: EventTarget[]): boolean {
-      return (
-        path.includes(el) ||
-        !!(panelEl && path.includes(panelEl)) ||
-        !!(currentTrigger && path.includes(currentTrigger))
-      );
-    }
-    function handleClickOutside(e: MouseEvent) {
-      if (!visible.value) return;
-
-      const path = e.composedPath();
-
-      if (isPathInside(path)) return;
-
-      close('outsideClick');
-    }
-    // Don't close when focus moves from the trigger into the panel content.
-    function handleFocusOut(e: FocusEvent) {
-      const next = e.relatedTarget as Element | null;
-
-      if (next && panelEl?.contains(next)) return;
-
-      if (next && currentTrigger?.contains(next)) return;
-
-      close('trigger');
-    }
-
-    onMounted(() => {
-      const triggerSlot = el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      let triggerBinding: (() => void) | null = null;
-
-      if (!triggerSlot) return;
-
-      const bindEvents = () => {
-        triggerBinding?.();
-        triggerBinding = null;
-
-        const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
-
-        if (!el) {
-          currentTrigger = null;
-
-          return;
-        }
-
-        currentTrigger = el;
-
-        const removeAria = syncAria(el, {
-          controls: () => panelId,
-          disabled: () => String(isDisabled.value),
-          expanded: () => String(visible.value),
-          haspopup: 'dialog',
-        });
-
-        const cleanups: Array<() => void> = [];
-        const add = (
-          target: EventTarget,
-          event: string,
-          listener: EventListener,
-          options?: AddEventListenerOptions,
-        ) => {
-          target.addEventListener(event, listener, options);
-          cleanups.push(() => target.removeEventListener(event, listener, options));
-        };
-
-        const t = triggers.value;
-        const hasTrigger = (trigger: PopoverTrigger) => t.includes(trigger);
-
-        if (hasTrigger('click')) {
-          add(el, 'click', toggle as EventListener);
-          add(document, 'click', handleClickOutside as EventListener, { capture: true });
-        }
-
-        if (hasTrigger('hover')) {
-          add(el, 'pointerenter', () => open('hover'));
-          add(el, 'pointerleave', () => close('trigger'));
-
-          if (panelEl) {
-            add(panelEl, 'pointerenter', () => open('hover'));
-            add(panelEl, 'pointerleave', () => close('trigger'));
-          }
-        }
-
-        if (hasTrigger('focus')) {
-          add(el, 'focusin', () => open('focus'));
-          add(el, 'focusout', handleFocusOut as EventListener);
-
-          if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
-        }
-
-        add(document, 'keydown', handleKeydown as EventListener);
-
-        triggerBinding = () => {
-          removeAria();
-
-          for (const cleanup of cleanups) cleanup();
-
-          currentTrigger = null;
-        };
-      };
-
-      watch(slots.elements(), bindEvents, { immediate: true });
-      // Controlled mode
-      watch(props.open, (openVal) => {
-        if (openVal === undefined || openVal === null) return;
-
-        if (openVal) {
-          showFloat();
-          emit('open', { reason: 'programmatic' });
-        } else {
-          hideFloat();
-          emit('close', { reason: 'programmatic' });
-        }
-      });
-      watch(props.trigger, bindEvents);
-      watch(props.disabled, (isDisabled) => {
-        if (isDisabled) close('programmatic');
-      });
-
-      return () => {
-        triggerBinding?.();
-        triggerBinding = null;
-
-        if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
-
-        overlay.cleanup();
-      };
-    });
+    onMounted(() => floating.mount());
 
     return html`
       <slot></slot>
@@ -318,9 +123,9 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         aria-modal="false"
         popover="manual"
         :aria-label="${props.label}"
-        :aria-hidden="${() => String(!visible.value)}"
-        ref=${(el: HTMLElement) => {
-          panelEl = el;
+        :aria-hidden="${() => String(!floating.visible.value)}"
+        ref=${(ref: HTMLElement) => {
+          panelEl = ref;
         }}>
         <slot name="content"></slot>
       </div>

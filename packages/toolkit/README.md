@@ -1,15 +1,15 @@
 ---
-description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
+description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, money, random, and typed checks.
 package: toolkit
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
 related: []
-exports: [chunk, debounce, throttle, group, clamp, isEqual, deepClone, currency, retry, sleep]
+exports: [chunk, debounce, throttle, allOf, clamp, isEqual, currency, retry, sleep]
 ---
 
 # @vielzeug/toolkit
 
-> Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
+> Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, money, random, and typed checks.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/toolkit)](https://www.npmjs.com/package/@vielzeug/toolkit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,9 +18,9 @@ exports: [chunk, debounce, throttle, group, clamp, isEqual, deepClone, currency,
 
 **Package:** `@vielzeug/toolkit` &nbsp;·&nbsp; **Category:** Utilities
 
-**Key exports:** `chunk`, `debounce`, `throttle`, `group`, `clamp`, `isEqual`, `deepClone`, `currency`, `retry`, `sleep`
+**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `currency`, `retry`, `sleep`
 
-**When to use:** Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
+**When to use:** Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, money, random, and typed checks.
 
 **Related:** None
 
@@ -40,16 +40,17 @@ yarn add @vielzeug/toolkit
 
 ```ts
 import {
+  allOf,
   chunk,
-  pick,
+  currency,
+  filterMap,
   groupBy,
+  is,
+  noneOf,
+  partial,
+  pick,
   queue,
   retry,
-  deepMerge,
-  partial,
-  filterMap,
-  currency,
-  is,
 } from '@vielzeug/toolkit';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
@@ -64,17 +65,24 @@ const data = await retry(() => fetch('/api/health').then((r) => r.json()), {
   delay: 200,
 });
 
-const cfg = deepMerge({ api: { host: 'localhost' } }, { api: { port: 3000 } });
-
 const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const doubled = filterMap(doubleAll([1, 2, 3]), (n) => (n > 2 ? n : undefined));
+
+// Compose predicates — allOf/anyOf/noneOf replace the old and/or/not/negate API
+const isWorkingAge = allOf<number>(
+  (age) => age >= 18,
+  (age) => age < 65,
+);
+const evens = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 !== 0));
 
 const price = currency({ amount: 123456n, currency: 'USD' }); // $1,234.56
 
 if (is.string(price)) {
-  console.log(price.toUpperCase(), safe);
+  console.log(price.toUpperCase(), safe, evens, isWorkingAge(30, 0, [30]));
 }
 ```
+
+> **Date utilities** (`expires`, `timeDiff`, `dateRange`) are available in [`@vielzeug/tempo`](https://www.npmjs.com/package/@vielzeug/tempo).
 
 ## Documentation
 

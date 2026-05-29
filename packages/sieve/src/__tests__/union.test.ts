@@ -92,7 +92,7 @@ describe('s.union() — sync returns branch output', () => {
 
 describe('s.union() — async', () => {
   it('runs async refinements inside branches', async () => {
-    const a = s.string().check(async (s) => s.startsWith('a') || 'Must start with a');
+    const a = s.string().checkAsync(async (s) => s.startsWith('a') || 'Must start with a');
     const b = s.number();
     const schema = s.union(a, b);
 
@@ -121,12 +121,12 @@ describe('s.union() — async', () => {
   it('runs all branches in parallel and returns the first success', async () => {
     const calls: string[] = [];
     const schema = s.union(
-      s.string().check(async (value) => {
+      s.string().checkAsync(async (value) => {
         calls.push('first');
 
         return value === 'ok' || 'first failed';
       }),
-      s.string().check(async () => {
+      s.string().checkAsync(async () => {
         calls.push('second');
 
         return true;

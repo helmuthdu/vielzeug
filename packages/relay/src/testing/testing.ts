@@ -35,14 +35,27 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     records.clear();
   }
 
+  // Explicit delegation — avoids object spread snapshotting getters at creation time.
+  // Any getter added to Bus<T> in the future will correctly delegate here without silent bugs.
   return {
-    ...bus,
+    get disposalSignal() {
+      return bus.disposalSignal;
+    },
     dispose,
     get disposed() {
       return bus.disposed;
     },
+    emit: bus.emit,
     emitted,
+    eventNames: bus.eventNames,
+    events: bus.events,
+    listenerCount: bus.listenerCount,
+    on: bus.on,
+    once: bus.once,
+    removeAllListeners: bus.removeAllListeners,
     reset: () => records.clear(),
     [Symbol.dispose]: dispose,
+    wait: bus.wait,
+    waitAny: bus.waitAny,
   };
 }

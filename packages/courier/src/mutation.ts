@@ -150,7 +150,6 @@ export function createMutation<TData, TVariables = void>(
       const wrapped = () => listener(snap);
 
       observers.add(wrapped);
-      listener(snap);
 
       return () => observers.delete(wrapped);
     },

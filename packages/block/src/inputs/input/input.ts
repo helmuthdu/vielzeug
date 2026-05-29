@@ -63,10 +63,6 @@ const VALID_INPUT_TYPES = [
   'week',
 ] as const;
 
-const validateInputType = (type: string | null | undefined): string => {
-  return VALID_INPUT_TYPES.includes(type as (typeof VALID_INPUT_TYPES)[number]) ? type! : 'text';
-};
-
 /**
  * A customizable text input component with multiple variants, label placements, and form features.
  *
@@ -172,12 +168,12 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       onCleanup,
     );
     const {
+      abortSignal,
       assistive,
       assistiveId,
       clear: clearValue,
       errorId,
       fieldId: inputId,
-      signal: abortSignal,
       value: fieldValue,
       wire,
     } = tf;
@@ -192,7 +188,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     };
 
     const resolvedInputType = (): string =>
-      props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
+      props.type.value === 'password' && showPassword.value ? 'text' : (props.type.value ?? 'text');
 
     bind({
       attr: {

@@ -1,4 +1,4 @@
 export const configurationExample = {
-  code: "import { Rune } from '/rune'\n\n// Configure Rune\nRune.setConfig({\n  variant: 'symbol', // 'text' | 'symbol' | 'icon'\n  logLevel: 'debug',\n  environment: true,\n  timestamp: true\n})\n\nRune.info('Configured with symbols')\n\n// Change variant\nRune.setConfig({ variant: 'text' })\nRune.info('Now using text variant')\n\nRune.setConfig({ variant: 'icon' })\nRune.info('Now using icon variant')\n\n// Toggle environment indicator\nRune.setConfig({ environment: false })\nRune.info('Environment indicator hidden')\n\nconsole.log('Check browser console!')",
-  name: 'Configuration Options',
+  code: "import { createLogger } from '/rune'\n\n// A custom inline transport captures entries synchronously\nconst entries = []\nconst log = createLogger({\n  logLevel: 'debug',\n  namespace: 'app',\n  transports: [(entry) => entries.push(entry)],\n})\n\nlog.info({ path: '/users', method: 'GET' }, 'request')\nlog.warn('cache miss')\nlog.error(new Error('timeout'))\n\n// Inspect the structured LogEntry objects captured by the transport\nentries.forEach((e, i) => {\n  console.log('Entry ' + (i + 1) + ' [' + e.level + ']:', JSON.stringify({\n    namespace: e.namespace,\n    message: e.message,\n    context: e.context,\n  }))\n})",
+  name: 'Transport Pipeline',
 };

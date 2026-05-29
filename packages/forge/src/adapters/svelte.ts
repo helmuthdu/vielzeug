@@ -1,5 +1,3 @@
-export * from '../index.js';
-
 import type { FieldState, FlatKeyOf, Form, FormState, TypeAtPath } from '../index.js';
 
 /**

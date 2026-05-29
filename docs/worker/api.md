@@ -1,15 +1,9 @@
 ---
 title: Worker — API Reference
-description: Complete type signatures and documentation for createWorker, WorkerHandle, error classes, and testing utilities.
+description: Complete API reference for @vielzeug/worker.
 ---
 
 [[toc]]
-
-## Package Entry Point
-
-| Import               | Purpose                |
-| -------------------- | ---------------------- |
-| `@vielzeug/worker`   | Main exports and types |
 
 ## API At a Glance
 
@@ -18,6 +12,12 @@ description: Complete type signatures and documentation for createWorker, Worker
 | `createWorker()`     | Create a typed worker or worker pool  | Sync           | Task functions must be self-contained              |
 | `worker.run()`       | Execute a typed task in a Worker      | Async          | Pass transferables for large buffers when possible |
 | `createTestWorker()` | Run worker tasks in-process for tests | Async          | Use call recording assertions to verify behavior   |
+
+## Package Entry Point
+
+| Import               | Purpose                |
+| -------------------- | ---------------------- |
+| `@vielzeug/worker`   | Main exports and types |
 
 ## Package Exports
 
@@ -61,13 +61,13 @@ type WorkerStatus = 'idle' | 'running' | 'terminated';
 ```ts
 type WorkerOptions = {
   concurrency?: number | 'auto';
-  maxQueue?: number | 'auto';
+  maxQueue?: number;
   timeout?: number;
 };
 ```
 
 - `concurrency`: `number | 'auto'`, defaults to `1`. `'auto'` uses `navigator.hardwareConcurrency` when available.
-- `maxQueue`: `number | 'auto' | undefined`. Queue capacity before `run()` rejects with `WorkerError` code `'queue_full'`. `'auto'` resolves to `concurrency * 2`.
+- `maxQueue`: `number | undefined`. Queue capacity before `run()` rejects with `WorkerError` code `'queue_full'`. Defaults to unlimited.
 - `timeout`: `number | undefined`. Milliseconds before a task rejects with `WorkerError` code `'timeout'`.
 
 ---
@@ -92,14 +92,16 @@ type RunOptions = {
 type WorkerHandle<TInput, TOutput> = {
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
+  readonly active: number;
   close(): Promise<void>;
   readonly completed: number;
-  run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  dispose(): void;
   readonly concurrency: number;
-  readonly size: number;
+  dispose(): void;
+  readonly queued: number;
+  run(input: TInput, options?: RunOptions): Promise<TOutput>;
   readonly status: WorkerStatus;
   readonly utilization: number;
+  warmup(): void;
 };
 ```
 
@@ -133,8 +135,11 @@ import { createWorker } from '@vielzeug/worker';
 // Single worker
 const worker = createWorker<string, string>((text) => text.toUpperCase());
 
-// Pool of 4
-const pool = createWorker<number, number>((n) => n ** 2, { concurrency: 4, maxQueue: 'auto', timeout: 3000 });
+// Pool of 4 with a 3 s timeout
+const pool = createWorker<number, number>((n) => n ** 2, { concurrency: 4, timeout: 3000 });
+
+// Use navigator.hardwareConcurrency
+const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'auto' });
 ```
 
 ## WorkerHandle Interface
@@ -168,6 +173,14 @@ Terminates all worker threads and rejects any pending or in-flight tasks with `W
 
 ---
 
+### `active`
+
+`readonly active: number`
+
+Number of worker slots currently executing a task.
+
+---
+
 ### `close()`
 
 `close(): Promise<void>`
@@ -192,12 +205,71 @@ The number of worker slots configured for this handle (always ≥ 1).
 
 ---
 
-### `size`
+### `queued`
 
-`readonly size: number`
+`readonly queued: number`
 
 Current queue depth (tasks waiting to start).
 
+---
+
+### `status`
+
+`readonly status: WorkerStatus`
+
+Current lifecycle state of the worker. See [`WorkerStatus`](#workerstatus).
+
+---
+
+### `utilization`
+
+`readonly utilization: number`
+
+Fraction of worker slots currently executing a task, from `0` (all idle) to `1` (all busy).
+
+---
+
+### `warmup()`
+
+`warmup(): void`
+
+Pre-initializes all worker slots by spawning their underlying `Worker` instances immediately. Call this during application startup to eliminate first-task latency when you know tasks will arrive soon.
+
+```ts
+import { createWorker } from '@vielzeug/worker';
+
+const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+
+// Pre-spawn all 4 Worker threads during app init
+pool.warmup();
+
+// Later — first run() has no cold-start overhead
+const result = await pool.run(21);
+```
+
+Warmup is best-effort: if the Worker API is unavailable (SSR, Node without Worker support), it silently does nothing and errors surface on the first `run()` call instead.
+
+---
+
+### `[Symbol.dispose]()` / `[Symbol.asyncDispose]()`
+
+`[Symbol.dispose](): void` — alias for `dispose()`, enables the `using` keyword.
+
+`[Symbol.asyncDispose](): Promise<void>` — alias for `close()`, enables `await using`.
+
+```ts
+// Synchronous dispose — terminates immediately
+{
+  using worker = createWorker<number, number>((n) => n * 2);
+  await worker.run(21); // 42
+} // dispose() called automatically
+
+// Async dispose — drains then terminates
+{
+  await using worker = createWorker<number, number>((n) => n * 2);
+  await worker.run(21); // 42
+} // close() called automatically — waits for in-flight tasks
+```
 ---
 
 ### `status`
@@ -276,10 +348,25 @@ import type { TestWorkerHandle } from '@vielzeug/worker/test';
 ### `createTestWorker`
 
 ```ts
-declare function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput>;
+declare function createTestWorker<TInput, TOutput>(
+  fn: TaskFn<TInput, TOutput>,
+  options?: TestWorkerOptions,
+): TestWorkerHandle<TInput, TOutput>;
 ```
 
 Creates a `TestWorkerHandle` that runs `fn` in-process on the same thread and records successful calls. No Worker is ever spawned, so tests work in any environment.
+
+---
+
+### `TestWorkerOptions`
+
+```ts
+type TestWorkerOptions = {
+  maxQueue?: number;
+};
+```
+
+- `maxQueue`: `number | undefined`. Queue capacity before `run()` rejects with `WorkerError` code `'queue_full'`. Defaults to unlimited.
 
 ---
 
@@ -293,7 +380,12 @@ type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
 
 Extends `WorkerHandle` with:
 
-| Member               | Type                               | Description                            |
-| -------------------- | ---------------------------------- | -------------------------------------- |
-| `calls`              | `ReadonlyArray<{ input, output }>` | All successful `run()` calls in order. |
-| `[Symbol.dispose]()` | `void`                             | Same as `dispose()`.                   |
+| Member  | Type                               | Description                            |
+| ------- | ---------------------------------- | -------------------------------------- |
+| `calls` | `ReadonlyArray<{ input, output }>` | All successful `run()` calls in order. |
+
+All `WorkerHandle` members are implemented. Notable differences from the real worker:
+
+- `concurrency` is always `1`.
+- `warmup()` is a no-op (tasks run in-process).
+- `active`, `queued`, `utilization`, `completed`, `status` reflect in-process state accurately.

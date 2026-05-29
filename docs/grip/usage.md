@@ -5,10 +5,6 @@ description: Drop zones, sortable lists, explicit connected scopes, keyboard sor
 
 [[toc]]
 
-::: tip New to Grip?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
-:::
-
 ## Drop Zone
 
 `createDropZone` attaches drag-and-drop behavior to any DOM element and keeps hover state stable with a counter.
@@ -16,6 +12,8 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 ### Basic usage
 
 ```ts
+import { createDropZone } from '@vielzeug/grip';
+
 const zone = createDropZone({
   element: document.getElementById('dropzone')!,
   onDrop: (files) => {
@@ -79,13 +77,29 @@ createDropZone({
 });
 ```
 
-### Sortable disabled state
+### Disabled state
 
 ```ts
 createDropZone({
   element: dropEl,
   disabled: () => isReadOnly.value,
   onDrop: handleFiles,
+});
+```
+
+### File limit
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*'],
+  maxFiles: 5,
+  onDrop: (files) => {
+    // 1-5 accepted files
+  },
+  onDropRejected: (files) => {
+    showToast(`Only 5 files at a time. ${files.length} were ignored.`);
+  },
 });
 ```
 
@@ -162,6 +176,7 @@ createSortable({
   element: listEl,
   autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
   dragImage: (id, item) => item,
+  dragImageOffset: [8, 8],
 });
 ```
 

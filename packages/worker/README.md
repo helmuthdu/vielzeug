@@ -7,16 +7,16 @@ related: [toolkit, ripple, relay]
 exports: [createWorker, createTestWorker]
 ---
 
-# /worker
+# @vielzeug/worker
 
 > Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
 
-[![npm version](https://img.shields.io/npm/v//worker)](https://www.npmjs.com/package//worker) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/worker)](https://www.npmjs.com/package/@vielzeug/worker) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/worker` &nbsp;·&nbsp; **Category:** Workers
+**Package:** `@vielzeug/worker` &nbsp;·&nbsp; **Category:** Workers
 
 **Key exports:** `createWorker`, `createTestWorker`
 
@@ -26,20 +26,20 @@ exports: [createWorker, createTestWorker]
 
 </details>
 
-`/worker` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/worker` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /worker
-npm install /worker
-yarn add /worker
+pnpm add @vielzeug/worker
+npm install @vielzeug/worker
+yarn add @vielzeug/worker
 ```
 
 ## Quick Start
 
 ```ts
-import { createWorker } from '/worker';
+import { createWorker } from '@vielzeug/worker';
 
 const worker = createWorker<number[], number>((nums) => nums.reduce((sum, value) => sum + value, 0));
 

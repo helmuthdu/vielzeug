@@ -16,7 +16,7 @@ export const ttl = {
   seconds: (n: number) => (assertTtlMs(n, 'ttl.seconds') * 1000) as TtlMs,
 } as const;
 
-/* -------------------- Storage record (renamed fields for debuggability) -------------------- */
+/* -------------------- Storage record -------------------- */
 
 /** Internal envelope used by all storage backends. `expiresAt` is an epoch timestamp in ms. */
 export type StoredRecord<T> = {
@@ -54,4 +54,20 @@ export function parseStored<T>(raw: unknown): StoredRecord<T> | undefined {
   }
 
   return record as StoredRecord<T>;
+}
+
+/**
+ * Parse a raw stored value and determine its TTL status in one call.
+ * Combines `parseStored` + `unwrapStored` with an explicit `expired` flag so callers
+ * can distinguish between "key not found" (`found: false`) and "key is TTL-expired"
+ * (`found: true, expired: true, value: undefined`).
+ */
+export function readWithTtl<T>(raw: unknown): { expired: boolean; found: boolean; value: T | undefined } {
+  const parsed = parseStored<T>(raw);
+
+  if (!parsed) return { expired: false, found: false, value: undefined };
+
+  const value = unwrapStored(parsed);
+
+  return { expired: value === undefined, found: true, value };
 }

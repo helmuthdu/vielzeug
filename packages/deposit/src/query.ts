@@ -1,5 +1,11 @@
+import { DepositError } from './errors';
+
 type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
-type QueryOp<T> = { apply: (data: T[]) => T[]; isPagination?: boolean };
+/**
+ * `isNonFilter`: when true this op is excluded from `totalCount()` — it does not restrict
+ * *which* records match (limit, offset, orderBy), only how results are presented.
+ */
+type QueryOp<T> = { apply: (data: T[]) => T[]; isNonFilter?: boolean };
 type ComparableFieldKeys<T extends Record<string, unknown>> = {
   [K in keyof T]-?: Extract<NonNullable<T[K]>, number | string> extends never ? never : K;
 }[keyof T];
@@ -37,10 +43,9 @@ type ChainedQuery<T extends Record<string, unknown>, Self> = {
     upper: Extract<NonNullable<T[K]>, number | string>,
   ): Self;
   /**
-   * Returns the number of records matching the applied filter predicates.
-   * Pagination ops (`limit`, `offset`) are intentionally ignored — this always
-   * counts the full filtered set, making paginated total-count queries possible
-   * without a second query.
+   * Returns the number of records matching all applied operations, including `limit` and `offset`.
+   * To get the full filtered set size regardless of pagination (e.g. for "page X of N" UIs),
+   * use `totalCount()` instead.
    */
   count(): Promise<number>;
   equals<K extends keyof T>(field: K, value: T[K]): Self;
@@ -51,6 +56,13 @@ type ChainedQuery<T extends Record<string, unknown>, Self> = {
   orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): Self;
   startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): Self;
   toArray(): Promise<T[]>;
+  /**
+   * Returns the number of records matching the applied filter predicates.
+   * Presentation-only ops (`limit`, `offset`, `orderBy`) are intentionally ignored — this
+   * always counts the full filtered set, making paginated total-count queries possible
+   * without a second query.
+   */
+  totalCount(): Promise<number>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -78,7 +90,7 @@ async function applyOps<T extends Record<string, unknown>>(
 
 function assertNonNegativeInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`[deposit] ${name} must be a non-negative integer`);
+    throw new DepositError(`${name} must be a non-negative integer`);
   }
 
   return value;
@@ -119,14 +131,11 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
       });
     },
     count(): Promise<number> {
-      // Pagination ops (limit/offset) are excluded — count reflects the full filtered set.
-      const filterOps = ops.filter((op) => !op.isPagination);
-
-      return applyOps(ctx, filterOps).then((r) => r.length);
+      return applyOps(ctx, ops).then((r) => r.length);
     },
     async delete(): Promise<number> {
       if (!ctx.deleteMany) {
-        throw new Error('[deposit] query.delete is not available for this adapter context');
+        throw new DepositError('query.delete is not available for this adapter context');
       }
 
       const records = await applyOps(ctx, ops);
@@ -156,12 +165,12 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
     limit(n) {
       const safeN = assertNonNegativeInteger(n, 'query.limit');
 
-      return append({ apply: (data) => data.slice(0, safeN), isPagination: true });
+      return append({ apply: (data) => data.slice(0, safeN), isNonFilter: true });
     },
     offset(n) {
       const safeN = assertNonNegativeInteger(n, 'query.offset');
 
-      return append({ apply: (data) => data.slice(safeN), isPagination: true });
+      return append({ apply: (data) => data.slice(safeN), isNonFilter: true });
     },
     orderBy(field, direction = 'asc') {
       return append({
@@ -177,6 +186,7 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
             return av > bv ? sign : -sign;
           });
         },
+        isNonFilter: true,
       });
     },
     startsWith(field, prefix, { ignoreCase = false } = {}) {
@@ -217,6 +227,13 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
     },
     toArray(): Promise<T[]> {
       return applyOps(ctx, ops);
+    },
+    totalCount(): Promise<number> {
+      // Presentation-only ops (limit, offset, orderBy) are excluded — totalCount reflects
+      // the full filtered set regardless of how results are paginated or sorted.
+      const filterOps = ops.filter((op) => !op.isNonFilter);
+
+      return applyOps(ctx, filterOps).then((r) => r.length);
     },
   };
 }

@@ -18,7 +18,7 @@ Hardcoding permission logic in the machine makes it inflexible and hard to test 
 Use Permit as the source of truth for authorization, and call permit predicates in Machine guards. The machine enforces the happy path, while permit ensures users can only take allowed actions.
 
 ```ts
-import { defineMachine, interpret, assign, MachinitError } from '@vielzeug/machine';
+import { assign, defineMachine, interpret, MachineError } from '@vielzeug/machine';
 import { createRBAC } from '@vielzeug/permit';
 
 type ApprovalEvent =

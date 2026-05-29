@@ -1,18 +1,8 @@
-import type {
-  Adapter,
-  AnySchema,
-  DepositLogger,
-  KeyOf,
-  MetricsEvent,
-  RecordOf,
-  TableSignals,
-  TableValidators,
-  TtlMs,
-} from '../types';
+import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { getRecordKey } from '../internal';
-import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
+import { type StoredRecord, parseStored, readWithTtl, wrapStored } from '../ttl';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -54,29 +44,18 @@ function isBroadcastMsg(data: unknown): data is MemoryBroadcastMsg {
   }
 }
 
-type MemoryOptions<S extends AnySchema> = {
-  logger?: DepositLogger;
+type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   /**
    * When provided and BroadcastChannel is available, enables cross-tab state sync.
-   * All `createMemory` instances with the same `name` will replicate mutations to each other,
-   * giving them shared in-memory state without a persistent backing store.
+   * All `createMemory` instances with the same `name` will replicate mutations to each other.
    */
   name?: string;
-  onMetrics?: (event: MetricsEvent) => void;
-  schema: S;
-  signals?: TableSignals<S>;
-  validators?: TableValidators<S>;
 };
 
 export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Adapter<S> {
   const { logger, name, onMetrics, schema, signals, validators } = options;
-  // Pre-populate all table stores at construction — schema is fixed, no lazy init needed.
   const tables = new Map(Object.keys(schema).map((k) => [k, new Map<string, StoredRecord<unknown>>()]));
   const getTableStore = (table: string) => tables.get(table)!;
-
-  // BroadcastChannel for cross-tab state sync (only when name is provided).
-  // On each mutation the mutating tab broadcasts the raw StoredRecord so receiving tabs
-  // can replicate the exact same data (including TTL) without re-serialising.
 
   const channel =
     name !== undefined && typeof BroadcastChannel !== 'undefined'
@@ -95,16 +74,16 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       const expiredKeys: string[] = [];
 
       for (const [key, raw] of store) {
-        if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) === undefined) {
+        const { expired } = readWithTtl<RecordOf<S, K>>(raw);
+
+        if (expired) {
           expiredKeys.push(key);
         } else {
           liveCount += 1;
         }
       }
 
-      for (const key of expiredKeys) {
-        store.delete(key);
-      }
+      for (const key of expiredKeys) store.delete(key);
 
       return liveCount;
     },
@@ -115,11 +94,11 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       if (!raw) return false;
 
-      const isLive = unwrapStored(raw as StoredRecord<RecordOf<S, K>>) !== undefined;
+      const { value } = readWithTtl<RecordOf<S, K>>(raw);
+      const isLive = value !== undefined;
 
-      store.delete(String(key)); // always clean up the physical entry
+      store.delete(String(key));
 
-      // Only broadcast live deletions — expired cleanup is local maintenance
       if (isLive) channel?.postMessage({ key: String(key), table: String(table), type: 'delete' });
 
       return isLive;
@@ -134,10 +113,9 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
         const raw = store.get(strKey);
 
         if (raw) {
-          // Only count as deleted if the entry is live (not TTL-expired)
-          if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) !== undefined) {
-            deletedKeys.push(strKey);
-          }
+          const { value } = readWithTtl<RecordOf<S, K>>(raw);
+
+          if (value !== undefined) deletedKeys.push(strKey);
 
           store.delete(strKey);
         }
@@ -156,11 +134,9 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       if (!raw) return undefined;
 
-      const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+      const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
 
-      if (value === undefined) {
-        store.delete(String(key));
-      }
+      if (expired) store.delete(String(key));
 
       return value;
     },
@@ -171,19 +147,16 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       const expiredKeys: string[] = [];
 
       for (const [key, raw] of store) {
-        const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+        const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
 
-        if (value === undefined) {
+        if (expired) {
           expiredKeys.push(key);
-          continue;
+        } else if (value !== undefined) {
+          records.push(value);
         }
-
-        records.push(value);
       }
 
-      for (const key of expiredKeys) {
-        store.delete(key);
-      }
+      for (const key of expiredKeys) store.delete(key);
 
       return records;
     },
@@ -198,13 +171,11 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       if (!raw) return false;
 
-      if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) === undefined) {
-        store.delete(String(key));
+      const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
 
-        return false;
-      }
+      if (expired) store.delete(String(key));
 
-      return true;
+      return value !== undefined;
     },
 
     async pruneExpiredInTable<K extends keyof S>(table: K): Promise<number> {
@@ -212,7 +183,9 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       let pruned = 0;
 
       for (const [key, raw] of store) {
-        if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) === undefined) {
+        const { expired } = readWithTtl<RecordOf<S, K>>(raw);
+
+        if (expired) {
           store.delete(key);
           pruned += 1;
         }
@@ -281,29 +254,45 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
                 return true;
               } catch {
-                return false; // discard invalid record
+                return false;
               }
             };
 
             switch (msg.type) {
               case 'clear':
                 store.clear();
-                break;
+                notify(msg.table as keyof S);
+
+                return;
               case 'delete':
                 store.delete(msg.key);
-                break;
+                notify(msg.table as keyof S);
+
+                return;
               case 'deleteMany':
                 for (const key of msg.keys) store.delete(key);
-                break;
-              case 'put':
-                applyStoredWithValidation(msg.key, msg.stored);
-                break;
-              case 'putAll':
-                for (const { key, stored } of msg.entries) applyStoredWithValidation(key, stored);
-                break;
-            }
+                notify(msg.table as keyof S);
 
-            notify(msg.table as keyof S);
+                return;
+              case 'put':
+                if (applyStoredWithValidation(msg.key, msg.stored)) {
+                  notify(msg.table as keyof S);
+                }
+
+                return;
+              case 'putAll':
+                {
+                  let anyApplied = false;
+
+                  for (const { key, stored } of msg.entries) {
+                    if (applyStoredWithValidation(key, stored)) anyApplied = true;
+                  }
+
+                  if (anyApplied) notify(msg.table as keyof S);
+                }
+
+                return;
+            }
           };
 
           return () => {
@@ -312,6 +301,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
         }
       : undefined,
     onMetrics,
+    schema,
     signals,
     validators,
   });

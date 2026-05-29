@@ -41,6 +41,10 @@ const unsub = bus.on('user:login', ({ userId, email }) => {
 unsub();
 ```
 
+::: tip Multiple registrations
+Registering the **same listener function** twice creates two independent subscriptions — the listener fires twice per emit and each registration has its own independent unsubscribe handle. There is no deduplication.
+:::
+
 ### `once()` — One-shot listener
 
 `once()` registers a listener that fires exactly once, then removes itself automatically.
@@ -216,6 +220,83 @@ try {
 }
 ```
 
+### `disposalSignal`
+
+Every bus exposes a `disposalSignal: AbortSignal` property. The signal fires when `dispose()` is called, giving you a handle to tie external lifecycles to the bus lifetime without polling `bus.disposed`.
+
+```ts
+const bus = createBus<AppEvents>();
+
+// Pass disposalSignal to another bus subscription — auto-unsubscribes on teardown
+otherBus.on('count', syncState, bus.disposalSignal);
+
+// Use with any AbortSignal-aware API
+fetch('/api/stream', { signal: bus.disposalSignal });
+
+// Combine with other signals using AbortSignal.any()
+const combined = AbortSignal.any([bus.disposalSignal, AbortSignal.timeout(10_000)]);
+bus.events('data:loaded', { signal: combined });
+```
+
+The signal is already aborted when `bus.disposed` is `true`.
+
+## Event Piping
+
+`pipeEvents()` forwards a selected subset of events from a source bus to a target bus. Both buses must share the same event map type.
+
+```ts
+import { createBus, pipeEvents } from '@vielzeug/relay';
+
+type AppEvents = {
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
+   'cart:updated': { items: CartItem[]; total: number };
+};
+
+const appBus = createBus<AppEvents>();
+const auditBus = createBus<AppEvents>();
+
+// Forward only auth events to the audit bus
+const unpipe = pipeEvents(appBus, auditBus, ['user:login', 'user:logout']);
+```
+
+`pipeEvents` returns an `Unsubscribe` function to stop forwarding manually:
+
+```ts
+unpipe(); // stop forwarding
+```
+
+Forwarding stops automatically when the **target** bus is disposed — no manual cleanup needed. Source disposal is handled by the source bus's own `on()` lifecycle.
+
+You can scope piping to a signal:
+
+```ts
+const controller = new AbortController();
+pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
+
+// Stop forwarding after 30 seconds
+setTimeout(() => controller.abort(), 30_000);
+```
+
+## Debug Mode
+
+Pass `debug: true` to `createBus()` to log all subscribe, emit, and dispose activity to `console.debug`. This is useful during development to trace the event flow through your application.
+
+```ts
+const bus = createBus<AppEvents>({ debug: true });
+
+bus.on('user:login', handler);
+// → [relay:on] on("user:login")
+
+bus.emit('user:login', { email: 'alice@example.com', userId: '42' });
+// → [relay:emit] emit("user:login") — 1 listener(s)
+
+bus.dispose();
+// → [relay:lifecycle] dispose()
+```
+
+Debug mode has no effect on behavior and should not be enabled in production.
+
 ### Counting listeners
 
 `listenerCount()` lets you inspect active subscriptions without needing to track them manually:
@@ -270,6 +351,15 @@ bus.dispose(); // clear listeners and recorded payloads
 ```
 
 `createTestBus` accepts the full `BusOptions<T>` including `onDispatch` — your hook is composed with the internal recording.
+
+Use `reset()` to clear recorded payloads between assertions without affecting active listeners:
+
+```ts
+bus.emit('user:login', { email: 'a@example.com', userId: '1' });
+bus.reset(); // clears emission records — listeners remain active
+
+bus.emitted('user:login'); // => []
+```
 
 Use `using` for automatic cleanup in test cases:
 
@@ -359,12 +449,6 @@ function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEve
 
 :::
 
-### Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
 ## Working with Other Vielzeug Libraries
 
 ### With Rune
@@ -407,5 +491,7 @@ bus.on('user:logout', () => { currentUser.value = null; });
 - Use `wait()` for one-off async coordination; use `events()` for continuous processing pipelines.
 - Configure `onError` on the bus rather than wrapping each listener in try/catch.
 - Call `dispose()` when a bus is no longer needed — it rejects all pending `wait()` promises.
+- Use `pipeEvents()` to forward events between buses rather than re-emitting manually inside listeners.
+- Pass `bus.disposalSignal` to tie external subscriptions and fetch calls to the bus lifetime.
 - Prefer typed `EventMap` interfaces over generic string keys for full payload inference.
 - Use `createTestBus` from `@vielzeug/relay/test` in unit tests rather than mocking the bus.

@@ -55,7 +55,6 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 
 ```
 block → craft → ripple, orbit
-deposit → rune, toolkit
 courier → toolkit
 permit  → rune
 ```

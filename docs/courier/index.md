@@ -3,9 +3,9 @@ title: Courier — HTTP, queries, SSE, and streaming
 description: Type-safe HTTP, query cache, mutations, SSE, and readable streaming built on native fetch.
 package: courier
 category: http
-keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors]
+keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors, persist, batcher]
 related: [sieve, ripple, deposit]
-exports: [createApi, createCourier, createMutation, createQuery, createStream, createTransportCore, HttpError]
+exports: [createApi, createCourier, createMutation, createQuery, createStream, HttpError, bindRefetch, createBatcher, withBearerAuth, withRequestId, withLogging, persistQueryCache, hydrateQueryCache]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`
+**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `HttpError`, `bindRefetch`, `createBatcher`, `withBearerAuth`, `persistQueryCache`, `hydrateQueryCache`
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with one shared fetch-based transport.
 
@@ -101,6 +101,10 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 | Standalone mutations  | ✅                                            | ❌             | ❌     |
 | Zero dependencies     | ✅                                            | ❌             | ❌     |
 
+**Use Courier when** your app needs typed HTTP, a query cache, tracked mutations, or SSE — especially when you want all of these sharing one interceptor pipeline and zero extra dependencies.
+
+**Consider axios when** you need to support IE11 or other XMLHttpRequest-based environments, or you already have a large axios-specific codebase.
+
 ## Features
 
 - **Unified client** — `createCourier()` combines `api`, `stream`, `query`, and `mutation()` behind one shared transport
@@ -112,7 +116,10 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 - **Standalone mutations** — `createMutation()` with retry, lifecycle callbacks, cancellation, and observable state
 - **Shared transport core** — `createTransportCore()` powers both `createApi()` and `createStream()` for advanced use cases
 - **Request deduplication** — idempotent requests dedupe by method + URL + response type, with `dedupe: false` to opt out
-- **Retry helpers** — `NO_RETRY`, `runWithRetry()`, `sleepWithAbort()`, and `toError()` are exported
+- **DataLoader-style batcher** — `createBatcher()` coalesces N individual `load()` calls into one batch request
+- **Interceptor presets** — `withBearerAuth()`, `withRequestId()`, and `withLogging()` ready to plug in via `use()`
+- **Focus/reconnect binding** — `bindRefetch(qc)` wires up tab visibility and network events; fully opt-in
+- **Cache persistence** — `persistQueryCache()` and `hydrateQueryCache()` for cross-reload cache survival
 - **Structured errors** — `HttpError` captures HTTP, network, abort, and timeout failures
 - **Disposable** — clients implement `[Symbol.dispose]` for deterministic cleanup
 
@@ -133,8 +140,8 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 
 ## See Also
 
-- [Sieve](/sieve/)
-- [Forge](/forge/)
-- [Ripple](/ripple/)
+- [Sieve](/sieve/) — validate HTTP response payloads against typed schemas before they enter your cache
+- [Forge](/forge/) — pair with Courier mutations to manage typed form state and submission
+- [Ripple](/ripple/) — use signal stores as a reactive layer on top of Courier's `SyncStore` API
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

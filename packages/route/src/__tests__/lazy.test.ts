@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { createDeferred, settle } from './test-utils';
 
 describe('lazy routes', () => {
@@ -60,7 +60,7 @@ describe('lazy routes', () => {
     router.dispose();
   });
 
-  it('lazy meta is picked up in router.state.matches', async () => {
+  it('lazy meta is picked up in router.getSnapshot().matches', async () => {
     const history = createMemoryHistory('/page');
     const router = createRouter({
       history,
@@ -73,11 +73,11 @@ describe('lazy routes', () => {
     });
 
     await settle();
-    expect(router.state.matches.at(-1)?.meta).toEqual({ title: 'Lazy Page' });
+    expect(router.getSnapshot().matches.at(-1)?.meta).toEqual({ title: 'Lazy Page' });
     router.dispose();
   });
 
-  it('lazy component is picked up in router.state.matches', async () => {
+  it('lazy component is picked up in router.getSnapshot().matches', async () => {
     const pageComponent = Symbol('lazy-page-component');
     const history = createMemoryHistory('/page');
     const router = createRouter({
@@ -91,7 +91,7 @@ describe('lazy routes', () => {
     });
 
     await settle();
-    expect(router.state.matches.at(-1)?.component).toBe(pageComponent);
+    expect(router.getSnapshot().matches.at(-1)?.component).toBe(pageComponent);
     router.dispose();
   });
 
@@ -126,7 +126,7 @@ describe('lazy routes', () => {
 
     expect(dataFn).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(router.state.location.pathname).toBe('/page/b');
+    expect(router.getSnapshot().location.pathname).toBe('/page/b');
     router.dispose();
   });
 

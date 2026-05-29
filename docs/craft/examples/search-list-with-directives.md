@@ -1,6 +1,6 @@
 ---
 title: 'Craft Examples — Search List with Directives'
-description: 'Search List with Directives examples for craft.'
+description: 'Search List with Directives example for @vielzeug/craft.'
 ---
 
 ## Search List with Directives
@@ -11,8 +11,10 @@ You have a list that should filter as the user types into an input — binding t
 
 ### Solution
 
+Use `each()` with positional arguments and `when()` for the empty-state fallback.
+
 ```ts
-import { computed, define, each, html, signal } from '@vielzeug/craft';
+import { computed, define, each, html, signal, when } from '@vielzeug/craft';
 
 define('search-list', {
   setup() {
@@ -22,34 +24,33 @@ define('search-list', {
       items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())),
     );
 
-    return () => html`
+    return html`
       <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
-      ${() =>
-        filtered.value.length > 0
-          ? html`<ul>
-              ${each(filtered, {
-                key: (_, i) => i,
-                render: (name) => html`<li>${name}</li>`,
-              })}
-            </ul>`
-          : html`<p>No matches</p>`}
+      ${when(
+        () => filtered.value.length > 0,
+        () => html`<ul>
+          ${each(
+            filtered,
+            (_, i) => i,
+            (name) => html`<li>${name}</li>`,
+          )}
+        </ul>`,
+        () => html`<p>No matches</p>`,
+      )}
     `;
   },
 });
 ```
 
-
 ### Pitfalls
 
-- Directives re-run when the bound signal changes, not when an array is mutated in place. Calling `list.push(item)` without assigning a new array reference will not trigger a re-render.
-- An empty string is falsy in a conditional directive — `if=""` may hide items unexpectedly. Always coerce to boolean before binding.
-- Attaching an `@input` directive to a non-input element (e.g. a `<div>`) will never fire. Use `@change` or the correct event name for the target element type.
+- `each()` takes positional arguments `(source, key, render, fallback?)` — not an options object `{ key, render }`. Passing an object will fail silently.
+- Mutating an array in place (`list.push(item)`) does not trigger re-render. Assign a new array reference: `items.value = [...items.value, item]`.
+- Using array index as the key (`(_, i) => i`) works for static lists but causes DOM reuse bugs when items are reordered or removed. Prefer stable IDs.
 
 ### Related
-- [Signals (Ripple)](@vielzeug/ripple/examples/signals)
-- [Virtual List (Scroll)](@vielzeug/scroll/examples/basic-fixed-height-list)
 
-- [Context Provider and Consumer](./context-provider-and-consumer.md)
+- [Scroll — Virtual lists](/scroll/) for rendering large filtered datasets efficiently
+- [Ripple — Computed signals](/ripple/) for the `computed()` used to derive the filtered list
 - [Counter Component](./counter-component.md)
-- [Form-Associated Rating Input](./form-associated-rating-input.md)

@@ -6,6 +6,7 @@ import { removeNodes } from '../utils/dom';
 type RawSanitizer = (html: string) => string;
 
 let _sanitizer: RawSanitizer | null = null;
+let _warned = false;
 
 export const setRawSanitizer = (fn: RawSanitizer | null): void => {
   _sanitizer = fn;
@@ -14,12 +15,14 @@ export const setRawSanitizer = (fn: RawSanitizer | null): void => {
 /** @internal */
 export const _resetRawSanitizer = (): void => {
   _sanitizer = null;
+  _warned = false;
 };
 
 const sanitize = (value: string): string => {
   if (_sanitizer) return _sanitizer(value);
 
-  if (value) {
+  if (value && !_warned) {
+    _warned = true;
     console.warn(
       '[craft] raw() was called without a sanitizer registered. ' +
         'Passing user-supplied HTML directly to raw() is an XSS risk. ' +

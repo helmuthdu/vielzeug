@@ -35,7 +35,6 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 - [`parseJSON`](./object/parseJSON.md): Safely parse JSON strings with optional fallback value.
 - [`get`](./object/path.md): Safely access nested properties using dot-notation strings.
 - [`prune`](./object/prune.md): Recursively remove null/undefined/empty values.
-- [`seek`](./object/seek.md): Recursively search nested values by similarity threshold.
 - [`values`](./object/values.md): Typed wrapper for Object.values.
 
 ## 💡 Practical Examples
@@ -76,7 +75,7 @@ console.log(deep, shallow);
 ### Accessing Nested Data
 
 ```ts
-import { get, omit, pick, seek } from '@vielzeug/toolkit';
+import { get, omit, pick } from '@vielzeug/toolkit';
 
 const data = {
   user: {
@@ -143,7 +142,6 @@ myCache.size(); // 1
 - [parseJSON](./object/parseJSON.md)
 - [get](./object/path.md)
 - [prune](./object/prune.md)
-- [seek](./object/seek.md)
 - [values](./object/values.md)
 
 ## Expected Output

@@ -1,6 +1,6 @@
 ---
 title: 'Grip Examples — Connected kanban with keyboard sorting'
-description: 'Connected multi-list sortable example with an explicit shared scope and keyboard reordering.'
+description: 'Connected kanban with keyboard sorting example for @vielzeug/grip.'
 ---
 
 ## Connected kanban with keyboard sorting

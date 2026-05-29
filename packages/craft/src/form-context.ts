@@ -17,7 +17,7 @@ export type FormContextValue = {
   /** Reset all registered field values. */
   reset(): void;
   /** Submit the form programmatically. */
-  submit(): void;
+  submit(e?: Event): Promise<void>;
   /** Whether the form is currently submitting. */
   readonly submitting: ReadonlySignal<boolean>;
   /** Whether all fields in the form are valid. */

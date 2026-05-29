@@ -1,4 +1,4 @@
-import type { AnySchema, InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
 
 import { Schema, isPlainObject } from '../core';
 
@@ -69,7 +69,17 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    return { allOf: this.schemas.map((s) => s.schema()) };
+    return { allOf: this.schemas.map((s) => s.toJsonSchema()) };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      branches: this.schemas.map((s) => s.describe()),
+      kind: 'intersect',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

@@ -1,4 +1,4 @@
-import type { MessageFn } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, resolveMessage } from '../core';
 import { _messages } from '../messages';
@@ -50,6 +50,15 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
     return {
       $comment:
         'Date objects are not representable in JSON Schema. Validate as a string with a date format in JSON contexts.',
+    };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'date',
     };
   }
 

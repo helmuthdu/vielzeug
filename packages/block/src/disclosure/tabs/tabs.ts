@@ -246,7 +246,9 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       moveIndicator(activeTab);
     };
 
-    watch(selectedValue, () => requestAnimationFrame(updateIndicator));
+    watch(selectedValue, () => {
+      requestAnimationFrame(updateIndicator);
+    });
 
     // ────────────────────────────────────────────────────────────────
     // Event Handlers

@@ -30,7 +30,7 @@ if (!result.success) {
 
 ## Schema Factories
 
-`v` is the canonical factory namespace.
+`s` is the canonical factory namespace.
 
 ```ts
 s.any();
@@ -41,10 +41,9 @@ s.boolean();
 s.date();
 s.literal('active');
 s.enum(['draft', 'published'] as const);
-s.nativeEnum(StatusEnum);
 s.object({ id: s.number() });
 s.array(s.string());
-s.tuple([s.string(), s.number()] as const);
+s.tuple([s.string(), s.number()]);
 s.record(s.string(), s.number());
 s.union(s.string(), s.number());
 s.union('admin', 'editor', 'viewer');
@@ -123,7 +122,6 @@ s.coerce.bigint(); // number/string integer -> bigint
 s.literal('active');
 s.enum(['draft', 'published'] as const);
 s.enum([200, 201, 204] as const);
-s.nativeEnum(StatusEnum);
 ```
 
 ## Objects, Arrays, Tuples, and Records
@@ -140,13 +138,13 @@ const Profile = s.object({
 });
 
 // object() is strict by default (unknown keys fail)
-const RelaxedProfile = Profile.relaxed();
-const StrippedProfile = Profile.strip();
+const RelaxedProfile = Profile.relaxed(); // allow and preserve unknown keys
+const StrictProfile = Profile.strict();   // explicitly re-enforce strict mode
 ```
 
 `object()` is strict by default. Unknown keys produce an `invalid_keys` issue instead of being silently dropped.
 
-Use `.strip()` when you want to ignore unknown keys, and `.relaxed()` when you want to preserve unknown keys.
+Use `.relaxed()` when you want to allow and preserve unknown keys. Call `.strict()` to create a new strict schema from a relaxed one.
 
 ### Arrays
 
@@ -230,7 +228,7 @@ if (!result.success) {
 const UniqueEmail = s
   .string()
   .email()
-  .check(async (value) => {
+  .checkAsync(async (value) => {
     const exists = await db.users.exists({ email: value });
     return !exists || 'Email already exists';
   });
@@ -239,7 +237,7 @@ await UniqueEmail.parseAsync('user@example.com');
 await UniqueEmail.safeParseAsync('user@example.com');
 ```
 
-If any branch of a schema uses async `check()`, use the async parse methods all the way through. Calling `parse()` on such a schema throws an error telling you to switch to `parseAsync()` or `safeParseAsync()`.
+If any schema in the tree uses `checkAsync()`, use the async parse methods. Calling `parse()` on such a schema throws immediately.
 
 ## Optional, Nullable, Default, and Catch
 
@@ -305,39 +303,74 @@ const PaginationSchema = s
 ### `brand()` and `describe()`
 
 ```ts
+// Setter: attach a human-readable description (returns same schema type)
 const UserId = s.number().int().positive().brand<'UserId'>().describe('Positive numeric user identifier');
+
+// Getter: return a typed SchemaDescriptor for introspection
+const descriptor = s.string().min(3).email().describe();
+// => { kind: 'string', minLength: 3, format: 'email' }
 ```
 
-`brand()` is compile-time only. `describe()` stores a string on the schema instance for tooling or documentation.
+`brand()` is compile-time only. `describe(string)` stores a description on the schema instance and returns the same schema type. `describe()` with no arguments returns a `SchemaDescriptor` with the kind, constraints, and nested descriptors for this schema.
+
+### `toJsonSchema()` and `walk()`
+
+```ts
+// JSON Schema 2020-12 output (memoized per schema instance)
+const jsonSchema = s.object({ name: s.string().min(1), age: s.number().int().min(0) }).toJsonSchema();
+
+// Walk the schema tree with a typed visitor
+const fieldNames = s.object({ id: s.number(), name: s.string() }).walk({
+  object: (_, fields) => Object.keys(fields),
+  unknown: () => [],
+});
+```
 
 ## Async Validation
 
-### `check()`
+### `check()` — sync validation
 
+`check()` has two forms:
+
+**Predicate form** — pass a boolean-returning function plus an optional message:
 ```ts
 const Password = s
   .string()
   .min(8)
-  .check((value) => /[A-Z]/.test(value) || 'Must include uppercase')
-  .check((value) => /\d/.test(value) || 'Must include a number');
+  .check((v) => /[A-Z]/.test(v), 'Must include uppercase')
+  .check((v) => /\d/.test(v), 'Must include a number');
 ```
 
-### `check()` with async validation
+**Context form** — single callback returning `void | boolean | string`; use for inline message or `ctx.addIssue()` for multi-issue or path-aware validation:
+```ts
+const Password = s
+  .string()
+  .min(8)
+  .check((v) => /[A-Z]/.test(v) || 'Must include uppercase')
+  .check((v) => /\d/.test(v) || 'Must include a number');
+```
+
+`check()` is **synchronous only**. Returning a `Promise` from `check()` throws at runtime. Use `checkAsync()` for async validators.
+
+### `checkAsync()` — async validation
 
 ```ts
 const Username = s
   .string()
   .min(3)
-  .check(async (value) => {
+  .checkAsync(async (value) => {
     const taken = await db.users.exists({ username: value });
 
     return !taken || `${value} is not available`;
   });
 ```
 
-Sync and async checks both receive the parsed value after preprocessors, defaults, and core schema validation.
+Async validators receive the parsed value after preprocessors, defaults, and core schema validation.
+Schemas with `checkAsync()` **must** be used with `parseAsync()` / `safeParseAsync()`.
 
 ### `ctx.addIssue()` for multi-issue validation
+
+Use the context form with `ctx.addIssue()` when you need multiple issues or explicit path control:
 
 ```ts
 const PasswordSchema = s
@@ -348,15 +381,13 @@ const PasswordSchema = s
   .check(({ password, confirmPassword }, ctx) => {
     if (password !== confirmPassword) {
       ctx.addIssue({
-        code: ErrorCode.custom,
+        code: 'custom',
         message: 'Passwords must match',
         path: ['confirmPassword'],
       });
     }
   });
 ```
-
-Use `ctx.addIssue()` when you need multiple issues or explicit issue paths/codes.
 
 ## Error Handling
 
@@ -376,8 +407,19 @@ if (!result.success) {
   }
 
   const grouped = result.error.flatten();
+  // grouped.fieldErrors: Array<{ path: (string|number)[]; messages: string[] }>
+  // grouped.formErrors: string[]
+
   const firstOnly = result.error.flattenFirst();
+  // firstOnly.fieldErrors: Array<{ path: (string|number)[]; message: string }>
+  // firstOnly.formErrors: string[]
+
   const nested = result.error.format();
+  // nested: { _errors: string[]; [field]: { _errors: string[] } }
+
+  // Target a specific field path
+  import { errorsAt } from '@vielzeug/sieve';
+  const emailErrors = errorsAt(nested, 'email'); // string[]
 
   console.log(grouped.fieldErrors, grouped.formErrors);
   console.log(firstOnly.fieldErrors, firstOnly.formErrors);

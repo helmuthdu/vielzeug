@@ -1,16 +1,29 @@
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
-describe('toStore', () => {
-  it('getSnapshot returns current router state', async () => {
+describe('subscribe / getSnapshot', () => {
+  it('getSnapshot returns current router state and updates on navigation', async () => {
     const history = createMemoryHistory('/');
-    const router = createRouter({ history, routes: { home: { path: '/' } } });
+    const router = createRouter({
+      history,
+      routes: {
+        about: { path: '/about' },
+        home: { path: '/' },
+      },
+    });
 
     await settle();
 
-    const { getSnapshot } = router.toStore();
+    const snapshot1 = router.getSnapshot();
 
-    expect(getSnapshot()).toBe(router.state);
+    expect(snapshot1.location.pathname).toBe('/');
+
+    await router.navigate({ path: '/about' });
+
+    const snapshot2 = router.getSnapshot();
+
+    expect(snapshot2.location.pathname).toBe('/about');
+    expect(snapshot1).not.toBe(snapshot2); // new state is a different object
 
     router.dispose();
   });
@@ -27,13 +40,11 @@ describe('toStore', () => {
 
     await settle();
 
-    const { getSnapshot } = router.toStore();
-
-    expect(getSnapshot().location.pathname).toBe('/');
+    expect(router.getSnapshot().location.pathname).toBe('/');
 
     await router.navigate({ path: '/about' });
 
-    expect(getSnapshot().location.pathname).toBe('/about');
+    expect(router.getSnapshot().location.pathname).toBe('/about');
 
     router.dispose();
   });
@@ -44,10 +55,8 @@ describe('toStore', () => {
 
     await settle();
 
-    const { subscribe } = router.toStore();
     const onStoreChange = vi.fn();
-
-    const unsubscribe = subscribe(onStoreChange);
+    const unsubscribe = router.subscribe(onStoreChange);
 
     expect(onStoreChange).not.toHaveBeenCalled();
 
@@ -68,10 +77,8 @@ describe('toStore', () => {
 
     await settle();
 
-    const { subscribe } = router.toStore();
     const onStoreChange = vi.fn();
-
-    const unsubscribe = subscribe(onStoreChange);
+    const unsubscribe = router.subscribe(onStoreChange);
 
     await router.navigate({ path: '/about' });
     await router.navigate({ path: '/contact' });
@@ -94,10 +101,8 @@ describe('toStore', () => {
 
     await settle();
 
-    const { subscribe } = router.toStore();
     const onStoreChange = vi.fn();
-
-    const unsubscribe = subscribe(onStoreChange);
+    const unsubscribe = router.subscribe(onStoreChange);
 
     await router.navigate({ path: '/about' });
 

@@ -1,17 +1,6 @@
 // ── Lifecycle bridge ────────────────────────────────────────────────────────────
 export { toAbortSignal } from './scope';
 
-// ── A11y host ─────────────────────────────────────────────────────────────────
-export {
-  createA11yHost,
-  type A11yHost,
-  type A11yHostOptions,
-  type AttrMap,
-  type AttrValue,
-  type PropMap,
-  type PropValue,
-} from './a11y-host';
-
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
   createAssistiveState,
@@ -54,7 +43,6 @@ export {
   type DialogCloseReason,
   type DropdownCloseReason,
   type OverlayCloseDetail,
-  type OverlayCloseReason,
   type OverlayControl,
   type OverlayControlOptions,
   type OverlayOpenDetail,
@@ -102,12 +90,14 @@ export {
 export {
   createInteraction,
   dispatchKeyboardAction,
-  parseStringTriggers,
   type Interaction,
   type InteractionOptions,
   type KeyboardDispatchOptions,
   type PressTrigger,
 } from './keyboard';
+
+// ── Trigger parser ────────────────────────────────────────────────────────────
+export { parseStringTriggers } from './parse';
 
 // ── Focus trap ────────────────────────────────────────────────────────────────
 export { createFocusTrap, type FocusTrap, type FocusTrapOptions } from './focus-trap';
@@ -125,11 +115,11 @@ export { createDialogFocusControl, type DialogFocusControl, type DialogFocusCont
 export { devAssert, HeadlessError, HeadlessException, type HeadlessErrorCode } from './dev';
 
 // ── ID generation ────────────────────────────────────────────────────────────
-export { createStableId, resetIdCounter } from './id';
+export { createStableId } from './id';
 
 // ── Composite control ─────────────────────────────────────────────────────────
 export { createComposite, type CompositeControlHandle, type CompositeOptions } from './composite';
 
 // ── DOM utilities ─────────────────────────────────────────────────────────────
 export { setBooleanAttribute, setMaybeAttribute } from './attrs';
-export { getChoiceLabel, getLightChildrenByTag } from './slot';
+export { getChoiceLabel, getLightChildrenByTag } from './light-dom';

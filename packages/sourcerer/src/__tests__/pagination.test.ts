@@ -14,7 +14,7 @@ describe('pagination helpers', () => {
     expect(clampOffset(99, 3)).toBe(2);
   });
 
-  it('creates consistent meta values for empty result sets', () => {
+  it('creates correct meta values for empty result sets', () => {
     const meta = createMeta({
       errorMessage: null,
       isLoading: false,
@@ -26,9 +26,6 @@ describe('pagination helpers', () => {
 
     expect(meta).toEqual({
       errorMessage: null,
-      hasNoItems: true,
-      isFirstPage: true,
-      isLastPage: true,
       isLoading: false,
       isSearchPending: false,
       itemEnd: 0,
@@ -38,9 +35,14 @@ describe('pagination helpers', () => {
       pageSize: 10,
       totalItems: 0,
     });
+
+    // Removed fields no longer in SourceMeta.
+    expect('hasNoItems' in meta).toBe(false);
+    expect('isFirstPage' in meta).toBe(false);
+    expect('isLastPage' in meta).toBe(false);
   });
 
-  it('creates consistent meta values for non-empty result sets', () => {
+  it('creates correct meta values for non-empty result sets', () => {
     const meta = createMeta({
       errorMessage: null,
       isLoading: true,
@@ -52,9 +54,6 @@ describe('pagination helpers', () => {
 
     expect(meta).toEqual({
       errorMessage: null,
-      hasNoItems: false,
-      isFirstPage: false,
-      isLastPage: false,
       isLoading: true,
       isSearchPending: true,
       itemEnd: 8,

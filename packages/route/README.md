@@ -1,5 +1,5 @@
 ---
-description: Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
+description: Framework-agnostic client-side router with typed params, async data loading, middleware, leave guards, and View Transitions support.
 package: route
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
@@ -11,7 +11,7 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 
 > Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
 
-[![npm version](https://img.shields.io/npm/v//route)](https://www.npmjs.com/package//route) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/route)](https://www.npmjs.com/package/@vielzeug/route) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
@@ -20,7 +20,7 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 
 **Key exports:** `createRouter`, `createBrowserHistory`, `createMemoryHistory`, `redirectTo`
 
-**When to use:** Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
+**When to use:** Framework-agnostic client-side router with typed params, async data loading, middleware, leave guards, and View Transitions support.
 
 **Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/permit](https://vielzeug.dev/permit/) · [@vielzeug/relay](https://vielzeug.dev/relay/)
 
@@ -33,22 +33,24 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 - Declarative route tables with nested names (`dashboard.settings`)
 - Named and raw-path navigation through one `navigate()` API
 - Route middleware, data loaders, and lazy route modules
+- Per-route `onLeave` guards and global `beforeLeave` leave guards
 - `component` + `meta` payloads on matched branch state
 - Browser and memory history drivers
 - Guard helpers via `redirectTo()`
+- SSR-compatible `match()` for data prefetching without side effects
 
 ## Installation
 
 ```sh
-pnpm add /route
-npm install /route
-yarn add /route
+pnpm add @vielzeug/route
+npm install @vielzeug/route
+yarn add @vielzeug/route
 ```
 
 ## Quick Start
 
 ```ts
-import { createRouter } from '/route';
+import { createRouter } from '@vielzeug/route';
 
 const router = createRouter({
   routes: {

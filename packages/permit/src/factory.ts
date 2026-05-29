@@ -9,165 +9,75 @@ import type {
   UserPrincipal,
 } from './types';
 
-import { WILDCARD, ANONYMOUS } from './constants';
+import { ANONYMOUS, WILDCARD } from './constants';
 
-type InternalRule<TAction extends string, TData> = PermitRule<TAction, TData> & {
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+/** A compiled entry stores the authored rule plus pre-computed lookup values. */
+type CompiledEntry<TAction extends string, TData> = {
+  /** Resolved priority (defaults to 0 when not authored). */
   priority: number;
-};
-
-type CompiledEntry<TAction extends string = string, TData = unknown> = {
-  rule: InternalRule<TAction, TData>;
+  /**
+   * Normalized roles array derived from `rule.role`. Always an array
+   * internally so matching logic has a single path.
+   */
+  roles: readonly string[];
+  /** The authored rule, preserved verbatim for public return values. */
+  rule: PermitRule<TAction, TData>;
+  /** Specificity score: 1 point per non-wildcard field (role, resource, action). */
   score: number;
-  source: PermitRule<TAction, TData>;
 };
 
-/**
- * Calculate specificity score for a rule (higher = more specific)
- * Specific roles/resources/actions score 1 point each, wildcards score 0
- */
-function specificity(rule: { action: string; resource: string; role: string }): number {
-  return (rule.role === WILDCARD ? 0 : 1) + (rule.resource === WILDCARD ? 0 : 1) + (rule.action === WILDCARD ? 0 : 1);
-}
+// ---------------------------------------------------------------------------
+// Validation (module-scope pure functions)
+// ---------------------------------------------------------------------------
 
-/**
- * Validate essential runtime fields that can bypass static typing.
- */
-function validateRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>): void {
-  if (typeof rule.role !== 'string' || !rule.role.trim()) {
-    throw new Error('[permit] Rule.role must be a non-empty string');
+function validateRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>, index: number): void {
+  const at = `Rule[${index}]`;
+
+  const roles = Array.isArray(rule.role) ? rule.role : [rule.role];
+
+  if (roles.length === 0 || roles.some((r) => typeof r !== 'string' || !r.trim())) {
+    throw new Error(`[permit] ${at}.role must be a non-empty string or non-empty array of strings`);
   }
 
   if (typeof rule.resource !== 'string' || !rule.resource.trim()) {
-    throw new Error('[permit] Rule.resource must be a non-empty string');
+    throw new Error(`[permit] ${at}.resource must be a non-empty string`);
   }
 
   if (typeof rule.action !== 'string' || !(rule.action as string).trim()) {
-    throw new Error('[permit] Rule.action must be a non-empty string');
+    throw new Error(`[permit] ${at}.action must be a non-empty string`);
   }
 
   if (rule.effect !== 'allow' && rule.effect !== 'deny') {
-    throw new Error('[permit] Rule.effect must be "allow" or "deny"');
+    throw new Error(`[permit] ${at}.effect must be "allow" or "deny"`);
   }
 
   if (rule.priority !== undefined && (typeof rule.priority !== 'number' || !Number.isFinite(rule.priority))) {
-    throw new Error('[permit] Rule.priority must be a finite number');
+    throw new Error(`[permit] ${at}.priority must be a finite number`);
   }
 
   if (rule.when !== undefined && typeof rule.when !== 'function') {
-    throw new Error('[permit] Rule.when must be a function');
+    throw new Error(`[permit] ${at}.when must be a function`);
   }
 }
 
-/**
- * Validate an authenticated principal.
- */
 function validateUserPrincipal(input: unknown): asserts input is UserPrincipal {
   if (typeof input !== 'object' || !input) {
     throw new Error('[permit] Invalid principal: expected { id: string, roles: string[] }');
   }
 
-  const principal = input as Record<string, unknown>;
+  const p = input as Record<string, unknown>;
 
-  if (typeof principal.id !== 'string' || !principal.id.trim()) {
+  if (typeof p.id !== 'string' || !p.id.trim()) {
     throw new Error('[permit] Invalid principal: id must be a non-empty string');
   }
 
-  if (!Array.isArray(principal.roles) || principal.roles.some((role) => typeof role !== 'string')) {
+  if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string')) {
     throw new Error('[permit] Invalid principal: roles must be an array of strings');
   }
-}
-
-/**
- * Compile a rule once so evaluation can stay minimal.
- */
-function compileEntry<TAction extends string, TData>(
-  source: PermitRule<TAction, TData>,
-): CompiledEntry<TAction, TData> {
-  validateRule<TAction, TData>(source);
-
-  const ruleSource: PermitRule<TAction, TData> = { ...source };
-
-  const rule: InternalRule<TAction, TData> = {
-    ...ruleSource,
-    priority: ruleSource.priority ?? 0,
-  };
-
-  return {
-    rule,
-    score: specificity(rule),
-    source: ruleSource,
-  };
-}
-
-function cloneRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>): PermitRule<TAction, TData> {
-  return { ...rule };
-}
-
-/**
- * Check whether a rule applies to the current decision request.
- */
-function matchesRule<TAction extends string, TData>(
-  entry: CompiledEntry<TAction, TData>,
-  principal: Principal,
-  resource: string,
-  action: TAction,
-  data: TData | undefined,
-): boolean {
-  const { rule } = entry;
-
-  if (principal === null) {
-    if (rule.role !== ANONYMOUS) return false;
-  } else {
-    if (rule.role === ANONYMOUS) return false;
-
-    if (rule.role !== WILDCARD && !principal.roles.includes(rule.role)) return false;
-  }
-
-  if (rule.resource !== WILDCARD && rule.resource !== resource) return false;
-
-  if (rule.action !== WILDCARD && rule.action !== action) return false;
-
-  if (!rule.when) return true;
-
-  if (principal === null) return false;
-
-  return rule.when({ data, principal });
-}
-
-function matchesRuleScope<TAction extends string, TData>(
-  entry: CompiledEntry<TAction, TData>,
-  principal: Principal,
-  resource: string,
-): boolean {
-  const { rule } = entry;
-
-  if (principal === null) {
-    if (rule.role !== ANONYMOUS) return false;
-  } else {
-    if (rule.role === ANONYMOUS) return false;
-
-    if (rule.role !== WILDCARD && !principal.roles.includes(rule.role)) return false;
-  }
-
-  if (rule.resource !== WILDCARD && rule.resource !== resource) return false;
-
-  return true;
-}
-
-function matchesRuleData<TAction extends string, TData>(
-  entry: CompiledEntry<TAction, TData>,
-  principal: Principal,
-  data: TData | undefined,
-): boolean {
-  if (!entry.rule.when) {
-    return true;
-  }
-
-  if (principal === null) {
-    return false;
-  }
-
-  return entry.rule.when({ data, principal });
 }
 
 function validatePrincipal(principal: Principal): void {
@@ -176,95 +86,200 @@ function validatePrincipal(principal: Principal): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Compilation (module-scope pure functions)
+// ---------------------------------------------------------------------------
+
+/**
+ * Specificity: 1 point per non-wildcard field (role, resource, action).
+ * Multi-role rules use the authored role array for display; score is 1 if
+ * the roles array is not a sole wildcard.
+ */
+function specificity<TAction extends string, TData>(
+  rule: PermitRule<TAction, TData>,
+  roles: readonly string[],
+): number {
+  const roleScore = roles.includes(WILDCARD) ? 0 : 1;
+  const resourceScore = rule.resource === WILDCARD ? 0 : 1;
+  const actionScore = rule.action === WILDCARD ? 0 : 1;
+
+  return roleScore + resourceScore + actionScore;
+}
+
+function compileEntry<TAction extends string, TData>(
+  rule: PermitRule<TAction, TData>,
+  index: number,
+): CompiledEntry<TAction, TData> {
+  validateRule(rule, index);
+
+  // Copy the role array before storing so post-creation mutations to the
+  // caller's rule object cannot affect compiled entries or returned decisions.
+  // The authored shape (string vs array) is preserved so public return values
+  // match what the caller wrote.
+  const snapshot: PermitRule<TAction, TData> = {
+    ...rule,
+    role: Array.isArray(rule.role) ? [...rule.role] : rule.role,
+  };
+  const roles: readonly string[] = Array.isArray(snapshot.role)
+    ? (snapshot.role as readonly string[])
+    : [snapshot.role as string];
+
+  return {
+    priority: snapshot.priority ?? 0,
+    roles,
+    rule: snapshot,
+    score: specificity(snapshot, roles),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Matching (module-scope pure functions)
+// ---------------------------------------------------------------------------
+
+/** Returns true if the principal's role set intersects with the rule's roles. */
+function principalMatchesRoles(roles: readonly string[], principal: Principal): boolean {
+  if (principal === null) {
+    // A null principal only matches rules that include ANONYMOUS (in any position).
+    return roles.includes(ANONYMOUS);
+  }
+
+  // Authenticated principal: a roles array composed entirely of ANONYMOUS never applies.
+  if (roles.every((r) => r === ANONYMOUS)) return false;
+
+  // WILDCARD role matches all authenticated principals.
+  if (roles.includes(WILDCARD)) return true;
+
+  return roles.some((role) => principal.roles.includes(role));
+}
+
+/**
+ * Check whether a rule applies to a given request.
+ *
+ * @param action        - Pass `undefined` to skip the action check (used by `rulesInScope`).
+ * @param data          - Data payload; passed to `when` predicates.
+ * @param skipPredicate - When true, omit the `when` evaluation even when data is present.
+ *                        Used by `rulesInScope` when called without a data argument so that
+ *                        predicate-gated rules still appear in the scope list.
+ */
+function matchesRule<TAction extends string, TData>(
+  entry: CompiledEntry<TAction, TData>,
+  principal: Principal,
+  resource: string,
+  action: TAction | undefined,
+  data: TData | undefined,
+  skipPredicate = false,
+): boolean {
+  if (!principalMatchesRoles(entry.roles, principal)) return false;
+
+  if (entry.rule.resource !== WILDCARD && entry.rule.resource !== resource) return false;
+
+  if (action !== undefined && entry.rule.action !== WILDCARD && entry.rule.action !== action) return false;
+
+  if (skipPredicate || !entry.rule.when) return true;
+
+  // Predicates require an authenticated principal
+  if (principal === null) return false;
+
+  return entry.rule.when({ data, principal });
+}
+
+// ---------------------------------------------------------------------------
+// Decision resolution (module-scope pure functions)
+// ---------------------------------------------------------------------------
+
+function pickWinner<TAction extends string, TData>(
+  entries: CompiledEntry<TAction, TData>[],
+  principal: Principal,
+  resource: string,
+  action: TAction,
+  data: TData | undefined,
+): CompiledEntry<TAction, TData> | undefined {
+  let winner: CompiledEntry<TAction, TData> | undefined;
+
+  for (const entry of entries) {
+    if (!matchesRule(entry, principal, resource, action, data)) continue;
+
+    if (!winner) {
+      winner = entry;
+      continue;
+    }
+
+    const beats =
+      entry.priority > winner.priority ||
+      (entry.priority === winner.priority && entry.score > winner.score) ||
+      (entry.priority === winner.priority && entry.score === winner.score && entry.rule.effect === 'deny');
+
+    if (beats) winner = entry;
+  }
+
+  return winner;
+}
+
+/** Clone a rule for public return values, ensuring the role array is also copied. */
+function cloneRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>): PermitRule<TAction, TData> {
+  return {
+    ...rule,
+    role: Array.isArray(rule.role) ? [...rule.role] : rule.role,
+  };
+}
+
+function toDecision<TAction extends string, TData>(
+  winner: CompiledEntry<TAction, TData> | undefined,
+): PermitDecision<TAction, TData> {
+  if (!winner) return { allowed: false, reason: 'no-matching-rule' };
+
+  if (winner.rule.effect === 'deny') {
+    return { allowed: false, reason: 'explicit-deny', rule: cloneRule(winner.rule) };
+  }
+
+  return { allowed: true, rule: cloneRule(winner.rule) };
+}
+
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+
 export function createPermit<TAction extends string = string, TData = unknown>(
   rules: readonly PermitRule<TAction, TData>[] = [],
   options: PermitOptions<TAction, TData> = {},
 ): Permit<TAction, TData> {
   const { logger } = options;
-  const entries: CompiledEntry<TAction, TData>[] = rules.map((rule) => compileEntry(rule));
+  const entries = rules.map((rule, i) => compileEntry(rule, i));
 
-  function evaluate(
-    principal: Principal,
-    resource: string,
-    action: TAction,
-    data?: TData,
-  ): CompiledEntry<TAction, TData> | undefined {
-    let winner: CompiledEntry<TAction, TData> | undefined;
+  // -------------------------------------------------------------------------
+  // Core decision + logging
+  // -------------------------------------------------------------------------
 
-    for (const entry of entries) {
-      if (!matchesRule(entry, principal, resource, action, data)) continue;
-
-      if (!winner) {
-        winner = entry;
-        continue;
-      }
-
-      const entryPriority = entry.rule.priority;
-      const winnerPriority = winner.rule.priority;
-      const entryBeatsWinner =
-        entryPriority > winnerPriority ||
-        (entryPriority === winnerPriority && entry.score > winner.score) ||
-        (entryPriority === winnerPriority && entry.score === winner.score && entry.rule.effect === 'deny');
-
-      if (entryBeatsWinner) {
-        winner = entry;
-      }
-    }
-
-    return winner;
-  }
-
-  function toDecision(winner: CompiledEntry<TAction, TData> | undefined): PermitDecision<TAction, TData> {
-    if (!winner) {
-      return { allowed: false, reason: 'no-matching-rule' };
-    }
-
-    if (winner.rule.effect === 'deny') {
-      return { allowed: false, reason: 'explicit-deny', rule: cloneRule(winner.source) };
-    }
-
-    return { allowed: true, rule: cloneRule(winner.source) };
-  }
-
-  function logDecision(
+  function evaluateAndLog(
     principal: Principal,
     resource: string,
     action: TAction,
     data: TData | undefined,
-    winner: CompiledEntry<TAction, TData> | undefined,
-  ): void {
-    if (!logger) {
-      return;
-    }
-
-    logger({
-      action,
-      data,
-      decision: winner?.rule.effect ?? 'deny',
-      principal,
-      resource,
-      rule: winner ? cloneRule(winner.source) : undefined,
-    });
-  }
-
-  function decide(
-    principal: Principal,
-    resource: string,
-    action: TAction,
-    data?: TData,
-    options?: { log?: boolean; validated?: boolean },
   ): PermitDecision<TAction, TData> {
-    if (!options?.validated) {
-      validatePrincipal(principal);
-    }
+    const winner = pickWinner(entries, principal, resource, action, data);
 
-    const winner = evaluate(principal, resource, action, data);
-
-    if (options?.log) {
-      logDecision(principal, resource, action, data, winner);
+    if (logger) {
+      logger({
+        action,
+        data,
+        decision: winner?.rule.effect ?? 'deny',
+        principal,
+        resource,
+        rule: winner ? cloneRule(winner.rule) : undefined,
+      });
     }
 
     return toDecision(winner);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public API
+  // -------------------------------------------------------------------------
+
+  function can(principal: Principal, resource: string, action: TAction, data?: TData): boolean {
+    validatePrincipal(principal);
+
+    return evaluateAndLog(principal, resource, action, data).allowed;
   }
 
   function explain(
@@ -273,201 +288,102 @@ export function createPermit<TAction extends string = string, TData = unknown>(
     action: TAction,
     data?: TData,
   ): PermitDecision<TAction, TData> {
-    return decide(principal, resource, action, data, { log: true });
-  }
+    validatePrincipal(principal);
 
-  function can(principal: Principal, resource: string, action: TAction, data?: TData): boolean {
-    return decide(principal, resource, action, data, { log: true }).allowed;
+    return evaluateAndLog(principal, resource, action, data);
   }
 
   function canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean {
-    if (actions.length === 0) {
-      return true;
-    }
+    if (actions.length === 0) return true;
 
     validatePrincipal(principal);
 
-    return actions.every((action) => decide(principal, resource, action, data, { log: true, validated: true }).allowed);
+    return actions.every((action) => evaluateAndLog(principal, resource, action, data).allowed);
   }
 
   function canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean {
-    if (actions.length === 0) {
-      return false;
-    }
+    if (actions.length === 0) return false;
 
     validatePrincipal(principal);
 
-    return actions.some((action) => decide(principal, resource, action, data, { log: true, validated: true }).allowed);
+    return actions.some((action) => evaluateAndLog(principal, resource, action, data).allowed);
   }
 
   function checkAll(
     principal: Principal,
     checks: readonly PermitCheck<TAction, TData>[],
   ): PermitDecision<TAction, TData>[] {
-    if (checks.length === 0) {
-      return [];
-    }
+    if (checks.length === 0) return [];
 
     validatePrincipal(principal);
 
-    return checks.map((check) =>
-      decide(principal, check.resource, check.action, check.data, { log: true, validated: true }),
-    );
-  }
-
-  function uniqueActions(actions: readonly TAction[]): TAction[] {
-    const seen = new Set<TAction>();
-    const output: TAction[] = [];
-
-    for (const action of actions) {
-      if (seen.has(action)) continue;
-
-      seen.add(action);
-      output.push(action);
-    }
-
-    return output;
-  }
-
-  function allowedActionsFor(
-    principal: Principal,
-    resource: string,
-    data?: TData,
-    knownActions?: readonly TAction[],
-  ): TAction[] {
-    validatePrincipal(principal);
-
-    if (knownActions && knownActions.length > 0) {
-      return uniqueActions(knownActions).filter(
-        (action) => decide(principal, resource, action, data, { validated: true }).allowed,
-      );
-    }
-
-    const allowed: TAction[] = [];
-    const seenActions = new Set<TAction>();
-
-    // Collect unique non-wildcard actions from matching rules
-    for (const entry of entries) {
-      if (entry.rule.action === WILDCARD) continue;
-
-      const action = entry.rule.action as TAction;
-
-      if (seenActions.has(action)) continue;
-
-      if (!matchesRule(entry, principal, resource, action, data)) continue;
-
-      seenActions.add(action);
-
-      if (decide(principal, resource, action, data, { validated: true }).allowed) {
-        allowed.push(action);
-      }
-    }
-
-    return allowed;
+    return checks.map((check) => evaluateAndLog(principal, check.resource, check.action, check.data));
   }
 
   function allowedActions(
     principal: Principal,
     resource: string,
+    knownActions: readonly TAction[],
     data?: TData,
-    knownActions?: readonly TAction[],
   ): TAction[] {
-    return allowedActionsFor(principal, resource, data, knownActions);
+    validatePrincipal(principal);
+
+    const seen = new Set<TAction>();
+    const result: TAction[] = [];
+
+    for (const action of knownActions) {
+      if (seen.has(action)) continue;
+
+      seen.add(action);
+
+      const winner = pickWinner(entries, principal, resource, action, data);
+
+      if (winner?.rule.effect === 'allow') result.push(action);
+    }
+
+    return result;
   }
 
   function rulesInScope(principal: Principal, resource: string, data?: TData): PermitRule<TAction, TData>[] {
     validatePrincipal(principal);
 
-    const matchedRules: PermitRule<TAction, TData>[] = [];
+    // When no data is provided we still want predicate-gated rules to appear
+    // in the scope list (the predicate isn't evaluated; the rule is shown as-is).
+    const skipPredicate = data === undefined;
+    const result: PermitRule<TAction, TData>[] = [];
 
     for (const entry of entries) {
-      if (!matchesRuleScope(entry, principal, resource)) {
-        continue;
-      }
+      if (!matchesRule(entry, principal, resource, undefined, data, skipPredicate)) continue;
 
-      if (data !== undefined && !matchesRuleData(entry, principal, data)) {
-        continue;
-      }
-
-      matchedRules.push(cloneRule(entry.source));
+      result.push(cloneRule(entry.rule));
     }
 
-    return matchedRules;
+    return result;
   }
 
   function forUser(principal: UserPrincipal): BoundPermit<TAction, TData> {
     validateUserPrincipal(principal);
 
-    const boundPrincipal: UserPrincipal = {
+    // Snapshot the principal at bind time — mutations to the caller's object
+    // must not affect decisions made through the bound view.
+    const snap: UserPrincipal = {
       attributes: principal.attributes ? structuredClone(principal.attributes) : undefined,
       id: principal.id,
       roles: [...principal.roles],
     };
 
-    function canBound(resource: string, action: TAction, data?: TData): boolean {
-      return decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed;
-    }
-
-    function canAllBound(resource: string, actions: readonly TAction[], data?: TData): boolean {
-      if (actions.length === 0) {
-        return true;
-      }
-
-      return actions.every(
-        (action) => decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed,
-      );
-    }
-
-    function canAnyBound(resource: string, actions: readonly TAction[], data?: TData): boolean {
-      if (actions.length === 0) {
-        return false;
-      }
-
-      return actions.some(
-        (action) => decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed,
-      );
-    }
-
-    function allowedActionsBound(resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[] {
-      return allowedActionsFor(boundPrincipal, resource, data, knownActions);
-    }
-
-    function explainBound(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData> {
-      return decide(boundPrincipal, resource, action, data, { log: true, validated: true });
-    }
-
-    function checkAllBound(checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[] {
-      return checkAll(boundPrincipal, checks);
-    }
-
-    function rulesInScopeBound(resource: string, data?: TData): PermitRule<TAction, TData>[] {
-      return rulesInScope(boundPrincipal, resource, data);
-    }
-
-    const boundPerm: BoundPermit<TAction, TData> = {
-      allowedActions: allowedActionsBound,
-      can: canBound,
-      canAll: canAllBound,
-      canAny: canAnyBound,
-      checkAll: checkAllBound,
-      explain: explainBound,
-      forUser,
-      rulesInScope: rulesInScopeBound,
+    // Delegate to the top-level closures so all validation, logging, and
+    // short-circuit semantics stay in one place.
+    return {
+      allowedActions: (resource, knownActions, data?) => allowedActions(snap, resource, knownActions, data),
+      can: (resource, action, data?) => can(snap, resource, action, data),
+      canAll: (resource, actions, data?) => canAll(snap, resource, actions, data),
+      canAny: (resource, actions, data?) => canAny(snap, resource, actions, data),
+      checkAll: (checks) => checkAll(snap, checks),
+      explain: (resource, action, data?) => explain(snap, resource, action, data),
+      rulesInScope: (resource, data?) => rulesInScope(snap, resource, data),
     };
-
-    return boundPerm;
   }
 
-  const permit: Permit<TAction, TData> = {
-    allowedActions,
-    can,
-    canAll,
-    canAny,
-    checkAll,
-    explain,
-    forUser,
-    rulesInScope,
-  };
-
-  return permit;
+  return { allowedActions, can, canAll, canAny, checkAll, explain, forUser, rulesInScope };
 }

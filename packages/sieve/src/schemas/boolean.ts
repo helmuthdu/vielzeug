@@ -1,3 +1,5 @@
+import type { SchemaDescriptor } from '../core';
+
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
@@ -12,6 +14,15 @@ export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
 
   protected override _toSchemaBase(): Record<string, unknown> {
     return { type: 'boolean' };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'boolean',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

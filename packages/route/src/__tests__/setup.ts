@@ -49,7 +49,7 @@ let activeRouter: { dispose: () => void } | undefined;
 export async function boot<TRoutes extends RouteTable>(router: Router<TRoutes>): Promise<Router<TRoutes>> {
   activeRouter = router;
 
-  const stateLocation = router.state.location;
+  const stateLocation = router.getSnapshot().location;
   const stateHasQuery = Object.keys(stateLocation.query).length > 0;
   const mockHasQuery = mockLocation.search.length > 1;
   const needsSync =

@@ -8,6 +8,7 @@ description: Practical examples and recipes for permit.
 ## Examples
 
 - [Blog Roles](./examples/blog-roles.md)
+- [Multi-Role Rules](./examples/multi-role-rules.md)
 - [Wildcard Action](./examples/wildcard-action.md)
 - [Inheritance And Overrides](./examples/inheritance-and-overrides.md)
 - [Bound Guard In Ui Layer](./examples/bound-guard-in-ui-layer.md)

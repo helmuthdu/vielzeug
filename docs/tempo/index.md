@@ -2,10 +2,10 @@
 title: Tempo — Temporal date and time utilities
 description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 package: tempo
-category: date-time
+category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
 related: [toolkit]
-exports: [parse, convert, add, subtract, diff, format, isBefore, isAfter, isWithin, now]
+exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatRange, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, timeDiff, dateRange, clearCaches]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [parse, convert, add, subtract, diff, format, isBefore, isAfter, isWith
 
 **Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date Time
 
-**Key exports:** `parse`, `convert`, `add`, `subtract`, `diff`, `format`, `isBefore`, `isAfter`, `isWithin`, `now`
+**Key exports:** `now`, `parseLocal`, `toInstant`, `toZoned`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`
 
 **When to use:** Temporal-powered date parsing, DST-safe arithmetic, timezone conversion, and Intl formatting.
 
@@ -53,18 +53,22 @@ yarn add @vielzeug/tempo
 ## Quick Start
 
 ```ts
-import { formatHuman, formatInstant, now, shift, toZoned } from '@vielzeug/tempo';
+import { format, formatInstant, parseLocal, shift, toInstant, toZoned } from '@vielzeug/tempo';
 
-// Get current time in a timezone
-const meeting = toZoned(now('UTC'), { tz: 'America/New_York' });
+// Parse a wall-clock string (no timezone attached)
+const localMeeting = parseLocal('2026-03-21T10:30:00');
 
-// Shift time (DST-safe)
-const reminder = shift(meeting, { minutes: -15 });
+// Convert to an instant using the user's timezone
+const meetingInstant = toInstant(localMeeting, { tz: 'America/New_York' });
 
-// Format for humans
-const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
+// Project to a zoned view and subtract 15 minutes (DST-safe)
+const meetingNY = toZoned(meetingInstant, { tz: 'America/New_York' });
+const reminder = shift(meetingNY, { minutes: -15 });
 
-// Format for APIs/logs (instant string)
+// Format for display
+const text = format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
+
+// Format for APIs/logs (stable UTC instant string)
 const stable = formatInstant(reminder);
 ```
 
@@ -98,12 +102,14 @@ const reminder = shift(meeting, { minutes: -15 });
 - **Explicit local parsing** — `parseLocal()` for wall-clock values; local inputs require `tz` when converting
 - **DST-safe arithmetic** — `shift()` handles transitions correctly
 - **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support
-- **Formatting split by intent** — `formatHuman()` for UI, `formatInstant()` for instant strings, `formatZoned()` for zoned strings
-- **Range + comparison helpers** — `within()`, `clamp()`, `isBefore()`, `isAfter()`, `isSame()`
+- **Formatting split by intent** — `format()` for UI (with presets and `intl` escape hatch), `formatInstant()` for UTC strings, `formatZoned()` for zoned strings
+- **Relative and range formatting** — `formatRelative()` for UX copy, `formatRange()` for localized time spans
+- **Range + comparison helpers** — `within()`, `clamp()`, `isBefore()`, `isAfter()`, `isSame()` with calendar-unit and week-start support
 - **Boundary helpers** — `startOf()` and `endOf()` for day/week/month/year-style snapping
-- **Relative and duration formatting** — `formatRelative()` and `formatDuration()`
-- **Duration tools** — `difference()` plus `parseDuration()`
-- **Intl integration** — formatting respects locale & calendar systems
+- **Duration tools** — `difference()`, `parseDuration()`, `formatDuration()`
+- **Expiry and diff utilities** — `expires()` for TTL classification, `timeDiff()` for human-readable time differences, `dateRange()` for generating date sequences
+- **Intl integration** — formatting respects locale and calendar systems
+- **Cache management** — `clearCaches()` to release internal `Intl` formatter caches
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`
 - <PackageInfo package="tempo" type="size" /> gzipped
 

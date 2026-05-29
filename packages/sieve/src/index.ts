@@ -22,6 +22,7 @@ export {
   type NullishSchema,
   type OptionalSchema,
   type ParseResult,
+  type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
   type WrapperMode,
@@ -29,9 +30,7 @@ export {
   resolveMessage,
 } from './core';
 
-export { schema } from './schemas/json';
-
-export { configure, reset, withMessages, withMessagesAsync, type Logger, type Messages } from './messages';
+export { configure, reset, withMessages, type Logger, type Messages } from './messages';
 
 export {
   s,

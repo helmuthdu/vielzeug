@@ -5,22 +5,26 @@ description: Build deterministic authorization policies with immutable rule sets
 
 [[toc]]
 
-::: tip New to Permit?
-Start with the [Overview](./index.md), then use this page for day-to-day patterns.
-:::
+## Basic Usage
 
-## Create a Permit
+Create a permit instance with an array of rules. Rules are compiled once at creation time.
 
 ```ts
-import { createPermit } from '@vielzeug/permit';
+import { WILDCARD, createPermit } from '@vielzeug/permit';
 
 const permit = createPermit([
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'blocked', resource: 'posts', action: '*', effect: 'deny', priority: 100 },
+  { role: 'viewer',  resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: 'editor',  resource: 'posts', action: 'update', effect: 'allow' },
+  // High-priority deny blocks the blocked role from every action on posts
+  { role: 'blocked', resource: 'posts', action: WILDCARD,  effect: 'deny', priority: 100 },
 ]);
+
+permit.can({ id: 'u1', roles: ['viewer'] },  'posts', 'read');   // true
+permit.can({ id: 'u1', roles: ['viewer'] },  'posts', 'update'); // false
+permit.can({ id: 'u2', roles: ['blocked'] }, 'posts', 'read');   // false
 ```
 
-Rules are immutable after creation. To change rules, create a new permit instance.
+To update the policy, create a new instance — rules are immutable after creation.
 
 ## Check Permissions
 
@@ -78,20 +82,28 @@ const boundDecisions = bound.checkAll([
 
 ## List Allowed Actions
 
-```ts
-const actions = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
-```
+`allowedActions(principal, resource, knownActions, data?)` returns the subset of `knownActions` that the principal is allowed to perform on `resource`.
 
-`allowedActions()` returns concrete actions that are currently allowed for the principal.
-Wildcard actions are not enumerable and are skipped.
-
-If your rules rely on wildcard actions, pass a known action set:
+`knownActions` is required because Permit cannot enumerate actions on its own — an action defined with `WILDCARD` has no finite list of concrete values. Passing `knownActions` resolves wildcard-action rules against that set:
 
 ```ts
-permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', undefined, ['read', 'update', 'delete']);
+// Returns the subset of the provided list that is allowed
+const actions = permit.allowedActions(
+  { id: 'u1', roles: ['admin'] },
+  'posts',
+  ['read', 'update', 'delete'],
+);
+
+// With runtime data for predicate-gated rules
+const ownedActions = permit.allowedActions(
+  { id: 'u1', roles: ['editor'] },
+  'posts',
+  ['read', 'update', 'delete'],
+  { authorId: 'u1' },
+);
 ```
 
-Without `knownActions`, wildcard-only matches return an empty list.
+`allowedActions` does not invoke the logger — it is a side-effect-free enumeration helper.
 
 ## Inspect Rule Scope with `rulesInScope`
 
@@ -167,6 +179,41 @@ const permit = createPermit<'publish'>([
 ```
 
 `principal.attributes` can store arbitrary user metadata for runtime policy checks.
+
+## Multi-Role Rules
+
+The `role` field accepts either a single string or an array of strings. A rule matches if the principal holds **any** of the listed roles (OR semantics).
+
+Multi-role rules reduce repetition when several roles share identical permissions:
+
+```ts
+import { createPermit } from '@vielzeug/permit';
+
+const permit = createPermit([
+  // One rule instead of three separate allow rules
+  { role: ['viewer', 'editor', 'admin'], resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: ['editor', 'admin'],           resource: 'posts', action: 'update', effect: 'allow' },
+  { role: 'admin',                       resource: 'posts', action: 'delete', effect: 'allow' },
+]);
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');   // true
+permit.can({ id: 'u2', roles: ['editor'] }, 'posts', 'update'); // true
+permit.can({ id: 'u2', roles: ['editor'] }, 'posts', 'delete'); // false
+```
+
+`ANONYMOUS` works inside multi-role arrays. The rule matches both unauthenticated visitors and any authenticated role listed alongside it:
+
+```ts
+import { ANONYMOUS, createPermit } from '@vielzeug/permit';
+
+const permit = createPermit([
+  { role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' },
+]);
+
+permit.can(null, 'posts', 'read');                             // true (anonymous)
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true (viewer)
+permit.can({ id: 'u2', roles: ['admin'] }, 'posts', 'read');  // false (not in list)
+```
 
 ## Anonymous and Wildcards
 

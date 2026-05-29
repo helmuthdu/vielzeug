@@ -133,7 +133,7 @@ describe('HTTP Client', () => {
       await expect(http.delete('/users/1')).resolves.toBeUndefined();
     });
 
-    it('throws for unsupported success content-type in auto mode', async () => {
+    it('falls back to text for unknown content-type in auto mode', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockResolvedValue(
@@ -143,7 +143,7 @@ describe('HTTP Client', () => {
         }),
       );
 
-      await expect(http.get('/binary')).rejects.toThrow(/unsupported response content-type/i);
+      await expect(http.get('/binary')).resolves.toBe('raw-bytes');
     });
 
     it('parses binary responses when responseType is explicit', async () => {

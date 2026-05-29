@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, route, courier]
-exports: [createI18n]
+exports: [createI18n, createFormatter]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,9 +21,9 @@ exports: [createI18n]
 
 **Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** I18n
 
-**Key exports:** `createI18n`
+**Key exports:** `createI18n` · `createFormatter` (from `@vielzeug/lingua/format`)
 
-**When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, and reactive subscriptions.
+**When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, partial catalog merging, and reactive subscriptions.
 
 **Related:** [Ripple](/ripple/) · [Route](/route/) · [Courier](/courier/)
 
@@ -77,7 +77,16 @@ await i18n.setLocale('fr');
 
 const greeting = i18n.t('greeting', { name: 'Alice' });
 const messages = i18n.tp('inbox', 3);
-const fmt = createFormatter(i18n);
+
+// Scope reduces key repetition inside a namespace
+const nav = i18n.scope('nav');
+nav.t('home'); // resolves 'nav.home'
+
+// Merge route-specific keys on top of the base catalog
+await i18n.merge('en', () => import('./routes/settings.i18n.json').then((m) => m.default));
+
+// Formatter bound to the current locale — follows locale changes automatically
+const fmt = createFormatter(() => i18n.locale);
 const price = fmt.currency(12.5, 'EUR');
 
 const snapshot = i18n.getSnapshot();
@@ -95,11 +104,25 @@ i18n.getSupportedLocales();
 
 ## Why Lingua?
 
-- Minimal API: `t`, `tp`, `preload`, `setLocale`, `register`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
+Most i18n libraries either couple runtime and framework, or require a global plugin system. Lingua is a plain object with a subscription model that any framework can consume directly.
+
+```ts
+// Before — manual key lookup with no type safety or fallback
+const messages = { en: { greeting: 'Hello, {name}!' }, de: { greeting: 'Hallo, {name}!' } };
+const locale = 'de';
+const raw = (messages[locale] ?? messages['en'])['greeting'].replace('{name}', 'Alice');
+
+// After — typed keys, fallback chain, plural resolution, reactive subscriptions
+const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
+const greeting = i18n.t('greeting', { name: 'Alice' });
+```
+
+- Minimal API: `t`, `tp`, `preload`, `setLocale`, `register`, `merge`, `scope`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
-- Framework-agnostic store primitives for React, Vue, Svelte, Solid, and others
+- Partial catalog merging via `merge()` — add route-level keys without full catalog replacement
+- Framework-agnostic store primitives that compose with any UI framework
 - Zero dependencies
 
 | Feature                           | Lingua                                       | i18next | FormatJS |
@@ -108,6 +131,7 @@ i18n.getSupportedLocales();
 | Typed key ergonomics              | ✅                                           | Partial | Partial  |
 | Deterministic fallback chain      | ✅                                           | ✅      | ✅       |
 | Async locale preload              | ✅                                           | ✅      | ✅       |
+| Partial catalog merging           | ✅ (`merge()`)                               | Partial | ❌       |
 | Runtime snapshots + subscriptions | ✅                                           | ❌      | ❌       |
 | External formatter bridge         | ✅ (`@vielzeug/lingua/format`)               | Partial | ✅       |
 | Framework agnostic                | ✅                                           | ✅      | ✅       |
@@ -122,6 +146,8 @@ i18n.getSupportedLocales();
 - One runtime primitive: `createI18n(options)`
 - Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
+- Partial catalog merging: `merge(locale, source)` adds keys without replacing the full catalog
+- Scoped translation helpers: `scope(prefix)` returns a helper bound to a key prefix
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales
 - Unified missing handling through `onMissing(info)` for both key and interpolation misses

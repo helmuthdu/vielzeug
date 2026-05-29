@@ -17,6 +17,8 @@ declare module '/machine' {
     args: ActionArgs<Ctx, Ev>,
   ) => void;
 
+  export type EntryFn<Ctx extends object> = (args: { context: Ctx }) => void;
+
   export type GuardFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (
     args: ActionArgs<Ctx, Ev>,
   ) => boolean;
@@ -31,6 +33,13 @@ declare module '/machine' {
     guard?: GuardFn<Ctx, EventByType<Ev, Type>>;
     target: State;
   };
+
+  export type TransitionInput<
+    State extends string,
+    Ctx extends object,
+    Ev extends MachineEvent,
+    Type extends EventType<Ev> = EventType<Ev>,
+  > = TransitionDef<State, Ctx, Ev, Type> | Array<TransitionDef<State, Ctx, Ev, Type>>;
 
   export type InvokeSourceArgs<Ctx extends object, Ev extends MachineEvent> = {
     readonly context: Readonly<Ctx>;
@@ -50,10 +59,10 @@ declare module '/machine' {
   };
 
   export type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    entry?: ActionFn<Ctx, Ev | LifecycleEvent>;
+    entry?: EntryFn<Ctx>;
     exit?: ActionFn<Ctx, Ev>;
     invoke?: Array<InvokeDef<Ctx, Ev>>;
-    on?: Partial<{ [Type in EventType<Ev>]: Array<TransitionDef<State, Ctx, Ev, Type>> }>;
+    on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
   };
 
   export type ContextValidator<Ctx extends object> = (context: unknown) => context is Ctx;
@@ -61,7 +70,6 @@ declare module '/machine' {
   export type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = {
     context?: Ctx;
     initial: State;
-    onTransition?: (info: { event: Ev; from: State; to: State }) => void;
     states: { [S in State]: StateNode<State, Ctx, Ev> };
     validateContext?: ContextValidator<Ctx>;
   };
@@ -92,7 +100,6 @@ declare module '/machine' {
   export type TransitionSkippedInfo<State extends string, Ev extends MachineEvent> = {
     readonly event: Ev;
     readonly from: State;
-    readonly reason: 'guard_failed' | 'no_transition';
   };
 
   export type InvokeDebugInfo<State extends string, Ctx extends object, Ev extends MachineEvent> = {
@@ -120,44 +127,43 @@ declare module '/machine' {
   };
 
   export type InterpretOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    context?: Ctx;
+    clone?: <T>(value: T) => T;
     debug?: DebugHooks<State, Ctx, Ev>;
     maxTransitionsPerFlush?: number;
+    onTransition?: (info: { event: Ev; from: State; to: State }) => void;
     persistence?: PersistenceAdapter<State, Ctx>;
     snapshot?: MachineSnapshot<State, Ctx>;
     traceLimit?: number;
     validateSnapshot?: ContextValidator<Ctx>;
   };
 
-  export type TransitionResolution<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    readonly transition: TransitionDef<State, Ctx, Ev>;
-  };
+  export type MachineErrorCode =
+    | 'MACHINE_INVALID_INITIAL_STATE'
+    | 'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH'
+    | 'MACHINE_INVALID_SNAPSHOT_STATE'
+    | 'MACHINE_INVALID_TRANSITION'
+    | 'MACHINE_INVALID_TRANSITION_ARRAY'
+    | 'MACHINE_INVALID_TRANSITION_HANDLER'
+    | 'MACHINE_INVALID_TYPE_HANDLER'
+    | 'MACHINE_INVALID_TYPE_IN_TRANSITION'
+    | 'MACHINE_INVALID_VALIDATE_CONTEXT'
+    | 'MACHINE_TRANSITION_LOOP_GUARD'
+    | 'MACHINE_UNKNOWN_TARGET';
 
-  export type MachinitErrorCode =
-    | 'MACHINIT_INVALID_INITIAL_STATE'
-    | 'MACHINIT_INVALID_MAX_TRANSITIONS_PER_FLUSH'
-    | 'MACHINIT_INVALID_SNAPSHOT_STATE'
-    | 'MACHINIT_INVALID_TRANSITION'
-    | 'MACHINIT_INVALID_TRANSITION_ARRAY'
-    | 'MACHINIT_INVALID_TRANSITION_HANDLER'
-    | 'MACHINIT_INVALID_TYPE_HANDLER'
-    | 'MACHINIT_INVALID_TYPE_IN_TRANSITION'
-    | 'MACHINIT_INVALID_VALIDATE_CONTEXT'
-    | 'MACHINIT_TRANSITION_LOOP_GUARD'
-    | 'MACHINIT_UNKNOWN_TARGET';
-
-  export class MachinitError extends Error {
-    readonly code: MachinitErrorCode;
+  export class MachineError extends Error {
+    readonly code: MachineErrorCode;
     readonly details?: Record<string, unknown>;
-    constructor(code: MachinitErrorCode, message: string, details?: Record<string, unknown>);
+    constructor(code: MachineErrorCode, message: string, details?: Record<string, unknown>);
   }
 
   export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
     readonly context: import('/ripple').ReadonlySignal<Ctx>;
     readonly state: import('/ripple').ReadonlySignal<State>;
     can(event: Ev): boolean;
+    clearPersistence(): void;
     getSnapshot(): MachineSnapshot<State, Ctx>;
     getTrace(): readonly TransitionTraceEntry<State, Ev>[];
+    matches(...states: State[]): boolean;
     send(event: Ev): boolean;
     [Symbol.dispose](): void;
   }
@@ -175,11 +181,10 @@ declare module '/machine' {
     definition: MachineDefinition<State, Ctx, Ev>,
     input: {
       context: Readonly<Ctx>;
-      debug?: DebugHooks<State, Ctx, Ev>;
       event: Ev;
       state: State;
     },
-  ): TransitionResolution<State, Ctx, Ev> | undefined;
+  ): TransitionDef<State, Ctx, Ev> | undefined;
 
   export function assign<Ctx extends object, Ev extends MachineEvent = MachineEvent>(
     fn: (args: ActionArgs<Ctx, Ev>) => Partial<Ctx>,

@@ -29,6 +29,10 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "dependencies": {
+    "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/toolkit": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^25.8.0",
     "typescript": "~6.0.3",

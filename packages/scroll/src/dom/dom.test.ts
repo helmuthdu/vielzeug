@@ -1,51 +1,17 @@
+import { flushMicrotasks, makeContainer } from '../__tests__/test-utils';
 import { createDomVirtualList } from './dom';
-
-const flushMicrotasks = () => new Promise<void>((resolve) => queueMicrotask(resolve));
-
-function makeContainer(clientHeight = 200, clientWidth = 320): HTMLElement {
-  let scrollTop = 0;
-  let scrollLeft = 0;
-  const el = document.createElement('div');
-
-  Object.defineProperties(el, {
-    clientHeight: { configurable: true, get: () => clientHeight },
-    clientWidth: { configurable: true, get: () => clientWidth },
-    scrollLeft: {
-      configurable: true,
-      get: () => scrollLeft,
-      set: (v: number) => {
-        scrollLeft = v;
-      },
-    },
-    scrollTop: {
-      configurable: true,
-      get: () => scrollTop,
-      set: (v: number) => {
-        scrollTop = v;
-      },
-    },
-  });
-
-  el.scrollTo = ((options?: ScrollToOptions) => {
-    if (typeof options?.top === 'number') scrollTop = options.top;
-
-    if (typeof options?.left === 'number') scrollLeft = options.left;
-  }) as typeof el.scrollTo;
-
-  return el;
-}
 
 describe('createDomVirtualList', () => {
   describe('layout and rendering', () => {
     test('renders virtual items and forwards total size', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const render = vi.fn();
       const domList = createDomVirtualList<string>({
         estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render,
+        scrollElement: scrollEl,
       });
 
       domList.setItems(['a', 'b', 'c', 'd']);
@@ -59,14 +25,14 @@ describe('createDomVirtualList', () => {
     });
 
     test('writes width instead of height in horizontal mode', () => {
-      const scrollEl = makeContainer(120, 120);
+      const scrollEl = makeContainer({ clientHeight: 120, clientWidth: 120 });
       const listEl = document.createElement('div');
       const domList = createDomVirtualList<string>({
         estimateSize: 30,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
         horizontal: true,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(['a', 'b', 'c']);
@@ -77,15 +43,15 @@ describe('createDomVirtualList', () => {
     });
 
     test('recomputes layout when item content changes but length is unchanged', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const rows = [{ size: 20 }, { size: 20 }, { size: 20 }];
 
       const domList = createDomVirtualList<{ size: number }>({
         estimateSize: (_index, item) => item.size,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(rows);
@@ -98,7 +64,7 @@ describe('createDomVirtualList', () => {
     });
 
     test('preserves measured sizes across reorder when getItemKey is stable', async () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const rows = [
         { id: 'a', size: 20 },
@@ -121,9 +87,9 @@ describe('createDomVirtualList', () => {
       const domList = createDomVirtualList<{ id: string; size: number }>({
         estimateSize: (_index, item) => item.size,
         getItemKey: (_index, item) => item.id,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render,
+        scrollElement: scrollEl,
       });
 
       domList.setItems(rows);
@@ -152,14 +118,14 @@ describe('createDomVirtualList', () => {
     });
 
     test('drops measured sizes on setItems when no getItemKey is provided', async () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const rows = [{ size: 20 }, { size: 20 }, { size: 20 }];
       const domList = createDomVirtualList<{ size: number }>({
         estimateSize: (_index, item) => item.size,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(rows);
@@ -176,9 +142,9 @@ describe('createDomVirtualList', () => {
     });
   });
 
-  describe('activation and target availability', () => {
+  describe('activation', () => {
     test('clears and resets styles when deactivated', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const clear = vi.fn((el: HTMLElement) => {
         el.textContent = '';
@@ -186,9 +152,9 @@ describe('createDomVirtualList', () => {
       const domList = createDomVirtualList<string>({
         clear,
         estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(Array.from({ length: 20 }, (_, i) => String(i)));
@@ -202,17 +168,82 @@ describe('createDomVirtualList', () => {
       domList.destroy();
     });
 
+    test('setActive is idempotent — calling false twice only clears once', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const clear = vi.fn((el: HTMLElement) => {
+        el.textContent = '';
+      });
+      const domList = createDomVirtualList<string>({
+        clear,
+        estimateSize: 36,
+        listElement: listEl,
+        render: () => {},
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(Array.from({ length: 5 }, (_, i) => String(i)));
+      domList.setActive(false);
+      domList.setActive(false); // should be no-op
+
+      expect(clear).toHaveBeenCalledTimes(1);
+      domList.destroy();
+    });
+
+    test('setActive is idempotent — calling true twice only spawns once', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const domList = createDomVirtualList<string>({
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(['a', 'b', 'c']);
+      render.mockClear();
+
+      domList.setActive(true); // already active — no-op
+      domList.setActive(true); // still no-op
+
+      expect(render).not.toHaveBeenCalled();
+      domList.destroy();
+    });
+
+    test('re-renders when re-activated with existing items', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const domList = createDomVirtualList<string>({
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(['a', 'b', 'c']);
+      render.mockClear();
+
+      domList.setActive(false);
+      expect(render).not.toHaveBeenCalled();
+
+      domList.setActive(true);
+      expect(render).toHaveBeenCalledTimes(1);
+      domList.destroy();
+    });
+
     test('clears and does not render when list is empty', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const render = vi.fn();
       const clear = vi.fn();
       const domList = createDomVirtualList<string>({
         clear,
         estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render,
+        scrollElement: scrollEl,
       });
 
       domList.setItems([]);
@@ -221,44 +252,16 @@ describe('createDomVirtualList', () => {
       expect(render).not.toHaveBeenCalled();
       domList.destroy();
     });
-
-    test('safely no-ops when scroll target is unavailable', () => {
-      const listEl = document.createElement('div');
-      const render = vi.fn();
-      const clear = vi.fn();
-      const domList = createDomVirtualList<string>({
-        clear,
-        estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => null,
-        render,
-      });
-
-      domList.setItems(['a', 'b']);
-
-      expect(clear).toHaveBeenCalledTimes(1);
-      expect(render).not.toHaveBeenCalled();
-      domList.destroy();
-    });
   });
 
-  describe('controller behavior', () => {
-    test('clears previous list when target element changes', () => {
-      const scrollEl = makeContainer(120);
-      const nextScrollEl = makeContainer(120);
+  describe('setTarget', () => {
+    test('clears previous list and re-renders on new elements', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
+      const nextScrollEl = makeContainer({ clientHeight: 120 });
       const nextListEl = document.createElement('div');
-      const clear = vi.fn((el: HTMLElement) => {
-        el.textContent = '';
-      });
-      let useNextTarget = false;
-
-      const domList = createDomVirtualList<string>({
-        clear,
-        estimateSize: 36,
-        getListElement: () => (useNextTarget ? nextListEl : listEl),
-        getScrollElement: () => (useNextTarget ? nextScrollEl : scrollEl),
-        render: ({ listEl, virtualItems }) => {
+      const render = vi.fn(
+        ({ listEl, virtualItems }: { listEl: HTMLElement; virtualItems: Array<{ index: number }> }) => {
           for (const item of virtualItems) {
             const row = document.createElement('div');
 
@@ -267,13 +270,23 @@ describe('createDomVirtualList', () => {
             listEl.appendChild(row);
           }
         },
+      );
+      const clear = vi.fn((el: HTMLElement) => {
+        el.textContent = '';
+      });
+
+      const domList = createDomVirtualList<string>({
+        clear,
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
       });
 
       domList.setItems(Array.from({ length: 20 }, (_, i) => String(i)));
       expect(listEl.querySelectorAll('.option').length).toBeGreaterThan(0);
 
-      useNextTarget = true;
-      domList.setItems(Array.from({ length: 20 }, (_, i) => String(i)));
+      domList.setTarget(nextScrollEl, nextListEl);
 
       expect(clear).toHaveBeenCalledTimes(1);
       expect(listEl.querySelectorAll('.option')).toHaveLength(0);
@@ -281,14 +294,36 @@ describe('createDomVirtualList', () => {
       domList.destroy();
     });
 
+    test('is a no-op when called with the same elements', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const domList = createDomVirtualList<string>({
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(['a', 'b', 'c']);
+      render.mockClear();
+
+      domList.setTarget(scrollEl, listEl); // same refs
+
+      expect(render).not.toHaveBeenCalled();
+      domList.destroy();
+    });
+  });
+
+  describe('controller delegation', () => {
     test('delegates scrollToIndex to underlying virtualizer when active', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const domList = createDomVirtualList<string>({
         estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(Array.from({ length: 20 }, (_, i) => String(i)));
@@ -298,8 +333,36 @@ describe('createDomVirtualList', () => {
       domList.destroy();
     });
 
+    test('measureBatch applies multiple measurements in a single rebuild', async () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const rows = ['a', 'b', 'c', 'd', 'e'];
+      const domList = createDomVirtualList<string>({
+        estimateSize: 20,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(rows);
+      render.mockClear();
+
+      domList.measureBatch([
+        { index: 0, size: 50 },
+        { index: 1, size: 80 },
+      ]);
+
+      expect(render).not.toHaveBeenCalled(); // queued in microtask
+      await flushMicrotasks();
+
+      expect(render).toHaveBeenCalledTimes(1);
+      expect(listEl.style.height).toBe(`${50 + 80 + 20 + 20 + 20}px`);
+      domList.destroy();
+    });
+
     test('forwards invalidate to the underlying virtualizer', async () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const rows = [
         { id: 'a', size: 20 },
@@ -309,9 +372,9 @@ describe('createDomVirtualList', () => {
       const domList = createDomVirtualList<{ id: string; size: number }>({
         estimateSize: (_index, item) => item.size,
         getItemKey: (_index, item) => item.id,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.setItems(rows);
@@ -327,19 +390,64 @@ describe('createDomVirtualList', () => {
     });
 
     test('destroy is safe to call repeatedly', () => {
-      const scrollEl = makeContainer(120);
+      const scrollEl = makeContainer({ clientHeight: 120 });
       const listEl = document.createElement('div');
       const domList = createDomVirtualList<string>({
         estimateSize: 36,
-        getListElement: () => listEl,
-        getScrollElement: () => scrollEl,
+        listElement: listEl,
         render: () => {},
+        scrollElement: scrollEl,
       });
 
       domList.destroy();
       domList.destroy();
 
       expect(true).toBe(true);
+    });
+
+    test('setTarget after destroy is a no-op', () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const domList = createDomVirtualList<string>({
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(['a', 'b', 'c']);
+      domList.destroy();
+      render.mockClear();
+
+      const newScrollEl = makeContainer({ clientHeight: 120 });
+      const newListEl = document.createElement('div');
+
+      domList.setTarget(newScrollEl, newListEl);
+
+      expect(render).not.toHaveBeenCalled();
+    });
+
+    test('setItems and measureBatch after destroy are no-ops', async () => {
+      const scrollEl = makeContainer({ clientHeight: 120 });
+      const listEl = document.createElement('div');
+      const render = vi.fn();
+      const domList = createDomVirtualList<string>({
+        estimateSize: 36,
+        listElement: listEl,
+        render,
+        scrollElement: scrollEl,
+      });
+
+      domList.setItems(['a', 'b', 'c']);
+      domList.destroy();
+      render.mockClear();
+
+      domList.setItems(['d', 'e', 'f']);
+      domList.measureBatch([{ index: 0, size: 50 }]);
+      await flushMicrotasks();
+
+      expect(render).not.toHaveBeenCalled();
     });
   });
 });

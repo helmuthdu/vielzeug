@@ -75,6 +75,25 @@ await container.dispose();
 
 Manual dependency wiring often spreads across modules, making lifetimes and teardown behavior difficult to reason about in larger systems.
 
+```ts
+// Before — manual wiring, no lifecycle, no type safety
+const logger = new ConsoleLogger();
+const db = await connectDb(process.env.DATABASE_URL);
+const repo = new UserRepo(db, logger);
+const service = new UserService(repo, logger);
+// cleanup is your problem
+
+// After — explicit tokens, typed resolution, disposal hooks
+const container = createContainer();
+container.value(Logger, new ConsoleLogger());
+container.factory(Db, () => connectDb(process.env.DATABASE_URL), { dispose: (db) => db.close() });
+container.factory(UserRepo, (db, logger) => new UserRepo(db, logger), { deps: [Db, Logger] });
+container.factory(UserService, (repo, logger) => new UserService(repo, logger), { deps: [UserRepo, Logger] });
+
+const service = await container.resolve(UserService);
+await container.dispose(); // all hooks run automatically
+```
+
 | Feature                     | Wired                                       | tsyringe                | InversifyJS                      |
 | --------------------------- | -------------------------------------------- | ----------------------- | -------------------------------- |
 | Bundle size                 | <PackageInfo package="wired" type="size" /> | ~6 kB                   | ~45 kB                           |
@@ -91,11 +110,14 @@ Manual dependency wiring often spreads across modules, making lifetimes and tear
 
 ## Features
 
-- Small core API
-- Typed dependency contracts
-- Async-first resolution
-- Child containers for scope boundaries
-- Explicit disposal
+- Small core API — `createToken`, `createContainer`, a handful of container methods
+- Typed dependency contracts via Symbol tokens with phantom types
+- Async-first resolution with singleton deduplication for concurrent callers
+- Sync resolution path (`resolveSync`) for hot paths after warm-up
+- Registration existence check (`has`) without triggering factory execution
+- Dispose hooks on both factory and value registrations
+- Child containers for request/component/test scope boundaries
+- Explicit disposal lifecycle with `Symbol.asyncDispose` support
 
 ## Compatibility
 

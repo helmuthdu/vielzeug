@@ -68,4 +68,3 @@ function format(val: unknown) {
 
 - [isNumber](./isNumber.md): Check if a value is a number.
 - [isString](./isString.md): Check if a value is a string.
-- [expires](../date/expires.md): Check if a date has passed.

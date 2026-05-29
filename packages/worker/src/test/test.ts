@@ -1,11 +1,10 @@
 import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../worker';
 
-import { createAbortError } from '../_internal';
-import { TaskQueue, type TaskQueueItem } from '../_task-queue';
+import { type QueueItem, TaskQueue, createAbortError } from '../_queue';
 import { WorkerError } from '../worker';
 
 export type TestWorkerOptions = {
-  maxQueue?: number | 'auto';
+  maxQueue?: number;
 };
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
@@ -13,50 +12,39 @@ export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & 
   readonly calls: ReadonlyArray<{ input: TInput; output: TOutput }>;
 };
 
-function resolveMaxQueue(value: TestWorkerOptions['maxQueue']): number | undefined {
-  if (value === undefined) return undefined;
-
-  if (value === 'auto') {
-    return 2;
-  }
-
-  if (!Number.isInteger(value) || value < 1) {
-    throw new WorkerError('invalid_options', '[worker/test] `maxQueue` must be a positive integer or "auto"');
-  }
-
-  return value;
-}
-
 export function createTestWorker<TInput, TOutput>(
   fn: TaskFn<TInput, TOutput>,
   options: TestWorkerOptions = {},
 ): TestWorkerHandle<TInput, TOutput> {
+  const { maxQueue } = options;
+
+  if (maxQueue !== undefined && (!Number.isInteger(maxQueue) || maxQueue < 1)) {
+    throw new WorkerError('invalid_options', '[worker/test] `maxQueue` must be a positive integer');
+  }
+
   const calls: { input: TInput; output: TOutput }[] = [];
+  const idleResolvers: Array<() => void> = [];
+  const queue = new TaskQueue<TInput, TOutput>();
   let closePromise: Promise<void> | undefined;
   let completed = 0;
-  let activeItem: TaskQueueItem<TInput, TOutput> | null = null;
-  let activeRejected = false;
-  const queue = new TaskQueue<TInput, TOutput>();
-  const maxQueue = resolveMaxQueue(options.maxQueue);
+  let activeItem: QueueItem<TInput, TOutput> | null = null;
   let processing = false;
   let running = false;
   let terminated = false;
 
   function isIdle(): boolean {
-    return !terminated && !running && queue.size === 0;
+    return !running && queue.size === 0;
   }
 
-  function status(): WorkerStatus {
+  function computeStatus(): WorkerStatus {
     if (terminated) return 'terminated';
 
     return running || queue.size > 0 ? 'running' : 'idle';
   }
 
-  function nextItem(): TaskQueueItem<TInput, TOutput> | undefined {
+  function nextItem(): QueueItem<TInput, TOutput> | undefined {
     while (queue.size > 0) {
       const item = queue.shift();
-
-      if (!item) return undefined;
 
       if (item.signal?.aborted) {
         item.cleanupAbort?.();
@@ -68,12 +56,22 @@ export function createTestWorker<TInput, TOutput>(
     }
   }
 
-  function waitForIdle(): Promise<void> {
-    if (terminated || isIdle()) {
-      return Promise.resolve();
-    }
+  function notifyIdle(): void {
+    if (!isIdle() || idleResolvers.length === 0) return;
 
-    return queue.waitForIdle(() => isIdle());
+    const resolvers = idleResolvers.splice(0);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
+  }
+
+  function waitForIdle(): Promise<void> {
+    if (terminated || isIdle()) return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      idleResolvers.push(resolve);
+    });
   }
 
   async function drainLoop(): Promise<void> {
@@ -88,20 +86,19 @@ export function createTestWorker<TInput, TOutput>(
         if (!item) break;
 
         running = true;
-        activeRejected = false;
         activeItem = item;
         item.cleanupAbort?.();
 
         try {
           const output = await fn(item.input);
 
-          if (terminated || activeItem !== item || activeRejected) continue;
+          if (terminated || activeItem !== item) continue;
 
           calls.push({ input: item.input, output });
           completed += 1;
           item.resolve(output);
         } catch (error) {
-          if (terminated || activeItem !== item || activeRejected) continue;
+          if (terminated || activeItem !== item) continue;
 
           item.reject(new WorkerError('task', error instanceof Error ? error.message : String(error), error));
         } finally {
@@ -110,61 +107,68 @@ export function createTestWorker<TInput, TOutput>(
           }
 
           running = false;
-          queue.notifyIdleIfReady(() => isIdle());
+          notifyIdle();
         }
       }
     } finally {
       processing = false;
-      queue.notifyIdleIfReady(() => isIdle());
+      notifyIdle();
     }
   }
 
+  function disposeWorker(): void {
+    if (terminated) return;
+
+    terminated = true;
+
+    if (activeItem) {
+      activeItem.reject(new WorkerError('terminated', '[worker] Worker was terminated'));
+      activeItem = null;
+    }
+
+    running = false;
+
+    while (queue.size > 0) {
+      const item = queue.shift();
+
+      item.cleanupAbort?.();
+      item.reject(new WorkerError('terminated', '[worker] Worker was terminated'));
+    }
+
+    const resolvers = idleResolvers.splice(0);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
+  }
+
+  function closeWorker(): Promise<void> {
+    if (terminated) return Promise.resolve();
+
+    if (closePromise) return closePromise;
+
+    closePromise = waitForIdle().then(disposeWorker);
+
+    return closePromise;
+  }
+
   return {
+    get active(): number {
+      return running ? 1 : 0;
+    },
     get calls(): ReadonlyArray<{ input: TInput; output: TOutput }> {
       return calls;
     },
-    close(): Promise<void> {
-      if (terminated) {
-        return Promise.resolve();
-      }
-
-      if (closePromise) {
-        return closePromise;
-      }
-
-      closePromise = waitForIdle().then(() => {
-        this.dispose();
-      });
-
-      return closePromise;
-    },
+    close: closeWorker,
     get completed(): number {
       return completed;
     },
     get concurrency(): number {
       return 1;
     },
-    dispose(): void {
-      if (terminated) return;
-
-      terminated = true;
-
-      if (activeItem) {
-        activeRejected = true;
-        activeItem.reject(new WorkerError('terminated', '[worker] Worker was terminated'));
-        activeItem = null;
-      }
-
-      running = false;
-
-      while (queue.size > 0) {
-        const item = queue.shift()!;
-
-        item.cleanupAbort?.();
-        item.reject(new WorkerError('terminated', '[worker] Worker was terminated'));
-      }
-
-      queue.notifyIdleIfReady(() => isIdle());
+    dispose: disposeWorker,
+    get queued(): number {
+      return queue.size;
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (terminated) {
@@ -179,10 +183,18 @@ export function createTestWorker<TInput, TOutput>(
         return Promise.reject(createAbortError(options.signal));
       }
 
-      const item: TaskQueueItem<TInput, TOutput> = {
+      let resolve!: (value: TOutput) => void;
+      let reject!: (reason: unknown) => void;
+
+      const promise = new Promise<TOutput>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+
+      const item: QueueItem<TInput, TOutput> = {
         input,
-        reject: () => {},
-        resolve: () => {},
+        reject,
+        resolve,
         signal: options.signal,
         transferables: options.transferables ?? [],
       };
@@ -191,44 +203,39 @@ export function createTestWorker<TInput, TOutput>(
         return Promise.reject(new WorkerError('queue_full', `[worker] Queue is full (${maxQueue})`));
       }
 
-      return new Promise<TOutput>((resolve, reject) => {
-        item.reject = reject;
-        item.resolve = resolve;
+      if (options.signal) {
+        const signal = options.signal;
 
-        if (options.signal) {
-          const onAbort = () => {
-            if (!queue.remove(item)) return;
+        const onAbort = () => {
+          if (!queue.remove(item)) return;
 
-            item.cleanupAbort?.();
-            reject(createAbortError(options.signal!));
-            queue.notifyIdleIfReady(() => isIdle());
-          };
+          item.cleanupAbort?.();
+          reject(createAbortError(signal));
+          notifyIdle();
+        };
 
-          item.cleanupAbort = () => {
-            options.signal!.removeEventListener('abort', onAbort);
-            item.cleanupAbort = undefined;
-          };
+        item.cleanupAbort = () => {
+          signal.removeEventListener('abort', onAbort);
+          item.cleanupAbort = undefined;
+        };
 
-          options.signal.addEventListener('abort', onAbort, { once: true });
-        }
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
 
-        void drainLoop();
-      });
-    },
-    get size(): number {
-      return queue.size;
+      void drainLoop();
+
+      return promise;
     },
     get status(): WorkerStatus {
-      return status();
+      return computeStatus();
     },
-    [Symbol.asyncDispose](): Promise<void> {
-      return this.close();
-    },
-    [Symbol.dispose](): void {
-      this.dispose();
-    },
+    [Symbol.asyncDispose]: closeWorker,
+    [Symbol.dispose]: disposeWorker,
     get utilization(): number {
       return Number(running);
+    },
+    warmup(): void {
+      // No-op: test worker runs in-process, no pre-initialization needed.
     },
   };
 }

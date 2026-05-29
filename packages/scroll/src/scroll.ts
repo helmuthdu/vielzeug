@@ -1,10 +1,10 @@
 export type VirtualKey = number | string;
 
 export interface VirtualItem {
-  index: number;
-  start: number;
   end: number;
+  index: number;
   size: number;
+  start: number;
 }
 
 export type Overscan = { end?: number; start?: number };
@@ -17,26 +17,17 @@ export interface VirtualizerOptions {
   horizontal?: boolean;
   initialOffset?: number;
   onChange?: (items: VirtualItem[], totalSize: number) => void;
+  onMeasure?: (index: number, oldSize: number | undefined, newSize: number) => void;
   onScrollEnd?: (offset: number) => void;
   onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
   scrollEndDelay?: number;
 }
 
-export type VirtualizerUpdateOptions = {
-  count?: number;
-  estimateSize?: number | ((index: number) => number);
-  gap?: number;
-  getItemKey?: (index: number) => VirtualKey;
-  onChange?: (items: VirtualItem[], totalSize: number) => void;
-  onScrollEnd?: (offset: number) => void;
-  onScrollingChange?: (isScrolling: boolean) => void;
-  overscan?: Overscan;
-  scrollEndDelay?: number;
-};
+export type VirtualizerUpdateOptions = Partial<Omit<VirtualizerOptions, 'horizontal' | 'initialOffset'>>;
 
 export interface ScrollToIndexOptions {
-  align?: 'start' | 'end' | 'center' | 'auto';
+  align?: 'auto' | 'center' | 'end' | 'start';
   behavior?: ScrollBehavior;
 }
 
@@ -49,6 +40,7 @@ export interface Virtualizer {
   destroy: () => void;
   invalidate: () => void;
   measure: (index: number, size: number) => void;
+  measureBatch: (entries: Array<{ index: number; size: number }>) => void;
   refresh: () => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
@@ -56,9 +48,9 @@ export interface Virtualizer {
   [Symbol.dispose]: () => void;
 }
 
-const DEFAULT_ESTIMATE_SIZE = 36;
-const DEFAULT_OVERSCAN = 3;
-const DEFAULT_SCROLL_END_DELAY = 120;
+export const DEFAULT_ESTIMATE_SIZE = 36;
+export const DEFAULT_OVERSCAN = 3;
+export const DEFAULT_SCROLL_END_DELAY = 120;
 
 type ScrollTarget = HTMLElement | Window;
 
@@ -105,13 +97,14 @@ function normalizeOverscan(overscan: Overscan | undefined): { end: number; start
 }
 
 function isWindowTarget(target: ScrollTarget): target is Window {
-  return 'innerHeight' in target && 'innerWidth' in target && !('clientHeight' in target);
+  return (
+    (typeof Window !== 'undefined' && target instanceof Window) ||
+    (typeof (target as Window).innerHeight === 'number' && typeof (target as Window).document === 'object')
+  );
 }
 
 function createAxisIO(target: ScrollTarget, horizontal: boolean): AxisIO {
-  const isWindow = isWindowTarget(target);
-
-  if (isWindow) {
+  if (isWindowTarget(target)) {
     return {
       attach(onScroll, onResize) {
         target.addEventListener('scroll', onScroll, { passive: true });
@@ -153,14 +146,17 @@ function createAxisIO(target: ScrollTarget, horizontal: boolean): AxisIO {
 export function createVirtualizer(target: ScrollTarget, options: VirtualizerOptions): Virtualizer {
   const axis = createAxisIO(target, !!options.horizontal);
 
+  const defaultItemKey = (index: number): VirtualKey => index;
+
   let count = toNonNegativeInt(options.count);
   let estimateSize = normalizeEstimate(options.estimateSize);
   let estimateFn = createEstimateFn(estimateSize);
   let gap = toNonNegativeInt(options.gap ?? 0);
-  let getItemKey = options.getItemKey ?? ((index: number) => index);
+  let getItemKey = options.getItemKey ?? defaultItemKey;
   let overscan = normalizeOverscan(options.overscan);
   let scrollEndDelay = toNonNegativeInt(options.scrollEndDelay ?? DEFAULT_SCROLL_END_DELAY, DEFAULT_SCROLL_END_DELAY);
   let onChange = options.onChange;
+  let onMeasure = options.onMeasure;
   let onScrollEnd = options.onScrollEnd;
   let onScrollingChange = options.onScrollingChange;
 
@@ -169,7 +165,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let scrollOffset = 0;
   let isScrolling = false;
   const measuredByKey = new Map<VirtualKey, number>();
-  let offsets = new Float64Array(count + 1);
+  let offsets: number[] = [];
   let viewportSize = axis.readViewportSize();
   let prevRenderStart = -1;
   let prevRenderEnd = -1;
@@ -178,12 +174,8 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let destroyed = false;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function keyAt(index: number): VirtualKey {
-    return getItemKey(index);
-  }
-
   function sizeAt(index: number): number {
-    return measuredByKey.get(keyAt(index)) ?? estimateFn(index);
+    return measuredByKey.get(getItemKey(index)) ?? estimateFn(index);
   }
 
   function startAt(index: number): number {
@@ -297,14 +289,16 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     prevRenderStart = -1;
     prevRenderEnd = -1;
 
-    const next = new Float64Array(count + 1);
+    const next: number[] = [0];
+    let pos = 0;
 
     for (let i = 0; i < count; i++) {
-      next[i + 1] = next[i] + sizeAt(i) + (i < count - 1 ? gap : 0);
+      pos += sizeAt(i) + (i < count - 1 ? gap : 0);
+      next.push(pos);
     }
 
     offsets = next;
-    totalSize = next[count] ?? 0;
+    totalSize = pos;
   }
 
   function computeVisible(): void {
@@ -349,7 +343,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     let needsRebuild = false;
     let needsCompute = false;
 
-    if ('count' in next && next.count !== undefined) {
+    if (next.count !== undefined) {
       const nextCount = toNonNegativeInt(next.count);
 
       if (nextCount !== count) {
@@ -359,7 +353,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('estimateSize' in next && next.estimateSize !== undefined) {
+    if (next.estimateSize !== undefined) {
       const normalizedEstimate = normalizeEstimate(next.estimateSize);
 
       if (normalizedEstimate !== estimateSize) {
@@ -371,7 +365,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('gap' in next && next.gap !== undefined) {
+    if (next.gap !== undefined) {
       const nextGap = toNonNegativeInt(next.gap);
 
       if (nextGap !== gap) {
@@ -381,16 +375,18 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('getItemKey' in next && next.getItemKey) {
-      if (next.getItemKey !== getItemKey) {
-        getItemKey = next.getItemKey;
+    if ('getItemKey' in next) {
+      const nextKey = next.getItemKey ?? defaultItemKey;
+
+      if (nextKey !== getItemKey) {
+        getItemKey = nextKey;
         measuredByKey.clear();
         needsRebuild = true;
         needsCompute = true;
       }
     }
 
-    if ('overscan' in next) {
+    if (next.overscan !== undefined) {
       const nextOverscan = normalizeOverscan(next.overscan);
 
       if (nextOverscan.start !== overscan.start || nextOverscan.end !== overscan.end) {
@@ -399,13 +395,15 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('scrollEndDelay' in next && next.scrollEndDelay !== undefined) {
-      const nextScrollEndDelay = toNonNegativeInt(next.scrollEndDelay, DEFAULT_SCROLL_END_DELAY);
+    if (next.scrollEndDelay !== undefined) {
+      const nextDelay = toNonNegativeInt(next.scrollEndDelay, DEFAULT_SCROLL_END_DELAY);
 
-      if (nextScrollEndDelay !== scrollEndDelay) scrollEndDelay = nextScrollEndDelay;
+      if (nextDelay !== scrollEndDelay) scrollEndDelay = nextDelay;
     }
 
     if ('onChange' in next) onChange = next.onChange;
+
+    if ('onMeasure' in next) onMeasure = next.onMeasure;
 
     if ('onScrollEnd' in next) onScrollEnd = next.onScrollEnd;
 
@@ -435,13 +433,53 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
     if (safeSize <= 0) return;
 
-    const key = keyAt(safeIndex);
+    const key = getItemKey(safeIndex);
+    const oldSize = measuredByKey.get(key);
 
-    if (measuredByKey.get(key) === safeSize) return;
+    if (oldSize === safeSize) return;
 
     measuredByKey.set(key, safeSize);
+    onMeasure?.(safeIndex, oldSize, safeSize);
 
     if (pendingBuild) return;
+
+    pendingBuild = true;
+    queueMicrotask(() => {
+      pendingBuild = false;
+      rebuildOffsets();
+      computeVisible();
+    });
+  }
+
+  function measureBatch(entries: Array<{ index: number; size: number }>): void {
+    if (destroyed) return;
+
+    let changed = false;
+
+    for (const { index, size } of entries) {
+      if (!Number.isFinite(index)) continue;
+
+      const safeIndex = Math.floor(index);
+
+      if (safeIndex < 0 || safeIndex >= count) continue;
+
+      const safeSize = toPositiveNumber(size, -1);
+
+      if (safeSize <= 0) continue;
+
+      const key = getItemKey(safeIndex);
+      const oldSize = measuredByKey.get(key);
+
+      if (oldSize === safeSize) continue;
+
+      measuredByKey.set(key, safeSize);
+      onMeasure?.(safeIndex, oldSize, safeSize);
+      changed = true;
+    }
+
+    if (!changed) return;
+
+    if (pendingBuild) return; // microtask already queued — map changes will be included
 
     pendingBuild = true;
     queueMicrotask(() => {
@@ -536,6 +574,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       return items;
     },
     measure,
+    measureBatch,
     refresh,
     get scrollOffset() {
       return scrollOffset;

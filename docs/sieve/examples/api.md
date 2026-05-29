@@ -1,15 +1,17 @@
 ---
-title: 'Sieve Examples — API'
-description: 'API request and response validation examples with sieve.'
+title: 'Sieve Examples — API and Response Validation'
+description: 'API and response validation example for @vielzeug/sieve.'
 ---
 
-## API validation examples
+## API and Response Validation
 
 ### Problem
 
 Validate request bodies, query parameters, and outbound service responses at the application boundary without duplicating ad-hoc checks.
 
-### Runnable Example
+### Solution
+
+Use `s.object()` combined with `safeParse()`, `s.coerce.*`, and `s.variant()` to validate request bodies, query parameters, and typed webhook payloads at every application boundary.
 
 ```ts
 import { s } from '@vielzeug/sieve';
@@ -62,13 +64,7 @@ const WebhookSchema = s.variant('type', {
 const event = WebhookSchema.parse(req.body);
 ```
 
-### Expected Output
-
-- `result.data` is fully parsed and defaulted before it enters your handler logic.
-- Query parameters like `?page=2&limit=50` become numbers.
-- Invalid responses from downstream services fail immediately instead of leaking inconsistent shapes into the rest of the app.
-
-### Common Pitfalls
+### Pitfalls
 
 - Assuming unknown keys are accepted in object payloads.
 - Using `safeParse()` with async-only schemas containing async `check()`.

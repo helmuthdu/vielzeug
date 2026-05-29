@@ -144,7 +144,7 @@ function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (
   const cssName = name.startsWith('--') ? name : toKebab(name);
   let owned = false;
 
-  const setStyle = (v: string | null | undefined) => {
+  const setStyle = (v: string | number | boolean | null | undefined) => {
     if (v != null && v !== '') {
       owned = true;
       host.style.setProperty(cssName, String(v));

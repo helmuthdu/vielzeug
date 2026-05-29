@@ -37,8 +37,8 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './select.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────

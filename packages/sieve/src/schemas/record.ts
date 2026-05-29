@@ -1,4 +1,4 @@
-import type { Issue } from '../core';
+import type { Issue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -117,7 +117,18 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    return { additionalProperties: this.valueSchema.schema(), type: 'object' };
+    return { additionalProperties: this.valueSchema.toJsonSchema(), type: 'object' };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      key: this.keySchema.describe(),
+      kind: 'record',
+      value: this.valueSchema.describe(),
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

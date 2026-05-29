@@ -1,4 +1,4 @@
-import { createMemory, table, type Adapter } from '../index';
+import { DepositError, createMemory, table, type Adapter } from '../index';
 
 type Row = { age: number; city: string; id: number; name: string };
 
@@ -81,13 +81,15 @@ describe('QueryBuilder (via query)', () => {
     });
 
     test('limit rejects invalid values', async () => {
-      await expect(() => db.query('rows').limit(-1)).toThrow('query.limit must be a non-negative integer');
-      await expect(() => db.query('rows').limit(1.5)).toThrow('query.limit must be a non-negative integer');
+      expect(() => db.query('rows').limit(-1)).toThrow(DepositError);
+      expect(() => db.query('rows').limit(-1)).toThrow('query.limit must be a non-negative integer');
+      expect(() => db.query('rows').limit(1.5)).toThrow(DepositError);
     });
 
     test('offset rejects invalid values', async () => {
-      await expect(() => db.query('rows').offset(-1)).toThrow('query.offset must be a non-negative integer');
-      await expect(() => db.query('rows').offset(Number.NaN)).toThrow('query.offset must be a non-negative integer');
+      expect(() => db.query('rows').offset(-1)).toThrow(DepositError);
+      expect(() => db.query('rows').offset(-1)).toThrow('query.offset must be a non-negative integer');
+      expect(() => db.query('rows').offset(Number.NaN)).toThrow(DepositError);
     });
   });
 
@@ -98,15 +100,27 @@ describe('QueryBuilder (via query)', () => {
       expect(r).toEqual([rowsData[2]]);
     });
 
-    test('count returns number of filtered records', async () => {
+    test('count returns number of filtered records including pagination', async () => {
       expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
     });
 
-    test('count ignores limit and offset — returns full filtered set size', async () => {
+    test('count respects limit and offset', async () => {
+      expect(await db.query('rows').limit(1).count()).toBe(1);
+      expect(await db.query('rows').offset(2).count()).toBe(1);
+      expect(await db.query('rows').equals('city', 'Paris').limit(1).count()).toBe(1);
+    });
+
+    test('totalCount ignores limit and offset — returns full filtered set size', async () => {
       // Enables paginated total-count queries without a second query
-      expect(await db.query('rows').limit(1).count()).toBe(3);
-      expect(await db.query('rows').offset(2).count()).toBe(3);
-      expect(await db.query('rows').equals('city', 'Paris').limit(1).count()).toBe(2);
+      expect(await db.query('rows').limit(1).totalCount()).toBe(3);
+      expect(await db.query('rows').offset(2).totalCount()).toBe(3);
+      expect(await db.query('rows').equals('city', 'Paris').limit(1).totalCount()).toBe(2);
+    });
+
+    test('totalCount ignores orderBy — does not sort before counting', async () => {
+      // orderBy is isNonFilter and must be excluded; result must be the full filtered count
+      expect(await db.query('rows').orderBy('age', 'desc').totalCount()).toBe(3);
+      expect(await db.query('rows').equals('city', 'Paris').orderBy('age', 'asc').limit(1).totalCount()).toBe(2);
     });
 
     test('delete removes transformed records and returns count', async () => {

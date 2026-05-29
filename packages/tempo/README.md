@@ -4,21 +4,21 @@ package: tempo
 category: date-time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
 related: [toolkit]
-exports: [parse, convert, add, subtract, diff, format, isBefore, isAfter, isWithin, now]
+exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatRange, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, timeDiff, dateRange, clearCaches]
 ---
 
 # /tempo
 
 > Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 
-[![npm version](https://img.shields.io/npm/v//tempo)](https://www.npmjs.com/package//tempo) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/tempo)](https://www.npmjs.com/package/@vielzeug/tempo) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
 **Package:** `/tempo` &nbsp;·&nbsp; **Category:** Date-time
 
-**Key exports:** `parse`, `convert`, `add`, `subtract`, `diff`, `format`, `isBefore`, `isAfter`, `isWithin`, `now`
+**Key exports:** `now`, `parseLocal`, `toInstant`, `toZoned`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `expires`, `clearCaches`
 
 **When to use:** Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 
@@ -39,18 +39,23 @@ yarn add /tempo
 ## Quick Start
 
 ```ts
-import { Temporal } from '@js-temporal/polyfill';
-import { formatDuration, formatHuman, formatInstant, formatZoned, parseLocal, shift, toInstant, toZoned } from '/tempo';
+import { format, formatInstant, parseLocal, shift, toInstant, toZoned } from '/tempo';
 
+// Parse a wall-clock string (no timezone attached)
 const localMeeting = parseLocal('2026-03-21T10:30:00');
+
+// Convert to an instant using the user's timezone
 const meetingInstant = toInstant(localMeeting, { tz: 'America/New_York' });
+
+// Project to a zoned view and subtract 15 minutes (DST-safe)
 const meetingNY = toZoned(meetingInstant, { tz: 'America/New_York' });
 const reminder = shift(meetingNY, { minutes: -15 });
 
-console.log(formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
+// Format for display
+console.log(format(reminder, { pattern: 'short', locale: 'en-US' }));
+
+// Format for APIs / logs (stable UTC instant string)
 console.log(formatInstant(reminder));
-console.log(formatZoned(reminder));
-console.log(formatDuration({ hours: 1, minutes: 30 }, { locale: 'en-US', style: 'short' }));
 ```
 
 Since many function names (`now`, `shift`, `clamp`, `difference`, …) are common in application code, use a namespace import to avoid collisions while still getting full tree-shaking:
@@ -59,8 +64,8 @@ Since many function names (`now`, `shift`, `clamp`, `difference`, …) are commo
 import * as tempo from '/tempo';
 
 tempo.now('UTC');
-tempo.difference(start, end, { largestUnit: 'day' });
-tempo.formatHuman(meeting, { pattern: 'short', locale: 'en-US' });
+tempo.difference(start, end, { largestUnit: 'day', tz: 'UTC' });
+tempo.format(meeting, { pattern: 'short', locale: 'en-US' });
 ```
 
 ## Documentation

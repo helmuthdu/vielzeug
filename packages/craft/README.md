@@ -1,72 +1,69 @@
 ---
-description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, block, orbit]
-exports: [define, html, css, signal, computed, effect, props, propsOf, on, ref, host, provide, inject]
+exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when]
 ---
 
-# /craft
+# @vielzeug/craft
 
-> Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+> Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
-[![npm version](https://img.shields.io/npm/v//craft)](https://www.npmjs.com/package//craft) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/craft)](https://www.npmjs.com/package/@vielzeug/craft) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/craft` &nbsp;·&nbsp; **Category:** Ui-primitives
+**Package:** `@vielzeug/craft` &nbsp;·&nbsp; **Category:** UI Primitives
 
-**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `props`, `propsOf`, `on`, `ref`, `host`, `provide`, `inject`
+**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `prop`, `ref`, `provide`, `inject`, `each`, `when`
 
-**When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+**When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
 **Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/block](https://vielzeug.dev/block/) · [@vielzeug/orbit](https://vielzeug.dev/orbit/)
 
 </details>
 
-`/craft` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/craft` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /craft
-npm install /craft
-yarn add /craft
+pnpm add @vielzeug/craft
+npm install @vielzeug/craft
+yarn add @vielzeug/craft
 ```
 
 ## Quick Start
 
 ```ts
-import { computed, css, define, html, prop, signal } from '/craft';
+import { computed, css, define, html, prop, signal } from '@vielzeug/craft';
 
 define('my-counter', {
   props: {
     label: prop.string('Count'),
     step: prop.number(1),
   },
-  setup(props, { host }) {
+  styles: [
+    css`
+      :host { display: inline-grid; gap: 0.5rem; }
+    `,
+  ],
+  setup(props, { bind }) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
-    host.class({ 'is-positive': () => count.value > 0 });
+    bind({ class: { 'is-positive': () => count.value > 0 } });
 
-    return () => html`
+    return html`
       <button @click=${() => (count.value += props.step.value)}>
         ${props.label}: ${count}
       </button>
       <p>Doubled: ${doubled}</p>
     `;
   },
-  styles: [
-    css`
-      :host {
-        display: inline-grid;
-        gap: 0.5rem;
-      }
-    `,
-  ],
 });
 ```
 

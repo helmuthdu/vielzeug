@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Real-time Events'
-description: 'Listen to typed SSE events with automatic reconnects in courier.'
+description: 'Real-time Events example for @vielzeug/courier.'
 ---
 
 ## Real-time Events
@@ -10,6 +10,8 @@ description: 'Listen to typed SSE events with automatic reconnects in courier.'
 You need a lightweight way to consume server-sent events for notifications, presence, or dashboards.
 
 ### Solution
+
+Use `stream.sse()` with typed event generics and `reconnect: true` to handle connection drops with full-jitter exponential backoff.
 
 ```ts
 import { createStream } from '@vielzeug/courier';

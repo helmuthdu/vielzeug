@@ -47,7 +47,8 @@ declare module '@vielzeug/toolkit' {
 
   export function polyfillScheduler(): void;
 
-  export function chunk<T>(array: readonly T[], size?: number, options?: Obj): T[][];
+  export function chunk(input: string, size?: number): string[];
+  export function chunk<T>(input: readonly T[], size?: number): T[][];
   export function compact<T>(array: readonly T[]): Array<Exclude<T, false | '' | 0 | 0n | null | undefined>>;
   export function contains<T>(array: readonly T[], value: T): boolean;
   export function countBy<T, K extends PropertyKey>(array: readonly T[], selector: (item: T) => K): Record<K, number>;
@@ -125,10 +126,6 @@ declare module '@vielzeug/toolkit' {
     options?: { interval?: number; signal?: AbortSignal; timeout?: number },
   ): Promise<void>;
 
-  export function expires(date: Date | string | number, days?: number): boolean;
-  export function interval(start: Date, end: Date, options?: Obj): unknown;
-  export function timeDiff(a: Date | string | number, b?: Date | string | number, allowedUnits?: string[]): string;
-
   export function assert(condition: boolean, message?: string, options?: { args?: Obj; type?: ErrorConstructor }): void;
   export function assertAll(
     conditions: boolean[],
@@ -146,16 +143,15 @@ declare module '@vielzeug/toolkit' {
     fn: T,
     options?: { key?: (...args: Parameters<T>) => PropertyKey; maxSize?: number; ttl?: number },
   ): (...args: Parameters<T>) => ReturnType<T>;
-  export function negate<T>(predicate: Predicate<T>): Predicate<T>;
+  export function allOf<T>(...predicates: Predicate<T>[]): Predicate<T>;
+  export function anyOf<T>(...predicates: Predicate<T>[]): Predicate<T>;
+  export function noneOf<T>(...predicates: Predicate<T>[]): Predicate<T>;
   export function once<T extends Fn>(fn: T): T;
   export function partial<Bound extends unknown[], Rest extends unknown[], Return>(
     callback: (...args: [...Bound, ...Rest]) => Return,
     ...boundArgs: Bound
   ): (...restArgs: Rest) => Return;
   export function pipe<A, B>(...fns: Array<(value: any) => any>): (value: A) => B;
-  export function and<T>(...predicates: Predicate<T>[]): Predicate<T>;
-  export function or<T>(...predicates: Predicate<T>[]): Predicate<T>;
-  export function not<T>(predicate: Predicate<T>): Predicate<T>;
   export function tap<T>(value: T, callback: (value: T) => void): T;
   export function throttle<F extends Fn>(fn: F, delay?: number, options?: Obj): F;
 
@@ -212,8 +208,8 @@ declare module '@vielzeug/toolkit' {
   export function mapKeys<T extends Obj>(obj: T, mapper: (key: keyof T, value: T[keyof T]) => PropertyKey): Obj;
   export function mapValues<T extends Obj, R>(obj: T, mapper: (value: T[keyof T], key: keyof T) => R): Record<keyof T, R>;
   export function omit<T extends Obj, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K>;
-  export function parseJSON<T>(
-    json: unknown,
+  export function parseJSON<T extends object | string | number | boolean | null>(
+    json: string | null | undefined,
     options?: {
       defaultValue?: T;
       onError?: (err: unknown) => void;
@@ -223,7 +219,6 @@ declare module '@vielzeug/toolkit' {
   ): T | undefined;
   export function pick<T extends Obj, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K>;
   export function prune<T>(value: T): T | undefined;
-  export function seek<T>(item: T, query: string, tone?: number): boolean;
   export function values<T extends Obj>(obj: T): Array<T[keyof T]>;
 
   export function draw<T>(array: readonly T[]): T | undefined;

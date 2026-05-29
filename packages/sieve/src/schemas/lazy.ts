@@ -1,4 +1,5 @@
 import type { Issue, SchemaState } from '../core';
+import type { SchemaDescriptor } from '../core';
 
 import { Schema } from '../core';
 
@@ -29,6 +30,15 @@ export class LazySchema<T> extends Schema<T> {
     if (result.success) return { data: result.data, issues: [] };
 
     return { data: value, issues: result.error.issues };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      kind: 'lazy',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

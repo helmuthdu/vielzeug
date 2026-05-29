@@ -1,24 +1,26 @@
 ---
 title: Grip — API Reference
-description: Complete API reference for Grip with type signatures, option documentation, and return value descriptions.
+description: Complete API reference for Grip.
 ---
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol                    | Purpose                                      | Execution mode | Common gotcha                                                        |
+| ------------------------- | -------------------------------------------- | -------------- | -------------------------------------------------------------------- |
+| `createDropZone()`        | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                   |
+| `createSortable()`        | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations                  |
+| `createSortableScope()`   | Create a shared scope for connected lists    | Sync           | Each set of connected containers needs its own scope instance        |
+| `applyReorder()`          | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended            |
+| `DropZoneOptions.accept`  | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly    |
+| `DropZoneOptions.maxFiles`| Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called   |
 
 ## Package Entry Point
 
 | Import               | Purpose                |
 | -------------------- | ---------------------- |
 | `@vielzeug/grip`   | Main exports and types |
-
-## API At a Glance
-
-| Symbol                   | Purpose                                      | Execution mode | Common gotcha                                                     |
-| ------------------------ | -------------------------------------------- | -------------- | ----------------------------------------------------------------- |
-| `createDropZone()`       | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                |
-| `createSortable()`       | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations               |
-| `applyReorder()`         | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended         |
-| `DropZoneOptions.accept` | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly |
 
 ## Types
 
@@ -37,6 +39,7 @@ interface Disposable {
 interface DropZoneOptions {
   element: HTMLElement;
   accept?: string[] | (() => string[]);
+  maxFiles?: number;
   disabled?: boolean | (() => boolean);
   dropEffect?: DataTransfer['dropEffect'];
   onDrop?: (files: File[], event: DragEvent) => void;
@@ -67,6 +70,7 @@ interface SortableOptions {
   axis?: 'vertical' | 'horizontal';
   autoScroll?: boolean | AutoScrollOptions;
   dragImage?: HTMLElement | ((id: string, item: HTMLElement, event: DragEvent) => HTMLElement | null | undefined);
+  dragImageOffset?: [number, number];
   placeholderClass?: string;
   disabled?: boolean | (() => boolean);
   onDragStart?: (id: string, event: DragEvent) => void;
@@ -76,10 +80,6 @@ interface SortableOptions {
 ```
 
 ### `AutoScrollOptions`
-
-```ts
-interface SortableScope {}
-```
 
 ```ts
 interface AutoScrollOptions {
@@ -121,10 +121,11 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | ---------------- | ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `element`        | `HTMLElement`                               | —        | **Required.** The element to attach drag listeners to.                                                                                                     |
 | `accept`         | `string[] \| (() => string[])`              | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
+| `maxFiles`       | `number`                                    | —        | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                   |
 | `disabled`       | `boolean \| (() => boolean)`                | —        | When truthy, all drag events are ignored and hover state does not change. Accepts a boolean or a function for reactive framework integration.              |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`      | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
 | `onDrop`         | `(files: File[], event: DragEvent) => void` | —        | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
-| `onDropRejected` | `(files: File[], event: DragEvent) => void` | —        | Called with files that did not match `accept`. Not called if all files are accepted.                                                                       |
+| `onDropRejected` | `(files: File[], event: DragEvent) => void` | —        | Called with files that did not match `accept` or exceeded `maxFiles`. Not called if all files are accepted.                                                |
 | `onHoverChange`  | `(hovered: boolean) => void`                | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                  |
 
 **Returns:** `DropZone`
@@ -132,6 +133,7 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 Notes:
 
 - Extension accept patterns are approximate during pre-check (`DataTransferItem` has no filename); exact filtering is applied at drop time.
+- Hover state (`hovered`) only becomes `true` when the dragged payload passes the `accept` filter. Drags carrying rejected file types enter and leave the zone without triggering `onHoverChange`.
 - Hover state is reset on element drop and also global `window` `drop`/`dragend` to avoid stuck hover state when drags leave the viewport.
 
 ```ts
@@ -217,7 +219,8 @@ Makes the direct children of a container element reorderable via drag. Each item
 - `itemAttribute`: `string`, default `'data-sort-id'`. The attribute used to read each item's stable identity.
 - `axis`: `'vertical' | 'horizontal'`, default `'vertical'`. Controls midpoint calculation for placeholder insertion.
 - `autoScroll`: `boolean | AutoScrollOptions`, default `true`. Scrolls the container near its edges; enable viewport scrolling with `autoScroll.viewport`.
-- `dragImage`: `HTMLElement | ((id, item, event) => HTMLElement | null | undefined)`. Custom native drag preview passed to `dataTransfer.setDragImage()`.
+- `dragImage`: `HTMLElement | ((id, item, event) => HTMLElement | null | undefined)`. Custom native drag preview passed to `dataTransfer.setDragImage()`. A `null` or `undefined` return skips `setDragImage` entirely.
+- `dragImageOffset`: `[number, number]`, default `[0, 0]`. The `[x, y]` hotspot offset passed to `setDragImage`. Controls which point of the preview image follows the cursor.
 - `placeholderClass`: `string`, default `'grip-placeholder'`. CSS class applied to the generated placeholder element.
 - `disabled`: `boolean | (() => boolean)`. Blocks drag interactions. If a list becomes disabled mid-drag, Grip cancels the drag and restores the original order.
 - `onDragStart`: `(id: string, event: DragEvent) => void`. Called when a drag starts.

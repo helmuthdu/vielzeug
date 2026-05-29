@@ -121,3 +121,54 @@ export const wait = (ms = 0): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+// ── ID counter ────────────────────────────────────────────────────────────────
+
+/**
+ * Resets the headless ID counter to 0. Use in test `beforeEach` hooks when you need
+ * deterministic IDs across test runs.
+ *
+ * @example
+ * ```ts
+ * import { resetIdCounter } from '@vielzeug/block/testing';
+ * beforeEach(() => resetIdCounter());
+ * ```
+ */
+export { resetIdCounter } from '../headless/id';
+
+// ── ARIA snapshot helper ───────────────────────────────────────────────────────
+
+/**
+ * Returns a snapshot of the most commonly tested ARIA attributes on an element.
+ * Useful for concise inline snapshot assertions in component tests.
+ *
+ * `ariaLabel` and `labelledby` are kept separate because `aria-label` is a
+ * direct string while `aria-labelledby` is an ID reference — conflating them
+ * masks bugs where the wrong labelling mechanism is used.
+ *
+ * @example
+ * ```ts
+ * expect(getAriaState(input)).toMatchObject({ invalid: 'true', required: 'true' });
+ * ```
+ */
+export const getAriaState = (
+  el: Element,
+): {
+  ariaLabel: null | string;
+  checked: null | string;
+  disabled: null | string;
+  expanded: null | string;
+  invalid: null | string;
+  labelledby: null | string;
+  required: null | string;
+  role: null | string;
+} => ({
+  ariaLabel: el.getAttribute('aria-label'),
+  checked: el.getAttribute('aria-checked'),
+  disabled: el.getAttribute('aria-disabled'),
+  expanded: el.getAttribute('aria-expanded'),
+  invalid: el.getAttribute('aria-invalid'),
+  labelledby: el.getAttribute('aria-labelledby'),
+  required: el.getAttribute('aria-required'),
+  role: el.getAttribute('role'),
+});

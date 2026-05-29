@@ -1,11 +1,11 @@
 ---
 title: Sourcerer — Reactive Query Sources
-description: Typed local and remote data sources for pagination, filtering, sorting, and search.
+description: Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
 package: sourcerer
 category: data
-keywords: [pagination, filtering, sorting, search, data-source, query, remote, local]
+keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
 related: [courier, ripple, route]
-exports: [createLocalSource, createRemoteSource]
+exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,21 +21,23 @@ exports: [createLocalSource, createRemoteSource]
 
 **Package:** `@vielzeug/sourcerer` &nbsp;·&nbsp; **Category:** Data
 
-**Key exports:** `createLocalSource`, `createRemoteSource`
+**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`
 
-**When to use:** Reactive local and remote data sources with pagination, filtering, sorting, search, and URL query-param sync.
+**When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
 
 **Related:** [Courier](/courier/) · [Ripple](/ripple/) · [Route](/route/)
 
 </details>
 
-`@vielzeug/sourcerer` provides lightweight, typed source models for list-like UIs:
+`@vielzeug/sourcerer` provides typed, reactive source models for list-based UIs:
 
+- `createLocalSource()` — in-memory collections with synchronous filter/sort/search
+- `createRemoteSource()` — async server-backed collections with page-number navigation
+- `createCursorSource()` — async collections navigated by cursor tokens (opaque next/prev pointers)
+- `createInfiniteSource()` — append-mode (infinite scroll) collections
+- `toSignals()` / `toCursorSignals()` / `toInfiniteSignals()` — Ripple signal adapters
 
-- `createLocalSource()` for in-memory collections
-- `createRemoteSource()` for async server-backed collections
-
-Both expose a consistent read model (`current`, `meta`, `snapshot`) and mutation model (`goTo`, `search`, `searchNow`, `setFilter`, `setSort`, `setLimit`, `batch`).
+All sources expose a consistent read model (`current` or `all`, `meta`, `subscribe`) so UI code remains the same regardless of the underlying data strategy.
 
 ## Installation
 
@@ -69,67 +71,81 @@ const source = createLocalSource(
   { limit: 2 },
 );
 
-source.searchNow('a');
-console.log(source.current); // [{ id: 1, name: 'Ada' }, { id: 2, name: 'Grace' }]
+await source.searchNow('a');
+console.log(source.current);        // [{ id: 1, name: 'Ada' }]
 console.log(source.meta.pageNumber); // 1
 ```
 
 ```ts
 import { createRemoteSource } from '@vielzeug/sourcerer';
 
-const remote = createRemoteSource({
-  fetch: async ({ limit, page, search }) => {
-    const result = await api.users.list({ limit, page, search });
-
-    return { items: result.items, total: result.total };
+const source = createRemoteSource({
+  fetch: async ({ filter, limit, page, search, sort }, signal) => {
+    const res = await fetch(`/api/users?page=${page}&limit=${limit}`, { signal });
+    return res.json(); // { items: User[], total: number }
   },
   limit: 20,
 });
 
-remote.refresh();
-await remote.ready();
+// autoFetch is true by default — initial data loads immediately
+await source.ready();
+console.log(source.current, source.meta.totalItems);
 ```
 
 ## Why Sourcerer?
 
-- Typed and small API surface
-- Deterministic pagination/search behavior
-- Local and remote sources with aligned usage patterns
-- URL sync helpers via query param encode/decode
-- Selector subscriptions via utility (`subscribeSelector`)
+Managing paginated lists across local and remote data usually means writing different state models for each case, wiring separate loading flags, and duplicating URL serialization logic. Sourcerer provides one typed contract — `current`, `meta`, and `subscribe` — that works the same whether data lives in memory or comes from a server.
 
-| Feature                             | Sourcerer                                       | TanStack Query | SWR              |
-| ----------------------------------- | ---------------------------------------------- | -------------- | ---------------- |
-| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB         | ~6 kB            |
-| Local in-memory source primitive    | ✅                                             | ❌             | ❌               |
-| Remote source primitive             | ✅                                             | ✅             | ✅               |
-| Typed page/filter/sort/search model | ✅                                             | Partial        | Partial          |
-| Shared local + remote API shape     | ✅                                             | ❌             | ❌               |
-| URL query encode/decode helpers     | ✅                                             | Partial        | Partial          |
-| Framework agnostic                  | ✅                                             | ✅             | ⚠️ (React-first) |
-| Zero dependencies                   | ✅                                             | ❌             | ❌               |
+```ts
+// Without Sourcerer — manual local list state
+const [items, setItems] = useState(allUsers);
+const [page, setPage] = useState(1);
+const [search, setSearch] = useState('');
+const pageSize = 10;
+const filtered = items.filter((u) => u.name.includes(search));
+const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+const totalPages = Math.ceil(filtered.length / pageSize);
+// ... repeat for remote with loading/error/abort logic ...
 
-**Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists.
+// With Sourcerer — same API for both
+const source = createLocalSource(allUsers, { limit: 10 }); // or createRemoteSource(...)
+await source.searchNow(search);
+// source.current, source.meta.pageCount — both cases handled
+```
 
-**Consider query-focused libraries when** your app only needs remote fetching and cache synchronization.
+| Feature | Sourcerer | TanStack Query | SWR |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="sourcerer" type="size" /> | ~16 kB | ~6 kB |
+| In-memory source primitive | ✅ | ❌ | ❌ |
+| Remote source primitive | ✅ | ✅ | ✅ |
+| Cursor-based pagination | ✅ | Partial | Partial |
+| Infinite scroll source | ✅ | ✅ | ✅ |
+| Typed page/filter/sort/search model | ✅ | Partial | Partial |
+| Optimistic updates | ✅ | ✅ | ✅ |
+| URL query encode/decode helpers | ✅ | Partial | Partial |
+| Framework agnostic | ✅ | ✅ | ⚠️ React-first |
 
-## Features
+**Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists, with built-in support for pagination, search, filters, and optimistic mutation.
 
-- Typed local and remote source contracts with a shared API shape
-- Deterministic pagination, search, sort, and filter state transitions
-- Snapshot/meta/current read model for predictable rendering
-- Batch updates for grouped source state changes
-- URL query encode/decode helpers for route synchronization
-- Selector subscriptions via `subscribeSelector`
-- Zero dependencies
+**Consider TanStack Query when** your data layer is already built around query keys, cache invalidation across many components, and React-first DevTools integration.
+
+## Sources at a Glance
+
+| Factory | Data model | Navigation | Key extras |
+|---|---|---|---|
+| `createLocalSource()` | In-memory array | Page number | Filter function, sort function, custom `searchFn` |
+| `createRemoteSource()` | Server fetch | Page number | `autoFetch`, `optimisticUpdate`, `queryKey` |
+| `createCursorSource()` | Server fetch | Cursor tokens | `autoFetch`, `queryKey` |
+| `createInfiniteSource()` | Server fetch | Append (`loadMore`) | `autoFetch` |
 
 ## Compatibility
 
 | Environment | Support |
-| ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
+|---|---|
+| Browser | ✅ |
+| Node.js | ✅ |
+| SSR | ✅ |
+| Deno | ✅ |
 
 ## Documentation
 

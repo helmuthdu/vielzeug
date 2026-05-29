@@ -14,6 +14,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./inline": {
+      "source": "./src/inline.ts",
+      "types": "./dist/inline.d.ts",
+      "import": "./dist/inline.js",
+      "require": "./dist/inline.cjs"
+    },
+    "./presets": {
+      "source": "./src/presets.ts",
+      "types": "./dist/presets.d.ts",
+      "import": "./dist/presets.js",
+      "require": "./dist/presets.cjs"
     }
   },
   "scripts": {

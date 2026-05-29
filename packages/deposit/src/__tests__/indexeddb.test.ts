@@ -1,4 +1,14 @@
-import { DepositScopeError, createIndexedDB, table, ttl, type Adapter, type MetricsEvent } from '../index';
+import type { IndexedDbAdapter } from '../adapters/indexeddb';
+
+import {
+  DepositDisposedError,
+  DepositScopeError,
+  createIndexedDB,
+  table,
+  ttl,
+  type Adapter,
+  type MetricsEvent,
+} from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -405,6 +415,166 @@ describe('IndexedDB adapter', () => {
     expect(await dbP.get('users', 3)).toEqual({ id: 3, name: 'Charlie' });
 
     dbP.dispose();
+  });
+});
+
+describe('IndexedDB adapter — iterate()', () => {
+  let db: IndexedDbAdapter<typeof userSchema>;
+
+  beforeEach(async () => {
+    db = createIndexedDB({ name: 'IDB-iterate', schema: userSchema, version: 1 });
+    await db.clear('users');
+  });
+
+  afterEach(() => {
+    db.dispose();
+  });
+
+  test('iterates all records in key order', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      results.push(r);
+    }
+
+    expect(results).toEqual([
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+  });
+
+  test('empty table yields nothing (done immediately)', async () => {
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      results.push(r);
+    }
+
+    expect(results).toHaveLength(0);
+  });
+
+  test('skips TTL-expired records without yielding them', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Bob' }); // no TTL
+    await db.put('users', { id: 3, name: 'Charlie' }, ttl.ms(1000));
+
+    vi.advanceTimersByTime(2000); // ids 1 and 3 are now expired
+
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      results.push(r);
+    }
+
+    vi.useRealTimers();
+
+    expect(results).toEqual([{ id: 2, name: 'Bob' }]);
+  });
+
+  test('early return() stops iteration cleanly', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      results.push(r);
+
+      break; // exits via return()
+    }
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ id: 1, name: 'Alice' });
+  });
+
+  test('consumer can await between iterations without transaction timeout', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      // Do an async operation between iterations — the cursor must stay alive.
+      await Promise.resolve();
+      results.push(r);
+    }
+
+    expect(results).toHaveLength(2);
+  });
+
+  test('throws DepositDisposedError after dispose()', async () => {
+    db.dispose();
+
+    await expect(async () => {
+      for await (const _ of db.iterate('users')) {
+        // should throw before yielding
+      }
+    }).rejects.toThrow(DepositDisposedError);
+  });
+
+  test('multiple independent iterations do not interfere', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const [first, second] = await Promise.all([
+      (async () => {
+        const out: User[] = [];
+
+        for await (const r of db.iterate('users')) out.push(r);
+
+        return out;
+      })(),
+      (async () => {
+        const out: User[] = [];
+
+        for await (const r of db.iterate('users')) out.push(r);
+
+        return out;
+      })(),
+    ]);
+
+    const expected = [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ];
+
+    expect(first).toEqual(expected);
+    expect(second).toEqual(expected);
+  });
+
+  test('all-expired table yields nothing (done immediately)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1000));
+
+    vi.advanceTimersByTime(2000); // both records expired
+
+    const results: User[] = [];
+
+    for await (const r of db.iterate('users')) {
+      results.push(r);
+    }
+
+    vi.useRealTimers();
+
+    expect(results).toHaveLength(0);
   });
 });
 

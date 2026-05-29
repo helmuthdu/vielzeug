@@ -23,5 +23,11 @@ import { isEqual } from '../typed/isEqual';
 export function contains<T>(array: T[], value: unknown): boolean {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
+  // Fast path: reference / primitive equality via Array.includes — avoids
+  // deep-equal traversal for the common case of searching for a scalar.
+  if (value === null || value === undefined || typeof value !== 'object') {
+    return array.includes(value as T);
+  }
+
   return array.some((val) => isEqual(val, value));
 }

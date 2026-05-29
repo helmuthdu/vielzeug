@@ -91,21 +91,23 @@ describe('check() sync', () => {
   });
 });
 
-describe('check() async', () => {
+describe('checkAsync()', () => {
   it('runs async checks in parseAsync()', async () => {
-    const schema = s.string().check(async (s) => s.length >= 3 || 'Too short');
+    const schema = s.string().checkAsync(async (s) => s.length >= 3 || 'Too short');
 
     await expect(schema.parseAsync('hello')).resolves.toBe('hello');
     await expect(schema.parseAsync('hi')).rejects.toThrow('Too short');
   });
 
-  it('rejects sync parse() when schema has async checks', () => {
+  it('rejects sync parse() when check() callback returns a Promise', () => {
     const schema = s.string().check(async () => true);
 
-    expect(() => schema.parse('x')).toThrow('returned a Promise in a sync parse context');
+    expect(() => schema.parse('x')).toThrow(
+      'check() callback returned a Promise. Use checkAsync() for async validation.',
+    );
   });
 
-  it('runs sync checks in parseAsync()', async () => {
+  it('checkAsync() works with parseAsync()', async () => {
     const schema = s.object({ confirm: s.string(), password: s.string() }).check((d) => {
       return d.password === d.confirm || 'Passwords must match';
     });

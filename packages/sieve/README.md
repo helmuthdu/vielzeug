@@ -4,7 +4,7 @@ package: sieve
 category: validation
 keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
 related: [forge, courier, deposit]
-exports: [s, toJsonSchema, ValidationError, configure]
+exports: [s, ValidationError, configure, ErrorCode, errorsAt]
 ---
 
 # /sieve
@@ -18,7 +18,7 @@ exports: [s, toJsonSchema, ValidationError, configure]
 
 **Package:** `/sieve` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `v`, `toJsonSchema`, `ValidationError`, `configure`
+**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`
 
 **When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 
@@ -39,7 +39,7 @@ yarn add /sieve
 ## Quick Start
 
 ```ts
-import { flattenFirstErrors, s, type Infer } from '/sieve';
+import { s, type Infer } from '@vielzeug/sieve';
 
 const UserSchema = s.object({
   id: s.coerce.number().int().positive(),
@@ -57,7 +57,8 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 } else {
-  console.log(flattenFirstErrors(result.error));
+  const { fieldErrors, formErrors } = result.error.flattenFirst();
+  console.log(fieldErrors, formErrors);
 }
 ```
 

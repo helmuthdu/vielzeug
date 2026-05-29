@@ -182,9 +182,30 @@ const page = await db
   .toArray();
 
 const first = await db.query('users').orderBy('age', 'asc').first();
-const count = await db.query('users').equals('age', 30).count();
 
-void page, first, count;
+// count() respects limit/offset — returns the number of records in the current page
+const count = await db.query('users').equals('age', 30).limit(10).count();
+
+// totalCount() ignores limit/offset/orderBy — returns the full filtered set size
+const total = await db.query('users').equals('age', 30).totalCount();
+
+void page, first, count, total;
+```
+
+Use `totalCount()` alongside `limit`/`offset` for "page X of N" UIs:
+
+```ts
+const pageSize = 20;
+const pageIndex = 2;
+
+const q = db.query('users').between('age', 18, 99).orderBy('name', 'asc');
+
+const [page, total] = await Promise.all([
+  q.limit(pageSize).offset(pageIndex * pageSize).toArray(),
+  q.totalCount(),
+]);
+
+console.log(`Page ${pageIndex + 1} of ${Math.ceil(total / pageSize)}`, page);
 ```
 
 ### Delete via Query
@@ -195,11 +216,17 @@ const deleted = await db.query('users').filter((u) => u.age < 18).delete();
 
 Returns the number of deleted records.
 
-## Lazy Iteration
+## Lazy Iteration (IndexedDB)
 
-`iterate(table)` returns an `AsyncIterable` — useful for processing large tables without loading all records into memory at once.
+`iterate(table)` is available on the `IndexedDbAdapter` returned by `createIndexedDB`. It streams records via an IDB cursor — the full table is never loaded into memory.
+
+For memory and web storage adapters, use `getAll()` or `query().toArray()` instead.
 
 ```ts
+import { createIndexedDB, table } from '@vielzeug/deposit';
+
+const db = createIndexedDB({ name: 'app', schema, version: 1 });
+
 for await (const user of db.iterate('users')) {
   if (user.age >= 18) {
     await processUser(user);
@@ -207,7 +234,7 @@ for await (const user of db.iterate('users')) {
 }
 ```
 
-Expired records are skipped automatically.
+Expired records are skipped automatically. Each call opens a fresh readonly IDB transaction.
 
 ## Reactive Reads
 
@@ -404,7 +431,7 @@ const db = createMemory({
 });
 ```
 
-Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `getOrDefault`, `batch`, `query`, `queryDelete`, `iterate`.
+Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`.
 
 For `batch` operations, `event.table` is `'*'` because a batch may span multiple tables.
 
@@ -495,6 +522,148 @@ try {
 | `DepositScopeError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
 | `DepositQuotaError` | A LocalStorage / SessionStorage write exceeds the storage quota |
 | `DepositMigrationError` | IndexedDB `onupgradeneeded` migration callback threw |
+
+## Framework Integration
+
+Use `db.observe()` for framework subscriptions. The returned unsubscribe function maps directly to each framework's cleanup hook.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useState } from 'react';
+import { createMemory, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+const db = createMemory({ schema });
+
+function useUsers(): User[] {
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    // immediate: true delivers current state synchronously before the first render
+    return db.observe('users', setUsers, { immediate: true });
+  }, []);
+
+  return users;
+}
+```
+
+```ts [Vue 3]
+import { onScopeDispose, ref } from 'vue';
+import { createMemory, table } from '@vielzeug/deposit';
+import type { Ref } from 'vue';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+const db = createMemory({ schema });
+
+export function useUsers(): { users: Ref<User[]> } {
+  const users = ref<User[]>([]);
+
+  const stop = db.observe('users', (rows) => {
+    users.value = rows;
+  }, { immediate: true });
+
+  // onScopeDispose runs when the calling composable's scope is destroyed
+  onScopeDispose(stop);
+
+  return { users };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createMemory, table } from '@vielzeug/deposit';
+
+  type User = { id: number; name: string };
+  const schema = { users: table<User>('id') };
+  const db = createMemory({ schema });
+
+  let users: User[] = [];
+  const stop = db.observe('users', (rows) => { users = rows; }, { immediate: true });
+
+  onDestroy(stop);
+</script>
+
+{#each users as user}
+  <p>{user.name}</p>
+{/each}
+```
+
+:::
+
+For libraries with a reactive context (`scope`, `onUnmounted`, signal effects), you can also use `db.watch(table)` inside an async loop — the observer is cleaned up automatically when the loop exits.
+
+## Working with Other Vielzeug Libraries
+
+### With Ripple
+
+Wire a `@vielzeug/ripple` signal to a table at construction time. The signal is updated automatically on every table change — no `observe()` boilerplate required.
+
+```ts
+import { signal, effect } from '@vielzeug/ripple';
+import { createIndexedDB, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+
+const usersSignal = signal<User[]>([]);
+
+const db = createIndexedDB({
+  name: 'app',
+  schema,
+  signals: { users: usersSignal },
+  version: 1,
+});
+
+// usersSignal.value stays in sync with the users table automatically
+effect(() => console.log('users:', usersSignal.value.length));
+
+await db.put('users', { id: 1, name: 'Alice' }); // → effect re-runs
+```
+
+### With Sieve
+
+Pass a `@vielzeug/sieve` schema as a validator. Deposit calls `schema.parse(value)` before every `put`, `putAll`, `update`, and `upsert`. Invalid records throw without touching storage.
+
+```ts
+import { s } from '@vielzeug/sieve';
+import { createMemory, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+
+const db = createMemory({
+  schema,
+  validators: {
+    users: s.object({ id: s.number(), name: s.string(), age: s.number().min(0) }),
+  },
+});
+
+// throws a sieve validation error before writing
+await db.put('users', { id: 1, name: 'Alice', age: -1 });
+```
+
+### With Rune
+
+Pass a `@vielzeug/rune` logger to route observer notification errors to your structured log pipeline.
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+import { createIndexedDB, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+
+const db = createIndexedDB({
+  name: 'app',
+  schema,
+  version: 1,
+  logger: createLogger('deposit'),
+});
+```
 
 ## Best Practices
 

@@ -2,7 +2,7 @@
  * Nested route structure — compilation, naming, middleware ordering,
  * and per-node data loaders.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('nested routes', () => {
@@ -39,7 +39,7 @@ describe('nested routes', () => {
 
     await settle();
 
-    expect(router.state.matches.at(-1)?.name).toBe('dashboard.settings');
+    expect(router.getSnapshot().matches.at(-1)?.name).toBe('dashboard.settings');
     router.dispose();
   });
 
@@ -77,7 +77,7 @@ describe('nested routes', () => {
 
     await settle();
 
-    expect(router.state.matches.map((m) => m.name)).toEqual(['dashboard', 'dashboard.settings']);
+    expect(router.getSnapshot().matches.map((m) => m.name)).toEqual(['dashboard', 'dashboard.settings']);
     router.dispose();
   });
 
@@ -152,8 +152,8 @@ describe('nested routes', () => {
 
     await settle();
 
-    expect(router.state.matches[0]?.data).toEqual({ layout: 'dashboard' });
-    expect(router.state.matches[1]?.data).toEqual({ page: 'profile' });
+    expect(router.getSnapshot().matches[0]?.data).toEqual({ layout: 'dashboard' });
+    expect(router.getSnapshot().matches[1]?.data).toEqual({ page: 'profile' });
     router.dispose();
   });
 });

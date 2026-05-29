@@ -1,7 +1,7 @@
 import { type ReadonlySignal, onEvent, watch } from '@vielzeug/craft';
 import { type Signal, signal } from '@vielzeug/ripple';
 
-import type { OverlayCloseReason, OverlayControl, OverlayOpenReason } from '../../headless';
+import type { DialogCloseReason, OverlayControl, OverlayOpenReason } from '../../headless';
 
 import { createOverlayControl } from '../../headless';
 import { createFocusManager } from '../../headless';
@@ -14,7 +14,7 @@ export type UseDialogOptions = {
   /** Called after showModal() but before isOpen = true. Use to clear drag styles etc. */
   beforeOpen?: (dialog: HTMLDialogElement) => void;
   /** Extra properties merged into the `close-request` custom event detail. */
-  closeRequestDetail?: (reason: Exclude<OverlayCloseReason, 'programmatic'>) => Record<string, unknown>;
+  closeRequestDetail?: (reason: Exclude<DialogCloseReason, 'programmatic'>) => Record<string, unknown>;
   dialogRef: { value: HTMLDialogElement | null | undefined };
   getPanelEl: () => HTMLElement | null | undefined;
   host: HTMLElement;
@@ -24,7 +24,7 @@ export type UseDialogOptions = {
    * Called after the native `close` event fires — after background unlock,
    * isOpen reset, and focus restore. Use to emit component events.
    */
-  onNativeClose?: (reason: OverlayCloseReason) => void;
+  onNativeClose?: (reason: DialogCloseReason) => void;
   /** Called by the overlay on open. Use to emit events. */
   onOpen?: (reason: OverlayOpenReason) => void;
   /** Open prop from the component — drives programmatic open/close via watch. */
@@ -33,7 +33,7 @@ export type UseDialogOptions = {
    * Called by the overlay when closing. Orchestrates the close animation.
    * Default: `dialog.close()`. Override in dialog.ts to add the CSS exit animation.
    */
-  performClose?: (dialog: HTMLDialogElement, reason: OverlayCloseReason) => void;
+  performClose?: (dialog: HTMLDialogElement, reason: DialogCloseReason) => void;
   returnFocus: ReadonlySignal<boolean | undefined>;
 };
 
@@ -43,7 +43,7 @@ export type UseDialogHandle = {
    * Dispatch a cancelable `close-request` event on the host. Returns true when
    * the close is allowed (event not prevented), false when it was cancelled.
    */
-  dispatchCloseRequest: (reason: Exclude<OverlayCloseReason, 'programmatic'>) => boolean;
+  dispatchCloseRequest: (reason: Exclude<DialogCloseReason, 'programmatic'>) => boolean;
   handleBackdropClick: (e: MouseEvent) => void;
   handleKeydown: (e: KeyboardEvent) => void;
   isOpen: Signal<boolean>;
@@ -52,7 +52,7 @@ export type UseDialogHandle = {
   /**
    * Dispatch `close-request`; if allowed, call `overlay.close()`.
    */
-  requestClose: (reason: Exclude<OverlayCloseReason, 'programmatic'>) => void;
+  requestClose: (reason: Exclude<DialogCloseReason, 'programmatic'>) => void;
   /**
    * Registers the open-prop watcher AND standard click/keydown event listeners on
    * the dialog element. Use for components that need standard dialog behavior.
@@ -79,7 +79,7 @@ export type UseDialogHandle = {
 export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   const isOpen = signal(false);
   // Internal close-reason: set atomically before dialog.close() fires.
-  let pendingCloseReason: OverlayCloseReason = 'programmatic';
+  let pendingCloseReason: DialogCloseReason = 'programmatic';
   const bgLock = createBackgroundLock();
   let isClosing = false;
 
@@ -114,7 +114,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     }
   };
 
-  const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
+  const dispatchCloseRequest = (reason: Exclude<DialogCloseReason, 'programmatic'>): boolean => {
     return options.host.dispatchEvent(
       new CustomEvent('close-request', {
         bubbles: true,
@@ -154,11 +154,11 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
       if (dialog.open) {
         // Capture reason before calling performClose so handleNativeClose can read it.
-        pendingCloseReason = reason as OverlayCloseReason;
+        pendingCloseReason = reason as DialogCloseReason;
 
         const performClose = options.performClose ?? ((d) => d.close());
 
-        performClose(dialog, reason as OverlayCloseReason);
+        performClose(dialog, reason as DialogCloseReason);
 
         return;
       }
@@ -167,7 +167,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     },
   });
 
-  const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>): void => {
+  const requestClose = (reason: Exclude<DialogCloseReason, 'programmatic'>): void => {
     const allowed = dispatchCloseRequest(reason);
 
     if (!allowed) return;

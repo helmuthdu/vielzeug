@@ -1,13 +1,13 @@
 ---
 title: Sieve — Examples
-description: Practical examples and recipes for sieve.
+description: Practical examples and recipes for @vielzeug/sieve.
 ---
 
 [[toc]]
 
 ## Examples
 
-- [Api](./examples/api.md)
-- [Async](./examples/async.md)
-- [Forms](./examples/forms.md)
-- [Unions](./examples/unions.md)
+- [API and Response Validation](./examples/api.md)
+- [Async Validation](./examples/async.md)
+- [Form Validation](./examples/forms.md)
+- [Unions, Intersects, and Variants](./examples/unions.md)

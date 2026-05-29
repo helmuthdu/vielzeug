@@ -1,18 +1,20 @@
 import {
   createContext,
   define,
+  defineField,
   effect,
   html,
   inject,
   prop,
   provide,
   type ReadonlySignal,
-  signal,
-  watch,
   when,
 } from '@vielzeug/craft';
 
+import type { ComponentSize, ThemeColor } from '../../types';
+
 import {
+  createChoiceField,
   createListControl,
   createStableId,
   type ChoiceChangeDetail,
@@ -21,14 +23,16 @@ import {
   setBooleanAttribute,
   setMaybeAttribute,
 } from '../../headless';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
 export type BitRadioGroupProps = {
   /** Theme color tint */
-  color?: string;
+  color?: ThemeColor;
   /** Disabled state */
   disabled?: boolean;
   /** Error message text */
@@ -44,19 +48,18 @@ export type BitRadioGroupProps = {
   /** Required field */
   required?: boolean;
   /** Items size preset */
-  size?: string;
+  size?: ComponentSize;
   /** Initial selected value */
   value?: string;
 };
 
-/** Shared context for radio groups */
 export type RadioGroupContext = {
-  color: ReadonlySignal<string | undefined>;
+  color: ReadonlySignal<ThemeColor | undefined>;
   disabled: ReadonlySignal<boolean>;
   name: ReadonlySignal<string | undefined>;
   select: (value: string, originalEvent?: Event) => void;
-  size: ReadonlySignal<string | undefined>;
-  value: ReadonlySignal<string>;
+  size: ReadonlySignal<ComponentSize | undefined>;
+  value: ReadonlySignal<string | undefined>;
 };
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('BitRadioGroup');
@@ -79,7 +82,7 @@ export type BitRadioGroupEvents = {
  * @attr {string} orientation - Layout: 'vertical' | 'horizontal'
  * @attr {boolean} required - Required field
  *
- * @fires change - Emitted when a radio is selected. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
+ * @fires change - Emitted when a radio is selected. detail: { values: string[], labels: string[], originalEvent?: Event }
  *
  * @slot - Place `bit-radio` elements here
  *
@@ -101,22 +104,36 @@ export type BitRadioGroupEvents = {
  * ```
  */
 export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
+  formAssociated: true,
   props: {
-    color: prop.string(),
-    disabled: prop.bool(false),
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
     error: prop.string(),
     helper: prop.string(),
     label: prop.string(),
     name: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
     required: prop.bool(false),
-    size: prop.string(),
     value: prop.string(),
   },
   setup(props, { bind, el, emit, slots }) {
-    const selectedValue = signal((props.value.value as string | undefined) ?? '');
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
+
+    const choice = createChoiceField({
+      disabled: fCtxProps.disabled,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      prefix: 'radio-group',
+      validateOn: formCtx?.validateOn,
+      value: props.value,
+    });
+
+    connectFormField(choice, defineField, choice.formValue, (v) => v);
+
+    const selectedValue = choice.selectedValue;
     const isDisabled = fCtxProps.disabled;
 
     bind({
@@ -126,14 +143,6 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       },
     });
 
-    watch(
-      props.value,
-      (v) => {
-        selectedValue.value = (v as string | undefined) ?? '';
-      },
-      { immediate: true },
-    );
-
     const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-radio');
 
     const getEnabledRadios = (): HTMLElement[] =>
@@ -141,28 +150,33 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
 
     const getLabelForValue = (value: string): string => getChoiceLabel(getSlottedRadios(), value);
 
-    const selectRadio = (val: string, originalEvent?: Event) => {
-      selectedValue.value = val;
+    const selectRadio = (val: string, originalEvent?: Event): void => {
+      choice.setValues(val ? [val] : []);
 
       const labels = val ? [getLabelForValue(val)] : [];
       const values = val ? [val] : [];
 
       emit('change', { labels, originalEvent, values });
+      choice.triggerValidation('blur');
     };
 
     provide(RADIO_GROUP_CTX, {
-      color: props.color,
+      color: props.color as ReadonlySignal<ThemeColor | undefined>,
       disabled: isDisabled,
       name: props.name,
       select: selectRadio,
-      size: props.size,
+      size: props.size as ReadonlySignal<ComponentSize | undefined>,
       value: selectedValue,
     });
 
-    // Sync name/color/size/disabled onto slotted bit-radio children.
-    // Checked state is handled reactively inside bit-radio via group context.
-    const syncChildren = () => {
-      for (const radio of getSlottedRadios()) {
+    // Sync name/color/size/disabled/checked onto slotted bit-radio children.
+    effect(() => {
+      void slots.elements().value;
+      void selectedValue.value;
+
+      const radios = getSlottedRadios();
+
+      for (const radio of radios) {
         const val = radio.getAttribute('value') ?? '';
 
         setBooleanAttribute(radio, 'checked', val === selectedValue.value);
@@ -171,27 +185,19 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
         setMaybeAttribute(radio, 'size', props.size.value);
         setBooleanAttribute(radio, 'disabled', isDisabled.value);
       }
-    };
-
-    effect(() => {
-      void slots.elements().value;
-      syncChildren();
     });
 
-    // Roving tabindex: only the selected (or first) radio is tabbable
+    // Roving tabindex: only the selected (or first) radio is tabbable.
     effect(() => {
       void slots.elements().value;
 
       const radios = getSlottedRadios();
-      const setTabIndex = (radio: HTMLElement, selected: boolean) => {
-        radio.setAttribute('tabindex', selected && !isDisabled.value ? '0' : '-1');
-      };
       let hasFocusable = false;
 
       for (const radio of radios) {
         const isSelected = radio.getAttribute('value') === selectedValue.value;
 
-        setTabIndex(radio, isSelected);
+        radio.setAttribute('tabindex', isSelected && !isDisabled.value ? '0' : '-1');
 
         if (isSelected && !isDisabled.value) hasFocusable = true;
       }
@@ -246,19 +252,16 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       },
     });
 
+    const { aria } = choice;
     const legendId = createStableId('radio-group-legend');
-    const errorId = `${legendId}-error`;
-    const helperId = `${legendId}-helper`;
-    const hasError = () => Boolean(props.error.value);
-    const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
     return html`
       <fieldset
         role="radiogroup"
         aria-required="${() => String(Boolean(props.required.value))}"
-        aria-invalid="${() => String(hasError())}"
-        aria-errormessage="${() => (hasError() ? errorId : null)}"
-        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
+        :aria-invalid="${aria.invalid}"
+        :aria-errormessage="${aria.errorMessage}"
+        :aria-describedby="${aria.describedBy}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${props.label}${when(
             () => Boolean(props.required.value),
@@ -268,8 +271,15 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
         <div class="radio-group-items" part="items">
           <slot></slot>
         </div>
-        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
+        <div
+          class="helper-text"
+          part="helper"
+          id="${choice.assistiveId}"
+          :role="${() => (choice.assistive.value.errorText ? 'alert' : null)}"
+          aria-live="polite"
+          ?hidden="${() => !choice.assistive.value.errorText && !choice.assistive.value.helperText}">
+          ${() => choice.assistive.value.errorText || choice.assistive.value.helperText}
+        </div>
       </fieldset>
     `;
   },

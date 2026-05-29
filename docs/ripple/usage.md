@@ -94,7 +94,52 @@ const sub = effect(() => {
 });
 ```
 
-Ripple includes a built-in loop guard (100 iterations) to protect against accidental self-triggering effect cycles.
+Ripple includes a built-in loop guard (100 iterations by default) to protect against accidental self-triggering effect cycles.
+
+### Effect Options
+
+`effect()` accepts an optional `EffectOptions` object to control scheduling, debugging, and loop protection:
+
+```ts
+import { effect } from '@vielzeug/ripple';
+
+// Named effect — name appears in StateError messages for easier debugging
+const sub = effect(
+  () => console.log('count:', count.value),
+  { name: 'count-logger' },
+);
+
+// Microtask scheduler — re-runs are deferred and coalesce within the same task
+effect(
+  () => document.title = count.value.toString(),
+  { scheduler: 'microtask' },
+);
+
+// RAF scheduler — re-runs are capped at display refresh rate (ideal for animations)
+effect(
+  () => canvas.draw(data.value),
+  { scheduler: 'raf' },
+);
+
+// Trace mode — logs changed reactive sources to the console before each re-run
+effect(
+  () => computeHeavyThing(a.value, b.value),
+  { trace: true },
+);
+
+// Increase the loop guard for known deep cascade graphs
+effect(
+  () => processGraph(root.value),
+  { maxIterations: 500 },
+);
+```
+
+| Option           | Type              | Default    | Description                                                      |
+| ---------------- | ----------------- | ---------- | ---------------------------------------------------------------- |
+| `scheduler`      | `EffectScheduler` | `'sync'`   | `'sync'` \| `'microtask'` \| `'raf'`                             |
+| `name`           | `string`          | —          | Shown in error messages                                          |
+| `trace`          | `boolean`         | `false`    | Log changed sources before each re-run                           |
+| `maxIterations`  | `number`          | `100`      | Loop guard threshold for this effect                             |
 
 ### `untrack`
 
@@ -241,95 +286,6 @@ batch(() => {
 If the callback throws, pending notifications are still flushed after the error;
 the original error is re-thrown with the flush errors suppressed.
 
-## Framework Integration
-
-::: code-group
-
-```tsx [React]
-import { useSyncExternalStore } from 'react';
-import { signal, computed, effect, type ReadonlySignal } from '@vielzeug/ripple';
-
-// Generic hook — works with any signal or computed
-function useSignalValue<T>(source: ReadonlySignal<T>): T {
-  return useSyncExternalStore(source.subscribe, () => source.value);
-}
-
-// Usage in a component
-const count = signal(0);
-const doubled = computed(() => count.value * 2);
-
-function Counter() {
-  const value = useSignalValue(count);
-  const doubledValue = useSignalValue(doubled);
-
-  return (
-    <div>
-      <p>{value} × 2 = {doubledValue}</p>
-      <button onClick={() => count.value++}>Increment</button>
-    </div>
-  );
-}
-```
-
-```ts [Vue 3]
-import { customRef, onScopeDispose } from 'vue';
-import { signal, computed, watch, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
-
-// Composable for read/write signals
-function useSignal<T>(source: Signal<T>) {
-  return customRef<T>((track, trigger) => ({
-    get() {
-      track();
-      return source.value;
-    },
-    set(value) {
-      source.value = value;
-      trigger();
-    },
-  }));
-}
-
-// Composable for read-only signals and computeds
-function useSignalValue<T>(source: ReadonlySignal<T>) {
-  const stop = watch(source, () => {}, { immediate: true });
-  onScopeDispose(() => stop.dispose());
-  return customRef<T>((track) => ({
-    get() {
-      track();
-      return source.value;
-    },
-    set(value) {
-      void value;
-    },
-  }));
-}
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { signal, computed, toStore } from '@vielzeug/ripple';
-
-  // toStore() adapts any signal to the Svelte store contract
-  const count = signal(0);
-  const doubled = computed(() => count.value * 2);
-
-  const countStore = toStore(count);
-  const doubledStore = toStore(doubled);
-  // Use $countStore and $doubledStore in the template
-</script>
-
-<p>{$countStore} × 2 = {$doubledStore}</p>
-<button on:click={() => count.value++}>Increment</button>
-```
-
-:::
-
-### Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
 ## `scope`
 
 `scope()` creates an isolated cleanup context that is not tied to any reactive effect. Use it when you want to collect teardown callbacks and release them all at once — without needing an effect or a component lifecycle hook.
@@ -439,6 +395,8 @@ object cannot corrupt `reset()`.
 
 ## Derived Slices
 
+### Via `computed()`
+
 Use `computed()` to derive a signal from a slice of the store's state:
 
 ```ts
@@ -459,6 +417,50 @@ Pass a custom `equals` option for arrays and objects to avoid re-rendering when 
 
 ```ts
 const items = computed(() => s.value.items, { equals: (a, b) => a.length === b.length });
+```
+
+### Via `store.lens()`
+
+`store.lens(path)` returns a writable `Signal` scoped to a specific property or dot-path. Lenses are cached per path and produce immutable copies on write:
+
+```ts
+const settings = store({
+  user: { name: 'Alice', address: { city: 'Berlin' } },
+  theme: 'light' as 'light' | 'dark',
+});
+
+// Top-level lens
+const theme = settings.lens('theme');            // Signal<'light' | 'dark'>
+theme.value = 'dark';
+
+// Nested dot-path lens
+const city = settings.lens('user.address.city'); // Signal<string>
+city.value = 'Hamburg';
+
+console.log(settings.value.theme);               // 'dark'
+console.log(settings.value.user.address.city);   // 'Hamburg'
+
+// Watch a single field
+watch(theme, (next, prev) => console.log(prev, '→', next));
+
+// Write directly
+theme.update((t) => (t === 'light' ? 'dark' : 'light'));
+```
+
+Lenses are cached: `settings.lens('theme')` called twice returns the same `Signal`. Disposing a lens removes it from the cache — the next call to `settings.lens('theme')` creates a fresh instance.
+
+::: warning Path constraints
+Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `StateError('INVALID_STORE')` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.
+:::
+
+### Via `.map()`
+
+For read-only derived slices, the `.map()` combinator is the most concise option:
+
+```ts
+const count = s.map((st) => st.count);  // ComputedSignal<number>
+watch(count, (n, prev) => console.log('count:', prev, '→', n));
+count.dispose();
 ```
 
 ## Watching State
@@ -562,6 +564,58 @@ counter.state.value.count; // readable
 // counter.state.value = ...; // TS compile error — read-only
 ```
 
+## Signal Combinators
+
+All signal types — `Signal`, `ComputedSignal`, and `Store` — expose `.map()` and `.filter()` as built-in combinators that return a `ComputedSignal`. They are shorthand for `computed()` on top of a source.
+
+### `.map(fn, options?)`
+
+Projects a signal value into a new derived signal:
+
+```ts
+const count = signal(3);
+const doubled = count.map((n) => n * 2);  // ComputedSignal<number>
+console.log(doubled.value); // 6
+
+count.value = 5;
+console.log(doubled.value); // 10
+
+doubled.dispose();
+```
+
+Works on stores too:
+
+```ts
+const cart = store({ items: 0, label: 'empty' });
+const label = cart.map((s) => s.label.toUpperCase()); // ComputedSignal<string>
+console.log(label.value); // 'EMPTY'
+```
+
+### `.filter(predicate)`
+
+Passes values through when the predicate returns `true`, otherwise yields `undefined`:
+
+```ts
+const count = signal(3);
+const even = count.filter((n) => n % 2 === 0);
+console.log(even.value); // undefined (3 is odd)
+
+count.value = 4;
+console.log(even.value); // 4
+
+even.dispose();
+```
+
+Supports type-guard predicates for narrowing:
+
+```ts
+const val = signal<string | null>(null);
+const str = val.filter((v): v is string => v !== null); // ComputedSignal<string | undefined>
+
+val.value = 'hello';
+console.log(str.value); // 'hello'
+```
+
 ## `Symbol.dispose` / `using` Declarations
 
 All `Subscription`, `ComputedSignal`, and `Scope` handles implement `[Symbol.dispose]`,
@@ -574,6 +628,106 @@ enabling the TC39 [explicit resource management](https://github.com/tc39/proposa
   // both are automatically disposed when the block exits
 }
 ```
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+import { signal, computed, effect, type ReadonlySignal } from '@vielzeug/ripple';
+
+// Generic hook — works with any signal or computed
+function useSignalValue<T>(source: ReadonlySignal<T>): T {
+  return useSyncExternalStore(source.subscribe, () => source.value);
+}
+
+// Usage in a component
+const count = signal(0);
+const doubled = computed(() => count.value * 2);
+
+function Counter() {
+  const value = useSignalValue(count);
+  const doubledValue = useSignalValue(doubled);
+
+  return (
+    <div>
+      <p>{value} × 2 = {doubledValue}</p>
+      <button onClick={() => count.value++}>Increment</button>
+    </div>
+  );
+}
+```
+
+```ts [Vue 3]
+import { customRef, onScopeDispose } from 'vue';
+import { signal, computed, watch, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+
+// Composable for read/write signals
+function useSignal<T>(source: Signal<T>) {
+  return customRef<T>((track, trigger) => ({
+    get() {
+      track();
+      return source.value;
+    },
+    set(value) {
+      source.value = value;
+      trigger();
+    },
+  }));
+}
+
+// Composable for read-only signals and computeds
+function useSignalValue<T>(source: ReadonlySignal<T>) {
+  const stop = watch(source, () => {}, { immediate: true });
+  onScopeDispose(() => stop.dispose());
+  return customRef<T>((track) => ({
+    get() {
+      track();
+      return source.value;
+    },
+    set(value) {
+      void value;
+    },
+  }));
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { signal, computed } from '@vielzeug/ripple';
+  import type { ReadonlySignal } from '@vielzeug/ripple';
+
+  // Manual Svelte store adapter — calls run() immediately, then on each change
+  function toSvelteStore<T>(source: ReadonlySignal<T>) {
+    return {
+      subscribe(run: (value: T) => void) {
+        run(source.value); // Svelte contract: fire immediately with current value
+        const sub = source.subscribe(() => run(source.value));
+        return () => sub.dispose();
+      },
+    };
+  }
+
+  const count = signal(0);
+  const doubled = computed(() => count.value * 2);
+
+  const countStore = toSvelteStore(count);
+  const doubledStore = toSvelteStore(doubled);
+  // Use $countStore and $doubledStore in the template
+</script>
+
+<p>{$countStore} × 2 = {$doubledStore}</p>
+<button on:click={() => count.value++}>Increment</button>
+```
+
+:::
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
 
 ## Working with Other Vielzeug Libraries
 
@@ -593,6 +747,52 @@ const source = createRemoteSource({
 search.subscribe(() => {
   source.page(1);
   void source.refresh();
+});
+```
+
+## Testing
+
+Ripple stores are plain objects — no special test utilities needed. Create a
+fresh store in `beforeEach` and dispose any active effects in `afterEach`.
+
+```ts
+import { store, watch } from '@vielzeug/ripple';
+import type { Store } from '@vielzeug/ripple';
+
+describe('counter', () => {
+  let s: Store<{ count: number }>;
+
+  beforeEach(() => {
+    s = store({ count: 0 });
+  });
+
+  it('patches count', () => {
+    s.patch({ count: 1 });
+    expect(s.value.count).toBe(1);
+  });
+
+  it('notifies watcher on change', () => {
+    const listener = vi.fn();
+    const sub = watch(s, listener);
+    s.patch({ count: 5 });
+    // notifications are synchronous — no await needed
+    expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
+    sub.dispose();
+  });
+});
+```
+
+For isolated signal tests, create signals in the test scope — they are
+garbage-collected unless an active `effect()` holds a reference:
+
+```ts
+it('computed updates reactively', () => {
+  const n = signal(2);
+  const sq = computed(() => n.value ** 2);
+  expect(sq.value).toBe(4);
+  n.value = 3;
+  expect(sq.value).toBe(9);
+  sq.dispose();
 });
 ```
 
@@ -675,50 +875,3 @@ effect(() => {
   const name = untrack(() => users.value[id]); // NOT tracked — avoids re-run on users change
   render(id, name);
 });
-```
-
-## Testing
-
-Ripple stores are plain objects — no special test utilities needed. Create a
-fresh store in `beforeEach` and dispose any active effects in `afterEach`.
-
-```ts
-import { store, watch } from '@vielzeug/ripple';
-import type { Store } from '@vielzeug/ripple';
-
-describe('counter', () => {
-  let s: Store<{ count: number }>;
-
-  beforeEach(() => {
-    s = store({ count: 0 });
-  });
-
-  it('patches count', () => {
-    s.patch({ count: 1 });
-    expect(s.value.count).toBe(1);
-  });
-
-  it('notifies watcher on change', () => {
-    const listener = vi.fn();
-    const sub = watch(s, listener);
-    s.patch({ count: 5 });
-    // notifications are synchronous — no await needed
-    expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
-    sub.dispose();
-  });
-});
-```
-
-For isolated signal tests, create signals in the test scope — they are
-garbage-collected unless an active `effect()` holds a reference:
-
-```ts
-it('computed updates reactively', () => {
-  const n = signal(2);
-  const sq = computed(() => n.value ** 2);
-  expect(sq.value).toBe(4);
-  n.value = 3;
-  expect(sq.value).toBe(9);
-  sq.dispose();
-});
-```

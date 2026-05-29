@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Query Subscriptions'
-description: 'Query subscription examples for courier.'
+description: 'Query Callbacks example for @vielzeug/courier.'
 ---
 
 ## Query Subscriptions

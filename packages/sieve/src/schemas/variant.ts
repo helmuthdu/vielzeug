@@ -1,4 +1,4 @@
-import type { AnySchema, Issue } from '../core';
+import type { AnySchema, Issue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -97,9 +97,26 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
-    const oneOf = [...this._map.values()].map((s) => s.schema());
+    const oneOf = [...this._map.values()].map((s) => s.toJsonSchema());
 
     return { discriminator: { propertyName: this._discriminator }, oneOf };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    const branches: Record<string, SchemaDescriptor> = {};
+
+    for (const [key, schema] of this._map.entries()) {
+      branches[key] = schema.describe();
+    }
+
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      branches,
+      discriminator: this._discriminator,
+      kind: 'variant',
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

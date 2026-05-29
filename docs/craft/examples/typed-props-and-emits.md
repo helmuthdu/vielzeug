@@ -1,14 +1,20 @@
 ---
 title: 'Craft Examples — Typed props and emits'
-description: 'Current Craft example for typed prop signals and typed setup-context emit.'
+description: 'Typed props and emits example for @vielzeug/craft.'
 ---
 
 ## Typed props and emits
 
-Combine direct prop definitions with the `Events` generic on `define<Props, Events>()` when you want both prop and event contracts checked together.
+### Problem
+
+You need both prop and event contracts checked at the type level. Craft's `define<Props, Events>()` generic ensures prop shapes and emitted event payloads are fully typed.
+
+### Solution
+
+Combine `prop.*` helpers with the `Events` type parameter on `define()`.
 
 ```ts
-import { define, html, prop } from '@vielzeug/craft';
+import { define, html, prop, when } from '@vielzeug/craft';
 
 type AlertBoxProps = {
   message: string;
@@ -36,29 +42,28 @@ define<AlertBoxProps, AlertBoxEvents>('alert-box', {
       emit('close');
     };
 
-    return () => html`
-      ${() =>
-        props.open.value
-          ? html`
-              <div :data-variant=${props.variant}>
-                <span>${props.message}</span>
-                <button @click=${close}>Close</button>
-              </div>
-            `
-          : ''}
+    return html`
+      ${when(
+        () => props.open.value,
+        () => html`
+          <div :data-variant=${props.variant}>
+            <span>${props.message}</span>
+            <button @click=${close}>Close</button>
+          </div>
+        `,
+      )}
     `;
   },
 });
 ```
 
-## Notes
+### Pitfalls
 
-- For no-detail events, use `void` so `emit('close')` stays ergonomic.
-- `prop.oneOf(...)` should use `as const` or the type widens to `string`.
-- Prop values in `setup()` are writable signals, so updates like `props.open.value = false` are valid.
+- Omitting `as const` on `prop.oneOf(...)` widens the type to `string`, losing the union constraint.
+- Prop values in `setup()` are writable signals. Mutating `props.open.value = false` works but only updates local state — it does not reflect back to the parent's attribute unless `reflect: true` is set (the default for `prop.bool`).
 
 ### Related
 
+- [Block — Accessible components](/block/) built with typed props using these same patterns
 - [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter component](./counter-component.md)
-- [Form-associated rating input](./form-associated-rating-input.md)

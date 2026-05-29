@@ -1,6 +1,6 @@
 ---
 title: 'Worker Examples — Fibonacci with Pool and Timeout'
-description: 'Fibonacci with Pool and Timeout examples for worker.'
+description: 'Fibonacci with Pool and Timeout example for @vielzeug/worker.'
 ---
 
 ## Fibonacci with Pool and Timeout
@@ -43,3 +43,13 @@ console.log(results);
 
 fibPool.dispose();
 ```
+
+### Pitfalls
+
+- Set `timeout` based on the largest input you expect, not an arbitrary constant. Fibonacci is exponential — `fib(40)` can take several seconds on a slow device, so a 1-second timeout would silently discard valid results.
+- Avoid passing an arrow function that references a helper defined outside `createWorker`. The function is serialized via `.toString()` and runs in an isolated scope, so outer-scope names are `undefined` at runtime. Keep all helpers inside the task function body.
+
+### Related
+
+- [Cancellable Batch](./cancellable-batch.md) — abort a group of tasks when results are no longer needed
+- [Data Transformation Pipeline](./data-transformation-pipeline.md) — processing multiple inputs across a pool

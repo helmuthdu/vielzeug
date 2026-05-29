@@ -11,6 +11,8 @@ export default defineConfig(
     getConfig(__dirname, {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        inline: resolve(__dirname, 'src/inline.ts'),
+        presets: resolve(__dirname, 'src/presets.ts'),
       },
       name: 'orbit',
     }),

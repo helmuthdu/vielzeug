@@ -1,7 +1,7 @@
 /**
  * createMemoryHistory — in-memory history driver used by the router.
  */
-import { createBrowserHistory, createMemoryHistory, createRouter } from '../router';
+import { createBrowserHistory, createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -93,7 +93,7 @@ describe('createBrowserHistory', () => {
     expect(history.location.state).toEqual({ step: 2 });
   });
 
-  it('router.state.location.historyState reflects push state', async () => {
+  it('router.getSnapshot().location.historyState reflects push state', async () => {
     const router = createRouter({
       routes: { home: { path: '/' }, page: { path: '/page' } },
     });
@@ -103,6 +103,6 @@ describe('createBrowserHistory', () => {
 
     await router.navigate({ path: '/page' }, { state: { from: 'home' } });
 
-    expect(router.state.location.historyState).toEqual({ from: 'home' });
+    expect(router.getSnapshot().location.historyState).toEqual({ from: 'home' });
   });
 });

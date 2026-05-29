@@ -158,15 +158,13 @@ class BaseElement extends HTMLElement {
     this._component.phase = ComponentPhase.UNMOUNTED;
     this._component.scope.dispose();
 
-    // Reset component state while preserving shadow and styles
-    const state = createComponentState(this._component.styles);
-
-    this._component.scope = state.scope;
-    this._component.mountCallbacks = state.mountCallbacks;
-    this._component.templateResult = state.templateResult;
-    this._component.phase = ComponentPhase.UNINITIALIZED;
-
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
+
+    // Reset component state while preserving shadow and styles
+    this._component.scope = _scope();
+    this._component.mountCallbacks = [];
+    this._component.templateResult = null;
+    this._component.phase = ComponentPhase.UNINITIALIZED;
   }
 
   private _handleSetupError(error: unknown, operation: string = 'connectedCallback'): HTMLResult | void {
@@ -229,45 +227,55 @@ class BaseElement extends HTMLElement {
   }
 
   private _init(): void {
+    this._applyStyles();
+    this._mountTemplate();
+    this._scheduleMountCallbacks();
+  }
+
+  private _applyStyles(): void {
     const { styles } = this._component;
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
+  }
 
-    if (this._component.templateResult != null) {
-      const { bindings, html: htmlString } = extractResult(this._component.templateResult);
+  private _mountTemplate(): void {
+    if (this._component.templateResult == null) return;
 
-      this.shadow.replaceChildren(parseHTML(htmlString));
+    const { bindings, html: htmlString } = extractResult(this._component.templateResult);
 
-      if (bindings.length) {
-        this._component.scope.run(() => {
-          applyBindingsInContainer(this.shadow, bindings, _onCleanup, {
-            onHtml: (binding) => applyHtmlBinding(this.shadow, binding, _onCleanup),
-          });
+    this.shadow.replaceChildren(parseHTML(htmlString));
+
+    if (bindings.length) {
+      this._component.scope.run(() => {
+        applyBindingsInContainer(this.shadow, bindings, _onCleanup, {
+          onHtml: (binding) => applyHtmlBinding(this.shadow, binding, _onCleanup),
         });
-      }
+      });
     }
+  }
 
-    if (this._component.mountCallbacks.length > 0) {
-      const token = ++this._component.mountToken;
+  private _scheduleMountCallbacks(): void {
+    if (this._component.mountCallbacks.length === 0) return;
 
-      queueMicrotask(() => {
-        if (!this.isConnected || token !== this._component.mountToken) return;
+    const token = ++this._component.mountToken;
 
+    queueMicrotask(() => {
+      if (!this.isConnected || token !== this._component.mountToken) return;
+
+      for (const callback of this._component.mountCallbacks) {
         try {
-          for (const callback of this._component.mountCallbacks) {
-            this._component.scope.run(() => {
-              withRuntimeContext({ element: this, mountCallbacks: [] }, () => {
-                const cleanup = callback();
+          this._component.scope.run(() => {
+            withRuntimeContext({ element: this, mountCallbacks: [] }, () => {
+              const cleanup = callback();
 
-                if (typeof cleanup === 'function') _onCleanup(cleanup);
-              });
+              if (typeof cleanup === 'function') _onCleanup(cleanup);
             });
-          }
+          });
         } catch (error) {
           this._handleSetupError(error, 'mountedCallback');
         }
-      });
-    }
+      }
+    });
   }
 }
 

@@ -15,6 +15,8 @@ import { buildUrl } from './url';
 
 export type StreamRequestConfig<P extends string = string> = {
   body?: unknown;
+  /** Raw fetch options for advanced use (credentials, cache, mode, referrer, etc.). */
+  fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
   headers?: Record<string, string>;
   method?: string;
   params?: P extends string ? Record<string, string | number | boolean> : never;
@@ -23,7 +25,7 @@ export type StreamRequestConfig<P extends string = string> = {
   signal?: AbortSignal;
   /** Request timeout in ms. Overrides client default (which is `Infinity` for streaming). */
   timeout?: number;
-} & Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
+};
 
 export type ReconnectOptions = {
   /** Total reconnect attempts after the first failure. Defaults to `5`. */
@@ -82,6 +84,56 @@ function parseEventData(raw: string): unknown {
   }
 }
 
+/**
+ * Shared stream setup: build URL, combine signals, merge headers, dispatch through
+ * transport. Returns the Response so both sse() and readable() can focus on parsing.
+ * The caller owns the AbortController lifecycle (track + untrack).
+ */
+async function openStreamWith(
+  transport: TransportCore,
+  url: string,
+  ac: AbortController,
+  config: {
+    body?: unknown;
+    extSignal?: AbortSignal;
+    fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
+    headers?: Record<string, string>;
+    method: string;
+    params?: Params;
+    query?: Params;
+    timeout?: number;
+  },
+  extraHeaders?: Record<string, string>,
+): Promise<Response> {
+  // Normalize once — error paths and RequestInit both receive the canonical form.
+  const method = config.method.toUpperCase();
+  const full = buildUrl(transport.baseUrl, url, config.params, config.query);
+  const combined = config.extSignal ? AbortSignal.any([config.extSignal, ac.signal]) : ac.signal;
+  // Streaming connections are long-lived — default to Infinity so the transport's
+  // REST default (30s) does not cut off streams prematurely.
+  const signal = buildTimeoutSignal(config.timeout ?? Number.POSITIVE_INFINITY, combined);
+  const requestHeaders = transport.mergeHeaders(config.headers, extraHeaders);
+  const init = buildRequestInit(method, requestHeaders, config.body, signal, config.fetchInit ?? {});
+
+  let res: Response;
+
+  try {
+    res = await transport.dispatch({ init, url: full });
+  } catch (err) {
+    throw HttpError.fromCause(err, method, full, ac.signal);
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+
+    throw HttpError.fromResponse(res, text, method, full);
+  }
+
+  if (!res.body) throw new Error('[courier] Response has no body');
+
+  return res;
+}
+
 export function createStream(opts?: TransportOptions, sharedTransport?: TransportCore) {
   const ownTransport = !sharedTransport;
   const transport = sharedTransport ?? createTransportCore(opts);
@@ -115,6 +167,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
     const {
       body,
+      fetchInit,
       headers: perRequestHeaders,
       method = body !== undefined ? 'POST' : 'GET',
       onError,
@@ -123,7 +176,6 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
       reconnect = false,
       signal: extSignal,
       timeout: cfgTimeout,
-      ...rest
     } = config as SseOptions;
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
@@ -152,37 +204,28 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     }
 
     async function connect(): Promise<void> {
-      const full = buildUrl(transport.baseUrl, url, params as Params | undefined, query);
-      const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
-      // SSE connections are long-lived — default timeout to Infinity so the
-      // transport's REST default (30s) does not cut off streams prematurely.
-      const signal = buildTimeoutSignal(cfgTimeout ?? Number.POSITIVE_INFINITY, combined);
+      const res = await openStreamWith(
+        transport,
+        url,
+        ac,
+        {
+          body,
+          extSignal,
+          fetchInit,
+          headers: perRequestHeaders as Record<string, string> | undefined,
+          method,
+          params: params as Params | undefined,
+          query,
+          timeout: cfgTimeout,
+        },
+        {
+          accept: 'text/event-stream',
+          'cache-control': 'no-cache',
+          ...(lastEventId ? { 'last-event-id': lastEventId } : {}),
+        },
+      );
 
-      const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined, {
-        accept: 'text/event-stream',
-        'cache-control': 'no-cache',
-        ...(lastEventId ? { 'last-event-id': lastEventId } : {}),
-      });
-
-      const init = buildRequestInit(method, requestHeaders, body, signal, rest);
-
-      let res: Response;
-
-      try {
-        res = await transport.dispatch({ init, url: full });
-      } catch (err) {
-        throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
-      }
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-
-        throw HttpError.fromResponse(res, text, method.toUpperCase(), full);
-      }
-
-      if (!res.body) throw new Error('[courier] SSE response has no body');
-
-      const reader = res.body.getReader();
+      const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let currentEvent = 'message';
@@ -345,6 +388,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
     const {
       body,
+      fetchInit,
       headers: perRequestHeaders,
       method = body !== undefined ? 'POST' : 'GET',
       params,
@@ -352,39 +396,26 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
       query,
       signal: extSignal,
       timeout: cfgTimeout,
-      ...rest
     } = config as StreamRequestConfig & { parse?: 'ndjson' | 'text' };
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
-    const full = buildUrl(transport.baseUrl, url, params as Params | undefined, query);
     const ac = new AbortController();
-    const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
-    // Readable streams are long-lived — default timeout to Infinity (same as SSE).
-    const signal = buildTimeoutSignal(cfgTimeout ?? Number.POSITIVE_INFINITY, combined);
-
-    const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined);
-    const init = buildRequestInit(method, requestHeaders, body, signal, rest);
     const untrack = transport.track(ac);
 
     try {
-      let res: Response;
+      const res = await openStreamWith(transport, url, ac, {
+        body,
+        extSignal,
+        fetchInit,
+        headers: perRequestHeaders as Record<string, string> | undefined,
+        method,
+        params: params as Params | undefined,
+        query,
+        timeout: cfgTimeout,
+      });
 
-      try {
-        res = await transport.dispatch({ init, url: full });
-      } catch (err) {
-        throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
-      }
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-
-        throw HttpError.fromResponse(res, text, method.toUpperCase(), full);
-      }
-
-      if (!res.body) throw new Error('[courier] Response has no body');
-
-      const reader = res.body.getReader();
+      const reader = res.body!.getReader();
       const decoder = new TextDecoder();
 
       try {

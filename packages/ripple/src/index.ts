@@ -1,15 +1,18 @@
 // Public API — all exports for /ripple
-// Internal implementation files (tracking.ts, helpers.ts, node.ts, scheduling.ts, config.ts)
+// Internal implementation files (tracking.ts, helpers.ts, scheduling.ts)
 // are intentionally NOT exported to keep the surface stable.
 
 export type {
   AsyncEffectCallback,
   AsyncSubscription,
+  BatchOptions,
   CleanupFn,
   ComputedSignal,
   EffectCallback,
+  EffectOptions,
   EffectScheduler,
   EqualityFn,
+  PathValue,
   ReactiveOptions,
   ReadonlySignal,
   Scope,
@@ -21,7 +24,6 @@ export type {
 
 export { StateError } from './error';
 export type { StateErrorCode } from './error';
-export { configure } from './config';
 
 // Core primitives
 export { signal } from './signal';
@@ -36,4 +38,4 @@ export { effect, effectAsync, onCleanup, scope } from './effect';
 export { watch } from './watch';
 
 // Utilities
-export { isComputed, isSignal, isStore, memo, readonly, syncedSignal, tick, untrack } from './utilities';
+export { isComputed, isSignal, isStore, readonly, untrack } from './utilities';

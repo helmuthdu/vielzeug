@@ -7,11 +7,19 @@ export class BusDisposedError extends Error {
   }
 }
 
+// Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
+const noop = () => {};
+
+// Each registration gets a unique Entry object, allowing the same listener function
+// to be registered multiple times independently (aligns with Node EventEmitter / mitt).
+type Entry = { fn: Listener<unknown>; unsub: () => void };
+
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
-  // Per-event map of listener fn → unsub, enabling O(1) add/remove/lookup by function identity.
-  const listeners = new Map<string, Map<Listener<unknown>, () => void>>();
+  // Per-event set of Entry objects. Set identity prevents accidental dedup of entries;
+  // the same fn can appear in multiple entries with independent lifetimes.
+  const listeners = new Map<string, Set<Entry>>();
   const disposeController = new AbortController();
-  const noop = () => {};
+  const debug = options?.debug ?? false;
 
   function mergeSignal(signal?: AbortSignal): AbortSignal {
     return signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
@@ -20,31 +28,43 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   function onWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
     if (signal.aborted) return noop;
 
-    const l = listener as Listener<unknown>;
-    let map = listeners.get(event);
+    let set = listeners.get(event);
 
-    if (!map) {
-      map = new Map();
-      listeners.set(event, map);
+    if (!set) {
+      set = new Set();
+      listeners.set(event, set);
     }
 
-    // Return existing unsub for duplicate registration — deduplicates delivery while preserving cancel capability.
-    const existing = map.get(l);
+    // Capture the set reference so unsub can safely delete from it even after
+    // the event key has been removed from the outer map.
+    const capturedSet = set;
 
-    if (existing) return existing;
+    // Boolean guard makes unsub idempotent without relying on set.size — a second
+    // call after re-registration would otherwise see an empty capturedSet and
+    // incorrectly delete the newly created event key from the outer map.
+    let called = false;
 
     function unsub() {
-      const m = listeners.get(event);
+      if (called) return;
 
-      m?.delete(l);
+      called = true;
+      capturedSet.delete(entry);
 
-      if (m?.size === 0) listeners.delete(event);
+      if (capturedSet.size === 0) listeners.delete(event);
 
       signal.removeEventListener('abort', unsub);
+
+      if (debug) console.debug(`[relay:sub] off("${event}") — ${capturedSet.size} listener(s) remaining`);
     }
 
-    map.set(l, unsub);
+    // Function declaration is hoisted, so `entry` can reference `unsub` directly.
+    // No placeholder needed.
+    const entry: Entry = { fn: listener as Listener<unknown>, unsub };
+
+    set.add(entry);
     signal.addEventListener('abort', unsub, { once: true });
+
+    if (debug) console.debug(`[relay:sub] on("${event}") — ${set.size} listener(s)`);
 
     return unsub;
   }
@@ -95,14 +115,13 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     });
   }
 
-  async function* events<K extends EventKey<T>>(
+  // Inner generator — receives already-validated maxBuffer from the public events() wrapper.
+  async function* eventsGenerator<K extends EventKey<T>>(
     event: K,
-    options?: { maxBuffer?: number; signal?: AbortSignal },
+    maxBuffer: number,
+    signal: AbortSignal | undefined,
   ): AsyncGenerator<T[K]> {
-    const activeSignal = mergeSignal(options?.signal);
-    const maxBuffer = options?.maxBuffer ?? Infinity;
-
-    if (maxBuffer <= 0) throw new RangeError('maxBuffer must be a positive number');
+    const activeSignal = mergeSignal(signal);
 
     if (activeSignal.aborted) return;
 
@@ -143,20 +162,36 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     }
   }
 
+  // Public events() — validates maxBuffer synchronously so callers get an immediate
+  // RangeError at call time rather than on the first .next() iteration.
+  function events<K extends EventKey<T>>(
+    event: K,
+    opts?: { maxBuffer?: number; signal?: AbortSignal },
+  ): AsyncGenerator<T[K]> {
+    const maxBuffer = opts?.maxBuffer ?? Infinity;
+
+    if (maxBuffer <= 0) throw new RangeError('maxBuffer must be a positive number');
+
+    return eventsGenerator(event, maxBuffer, opts?.signal);
+  }
+
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
     if (disposeController.signal.aborted) return;
 
     const payload = (args as unknown[])[0];
 
+    const set = listeners.get(event);
+
+    // Log before onDispatch so debug output announces the emit first.
+    if (debug) console.debug(`[relay:emit] emit("${event}") — ${set?.size ?? 0} listener(s)`);
+
     options?.onDispatch?.(event, payload as T[K]);
 
-    const map = listeners.get(event);
+    if (!set?.size) return;
 
-    if (!map?.size) return;
-
-    for (const fn of [...map.keys()]) {
+    for (const entry of [...set]) {
       try {
-        fn(payload);
+        entry.fn(payload);
       } catch (err) {
         if (options?.onError) options.onError(err, event, payload as T[K]);
         else throw err;
@@ -169,21 +204,21 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     let total = 0;
 
-    for (const map of listeners.values()) total += map.size;
+    for (const set of listeners.values()) total += set.size;
 
     return total;
   }
 
   function removeAllListeners(event?: EventKey<T>): void {
     if (event !== undefined) {
-      const map = listeners.get(event);
+      const set = listeners.get(event);
 
-      if (map) {
-        for (const unsub of [...map.values()]) unsub();
+      if (set) {
+        for (const entry of [...set]) entry.unsub();
       }
     } else {
-      for (const map of [...listeners.values()]) {
-        for (const unsub of [...map.values()]) unsub();
+      for (const set of [...listeners.values()]) {
+        for (const entry of [...set]) entry.unsub();
       }
     }
   }
@@ -227,11 +262,20 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   function dispose(): void {
     if (disposeController.signal.aborted) return;
 
+    if (debug) console.debug('[relay:lifecycle] dispose()');
+
     disposeController.abort(new BusDisposedError());
+    // disposeController.abort() fires all unsub handlers synchronously, which
+    // removes every entry and deletes empty keys. By here listeners is already
+    // empty. clear() is a cheap defensive measure against any future code path
+    // that bypasses the signal (e.g. a direct listeners.set() before a guard).
     listeners.clear();
   }
 
   return {
+    get disposalSignal() {
+      return disposeController.signal;
+    },
     dispose,
     get disposed() {
       return disposeController.signal.aborted;

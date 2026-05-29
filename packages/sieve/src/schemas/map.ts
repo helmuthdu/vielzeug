@@ -1,4 +1,4 @@
-import type { Issue, ParseResult, Schema as BaseSchema } from '../core';
+import type { Issue, ParseResult, Schema as BaseSchema, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -73,6 +73,21 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     }
 
     return { data: out, issues };
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { $comment: 'Map<K,V> — no JSON Schema equivalent' };
+  }
+
+  protected override _describeImpl(): SchemaDescriptor {
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      key: this.keySchema.describe(),
+      kind: 'map',
+      value: this.valueSchema.describe(),
+    };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

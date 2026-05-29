@@ -19,55 +19,8 @@ import { TupleSchema, type TupleSchemas } from './schemas/tuple';
 import { UnionSchema } from './schemas/union';
 import { VariantSchema } from './schemas/variant';
 
-/**
- * The `v` namespace bundles all schema factories for convenience.
- */
-export const s = {
-  any: (): Schema<any> => new Schema(),
-  array: <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema),
-  bigint: (): BigIntSchema => new BigIntSchema(),
-  boolean: (): BooleanSchema => new BooleanSchema(),
-  coerce: {
-    bigint: (): BigIntSchema => BigIntSchema.coerce(),
-    boolean: (): BooleanSchema => BooleanSchema.coerce(),
-    date: (): DateSchema => DateSchema.coerce(),
-    number: (): NumberSchema => NumberSchema.coerce(),
-    string: (): StringSchema => StringSchema.coerce(),
-  },
-  date: (): DateSchema => new DateSchema(),
-  enum: <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values),
-  instanceof: <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls),
-  intersect: <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
-    ...items: T
-  ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
-    new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  lazy: <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter),
-  literal: <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
-    new LiteralSchema(value),
-  map: <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
-    new MapSchema(keySchema, valueSchema),
-  never: (): NeverSchema => new NeverSchema(),
-  null: (): LiteralSchema<null> => new LiteralSchema(null),
-  number: (): NumberSchema => new NumberSchema(),
-  object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
-  record: <K extends string, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): RecordSchema<K, V> =>
-    new RecordSchema(keySchema, valueSchema),
-  set: <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema),
-  string: (): StringSchema => new StringSchema(),
-  tuple: <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items),
-  undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
-  union: <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
-    ...items: T
-  ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
-    new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  unknown: (): Schema<unknown> => new Schema(),
-  variant: <K extends string, M extends Record<string, ObjectSchema<any>>>(
-    discriminator: K,
-    map: M,
-  ): VariantSchema<K, M> => new VariantSchema(discriminator, map),
-};
+/* -------------------- Tree-shakeable standalone exports -------------------- */
 
-// Individual tree-shakeable factory exports (R9)
 export const sAny = (): Schema<any> => new Schema();
 export const sArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
 export const sBigint = (): BigIntSchema => new BigIntSchema();
@@ -111,4 +64,37 @@ export const sCoerce = {
   date: (): DateSchema => DateSchema.coerce(),
   number: (): NumberSchema => NumberSchema.coerce(),
   string: (): StringSchema => StringSchema.coerce(),
+};
+
+/* -------------------- `s` namespace (built from standalones — no duplication) -------------------- */
+
+/**
+ * The `s` namespace bundles all schema factories for convenience.
+ * All methods are identical to the tree-shakeable `sXxx` exports.
+ */
+export const s = {
+  any: sAny,
+  array: sArray,
+  bigint: sBigint,
+  boolean: sBoolean,
+  coerce: sCoerce,
+  date: sDate,
+  enum: sEnum,
+  instanceof: sInstanceof,
+  intersect: sIntersect,
+  lazy: sLazy,
+  literal: sLiteral,
+  map: sMap,
+  never: sNever,
+  null: sNull,
+  number: sNumber,
+  object: sObject,
+  record: sRecord,
+  set: sSet,
+  string: sString,
+  tuple: sTuple,
+  undefined: sUndefined,
+  union: sUnion,
+  unknown: sUnknown,
+  variant: sVariant,
 };

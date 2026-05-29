@@ -4,42 +4,42 @@ package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
 related: [grip, craft, block]
-exports: [createVirtualizer, Virtualizer]
+exports: [createVirtualizer, createDomVirtualList, Virtualizer]
 ---
 
-# /scroll
+# @vielzeug/scroll
 
 > Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
 
-[![npm version](https://img.shields.io/npm/v//scroll)](https://www.npmjs.com/package//scroll) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/scroll)](https://www.npmjs.com/package/@vielzeug/scroll) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/scroll` &nbsp;·&nbsp; **Category:** Ui-performance
+**Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
 
-**Key exports:** `createVirtualizer`, `Virtualizer`
+**Key exports:** `createVirtualizer`, `createDomVirtualList`, `Virtualizer`
 
-**When to use:** Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
+**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
 
 **Related:** [@vielzeug/grip](https://vielzeug.dev/grip/) · [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/block](https://vielzeug.dev/block/)
 
 </details>
 
-`/scroll` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/scroll` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /scroll
-npm install /scroll
-yarn add /scroll
+pnpm add @vielzeug/scroll
+npm install @vielzeug/scroll
+yarn add @vielzeug/scroll
 ```
 
 ## Quick Start
 
 ```ts
-import { createVirtualizer } from '/scroll';
+import { createVirtualizer } from '@vielzeug/scroll';
 
 const scrollEl = document.querySelector<HTMLElement>('.scroll-container')!;
 
@@ -61,6 +61,35 @@ const virt = createVirtualizer(scrollEl, {
 
 // Later:
 virt.destroy();
+```
+
+## DOM Module
+
+For dropdown and listbox patterns, use `createDomVirtualList` from `@vielzeug/scroll/dom`. It manages the virtualizer lifecycle and handles list-height styles automatically.
+
+```ts
+import { createDomVirtualList } from '@vielzeug/scroll/dom';
+
+type Option = { label: string; value: string };
+
+const domList = createDomVirtualList<Option>({
+  listElement: listEl,
+  scrollElement: dropdownEl,
+  render: ({ items, listEl, virtualItems }) => {
+    listEl.replaceChildren();
+    for (const item of virtualItems) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
+      el.textContent = items[item.index].label;
+      listEl.appendChild(el);
+    }
+  },
+});
+
+domList.setItems(options);
+domList.setActive(isOpen);
+domList.scrollToIndex(focusedIndex, { align: 'auto' });
+domList.destroy();
 ```
 
 ## Documentation

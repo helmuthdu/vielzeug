@@ -1,7 +1,7 @@
-import { type UseSyncExternalStoreFn, init, useField, useFormState, useFormValues } from '../../adapters/react';
+import { type UseSyncExternalStoreFn, createForgeHooks } from '../../adapters/react';
 import { createForm } from '../../index';
 
-// Minimal synchronous mock: subscribes (retaining the unsub handle) and returns the snapshot.
+// Minimal synchronous mock: subscribes and immediately returns the snapshot.
 const mockStore: UseSyncExternalStoreFn = <T>(
   subscribe: (onStoreChange: () => void) => () => void,
   getSnapshot: () => T,
@@ -11,11 +11,9 @@ const mockStore: UseSyncExternalStoreFn = <T>(
   return getSnapshot();
 };
 
-describe('/forge react adapter', () => {
-  beforeEach(() => {
-    init(mockStore);
-  });
+const { useField, useFormState, useFormValues } = createForgeHooks(mockStore);
 
+describe('/forge react adapter', () => {
   describe('useFormState', () => {
     test('returns the current FormState snapshot', () => {
       const form = createForm({ defaultValues: { name: 'Alice' } });
@@ -29,15 +27,14 @@ describe('/forge react adapter', () => {
     test('getSnapshot function returns live state after mutations', () => {
       let capturedGetSnapshot!: () => ReturnType<typeof form.state>;
       const form = createForm({ defaultValues: { name: 'Alice' } });
-
-      init(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
+      const hooks = createForgeHooks(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
         capturedGetSnapshot = snap as () => ReturnType<typeof form.state>;
         sub(() => {});
 
         return snap();
       });
 
-      useFormState(form);
+      hooks.useFormState(form);
 
       form.set('name', 'Bob');
       expect(capturedGetSnapshot().isDirty).toBe(true);
@@ -46,15 +43,14 @@ describe('/forge react adapter', () => {
     test('subscribe function notifies when form state changes', () => {
       let capturedSubscribe!: (fn: () => void) => () => void;
       const form = createForm({ defaultValues: { name: 'Alice' } });
-
-      init(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
+      const hooks = createForgeHooks(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
         capturedSubscribe = sub;
         sub(() => {});
 
         return snap();
       });
 
-      useFormState(form);
+      hooks.useFormState(form);
 
       let notifications = 0;
       const unsub = capturedSubscribe(() => notifications++);
@@ -82,15 +78,14 @@ describe('/forge react adapter', () => {
     test('getSnapshot reflects the live field value', () => {
       let capturedGetSnapshot!: () => { value: string };
       const form = createForm({ defaultValues: { name: 'Alice' } });
-
-      init(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
+      const hooks = createForgeHooks(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
         capturedGetSnapshot = snap as () => { value: string };
         sub(() => {});
 
         return snap();
       });
 
-      useField(form, 'name');
+      hooks.useField(form, 'name');
 
       form.set('name', 'Bob');
       expect(capturedGetSnapshot().value).toBe('Bob');
@@ -99,60 +94,33 @@ describe('/forge react adapter', () => {
     test('subscribe only notifies when the subscribed field changes', () => {
       let capturedSubscribe!: (fn: () => void) => () => void;
       const form = createForm({ defaultValues: { age: 30, name: 'Alice' } });
-
-      init(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
+      const hooks = createForgeHooks(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
         capturedSubscribe = sub;
         sub(() => {});
 
         return snap();
       });
 
-      useField(form, 'name');
+      hooks.useField(form, 'name');
 
       let notifications = 0;
 
       capturedSubscribe(() => notifications++);
 
-      form.set('age', 31); // different field — no notification
+      form.set('age', 31);
       expect(notifications).toBe(0);
 
-      form.set('name', 'Bob'); // subscribed field — notified
+      form.set('name', 'Bob');
       expect(notifications).toBe(1);
     });
   });
 
   describe('useFormValues', () => {
-    test('returns the current values object', () => {
+    test('returns the current values', () => {
       const form = createForm({ defaultValues: { age: 30, name: 'Alice' } });
-      const values = useFormValues(form);
+      const vals = useFormValues(form);
 
-      expect(values).toEqual({ age: 30, name: 'Alice' });
+      expect(vals).toEqual({ age: 30, name: 'Alice' });
     });
-
-    test('getSnapshot reflects live values', () => {
-      let capturedGetSnapshot!: () => { name: string };
-      const form = createForm({ defaultValues: { name: 'Alice' } });
-
-      init(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
-        capturedGetSnapshot = snap as () => { name: string };
-        sub(() => {});
-
-        return snap();
-      });
-
-      useFormValues(form);
-
-      form.set('name', 'Bob');
-      expect(capturedGetSnapshot().name).toBe('Bob');
-    });
-  });
-
-  test('throws if init() was not called', () => {
-    // Force-clear the internal reference by injecting undefined via a type cast
-    init(undefined as unknown as UseSyncExternalStoreFn);
-
-    const form = createForm({ defaultValues: { x: 1 } });
-
-    expect(() => useFormState(form)).toThrow('[forge/react]');
   });
 });

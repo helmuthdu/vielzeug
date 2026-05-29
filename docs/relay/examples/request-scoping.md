@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Request scoping'
-description: 'Request scoping examples for relay.'
+description: 'Request scoping example for @vielzeug/relay.'
 ---
 
 ## Request scoping

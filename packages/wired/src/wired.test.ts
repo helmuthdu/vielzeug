@@ -8,6 +8,8 @@ import {
   createToken,
   MultipleProvidersError,
   ProviderNotFoundError,
+  ScopedResolutionError,
+  SyncResolutionError,
 } from './wired';
 
 // ---------------------------------------------------------------------------
@@ -316,13 +318,13 @@ describe('Container — transient lifetime', () => {
 });
 
 describe('Container — scoped lifetime', () => {
-  it('throws when resolved directly from the root container', async () => {
+  it('throws ScopedResolutionError when resolved directly from the root container', async () => {
     const T = createToken<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'v', { lifetime: 'scoped' });
 
-    await expect(c.resolve(T)).rejects.toThrow(/scoped lifetime/);
+    await expect(c.resolve(T)).rejects.toThrow(ScopedResolutionError);
   });
 
   it('caches one instance per child container', async () => {
@@ -564,8 +566,9 @@ describe('Container — disposal', () => {
     expect(log).toHaveLength(0);
   });
 
-  it('does not call a dispose hook on a value provider', async () => {
-    // value() takes no dispose option — just confirms disposal does not throw
+  it('does not fire a dispose hook on a value provider registered without one', async () => {
+    // value() accepts an optional dispose hook — this confirms disposal does not throw
+    // and no hook is called when none was attached
     const T = createToken<string>('T');
     const c = createContainer();
 
@@ -719,5 +722,275 @@ describe('Container — post-disposal guards', () => {
     await root.dispose();
 
     await expect(child.resolve(T)).rejects.toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// has()
+// ---------------------------------------------------------------------------
+
+describe('Container — has', () => {
+  it('returns false when no provider is registered', () => {
+    const T = createToken<string>('T');
+
+    expect(createContainer().has(T)).toBe(false);
+  });
+
+  it('returns true when a value provider is registered', () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'x');
+
+    expect(c.has(T)).toBe(true);
+  });
+
+  it('returns true when a factory provider is registered', () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'x');
+
+    expect(c.has(T)).toBe(true);
+  });
+
+  it('returns true when token is registered on parent', () => {
+    const T = createToken<string>('T');
+    const root = createContainer();
+
+    root.value(T, 'x');
+
+    expect(root.createChild().has(T)).toBe(true);
+  });
+
+  it('does not execute the factory when checking has()', () => {
+    let calls = 0;
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => {
+      calls++;
+
+      return 'x';
+    });
+
+    c.has(T);
+
+    expect(calls).toBe(0);
+  });
+
+  it('throws ContainerDisposedError on disposed container', async () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => c.has(T)).toThrow(ContainerDisposedError);
+  });
+
+  it('throws ContainerDisposedError when token lives only in a disposed parent', async () => {
+    const T = createToken<string>('T');
+    const root = createContainer();
+    const child = root.createChild();
+
+    root.value(T, 'parent-only');
+    await root.dispose();
+
+    expect(() => child.has(T)).toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveSync()
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveSync', () => {
+  it('resolves a value provider synchronously', () => {
+    const T = createToken<number>('T');
+    const c = createContainer();
+
+    c.value(T, 42);
+
+    expect(c.resolveSync(T)).toBe(42);
+  });
+
+  it('resolves an already-cached singleton synchronously', async () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'built');
+    await c.resolve(T);
+
+    expect(c.resolveSync(T)).toBe('built');
+  });
+
+  it('resolves an already-cached scoped instance synchronously', async () => {
+    const T = createToken<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'scoped', { lifetime: 'scoped' });
+
+    const child = root.createChild();
+
+    await child.resolve(T);
+
+    expect(child.resolveSync(T)).toBe('scoped');
+  });
+
+  it('throws SyncResolutionError for an unresolved factory', () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'x');
+
+    expect(() => c.resolveSync(T)).toThrow(SyncResolutionError);
+  });
+
+  it('throws SyncResolutionError for a transient factory (never cached)', async () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'x', { lifetime: 'transient' });
+
+    expect(() => c.resolveSync(T)).toThrow(SyncResolutionError);
+  });
+
+  it('throws ScopedResolutionError for a scoped token resolved from the root container', () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'x', { lifetime: 'scoped' });
+
+    expect(() => c.resolveSync(T)).toThrow(ScopedResolutionError);
+  });
+
+  it('throws SyncResolutionError for an unresolved scoped instance on a child container', () => {
+    const T = createToken<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'x', { lifetime: 'scoped' });
+
+    const child = root.createChild();
+
+    // child.resolve(T) has never been awaited, so no cached instance exists
+    expect(() => child.resolveSync(T)).toThrow(SyncResolutionError);
+  });
+
+  it('throws ProviderNotFoundError when token is not registered', () => {
+    const T = createToken<string>('Missing');
+
+    expect(() => createContainer().resolveSync(T)).toThrow(ProviderNotFoundError);
+  });
+
+  it('throws MultipleProvidersError for multi-registered token', () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'a', { multi: true });
+    c.value(T, 'b', { multi: true });
+
+    expect(() => c.resolveSync(T)).toThrow(MultipleProvidersError);
+  });
+
+  it('SyncResolutionError message contains the token description', () => {
+    const T = createToken<string>('ConfigService');
+    const c = createContainer();
+
+    c.factory(T, () => 'x');
+
+    expect(() => c.resolveSync(T)).toThrow('ConfigService');
+  });
+
+  it('SyncResolutionError message distinguishes transient from unresolved singleton', () => {
+    const Singleton = createToken<string>('MySingleton');
+    const Transient = createToken<string>('MyTransient');
+    const c = createContainer();
+
+    c.factory(Singleton, () => 'x');
+    c.factory(Transient, () => 'x', { lifetime: 'transient' });
+
+    const getError = (fn: () => unknown): unknown => {
+      try {
+        fn();
+      } catch (e) {
+        return e;
+      }
+    };
+
+    const singletonErr = getError(() => c.resolveSync(Singleton)) as SyncResolutionError;
+    const transientErr = getError(() => c.resolveSync(Transient)) as SyncResolutionError;
+
+    expect(singletonErr.message).toContain('not been resolved yet');
+    expect(transientErr.message).toContain('transient');
+  });
+
+  it('throws ContainerDisposedError on disposed container', async () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => c.resolveSync(T)).toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Value dispose hooks
+// ---------------------------------------------------------------------------
+
+describe('Container — value dispose hooks', () => {
+  it('calls dispose hook on a value registration at container disposal', async () => {
+    const log: string[] = [];
+    const T = createToken<{ close(): void }>('T');
+    const resource = { close: () => log.push('closed') };
+    const c = createContainer();
+
+    c.value(T, resource, { dispose: (r) => r.close() });
+
+    await c.dispose();
+
+    expect(log).toEqual(['closed']);
+  });
+
+  it('calls dispose hooks for multi value registrations', async () => {
+    const log: string[] = [];
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'a', { dispose: (v) => log.push(`dispose:${v}`), multi: true });
+    c.value(T, 'b', { dispose: (v) => log.push(`dispose:${v}`), multi: true });
+
+    await c.dispose();
+
+    expect(log).toEqual(['dispose:a', 'dispose:b']);
+  });
+
+  it('value dispose hook fires even if the value was never resolved', async () => {
+    const log: string[] = [];
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'x', { dispose: () => log.push('done') });
+
+    await c.dispose();
+
+    expect(log).toEqual(['done']);
+  });
+
+  it('value dispose failures are collected in AggregateError', async () => {
+    const T = createToken<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'x', {
+      dispose: () => {
+        throw new Error('value-fail');
+      },
+    });
+
+    const err = await c.dispose().catch((e) => e);
+
+    expect(err).toBeInstanceOf(AggregateError);
+    expect(err.errors).toHaveLength(1);
+    expect(err.errors[0].message).toBe('value-fail');
   });
 });

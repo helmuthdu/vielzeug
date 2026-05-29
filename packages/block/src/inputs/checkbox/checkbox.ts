@@ -13,10 +13,10 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-import { connectFormField } from '../shared/connect-form-field';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
+import { connectFormField } from '../shared/use-field';
 import componentStyles from './checkbox.css?inline';
 
 export type BitCheckboxEvents = {

@@ -21,14 +21,18 @@ export interface DifferenceOptions extends TimeOptions {
 
 export type FormatPattern = 'short' | 'medium' | 'long' | 'date-only' | 'time-only';
 
-interface HumanFormatBaseOptions {
+/**
+ * Options for {@link format} and {@link formatRange}.
+ *
+ * `intl` and `pattern` are mutually exclusive: when `intl` is provided it takes
+ * full precedence over `pattern`. Providing both is valid but `pattern` is ignored.
+ */
+export interface FormatOptions {
+  intl?: Intl.DateTimeFormatOptions;
   locale?: Intl.LocalesArgument;
+  pattern?: FormatPattern;
   tz?: string;
 }
-
-export type HumanFormatOptions =
-  | (HumanFormatBaseOptions & { intl?: never; pattern?: FormatPattern })
-  | (HumanFormatBaseOptions & { intl: Intl.DateTimeFormatOptions; pattern?: never });
 
 export interface RelativeFormatOptions {
   base?: RelativeTimeInput;
@@ -39,17 +43,15 @@ export interface RelativeFormatOptions {
 
 export type BoundaryUnit = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
 export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-type NonWeekBoundaryUnit = Exclude<BoundaryUnit, 'week'>;
 
 export interface BoundaryOptions extends TimeOptions {
   weekStartsOn?: WeekStartDay;
 }
 
-type UnitBoundaryOptions =
-  | (TimeOptions & { unit: NonWeekBoundaryUnit; weekStartsOn?: never })
-  | (TimeOptions & { unit: 'week'; weekStartsOn?: WeekStartDay });
-
-export type CompareOptions = UnitBoundaryOptions | (TimeOptions & { unit?: undefined; weekStartsOn?: never });
+export interface CompareOptions extends TimeOptions {
+  unit?: BoundaryUnit;
+  weekStartsOn?: WeekStartDay;
+}
 
 export type IsSameOptions = CompareOptions;
 
@@ -126,6 +128,10 @@ const BOUNDARY_CONFIG: Record<BoundaryUnit, { add: Temporal.DurationLike; clear:
     clear: { day: 1, hour: 0, microsecond: 0, millisecond: 0, minute: 0, month: 1, nanosecond: 0, second: 0 },
   },
 };
+
+// Units that require a timezone-aware context because Temporal.Instant does not support them
+// as a largestUnit or smallestUnit in difference operations.
+const CALENDAR_UNITS = new Set<Temporal.DateTimeUnit>(['day', 'week', 'month', 'year']);
 
 // ─── Bounded cache ────────────────────────────────────────────────────────────
 
@@ -263,10 +269,6 @@ function toZonedFromParsed(parsed: ParsedTimeInput, options: TimeOptionsWithTz):
   return parsed.value.toZonedDateTimeISO(options.tz);
 }
 
-function resolveInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
-  return toInstantFromParsed(parseInput(input), options);
-}
-
 function resolveDisplayTimeZone(parsed: ParsedTimeInput, tz?: string): string | undefined {
   return tz ?? (parsed.kind === 'zoned' ? parsed.value.timeZoneId : undefined);
 }
@@ -326,18 +328,55 @@ function floorToBoundaryInstant(
   return startOfParsed(parsed, unit, options).toInstant();
 }
 
+function resolveUnitRange(
+  value: TimeInput,
+  start: TimeInput,
+  end: TimeInput,
+  options: CompareOptions & { unit: BoundaryUnit },
+): { lower: Temporal.Instant; target: Temporal.Instant; upper: Temporal.Instant } {
+  const parsedValue = parseInput(value);
+  const parsedStart = parseInput(start);
+  const parsedEnd = parseInput(end);
+  const tz = inferSharedTimeZone([parsedValue, parsedStart, parsedEnd], options);
+  const unitOptions = { tz, weekStartsOn: options.weekStartsOn, when: options.when };
+  const target = floorToBoundaryInstant(parsedValue, options.unit, unitOptions);
+  const [lower, upper] = normalizeRange(
+    floorToBoundaryInstant(parsedStart, options.unit, unitOptions),
+    floorToBoundaryInstant(parsedEnd, options.unit, unitOptions),
+  );
+
+  return { lower, target, upper };
+}
+
+function resolveUnitPair(
+  a: TimeInput,
+  b: TimeInput,
+  options: CompareOptions & { unit: BoundaryUnit },
+): { left: Temporal.Instant; right: Temporal.Instant } {
+  const parsedA = parseInput(a);
+  const parsedB = parseInput(b);
+  const tz = inferSharedTimeZone([parsedA, parsedB], options);
+  const unitOptions = { tz, weekStartsOn: options.weekStartsOn, when: options.when };
+
+  return {
+    left: floorToBoundaryInstant(parsedA, options.unit, unitOptions),
+    right: floorToBoundaryInstant(parsedB, options.unit, unitOptions),
+  };
+}
+
 function serializeIntlOptions(options: Intl.DateTimeFormatOptions): string {
   return JSON.stringify(
     Object.entries(options)
+      .filter(([, value]) => value !== undefined)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, value]) => [key, String(value)]),
   );
 }
 
-function makeFormatter(options: HumanFormatOptions, displayTz?: string): Intl.DateTimeFormat {
+function makeFormatter(options: FormatOptions, displayTz?: string): Intl.DateTimeFormat {
   const tz = options.tz ?? displayTz;
 
-  if ('intl' in options && options.intl) {
+  if (options.intl) {
     const cacheKey = `${String(options.locale ?? '')}|intl|${tz ?? ''}|${serializeIntlOptions(options.intl)}`;
     const cached = getCached(DATE_TIME_FORMATTER_CACHE, cacheKey);
 
@@ -407,6 +446,12 @@ function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; v
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+export function clearCaches(): void {
+  DATE_TIME_FORMATTER_CACHE.clear();
+  RELATIVE_TIME_FORMATTER_CACHE.clear();
+  DURATION_FORMATTER_CACHE.clear();
+}
+
 export function now(tz: string): Temporal.ZonedDateTime {
   return Temporal.Now.zonedDateTimeISO(tz);
 }
@@ -441,32 +486,42 @@ export function shift(
 export function difference(start: TimeInput, end: TimeInput, options: DifferenceOptions = {}): Temporal.Duration {
   const parsedStart = parseInput(start);
   const parsedEnd = parseInput(end);
-  const tz = inferSharedTimeZone([parsedStart, parsedEnd], options);
   const { largestUnit, roundingIncrement, roundingMode, smallestUnit } = options;
+  const roundingOptions = { largestUnit, roundingIncrement, roundingMode, smallestUnit };
+
+  // Fast path: both inputs are absolute instants and no calendar unit is requested.
+  // Calendar units (day, week, month, year) are timezone-dependent and still require options.tz.
+  const needsCalendar =
+    (largestUnit !== undefined && CALENDAR_UNITS.has(largestUnit)) ||
+    (smallestUnit !== undefined && CALENDAR_UNITS.has(smallestUnit));
+
+  if (!needsCalendar && parsedStart.kind === 'instant' && parsedEnd.kind === 'instant') {
+    // Safe: CALENDAR_UNITS guards ensure neither largestUnit nor smallestUnit is a
+    // calendar unit (day/week/month/year) at this point, so Temporal.Instant.since() accepts them.
+    return parsedEnd.value.since(parsedStart.value, roundingOptions as Temporal.DifferenceOptions<Temporal.TimeUnit>);
+  }
+
+  const tz = inferSharedTimeZone([parsedStart, parsedEnd], options);
 
   return toZonedFromParsed(parsedEnd, { tz, when: options.when }).since(
     toZonedFromParsed(parsedStart, { tz, when: options.when }),
-    { largestUnit, roundingIncrement, roundingMode, smallestUnit },
+    roundingOptions,
   );
 }
 
 export function within(value: TimeInput, start: TimeInput, end: TimeInput, options: CompareOptions = {}): boolean {
   if (!options.unit) {
-    const target = resolveInstant(value, options);
-    const [lower, upper] = normalizeRange(resolveInstant(start, options), resolveInstant(end, options));
+    const target = toInstant(value, options);
+    const [lower, upper] = normalizeRange(toInstant(start, options), toInstant(end, options));
 
     return Temporal.Instant.compare(lower, target) <= 0 && Temporal.Instant.compare(target, upper) <= 0;
   }
 
-  const parsedValue = parseInput(value);
-  const parsedStart = parseInput(start);
-  const parsedEnd = parseInput(end);
-  const tz = inferSharedTimeZone([parsedValue, parsedStart, parsedEnd], options);
-  const unitOptions = { tz, weekStartsOn: options.weekStartsOn, when: options.when };
-  const target = floorToBoundaryInstant(parsedValue, options.unit, unitOptions);
-  const [lower, upper] = normalizeRange(
-    floorToBoundaryInstant(parsedStart, options.unit, unitOptions),
-    floorToBoundaryInstant(parsedEnd, options.unit, unitOptions),
+  const { lower, target, upper } = resolveUnitRange(
+    value,
+    start,
+    end,
+    options as CompareOptions & { unit: BoundaryUnit },
   );
 
   return Temporal.Instant.compare(lower, target) <= 0 && Temporal.Instant.compare(target, upper) <= 0;
@@ -479,8 +534,8 @@ export function clamp(
   options: CompareOptions = {},
 ): Temporal.Instant {
   if (!options.unit) {
-    const target = resolveInstant(value, options);
-    const [lower, upper] = normalizeRange(resolveInstant(start, options), resolveInstant(end, options));
+    const target = toInstant(value, options);
+    const [lower, upper] = normalizeRange(toInstant(start, options), toInstant(end, options));
 
     if (Temporal.Instant.compare(target, lower) < 0) return lower;
 
@@ -489,15 +544,11 @@ export function clamp(
     return target;
   }
 
-  const parsedValue = parseInput(value);
-  const parsedStart = parseInput(start);
-  const parsedEnd = parseInput(end);
-  const tz = inferSharedTimeZone([parsedValue, parsedStart, parsedEnd], options);
-  const unitOptions = { tz, weekStartsOn: options.weekStartsOn, when: options.when };
-  const target = floorToBoundaryInstant(parsedValue, options.unit, unitOptions);
-  const [lower, upper] = normalizeRange(
-    floorToBoundaryInstant(parsedStart, options.unit, unitOptions),
-    floorToBoundaryInstant(parsedEnd, options.unit, unitOptions),
+  const { lower, target, upper } = resolveUnitRange(
+    value,
+    start,
+    end,
+    options as CompareOptions & { unit: BoundaryUnit },
   );
 
   if (Temporal.Instant.compare(target, lower) < 0) return lower;
@@ -509,16 +560,10 @@ export function clamp(
 
 function compareByUnit(a: TimeInput, b: TimeInput, options: CompareOptions): number {
   if (!options.unit) {
-    return Temporal.Instant.compare(resolveInstant(a, options), resolveInstant(b, options));
+    return Temporal.Instant.compare(toInstant(a, options), toInstant(b, options));
   }
 
-  const parsedA = parseInput(a);
-  const parsedB = parseInput(b);
-
-  const tz = inferSharedTimeZone([parsedA, parsedB], options);
-  const unitOptions = { tz, weekStartsOn: options.weekStartsOn, when: options.when };
-  const left = floorToBoundaryInstant(parsedA, options.unit, unitOptions);
-  const right = floorToBoundaryInstant(parsedB, options.unit, unitOptions);
+  const { left, right } = resolveUnitPair(a, b, options as CompareOptions & { unit: BoundaryUnit });
 
   return Temporal.Instant.compare(left, right);
 }
@@ -546,7 +591,7 @@ export function endOf(input: TimeInput, unit: BoundaryUnit, options: BoundaryOpt
   return addBoundaryUnit(startOf(input, unit, options), unit).subtract({ nanoseconds: 1 });
 }
 
-export function formatHuman(input: TimeInput, options: HumanFormatOptions = {}): string {
+export function format(input: TimeInput, options: FormatOptions = {}): string {
   const parsed = parseInput(input);
   const displayTz = resolveDisplayTimeZone(parsed, options.tz);
   const instant = toInstantFromParsed(parsed, { tz: displayTz });
@@ -554,7 +599,7 @@ export function formatHuman(input: TimeInput, options: HumanFormatOptions = {}):
   return makeFormatter(options, displayTz).format(new Date(instant.epochMilliseconds));
 }
 
-export function formatRange(start: TimeInput, end: TimeInput, options: HumanFormatOptions = {}): string {
+export function formatRange(start: TimeInput, end: TimeInput, options: FormatOptions = {}): string {
   const parsedStart = parseInput(start);
   const parsedEnd = parseInput(end);
   const displayTz = resolveRangeDisplayTimeZone(parsedStart, parsedEnd, options.tz);
@@ -578,8 +623,8 @@ export function formatZoned(input: TimeInput, options: TimeOptions = {}): string
 }
 
 export function formatRelative(input: RelativeTimeInput, options: RelativeFormatOptions = {}): string {
-  const target = resolveInstant(input);
-  const base = options.base ? resolveInstant(options.base) : Temporal.Now.instant();
+  const target = toInstant(input);
+  const base = options.base ? toInstant(options.base) : Temporal.Now.instant();
   const differenceInSeconds = (target.epochMilliseconds - base.epochMilliseconds) / 1000;
   const { unit, value } = toRelativeUnit(differenceInSeconds);
 
@@ -614,4 +659,147 @@ export function formatDuration(input: string | Temporal.DurationLike, options: D
   setCached(DURATION_FORMATTER_CACHE, cacheKey, formatter);
 
   return formatter.format(duration);
+}
+
+// ─── Expiry / date range / time diff ─────────────────────────────────────────
+
+const YEAR_9999_INSTANT = Temporal.Instant.from('9999-01-01T00:00:00Z');
+const MS_PER_DAY = 86_400_000;
+
+/** Expiry classification for a future date. */
+export type ExpiryStatus = 'EXPIRED' | 'LATER' | 'NEVER' | 'SOON';
+
+/**
+ * Classifies a date as `'EXPIRED'`, `'SOON'`, `'LATER'`, or `'NEVER'` relative to now.
+ *
+ * - `'NEVER'` – date is on or after year 9999.
+ * - `'EXPIRED'` – date is in the past.
+ * - `'SOON'` – date is within the next `days` days (default 7).
+ * - `'LATER'` – date is further in the future.
+ *
+ * For `PlainDate` and `PlainDateTime` inputs without an explicit timezone the
+ * UTC calendar is used. Pass `options.tz` to override.
+ *
+ * @example
+ * ```ts
+ * expires(Temporal.Now.instant()); // 'EXPIRED'
+ * expires(Temporal.Instant.from('9999-12-31T00:00:00Z')); // 'NEVER'
+ * expires(toZoned(parseLocal('2030-01-01'), { tz: 'UTC' })); // 'LATER'
+ * ```
+ */
+export function expires(date: TimeInput, days = 7, options: TimeOptions = {}): ExpiryStatus {
+  const instantMs = parsedToMs(parseInput(date), options);
+
+  if (instantMs >= YEAR_9999_INSTANT.epochMilliseconds) return 'NEVER';
+
+  const diff = instantMs - Temporal.Now.instant().epochMilliseconds;
+
+  if (diff <= 0) return 'EXPIRED';
+
+  if (diff <= days * MS_PER_DAY) return 'SOON';
+
+  return 'LATER';
+}
+
+/** Unit used in a `TimeDiffResult`. */
+export type TimeDiffUnit = 'day' | 'hour' | 'millisecond' | 'minute' | 'month' | 'second' | 'week' | 'year';
+
+/** Structured output of {@link timeDiff}. */
+export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
+
+const TIME_DIFF_THRESHOLDS: ReadonlyArray<{ ms: number; unit: TimeDiffUnit }> = [
+  { ms: 365 * MS_PER_DAY, unit: 'year' },
+  { ms: 30 * MS_PER_DAY, unit: 'month' },
+  { ms: 7 * MS_PER_DAY, unit: 'week' },
+  { ms: MS_PER_DAY, unit: 'day' },
+  { ms: 3_600_000, unit: 'hour' },
+  { ms: 60_000, unit: 'minute' },
+  { ms: 1_000, unit: 'second' },
+];
+
+function parsedToMs(parsed: ParsedTimeInput, options: TimeOptions): number {
+  if (parsed.kind === 'instant') return parsed.value.epochMilliseconds;
+
+  if (parsed.kind === 'zoned') return parsed.value.toInstant().epochMilliseconds;
+
+  const tz = options.tz ?? 'UTC';
+
+  return parsed.value.toZonedDateTime(tz).toInstant().epochMilliseconds;
+}
+
+/**
+ * Returns the absolute time difference between two dates as a structured
+ * `{ unit, value }` in the largest meaningful unit.
+ *
+ * When `b` is omitted, the current instant is used.
+ * For `PlainDate` / `PlainDateTime` inputs without a timezone, UTC is assumed.
+ * Pass `options.tz` to override.
+ *
+ * **Note:** Month and year thresholds use fixed approximations (30 days/month,
+ * 365 days/year). Results are suitable for human-readable display, not precise
+ * calendar arithmetic.
+ *
+ * Sub-second differences are returned as `{ unit: 'millisecond', value: <ms> }`.
+ *
+ * @example
+ * ```ts
+ * timeDiff(Temporal.Instant.from('2027-01-01T00:00:00Z'), Temporal.Now.instant());
+ * // { unit: 'month', value: 7 }
+ * ```
+ */
+export function timeDiff(a: TimeInput, b?: TimeInput, options: TimeOptions = {}): TimeDiffResult {
+  const msA = parsedToMs(parseInput(a), options);
+  const msB = b ? parsedToMs(parseInput(b), options) : Temporal.Now.instant().epochMilliseconds;
+  const diff = Math.abs(msA - msB);
+
+  for (const { ms, unit } of TIME_DIFF_THRESHOLDS) {
+    if (diff >= ms) return { unit, value: Math.floor(diff / ms) };
+  }
+
+  return { unit: 'millisecond', value: diff };
+}
+
+/**
+ * Generates an array of `ZonedDateTime` values between `start` and `end`
+ * (inclusive) advancing by `step` on each iteration.
+ *
+ * @example
+ * ```ts
+ * dateRange(
+ *   Temporal.ZonedDateTime.from('2022-01-01T00:00:00[UTC]'),
+ *   Temporal.ZonedDateTime.from('2022-01-05T00:00:00[UTC]'),
+ *   { days: 1 },
+ *   { tz: 'UTC' },
+ * );
+ * // [Jan 1, Jan 2, Jan 3, Jan 4, Jan 5]
+ * ```
+ *
+ * @param start  - Range start (inclusive).
+ * @param end    - Range end (inclusive).
+ * @param step   - Duration to advance on each iteration.
+ * @param options - Must include `tz` when inputs are not `ZonedDateTime`.
+ */
+export function dateRange(
+  start: TimeInput,
+  end: TimeInput,
+  step: Temporal.DurationLike,
+  options: TimeOptionsWithTz,
+): Temporal.ZonedDateTime[] {
+  const startZoned = toZonedFromParsed(parseInput(start), options);
+  const endZoned = toZonedFromParsed(parseInput(end), options);
+
+  // Guard: step must advance the date forward to prevent infinite loops.
+  if (Temporal.ZonedDateTime.compare(startZoned.add(step), startZoned) <= 0) {
+    throw new RangeError('dateRange: step must advance the date forward');
+  }
+
+  const result: Temporal.ZonedDateTime[] = [];
+  let current = startZoned;
+
+  while (Temporal.ZonedDateTime.compare(current, endZoned) <= 0) {
+    result.push(current);
+    current = current.add(step);
+  }
+
+  return result;
 }

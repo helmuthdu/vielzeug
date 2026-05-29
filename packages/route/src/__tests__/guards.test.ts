@@ -1,7 +1,7 @@
 /**
  * beforeLeave guards — navigation blocking and removal semantics.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { mockHistory, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -38,7 +38,7 @@ describe('beforeLeave', () => {
     await router.navigate({ path: '/page' });
 
     expect(handler).not.toHaveBeenCalled();
-    expect(router.state.location.pathname).toBe('/');
+    expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
   });
 
@@ -76,7 +76,7 @@ describe('beforeLeave', () => {
     let pathnameAtBlockTime = '';
 
     router.beforeLeave(async () => {
-      pathnameAtBlockTime = router.state.location.pathname;
+      pathnameAtBlockTime = router.getSnapshot().location.pathname;
 
       return false;
     });
@@ -152,9 +152,136 @@ describe('beforeLeave', () => {
 
     await settle();
 
-    expect(router.state.location.pathname).toBe('/');
+    expect(router.getSnapshot().location.pathname).toBe('/');
     expect(handler).not.toHaveBeenCalled();
     expect(mockHistory.replaceState).toHaveBeenCalledWith(null, '', '/');
+    router.dispose();
+  });
+});
+
+describe('per-route onLeave', () => {
+  it('blocks navigation when the route onLeave returns false', async () => {
+    const handler = vi.fn();
+    const history = createMemoryHistory('/home');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { onLeave: async () => false, path: '/home' },
+        page: { handler, path: '/page' },
+      },
+    });
+
+    await settle();
+    await router.navigate({ path: '/page' });
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(router.getSnapshot().location.pathname).toBe('/home');
+    router.dispose();
+  });
+
+  it('allows navigation when the route onLeave returns true', async () => {
+    const handler = vi.fn();
+    const history = createMemoryHistory('/home');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { onLeave: async () => true, path: '/home' },
+        page: { handler, path: '/page' },
+      },
+    });
+
+    await settle();
+    await router.navigate({ path: '/page' });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    router.dispose();
+  });
+
+  it('per-route onLeave only fires when that route is currently matched', async () => {
+    const onLeave = vi.fn(async () => false);
+    const handler = vi.fn();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        other: { onLeave, path: '/other' },
+        page: { handler, path: '/page' },
+      },
+    });
+
+    await settle();
+
+    // Navigate from / to /page — onLeave on /other should NOT fire.
+    await router.navigate({ path: '/page' });
+
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(1);
+    router.dispose();
+  });
+
+  it('per-route onLeave fires before global beforeLeave', async () => {
+    const order: string[] = [];
+    const history = createMemoryHistory('/home');
+    const router = createRouter({
+      history,
+      routes: {
+        home: {
+          onLeave: async () => {
+            order.push('route');
+
+            return true;
+          },
+          path: '/home',
+        },
+        other: { path: '/other' },
+      },
+    });
+
+    await settle();
+    router.beforeLeave(async () => {
+      order.push('global');
+
+      return true;
+    });
+    await router.navigate({ path: '/other' });
+
+    expect(order).toEqual(['route', 'global']);
+    router.dispose();
+  });
+
+  it('per-route onLeave fires leaf-to-root for nested routes', async () => {
+    const order: string[] = [];
+    const history = createMemoryHistory('/parent/child');
+    const router = createRouter({
+      history,
+      routes: {
+        other: { path: '/other' },
+        parent: {
+          children: {
+            child: {
+              onLeave: async () => {
+                order.push('child');
+
+                return true;
+              },
+              path: 'child',
+            },
+          },
+          onLeave: async () => {
+            order.push('parent');
+
+            return true;
+          },
+          path: '/parent',
+        },
+      },
+    });
+
+    await settle();
+    await router.navigate({ path: '/other' });
+
+    expect(order).toEqual(['child', 'parent']); // leaf fires before root
     router.dispose();
   });
 });

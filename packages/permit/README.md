@@ -4,7 +4,7 @@ package: permit
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, route, wired]
-exports: [createPermit, owns]
+exports: [createPermit, owns, WILDCARD, ANONYMOUS]
 ---
 
 # @vielzeug/permit
@@ -18,7 +18,7 @@ exports: [createPermit, owns]
 
 **Package:** `@vielzeug/permit` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createPermit`, `owns`
+**Key exports:** `createPermit`, `owns`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 
@@ -42,7 +42,8 @@ yarn add @vielzeug/permit
 import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
 const permit = createPermit<'read' | 'update', { authorId: string }>([
-  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow' },
+  // Multi-role rule: viewer and editor can both read
+  { role: ['viewer', 'editor'], resource: 'posts', action: 'read',   effect: 'allow' },
   {
     role: 'editor',
     resource: 'posts',
@@ -50,19 +51,25 @@ const permit = createPermit<'read' | 'update', { authorId: string }>([
     effect: 'allow',
     when: owns('authorId'),
   },
+  // High-priority deny overrides any allow rule for blocked principals
   { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
+  // Anonymous visitors can read posts
   { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
-  { role: WILDCARD, resource: 'status', action: 'read', effect: 'allow' },
 ]);
 
 const principal = { id: 'u1', roles: ['editor'] };
 
-const bound = permit.forUser(principal);
-
+// Direct checks
 permit.can(principal, 'posts', 'read');
 permit.can(principal, 'posts', 'update', { authorId: 'u1' });
-bound.can('status', 'read');
+permit.can(null, 'posts', 'read'); // anonymous
+
+// Principal-bound view — principal is snapshotted at bind time
+const bound = permit.forUser(principal);
+
+bound.can('posts', 'read');
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.explain('posts', 'update', { authorId: 'u2' });
 ```
 

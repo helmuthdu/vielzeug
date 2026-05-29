@@ -5,9 +5,41 @@ description: Fixed and variable heights, measurement, programmatic scrolling, an
 
 [[toc]]
 
-::: tip New to Scroll?
-Start with the [Overview](./index.md) for installation and a quick introduction, then come back here for in-depth patterns.
-:::
+## Basic Usage
+
+Render only visible rows by passing a scroll container, a total item count, and a size estimate. Scroll calls `onChange` with the visible window whenever it changes.
+
+```ts
+import { createVirtualizer } from '@vielzeug/scroll';
+
+const scrollEl = document.querySelector<HTMLElement>('.scroll-container')!;
+const listEl = document.querySelector<HTMLElement>('.list')!;
+
+const virt = createVirtualizer(scrollEl, {
+  count: 10_000,
+  estimateSize: 36,
+  onChange: (virtualItems, totalSize) => {
+    listEl.style.height = `${totalSize}px`;
+    listEl.innerHTML = '';
+
+    for (const item of virtualItems) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
+      el.textContent = `Row ${item.index}`;
+      listEl.appendChild(el);
+    }
+  },
+});
+
+// Cleanup
+virt.destroy();
+```
+
+```html
+<div class="scroll-container" style="height:400px;overflow:auto;position:relative;">
+  <div class="list" style="position:relative;"></div>
+</div>
+```
 
 ## DOM Layout Requirements
 
@@ -51,8 +83,7 @@ const domVirtualList = createDomVirtualList<Option>({
   estimateSize: 36,
   gap: 6,
   getItemKey: (_index, option) => option.value,
-  getListElement: () => listboxEl,
-  getScrollElement: () => dropdownEl,
+  listElement: listboxEl,
   overscan: { start: 4, end: 4 },
   render: ({ items, listEl, totalSize, virtualItems }) => {
     listEl.style.height = `${totalSize}px`;
@@ -70,6 +101,7 @@ const domVirtualList = createDomVirtualList<Option>({
       listEl.appendChild(row);
     }
   },
+  scrollElement: dropdownEl,
 });
 
 // Keep this in sync when options or open state change
@@ -87,6 +119,20 @@ domVirtualList.destroy();
 ```
 
 For variable-height rows, pass `getItemKey` whenever the same logical items can be reordered, filtered, or reinserted. Without stable keys, `createDomVirtualList` clears measured heights on each `setItems()` call by design.
+
+When multiple sizes are available at once (e.g., from a `ResizeObserver` batch), use `measureBatch` to coalesce them into a single rebuild:
+
+```ts
+domVirtualList.measureBatch(
+  entries.map((e) => ({ index: Number(e.target.dataset.index), size: e.contentRect.height })),
+);
+```
+
+When the DOM is rebuilt — for example, a portal remounts — swap the elements live with `setTarget` rather than destroying and recreating the controller:
+
+```ts
+domVirtualList.setTarget(newScrollEl, newListEl);
+```
 
 Use `domVirtualList.invalidate()` when many row heights changed and you want to discard all cached measurements.
 
@@ -164,6 +210,46 @@ const virt = createVirtualizer(scrollEl, {
 ::: tip Measurement is idempotent
 `measure(index, height)` is a no-op when the new height matches the current effective height (measured or estimated). It is safe to call on every render without triggering unnecessary rebuilds.
 :::
+
+## Variable Heights — Batch Measurement
+
+When a `ResizeObserver` fires with multiple entries at once, use `measureBatch()` to apply all sizes in a single offset rebuild instead of triggering one rebuild per `measure()` call.
+
+```ts
+const observer = new ResizeObserver((entries) => {
+  virt.measureBatch(
+    entries
+      .filter((e) => e.target instanceof HTMLElement && e.target.dataset.index)
+      .map((e) => ({
+        index: Number((e.target as HTMLElement).dataset.index),
+        size: e.contentRect.height,
+      })),
+  );
+});
+
+// Observe each rendered row
+for (const item of virt.items) {
+  const el = listEl.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
+  if (el) observer.observe(el);
+}
+```
+
+## Reacting to Individual Size Changes
+
+Use `onMeasure` when you need to know exactly which item changed size and by how much — for example, to sync an external size cache or to animate a row expansion.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: rows.length,
+  estimateSize: 40,
+  onMeasure: (index, oldSize, newSize) => {
+    console.log(`item ${index}: ${oldSize ?? 'unmeasured'} → ${newSize}px`);
+  },
+  onChange: render,
+});
+```
+
+`onMeasure` fires once per item per distinct size change. It does not fire when `measure()` is called with a size identical to the current effective height.
 
 ## Overscan
 

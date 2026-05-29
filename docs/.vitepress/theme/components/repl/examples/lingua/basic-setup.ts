@@ -11,9 +11,9 @@ const i18n = createI18n({
 })
 
 console.log('EN:', i18n.t('hello'))
-console.log(i18n.t('welcome', { vars: { name: 'Alice' } }))
+console.log(i18n.t('welcome', { name: 'Alice' }))
 await i18n.setLocale('es')
 console.log('ES:', i18n.t('hello'))
-console.log(i18n.t('welcome', { vars: { name: 'Alice' } }))`,
+console.log(i18n.t('welcome', { name: 'Alice' }))`,
   name: 'Basic Setup - Initialize i18n',
 };

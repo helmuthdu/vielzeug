@@ -1,15 +1,17 @@
 ---
-title: 'Sieve Examples — Unions'
-description: 'Union, intersect, and variant examples with sieve.'
+title: 'Sieve Examples — Unions, Intersects, and Variants'
+description: 'Union, intersect, and variant example for @vielzeug/sieve.'
 ---
 
-## Union and variant examples
+## Unions, Intersects, and Variants
 
 ### Problem
 
 Model polymorphic payloads, IDs that can arrive in multiple formats, and discriminated events without losing runtime validation or output typing.
 
-### Runnable Example
+### Solution
+
+Use `s.union()` for value-level branching, `s.intersect()` to merge multiple object shapes, and `s.variant()` for discriminated-union dispatch on a known tag field.
 
 ```ts
 import { s } from '@vielzeug/sieve';
@@ -42,22 +44,17 @@ const ActionSchema = s.variant('type', {
 
 ActionSchema.safeParse({ type: 'create', name: 'A', extra: true }); // fails (strict object mode)
 
+// TypeScript enum — extract values into a tuple for s.enum()
 enum Status {
   Draft = 'draft',
   Published = 'published',
 }
 
-const StatusSchema = s.nativeEnum(Status);
+const StatusSchema = s.enum(Object.values(Status) as [string, ...string[]]);
 StatusSchema.parse(Status.Draft);
 ```
 
-### Expected Output
-
-- `union()` returns the first successful branch result.
-- `intersect()` requires every branch to pass and merges object outputs from successful branches.
-- `variant()` chooses one object branch by discriminator instead of trying every branch.
-
-### Common Pitfalls
+### Pitfalls
 
 - Ordering permissive union branches before strict branches.
 - Assuming intersection merges incompatible values automatically.

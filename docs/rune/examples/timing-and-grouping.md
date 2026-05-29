@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — Timing and Grouping'
-description: 'Timing and Grouping examples for rune.'
+description: 'Timing and Grouping example for @vielzeug/rune.'
 ---
 
 ## Timing and Grouping
@@ -10,6 +10,8 @@ description: 'Timing and Grouping examples for rune.'
 You need to measure how long a code block takes and group the related log entries so they are easy to correlate in output — without sprinkling `Date.now()` calls across the codebase.
 
 ### Solution
+
+Use `time(label, fn)` to measure execution and `groupCollapsed(label, fn)` to nest related log lines under a collapsible group in the console.
 
 ```ts
 import { Rune } from '@vielzeug/rune';
@@ -24,12 +26,13 @@ const result = await Rune.groupCollapsed('Checkout', async () => {
 
 ### Pitfalls
 
-- `console.time()`/`console.timeEnd()` share a global namespace. Two concurrent operations using the same label will interfere. Use unique labels (e.g., include a request ID) per measurement.
-- The timer measures wall-clock time, not CPU time. Event-loop blocking is indistinguishable from a long async wait. Use `performance.now()` for higher-precision measurements.
-- Log grouping is a transport concern. Plain text transports output group entries as flat lines with no visual nesting — only console-based or structured transports render groups.
+- `time()` always emits at `debug` level. If the logger's `logLevel` is above `debug`, the timer still runs but no entry is emitted. Set `logLevel: 'debug'` (or `'off'` to suppress without disabling the callback) when capturing timing data.
+- `time()` measures wall-clock time via `performance.now()`. For async functions, it covers total elapsed time including I/O wait — not CPU time. Long I/O waits will inflate the result.
+- `group()` and `groupCollapsed()` are console-only — they visually nest output in `consoleTransport`. Other transports (remote, JSON, batch) receive entries as normal flat events with no grouping semantics.
 
 ### Related
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
+- [Request Timing (Courier)](/courier/examples/request-middleware)

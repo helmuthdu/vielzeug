@@ -197,10 +197,18 @@ describe('createI18n', () => {
       expect(i18n.t('hello')).toBe('Hello');
     });
 
-    test('falls back to "en" for a string that Intl.getCanonicalLocales rejects', () => {
-      // Strings with spaces or illegal characters are invalid BCP 47 tags.
-      // canon() returns 'en' rather than storing arbitrary strings as locale keys.
-      expect(createI18n({ locale: 'not a valid locale' }).locale).toBe('en');
+    test('throws for an invalid BCP 47 locale tag at construction', () => {
+      expect(() => createI18n({ locale: 'not a valid locale' })).toThrow(
+        '[lingua/E004] Invalid BCP 47 locale tag: "not a valid locale".',
+      );
+    });
+
+    test('throws when setLocale receives an invalid locale tag', async () => {
+      await expect(createI18n().setLocale('not_valid')).rejects.toThrow('[lingua/E004]');
+    });
+
+    test('throws when register receives an invalid locale tag', () => {
+      expect(() => createI18n().register('not_valid', { hello: 'Hi' })).toThrow('[lingua/E004]');
     });
   });
 
@@ -807,12 +815,144 @@ describe('createI18n', () => {
       expect(nav.t('home')).toBe('Home');
       expect(msgs.tp('inbox', 1)).toBe('One message');
     });
+  });
 
-    test('returns the same object reference for repeated calls with the same prefix', () => {
-      const i18n = createI18n({ catalogs });
+  // ─── merge() ────────────────────────────────────────────────────────────────
 
-      expect(i18n.scope('nav')).toBe(i18n.scope('nav'));
-      expect(i18n.scope('messages')).toBe(i18n.scope('messages'));
+  describe('merge()', () => {
+    test('adds new keys to an existing static catalog', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await i18n.merge('en', { world: 'World' });
+      expect(i18n.t('hello')).toBe('Hello');
+      expect(i18n.t('world')).toBe('World');
+    });
+
+    test('overrides existing keys with merged values', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await i18n.merge('en', { hello: 'Hi' });
+      expect(i18n.t('hello')).toBe('Hi');
+    });
+
+    test('creates a new catalog when the locale is not yet registered', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await i18n.merge('fr', { hello: 'Bonjour' });
+      expect(i18n.getSupportedLocales()).toContain('fr');
+    });
+
+    test('accepts an async loader as the merge source', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await i18n.merge('en', async () => ({ world: 'World' }));
+      expect(i18n.t('world')).toBe('World');
+    });
+
+    test('supports nested message objects and preserves sibling keys', async () => {
+      const i18n = createI18n({ catalogs: { en: { nav: { home: 'Home' } } } });
+
+      await i18n.merge('en', { footer: { contact: 'Contact' }, nav: { about: 'About' } });
+      expect(i18n.t('nav.home')).toBe('Home');
+      expect(i18n.t('nav.about')).toBe('About');
+      expect(i18n.t('footer.contact')).toBe('Contact');
+    });
+
+    test('notifies subscribers after merging into the active locale', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } }, locale: 'en' });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      await i18n.merge('en', { world: 'World' });
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    test('does not notify subscribers when merging into an inactive locale', async () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
+        locale: 'en',
+      });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      await i18n.merge('fr', { world: 'Monde' });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    test('waits for a pending dynamic load before merging, preserving base keys', async () => {
+      let loaderCalled = 0;
+      const i18n = createI18n({
+        catalogs: {
+          en: { hello: 'Hello' },
+          fr: () => {
+            loaderCalled++;
+
+            return Promise.resolve({ hello: 'Bonjour' });
+          },
+        },
+        locale: 'en',
+      });
+
+      await i18n.merge('fr', { world: 'Monde' });
+
+      // Confirms merge triggered preload() for the dynamic locale.
+      expect(loaderCalled).toBe(1);
+
+      await i18n.setLocale('fr');
+      expect(i18n.t('hello')).toBe('Bonjour');
+      expect(i18n.t('world')).toBe('Monde');
+    });
+
+    test('concurrent merge() calls both apply their keys', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await Promise.all([i18n.merge('en', { a: 'A' }), i18n.merge('en', { b: 'B' })]);
+      expect(i18n.t('hello')).toBe('Hello');
+      expect(i18n.t('a')).toBe('A');
+      expect(i18n.t('b')).toBe('B');
+    });
+
+    test('register() after merge() fully replaces the catalog, discarding merged keys', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } }, locale: 'en' });
+
+      await i18n.merge('en', { world: 'World' });
+      expect(i18n.t('world')).toBe('World');
+
+      i18n.register('en', { hello: 'Hi' });
+      // Merged key is gone — register() is always a full replacement.
+      expect(i18n.t('hello')).toBe('Hi');
+      expect(i18n.t('world')).toBe('world'); // falls through to onMissing (returns key)
+    });
+
+    test('notifies subscribers and resolves via fallback when merging into a fallback locale', async () => {
+      const i18n = createI18n({
+        catalogs: { en: {}, fr: {} },
+        fallback: 'fr',
+        locale: 'en',
+      });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      await i18n.merge('fr', { extra: 'Supplément' });
+
+      // fr is in the active fallback chain — subscribers must be notified.
+      expect(listener).toHaveBeenCalledTimes(1);
+      // Key is reachable through the fallback chain.
+      expect(i18n.t('extra')).toBe('Supplément');
+    });
+
+    test('rejects when the source loader throws and leaves catalog unchanged', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await expect(i18n.merge('en', () => Promise.reject(new Error('network')))).rejects.toThrow('network');
+      // Catalog must be unchanged after a failed merge.
+      expect(i18n.t('hello')).toBe('Hello');
+    });
+
+    test('throws for an invalid locale tag', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      await expect(i18n.merge('not_valid', { hello: 'Hi' })).rejects.toThrow('[lingua/E004]');
     });
   });
 

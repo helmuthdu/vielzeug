@@ -1,45 +1,45 @@
 ---
-description: Typed local and remote data sources for pagination, filtering, sorting, and search.
+description: Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
 package: sourcerer
 category: data
-keywords: [pagination, filtering, sorting, search, data-source, query, remote, local]
+keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
 related: [courier, ripple, route]
-exports: [createLocalSource, createRemoteSource]
+exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals]
 ---
 
-# /sourcerer
+# @vielzeug/sourcerer
 
-> Typed local and remote data sources for pagination, filtering, sorting, and search.
+> Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
 
-[![npm version](https://img.shields.io/npm/v//sourcerer)](https://www.npmjs.com/package//sourcerer) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/sourcerer)](https://www.npmjs.com/package/@vielzeug/sourcerer) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/sourcerer` &nbsp;·&nbsp; **Category:** Data
+**Package:** `@vielzeug/sourcerer` &nbsp;·&nbsp; **Category:** Data
 
-**Key exports:** `createLocalSource`, `createRemoteSource`
+**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`
 
-**When to use:** Typed local and remote data sources for pagination, filtering, sorting, and search.
+**When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
 
 **Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/route](https://vielzeug.dev/route/)
 
 </details>
 
-`/sourcerer` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/sourcerer` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /sourcerer
-npm install /sourcerer
-yarn add /sourcerer
+pnpm add @vielzeug/sourcerer
+npm install @vielzeug/sourcerer
+yarn add @vielzeug/sourcerer
 ```
 
 ## Quick Start
 
 ```ts
-import { createLocalSource } from '/sourcerer';
+import { createLocalSource } from '@vielzeug/sourcerer';
 
 const source = createLocalSource(
   [
@@ -50,11 +50,34 @@ const source = createLocalSource(
   { limit: 2 },
 );
 
-source.searchNow('a');
-
-console.log(source.current);
-console.log(source.meta.pageNumber);
+await source.searchNow('a');
+console.log(source.current);       // [{ id: 1, name: 'Ada' }]
+console.log(source.meta.pageNumber); // 1
 ```
+
+```ts
+import { createRemoteSource } from '@vielzeug/sourcerer';
+
+const source = createRemoteSource({
+  fetch: async ({ limit, page, search }, signal) => {
+    const res = await fetch(`/api/users?page=${page}&limit=${limit}&q=${search ?? ''}`, { signal });
+    return res.json(); // { items: User[], total: number }
+  },
+  limit: 20,
+});
+
+await source.ready();
+console.log(source.current, source.meta.totalItems);
+```
+
+## Sources at a Glance
+
+| Factory | Data model | Navigation |
+|---|---|---|
+| `createLocalSource()` | In-memory array | Page number |
+| `createRemoteSource()` | Async server fetch | Page number |
+| `createCursorSource()` | Async server fetch | Cursor tokens (next/prev) |
+| `createInfiniteSource()` | Async server fetch | Append (load more) |
 
 ## Documentation
 

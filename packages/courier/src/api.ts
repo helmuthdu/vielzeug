@@ -50,6 +50,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     full: string,
     m: string,
     responseType: HttpRequestConfig['responseType'],
+    schema?: { parse(data: unknown): unknown },
   ): Promise<T> {
     const signal = init.signal as AbortSignal | undefined;
     let res: Response;
@@ -75,7 +76,9 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     }
 
     try {
-      return (await parseResponse(res, responseType ?? 'auto')) as T;
+      const raw = await parseResponse(res, responseType ?? 'auto');
+
+      return (schema ? schema.parse(raw) : raw) as T;
     } catch (err) {
       throw HttpError.fromCause(err, m, full, signal);
     }
@@ -94,13 +97,12 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
       body,
       dedupe = true,
       dedupeKey,
+      fetchInit,
       headers,
-      params, // consumed by buildUrl
-      query, // consumed by buildUrl
       responseType,
+      schema,
       signal: extSignal,
       timeout: cfgTimeout,
-      ...rest // clean RequestInit passthrough
     } = config as HttpRequestConfig;
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
@@ -119,8 +121,8 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     const combinedExt = extSignal ? AbortSignal.any([extSignal, requestAc.signal]) : requestAc.signal;
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combinedExt);
 
-    const init = buildRequestInit(m, mergedHeaders, body, signal, rest);
-    const p = execute<T>(init, full, m, responseType);
+    const init = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
+    const p = execute<T>(init, full, m, responseType, schema);
 
     if (requestDedupeKey) inFlight.set(requestDedupeKey, p);
 

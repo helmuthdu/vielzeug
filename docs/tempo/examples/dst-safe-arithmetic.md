@@ -1,59 +1,52 @@
 ---
-title: DST-safe Arithmetic
-description: Handling daylight-saving time transitions with Tempo arithmetic.
+title: 'Tempo Examples — DST-Safe Arithmetic'
+description: 'DST-safe date arithmetic example for @vielzeug/tempo.'
 ---
 
-When adding or subtracting time, DST transitions are handled automatically.
+## DST-Safe Arithmetic
 
-## Spring Forward (Gap)
+### Problem
 
-In North America, on March 8, 2026, at 2:00 AM EST, clocks spring forward to 3:00 AM EDT.
+Standard millisecond math with `Date` loses DST context. Adding one hour to a wall-clock time just before the DST "spring forward" produces the wrong clock time — it lands in the skipped hour gap. The same issue affects "fall back" transitions, where the same wall-clock hour appears twice.
+
+### Solution
+
+Use `shift()` to add or subtract duration. It delegates to the Temporal calendar system, which resolves DST transitions correctly using the target timezone.
 
 ```ts
 import { difference, shift, toInstant, toZoned } from '@vielzeug/tempo';
 
-// One hour before the transition
+// Spring forward: March 8, 2026 — clocks jump 1:59 AM → 3:00 AM EDT
 const before = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
-
-// Add 1 hour — should jump to 3:30 EDT (not 2:30)
 const after = shift(before, { hours: 1 });
+// → '2026-03-08T03:30:00-04:00[America/New_York]'  (skips the gap)
 
-console.log(after.toString());
-// → 2026-03-08T03:30:00-04:00[America/New_York]
+// Fall back: the 1:30 AM hour happens twice — use 'earlier' to pick the first
+const ambiguous = toInstant(Temporal.ZonedDateTime.from('2026-11-01T01:30:00-04:00[America/New_York]'));
+const first = toZoned(ambiguous, { tz: 'America/New_York', when: 'earlier' });
+// → '2026-11-01T01:30:00-04:00[America/New_York]'  (EDT, first occurrence)
 ```
 
-## Fall Back (Overlap)
+#### Comparing Across a DST Boundary
 
-In North America, on November 1, 2026, at 2:00 AM EDT, clocks fall back to 1:00 AM EST. The hour from 1:00–2:00 AM happens twice.
+`difference()` works correctly even when the range spans a DST transition.
 
 ```ts
-// First occurrence: 1:30 AM EDT
-const first = toInstant(Temporal.ZonedDateTime.from('2026-11-01T01:30:00-04:00[America/New_York]'));
+const lo = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
+const hi = Temporal.ZonedDateTime.from('2026-03-08T04:00:00-04:00[America/New_York]');
 
-// Convert to different representation
-const zoned = toZoned(first, { tz: 'America/New_York', when: 'earlier' });
-console.log(zoned.toString());
-// → 2026-11-01T01:30:00-04:00[America/New_York] (EDT, first occurrence)
+const duration = difference(lo, hi, { largestUnit: 'hour' });
+console.log(duration.toString()); // PT2H30M — correct wall-clock difference
 ```
 
-## Why This Matters
+### Pitfalls
 
-Without DST awareness, you'd calculate incorrect times:
+- Using `new Date(meeting.getTime() - 30 * 60_000)` when crossing a DST boundary produces the wrong wall-clock time. Always use `shift()` for calendar-aware arithmetic.
+- Passing `when: 'compatible'` (the default) during a DST gap silently selects the post-gap time. If you need a specific behavior (error on ambiguous times), use `when: 'reject'`.
+- `difference()` requires `tz` when `largestUnit` is a calendar unit like `'day'` or `'month'`. Omitting it throws when either input is a plain date.
 
-```ts
-// ❌ Wrong: Naive millisecond math
-const wrongReminder = new Date(meeting.getTime() - 30 * 60_000);
+### Related
 
-// ✅ Correct: Tempo handles DST
-const rightReminder = shift(meeting, { minutes: -30 }, { tz: 'America/New_York' });
-```
-
-## Compare Instants Across DST
-
-```ts
-const beforeDst = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
-const afterDst = Temporal.ZonedDateTime.from('2026-03-08T04:00:00-04:00[America/New_York]');
-
-const duration = difference(beforeDst, afterDst, { tz: 'America/New_York' });
-console.log(duration.toString()); // PT2H30M — correct!
-```
+- [Timezone Conversion](./timezone-conversion.md)
+- [API Reference — `shift()`](/tempo/api#shift-input-duration-options-temporal-zoneddatetime)
+- [API Reference — `difference()`](/tempo/api#difference-start-end-options-temporal-duration)

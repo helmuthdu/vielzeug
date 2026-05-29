@@ -1,5 +1,5 @@
 import { assert } from '../function/assert';
-import { seek } from '../object/seek';
+import { seek } from '../object/_seek';
 import { IS_STRING_ERROR_MSG, isString } from '../typed/isString';
 
 /**

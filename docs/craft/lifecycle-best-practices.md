@@ -19,17 +19,17 @@ define('counter-title', {
     const count = signal(0);
 
     effect(() => {
-      document.title = `Count: ${count.value}`;
+      document.title = 'Count: ' + count.value;
     });
 
-    return () => html`<button @click=${() => count.value++}>${count}</button>`;
+    return html`<button @click=${() => count.value++}>${count}</button>`;
   },
 });
 ```
 
 ## Run DOM Initialization with `onMounted()`
 
-Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order.
+Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order. Each callback is error-isolated.
 
 ```ts
 import { define, html, onMounted, ref, signal } from '@vielzeug/craft';
@@ -46,7 +46,7 @@ define('my-tabs', {
       }
     });
 
-    return () => html`
+    return html`
       <div ref=${containerRef}>
         <div role="tablist"><slot name="tabs"></slot></div>
         <div role="tabpanel"><slot name="panels"></slot></div>
@@ -79,37 +79,33 @@ define('focus-input', {
       return () => input.removeEventListener('keydown', onKeydown);
     });
 
-    return () => html`<input ref=${inputRef} />`;
+    return html`<input ref=${inputRef} />`;
   },
 });
 ```
 
 ## Keep Host Wiring Explicit
 
-Use one-liner host helpers for individual bindings and `host.bind(...)` for grouped bindings.
+Use `bind()` from the setup context for host bindings.
 
 ```ts
-import { computed, define, handle, html, signal } from '@vielzeug/craft';
+import { computed, define, html, onEvent, signal } from '@vielzeug/craft';
 
 define('toggle-host', {
-  setup(_props, { host }) {
+  setup(_props, { bind }) {
     const open = signal(false);
-    const expanded = computed(() => String(open.value));
 
-    host.bind({
-      attr: { 'aria-expanded': expanded, role: 'button', tabindex: 0 },
+    bind({
+      attr: { 'aria-expanded': () => String(open.value), role: 'button', tabindex: 0 },
       class: { 'is-open': open },
       on: { click: () => (open.value = !open.value) },
     });
 
-    handle(window, 'keydown', (e) => {
+    onEvent(window, 'keydown', (e) => {
       if (e.key === 'Escape') open.value = false;
     });
 
-    // handle() auto-registers cleanup when called inside setup()/scope.run().
-    // If you call it elsewhere, keep the returned cleanup function and dispose it manually.
-
-    return () => html`<slot></slot>`;
+    return html`<slot></slot>`;
   },
 });
 ```
@@ -119,3 +115,5 @@ define('toggle-host', {
 - Use `onCleanup(fn)` for component-owned teardown.
 - Use `onElement()` for per-element teardown.
 - Return cleanup from `onMounted()` when cleanup belongs to mount-time setup.
+- Use `onEvent()` for event listeners that should auto-cleanup.
+- Use `listen()` when you need manual lifecycle control.

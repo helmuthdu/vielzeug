@@ -1,6 +1,6 @@
 ---
 title: 'Worker Examples — React Integration'
-description: 'React Integration examples for worker.'
+description: 'React Integration example for @vielzeug/worker.'
 ---
 
 ## React Integration
@@ -76,15 +76,11 @@ export function SortedList({ data }: { data: number[] }) {
 
 ### Pitfalls
 
-- Creating `createWorkerPool` inside the component body (not in `useRef` or `useEffect`) spawns new Worker threads on every render.
-- `poolRef.current` is `null` between `useEffect` cleanup and the next setup. Guard calls with `poolRef.current?.run()` rather than the non-null assertion `poolRef.current!.run()`.
-- Workers do not share the main thread's module scope. Functions passed to the worker run in isolation — avoid closures that capture main-thread variables, as they are serialized and lose their references.
-- Creating workers without memoization causes unnecessary recreations.
+- Creating `createWorker` in the component body (not inside `useMemo`) spawns new Worker threads on every render. Always stabilize the reference with `useMemo` or `useRef`.
+- `worker` can be stale between effect cleanup and the next setup. Guard calls with optional chaining (`worker?.run()`) rather than the non-null assertion.
+- Workers run in an isolated scope — task functions cannot close over main-thread variables. Encode all required values into the input payload.
 
 ### Related
-- [Data Transformation Pipeline](./data-transformation-pipeline)
-- [Async Workflows (Ripple)](@vielzeug/ripple/examples/pattern-nextvalue-in-async-workflows)
 
-- [Cancellable Batch](./cancellable-batch.md)
-- [Data Transformation Pipeline](./data-transformation-pipeline.md)
-- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)
+- [Cancellable Batch](./cancellable-batch.md) — cancel tasks when the component unmounts
+- [Data Transformation Pipeline](./data-transformation-pipeline.md) — offloading CPU-bound dataset work

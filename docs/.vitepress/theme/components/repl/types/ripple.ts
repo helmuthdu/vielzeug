@@ -1,2 +1,109 @@
-export const rippleTypes =
-  "\ndeclare module '/ripple' {\n  export type CleanupFn = () => void;\n  export type EffectCallback = () => CleanupFn | void;\n  export type EqualityFn<T> = (a: T, b: T) => boolean;\n  export type ReactiveOptions<T> = { equals?: EqualityFn<T> };\n  export type WatchOptions<T> = { immediate?: boolean; equals?: EqualityFn<T> };\n\n  export interface Subscription {\n    (): void;\n    dispose(): void;\n    [Symbol.dispose](): void;\n  }\n\n  export interface ReadonlySignal<T> {\n    peek(): T;\n    subscribe(onStoreChange: () => void): Subscription;\n    readonly value: T;\n  }\n\n  export interface Signal<T> extends ReadonlySignal<T> {\n    update(fn: (current: T) => T): void;\n    value: T;\n  }\n\n  export interface ComputedSignal<T> extends ReadonlySignal<T> {\n    dispose(): void;\n    [Symbol.dispose](): void;\n  }\n\n  export interface ObservableObserver<T> {\n    next(value: T): void;\n  }\n\n  export interface ObservableLike<T> {\n    subscribe(observer: ObservableObserver<T> | ((value: T) => void)): { unsubscribe(): void };\n  }\n\n  export interface Store<T extends object> extends ReadonlySignal<T> {\n    patch(partial: Partial<T>): void;\n    update(fn: (state: T) => T): void;\n    reset(): void;\n  }\n\n  export interface Scope {\n    readonly run: <T>(fn: () => T) => T;\n    readonly dispose: () => void;\n    readonly [Symbol.dispose]: () => void;\n  }\n\n  export function toSubscription(dispose: () => void): Subscription;\n  export function signal<T>(initial: T, options?: ReactiveOptions<T>): Signal<T>;\n  export function computed<T>(fn: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;\n  export function batch<T>(fn: () => T): T;\n  export function effect(fn: EffectCallback): Subscription;\n  export function untrack<T>(fn: () => T): T;\n  export function readonly<T>(source: ReadonlySignal<T>): ReadonlySignal<T>;\n  export function toStore<T>(source: ReadonlySignal<T>): { subscribe(run: (value: T) => void): Subscription };\n  export function toObservable<T>(source: ReadonlySignal<T>): ObservableLike<T>;\n  export function onCleanup(fn: CleanupFn): void;\n  export function scope(setup?: () => void): Scope;\n  export function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;\n  export function watch<T>(source: () => T, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;\n  export function store<T extends object>(initial: T): Store<T>;\n  export function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;\n}\n";
+export const rippleTypes = `
+declare module '/ripple' {
+  // ── Primitive types ──────────────────────────────────────────────────────
+
+  export type CleanupFn = () => void;
+  export type EffectCallback = () => CleanupFn | void;
+  export type AsyncEffectCallback = (signal: AbortSignal) => Promise<CleanupFn | void>;
+  export type EqualityFn<T> = (a: T, b: T) => boolean;
+  export type ReactiveOptions<T> = { equals?: EqualityFn<T>; name?: string };
+  export type WatchOptions<T> = ReactiveOptions<T> & { immediate?: boolean };
+  export type EffectScheduler = 'sync' | 'microtask' | 'raf';
+
+  export type EffectOptions = {
+    maxIterations?: number;
+    name?: string;
+    scheduler?: EffectScheduler;
+    trace?: boolean;
+  };
+
+  export type BatchOptions = {
+    maxIterations?: number;
+  };
+
+  export type StateErrorCode =
+    | 'COMPUTED_CYCLE'
+    | 'DISPOSED_READ'
+    | 'DISPOSED_SCOPE'
+    | 'INFINITE_LOOP'
+    | 'INVALID_CLEANUP'
+    | 'INVALID_STORE';
+
+  // PathValue: resolves the type at a dot-separated path
+  export type PathValue<T, P extends string> =
+    P extends \`\${infer K}.\${infer Rest}\`
+      ? K extends keyof T
+        ? PathValue<T[K], Rest>
+        : never
+      : P extends keyof T
+        ? T[P]
+        : never;
+
+  // ── Core interfaces ───────────────────────────────────────────────────────
+
+  export interface Subscription {
+    (): void;
+    dispose(): void;
+    [Symbol.dispose](): void;
+  }
+
+  export interface ReadonlySignal<T> {
+    peek(): T;
+    subscribe(onStoreChange: () => void): Subscription;
+    map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U>;
+    filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
+    filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
+    readonly value: T;
+  }
+
+  export interface Signal<T> extends ReadonlySignal<T> {
+    update(fn: (current: T) => T): void;
+    dispose(): void;
+    [Symbol.dispose](): void;
+    value: T;
+  }
+
+  export interface ComputedSignal<T> extends ReadonlySignal<T> {
+    dispose(): void;
+    [Symbol.dispose](): void;
+  }
+
+  export interface Store<T extends object> extends ReadonlySignal<T> {
+    readonly value: T;
+    lens<P extends string>(path: P): Signal<PathValue<T, P>>;
+    patch(partial: Partial<T>): void;
+    update(fn: (state: T) => T): void;
+    reset(): void;
+  }
+
+  export interface Scope {
+    readonly run: <T>(fn: () => T) => T;
+    readonly dispose: () => void;
+    readonly [Symbol.dispose]: () => void;
+  }
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+
+  export class StateError extends Error {
+    readonly code: StateErrorCode;
+  }
+
+  // ── Functions ─────────────────────────────────────────────────────────────
+
+  export function signal<T>(initial: T, options?: ReactiveOptions<T>): Signal<T>;
+  export function computed<T>(fn: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;
+  export function effect(fn: EffectCallback, options?: EffectOptions): Subscription;
+  export function effectAsync(fn: AsyncEffectCallback, options?: { onError?: (err: unknown) => void }): Subscription;
+  export function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
+  export function watch<T>(source: () => T, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
+  export function batch<T>(fn: () => T, options?: BatchOptions): T;
+  export function untrack<T>(fn: () => T): T;
+  export function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
+  export function onCleanup(fn: CleanupFn): void;
+  export function scope(): Scope;
+  export function store<T extends object>(initial: T, options?: ReactiveOptions<T>): Store<T>;
+  export function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
+  export function isComputed<T = unknown>(value: unknown): value is ComputedSignal<T>;
+  export function isStore<T extends object = Record<string, unknown>>(value: unknown): value is Store<T>;
+}
+`;

@@ -68,5 +68,4 @@ similarity(s1.toLowerCase(), s2.toLowerCase()); // 1
 ## See Also
 
 - [search](../array/search.md): Use similarity to perform fuzzy searches in arrays.
-- [seek](../object/seek.md): Use similarity to find values in deep objects.
 - [truncate](./truncate.md): Shorten long strings.

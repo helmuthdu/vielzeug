@@ -2,7 +2,7 @@
  * Router state — error status, historyState in location, and error reporting
  * via the onError callback.
  */
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 /** Global error boundary that swallows exceptions so the router settles. */
@@ -35,8 +35,8 @@ describe('error status', () => {
 
     await settle();
 
-    expect(router.state.status).toBe('error');
-    expect(router.state.error).toBe(thrown);
+    expect(router.getSnapshot().status).toBe('error');
+    expect(router.getSnapshot().error).toBe(thrown);
     router.dispose();
   });
 
@@ -57,18 +57,18 @@ describe('error status', () => {
     });
 
     await settle();
-    expect(router.state.status).toBe('error');
+    expect(router.getSnapshot().status).toBe('error');
 
     await router.navigate({ path: '/ok' });
 
-    expect(router.state.status).toBe('idle');
-    expect(router.state.error).toBeUndefined();
+    expect(router.getSnapshot().status).toBe('idle');
+    expect(router.getSnapshot().error).toBeUndefined();
     router.dispose();
   });
 });
 
 describe('historyState in location', () => {
-  it('exposes history entry state on router.state.location.historyState', async () => {
+  it('exposes history entry state on router.getSnapshot().location.historyState', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -78,7 +78,7 @@ describe('historyState in location', () => {
     await settle();
     await router.navigate({ path: '/page' }, { state: { from: 'home' } });
 
-    expect(router.state.location.historyState).toEqual({ from: 'home' });
+    expect(router.getSnapshot().location.historyState).toEqual({ from: 'home' });
     router.dispose();
   });
 
@@ -167,6 +167,32 @@ describe('onError callback', () => {
     await expect(router.preload('fail')).rejects.toThrow('prefetch fail');
 
     expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'preload' });
+    router.dispose();
+  });
+});
+
+describe('subscriber notification count', () => {
+  it('notifies subscribers exactly twice (loading then error) when a data loader throws', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      middleware: [swallow],
+      routes: {
+        home: {
+          data: async () => {
+            throw new Error('boom');
+          },
+          path: '/',
+        },
+      },
+    });
+    const statuses: string[] = [];
+
+    router.subscribe((s) => statuses.push(s.status));
+
+    await settle();
+
+    expect(statuses).toEqual(['loading', 'error']);
     router.dispose();
   });
 });

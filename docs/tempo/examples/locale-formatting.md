@@ -1,130 +1,89 @@
 ---
-title: Locale Formatting
-description: Formatting times for different locales and languages with Tempo.
+title: 'Tempo Examples — Locale Formatting'
+description: 'Locale-aware date and time formatting example for @vielzeug/tempo.'
 ---
 
-Format times respecting user locale, language, and timezone.
+## Locale Formatting
 
-## Basic Locale Formatting
+### Problem
+
+Displaying dates and times for international users requires locale-specific formats, calendar systems, and timezone offsets. `Intl.DateTimeFormat` handles this but requires verbose configuration and careful key management for caching.
+
+### Solution
+
+Use `format()` with the `pattern` shorthand for common layouts, or pass `intl` directly for a custom `Intl.DateTimeFormatOptions`. Tempo manages formatter caching internally.
 
 ```ts
-import { formatHuman, formatInstant, formatRange, formatRelative } from '@vielzeug/tempo';
+import { format, formatInstant, formatRange, formatRelative } from '@vielzeug/tempo';
 
 const time = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
-// English (US)
-formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
-// → "3/21/2026, 10:15 AM"
+// Preset patterns
+format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });   // '3/21/2026, 10:15 AM'
+format(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' }); // '21.3.2026, 11:15'
+format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });   // '2026/3/21 19:15'
 
-// German
-formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
-// → "21.3.2026, 11:15"
+// All preset patterns
+format(time, { pattern: 'medium',    locale: 'en-GB', tz: 'UTC' }); // '21 Mar 2026, 10:15'
+format(time, { pattern: 'long',      locale: 'en-GB', tz: 'UTC' }); // 'Saturday, 21 March 2026 at 10:15:30'
+format(time, { pattern: 'date-only', locale: 'en-GB', tz: 'UTC' }); // '21/03/2026'
+format(time, { pattern: 'time-only', locale: 'en-GB', tz: 'UTC' }); // '10:15'
 
-// Japanese
-formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
-// → "2026/3/21 19:15"
+// Stable UTC instant string (for APIs and logs)
+formatInstant(time); // '2026-03-21T10:15:30Z'
 ```
 
-## All Format Patterns
+#### Escape Hatch: Full Intl Spec
+
+When presets do not fit, pass `intl` directly. The `intl` option takes full precedence over `pattern`.
 
 ```ts
-const time = Temporal.Instant.from('2026-03-21T10:15:30Z');
-
-const patterns = ['short', 'medium', 'long', 'date-only', 'time-only'] as const;
-
-for (const pattern of patterns) {
-  const formatted = formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
-  console.log(`${pattern.padEnd(10)} ${formatted}`);
-}
-
-console.log(`iso       ${formatInstant(time)}`);
-
-// Output:
-// short      21/03/2026, 10:15
-// medium     21 Mar 2026, 10:15
-// long       Saturday, 21 March 2026 at 10:15:30
-// iso        2026-03-21T10:15:30Z
-// date-only  21/03/2026
-// time-only  10:15
-```
-
-## Advanced: Escape Hatch to Intl
-
-Use the `intl` option for custom `Intl.DateTimeFormatOptions`:
-
-```ts
-formatHuman(time, {
+format(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
-  intl: {
-    dateStyle: 'short',
-    timeStyle: 'short',
-    weekday: 'long',
-    hour12: false,
-  },
+  intl: { dateStyle: 'short', timeStyle: 'short', weekday: 'long', hour12: false },
 });
-// → "Samstag, 21.3.2026, 11:15"
+// → 'Samstag, 21.3.2026, 11:15'
 ```
 
-## Range Formatting
-
-Format a span of time:
+#### Range Formatting
 
 ```ts
-const start = Temporal.Instant.from('2026-03-21T10:00:00Z');
-const end = Temporal.Instant.from('2026-03-21T12:00:00Z');
+import { formatRange } from '@vielzeug/tempo';
 
-formatRange(start, end, {
-  pattern: 'short',
-  locale: 'en-US',
-  tz: 'America/New_York',
-});
-// → "3/21/2026, 6:00 AM – 8:00 AM"
+formatRange(
+  Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  { pattern: 'short', locale: 'en-US', tz: 'America/New_York' },
+);
+// → '3/21/2026, 6:00 AM – 8:00 AM'
 ```
 
-## Relative Formatting
-
-Generate UX-friendly relative labels (for example, "in 2 hours" or "3 days ago"):
+#### Relative Formatting
 
 ```ts
+import { formatRelative } from '@vielzeug/tempo';
+
 const base = Temporal.Instant.from('2026-03-21T10:00:00Z');
 
-formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
-  base,
-  locale: 'en-US',
-  numeric: 'always',
-});
-// → "in 2 hours"
+formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), { base, locale: 'en-US', numeric: 'always' });
+// → 'in 2 hours'
 
-formatRelative(Temporal.Instant.from('2026-03-19T10:00:00Z'), {
-  base,
-  locale: 'en-US',
-  style: 'long',
-});
-// → "2 days ago"
+formatRelative(Temporal.Instant.from('2026-03-19T10:00:00Z'), { base, locale: 'en-US' });
+// → '2 days ago'
 
-formatRelative(Temporal.Instant.from('2026-03-21T10:00:45Z'), {
-  base,
-  locale: 'de-DE',
-  numeric: 'auto',
-});
-// → "in 45 Sekunden"
+formatRelative(Temporal.Instant.from('2026-03-21T10:00:45Z'), { base, locale: 'de-DE', numeric: 'auto' });
+// → 'in 45 Sekunden'
 ```
 
-## Dynamic Locale Selection
+### Pitfalls
 
-```ts
-function formatUserTime(time: Temporal.Instant, userLocale: string, userTz: string) {
-  return formatHuman(time, {
-    pattern: 'long',
-    locale: userLocale,
-    tz: userTz,
-  });
-}
+- When both `pattern` and `intl` are provided, `intl` wins silently. Do not pass `pattern` expecting it to act as a fallback when `intl` is present.
+- `formatRelative()` only accepts `Temporal.Instant` or `Temporal.ZonedDateTime` inputs. Passing a `PlainDateTime` throws.
+- Locale strings must be valid BCP 47 tags. An invalid locale (e.g., `'english'`) may silently fall back to the system locale or throw depending on the runtime.
 
-console.log(formatUserTime(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'fr-FR', 'Europe/Paris'));
-// → "samedi 21 mars 2026 à 11:15:30"
+### Related
 
-console.log(formatUserTime(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'es-ES', 'Europe/Madrid'));
-// → "sábado, 21 de marzo de 2026, 11:15:30"
-```
+- [Timezone Conversion](./timezone-conversion.md)
+- [API Reference — `format()`](/tempo/api#format-input-options-string)
+- [API Reference — `formatRelative()`](/tempo/api#formatrelative-input-options-string)

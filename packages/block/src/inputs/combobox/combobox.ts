@@ -7,7 +7,7 @@ import {
   createComposite,
   createInteraction,
   toAbortSignal,
-  type OverlayCloseReason,
+  type DialogCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
 import { FIELD_SIZE_PRESET } from '../../shared/config';
@@ -20,8 +20,8 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { connectFormField } from '../shared/connect-form-field';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { connectFormField } from '../shared/use-field';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
 import componentStyles from './combobox.css?inline';
@@ -341,7 +341,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       }
     }
 
-    function closePopup(reason: OverlayCloseReason = 'programmatic') {
+    function closePopup(reason: DialogCloseReason = 'programmatic') {
       optionList.close(reason);
     }
 

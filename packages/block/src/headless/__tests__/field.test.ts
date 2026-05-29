@@ -184,6 +184,70 @@ describe('field controls', () => {
       expect(handle.disabled.value).toBe(true);
       expect(handle.assistive.value.helperText).toBe('Hint');
     });
+
+    it('removeValue removes a specific value without affecting others', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            disabled: signal(false),
+            multiple: signal(true),
+            prefix: 'choice-remove',
+            value: signal(['alpha', 'beta', 'gamma']),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.removeValue('beta');
+      expect(handle.selectedValues.value).toEqual(['alpha', 'gamma']);
+    });
+
+    it('clear resets selection to empty', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            disabled: signal(false),
+            multiple: signal(true),
+            prefix: 'choice-clear',
+            value: signal(['alpha', 'beta']),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.clear();
+      expect(handle.selectedValues.value).toEqual([]);
+      expect(handle.formValue.value).toBe('');
+    });
+
+    it('deduplicates values in multiple mode', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            disabled: signal(false),
+            multiple: signal(true),
+            prefix: 'choice-dedup',
+            value: signal(['alpha']),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.setValues(['alpha', 'alpha', 'beta']);
+      expect(handle.selectedValues.value).toEqual(['alpha', 'beta']);
+    });
   });
 
   describe('createAssistiveState()', () => {

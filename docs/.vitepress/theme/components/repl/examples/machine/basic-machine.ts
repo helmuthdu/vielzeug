@@ -5,14 +5,14 @@ const trafficMachine = defineMachine({
   initial: 'red',
   context: { cycles: 0 },
   states: {
-    red:    { on: { NEXT: [{ target: 'green' }] } },
-    green:  { on: { NEXT: [{ target: 'yellow' }] } },
+    red:    { on: { NEXT: { target: 'green' } } },
+    green:  { on: { NEXT: { target: 'yellow' } } },
     yellow: {
       on: {
-        NEXT: [{
+        NEXT: {
           target: 'red',
           actions: [assign(({ context }) => ({ cycles: context.cycles + 1 }))],
-        }],
+        },
       },
     },
   },

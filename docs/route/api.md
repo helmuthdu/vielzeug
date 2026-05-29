@@ -1,30 +1,34 @@
 ---
 title: Route — API Reference
-description: Complete API reference for the declarative Route router.
+description: Complete API reference for Route.
 ---
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol | Purpose | Execution mode | Common gotcha |
+| ------ | ------- | -------------- | ------------- |
+| `createRouter(options)` | Create a router from a route table | Sync | Initial navigation starts asynchronously in the constructor |
+| `createBrowserHistory()` | Create the default browser history driver | Sync | — |
+| `createMemoryHistory(initialPath?)` | Create an in-memory history driver | Sync | — |
+| `redirectTo(target, options?)` | Build redirect middleware | Sync (returns fn) | Does not call `next()` — always short-circuits the chain |
+| `router.navigate(target, options?)` | Navigate to a named route or raw path | Async | No-op when destination equals current URL unless `force: true` |
+| `router.getSnapshot()` | Return the current immutable route state | Sync | Does not subscribe — call `subscribe()` to react to changes |
+| `router.subscribe(listener)` | Register a listener for state changes | Sync (returns unsub) | Listener is **not** called immediately with current state |
+| `router.url(name, params?, query?)` | Build a URL for a named route | Sync | Throws if the route name is unknown |
+| `router.isActive(name, options?)` | Check if a named route matches the current URL | Sync | Reads `history.location` directly, not from snapshot |
+| `router.resolve(pathname)` | Resolve a pathname to a branch without side effects | Sync | Returns `null` for redirect routes |
+| `router.match(url, signal?)` | Resolve a URL to a full state including data loaders | Async | Lazy modules are resolved as a side effect |
+| `router.preload(name, params?)` | Eagerly run data loaders without navigating | Async | Results are discarded on the next navigation |
+| `router.beforeLeave(blocker)` | Register a global leave guard | Sync (returns unsub) | Fires after per-route `onLeave` guards |
+| `router.dispose()` | Remove listeners and shut down the router | Sync | Idempotent — safe to call multiple times |
 
 ## Package Entry Point
 
 | Import                | Purpose                |
 | --------------------- | ---------------------- |
 | `@vielzeug/route`   | Main exports and types |
-
-## API At a Glance
-
-| Symbol                                 | Purpose                                          |
-| -------------------------------------- | ------------------------------------------------ |
-| `createRouter({ routes, ...options })` | Create a router from a route table               |
-| `createBrowserHistory()`               | Create the default browser history driver        |
-| `createMemoryHistory(initialPath?)`    | Create an in-memory history driver (tests / non-browser) |
-| `redirectTo(target, options?)`         | Build redirect middleware for guard flows        |
-| `router.navigate({ name, ... })`       | Navigate by route name                           |
-| `router.navigate({ path })`            | Navigate by raw path target                      |
-| `router.url(name, params?, query?)`    | Build a URL for a named route                    |
-| `router.preload(name, params?)`        | Eagerly run data loaders without navigating      |
-| `router.beforeLeave(blocker)`          | Register a leave guard                           |
-| `router.toStore()`                     | React-style external store bridge                |
 
 ## `createRouter(options)`
 
@@ -58,6 +62,8 @@ const router = createRouter({
 | `viewTransition` | `boolean`                      | `false`                  | Wrap navigations in the View Transition API when available                                                                                       |
 
 **Returns:** `Router`
+
+---
 
 ## Route Table
 
@@ -116,14 +122,15 @@ Each route definition supports these fields:
 | `path`         | `string`                                    | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`.  |
 | `children`     | `Record<string, RouteDefinition>`           | Nested child routes. Child names are appended to the parent route name.                                                   |
 | `index`        | `boolean`                                   | Default child route that inherits the parent path.                                                                        |
-| `component`    | `unknown`                                   | Optional framework view payload exposed on `router.state.matches.at(-1)?.component`.                                      |
+| `component`    | `unknown`                                   | Optional framework view payload exposed on the leaf `RouteMatch`.                                                         |
 | `data`         | `DataFn`                                    | Optional route data function. Runs after middleware and before the handler.                                               |
-| `handler`      | `RouteHandler`                              | Optional terminal handler                                                                                                 |
-| `lazy`         | `() => Promise<{ handler?, data?, component?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, `component`, and `meta` in place.             |
+| `handler`      | `RouteHandler`                              | Optional terminal handler. Receives `HandlerContext` (extends `RouteContext` with `data`).                                |
+| `lazy`         | `() => Promise<{ handler?, data?, component?, meta? }>` | Lazy-load the route module. Called once on first navigation; result overrides static fields in the hydration cache. |
+| `meta`         | `unknown`                                   | Static metadata exposed on each `RouteMatch` in the branch.                                                               |
 | `middleware`   | `Middleware[]`                              | Optional route-specific middleware                                                                                        |
-| `meta`         | `unknown`                                   | Static metadata exposed on `router.state.matches.at(-1)?.meta`                                                            |
+| `onLeave`      | `() => MaybePromise<boolean>`               | Per-route leave guard. Return `false` to cancel navigation away from this route. Fires before global `beforeLeave` guards. |
 | `redirect`     | `NavigationTarget`                          | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
-| `coerceSearch` | `(raw: ResolvedQueryParams) => ResolvedQueryParams` | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the parsed query unchanged.                     |
+| `coerceSearch` | `(raw: QueryParams) => ResolvedQueryParams` | Coerce raw URL string values into typed values. Return value replaces `ctx.query`. Throwing leaves the parsed query unchanged. |
 
 ## `createBrowserHistory()`
 
@@ -165,6 +172,8 @@ Remove listeners, clear subscribers, and reject future router interaction.
 
 **Returns:** `void`
 
+---
+
 ### Navigation
 
 #### `router.navigate(target, options?)`
@@ -190,6 +199,8 @@ Named routes stay the primary API, but `navigate()` also accepts raw path target
 await router.navigate({ path: '/marketing?utm_source=campaign' });
 await router.navigate({ path: '/checkout#payment' }, { replace: true });
 ```
+
+---
 
 ### Route Helpers
 
@@ -226,9 +237,30 @@ router.resolve('/app/dashboard/settings');
 //    ]
 ```
 
-Resolve a pathname without running middleware, handlers, or subscribers. Returns the matched branch from root to leaf.
+Resolve a pathname without running middleware, handlers, data loaders, or subscribers. Strips the configured `base` automatically. Returns the matched branch from root to leaf, or `null` for redirect routes and no-match.
 
 **Returns:** `RouteMatchBranch | null`
+
+---
+
+#### `router.match(url, signal?)`
+
+```ts
+// SSR data prefetch
+const state = await router.match('/users/42');
+
+// With cancellation
+const controller = new AbortController();
+const state = await router.match('/dashboard', controller.signal);
+```
+
+Resolve a full URL to a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
+
+When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
+
+**Returns:** `Promise<RouteState | null>`
+
+---
 
 #### `router.preload(name, params?)`
 
@@ -243,6 +275,8 @@ Eagerly runs the data loaders for a named route without navigating. Useful for h
 
 **Returns:** `Promise<void>`
 
+---
+
 #### `router.beforeLeave(blocker)`
 
 ```ts
@@ -256,9 +290,15 @@ const remove = router.beforeLeave(async () => {
 remove();
 ```
 
-Register a leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`. Internal declarative redirects bypass leave guards.
+Register a global leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`.
+
+For route-scoped leave guards that only apply to a specific route, use the `onLeave` field in the route definition instead. When both are present, `onLeave` (leaf → root) fires before global `beforeLeave` guards (in registration order).
+
+Declarative `redirect` routes bypass all leave guards.
 
 **Returns:** `() => void`
+
+---
 
 ## `redirectTo(target, options?)`
 
@@ -268,21 +308,32 @@ import { redirectTo } from '@vielzeug/route';
 const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 ```
 
-Creates middleware that performs a redirect and short-circuits the chain.
+Creates middleware that navigates to `target` and short-circuits the middleware chain (does not call `next()`). Useful for auth guards and route aliases in middleware.
+
+For permanent declarative redirects (URL aliases), use the `redirect` field on the route definition instead.
 
 **Returns:** `Middleware`
 
+---
+
 ### State
 
-#### `router.state`
+#### `router.getSnapshot()`
 
-Current immutable route snapshot.
+Returns the current immutable route state snapshot. Use this to read state synchronously. Compatible with React's `useSyncExternalStore`:
 
 ```ts
-const { location, matches, status, error } = router.state;
+const state = useSyncExternalStore(
+  (cb) => router.subscribe(cb),
+  () => router.getSnapshot(),
+);
+```
+
+```ts
+const { location, matches, status, error } = router.getSnapshot();
 
 location.pathname;
-location.query;
+location.query;        // raw parsed query (QueryParams) — always string values
 location.hash;
 location.historyState; // value passed to navigate({ ... }, { state: ... })
 
@@ -291,6 +342,8 @@ console.error(error);
 ```
 
 `error` is only set when `status === 'error'`. It holds the exact value thrown by the failing `data()` function.
+
+**Returns:** `RouteState`
 
 #### `router.subscribe(listener)`
 
@@ -301,30 +354,20 @@ const unsubscribe = router.subscribe((state) => {
 });
 ```
 
-The listener runs immediately with the current state, then after each successful navigation.
+Register a listener that is called after each subsequent state change. The listener is **not** called immediately — use `router.getSnapshot()` to read the current state synchronously.
 
 **Returns:** `() => void`
 
-#### `router.toStore()`
+---
 
-```ts
-const { subscribe, getSnapshot } = router.toStore();
-```
-
-Returns an external-store bridge for React's `useSyncExternalStore`:
-
-- `getSnapshot()` returns `router.state`
-- `subscribe(onStoreChange)` notifies on subsequent state changes (no immediate first-call emission)
-
-**Returns:** `{ getSnapshot: () => RouteState; subscribe: (onStoreChange: () => void) => () => void }`
-
-## Core Types
+## Types
 
 ### `RouteContext<Params, TRoutes>`
 
+Context passed to middleware functions. Handlers receive `HandlerContext` (a subtype that also carries `data`).
+
 ```ts
 type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
-  readonly data?: unknown;
   readonly hash: string;
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
@@ -340,9 +383,19 @@ type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends Rout
 };
 ```
 
-`ctx.data` is only populated for the final route handler.
-
 Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
+
+### `HandlerContext<Params, TRoutes>`
+
+```ts
+type HandlerContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> =
+  RouteContext<Params, TRoutes> & {
+    /** Result of the route's `data()` function, or `undefined` if none was defined. */
+    readonly data: unknown;
+  };
+```
+
+Only available inside route `handler` functions. Middleware always runs before `data()`, so `data` is never present in middleware context.
 
 ### `DataFn<Params, TRoutes>`
 
@@ -437,7 +490,10 @@ type RouteLocation = {
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
   readonly pathname: string;
-  readonly query: ResolvedQueryParams;
+  /** Raw parsed query params — always string values from URL parsing.
+   * For coerced values (numbers, booleans), read `ctx.query` inside middleware or handlers.
+   */
+  readonly query: QueryParams;
 };
 ```
 
@@ -487,6 +543,89 @@ type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQueryValu
 
 Represents the query object after optional `coerceSearch` normalization.
 
+### `RouteMatchBranch`
+
+```ts
+type RouteMatchBranch = readonly RouteMatch[];
+```
+
+### `NavigationStatus`
+
+```ts
+type NavigationStatus = 'idle' | 'loading' | 'error';
+```
+
+### `BeforeLeaveBlocker`
+
+```ts
+// Return true to allow navigation, false to cancel.
+type BeforeLeaveBlocker = () => MaybePromise<boolean>;
+```
+
+### `IsActiveOptions`
+
+```ts
+type IsActiveOptions = {
+  /** Require an exact pathname match. Defaults to prefix matching. */
+  exact?: boolean;
+};
+```
+
+### `ScrollDecision`
+
+```ts
+type ScrollPosition = { x: number; y: number };
+type ScrollDecision = ScrollPosition | 'preserve' | 'top';
+```
+
+### `RouterErrorContext`
+
+```ts
+type RouterErrorSource = 'initial-navigation' | 'history-listener' | 'preload';
+type RouterErrorContext = {
+  readonly source: RouterErrorSource;
+};
+```
+
+### `HistoryDriver`
+
+```ts
+interface HistoryDriver {
+  readonly location: {
+    readonly hash: string;
+    readonly pathname: string;
+    readonly search: string;
+    readonly state: unknown;
+  };
+  push(url: string, state?: unknown): void;
+  replace(url: string, state?: unknown): void;
+  /** Subscribe to location changes. Returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void;
+}
+```
+
+### `Unsubscribe`
+
+```ts
+type Unsubscribe = () => void;
+```
+
+## Errors
+
+Route does not export custom `Error` subclasses. All errors are thrown as native `Error` instances. The following error messages are thrown at runtime:
+
+| Message | When |
+| ------- | ---- |
+| `[route] Router is disposed` | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` |
+| `[route] Unknown route name: X. Available routes: Y` | Navigating to or resolving an unregistered route name |
+| `[route] Duplicate route name: X` | Two routes resolve to the same compound name during `createRouter()` |
+| `[route] Redirect loop detected` | A declarative `redirect` chain exceeds 5 hops |
+| `[route] Invalid param name ":X" in path "Y"` | A param name contains non-word characters (e.g., `:user-id`) |
+| `[route] Wildcard "*" must be the final segment in path: X` | A `*` segment appears before the last segment |
+| `[route] Wildcard param must be final segment in path: X` | A `:param*` greedy param appears before the last segment |
+
+---
+
 ## Pattern Rules
 
 | Pattern                        | Example             | Meaning                                     |
@@ -503,6 +642,6 @@ Represents the query object after optional `coerceSearch` normalization.
 - Route no longer exposes imperative registration methods like `on()`, `group()`, or `use()`.
 - Route names come from the route-table object keys.
 - Not-found handling is just another route, typically `path: '*'`.
-- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.state.error`.
-- Declarative `redirect` on a route definition is distinct from the `redirectTo()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
-- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/component/meta are stored directly on the branch def.
+- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`.
+- Declarative `redirect` on a route definition is for permanent alias redirects. The `redirectTo()` middleware helper is for conditional guards.
+- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/component/meta are stored in the router's internal hydration cache — the compiled `RouteRecord` is never mutated.

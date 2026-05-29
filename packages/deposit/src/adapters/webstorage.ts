@@ -1,14 +1,4 @@
-import type {
-  Adapter,
-  AnySchema,
-  DepositLogger,
-  KeyOf,
-  MetricsEvent,
-  RecordOf,
-  TableSignals,
-  TableValidators,
-  TtlMs,
-} from '../types';
+import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { DepositQuotaError } from '../errors';
@@ -19,36 +9,26 @@ import {
   encodeStorageTablePrefix,
   getRecordKey,
 } from '../internal';
-import { parseStored, unwrapStored, wrapStored } from '../ttl';
+import { readWithTtl, wrapStored } from '../ttl';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
 
-type WebStorageOptions<S extends AnySchema> = {
-  logger?: DepositLogger;
+type WebStorageOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   name: string;
-  onMetrics?: (event: MetricsEvent) => void;
   /**
    * Called when localStorage/sessionStorage quota is exceeded on a write.
    * Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow the error.
    */
   onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
-  schema: S;
-  signals?: TableSignals<S>;
-  validators?: TableValidators<S>;
 };
 
-function createWebStorageAdapter<S extends AnySchema>(options: {
-  getStorage: () => Storage;
-  logger?: DepositLogger;
-  name: string;
-  onMetrics?: (event: MetricsEvent) => void;
-  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
-  schema: S;
-  signals?: TableSignals<S>;
-  storageLabel: string;
-  validators?: TableValidators<S>;
-}): Adapter<S> {
+function createWebStorageAdapter<S extends AnySchema>(
+  options: WebStorageOptions<S> & {
+    getStorage: () => Storage;
+    storageLabel: string;
+  },
+): Adapter<S> {
   const { getStorage, logger, name, onMetrics, onQuotaExceeded, schema, signals, storageLabel, validators } = options;
 
   const storage = (): Storage => {
@@ -69,7 +49,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     }
   };
 
-  // Precompute table prefixes once to avoid repeated encodeURIComponent calls
   const prefixMap = new Map(Object.keys(schema).map((table) => [table, encodeStorageTablePrefix(name, table)]));
   const getPrefix = (table: string): string => {
     const cached = prefixMap.get(table);
@@ -98,9 +77,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   };
 
   // Per-instance registry of all storage keys owned by this adapter instance.
-  // Populated once at construction via a one-time scan; kept current by every mutation.
-  // Enables count/getAll/clear/prune to iterate only owned keys (O(owned)) rather than
-  // scanning the full WebStorage key list (O(all keys in storage)).
+  // Populated once at construction; kept current by every mutation.
   const ownedKeys = new Set<string>();
 
   const initOwnedKeys = (): void => {
@@ -119,20 +96,27 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
 
   initOwnedKeys();
 
-  /** Reads, parses, and optionally cleans up expired/corrupt entries on miss. */
+  /**
+   * Reads a single entry. Returns the live value, or `undefined` if missing/expired/corrupt.
+   *
+   * `cleanup: true` (default) immediately removes the storage key and evicts from `ownedKeys`
+   * on any non-live result. Pass `cleanup: false` for batch scans (`count`, `getAll`) where
+   * the caller collects stale keys and evicts them after iteration to avoid mutating `ownedKeys`
+   * mid-loop.
+   */
   const readEntry = <T extends Record<string, unknown>>(
     storageKey: string,
-    { remove = true }: { remove?: boolean } = {},
+    { cleanup = true }: { cleanup?: boolean } = {},
   ): T | undefined => {
     const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
 
     try {
-      const parsed = parseStored<T>(JSON.parse(raw) as unknown);
+      const { expired, found, value } = readWithTtl<T>(JSON.parse(raw) as unknown);
 
-      if (!parsed) {
-        if (remove) {
+      if (!found || expired) {
+        if (cleanup) {
           storage().removeItem(storageKey);
           ownedKeys.delete(storageKey);
         }
@@ -140,16 +124,10 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
         return undefined;
       }
 
-      const value = unwrapStored(parsed);
-
-      if (value === undefined && remove) {
-        storage().removeItem(storageKey);
-        ownedKeys.delete(storageKey);
-      }
-
       return value;
     } catch {
-      if (remove) {
+      // JSON parse failure — always treat as stale.
+      if (cleanup) {
         storage().removeItem(storageKey);
         ownedKeys.delete(storageKey);
       }
@@ -183,7 +161,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const value = readEntry<RecordOf<S, K>>(storageKey, { remove: false });
+        const value = readEntry<RecordOf<S, K>>(storageKey, { cleanup: false });
 
         if (value === undefined) {
           expiredKeys.push(storageKey);
@@ -204,8 +182,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       const storageKey = encodeStorageKey(name, String(table), String(key));
       const value = readEntry<RecordOf<S, K>>(storageKey);
 
-      // readEntry cleaned up expired/corrupt entries and synced ownedKeys.
-      // For live entries, remove the physical entry and sync ownedKeys here.
       if (value !== undefined) {
         storage().removeItem(storageKey);
         ownedKeys.delete(storageKey);
@@ -246,7 +222,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const value = readEntry<RecordOf<S, K>>(storageKey, { remove: false });
+        const value = readEntry<RecordOf<S, K>>(storageKey, { cleanup: false });
 
         if (value === undefined) {
           expiredKeys.push(storageKey);
@@ -289,18 +265,15 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
 
         const raw = target.getItem(storageKey);
 
-        // Key is in ownedKeys but physically absent (e.g. removed outside the adapter)
         if (raw === null) {
           expiredKeys.push(storageKey);
           continue;
         }
 
         try {
-          const parsed = parseStored(JSON.parse(raw) as unknown);
+          const { expired, found } = readWithTtl(JSON.parse(raw) as unknown);
 
-          if (!parsed || unwrapStored(parsed) === undefined) {
-            expiredKeys.push(storageKey);
-          }
+          if (!found || expired) expiredKeys.push(storageKey);
         } catch {
           expiredKeys.push(storageKey);
         }
@@ -317,8 +290,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
       const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
 
-      // writeItem first: if it throws (quota exceeded), ownedKeys must not be polluted
-      // with a key that was never physically written.
       writeItem(table, storageKey, wrapStored(value, ttl));
       ownedKeys.add(storageKey);
     },
@@ -327,8 +298,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       for (const value of values) {
         const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
 
-        // writeItem first: if it throws mid-batch (quota), we stop here and only
-        // the keys that were successfully written remain in ownedKeys.
         writeItem(table, storageKey, wrapStored(value, ttl));
         ownedKeys.add(storageKey);
       }
@@ -361,8 +330,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
         const tableName = decodeStorageTableFromKey(name, event.key);
 
         if (tableName && tableName in schema) {
-          // Keep ownedKeys in sync with cross-tab writes and deletes.
-          // Only accept keys for tables that exist in our schema to prevent unbounded growth.
           if (event.newValue === null) {
             ownedKeys.delete(event.key);
           } else {
@@ -378,6 +345,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       return () => window.removeEventListener('storage', listener);
     },
     onMetrics,
+    schema,
     signals,
     validators,
   });

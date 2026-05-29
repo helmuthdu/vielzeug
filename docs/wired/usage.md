@@ -1,44 +1,113 @@
 ---
-title: Wired Usage Guide
-description: Practical usage patterns for the Wired container.
+title: Wired — Usage Guide
+description: How to register providers, resolve dependencies, manage lifetimes, and tear down containers with @vielzeug/wired.
 ---
 
 [[toc]]
 
-## Tokens
+## Basic Usage
 
-Create one token per dependency contract.
+Create a container, register providers with typed tokens, resolve dependencies, then dispose when done.
 
 ```ts
+import { createContainer, createToken } from '@vielzeug/wired';
+
 const Logger = createToken<{ log(message: string): void }>('Logger');
+const Service = createToken<{ run(): Promise<void> }>('Service');
+
+const container = createContainer();
+
+container.value(Logger, console);
+container.factory(
+  Service,
+  (logger) => ({ run: async () => logger.log('running') }),
+  { deps: [Logger] },
+);
+
+const service = await container.resolve(Service);
+await service.run();
+
+await container.dispose();
+```
+
+## Tokens
+
+Create one token per dependency contract. Tokens are unique symbols — two tokens with the same description are still distinct.
+
+```ts
+import { createToken } from '@vielzeug/wired';
+
+const Logger = createToken<{ log(message: string): void }>('Logger');
+const Config = createToken<{ apiUrl: string }>('Config');
 ```
 
 ## Registration
 
-Use `value()` for constants and `factory()` for computed values.
+Use `value()` for constants and pre-constructed instances. Use `factory()` for anything built lazily.
 
 ```ts
+import { createContainer, createToken } from '@vielzeug/wired';
+
+const Logger = createToken<{ log(message: string): void }>('Logger');
+const Service = createToken<{ run(): void }>('Service');
+
+const container = createContainer();
+
 container.value(Logger, console);
-container.factory(Service, (logger) => new ServiceImpl(logger), { deps: [Logger] });
+container.factory(Service, (logger) => ({ run: () => logger.log('ok') }), { deps: [Logger] });
 ```
 
 ## Resolution
 
-Call `resolve()` for a single provider and `resolveOptional()` when a missing provider should not throw.
+Call `resolve()` for a single provider. Use `resolveOptional()` when a missing token should return `undefined` rather than throw.
 
 ```ts
+import { createContainer, createToken } from '@vielzeug/wired';
+
+const Service = createToken<{ run(): void }>('Service');
+const Plugin = createToken<{ name: string }>('Plugin');
+const container = createContainer();
+
 const service = await container.resolve(Service);
-const maybeLogger = await container.resolveOptional(Logger);
+const maybePlugin = await container.resolveOptional(Plugin); // undefined if not registered
 ```
 
-`resolveMany()` is for multi-provider tokens.
+Use `resolveMany()` for multi-provider tokens.
 
 ```ts
-container.value(Plugin, firstPlugin, { multi: true });
-container.value(Plugin, secondPlugin, { multi: true });
+container.value(Plugin, { name: 'first' }, { multi: true });
+container.value(Plugin, { name: 'second' }, { multi: true });
 
-const plugins = await container.resolveMany(Plugin);
+const plugins = await container.resolveMany(Plugin); // [{ name: 'first' }, { name: 'second' }]
 ```
+
+## Checking Registration
+
+Use `has()` to test whether a token is registered without triggering the factory.
+
+```ts
+if (container.has(FeatureFlag)) {
+  const flags = await container.resolve(FeatureFlag);
+}
+```
+
+`has()` walks the parent chain, so child containers see parent registrations.
+
+## Synchronous Resolution
+
+After a container has been warmed up asynchronously, registered values and cached singleton/scoped instances can be retrieved synchronously with `resolveSync()`.
+
+```ts
+// During startup — async warm-up
+await container.resolve(Config);
+await container.resolve(Logger);
+
+// Later, in hot paths — no Promise overhead
+const config = container.resolveSync(Config);
+const logger = container.resolveSync(Logger);
+```
+
+`resolveSync()` throws `SyncResolutionError` for transient factories (which are never cached) and for any singleton or scoped factory that has not been resolved at least once. It throws `ScopedResolutionError` when called on the root container for a scoped token.
 
 ## Lifetimes
 
@@ -83,7 +152,22 @@ Dispose the container when its scope ends.
 await container.dispose();
 ```
 
-Resolved instances with `dispose()` hooks are cleaned up during disposal.
+Disposal hooks are supported on both `factory()` and `value()` registrations. Factory hooks fire only when the instance was resolved at least once; value hooks always fire.
+
+```ts
+// Factory with cleanup
+container.factory(DbPool, () => createPool(), {
+  dispose: (pool) => pool.end(),
+});
+
+// External resource registered as a value
+const db = await connectDb();
+container.value(Db, db, { dispose: (db) => db.close() });
+
+await container.dispose(); // calls both hooks
+```
+
+If any hook throws, the container still disposes fully and the errors are collected into an `AggregateError`.
 
 ## Framework Integration
 
@@ -93,12 +177,12 @@ Wired's container is a plain class — use it as a singleton, inject it via fram
 
 ```tsx [React]
 import { createContext, useContext, useEffect, useState, type FC } from 'react';
-import { Container } from '@vielzeug/wired';
+import { createContainer, type Container } from '@vielzeug/wired';
 
 const ContainerCtx = createContext<Container | null>(null);
 
 export const ContainerProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [container] = useState(() => new Container());
+  const [container] = useState(() => createContainer());
   useEffect(() => () => { container.dispose(); }, [container]);
   return <ContainerCtx.Provider value={container}>{children}</ContainerCtx.Provider>;
 };
@@ -122,11 +206,11 @@ function UserService() {
 
 ```vue [Vue 3]
 <script setup lang="ts">
-import { Container } from '@vielzeug/wired';
+import { createContainer, type Container } from '@vielzeug/wired';
 import { provide, inject, onScopeDispose } from 'vue';
 
 // In root component (App.vue):
-const container = new Container();
+const container = createContainer();
 provide('container', container);
 onScopeDispose(() => container.dispose());
 
@@ -138,11 +222,11 @@ const repo = await container.resolve(UserRepo);
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { Container } from '@vielzeug/wired';
+  import { createContainer, type Container } from '@vielzeug/wired';
   import { setContext, getContext, onDestroy } from 'svelte';
 
   // Root component:
-  const container = new Container();
+  const container = createContainer();
   setContext('container', container);
   onDestroy(() => container.dispose());
 </script>
@@ -157,11 +241,13 @@ const repo = await container.resolve(UserRepo);
 Inject a shared logger into all services by registering it as a singleton.
 
 ```ts
-import { Container } from '@vielzeug/wired';
+import { createContainer, createToken } from '@vielzeug/wired';
 import { createLogger } from '@vielzeug/rune';
 
-const container = new Container();
-container.singleton(Logger, () => createLogger({ level: 'debug', prefix: 'app' }));
+const Logger = createToken<ReturnType<typeof createLogger>>('Logger');
+const container = createContainer();
+
+container.factory(Logger, () => createLogger({ level: 'debug', prefix: 'app' }));
 
 // Every service that depends on Logger receives the same instance.
 const service = await container.resolve(ApiService);
@@ -172,22 +258,29 @@ const service = await container.resolve(ApiService);
 Register an event bus in the container and inject it into services that emit or subscribe.
 
 ```ts
-import { Container } from '@vielzeug/wired';
-import { createBus } from '@vielzeug/relay';
+import { createContainer, createToken } from '@vielzeug/wired';
+import { type Bus, createBus } from '@vielzeug/relay';
 
-const container = new Container();
-container.singleton(EventBus, () => createBus());
+const EventBus = createToken<Bus>('EventBus');
+const container = createContainer();
 
-class NotificationService {
-  constructor(private bus = container.resolve(EventBus)) {}
-  notify(msg: string) { this.bus.emit('notification', msg); }
-}
+container.factory(EventBus, () => createBus(), { dispose: (bus) => bus.clear() });
+
+const NotificationService = createToken<{ notify(msg: string): void }>('NotificationService');
+
+container.factory(
+  NotificationService,
+  (bus) => ({ notify: (msg) => bus.emit('notification', msg) }),
+  { deps: [EventBus] },
+);
 ```
 
 ## Best Practices
 
-- Register all singletons at startup and avoid calling `container.resolve()` in hot render paths.
+- Register all providers at startup before any resolution begins.
 - Use `container.factory()` for services with async initialization (config loading, DB connections).
+- Use `resolveSync()` in hot paths after a startup warm-up phase — not as a substitute for `resolve()`.
+- Use `has()` to guard optional integrations instead of `resolveOptional()` when you don't need the instance.
 - Scope child containers to component trees or request lifetimes — dispose them with the scope.
-- Keep tokens (classes or Symbols) as the source of truth; avoid string-keyed registrations.
+- Attach `dispose` hooks to both factory and value registrations for external resources that need cleanup.
 - Call `container.dispose()` during app teardown to invoke all registered cleanup hooks.

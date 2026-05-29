@@ -1,5 +1,4 @@
 import { isNil } from '../typed/isNil';
-import { isString } from '../typed/isString';
 
 type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
 
@@ -14,8 +13,7 @@ type ParseJSONOptions<T> = {
 
 /**
  * Parses a JSON string and returns the resulting object.
- * Non-string, non-null inputs are returned as-is (use validator to enforce type safety).
- * Null and undefined inputs return the default value.
+ * `null` and `undefined` inputs return the default value.
  *
  * @example
  * ```ts
@@ -32,31 +30,28 @@ type ParseJSONOptions<T> = {
  * ```
  *
  * @template T - The expected type of the parsed JSON.
- * @param json - The JSON string to parse. Non-string inputs: null/undefined return defaultValue; others are returned as-is.
+ * @param json - The JSON string to parse. `null` / `undefined` return `defaultValue`.
  * @param options - Configuration options for parsing.
- * @param options.defaultValue - Value to return if parsing fails, input is null/undefined, or validator rejects the result.
- * @param options.validator - Optional predicate to validate the parsed result. If fails, returns defaultValue.
+ * @param options.defaultValue - Value to return if parsing fails or input is nullish.
+ * @param options.validator - Optional predicate to validate the parsed result.
  * @param options.reviver - Optional reviver function for JSON.parse.
  * @param options.onError - Optional callback for error handling.
  *
- * @returns The parsed object if successful, otherwise returns non-null non-string input as-is or the default value.
+ * @returns The parsed value, or `defaultValue` on failure.
  */
-export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSONOptions<T> = {}): T | undefined {
+export function parseJSON<T extends JSONValue>(
+  json: string | null | undefined,
+  options: ParseJSONOptions<T> = {},
+): T | undefined {
   const { defaultValue, onError, reviver, validator } = options;
 
+  if (isNil(json)) return defaultValue;
+
   try {
-    let value: unknown;
-
-    if (isString(json)) {
-      value = JSON.parse(json as string, reviver);
-    } else {
-      if (isNil(json)) return defaultValue;
-
-      value = json;
-    }
+    const value = JSON.parse(json, reviver);
 
     if (validator && !validator(value)) {
-      throw new TypeError('Parsed or provided value does not match the expected structure');
+      throw new TypeError('Parsed value does not match the expected structure');
     }
 
     return (value ?? defaultValue) as T | undefined;

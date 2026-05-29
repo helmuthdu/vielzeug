@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('declarative redirect', () => {
@@ -14,7 +14,7 @@ describe('declarative redirect', () => {
     });
 
     await settle();
-    expect(router.state.location.pathname).toBe('/new');
+    expect(router.getSnapshot().location.pathname).toBe('/new');
     expect(handler).toHaveBeenCalled();
     router.dispose();
   });
@@ -31,7 +31,7 @@ describe('declarative redirect', () => {
     });
 
     await settle();
-    expect(router.state.location.pathname).toBe('/current');
+    expect(router.getSnapshot().location.pathname).toBe('/current');
     expect(handler).toHaveBeenCalled();
     router.dispose();
   });
@@ -41,7 +41,7 @@ describe('declarative redirect', () => {
     const history = createMemoryHistory('/old');
     const origReplace = history.replace.bind(history);
 
-    history.replace = (url, state) => {
+    history.replace = (url: string, state: unknown) => {
       replaceCount.n++;
       origReplace(url, state);
     };
@@ -89,7 +89,7 @@ describe('declarative redirect', () => {
     router.beforeLeave(async () => false);
     await settle();
 
-    expect(router.state.location.pathname).toBe('/new');
+    expect(router.getSnapshot().location.pathname).toBe('/new');
     expect(handler).toHaveBeenCalled();
     router.dispose();
   });

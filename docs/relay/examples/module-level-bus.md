@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Module-level bus'
-description: 'Module-level bus examples for relay.'
+description: 'Module-level bus example for @vielzeug/relay.'
 ---
 
 ## Module-level bus

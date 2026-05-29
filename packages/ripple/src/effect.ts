@@ -2,16 +2,17 @@ import type {
   AsyncEffectCallback,
   AsyncSubscription,
   CleanupFn,
+  DepEntry,
   EffectCallback,
-  EffectScheduler,
+  EffectOptions,
   Scope,
   Subscriber,
   Subscription,
 } from './types';
 
-import { config } from './config';
 import { StateError } from './error';
 import { collectErrors, rethrowWith, runAll, toSubscription } from './helpers';
+import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { getTracking, withTracking } from './tracking';
 
 /**
@@ -19,8 +20,8 @@ import { getTracking, withTracking } from './tracking';
  * The `subscriber` returned here is what gets registered in signal subscriber sets —
  * so notifications call the deferred wrapper, not `run` directly.
  */
-const withScheduler = (run: Subscriber, scheduler: EffectScheduler): Subscriber => {
-  if (scheduler === 'sync') return run;
+const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): Subscriber => {
+  if (scheduler === 'sync' || scheduler === undefined) return run;
 
   let scheduled = false;
 
@@ -47,14 +48,19 @@ const withScheduler = (run: Subscriber, scheduler: EffectScheduler): Subscriber 
   };
 };
 
-export const effect = (fn: EffectCallback, options?: { scheduler?: EffectScheduler }): Subscription => {
+export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const scheduler = options?.scheduler ?? 'sync';
+  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+  const isTrace = options?.trace ?? false;
+  const effectName = options?.name;
 
   let cleanup: CleanupFn | undefined;
   const subscriptions = new Set<CleanupFn>();
   let isRunning = false;
   let isDirty = false;
   let isDisposed = false;
+  // Non-null only when trace mode is active — lazily populated after the first run.
+  let prevDeps: DepEntry[] | null = null;
 
   const teardown = (): void => {
     if (!cleanup && subscriptions.size === 0) return;
@@ -84,19 +90,40 @@ export const effect = (fn: EffectCallback, options?: { scheduler?: EffectSchedul
       let iterations = 0;
 
       do {
-        if (++iterations > config.maxIterations) {
-          throw new StateError('INFINITE_LOOP', `infinite effect loop (> ${config.maxIterations} iterations)`);
+        if (++iterations > maxIterations) {
+          const label = effectName ? ` in "${effectName}"` : '';
+
+          throw new StateError('INFINITE_LOOP', `infinite effect loop (> ${maxIterations} iterations)${label}`);
+        }
+
+        // Trace: log which sources changed before each re-run (skip first run).
+        // prevDeps is non-null iff trace mode is on (depCollector is only assigned when isTrace is true).
+        if (prevDeps !== null && prevDeps.length > 0) {
+          const changed = prevDeps.filter((d) => d.source.version !== d.version);
+
+          if (changed.length > 0) {
+            const label = effectName ?? 'anonymous';
+
+            console.group(`[ripple:trace] "${label}" re-running — changed sources:`);
+
+            for (const dep of changed) {
+              console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} → v${dep.source.version})`);
+            }
+
+            console.groupEnd();
+          }
         }
 
         isDirty = false;
         teardown();
 
         const localCleanups: CleanupFn[] = [];
+        const depCollector: DepEntry[] | null = isTrace ? [] : null;
         let returnedCleanup: CleanupFn | void = undefined;
 
         try {
           returnedCleanup = withTracking(
-            { cleanups: localCleanups, computed: null, depCollector: null, effect: subscriber, subscriptions },
+            { cleanups: localCleanups, depCollector, effect: subscriber, kind: 'effect', subscriptions },
             fn,
           );
         } catch (error) {
@@ -106,7 +133,11 @@ export const effect = (fn: EffectCallback, options?: { scheduler?: EffectSchedul
           rethrowWith(error, cleanupErrors, 'effect failure with cleanup errors');
         }
 
-        // R11: Throw on non-function truthy returns — catches bugs like returning array.push() result
+        if (depCollector) {
+          prevDeps = depCollector;
+        }
+
+        // Throws on non-function truthy returns — catches bugs like returning array.push() result
         if (returnedCleanup !== undefined && typeof returnedCleanup !== 'function') {
           throw new StateError(
             'INVALID_CLEANUP',
@@ -222,7 +253,7 @@ export const effectAsync = (
 export const onCleanup = (fn: CleanupFn): void => {
   const ctx = getTracking();
 
-  if (ctx === null || ctx.cleanups === null) {
+  if (ctx === null || ctx.kind === 'computed') {
     throw new StateError('INVALID_CLEANUP', 'onCleanup() must be called from within an active effect or scope.');
   }
 
@@ -236,7 +267,7 @@ export const scope = (setup?: () => void): Scope => {
   const run = <T>(fn: () => T): T => {
     if (disposed) throw new StateError('DISPOSED_SCOPE', 'Cannot run inside a disposed scope.');
 
-    return withTracking({ cleanups, computed: null, depCollector: null, effect: null, subscriptions: null }, fn);
+    return withTracking({ cleanups, kind: 'scope' }, fn);
   };
 
   const dispose = (): void => {

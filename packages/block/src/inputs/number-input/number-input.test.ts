@@ -34,26 +34,28 @@ describe('bit-number-input', () => {
       expect(fixture.query('[aria-label="Increase"]')).toBeTruthy();
     });
 
-    it('renders a bit-input with part="input"', async () => {
+    it('renders a native input with part="input"', async () => {
       fixture = await mount('bit-number-input');
 
-      expect(fixture.query('bit-input[part="input"]')).toBeTruthy();
+      expect(fixture.query('input[part="input"]')).toBeTruthy();
     });
 
-    it('passes label to bit-input when label prop is set', async () => {
+    it('renders a label element when label prop is set', async () => {
       fixture = await mount('bit-number-input', { attrs: { label: 'Quantity' } });
+      await fixture.flush();
 
-      const inp = fixture.query('bit-input');
+      const label = fixture.query('label');
 
-      expect(inp?.getAttribute('label')).toBe('Quantity');
+      expect(label?.textContent?.trim()).toBe('Quantity');
     });
 
-    it('does not pass label to bit-input when label prop is absent', async () => {
+    it('does not render a visible label when label prop is absent', async () => {
       fixture = await mount('bit-number-input');
+      await fixture.flush();
 
-      const inp = fixture.query('bit-input');
+      const labels = Array.from(fixture.element.shadowRoot?.querySelectorAll('label') ?? []);
 
-      expect(inp?.getAttribute('label') || '').toBeFalsy();
+      expect(labels.every((l) => l.hidden)).toBe(true);
     });
   });
 
@@ -319,13 +321,13 @@ describe('bit-number-input accessibility', () => {
     });
   });
 
-  describe('Input Hidden from AT', () => {
-    it('inner input has aria-hidden="true"', async () => {
+  describe('Input accessible to AT', () => {
+    it('inner input is not aria-hidden', async () => {
       fixture = await mount('bit-number-input');
 
       const input = fixture.query('[part="input"]');
 
-      expect(input?.getAttribute('aria-hidden')).toBe('true');
+      expect(input?.getAttribute('aria-hidden')).toBeNull();
     });
   });
 });

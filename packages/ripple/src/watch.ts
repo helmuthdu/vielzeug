@@ -54,9 +54,7 @@ export const watch = <T>(
     if (firstRun) {
       firstRun = false;
 
-      if (immediate) {
-        invokeCallback(next, undefined);
-      }
+      if (immediate) invokeCallback(next, undefined);
 
       prev = next;
     } else {

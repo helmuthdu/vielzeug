@@ -73,6 +73,40 @@ s.reset();
 console.log(s.value); // { count: 0, label: 'default' }
 ```
 
+---
+
+### Store Lenses — Scoped Writable Signals
+
+Use `store.lens(path)` to get a writable `Signal` scoped to a single property or dot-path. The lens is cached and produces immutable copies on write:
+
+```ts
+import { store, watch } from '@vielzeug/ripple';
+
+const settings = store({
+  theme: 'light' as 'light' | 'dark',
+  user: { name: 'Alice', address: { city: 'Berlin' } },
+});
+
+// Lens for a top-level field
+const theme = settings.lens('theme');            // Signal<'light' | 'dark'>
+theme.value = 'dark';
+console.log(settings.value.theme);              // 'dark'
+
+// Lens for a deeply nested path
+const city = settings.lens('user.address.city'); // Signal<string>
+city.value = 'Hamburg';
+console.log(settings.value.user.address.city);  // 'Hamburg'
+
+// Watch a single field directly
+const stopWatch = watch(theme, (next, prev) => {
+  console.log('theme:', prev, '→', next);
+});
+
+theme.value = 'light'; // → 'theme: dark → light'
+stopWatch.dispose();
+```
+
+---
 
 ### Pitfalls
 

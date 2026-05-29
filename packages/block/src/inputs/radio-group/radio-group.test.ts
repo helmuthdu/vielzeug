@@ -157,7 +157,7 @@ describe('bit-radio-group', () => {
       await fixture.flush();
 
       expect(fixture.query('fieldset')?.getAttribute('aria-invalid')).toBe('true');
-      expect(fixture.query('.error-text[role="alert"]')?.textContent).toContain('Selection required');
+      expect(fixture.query('.helper-text[role="alert"]')?.textContent).toContain('Selection required');
     });
 
     it('supports roving tabindex and arrow-key navigation', async () => {

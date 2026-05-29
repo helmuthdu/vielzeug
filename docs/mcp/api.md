@@ -1,29 +1,41 @@
 ---
 title: Mcp — API Reference
-description: Current MCP tool contracts, result shapes, and runtime behavior for the Vielzeug MCP server.
+description: Complete API reference for @vielzeug/mcp — tools, resources, and programmatic API.
 ---
 
 [[toc]]
 
-## API at a glance
+## API At a Glance
 
-| Name | Kind | Input | Returns |
+| Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `list-packages` | Tool | none | JSON array of package metadata |
-| `get-package` | Tool | `packageSlug` | JSON object for one package |
-| `get-docs` | Tool | `packageSlug`, `page?` | Markdown docs text |
-| `get-source` | Tool | `packageSlug` | Bundled `src/index.ts` source text |
-| `search-packages` | Tool | `query` | JSON array of ranked matches |
-| `list-components` | Tool | none | JSON array of `{ name, tagName }` |
-| `get-component` | Tool | `tagName` | JSON Block component declaration |
+| `list-packages` | All packages or one by slug | Sync | Always returns an array — even with `packageSlug` |
+| `get-docs` | Package documentation page | Sync | `page` enum excludes `source` — use `get-source` |
+| `get-source` | `src/index.ts` text | Sync | `isError: true` when package has no bundled source |
+| `search-packages` | Ranked search across metadata + docs | Sync | Returns `[]`, never an error, when nothing matches |
+| `list-components` | Block component tag list | Sync | `isError: true` if Block CEM not in snapshot |
+| `get-component` | Single Block CEM declaration | Sync | `isError: true` lists available tags on miss |
+| `createServer()` | Programmatic server factory | Sync | Requires pre-loaded `BundledData` — call `loadData()` first |
 
-## Tool details
+## Package Entry Points
+
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/mcp` | Programmatic API (`createServer`) |
+
+The CLI binary (`vielzeug-mcp`) is the primary runtime interface; direct imports are for custom server wiring only.
+
+## Tools
 
 ### `list-packages`
 
-Returns one metadata object per package.
+Returns an array of `PackageMeta` objects. Pass `packageSlug` to filter to a single result.
 
-**Input:** none
+**Input:**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `packageSlug` | `string` | No | Package folder name, e.g. `"ripple"`. Omit to return all. |
 
 **Result shape:**
 
@@ -32,7 +44,7 @@ Returns one metadata object per package.
   {
     "name": "@vielzeug/ripple",
     "slug": "ripple",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "description": "Reactive signals, computed, effects, stores",
     "category": "state",
     "keywords": ["signals", "reactive"],
@@ -44,125 +56,264 @@ Returns one metadata object per package.
 ]
 ```
 
----
-
-### `get-package`
-
-Returns one package metadata object by slug.
-
-**Input:**
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `packageSlug` | `string` | Package folder name without the `@vielzeug/` prefix |
-
-**Error cases:** unknown slug returns `isError: true` with available slugs.
+**Error cases:** unknown `packageSlug` → `isError: true` with available slugs listed.
 
 ---
 
 ### `get-docs`
 
-Returns docs content for a package and page.
+Returns the Markdown content of a documentation page.
 
 **Input:**
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `packageSlug` | `string` | Package folder name without the `@vielzeug/` prefix |
-| `page` | `'index' \| 'api' \| 'usage' \| 'examples'` (optional) | Defaults to `index` |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `packageSlug` | `string` | Yes | Package folder name, e.g. `"sieve"` |
+| `page` | `'index' \| 'api' \| 'usage' \| 'examples'` | No | Defaults to `'index'` |
 
-Behavior:
+**Notes:**
+- Returns raw Markdown text. Use `get-source` for `src/index.ts`.
+- When a page is unavailable, the error message lists which pages the package has.
 
-- Returns markdown text only
-- Use `get-source` for `src/index.ts`
+**Error cases:** unknown slug or unavailable page → `isError: true`.
 
 ---
 
 ### `get-source`
 
-Returns bundled `src/index.ts` source text for a package.
+Returns the bundled `src/index.ts` source text.
 
 **Input:**
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `packageSlug` | `string` | Package folder name without the `@vielzeug/` prefix |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `packageSlug` | `string` | Yes | Package folder name, e.g. `"ripple"` |
 
-**Error cases:** unknown slug or missing source returns `isError: true`.
+**Error cases:** unknown slug or no bundled source → `isError: true`.
 
 ---
 
 ### `search-packages`
 
-Searches package metadata and docs content.
+Searches metadata, keywords, documentation, and source. Returns ranked `SearchHit` objects.
 
 **Input:**
 
-| Field | Type | Description |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `query` | `string` | Yes | Non-empty search term |
+
+**Ranking:**
+
+| Score | Category | Field(s) searched |
 | --- | --- | --- |
-| `query` | `string` | Non-empty search term |
+| 3 | `"metadata"` | `name`, `description`, `category` |
+| 2 | `"keywords"` | `keywords` array |
+| 1 | `"docs"` | All doc pages and `src/index.ts` (`matchedPages` lists which) |
 
-Ranking order:
+Results are sorted by `score` descending, then `slug` ascending. Multiple categories can match simultaneously.
 
-1. Metadata (`name`, `description`, `category`)
-2. `keywords`
-3. Docs content (`index`, `api`, `usage`, `examples`) and then source text (`matchedPage: "source"`)
-
-**Result example:**
+**Result shape:**
 
 ```json
 [
-  { "name": "@vielzeug/sieve", "slug": "sieve", "matchedIn": "metadata" },
-  { "name": "@vielzeug/forge", "slug": "forge", "matchedIn": "docs", "matchedPage": "usage" }
+  {
+    "name": "@vielzeug/sieve",
+    "slug": "sieve",
+    "score": 3,
+    "matchedIn": ["metadata", "keywords"]
+  },
+  {
+    "name": "@vielzeug/forge",
+    "slug": "forge",
+    "score": 1,
+    "matchedIn": ["docs"],
+    "matchedPages": ["usage", "examples"]
+  }
 ]
 ```
 
-If nothing matches, the tool returns `[]` (not an error).
+Returns `[]` when nothing matches — not an error.
 
 ---
 
 ### `list-components`
 
-Returns Block component tags from bundled component metadata.
+Returns Block component tag names from bundled CEM metadata.
 
 **Input:** none
 
-**Error cases:** missing bundled Block component metadata returns `isError: true`.
+**Result shape:**
+
+```json
+[
+  { "name": "Button", "tagName": "bit-button" },
+  { "name": "Input", "tagName": "bit-input" }
+]
+```
+
+**Error cases:** Block CEM not present in this snapshot → `isError: true`.
 
 ---
 
 ### `get-component`
 
-Returns one full Block component declaration by `tagName`.
+Returns one full CEM declaration for a Block component.
 
 **Input:**
 
-| Field | Type | Description |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `tagName` | `string` | Yes | HTML custom element tag, e.g. `"bit-button"` |
+
+**Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS properties.
+
+**Error cases:** unknown tag (lists available tags) or missing Block CEM → `isError: true`.
+
+---
+
+## Resources
+
+Resources follow the MCP `resources/list` and `resources/read` protocol.
+
+### URI format
+
+| Pattern | MIME type | Description |
 | --- | --- | --- |
-| `tagName` | `string` | HTML custom element tag, e.g. `bit-button` |
+| `vielzeug://docs/<slug>/<page>` | `text/markdown` | Documentation page — one of `index`, `api`, `usage`, `examples` |
+| `vielzeug://source/<slug>` | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source |
 
-**Error cases:** unknown tag returns `isError: true` and lists available tags.
+**Error cases:** unknown URI → `McpError` with `InvalidParams` code.
 
-## Validation and errors
+---
 
-- Tool schemas are declared as JSON Schema and advertised through `ListTools`.
-- Tool handlers perform argument checks and return user-facing tool errors as `isError: true`.
-- Domain/runtime failures are returned as `isError: true` tool results.
-- Unknown tool names are handled at the MCP protocol layer (`MethodNotFound`).
+## Programmatic API
 
-Example tool error payload:
+### `createServer()`
 
-```json
-{
-  "content": [{ "type": "text", "text": "Package \"does-not-exist\" not found. Available slugs: ..." }],
-  "isError": true
+```ts
+import { createServer } from '@vielzeug/mcp';
+import { loadData } from '@vielzeug/mcp/data';
+
+createServer(data: BundledData): Server;
+```
+
+Creates and returns an MCP `Server` instance with all tools and resources registered. Call `loadData()` to obtain `BundledData` before passing it in.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `data` | `BundledData` | Validated bundled snapshot loaded via `loadData()` |
+
+**Returns:** `Server` from `@modelcontextprotocol/sdk`
+
+**Example:**
+
+```ts
+import { createServer } from '@vielzeug/mcp';
+import { loadData } from '@vielzeug/mcp/data';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+const server = createServer(loadData());
+await server.connect(new StdioServerTransport());
+```
+
+---
+
+## Types
+
+### `BundledData`
+
+The validated snapshot loaded at startup.
+
+```ts
+interface BundledData {
+  packages: BundledPackage[];
+  version: string;
 }
 ```
 
-## Runtime behavior
+### `BundledPackage`
+
+Full package record in the snapshot. Includes all docs and source inline.
+
+```ts
+interface BundledPackage {
+  apiSource: string | null;
+  availableDocPages: DocPage[];
+  category: string;
+  components: CemDeclaration[];
+  description: string;
+  docs: Partial<Record<DocPage, string>>;
+  exports: string[];
+  keywords: string[];
+  name: string;
+  related: string[];
+  slug: string;
+  version: string | null;
+}
+```
+
+### `PackageMeta`
+
+Stripped version returned by tools — no `docs`, `apiSource`, or `components`.
+
+```ts
+interface PackageMeta extends Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> {
+  hasSource: boolean;
+}
+```
+
+### `SearchHit`
+
+Result shape for `search-packages`.
+
+```ts
+interface SearchHit {
+  matchedIn: Array<'docs' | 'keywords' | 'metadata'>;
+  matchedPages?: string[];
+  name: string;
+  score: number;
+  slug: string;
+}
+```
+
+### `DocPage`
+
+```ts
+type DocPage = 'api' | 'examples' | 'index' | 'usage';
+```
+
+---
+
+## Errors
+
+### Tool errors (`isError: true`)
+
+All tool-level failures return a text content item with `isError: true`. The error message is human-readable and includes actionable context (available slugs, available pages, available tags).
+
+### Protocol errors (`McpError`)
+
+| Situation | Error code |
+| --- | --- |
+| Unknown tool name | `MethodNotFound` |
+| Unknown resource URI | `InvalidParams` |
+
+### Startup errors
+
+`loadData()` throws synchronously with an actionable message when:
+
+- The bundled data file is missing (`ENOENT`): includes the regen command
+- The file is malformed JSON: includes the regen command
+- The parsed data fails schema validation: includes the regen command
+
+---
+
+## Runtime Behavior
 
 - Default transport: stdio
 - HTTP mode: `--port <number>` using Streamable HTTP
-- HTTP health endpoint: `GET /health` returns `{ "status": "ok" }`
-- Bundled data is validated at startup (fail-fast)
-- CLI helpers: `--help` and `--version`
+- Health endpoint: `GET /health` → `{ "status": "ok" }`
+- Bundled data validated at startup — missing or malformed data aborts with an actionable error
+- CLI flags: `--help`, `--version`

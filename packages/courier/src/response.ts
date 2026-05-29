@@ -24,5 +24,6 @@ export async function parseResponse(res: Response, responseType: ResponseType = 
     return res.blob();
   }
 
-  throw new TypeError(`[courier] Unsupported response content-type '${contentType || 'unknown'}'`);
+  // Unknown content-type — fall back to text, which is always safe to read and debug.
+  return res.text();
 }

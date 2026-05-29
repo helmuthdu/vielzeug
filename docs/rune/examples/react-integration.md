@@ -1,6 +1,6 @@
 ---
 title: 'Rune Examples — React Integration'
-description: 'React Integration examples for rune.'
+description: 'React Integration example for @vielzeug/rune.'
 ---
 
 ## React Integration
@@ -10,6 +10,8 @@ description: 'React Integration examples for rune.'
 Components deep in a React tree need to log without importing the logger directly. A context-based logger makes the same instance available everywhere without prop-drilling.
 
 ### Solution
+
+Create the logger outside the component body or inside a stable initializer, and use `withBindings()` in `useEffect` to pin per-instance fields.
 
 ```tsx
 import { Rune } from '@vielzeug/rune';
@@ -42,3 +44,4 @@ export function UserProfile({ userId }: { userId: string }) {
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
+- [Dependency Injection (Wired)](/wired/)

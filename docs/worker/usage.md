@@ -99,8 +99,6 @@ try {
 }
 ```
 
-Use `maxQueue: 'auto'` to default to `concurrency * 2`.
-
 ## Timeouts
 
 Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `WorkerError` with code `'timeout'` is thrown.
@@ -214,23 +212,26 @@ console.log(worker.status); // 'terminated'
 Use lightweight counters for visibility and load monitoring:
 
 - `completed`: successful tasks since creation
+- `active`: number of slots currently executing a task
+- `queued`: tasks currently waiting in the queue
 - `utilization`: active slot ratio from `0` to `1`
-- `size`: queued task count
 
 ```ts
 import { createWorker } from '@vielzeug/worker';
 
 const pool = createWorker<number, number>((n) => n + 1, { concurrency: 4 });
 
-console.log(pool.completed); // 0
+console.log(pool.completed);   // 0
 console.log(pool.utilization); // 0
-console.log(pool.size); // 0
+console.log(pool.active);      // 0
+console.log(pool.queued);      // 0
 
 const p = pool.run(1);
 console.log(pool.utilization); // > 0 while running
+console.log(pool.active);      // 1
 
 await p;
-console.log(pool.completed); // 1
+console.log(pool.completed);   // 1
 ```
 
 ## Graceful Shutdown (`close`)
@@ -345,35 +346,57 @@ describe('add worker', () => {
 }
 ```
 
+## Warmup
+
+Call `warmup()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task. This is particularly useful when the pool is created during application startup but tasks don't arrive until later.
+
+```ts
+import { createWorker } from '@vielzeug/worker';
+
+const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+
+// Pre-spawn during app init
+pool.warmup();
+
+// First run() has no cold-start overhead
+const result = await pool.run(21); // 42
+
+pool.dispose();
+```
+
+Warmup is best-effort. If the Worker API is unavailable (SSR, Node.js without Worker support), `warmup()` silently does nothing and the error surfaces on the first `run()` call instead.
+
 ## Framework Integration
 
-Worker workers are plain async functions — wrap them in a hook or composable to integrate with your framework's lifecycle.
+Worker handles are plain objects — wrap them in a hook or composable to integrate with your framework's lifecycle.
 
 ::: code-group
 
 ```tsx [React]
-import { useEffect, useRef, useState } from 'react';
-import { createWorkerPool, type WorkerPool } from '@vielzeug/worker';
+import { useEffect, useRef } from 'react';
+import { createWorker, type WorkerHandle } from '@vielzeug/worker';
+import type { TaskFn } from '@vielzeug/worker';
 
-function useWorkerPool<TInput, TOutput>(fn: (input: TInput) => TOutput, size = 2) {
-  const poolRef = useRef<WorkerPool<TInput, TOutput> | null>(null);
+function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2) {
+  const ref = useRef<WorkerHandle<TInput, TOutput> | null>(null);
 
   useEffect(() => {
-    poolRef.current = createWorkerPool(fn, { size });
-    return () => { poolRef.current?.close(); };
+    const worker = createWorker(fn, { concurrency });
+    worker.warmup();
+    ref.current = worker;
+    return () => { worker.close(); };
   }, []);
 
-  return poolRef;
+  return ref;
 }
 
 function ImageProcessor() {
-  const poolRef = useWorkerPool((buf: ArrayBuffer) => processImage(buf), 4);
-  const [result, setResult] = useState<string | null>(null);
+  const workerRef = useWorker((buf: ArrayBuffer) => buf.byteLength, 4);
 
   async function handleUpload(file: File) {
     const buf = await file.arrayBuffer();
-    const output = await poolRef.current!.run(buf);
-    setResult(output);
+    const size = await workerRef.current!.run(buf);
+    console.log('Processed', size, 'bytes');
   }
 
   return <button onClick={() => handleUpload(selectedFile)}>Process</button>;
@@ -382,10 +405,11 @@ function ImageProcessor() {
 
 ```vue [Vue 3]
 <script setup lang="ts">
-import { createWorkerPool } from '@vielzeug/worker';
+import { createWorker } from '@vielzeug/worker';
 import { onScopeDispose, ref } from 'vue';
 
-const pool = createWorkerPool((n: number) => n * n, { size: 2 });
+const pool = createWorker((n: number) => n * n, { concurrency: 2 });
+pool.warmup();
 onScopeDispose(() => pool.close());
 
 const result = ref<number | null>(null);
@@ -403,10 +427,11 @@ async function runTask(n: number) {
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { createWorkerPool } from '@vielzeug/worker';
+  import { createWorker } from '@vielzeug/worker';
   import { onDestroy } from 'svelte';
 
-  const pool = createWorkerPool((n: number) => n * n, { size: 2 });
+  const pool = createWorker((n: number) => n * n, { concurrency: 2 });
+  pool.warmup();
   onDestroy(() => pool.close());
 
   let result: number | null = null;
@@ -424,7 +449,7 @@ async function runTask(n: number) {
 
 ### Pitfalls
 
-- **React:** Initializing the pool with `createWorkerPool(fn, ...)` directly in the component body (not inside `useEffect` or `useRef`) creates a new pool on every render. Always use `useRef` for stable initialization.
+- **React:** Initializing the pool with `createWorker(fn, ...)` directly in the component body (not inside `useEffect` or `useRef`) creates a new pool on every render. Always use `useRef` for stable initialization.
 - **Vue 3:** Creating the pool inside a `watch` or `computed` callback instead of at the top level of `setup()` can result in multiple pools being created. Always create at the top level and register `onScopeDispose` immediately.
 - **Svelte:** The pool created at the top of `<script>` starts immediately — if the component is conditionally rendered with `{#if}`, the pool is created when the component mounts. This is correct. Ensure `onDestroy` is called to close it when the component is removed.
 
@@ -455,28 +480,31 @@ const worker = createWorker(async (items: string[]) => {
 Track worker pool status in a reactive signal to drive UI state.
 
 ```ts
-import { createWorkerPool } from '@vielzeug/worker';
-import { signal, computed } from '@vielzeug/ripple';
+import { createWorker } from '@vielzeug/worker';
+import { computed, signal } from '@vielzeug/ripple';
 
-const pool = createWorkerPool(heavyTask, { size: 4 });
-const stats = signal(pool.stats());
+const pool = createWorker((n: number) => n * 2, { concurrency: 4 });
+const active = signal(pool.active);
+const queued = signal(pool.queued);
 
-// Refresh stats after each task
-const isBusy = computed(() => stats().active > 0);
+const isBusy = computed(() => active() > 0);
 
 async function runTask(input: number) {
+  active.set(pool.active);
   const result = await pool.run(input);
-  stats.set(pool.stats());
+  active.set(pool.active);
+  queued.set(pool.queued);
   return result;
 }
 ```
 
 ## Best Practices
 
-- Use `createWorkerPool()` rather than a single worker for CPU-bound tasks — multiple workers prevent head-of-line blocking.
+- Use `concurrency` > 1 for CPU-bound tasks — multiple slots prevent head-of-line blocking.
 - Set `maxQueue` to bound memory usage when consumers are slower than producers.
 - Pass large binary data (images, audio, WASM buffers) as `Transferable` to avoid copying.
-- Use `AbortSignal` to cancel long-running tasks when the user navigates away.
+- Use `AbortSignal` to cancel queued tasks when the user navigates away.
+- Call `warmup()` at startup when you know tasks will arrive soon, to eliminate first-task cold-start latency.
 - Always call `close()` in framework cleanup callbacks to terminate worker threads and free resources.
-- Keep worker task functions pure — avoid closures over mutable main-thread state since workers run in isolated threads.
-- Use `createTestWorker()` in unit tests to run tasks synchronously without spinning up real worker threads.
+- Keep worker task functions pure and self-contained — avoid closures over mutable main-thread state.
+- Use `createTestWorker()` in unit tests to run tasks in-process without spinning up real Worker threads.

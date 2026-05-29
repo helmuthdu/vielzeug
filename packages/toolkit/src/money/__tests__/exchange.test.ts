@@ -77,16 +77,14 @@ describe('exchange', () => {
       expect(result.amount).toBe(73000n);
     });
 
-    it('should handle complex decimal rates', () => {
+    it('should handle complex decimal rates with full 10-decimal-digit precision', () => {
       const money: Money = { amount: 100000n, currency: 'USD' };
       const rate: ExchangeRate = { from: 'USD', rate: 0.847532, to: 'EUR' };
 
       const result = exchange(money, rate);
 
       expect(result.currency).toBe('EUR');
-      // Should be close to 84753
-      expect(Number(result.amount)).toBeGreaterThan(84000);
-      expect(Number(result.amount)).toBeLessThan(85000);
+      expect(result.amount).toBe(84753n);
     });
   });
 

@@ -1,4 +1,6 @@
 import {
+  DEFAULT_ESTIMATE_SIZE,
+  DEFAULT_OVERSCAN,
   type Overscan,
   type ScrollToIndexOptions,
   type VirtualItem,
@@ -9,9 +11,6 @@ import {
 
 export * from '../scroll';
 
-const DEFAULT_ESTIMATE_SIZE = 36;
-const DEFAULT_OVERSCAN = 3;
-
 export type DomVirtualListRenderArgs<T> = {
   items: T[];
   listEl: HTMLElement;
@@ -21,32 +20,33 @@ export type DomVirtualListRenderArgs<T> = {
 
 export type DomVirtualListOptions<T> = {
   clear?: (listEl: HTMLElement) => void;
-  estimateSize: number | ((index: number, item: T) => number);
+  estimateSize?: number | ((index: number, item: T) => number);
   gap?: number;
   getItemKey?: (index: number, item: T) => VirtualKey;
-  getListElement: () => HTMLElement | null;
-  getScrollElement: () => HTMLElement | Window | null;
   horizontal?: boolean;
+  listElement: HTMLElement;
   overscan?: Overscan;
   render: (args: DomVirtualListRenderArgs<T>) => void;
+  scrollElement: HTMLElement | Window;
 };
 
 export type DomVirtualListController<T> = {
   destroy: () => void;
   invalidate: () => void;
   measure: (index: number, size: number) => void;
+  measureBatch: (entries: Array<{ index: number; size: number }>) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   setActive: (active: boolean) => void;
   setItems: (items: T[]) => void;
+  setTarget: (scrollElement: HTMLElement | Window, listElement: HTMLElement) => void;
 };
-
-type MeasurementSyncMode = 'invalidate' | 'refresh' | null;
 
 export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomVirtualListController<T> {
   let currentItems: T[] = [];
   let isActive = true;
-  let listElRef: HTMLElement | null = null;
-  let scrollElRef: HTMLElement | Window | null = null;
+  let isDestroyed = false;
+  let listElRef: HTMLElement = options.listElement;
+  let scrollElRef: HTMLElement | Window = options.scrollElement;
   let virtualizer: Virtualizer | null = null;
   let itemKeyRevision = 0;
 
@@ -59,6 +59,8 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   };
 
   const resolveEstimate = (index: number): number => {
+    if (options.estimateSize === undefined) return DEFAULT_ESTIMATE_SIZE;
+
     if (typeof options.estimateSize === 'number') return options.estimateSize;
 
     const item = currentItems[index];
@@ -68,9 +70,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     return options.estimateSize(index, item);
   };
 
-  const clearAndReset = (listEl: HTMLElement | null = listElRef) => {
-    if (!listEl) return;
-
+  const clearAndReset = (listEl: HTMLElement = listElRef) => {
     if (options.clear) options.clear(listEl);
     else listEl.textContent = '';
 
@@ -81,8 +81,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   };
 
   const applyListSize = (totalSize: number) => {
-    if (!listElRef) return;
-
     if (options.horizontal) {
       listElRef.style.width = `${totalSize}px`;
       listElRef.style.height = '';
@@ -93,8 +91,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   };
 
   const renderFromChange = (virtualItems: VirtualItem[], totalSize: number) => {
-    if (!listElRef) return;
-
     applyListSize(totalSize);
     options.render({
       items: currentItems,
@@ -104,45 +100,32 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     });
   };
 
-  const syncVirtualizer = (measurementSync: MeasurementSyncMode) => {
-    const nextScroll = options.getScrollElement();
-    const nextList = options.getListElement();
-    const previousList = listElRef;
+  const spawnVirtualizer = () => {
+    virtualizer = createVirtualizer(scrollElRef, {
+      count: currentItems.length,
+      estimateSize: resolveEstimate,
+      gap: options.gap,
+      getItemKey: resolveItemKey,
+      horizontal: options.horizontal,
+      onChange: (virtualItems, totalSize) => renderFromChange(virtualItems, totalSize),
+      overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
+    });
 
-    if (!isActive || !nextScroll || !nextList || currentItems.length === 0) {
+    listElRef.style.position = 'relative';
+    listElRef.style.contain = 'layout';
+  };
+
+  const syncItems = (keepMeasurements: boolean) => {
+    if (!isActive || currentItems.length === 0) {
       virtualizer?.destroy();
       virtualizer = null;
-      listElRef = nextList;
-      scrollElRef = nextScroll;
       clearAndReset();
 
       return;
     }
 
-    const targetChanged = scrollElRef !== nextScroll || listElRef !== nextList;
-
-    listElRef = nextList;
-    scrollElRef = nextScroll;
-
-    if (!virtualizer || targetChanged) {
-      const shouldClearForTargetSwap = !!virtualizer && targetChanged;
-
-      virtualizer?.destroy();
-
-      if (shouldClearForTargetSwap) clearAndReset(previousList);
-
-      virtualizer = createVirtualizer(scrollElRef, {
-        count: currentItems.length,
-        estimateSize: resolveEstimate,
-        gap: options.gap,
-        getItemKey: resolveItemKey,
-        horizontal: options.horizontal,
-        onChange: (virtualItems, totalSize) => renderFromChange(virtualItems, totalSize),
-        overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
-      });
-
-      listElRef.style.position = 'relative';
-      listElRef.style.contain = 'layout';
+    if (!virtualizer) {
+      spawnVirtualizer();
 
       return;
     }
@@ -155,17 +138,18 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       overscan: options.overscan,
     });
 
-    if (measurementSync === 'invalidate') {
+    if (keepMeasurements) {
+      virtualizer.refresh();
+    } else {
       virtualizer.invalidate();
-
-      return;
     }
-
-    if (measurementSync === 'refresh') virtualizer.refresh();
   };
 
   return {
     destroy() {
+      if (isDestroyed) return;
+
+      isDestroyed = true;
       virtualizer?.destroy();
       virtualizer = null;
       clearAndReset();
@@ -176,24 +160,49 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     measure(index, size) {
       virtualizer?.measure(index, size);
     },
+    measureBatch(entries) {
+      virtualizer?.measureBatch(entries);
+    },
     scrollToIndex(index, scrollOptions) {
       virtualizer?.scrollToIndex(index, scrollOptions);
     },
     setActive(active) {
+      if (isDestroyed || isActive === active) return;
+
       isActive = active;
-      syncVirtualizer(null);
+
+      if (!isActive) {
+        virtualizer?.destroy();
+        virtualizer = null;
+        clearAndReset();
+      } else if (currentItems.length > 0) {
+        spawnVirtualizer();
+      }
     },
     setItems(items) {
+      if (isDestroyed) return;
+
       currentItems = items;
+      itemKeyRevision += options.getItemKey ? 0 : 1;
+      syncItems(!!options.getItemKey);
+    },
+    setTarget(scrollElement, listElement) {
+      if (isDestroyed) return;
 
-      if (options.getItemKey) {
-        syncVirtualizer('refresh');
+      if (scrollElement === scrollElRef && listElement === listElRef) return;
 
-        return;
+      const previousList = listElRef;
+
+      virtualizer?.destroy();
+      virtualizer = null;
+      clearAndReset(previousList);
+
+      scrollElRef = scrollElement;
+      listElRef = listElement;
+
+      if (isActive && currentItems.length > 0) {
+        spawnVirtualizer();
       }
-
-      itemKeyRevision += 1;
-      syncVirtualizer('invalidate');
     },
   };
 }

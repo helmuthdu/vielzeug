@@ -15,23 +15,13 @@ describe('chunk', () => {
     });
   });
 
-  describe('String chunking without overlap', () => {
+  describe('String chunking', () => {
     it('should chunk a string into equal parts', () => {
       expect(chunk('hello', 2)).toEqual(['he', 'll', 'o']);
     });
 
     it('should handle an empty string', () => {
       expect(chunk('', 2)).toEqual([]);
-    });
-  });
-
-  describe('String chunking with overlap', () => {
-    it('should chunk a string with overlap', () => {
-      expect(chunk('hello', 2, { overlap: true })).toEqual([' h', 'he', 'el', 'll', 'lo', 'o ']);
-    });
-
-    it('should pad the string when overlap is enabled', () => {
-      expect(chunk('hello', 3, { overlap: true, pad: '*' })).toEqual(['*he', 'hel', 'ell', 'llo', 'lo*']);
     });
   });
 

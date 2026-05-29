@@ -29,17 +29,24 @@ export type CourierRequestConfig<P extends string = string> = PathConfig<P> & {
   query?: Params;
   /** Response parsing strategy. */
   responseType?: ResponseType;
+  /**
+   * Optional schema for response validation. Any object with a `parse(data)` method
+   * works — e.g. a `@vielzeug/sieve` schema or a plain validator function wrapper.
+   * Called after the response body is parsed; throws if validation fails.
+   */
+  schema?: { parse(data: unknown): unknown };
   /** Request timeout in ms. Overrides client default. */
   timeout?: number;
 };
 
-export type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> &
-  Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'> & {
-    /** Per-request headers merged with (and overriding) global client headers. */
-    headers?: Record<string, string>;
-    /** External abort signal merged with internal cancellation. */
-    signal?: AbortSignal;
-  };
+export type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
+  /** Raw fetch options for advanced use (credentials, cache, mode, referrer, etc.). */
+  fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
+  /** Per-request headers merged with (and overriding) global client headers. */
+  headers?: Record<string, string>;
+  /** External abort signal merged with internal cancellation. */
+  signal?: AbortSignal;
+};
 
 export function buildUrl(base: string, path: string, params?: Params, query?: Params): string {
   const baseClean = base.replace(/\/+$/, '');

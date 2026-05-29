@@ -11,85 +11,64 @@ A long form is split into pages that users move through sequentially. Each page 
 
 ### Solution
 
-Multi-step form with step-by-step validation.
+Use `scope()` to give each step its own relative field namespace. Each step's `scope.validate()` returns only that step's errors so advancing is safe even when sibling steps have pre-existing errors.
 
-```typescript
+```ts
 import { createForm } from '@vielzeug/forge';
 
-const wizardForm = createForm({
+const form = createForm({
   defaultValues: {
-    // Step 1: Personal Info
-    firstName: '',
-    lastName: '',
-    email: '',
-    // Step 2: Address
-    street: '',
-    city: '',
-    zipCode: '',
-    // Step 3: Payment
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
+    personal: { firstName: '', lastName: '', email: '' },
+    address:  { street: '', city: '', zipCode: '' },
+    payment:  { cardNumber: '', expiryDate: '', cvv: '' },
   },
   validators: {
-    firstName: (v) => (!v ? 'First name is required' : undefined),
-    lastName: (v) => (!v ? 'Last name is required' : undefined),
-    email: (v) => (!v ? 'Email is required' : v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    street: (v) => (!v ? 'Street is required' : undefined),
-    city: (v) => (!v ? 'City is required' : undefined),
-    zipCode: (v) => (!v ? 'ZIP code is required' : v && !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP code' : undefined),
-    cardNumber: (v) =>
-      !v
-        ? 'Card number is required'
-        : v && !/^\d{16}$/.test(String(v).replace(/\s/g, ''))
-          ? 'Invalid card number'
-          : undefined,
-    expiryDate: (v) => (!v ? 'Expiry date is required' : undefined),
-    cvv: (v) => (!v ? 'CVV is required' : v && !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
+    'personal.firstName': (v) => (!v ? 'First name is required' : undefined),
+    'personal.lastName':  (v) => (!v ? 'Last name is required' : undefined),
+    'personal.email':     (v) => (!v ? 'Email is required' : !String(v).includes('@') ? 'Invalid email' : undefined),
+    'address.street':     (v) => (!v ? 'Street is required' : undefined),
+    'address.city':       (v) => (!v ? 'City is required' : undefined),
+    'address.zipCode':    (v) => (!v ? 'ZIP code is required' : !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP' : undefined),
+    'payment.cardNumber': (v) => (!v ? 'Card number is required' : !/^\d{16}$/.test(String(v).replace(/\s/g, '')) ? 'Invalid card number' : undefined),
+    'payment.expiryDate': (v) => (!v ? 'Expiry date is required' : undefined),
+    'payment.cvv':        (v) => (!v ? 'CVV is required' : !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
   },
 });
 
-// Step configuration
+// Store scoped sub-forms once — each call creates a new object
 const steps = [
-  { title: 'Personal Info', fields: ['firstName', 'lastName', 'email'] as const },
-  { title: 'Address', fields: ['street', 'city', 'zipCode'] as const },
-  { title: 'Payment', fields: ['cardNumber', 'expiryDate', 'cvv'] as const },
-] as const;
+  { title: 'Personal Info', scope: form.scope('personal') },
+  { title: 'Address',       scope: form.scope('address') },
+  { title: 'Payment',       scope: form.scope('payment') },
+];
 
 let currentStep = 0;
 
-// Validate current step
-async function validateCurrentStep() {
-  const { valid } = await wizardForm.validateFields([...steps[currentStep].fields]);
-  return valid;
-}
-
-// Navigate to next step
 async function nextStep() {
-  const isValid = await validateCurrentStep();
-  if (isValid && currentStep < steps.length - 1) {
+  // validate() on the scoped form validates only this step's fields and
+  // returns relative-key errors — sibling errors do not bleed in
+  const { valid } = await steps[currentStep].scope.validate();
+
+  if (valid && currentStep < steps.length - 1) {
     currentStep++;
     updateStepUI();
   }
 }
 
-// Submit wizard
 async function submitWizard() {
-  const isValid = await validateCurrentStep();
-  if (isValid) {
-    const result = await wizardForm.submit(async (values) => {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      return response.json();
+  // submit() on the parent form validates everything and sends all values
+  const result = await form.submit(async (values) => {
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
     });
+    return response.json();
+  });
 
-    if (!result.ok) {
-      return;
-    }
-  }
+  if (!result.ok) return;
+
+  window.location.href = '/confirmation';
 }
 
 function updateStepUI() {
@@ -97,17 +76,15 @@ function updateStepUI() {
 }
 ```
 
-
 ### Pitfalls
 
-- Navigating backward does not re-trigger validation for already-completed steps. If you want to re-surface stale errors on return, call `form.validate()` explicitly when the user goes back.
-- `form.submit()` validates all fields across all steps, not just the current one. This is correct for final submission but call `form.validateField(name)` for per-step validation.
-- Storing the current step in a URL parameter without syncing it to form state can show the wrong step when the user navigates with the browser back button.
+- **Call `scope()` once and store the result.** Calling `form.scope('personal')` inside a render function creates a new object each time, breaking subscription closures.
+- `scope.state` reflects the **full** form — `state.isValid` is `false` if any step has an error. Use `scope.validate()` for per-step validity, not `state.isValid`.
+- Navigating backward does not re-run validation. If you want to re-surface errors on return, call `scope.validate()` when the user navigates to a step.
+- `form.submit()` validates all fields across all steps — this is correct for final submission. Use `scope.validate()` for per-step validation when advancing.
 
 ### Related
-- [Routing Between Steps (Route)](@vielzeug/route/examples/route-table-basics)
-- [Schema Validation with Sieve](/sieve/)
 
-- [Best Practices](./best-practices.md)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
+- [Routing Between Steps (Route)](/route/)
+- [Schema Validation with Sieve](/sieve/)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

@@ -26,10 +26,27 @@ export function assert(
 ): void {
   if (condition) return;
 
-  const errorDetails = args ? `\nArguments: ${JSON.stringify(args, null, 2)}` : '';
-  const fullMessage = `${message}${errorDetails}`;
+  let errorDetails = '';
 
-  throw new type(fullMessage);
+  if (args) {
+    try {
+      errorDetails = `\nArguments: ${JSON.stringify(args, null, 2)}`;
+    } catch {
+      const parts = Object.entries(args)
+        .map(([k, v]) => {
+          try {
+            return `${k}: ${JSON.stringify(v)}`;
+          } catch {
+            return `${k}: [circular]`;
+          }
+        })
+        .join(', ');
+
+      errorDetails = `\nArguments: { ${parts} }`;
+    }
+  }
+
+  throw new type(`${message}${errorDetails}`);
 }
 
 /**

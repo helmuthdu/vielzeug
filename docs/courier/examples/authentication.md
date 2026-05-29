@@ -1,6 +1,6 @@
 ---
 title: 'Courier Examples — Authentication'
-description: 'Authentication examples for courier.'
+description: 'Authentication example for @vielzeug/courier.'
 ---
 
 ## Authentication
@@ -11,7 +11,11 @@ Every request to your API needs a valid `Authorization` header, and when the ser
 
 ### Solution
 
+Use `api.headers()` to manage global tokens and `withBearerAuth()` for token-refresh flows via a shared interceptor.
+
 ```ts
+import { createApi, createQuery, withBearerAuth } from '@vielzeug/courier';
+
 const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery();
 
@@ -25,7 +29,25 @@ function logout() {
 }
 ```
 
-### Auto Token Refresh via Interceptor
+### Using the Built-in `withBearerAuth` Preset
+
+For token-refresh flows, use the built-in interceptor preset. It accepts a static string or an async factory:
+
+```ts
+import { withBearerAuth } from '@vielzeug/courier';
+
+// Static token
+api.use(withBearerAuth('my-static-token'));
+
+// Dynamic token — called before every request
+api.use(withBearerAuth(async () => tokenStore.getAccessToken()));
+```
+
+`withBearerAuth` correctly handles any form of `ctx.init.headers` — `undefined`, plain object, `Headers` instance, or array of tuples — so no manual spreading is required.
+
+### Auto Token Refresh via Custom Interceptor
+
+When you need full control over the 401 retry cycle:
 
 ```ts
 const stopRefreshing = api.use(async (ctx, next) => {
@@ -35,8 +57,8 @@ const stopRefreshing = api.use(async (ctx, next) => {
     if (HttpError.is(err, 401)) {
       const newToken = await refreshToken();
       api.headers({ Authorization: `Bearer ${newToken}` });
-      // Retry with updated header
-      ctx.init.headers = { ...(ctx.init.headers as object), Authorization: `Bearer ${newToken}` };
+      // Replay the original request with the updated header
+      ctx.init.headers = { ...(ctx.init.headers as Record<string, string>), Authorization: `Bearer ${newToken}` };
       return next(ctx);
     }
     throw err;

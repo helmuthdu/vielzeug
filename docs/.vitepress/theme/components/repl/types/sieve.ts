@@ -32,6 +32,8 @@ declare module '/sieve' {
     path: (string | number)[];
   };
 
+  export type FlatError = { messages: string[]; path: (string | number)[] };
+
   export type FormattedErrors = {
     _errors: string[];
     [key: string]: FormattedErrors | string[];
@@ -39,19 +41,63 @@ declare module '/sieve' {
 
   export class ValidationError extends Error {
     readonly issues: Issue[];
-    flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] };
+    flatten(): { fieldErrors: FlatError[]; formErrors: string[] };
     flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] };
     format(): FormattedErrors;
     static is(value: unknown): value is ValidationError;
   }
 
+  export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[];
+
   export type ParseResult<T> =
     | { data: T; success: true }
     | { error: ValidationError; success: false };
 
+  export type CheckFnResult = void | null | undefined | boolean | string;
+
+  export type CheckContext = {
+    addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void;
+  };
+
   export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> =
     | string
     | ((ctx: Ctx) => string);
+
+  export type JsonSchema = Record<string, unknown>;
+
+  export type SchemaDescriptor = {
+    description?: string;
+    kind:
+      | 'any'
+      | 'unknown'
+      | 'string'
+      | 'number'
+      | 'boolean'
+      | 'date'
+      | 'bigint'
+      | 'null'
+      | 'undefined'
+      | 'never'
+      | 'literal'
+      | 'enum'
+      | 'object'
+      | 'array'
+      | 'tuple'
+      | 'record'
+      | 'set'
+      | 'map'
+      | 'union'
+      | 'intersect'
+      | 'variant'
+      | 'pipe'
+      | 'wrapper';
+    [key: string]: unknown;
+  };
+
+  export type SchemaWalker<R> = {
+    [kind: string]: ((schema: Schema<any>, ...args: any[]) => R) | undefined;
+    unknown?: (schema: Schema<any>) => R;
+  };
 
   export class Schema<Output = unknown, Input = Output> {
     parse(value: Input): Output;
@@ -59,12 +105,9 @@ declare module '/sieve' {
     parseAsync(value: Input): Promise<Output>;
     safeParseAsync(value: Input): Promise<ParseResult<Output>>;
 
-    check(
-      check: (
-        value: Output,
-        ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-      ) => void | null | undefined | boolean | string | Promise<void | null | undefined | boolean | string>,
-    ): this;
+    check(fn: (value: Output, ctx: CheckContext) => CheckFnResult): this;
+    checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this;
+
     optional(): Schema<Output | undefined, Input | undefined>;
     nullable(): Schema<Output | null, Input | null>;
     nullish(): Schema<Output | null | undefined, Input | null | undefined>;
@@ -76,9 +119,11 @@ declare module '/sieve' {
     preprocess(fn: (value: unknown) => unknown): this;
 
     describe(description: string): this;
-    readonly description: string | undefined;
+    describe(): SchemaDescriptor;
+    toJsonSchema(): JsonSchema;
+    walk<R>(visitor: SchemaWalker<R>): R;
+
     brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>;
-    readonly(): Schema<Readonly<Output>, Input>;
     is(value: unknown): value is Output;
   }
 
@@ -179,7 +224,7 @@ declare module '/sieve' {
     pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>>;
     omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>>;
     relaxed(): Schema<{ [K in keyof T]: InferOutput<T[K]> } & Record<string, unknown>>;
-    strip(): ObjectSchema<T>;
+    strict(): ObjectSchema<T>;
   }
 
   export class TupleSchema<T extends readonly Schema<any>[]> extends Schema<{ readonly [K in keyof T]: InferOutput<T[K]> }> {
@@ -214,10 +259,11 @@ declare module '/sieve' {
   export type InferOutput<T> = T extends Schema<infer O, any> ? O : never;
 
   export type Messages = Record<string, unknown>;
-  export function configure(opts: { messages?: Record<string, unknown> }): void;
+  export function configure(opts: { logger?: ((msg: string) => void) | null; messages?: Record<string, unknown> }): void;
   export function reset(): void;
+  export function withMessages<T>(patch: Record<string, unknown>, fn: () => T): T;
 
-  export const v: {
+  export const s: {
     any(): Schema<any>;
     unknown(): Schema<unknown>;
 
@@ -228,7 +274,7 @@ declare module '/sieve' {
     bigint(): BigIntSchema;
 
     literal<T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T>;
-    enum<T extends readonly [string | number, ...(string | number)[]]>(values: T): EnumSchema<T>;
+    enum<const T extends readonly [string | number, ...(string | number)[]]>(values: T): EnumSchema<T>;
     null(): LiteralSchema<null>;
     undefined(): LiteralSchema<undefined>;
     never(): Schema<never>;

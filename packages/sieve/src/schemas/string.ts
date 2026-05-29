@@ -1,4 +1,4 @@
-import type { MessageFn } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, fail, resolveMessage } from '../core';
 import { _messages, _warn } from '../messages';
@@ -9,34 +9,8 @@ type UrlOptions = {
 };
 
 export class StringSchema<Input = string> extends Schema<string, Input> {
-  /** @internal JSON Schema annotation \u2014 populated by min()/length()/nonEmpty() */
-  _minLength?: number;
-  /** @internal JSON Schema annotation \u2014 populated by max()/length() */
-  _maxLength?: number;
-  /** @internal JSON Schema annotation \u2014 populated by regex(); null = ambiguous (multiple patterns) */
-  _pattern?: string | null;
-  /** @internal JSON Schema annotation \u2014 populated by email/uuid/url/isoDate etc. */
-  _format?: string;
-  /** @internal JSON Schema annotation \u2014 populated by base64() */
-  _contentEncoding?: string;
-
   constructor() {
     super((value) => (typeof value === 'string' ? null : fail(ErrorCode.invalid_type, _messages().string.type())));
-  }
-
-  private _check(
-    format: string,
-    check: (value: string) => boolean,
-    message: MessageFn<{ value: string }>,
-    code: ErrorCode = ErrorCode.invalid_string,
-  ): this {
-    return this._addValidator((value) => {
-      const s = value as string;
-
-      if (check(s)) return null;
-
-      return fail(code, resolveMessage(message, { value: s }), { format });
-    });
   }
 
   private _checkRegex(
@@ -45,68 +19,75 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     message: MessageFn<{ value: string }>,
     code: ErrorCode = ErrorCode.invalid_string,
   ): this {
-    return this._check(format, (value) => pattern.test(value), message, code);
+    return this._addConstraint((value) => {
+      if (pattern.test(value as string)) return null;
+
+      return fail(code, resolveMessage(message, { value: value as string }), { format });
+    });
   }
 
   min(length: number, message: MessageFn<{ min: number; value: string }> = (ctx) => _messages().string.min(ctx)): this {
-    const next = this._addValidator((value) => {
-      if ((value as string).length >= length) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as string).length >= length) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as string }), {
-        min: length,
-      });
-    }) as StringSchema<any>;
-
-    next._minLength = next._minLength === undefined ? length : Math.max(next._minLength, length);
-
-    return next as this;
+        return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as string }), {
+          min: length,
+        });
+      },
+      (ann) => ({
+        ...ann,
+        minLength: ann['minLength'] === undefined ? length : Math.max(ann['minLength'] as number, length),
+      }),
+    );
   }
 
   max(length: number, message: MessageFn<{ max: number; value: string }> = (ctx) => _messages().string.max(ctx)): this {
-    const next = this._addValidator((value) => {
-      if ((value as string).length <= length) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as string).length <= length) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as string }), { max: length });
-    }) as StringSchema<any>;
-
-    next._maxLength = next._maxLength === undefined ? length : Math.min(next._maxLength, length);
-
-    return next as this;
+        return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as string }), {
+          max: length,
+        });
+      },
+      (ann) => ({
+        ...ann,
+        maxLength: ann['maxLength'] === undefined ? length : Math.min(ann['maxLength'] as number, length),
+      }),
+    );
   }
 
   length(
     exact: number,
     message: MessageFn<{ exact: number; value: string }> = (ctx) => _messages().string.length(ctx),
   ): this {
-    const next = this._addValidator((value) => {
-      if ((value as string).length === exact) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as string).length === exact) return null;
 
-      return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as string }), { exact });
-    }) as StringSchema<any>;
-
-    next._minLength = exact;
-    next._maxLength = exact;
-
-    return next as this;
+        return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as string }), { exact });
+      },
+      (ann) => ({ ...ann, maxLength: exact, minLength: exact }),
+    );
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: string }> = () => _messages().string.nonEmpty()): this {
-    const next = this._addValidator((value) => {
-      if ((value as string).length > 0) return null;
+    return this._addConstraint(
+      (value) => {
+        if ((value as string).length > 0) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: 1, value: value as string }), { min: 1 });
-    }) as StringSchema<any>;
-
-    if (next._minLength === undefined || next._minLength < 1) next._minLength = 1;
-
-    return next as this;
+        return fail(ErrorCode.too_small, resolveMessage(message, { min: 1, value: value as string }), { min: 1 });
+      },
+      (ann) => ({ ...ann, minLength: Math.max((ann['minLength'] as number | undefined) ?? 0, 1) }),
+    );
   }
 
   startsWith(
     prefix: string,
     message: MessageFn<{ prefix: string; value: string }> = (ctx) => _messages().string.startsWith(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       if ((value as string).startsWith(prefix)) return null;
 
       return fail(ErrorCode.invalid_string, resolveMessage(message, { prefix, value: value as string }), { prefix });
@@ -117,7 +98,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     suffix: string,
     message: MessageFn<{ suffix: string; value: string }> = (ctx) => _messages().string.endsWith(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       if ((value as string).endsWith(suffix)) return null;
 
       return fail(ErrorCode.invalid_string, resolveMessage(message, { suffix, value: value as string }), { suffix });
@@ -128,7 +109,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     substr: string,
     message: MessageFn<{ substr: string; value: string }> = (ctx) => _messages().string.includes(ctx),
   ): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       if ((value as string).includes(substr)) return null;
 
       return fail(ErrorCode.invalid_string, resolveMessage(message, { substr, value: value as string }), {
@@ -138,98 +119,109 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string.regex(ctx)): this {
-    const next = this._addValidator((value) => {
-      if (pattern.test(value as string)) return null;
+    return this._addConstraint(
+      (value) => {
+        if (pattern.test(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-        pattern: pattern.source,
-      });
-    }) as StringSchema<any>;
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
+          pattern: pattern.source,
+        });
+      },
+      (ann) => {
+        const current = ann['pattern'];
 
-    if (next._pattern === null) {
-      // already ambiguous, stay that way
-    } else if (next._pattern === undefined) {
-      next._pattern = pattern.source;
-    } else if (next._pattern !== pattern.source) {
-      next._pattern = null; // multiple conflicting patterns: omit from JSON Schema
-      _warn(
-        '[sieve] Multiple .regex() constraints detected on a single string schema. ' +
-          'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from schema() output.',
-      );
-    }
+        if (current === null) return ann; // already ambiguous
 
-    return next as this;
+        if (current === undefined) return { ...ann, pattern: pattern.source };
+
+        if (current !== pattern.source) {
+          _warn(
+            '[sieve] Multiple .regex() constraints detected on a single string schema. ' +
+              'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from toJsonSchema() output.',
+          );
+
+          return { ...ann, pattern: null };
+        }
+
+        return ann;
+      },
+    );
   }
 
   email(message: MessageFn<{ value: string }> = () => _messages().string.email()): this {
-    const next = this._checkRegex('email', /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message);
+    return this._addConstraint(
+      (value) => {
+        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value as string)) return null;
 
-    (next as StringSchema<any>)._format = 'email';
-
-    return next;
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'email' });
+      },
+      (ann) => ({ ...ann, format: 'email' }),
+    );
   }
 
   url(options: UrlOptions = {}): this {
     const { message = () => _messages().string.url(), protocols = ['http', 'https'] } = options;
     const allowedProtocols = new Set(protocols.map((p) => p.toLowerCase()));
-    const next = this._check(
-      'url',
+
+    return this._addConstraint(
       (value) => {
         try {
-          const parsed = new URL(value);
+          const parsed = new URL(value as string);
 
-          return allowedProtocols.has(parsed.protocol.replace(':', '').toLowerCase());
+          if (allowedProtocols.has(parsed.protocol.replace(':', '').toLowerCase())) return null;
         } catch {
-          return false;
+          // invalid URL
         }
+
+        return fail(ErrorCode.invalid_url, resolveMessage(message, { value: value as string }), { format: 'url' });
       },
-      message,
-      ErrorCode.invalid_url,
+      (ann) => ({ ...ann, format: 'uri' }),
     );
-
-    (next as StringSchema<any>)._format = 'uri';
-
-    return next;
   }
 
   uuid(message: MessageFn<{ value: string }> = () => _messages().string.uuid()): this {
-    const next = this._checkRegex('uuid', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, message);
+    return this._addConstraint(
+      (value) => {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value as string)) return null;
 
-    (next as StringSchema<any>)._format = 'uuid';
-
-    return next;
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'uuid' });
+      },
+      (ann) => ({ ...ann, format: 'uuid' }),
+    );
   }
 
   isoDate(message: MessageFn<{ value: string }> = () => _messages().string.date()): this {
-    const next = this._check(
-      'iso-date',
+    return this._addConstraint(
       (value) => {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        const v = value as string;
 
-        const d = new Date(value);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+          const d = new Date(v);
 
-        return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
+          if (!Number.isNaN(d.getTime()) && d.toISOString().startsWith(v)) return null;
+        }
+
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'iso-date' });
       },
-      message,
+      (ann) => ({ ...ann, format: 'date' }),
     );
-
-    (next as StringSchema<any>)._format = 'date';
-
-    return next;
   }
 
   isoDateTime(message: MessageFn<{ value: string }> = () => _messages().string.dateTime()): this {
-    const next = this._check(
-      'iso-datetime',
-      (value) =>
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value) &&
-        !Number.isNaN(new Date(value).getTime()),
-      message,
+    return this._addConstraint(
+      (value) => {
+        const v = value as string;
+
+        if (
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(v) &&
+          !Number.isNaN(new Date(v).getTime())
+        )
+          return null;
+
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'iso-datetime' });
+      },
+      (ann) => ({ ...ann, format: 'date-time' }),
     );
-
-    (next as StringSchema<any>)._format = 'date-time';
-
-    return next;
   }
 
   trim(): this {
@@ -245,27 +237,30 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   ip(message: MessageFn<{ value: string }> = () => _messages().string.ip()): this {
-    return this._check(
-      'ip',
-      (value) => {
-        if (/^(\d{1,3}\.){3}\d{1,3}$/.test(value)) {
-          return value.split('.').every((octet) => {
-            const n = parseInt(octet, 10);
+    return this._addConstraint((value) => {
+      const v = value as string;
+
+      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) {
+        if (
+          v.split('.').every((o) => {
+            const n = parseInt(o, 10);
 
             return n >= 0 && n <= 255;
-          });
-        }
-
+          })
+        )
+          return null;
+      } else {
         try {
-          new URL(`http://[${value}]/`);
+          new URL(`http://[${v}]/`);
 
-          return true;
+          return null;
         } catch {
-          return false;
+          /* invalid */
         }
-      },
-      message,
-    );
+      }
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'ip' });
+    });
   }
 
   cuid(message: MessageFn<{ value: string }> = () => _messages().string.cuid()): this {
@@ -285,16 +280,17 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   base64(message: MessageFn<{ value: string }> = () => _messages().string.base64()): this {
-    const next = this._checkRegex(
-      'base64',
-      /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/,
-      message,
-      ErrorCode.invalid_base64,
+    return this._addConstraint(
+      (value) => {
+        if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/.test(value as string))
+          return null;
+
+        return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
+          format: 'base64',
+        });
+      },
+      (ann) => ({ ...ann, contentEncoding: 'base64' }),
     );
-
-    (next as StringSchema<any>)._contentEncoding = 'base64';
-
-    return next;
   }
 
   base64url(message: MessageFn<{ value: string }> = () => _messages().string.base64url()): this {
@@ -322,16 +318,17 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   duration(message: MessageFn<{ value: string }> = () => _messages().string.duration()): this {
-    const next = this._checkRegex(
-      'duration',
-      /^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(?:\.\d+)?S)?)?$/,
-      message,
-      ErrorCode.invalid_duration,
+    return this._addConstraint(
+      (value) => {
+        if (/^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(?:\.\d+)?S)?)?$/.test(value as string))
+          return null;
+
+        return fail(ErrorCode.invalid_duration, resolveMessage(message, { value: value as string }), {
+          format: 'duration',
+        });
+      },
+      (ann) => ({ ...ann, format: 'duration' }),
     );
-
-    (next as StringSchema<any>)._format = 'duration';
-
-    return next;
   }
 
   semver(message: MessageFn<{ value: string }> = () => _messages().string.semver()): this {
@@ -351,17 +348,18 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
+    const ann = this._annotations;
     const base: Record<string, unknown> = { type: 'string' };
 
-    if (this._minLength !== undefined) base['minLength'] = this._minLength;
+    if (ann['minLength'] !== undefined) base['minLength'] = ann['minLength'];
 
-    if (this._maxLength !== undefined) base['maxLength'] = this._maxLength;
+    if (ann['maxLength'] !== undefined) base['maxLength'] = ann['maxLength'];
 
-    if (this._pattern != null) base['pattern'] = this._pattern; // null = ambiguous, omit
+    if (ann['pattern'] != null) base['pattern'] = ann['pattern']; // null = ambiguous, omit
 
-    if (this._format !== undefined) base['format'] = this._format;
+    if (ann['format'] !== undefined) base['format'] = ann['format'];
 
-    if (this._contentEncoding !== undefined) base['contentEncoding'] = this._contentEncoding;
+    if (ann['contentEncoding'] !== undefined) base['contentEncoding'] = ann['contentEncoding'];
 
     return base;
   }
@@ -372,17 +370,34 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     return super._walk(visitor);
   }
 
+  protected override _describeImpl(): SchemaDescriptor {
+    const ann = this._annotations;
+
+    return {
+      ...(this.state.description ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true } : {}),
+      ...(this.state.isOptional ? { isOptional: true } : {}),
+      ...(ann['contentEncoding'] !== undefined ? { contentEncoding: ann['contentEncoding'] as string } : {}),
+      ...(ann['format'] !== undefined ? { format: ann['format'] as string } : {}),
+      ...(ann['maxLength'] !== undefined ? { maxLength: ann['maxLength'] as number } : {}),
+      ...(ann['minLength'] !== undefined ? { minLength: ann['minLength'] as number } : {}),
+      ...(ann['pattern'] !== undefined ? { pattern: ann['pattern'] as string | null } : {}),
+      kind: 'string',
+    };
+  }
+
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof StringSchema)) return false;
 
-    const o = other as StringSchema<any>;
+    const a = this._annotations;
+    const b = other._annotations;
 
     return (
-      this._minLength === o._minLength &&
-      this._maxLength === o._maxLength &&
-      this._pattern === o._pattern &&
-      this._format === o._format &&
-      this._contentEncoding === o._contentEncoding
+      a['minLength'] === b['minLength'] &&
+      a['maxLength'] === b['maxLength'] &&
+      a['pattern'] === b['pattern'] &&
+      a['format'] === b['format'] &&
+      a['contentEncoding'] === b['contentEncoding']
     );
   }
 

@@ -34,6 +34,7 @@ declare module '@vielzeug/deposit' {
   export interface QueryBuilder<T extends Record<string, unknown>> {
     between<K extends ComparableFieldKeys<T>>(field: K, lower: T[K], upper: T[K]): QueryBuilder<T>;
     count(): Promise<number>;
+    totalCount(): Promise<number>;
     delete(): Promise<number>;
     equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
     filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
@@ -60,7 +61,6 @@ declare module '@vielzeug/deposit' {
       ttl?: TtlMs,
     ): Promise<RecordOf<S, T>>;
     has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-    iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
     put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
     putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
     query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
@@ -81,6 +81,10 @@ declare module '@vielzeug/deposit' {
   export type DebugStats = { expiredCount: number; recordCount: number };
   export type DebugInfo<S extends AnySchema> = {
     tables: Array<{ name: keyof S & string } & DebugStats>;
+  };
+
+  export type IndexedDbAdapter<S extends AnySchema> = Adapter<S> & {
+    iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
   };
 
   export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>, 'getOrDefault'> {
@@ -110,31 +114,49 @@ declare module '@vielzeug/deposit' {
   export class DepositQuotaError extends DepositError {}
   export class DepositMigrationError extends DepositError {}
 
+  export interface DepositLogger {
+    error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
+  }
+
+  export type MetricsEvent = {
+    duration: number;
+    operation: 'batch' | 'count' | 'delete' | 'deleteMany' | 'clear' | 'get' | 'getAll' | 'getMany' | 'has' | 'put' | 'putAll' | 'query' | 'queryDelete' | 'update' | 'upsert';
+    table: string;
+  };
+
   export function table<T extends Record<string, unknown>>(key: keyof T & string): SchemaEntry<T>;
 
   export function createLocalStorage<S extends AnySchema>(options: {
+    logger?: DepositLogger;
     name: string;
+    onMetrics?: (event: MetricsEvent) => void;
     onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
     schema: S;
   }): Adapter<S>;
 
   export function createSessionStorage<S extends AnySchema>(options: {
+    logger?: DepositLogger;
     name: string;
+    onMetrics?: (event: MetricsEvent) => void;
     onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
     schema: S;
   }): Adapter<S>;
 
   export function createMemory<S extends AnySchema>(options: {
+    logger?: DepositLogger;
     name?: string;
+    onMetrics?: (event: MetricsEvent) => void;
     schema: S;
   }): Adapter<S>;
 
   export function createIndexedDB<S extends AnySchema>(options: {
+    logger?: DepositLogger;
     migrate?: MigrationFn;
     name: string;
+    onMetrics?: (event: MetricsEvent) => void;
     schema: S;
     version: number;
-  }): Adapter<S>;
+  }): IndexedDbAdapter<S>;
 
   export function scheduleExpiredPrune<S extends AnySchema>(
     adapter: Pick<Adapter<S>, 'pruneExpired'>,

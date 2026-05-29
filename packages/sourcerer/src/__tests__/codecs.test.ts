@@ -1,15 +1,9 @@
-import {
-  decodeLocalQueryParams,
-  decodeRemoteQueryParams,
-  decodeRemoteQueryParamsStrict,
-  encodeLocalQueryParams,
-  encodeRemoteQueryParams,
-} from '../codecs';
+import { decodeQuery, encodeQuery } from '../codecs';
 
 describe('codecs', () => {
-  it('roundtrips local query params', () => {
-    const encoded = encodeLocalQueryParams({ limit: 20, page: 3, search: 'ada' });
-    const decoded = decodeLocalQueryParams(encoded, 10);
+  it('roundtrips local (page/limit/search) query params', () => {
+    const encoded = encodeQuery({ limit: 20, page: 3, search: 'ada' });
+    const decoded = decodeQuery(encoded, { defaultLimit: 10 });
 
     expect(decoded).toEqual({
       limit: 20,
@@ -18,15 +12,15 @@ describe('codecs', () => {
     });
   });
 
-  it('roundtrips remote query params', () => {
-    const encoded = encodeRemoteQueryParams({
+  it('roundtrips remote (+ filter/sort) query params', () => {
+    const encoded = encodeQuery({
       filter: { active: true },
       limit: 5,
       page: 2,
       search: 'issue',
       sort: { by: 'name', dir: 'asc' },
     });
-    const decoded = decodeRemoteQueryParams(encoded, 10);
+    const decoded = decodeQuery(encoded, { defaultLimit: 10 });
 
     expect(decoded).toEqual({
       filter: { active: true },
@@ -37,45 +31,47 @@ describe('codecs', () => {
     });
   });
 
-  it('ignores malformed remote filter/sort in non-strict decode', () => {
-    const decoded = decodeRemoteQueryParams(
+  it('silently drops malformed filter/sort in non-strict mode', () => {
+    const decoded = decodeQuery(
       {
         filter: '{"active":',
         limit: '5',
         page: '2',
         sort: '{"by":',
       },
-      10,
+      { defaultLimit: 10 },
     );
 
-    // Malformed params are silently dropped; keys are omitted entirely (not set to undefined).
-    expect(decoded).toEqual({
-      limit: 5,
-      page: 2,
-      search: '',
-    });
+    expect(decoded).toEqual({ limit: 5, page: 2, search: '' });
     expect('filter' in decoded).toBe(false);
     expect('sort' in decoded).toBe(false);
   });
 
   it('omits filter and sort keys when params are absent', () => {
-    const decoded = decodeRemoteQueryParams({ limit: '5', page: '1' }, 10);
+    const decoded = decodeQuery({ limit: '5', page: '1' }, { defaultLimit: 10 });
 
     expect(decoded).toEqual({ limit: 5, page: 1, search: '' });
     expect('filter' in decoded).toBe(false);
     expect('sort' in decoded).toBe(false);
   });
 
-  it('throws for malformed remote filter/sort in strict decode', () => {
+  it('throws for malformed filter in strict mode', () => {
     expect(() =>
-      decodeRemoteQueryParamsStrict(
-        {
-          filter: '{"active":',
-          limit: '5',
-          page: '2',
-        },
-        10,
-      ),
+      decodeQuery({ filter: '{"active":', limit: '5', page: '2' }, { defaultLimit: 10, strict: true }),
     ).toThrow('Invalid query param "filter"');
+  });
+
+  it('throws for malformed sort in strict mode', () => {
+    expect(() => decodeQuery({ limit: '5', page: '2', sort: '{"by":' }, { defaultLimit: 10, strict: true })).toThrow(
+      'Invalid query param "sort"',
+    );
+  });
+
+  it('encodeQuery omits empty search', () => {
+    const params = encodeQuery({ limit: 10, page: 1, search: '' });
+
+    expect('search' in params).toBe(false);
+    expect(params.limit).toBe('10');
+    expect(params.page).toBe('1');
   });
 });

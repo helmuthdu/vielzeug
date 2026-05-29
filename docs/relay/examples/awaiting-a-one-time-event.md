@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Awaiting a one-time event'
-description: 'Awaiting a one-time event examples for relay.'
+description: 'Awaiting a one-time event example for @vielzeug/relay.'
 ---
 
 ## Awaiting a one-time event

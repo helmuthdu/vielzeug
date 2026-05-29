@@ -137,13 +137,13 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
         label: props.label,
         labelPlacement: props['label-placement'],
         maxLength: props.maxlength,
+        onBeforeInput: autoGrow,
         onChange: (event, value) => {
           emit('change', { originalEvent: event, value });
         },
         onInput: (event, value) => {
           emit('input', { originalEvent: event, value });
         },
-        onRawInput: autoGrow,
         prefix: 'textarea',
         validateOn: formCtx?.validateOn,
         value: props.value,

@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — React Integration'
-description: useSyncExternalStore integration with route, plus minimal RouterView/RouterLink primitives.
+description: 'React integration example for @vielzeug/route.'
 ---
 
 ## React Integration
 
-Export a single `useRouter()` hook from `router.ts`. It returns reactive route state and bound router actions, so components import one symbol and call one hook.
+### Problem
+
+Using `useState` + `useEffect` to bind external router state to React causes tearing: the render that reads state and the effect that subscribes to updates can be out of sync in concurrent mode.
+
+### Solution
+
+Use `useSyncExternalStore(subscribe, getSnapshot)` for tear-safe, concurrent-mode-compatible route state. Create the router and bind actions at module scope outside the hook.
 
 ```ts
 // router.ts
@@ -20,9 +26,9 @@ const router = createRouter({
   },
 });
 
-const { getSnapshot, subscribe } = router.toStore();
-
 // Stable bound references, safe to return from the hook.
+const getSnapshot = () => router.getSnapshot();
+const subscribe = (cb: () => void) => router.subscribe(cb);
 const isActive = router.isActive.bind(router);
 const navigate = router.navigate.bind(router);
 const url = router.url.bind(router);
@@ -80,4 +86,12 @@ export function RouterLink({ children, name }: Props) {
 }
 ```
 
-This mirrors React Router's hook-first mental model without needing an adapter package.
+### Pitfalls
+
+- Never use `useEffect` + `useState` for router state in concurrent mode — it causes tearing between reads and subscription updates.
+- Do not create `getSnapshot`, `subscribe`, `navigate`, `url`, or `isActive` inside the hook. They must be stable references at module scope to avoid infinite re-renders.
+
+### Related
+
+- [Vue Integration](./vue-integration.md)
+- [Svelte Integration](./svelte-integration.md)

@@ -1,11 +1,17 @@
 ---
 title: 'Route Examples — Page Titles from Meta'
-description: Drive document.title from route metadata and state subscriptions.
+description: 'Page titles from meta example for @vielzeug/route.'
 ---
 
 ## Page Titles from Meta
 
-Store title hints in route `meta`, then apply them in a single subscription.
+### Problem
+
+Setting `document.title` inside individual handlers is repetitive and misses back/forward navigation driven by the browser's own history buttons.
+
+### Solution
+
+Store title hints in route `meta` and update `document.title` in a single `subscribe()` callback.
 
 ```ts
 import { createRouter } from '@vielzeug/route';
@@ -37,10 +43,22 @@ const router = createRouter({
   },
 });
 
-router.subscribe((state) => {
+// Set title on initial load from current snapshot, then update on every navigation.
+const applyTitle = (state: ReturnType<typeof router.getSnapshot>) => {
   const m = state.matches.at(-1)?.meta as Meta | undefined;
-  document.title = m?.title ? `${m.title} - My App` : 'My App';
-});
+  document.title = m?.title ? `${m.title} — My App` : 'My App';
+};
+
+applyTitle(router.getSnapshot());
+router.subscribe(applyTitle);
 ```
 
-This pattern keeps page title logic centralized and deterministic. For nested routes, read `router.state.matches` and use the leaf route (or combine branch metadata for breadcrumb-style titles).
+### Pitfalls
+
+- `router.subscribe()` does not fire for the initial navigation. Call `applyTitle(router.getSnapshot())` before subscribing, or the title will be blank until the first user-triggered navigation.
+- For nested routes, use all entries in `state.matches` (not just the leaf) to build breadcrumb-style titles from root to leaf.
+
+### Related
+
+- [Route Table Basics](./route-table-basics.md)
+- [Not Found and Error Boundary](./not-found-and-error-boundary.md)

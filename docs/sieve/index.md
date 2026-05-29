@@ -5,7 +5,7 @@ package: sieve
 category: validation
 keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
 related: [forge, courier, deposit]
-exports: [s, toJsonSchema, ValidationError, configure]
+exports: [s, ValidationError, configure, ErrorCode, errorsAt]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [s, toJsonSchema, ValidationError, configure]
 
 **Package:** `@vielzeug/sieve` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `v`, `toJsonSchema`, `ValidationError`, `configure`
+**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`
 
 **When to use:** Zero-dep schema validation with strict-by-default objects, async refinements, coercion, JSON Schema output, and full TypeScript inference.
 
@@ -123,12 +123,13 @@ if (!result.success) {
 
 - **Schema factories**: primitives, collections, literals, unions, intersections, lazy schemas, discriminated variants, and enum helpers
 - **Input/output inference**: `InferInput<T>` for accepted inputs plus `Infer<T>` for parsed outputs
-- **Sync and async validation**: `.check()` with `parse*` and `safeParse*`
+- **Sync and async validation**: `.check()` for synchronous predicates, `.checkAsync()` for async validators; use `parseAsync()` / `safeParseAsync()` for async schemas
 - **Advanced validation hooks**: `ctx.addIssue()` for multi-issue/path-aware validation
 - **Preprocess and coerce**: `schema.preprocess(...)` plus `s.coerce.string()`, `number()`, `boolean()`, and `date()`
+- **Schema introspection**: `schema.describe()` as a getter returns a typed `SchemaDescriptor`; as a setter it attaches a human-readable description. `schema.toJsonSchema()` emits JSON Schema 2020-12 output. `schema.walk()` for custom tree traversal.
 - **Expanded schema coverage**: `s.bigint()`, `s.set()`, and `s.map()`
-- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, and `error.flattenFirst()`
-- **Object and tuple composition**: object `.strip()`/`.relaxed()` modes and tuple `.rest()`
+- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, `error.flattenFirst()`, `error.format()`, and `errorsAt()`
+- **Object and tuple composition**: object `.relaxed()` / `.strict()` modes, `.partial()`, `.pick()`, `.omit()`, `.extend()`, and tuple `.rest()`
 - **String and number format constraints**: validators like `.ulid()`, `.jwt()`, `.duration()`, and `.finite()`
 - **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used
 - **Nested global message customization**: `configure({ messages })` and `reset()`
@@ -152,8 +153,8 @@ if (!result.success) {
 
 ## See Also
 
-- [Forge](/forge/)
-- [Courier](/courier/)
-- [Deposit](/deposit/)
+- [Forge](/forge/) — typed form state that uses Sieve schemas as its validation layer
+- [Courier](/courier/) — HTTP client for validating request and response payloads at service boundaries
+- [Deposit](/deposit/) — unified storage API that accepts Sieve schemas to type-gate persisted data
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

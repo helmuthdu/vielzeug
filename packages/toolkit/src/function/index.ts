@@ -8,7 +8,6 @@ export * from './curry';
 export * from './debounce';
 export * from './identity';
 export * from './memo';
-export * from './negate';
 export * from './once';
 export * from './partial';
 export * from './pipe';

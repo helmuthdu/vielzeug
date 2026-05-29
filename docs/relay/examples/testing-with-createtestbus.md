@@ -1,6 +1,6 @@
 ---
 title: 'Relay Examples — Testing with `createTestBus`'
-description: 'Testing with `createTestBus` examples for relay.'
+description: 'Testing with `createTestBus` example for @vielzeug/relay.'
 ---
 
 ## Testing with `createTestBus`
@@ -53,7 +53,7 @@ describe('cart module', () => {
 
 - `createTestBus` delivers events synchronously. If your production code relies on microtask-level async delivery, the test may pass when the real code would fail. Verify the delivery timing matches production.
 - `testBus.emitted(event)` returns all payloads ever emitted under that name — not just the most recent. Assert on a specific index when emission order matters.
-- Calling `testBus.reset()` clears both emitted history and all active listeners. Re-register any listeners set up in `beforeEach` after calling `reset()`.
+- Calling `testBus.reset()` clears only the recorded emission history — it does **not** remove active listeners. Listeners registered before `reset()` continue to fire on subsequent emits.
 
 ### Related
 

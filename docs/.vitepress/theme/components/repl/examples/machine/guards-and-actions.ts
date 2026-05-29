@@ -9,13 +9,13 @@ const doorMachine = defineMachine({
   states: {
     closed: {
       on: {
-        OPEN: [{ target: 'open' }],
-        LOCK: [{ target: 'locked' }],
+        OPEN: { target: 'open' },
+        LOCK: { target: 'locked' },
       },
     },
     open: {
       on: {
-        CLOSE: [{ target: 'closed' }],
+        CLOSE: { target: 'closed' },
       },
     },
     locked: {

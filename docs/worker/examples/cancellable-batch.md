@@ -1,6 +1,6 @@
 ---
 title: 'Worker Examples — Cancellable Batch'
-description: 'Cancellable Batch examples for worker.'
+description: 'Cancellable Batch example for @vielzeug/worker.'
 ---
 
 ## Cancellable Batch
@@ -49,3 +49,13 @@ const batch = startBatch(['https://example.com/1', 'https://example.com/2']);
 batch.cancel();
 // Queued tasks will reject with AbortError
 ```
+
+### Pitfalls
+
+- Aborting only cancels **queued** tasks. Tasks already dispatched to a worker slot continue executing — the `fetch()` call inside the task is not aborted. Design task functions to check for stale results and discard them after abort.
+- The example creates `pool` at module level but never disposes it. Call `pool.dispose()` or `pool.close()` at application shutdown to terminate worker threads and free resources.
+
+### Related
+
+- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md) — stopping long-running tasks with a time budget
+- [React Integration](./react-integration.md) — tying cancellation to component lifecycle

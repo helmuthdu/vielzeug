@@ -1,4 +1,10 @@
+import type { BoundPermit, PermitPredicate } from '../index';
+
 import { ANONYMOUS, WILDCARD, createPermit, owns } from '../index';
+
+// ---------------------------------------------------------------------------
+// Core decision model
+// ---------------------------------------------------------------------------
 
 describe('permit: core decision model', () => {
   it('denies when no rules match', () => {
@@ -71,6 +77,60 @@ describe('permit: core decision model', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Multi-role rules
+// ---------------------------------------------------------------------------
+
+describe('permit: multi-role rules', () => {
+  it('matches when the principal holds any of the listed roles', () => {
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] }]);
+
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(permit.can({ id: 'u2', roles: ['editor'] }, 'posts', 'read')).toBe(true);
+    expect(permit.can({ id: 'u3', roles: ['admin'] }, 'posts', 'read')).toBe(false);
+  });
+
+  it('reduces rule count when multiple roles share the same permissions', () => {
+    const permit = createPermit([
+      { action: 'read', effect: 'allow', resource: 'docs', role: ['member', 'editor', 'admin'] },
+      { action: 'update', effect: 'allow', resource: 'docs', role: ['editor', 'admin'] },
+    ]);
+
+    expect(permit.can({ id: 'u1', roles: ['member'] }, 'docs', 'read')).toBe(true);
+    expect(permit.can({ id: 'u1', roles: ['member'] }, 'docs', 'update')).toBe(false);
+    expect(permit.can({ id: 'u2', roles: ['editor'] }, 'docs', 'read')).toBe(true);
+    expect(permit.can({ id: 'u2', roles: ['editor'] }, 'docs', 'update')).toBe(true);
+    expect(permit.can({ id: 'u3', roles: ['admin'] }, 'docs', 'read')).toBe(true);
+    expect(permit.can({ id: 'u3', roles: ['admin'] }, 'docs', 'update')).toBe(true);
+  });
+
+  it('multi-role rules score as specific (not wildcard) in priority resolution', () => {
+    // A multi-role allow at same priority as a wildcard deny should win (higher score)
+    const permit = createPermit([
+      { action: 'read', effect: 'deny', priority: 0, resource: 'posts', role: WILDCARD },
+      { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer', 'editor'] },
+    ]);
+
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+  });
+
+  it('preserves authored multi-role array in returned rule shape', () => {
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] }]);
+
+    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(decision.allowed).toBe(true);
+
+    if (decision.allowed) {
+      expect(decision.rule.role).toEqual(['viewer', 'editor']);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
 describe('permit: validation', () => {
   it('throws for invalid principal payloads', () => {
     const permit = createPermit();
@@ -83,13 +143,13 @@ describe('permit: validation', () => {
   it('throws when a rule effect is invalid', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'grant' as any, resource: 'posts', role: 'viewer' }]);
-    }).toThrow('Rule.effect must be "allow" or "deny"');
+    }).toThrow('Rule[0].effect must be "allow" or "deny"');
   });
 
   it('throws when a when-clause is not a function', () => {
     expect(() => {
       createPermit([{ action: 'update', effect: 'allow', resource: 'posts', role: 'editor', when: 'bad' as any }]);
-    }).toThrow('Rule.when must be a function');
+    }).toThrow('Rule[0].when must be a function');
   });
 
   it('throws when forUser receives an invalid principal', () => {
@@ -97,7 +157,33 @@ describe('permit: validation', () => {
 
     expect(() => permit.forUser({ id: '', roles: ['viewer'] } as any)).toThrow('Invalid principal');
   });
+
+  it('includes the rule index in validation error messages', () => {
+    expect(() => {
+      createPermit([
+        { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
+        { action: 'read', effect: 'allow', resource: 'posts', role: 'editor' },
+        { action: 'read', effect: 'grant' as any, resource: 'posts', role: 'admin' },
+      ]);
+    }).toThrow('Rule[2].effect');
+  });
+
+  it('throws when a multi-role array contains a non-string', () => {
+    expect(() => {
+      createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 123 as any] }]);
+    }).toThrow('Rule[0].role');
+  });
+
+  it('throws when a multi-role array is empty', () => {
+    expect(() => {
+      createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: [] as any }]);
+    }).toThrow('Rule[0].role');
+  });
 });
+
+// ---------------------------------------------------------------------------
+// Predicates and ABAC
+// ---------------------------------------------------------------------------
 
 describe('permit: predicates and ABAC behavior', () => {
   it('evaluates when-clause for authenticated principals', () => {
@@ -164,6 +250,10 @@ describe('permit: predicates and ABAC behavior', () => {
     expect(permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', undefined)).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Decision APIs
+// ---------------------------------------------------------------------------
 
 describe('permit: decision APIs', () => {
   it('canAll returns true only when every action is allowed', () => {
@@ -253,40 +343,71 @@ describe('permit: decision APIs', () => {
   });
 });
 
-describe('permit: action enumeration and introspection', () => {
-  it('returns concrete allowed actions from explicit rules', () => {
+// ---------------------------------------------------------------------------
+// allowedActions (knownActions required)
+// ---------------------------------------------------------------------------
+
+describe('permit: allowedActions', () => {
+  it('returns allowed actions from the provided knownActions list', () => {
     const permit = createPermit<'read' | 'update' | 'delete'>([
       { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
       { action: 'update', effect: 'allow', resource: 'posts', role: 'editor' },
       { action: 'delete', effect: 'deny', resource: 'posts', role: 'editor' },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['viewer'] }, 'posts')).toEqual(['read']);
-    expect(permit.allowedActions({ id: 'u2', roles: ['editor'] }, 'posts')).toEqual(['update']);
+    expect(permit.allowedActions({ id: 'u1', roles: ['viewer'] }, 'posts', ['read', 'update', 'delete'])).toEqual([
+      'read',
+    ]);
+    expect(permit.allowedActions({ id: 'u2', roles: ['editor'] }, 'posts', ['read', 'update', 'delete'])).toEqual([
+      'update',
+    ]);
   });
 
-  it('requires knownActions to enumerate wildcard action rules', () => {
+  it('resolves wildcard-action rules when knownActions is provided', () => {
     const permit = createPermit<'read' | 'update'>([
       { action: WILDCARD, effect: 'allow', resource: 'posts', role: 'admin' },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts')).toEqual([]);
-    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', undefined, ['read', 'update'])).toEqual([
+    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'update'])).toEqual([
       'read',
       'update',
     ]);
   });
 
-  it('deduplicates known actions while preserving order', () => {
+  it('returns empty array when knownActions is empty', () => {
+    const permit = createPermit<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'admin' }]);
+
+    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', [])).toEqual([]);
+  });
+
+  it('deduplicates knownActions while preserving order', () => {
     const permit = createPermit<'read' | 'update'>([
       { action: WILDCARD, effect: 'allow', resource: 'posts', role: 'admin' },
     ]);
 
-    expect(
-      permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', undefined, ['update', 'read', 'update']),
-    ).toEqual(['update', 'read']);
+    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['update', 'read', 'update'])).toEqual([
+      'update',
+      'read',
+    ]);
   });
 
+  it('respects data-dependent rules when data is passed', () => {
+    const permit = createPermit<'update', { authorId: string }>([
+      { action: 'update', effect: 'allow', resource: 'posts', role: 'editor', when: owns('authorId') },
+    ]);
+
+    expect(permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u1' })).toEqual([
+      'update',
+    ]);
+    expect(permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u2' })).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rulesInScope
+// ---------------------------------------------------------------------------
+
+describe('permit: rulesInScope', () => {
   it('returns rules in scope for a principal and resource', () => {
     const permit = createPermit<'read' | 'update'>([
       { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
@@ -327,7 +448,20 @@ describe('permit: action enumeration and introspection', () => {
       { action: 'read', effect: 'allow', resource: 'posts', role: ANONYMOUS },
     ]);
   });
+
+  it('includes multi-role rules when principal holds any matching role', () => {
+    const permit = createPermit<'read'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] },
+    ]);
+
+    expect(permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts')).toHaveLength(1);
+    expect(permit.rulesInScope({ id: 'u2', roles: ['admin'] }, 'posts')).toHaveLength(0);
+  });
 });
+
+// ---------------------------------------------------------------------------
+// Bound view
+// ---------------------------------------------------------------------------
 
 describe('permit: bound view', () => {
   it('binds decision methods to the provided principal', () => {
@@ -376,6 +510,17 @@ describe('permit: bound view', () => {
     ]);
   });
 
+  it('exposes allowedActions on the bound view', () => {
+    const permit = createPermit<'read' | 'update' | 'delete'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
+      { action: 'update', effect: 'deny', resource: 'posts', role: 'viewer' },
+    ]);
+
+    const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
+
+    expect(bound.allowedActions('posts', ['read', 'update', 'delete'])).toEqual(['read']);
+  });
+
   it('snapshots principal roles and attributes at bind time', () => {
     const permit = createPermit<'read'>([
       {
@@ -401,16 +546,17 @@ describe('permit: bound view', () => {
     expect(bound.can('premium-content', 'read')).toBe(true);
   });
 
-  it('supports rebinding through bound.forUser', () => {
+  it('does not expose forUser on BoundPermit', () => {
     const permit = createPermit<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
-
     const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
-    const rebound = bound.forUser({ id: 'u2', roles: ['unknown'] });
 
-    expect(bound.can('posts', 'read')).toBe(true);
-    expect(rebound.can('posts', 'read')).toBe(false);
+    expect((bound as any).forUser).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Logger behavior
+// ---------------------------------------------------------------------------
 
 describe('permit: logger behavior', () => {
   it('logs allow decisions with the authored winning rule', () => {
@@ -473,60 +619,64 @@ describe('permit: logger behavior', () => {
       },
     );
 
-    permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', undefined, ['read', 'delete']);
+    permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'delete']);
     permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts');
 
     expect(calls).toEqual([]);
   });
 });
 
+// ---------------------------------------------------------------------------
+// Rule validation at creation time
+// ---------------------------------------------------------------------------
+
 describe('permit: rule validation at creation time', () => {
   it('throws when role is empty', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: '' }]);
-    }).toThrow('Rule.role must be a non-empty string');
+    }).toThrow('Rule[0].role');
   });
 
   it('throws when role is whitespace-only', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: '   ' }]);
-    }).toThrow('Rule.role must be a non-empty string');
+    }).toThrow('Rule[0].role');
   });
 
   it('throws when resource is empty', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', resource: '', role: 'viewer' }]);
-    }).toThrow('Rule.resource must be a non-empty string');
+    }).toThrow('Rule[0].resource');
   });
 
   it('throws when resource is whitespace-only', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', resource: '   ', role: 'viewer' }]);
-    }).toThrow('Rule.resource must be a non-empty string');
+    }).toThrow('Rule[0].resource');
   });
 
   it('throws when action is empty', () => {
     expect(() => {
       createPermit([{ action: '' as any, effect: 'allow', resource: 'posts', role: 'viewer' }]);
-    }).toThrow('Rule.action must be a non-empty string');
+    }).toThrow('Rule[0].action');
   });
 
   it('throws when priority is NaN', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', priority: NaN, resource: 'posts', role: 'viewer' }]);
-    }).toThrow('Rule.priority must be a finite number');
+    }).toThrow('Rule[0].priority');
   });
 
   it('throws when priority is Infinity', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', priority: Infinity, resource: 'posts', role: 'viewer' }]);
-    }).toThrow('Rule.priority must be a finite number');
+    }).toThrow('Rule[0].priority');
   });
 
   it('throws when priority is a non-number', () => {
     expect(() => {
       createPermit([{ action: 'read', effect: 'allow', priority: 'high' as any, resource: 'posts', role: 'viewer' }]);
-    }).toThrow('Rule.priority must be a finite number');
+    }).toThrow('Rule[0].priority');
   });
 
   it('accepts negative priority', () => {
@@ -541,6 +691,10 @@ describe('permit: rule validation at creation time', () => {
     }).not.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Predicate error propagation
+// ---------------------------------------------------------------------------
 
 describe('permit: predicate error propagation', () => {
   it('propagates exceptions thrown inside a when-predicate through can', () => {
@@ -598,6 +752,10 @@ describe('permit: predicate error propagation', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Bound view snapshot depth
+// ---------------------------------------------------------------------------
+
 describe('permit: bound view snapshot depth', () => {
   it('does not reflect nested attribute mutations after forUser binding', () => {
     const permit = createPermit<'read'>([
@@ -618,10 +776,8 @@ describe('permit: bound view snapshot depth', () => {
 
     const bound = permit.forUser(principal);
 
-    // Mutate nested attribute after binding
     (principal.attributes.config as Record<string, unknown>).enabled = false;
 
-    // Bound principal should still see the original nested value
     expect(bound.can('docs', 'read')).toBe(true);
   });
 
@@ -650,13 +806,106 @@ describe('permit: bound view snapshot depth', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Type exports
+// ---------------------------------------------------------------------------
+
 describe('permit: BoundPermit type is publicly exported', () => {
   it('can be used as an explicit type annotation', () => {
-    import('@vielzeug/permit').then(({ createPermit }) => {
-      const permit = createPermit<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
-      const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
+    const permit = createPermit<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
+    const bound: BoundPermit<'read'> = permit.forUser({ id: 'u1', roles: ['viewer'] });
 
-      expect(bound).toBeDefined();
-    });
+    expect(bound).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edge-case tests covering previously uncovered scenarios (R7)
+// ---------------------------------------------------------------------------
+
+describe('permit: ANONYMOUS in multi-role arrays', () => {
+  it('matches both null and matching authenticated principals when ANONYMOUS is in a multi-role array', () => {
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: [ANONYMOUS, 'viewer'] }]);
+
+    expect(permit.can(null, 'posts', 'read')).toBe(true);
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(permit.can({ id: 'u2', roles: ['other'] }, 'posts', 'read')).toBe(false);
+  });
+});
+
+describe('permit: allowedActions with null principal', () => {
+  it('returns allowed actions for ANONYMOUS rules when principal is null', () => {
+    const permit = createPermit<'read' | 'write'>([
+      { action: WILDCARD, effect: 'allow', resource: 'docs', role: ANONYMOUS },
+    ]);
+
+    expect(permit.allowedActions(null, 'docs', ['read', 'write'])).toEqual(['read', 'write']);
+  });
+
+  it('returns empty array for null principal when no ANONYMOUS rules exist', () => {
+    const permit = createPermit<'read' | 'write'>([
+      { action: 'read', effect: 'allow', resource: 'docs', role: 'viewer' },
+    ]);
+
+    expect(permit.allowedActions(null, 'docs', ['read', 'write'])).toEqual([]);
+  });
+});
+
+describe('permit: rulesInScope with wildcard resource', () => {
+  it('includes a wildcard-resource rule in scope for any resource', () => {
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: WILDCARD, role: 'admin' }]);
+
+    const scope = permit.rulesInScope({ id: 'u1', roles: ['admin'] }, 'anything');
+
+    expect(scope).toHaveLength(1);
+    expect(scope[0].resource).toBe(WILDCARD);
+  });
+
+  it('does not include a wildcard-resource rule in scope for a principal without the required role', () => {
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: WILDCARD, role: 'admin' }]);
+
+    const scope = permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'anything');
+
+    expect(scope).toHaveLength(0);
+  });
+});
+
+describe('permit: explain preserves the when predicate in the returned rule', () => {
+  it('includes the when field on the rule attached to the decision', () => {
+    const isOwner: PermitPredicate<{ ownerId: string }> = ({ data, principal }) => data?.ownerId === principal.id;
+
+    const permit = createPermit<'edit', { ownerId: string }>([
+      { action: 'edit', effect: 'allow', resource: 'posts', role: 'user', when: isOwner },
+    ]);
+
+    const decision = permit.explain({ id: 'u1', roles: ['user'] }, 'posts', 'edit', { ownerId: 'u1' });
+
+    expect(decision.allowed).toBe(true);
+
+    if (decision.allowed) {
+      expect(typeof decision.rule.when).toBe('function');
+      expect(decision.rule.when).toBe(isOwner);
+    }
+  });
+});
+
+describe('permit: returned decision.rule is isolated from internal state', () => {
+  it('mutating the role array on a returned rule does not corrupt future decisions', () => {
+    // Use an array role so Array.isArray is true and the mutation path is reached.
+    const permit = createPermit([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    const first = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(first.allowed).toBe(true);
+
+    // Corrupt the role list via the returned reference.
+    if (first.allowed) {
+      (first.rule.role as string[]).push('hacker');
+    }
+
+    // A principal with only the injected role must still be denied.
+    expect(permit.can({ id: 'u2', roles: ['hacker'] }, 'posts', 'read')).toBe(false);
+    // The original principal must still be allowed.
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
   });
 });

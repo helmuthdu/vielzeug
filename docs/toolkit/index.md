@@ -5,7 +5,7 @@ package: toolkit
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
 related: []
-exports: [chunk, debounce, throttle, group, clamp, isEqual, deepClone, currency, retry, sleep]
+exports: [chunk, debounce, throttle, allOf, clamp, isEqual, currency, retry, sleep]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,9 +21,11 @@ exports: [chunk, debounce, throttle, group, clamp, isEqual, deepClone, currency,
 
 **Package:** `@vielzeug/toolkit` &nbsp;·&nbsp; **Category:** Utilities
 
-**Key exports:** `chunk`, `debounce`, `throttle`, `group`, `clamp`, `isEqual`, `deepClone`, `currency`, `retry`, `sleep`
+**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `currency`, `retry`, `sleep`
 
 **When to use:** 75+ tree-shakeable utility functions for arrays, objects, strings, async control, math, and money. Import only what you use.
+
+**Related:** [Tempo](/tempo/) · [Sourcerer](/sourcerer/) · [Sieve](/sieve/)
 
 </details>
 
@@ -90,7 +92,7 @@ Toolkit favors a curated, typed utility surface over an everything-and-the-kitch
 | Tree-shakeable modules      | ✅                                            | ✅        | ✅      |
 | Zero dependencies           | ✅                                            | ✅        | ✅      |
 
-**Use Toolkit when** you want one compact, typed utility layer that covers array/object/function/async/math/date/random use cases.
+**Use Toolkit when** you want one compact, typed utility layer that covers array/object/function/async/math/money/random use cases.
 
 **Consider narrower alternatives when** you only need a small functional subset and prefer ultra-focused APIs.
 
@@ -98,10 +100,9 @@ Toolkit favors a curated, typed utility surface over an everything-and-the-kitch
 
 - **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `take/drop`, `union/intersection`, `zip/unzip`, and more
 - **Async**: `attempt`, `abortable`, `timeout`, `parallel`, `queue`, `Scheduler`, `retry`, `waitFor`
-- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `deepClone`, `defaults`, `deepMerge`, `shallowMerge`, `parseJSON`, `get`, `seek`, `stash`
-- **Function**: `partial`, `negate`, `and/or/not`, `tap`, `identity`, `constant`, composition, memoization, and rate limiting
+- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `deepClone`, `defaults`, `deepMerge`, `shallowMerge`, `parseJSON`, `get`, `stash`
+- **Function**: `partial`, `allOf`, `anyOf`, `noneOf`, `tap`, `identity`, `constant`, composition, memoization, and rate limiting
 - **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, plus existing numeric helpers
-- **Date**: `expires`, `interval`, `timeDiff`
 - **Money**: `currency`, `exchange`
 - **Random**: `draw`, `random`, `shuffle`, `uuid`
 - **Typed Namespace**: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.greaterThan`, `is.greaterThanOrEqual`, `is.lessThan`, `is.lessThanOrEqual`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`, `is.within`
@@ -116,13 +117,16 @@ Toolkit favors a curated, typed utility surface over an everything-and-the-kitch
 | SSR         | ✅      |
 | Deno        | ✅      |
 
-## See Also
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [Courier](/courier/)
-- [Ripple](/ripple/)
-- [Sieve](/sieve/)
+
+## See Also
+
+- [Tempo](/tempo/) — date/time utilities including `expires`, `timeDiff`, and `dateRange`
+- [Sourcerer](/sourcerer/) — reactive paginated query sources built on top of toolkit primitives
+- [Sieve](/sieve/) — schema validation that pairs naturally with `parseJSON` and `assert`
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

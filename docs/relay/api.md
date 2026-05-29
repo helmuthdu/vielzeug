@@ -1,6 +1,6 @@
 ---
 title: Relay — API Reference
-description: Source-aligned API reference for @vielzeug/relay and @vielzeug/relay/test.
+description: Complete API reference for @vielzeug/relay.
 ---
 
 [[toc]]
@@ -10,6 +10,7 @@ description: Source-aligned API reference for @vielzeug/relay and @vielzeug/rela
 | Symbol             | Purpose                                 | Execution mode | Common gotcha                                 |
 | ------------------ | --------------------------------------- | -------------- | --------------------------------------------- |
 | `createBus()`      | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
+| `pipeEvents()`     | Forward events from one bus to another  | Sync           | Teardown is automatic when the target disposes |
 | `bus.wait()`       | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
 | `bus.waitAny()`    | Await the first event from many         | Async          | Result is a discriminated union by event key  |
 | `bus.eventNames()` | Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
@@ -24,22 +25,64 @@ description: Source-aligned API reference for @vielzeug/relay and @vielzeug/rela
 
 ## Types
 
-- `EventMap`: `Record<string, unknown>`
-- `EventKey<T>`: `keyof T & string`
-- `Listener<T>`: `(payload: T) => void`
-- `Unsubscribe`: `() => void`
-- `BusOptions<T>`:
-  - `onDispatch(event, payload)` called before listeners run
-  - `onError(err, event, payload)` called for listener errors (instead of re-throw)
-- `WaitAnyResult<T, K>`: typed union result for `waitAny()` (`{ event, payload }`)
-- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `waitAny`, `events`, `listenerCount`, `eventNames`, `removeAllListeners`, `dispose`)
-- `TestBus<T>`: `Bus<T>` plus `emitted(event)` and `reset()`
+`EventMap`, `EventKey<T>`, `Listener<T>`, `Unsubscribe` — simple type aliases:
 
-### `BusDisposedError`
+```ts
+type EventMap = Record<string, unknown>;
+type EventKey<T extends EventMap> = keyof T & string;
+type Listener<T> = (payload: T) => void;
+type Unsubscribe = () => void;
+```
 
-A typed error used when `wait()` is rejected due to bus disposal:
+`BusOptions<T>` — options object passed to `createBus()`:
 
-`BusDisposedError extends Error` with message `Bus is disposed`.
+```ts
+type BusOptions<T extends EventMap> = {
+  debug?: boolean;
+  onDispatch?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
+  onError?: <K extends EventKey<T>>(err: unknown, event: K, payload: T[K]) => void;
+};
+```
+
+`WaitAnyResult<T, K>` — discriminated-union result returned by `waitAny()`:
+
+```ts
+type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> = {
+  [I in keyof K]: K[I] extends EventKey<T> ? { event: K[I]; payload: T[K[I]] } : never;
+}[number];
+```
+
+`Bus<T>` — the runtime bus interface. Individual method docs are in the [Bus Interface](#bus-interface) section.
+
+```ts
+type Bus<T extends EventMap> = {
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  [Symbol.dispose](): void;
+  dispose(): void;
+  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
+  eventNames(): EventKey<T>[];
+  events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): AsyncGenerator<T[K]>;
+  listenerCount(event?: EventKey<T>): number;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  removeAllListeners(event?: EventKey<T>): void;
+  wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>;
+  waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+    events: K,
+    signal?: AbortSignal,
+  ): Promise<WaitAnyResult<T, K>>;
+};
+```
+
+`TestBus<T>` — extends `Bus<T>` with emission recording. Full docs in the [Testing Utilities](#testing-utilities) section.
+
+```ts
+type TestBus<T extends EventMap> = Bus<T> & {
+  emitted<K extends EventKey<T>>(event: K): T[K][];
+  reset(): void;
+};
+```
 
 ## `createBus()`
 
@@ -62,6 +105,7 @@ type AppEvents = {
 };
 
 const bus = createBus<AppEvents>({
+  debug: true, // log subscribe/emit/dispose to console.debug
   onDispatch: (event, payload) => console.debug('[bus]', event, payload),
   onError: (err, event, payload) => console.error('[bus] error in', event, err, payload),
 });
@@ -83,6 +127,27 @@ if (!bus.disposed) {
 
 ---
 
+### `bus.disposalSignal`
+
+Type: `readonly AbortSignal`
+
+An `AbortSignal` that fires when the bus is disposed. Use it to tie external lifecycles to the bus lifetime without polling `bus.disposed`.
+
+```ts
+// Automatically unsubscribe from another bus when this bus is torn down
+otherBus.on('count', syncState, bus.disposalSignal);
+
+// Cancel a fetch when the bus is disposed
+fetch('/api/stream', { signal: bus.disposalSignal });
+
+// Combine with a timeout
+const signal = AbortSignal.any([bus.disposalSignal, AbortSignal.timeout(10_000)]);
+```
+
+The signal is already aborted when `bus.disposed` is `true`.
+
+---
+
 ### `bus.on()`
 
 Signature: `on(event, listener, signal?) => Unsubscribe`
@@ -98,6 +163,10 @@ Subscribe to an event. The listener runs synchronously on every emit.
 **Returns:** `Unsubscribe` — call to remove the listener manually.
 
 If `signal` is already aborted, `on()` returns a no-op unsubscribe immediately without adding the listener.
+
+::: tip Multiple registrations
+Registering the same listener function twice creates **two independent subscriptions**. The listener will fire twice per emit and each registration has its own unsubscribe handle. There is no deduplication.
+:::
 
 ```ts
 const unsub = bus.on('user:login', ({ userId }) => {
@@ -196,6 +265,14 @@ Returns an `AsyncGenerator` that yields payloads for every future emit of `event
 
 - `event: K` — event key to stream
 - `options?: { signal?: AbortSignal; maxBuffer?: number }` — optional early termination and buffering
+
+::: warning Synchronous validation
+`events()` validates `maxBuffer` **synchronously** at call time. If `maxBuffer` is `0` or negative, a `RangeError` is thrown immediately — not on the first `await`.
+:::
+
+::: tip First-yield timing
+The generator starts listening when the `for await` loop begins its first iteration, not when the generator object is created. Events emitted between construction and first iteration are lost.
+:::
 
 **Terminates when:**
 
@@ -325,6 +402,43 @@ bus.removeAllListeners('user:login');
 bus.removeAllListeners(); // remove everything
 ```
 
+## `pipeEvents()`
+
+Signature: `pipeEvents<T extends EventMap>(source, target, events, signal?) => Unsubscribe`
+
+Forwards a selected subset of events from a source bus to a target bus. Both buses must share the same event map type `T`.
+
+| Parameter | Type                                         | Description                                     |
+| --------- | -------------------------------------------- | ----------------------------------------------- |
+| `source`  | `Bus<T>`                                     | The bus to listen on                            |
+| `target`  | `Bus<T>`                                     | The bus to forward events to                    |
+| `events`  | `readonly [EventKey<T>, ...EventKey<T>[]]`   | One or more event keys to forward               |
+| `signal`  | `AbortSignal` (optional)                     | Optional signal to stop forwarding early        |
+
+**Returns:** `Unsubscribe` — call to stop forwarding manually.
+
+Forwarding stops automatically when the **target bus is disposed**. Source disposal is handled via the source bus's own subscription lifecycle.
+
+```ts
+import { createBus, pipeEvents } from '@vielzeug/relay';
+
+const appBus = createBus<AppEvents>();
+const auditBus = createBus<AppEvents>();
+
+// Forward only auth events — tears down automatically when auditBus disposes
+const unpipe = pipeEvents(appBus, auditBus, ['user:login', 'user:logout']);
+
+// Stop forwarding manually
+unpipe();
+
+// Scope to a signal
+const controller = new AbortController();
+pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
+controller.abort(); // forwarding stops
+```
+
+---
+
 ## Testing Utilities
 
 Import from `@vielzeug/relay/test`.
@@ -398,3 +512,34 @@ bus.emitted('user:login'); // => []
 Signature: `dispose() => void`
 
 Clears recorded payloads and then calls the underlying `bus.dispose()`, removing all listeners and rejecting pending waits. Idempotent.
+
+---
+
+## Errors
+
+### `BusDisposedError`
+
+```ts
+class BusDisposedError extends Error {
+  override name = 'BusDisposedError';
+  override message = 'Bus is disposed';
+}
+```
+
+Thrown as the rejection reason when a pending `wait()` or `waitAny()` call is interrupted by `bus.dispose()`. Also used as the abort reason on `bus.disposalSignal`.
+
+Use `instanceof` to distinguish from signal aborts and other rejections:
+
+```ts
+import { BusDisposedError } from '@vielzeug/relay';
+
+try {
+  await bus.wait('user:login');
+} catch (err) {
+  if (err instanceof BusDisposedError) {
+    // bus was torn down before the event fired
+  } else {
+    throw err; // signal abort or unexpected error
+  }
+}
+```

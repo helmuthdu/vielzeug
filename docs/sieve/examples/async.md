@@ -1,15 +1,17 @@
 ---
-title: 'Sieve Examples — Async'
-description: 'Async validation examples using check() with sieve.'
+title: 'Sieve Examples — Async Validation'
+description: 'Async validation example for @vielzeug/sieve.'
 ---
 
-## Async validation examples
+## Async Validation
 
 ### Problem
 
 Validate values that depend on asynchronous checks such as uniqueness, account state, or external policy rules.
 
-### Runnable Example
+### Solution
+
+Use `.checkAsync()` on any schema combined with `safeParseAsync()` or `parseAsync()` to run async validators such as database lookups or external policy checks.
 
 ```ts
 import { s } from '@vielzeug/sieve';
@@ -17,32 +19,29 @@ import { s } from '@vielzeug/sieve';
 const UsernameSchema = s
   .string()
   .min(3)
-  .check(async (value) => {
+  .checkAsync(async (value) => {
     const exists = await db.users.exists({ username: value });
-    return !exists;
-  }, 'Username already taken');
+    return !exists || 'Username already taken';
+  });
 
 const result = await UsernameSchema.safeParseAsync(input.username);
 
 const CompanyEmailSchema = s
   .string()
   .email()
-  .check(
-    async (value) => {
-      const domain = value.split('@')[1] ?? '';
-      return allowedDomains.has(domain.toLowerCase());
-    },
-    ({ value }) => `${value} is not an allowed company email`,
-  );
+  .checkAsync(async (value) => {
+    const domain = value.split('@')[1] ?? '';
+    return allowedDomains.has(domain.toLowerCase()) || `${value} is not an allowed company email`;
+  });
 
 const InviteSchema = s
   .object({
     workspaceId: s.string().uuid(),
     email: s.string().email(),
   })
-  .check(async ({ workspaceId, email }) => {
-    return !(await db.invites.exists({ workspaceId, email }));
-  }, 'Invite already exists for this user and workspace');
+  .checkAsync(async ({ workspaceId, email }) => {
+    return !(await db.invites.exists({ workspaceId, email })) || 'Invite already exists for this user and workspace';
+  });
 
 await InviteSchema.parseAsync(payload);
 
@@ -50,22 +49,17 @@ const TeamSlugSchema = s
   .string()
   .min(3)
   .regex(/^[a-z0-9-]+$/)
-  .check(async (value) => {
+  .checkAsync(async (value) => {
     const exists = await db.teams.exists({ slug: value });
-    return !exists;
-  }, 'Slug already in use');
+    return !exists || 'Slug already in use';
+  });
 
 await TeamSlugSchema.parseAsync('platform-team');
 ```
 
-### Expected Output
+### Pitfalls
 
-- `safeParseAsync()` returns the same success or failure shape as `safeParse()`, but after awaiting async refinements.
-- Sync validators still run first, so obviously invalid input can fail before the expensive async check.
-
-### Common Pitfalls
-
-- Calling `.parse()` or `.safeParse()` on schemas with async `check()` functions.
+- Calling `.parse()` or `.safeParse()` on schemas with `checkAsync()` functions.
 - Running side effects inside async `check()` functions that are not safe to retry.
 - Forgetting to debounce or batch high-volume availability checks in UI code.
 
@@ -74,5 +68,3 @@ await TeamSlugSchema.parseAsync('platform-team');
 - [API](./api.md)
 - [Forms](./forms.md)
 - [Unions](./unions.md)
-
-Use `parseAsync()` or `safeParseAsync()` whenever the schema contains async `check()` functions anywhere in the tree.

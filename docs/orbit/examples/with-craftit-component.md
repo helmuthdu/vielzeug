@@ -1,6 +1,6 @@
 ---
 title: 'Orbit Examples — With Craft Component'
-description: 'With Craft Component examples for orbit.'
+description: 'With Craft Component example for @vielzeug/orbit.'
 ---
 
 ## With Craft Component

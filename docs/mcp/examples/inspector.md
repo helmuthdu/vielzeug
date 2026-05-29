@@ -1,33 +1,53 @@
 ---
-title: Inspector
-description: Inspect the MCP server locally using the MCP Inspector.
+title: 'Mcp Examples — Inspector'
+description: 'Inspector example for @vielzeug/mcp.'
 ---
 
-## Inspect locally with MCP Inspector
+## Inspector
 
-Use MCP Inspector to explore the mcp server and test tool calls interactively:
+### Problem
+
+You want to explore all available tools interactively, test tool calls with different arguments, and verify the server is wired up correctly before integrating with an AI client.
+
+### Solution
+
+Build the server and run it through the MCP Inspector for an interactive UI. Use HTTP mode during integration testing to inspect raw request and response payloads.
+
+#### Interactive inspection with MCP Inspector
 
 ```sh
-cd /Users/saatkhel/Projects/vielzeug/packages/mcp
+cd packages/mcp
 pnpm build
 npx @modelcontextprotocol/inspector node dist/cli.js
 ```
 
-This opens an interactive interface where you can:
-- Browse all available tools
-- Test tool calls with different arguments
-- View request/response data
-- Debug integration issues
+The Inspector opens a browser UI where you can browse tools, call them with custom arguments, and view the raw MCP protocol messages.
 
-## HTTP mode for debugging
-
-For debugging or exposing the server over HTTP:
+#### HTTP mode for integration debugging
 
 ```sh
-cd /Users/saatkhel/Projects/vielzeug/packages/mcp
+cd packages/mcp
 pnpm build
 node dist/cli.js --port 3100
 ```
 
-Then connect to `http://localhost:3100` using your MCP client.
+Verify the server is up:
 
+```sh
+curl http://localhost:3100/health
+# {"status":"ok"}
+```
+
+Then connect any MCP client or send raw HTTP requests to `http://localhost:3100/`.
+
+### Pitfalls
+
+- The Inspector requires a built `dist/cli.js`. Run `pnpm build` in `packages/mcp` first; inspecting the source directly will fail.
+- HTTP mode binds to `0.0.0.0` by default. Do not expose the port publicly in development environments.
+- The MCP Inspector version must be compatible with MCP SDK v1.x. Use `npx @modelcontextprotocol/inspector` without a pinned version to get the latest compatible release.
+
+### Related
+
+- [Usage Guide — Transport Modes](../usage.md#transport-modes)
+- [API Reference — Runtime Behavior](../api.md#runtime-behavior)
+- [Looking Up Components](./looking-up-components.md)

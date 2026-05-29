@@ -38,6 +38,11 @@ export const css = (strings: TemplateStringsArray, ...values: Array<CSSResult | 
 
 const stylesheetStringCache = new Map<string, CSSStyleSheet>();
 
+/** @internal Clear the stylesheet cache. Used for test isolation and HMR. */
+export const _clearStylesheetCache = (): void => {
+  stylesheetStringCache.clear();
+};
+
 export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSStyleSheet => {
   if (style instanceof CSSStyleSheet) return style;
 
