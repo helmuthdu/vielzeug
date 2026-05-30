@@ -1,7 +1,5 @@
-import { assert } from '../function/assert';
 import { compare } from '../function/compare';
 import { compareBy } from '../function/compareBy';
-import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 
 export type SortDirection = 'asc' | 'desc';
 export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
@@ -34,8 +32,6 @@ export function sort<T>(
   selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
   direction: SortDirection = 'asc',
 ): T[] {
-  assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
   if (typeof selectorOrSelectors === 'function') {
     const multiplier = direction === 'desc' ? -1 : 1;
 

@@ -1,4 +1,5 @@
 import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -81,10 +82,10 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const guarded = this._guardObjectInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const { obj } = guarded;
     const { issues, output } = this._createObjectParseContext(obj);
@@ -104,13 +105,13 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     this._copyRelaxedUnknownKeys(obj, output);
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     const guarded = this._guardObjectInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const { obj } = guarded;
     const { issues, output } = this._createObjectParseContext(obj);
@@ -136,7 +137,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     this._copyRelaxedUnknownKeys(obj, output);
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
   partial(): ObjectSchema<{ [K in keyof T]: Schema<InferOutput<T[K]> | undefined> }>;
@@ -193,21 +194,14 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return this._rebuildWith(this.shape, false) as unknown as ObjectSchema<T>;
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     const fields: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of Object.entries(this.shape)) {
-      fields[key] = schema.describe();
+      fields[key] = schema.toDescriptor();
     }
 
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      fields,
-      kind: 'object',
-      strict: !this._isRelaxed,
-    };
+    return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
@@ -235,6 +229,10 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (visitor.object) return visitor.object(this, fields);
 
     return super._walk(visitor);
+  }
+
+  merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
+    return new ObjectSchema({ ...this.shape, ...other.shape } as unknown as T & U);
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {

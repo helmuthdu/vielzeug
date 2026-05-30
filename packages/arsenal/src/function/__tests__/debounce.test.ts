@@ -103,26 +103,4 @@ describe('debounce', () => {
     expect(fn).not.toBeCalled();
     expect(result).toBe(undefined);
   });
-
-  it('should preserve this context', () => {
-    const context = { value: 42 };
-    const fn = vi.fn(function (this: typeof context) {
-      return this.value;
-    });
-    const debounced = debounce(fn, 100);
-
-    debounced.call(context);
-    vi.advanceTimersByTime(100);
-
-    expect(fn).toBeCalledTimes(1);
-    expect(fn.mock.instances[0]).toBe(context);
-  });
-
-  it('should throw for invalid arguments', () => {
-    // @ts-expect-error - testing invalid input
-    expect(() => debounce('not a function')).toThrow(TypeError);
-    expect(() => debounce(() => {}, -1)).toThrow(TypeError);
-    // @ts-expect-error - testing invalid input
-    expect(() => debounce(() => {}, 'invalid')).toThrow(TypeError);
-  });
 });

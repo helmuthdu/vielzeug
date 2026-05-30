@@ -1,10 +1,10 @@
 import type { QueryBuilder } from './query';
 
-import { assertTtlMs, type TtlMs } from './ttl';
+import { assertTtlMs, type TtlMs, type VaultCodec } from './ttl';
 
-/* -------------------- Re-export TtlMs for public API -------------------- */
+/* -------------------- Re-export TtlMs and VaultCodec for public API -------------------- */
 
-export type { TtlMs };
+export type { TtlMs, VaultCodec };
 
 /* -------------------- Schema types -------------------- */
 
@@ -19,30 +19,57 @@ export type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T &
   /** @internal Phantom field — enables TypeScript to infer T. Never has a runtime value. */
   readonly _record?: T;
   defaultTtl?: TtlMs;
+  /**
+   * Secondary index field names. The IndexedDB adapter creates an IDB index for each field,
+   * enabling push-down optimisation for `equals`, `between`, and `startsWith` queries on those
+   * fields — avoiding a full-table scan.
+   *
+   * ```ts
+   * const schema = {
+   *   users: table<User>('id').index('email').index('city'),
+   * };
+   * // db.query('users').equals('email', 'alice@example.com') → uses IDB index
+   * ```
+   */
+  indexes?: readonly (keyof T & string)[];
   key: Key;
 };
 
 /** A schema is any record of `SchemaEntry`-compatible values. Checked structurally so that
  *  concrete `SchemaEntry<T, Key>` values satisfy it without covariance constraints. */
-export type AnySchema = Record<string, { defaultTtl?: TtlMs; key: string }>;
+export type AnySchema = Record<string, { defaultTtl?: TtlMs; indexes?: readonly string[]; key: string }>;
 
-/** Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` chaining. */
+/** Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` and `.index()` chaining. */
 type TableBuilder<T extends Record<string, unknown>, Key extends keyof T & string> = SchemaEntry<T, Key> & {
+  /**
+   * Register a secondary index on the given field. Can be chained multiple times.
+   * Only used by the IndexedDB adapter; other adapters fall back to in-memory filtering.
+   */
+  index: <F extends keyof T & string>(field: F) => TableBuilder<T, Key>;
   /** Set a default TTL (ms) applied to all `put`/`putAll` calls that don't specify one explicitly. */
-  ttl: (ms: TtlMs) => SchemaEntry<T, Key>;
+  ttl: (ms: TtlMs) => TableBuilder<T, Key>;
 };
 
 export function table<T extends Record<string, unknown>, Key extends keyof T & string = keyof T & string>(
   key: Key,
 ): TableBuilder<T, Key> {
-  return {
-    key,
-    ttl: (ms: TtlMs): SchemaEntry<T, Key> => {
-      assertTtlMs(ms, 'table.ttl');
+  function makeBuilder(entry: SchemaEntry<T, Key>): TableBuilder<T, Key> {
+    return {
+      ...entry,
+      index: <F extends keyof T & string>(field: F): TableBuilder<T, Key> => {
+        const current = (entry.indexes ?? []) as readonly (keyof T & string)[];
 
-      return { defaultTtl: ms, key };
-    },
-  };
+        return makeBuilder({ ...entry, indexes: [...current, field] });
+      },
+      ttl: (ms: TtlMs): TableBuilder<T, Key> => {
+        assertTtlMs(ms, 'table.ttl');
+
+        return makeBuilder({ ...entry, defaultTtl: ms });
+      },
+    };
+  }
+
+  return makeBuilder({ key });
 }
 
 /** Extracts the record type from a schema table entry. */
@@ -154,6 +181,12 @@ export type Observer<T> = (records: T[]) => void;
  * Individual adapters extend this with adapter-specific fields.
  */
 export type BaseAdapterOptions<S extends AnySchema> = {
+  /**
+   * Pluggable serialization codec. Provide a custom implementation to change how values
+   * are encoded at rest (e.g. compact keys, encryption, msgpack).
+   * Defaults to the standard `{ value, expiresAt? }` JSON envelope.
+   */
+  codec?: VaultCodec;
   /** Structured logger. A /rune Logger satisfies VaultLogger directly. */
   logger?: VaultLogger;
   /** Performance monitoring hook. Called after every operation with duration in ms. */
@@ -174,14 +207,16 @@ export type MetricsEvent = {
   duration: number;
   operation:
     | 'batch'
+    | 'clear'
     | 'count'
     | 'delete'
     | 'deleteMany'
-    | 'clear'
+    | 'entries'
     | 'get'
     | 'getAll'
     | 'getMany'
     | 'has'
+    | 'keys'
     | 'put'
     | 'putAll'
     | 'query'
@@ -208,19 +243,62 @@ export type DebugInfo<S extends AnySchema> = {
   tables: Array<{ name: keyof S & string } & DebugStats>;
 };
 
-/* -------------------- Transaction context -------------------- */
+/* -------------------- Shared CRUD methods -------------------- */
 
-/** Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction. */
-export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+/**
+ * @internal Shared CRUD methods present on both `TransactionContext` and `Adapter`.
+ * Not exported — use `TransactionContext` or `Adapter` directly.
+ */
+type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
   clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   /** Delete multiple records by key in a single operation. Returns the number of records removed. */
   deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  /**
+   * Returns all `[key, record]` pairs in the table.
+   * Useful for cache-warming, migration scripts, and debugging.
+   */
+  entries<T extends K>(table: T): Promise<Array<[KeyOf<S, T>, RecordOf<S, T>]>>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
-  /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
+  /** Fetch all records in the table. */
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
   getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /**
+   * Returns the primary key of every live record in the table without fetching the full records.
+   * Useful for existence checks, diffing, and cache-invalidation.
+   */
+  keys<T extends K>(table: T): Promise<KeyOf<S, T>[]>;
+  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
+  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
+  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
+  /**
+   * Merge `changes` into the existing record identified by `key` and persist the result.
+   * Throws `VaultError` if the key does not exist — use `upsert` for insert-or-update semantics.
+   */
+  update<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    changes: Partial<RecordOf<S, T>>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
+  upsert<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
+};
+
+/* -------------------- Transaction context -------------------- */
+
+/** Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction. */
+export type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = SharedMethods<
+  S,
+  K
+> & {
   /**
    * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
    * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
@@ -236,45 +314,35 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
     defaultFn: () => RecordOf<S, T>,
     ttl?: TtlMs,
   ): Promise<RecordOf<S, T>>;
-  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
-  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
-  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
-  update<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    changes: Partial<RecordOf<S, T>>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T> | undefined>;
-  upsert<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T>>;
 };
 
 /* -------------------- Adapter interface -------------------- */
 
 /**
- * Full client API. Extends TransactionContext<S> (minus `getOrDefault`, which is only
- * available inside `batch()` callbacks) with batch, observe/watch, disposal,
- * debug tooling, and explicit TTL pruning.
+ * Full client API. Shares all CRUD methods with `TransactionContext` and adds
+ * batch, observe/watch, disposal, debug tooling, and explicit TTL pruning.
+ * `getOrDefault` is only available inside `batch()` callbacks.
  */
-export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>, 'getOrDefault'> {
+export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
   /**
    * Execute multiple operations against a set of tables with deferred observer notifications.
    *
    * All observer callbacks fire once per dirty table after `fn` resolves, instead of after
    * each individual write. Inside `fn`, only the tables declared in `tables` may be accessed.
-   * For the IndexedDB adapter this is also a true atomic IDB transaction.
+   *
+   * **Atomicity:** For the IndexedDB adapter this runs as a real IDB transaction — all writes
+   * are atomic and rolled back on error. For the memory and WebStorage adapters the operation
+   * is **not atomic** — concurrent `batch()` calls or concurrent mutations may interleave.
    */
-  batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
+  batch<K extends keyof S & string, R>(
+    tables: readonly K[],
+    fn: (tx: TransactionContext<S, K>) => Promise<R>,
+  ): Promise<R>;
   /** Returns live record counts and expired-but-not-yet-evicted counts per table. */
   debug(): Promise<DebugInfo<S>>;
   /** Releases all resources (observers, cross-tab channel, DB connection). */
-  dispose(): void;
-  observe<K extends keyof S>(
+  dispose(): Promise<void>;
+  observe<K extends keyof S & string>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
     options?: { immediate?: boolean },
@@ -282,18 +350,16 @@ export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>
   /**
    * Observe multiple tables simultaneously. The listener receives a combined snapshot
    * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
-   * their first snapshot. Subsequent firings are coalesced per microtask, so a batch
-   * that writes to multiple observed tables triggers exactly one combined callback.
+   * their first snapshot (initial load). Subsequent firings are coalesced per microtask,
+   * so a batch that writes to multiple observed tables triggers exactly one combined callback.
    *
    * @param tables - The tables to observe. Must be non-empty.
    * @param listener - Called with a snapshot map keyed by table name.
-   * @param options - `immediate: true` fires the listener with the current state immediately.
    * @returns An unsubscribe function that stops all underlying observers.
    */
-  observeMany<K extends keyof S>(
+  observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    options?: { immediate?: boolean },
   ): () => void;
   /**
    * Explicitly delete all TTL-expired records from every table.
@@ -319,6 +385,12 @@ export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>
    *
    * The iteration auto-cleans up its observer when the `for await` loop exits
    * (via `return()` or `break`).
+   *
+   * @param options.mode
+   *   - `'latest'` (default): if the consumer lags, intermediate snapshots are dropped and
+   *     only the most recent one is retained. Best for rendering/display use-cases.
+   *   - `'all'`: every snapshot is queued and delivered in order. Use when every intermediate
+   *     state matters (audit trails, animation frames).
    */
-  watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
+  watch<K extends keyof S & string>(table: K, options?: { mode?: 'all' | 'latest' }): AsyncIterable<RecordOf<S, K>[]>;
 }

@@ -97,6 +97,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/coins",
+      "projectFolder": "packages/coins",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/tempo",
       "projectFolder": "packages/tempo",
       "shouldPublish": true,

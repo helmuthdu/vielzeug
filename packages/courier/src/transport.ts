@@ -1,3 +1,5 @@
+import { anySignal } from '@vielzeug/arsenal';
+
 export type FetchContext = { init: RequestInit; url: string };
 export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 
@@ -21,9 +23,7 @@ export function buildTimeoutSignal(timeoutMs: number, external?: AbortSignal | n
     return external ?? undefined;
   }
 
-  const t = AbortSignal.timeout(timeoutMs);
-
-  return external ? AbortSignal.any([t, external]) : t;
+  return anySignal(AbortSignal.timeout(timeoutMs), external);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { clampOffset, clampPage, createMeta, pageCount } from '../pagination';
+import { clampPage, createMeta, pageCount } from '../pagination';
 
 describe('pagination helpers', () => {
   it('computes page counts with safe minimums', () => {
@@ -7,11 +7,9 @@ describe('pagination helpers', () => {
     expect(pageCount(11, 0)).toBe(11);
   });
 
-  it('clamps page and offset to valid ranges', () => {
+  it('clamps page to valid range', () => {
     expect(clampPage(-10, 3)).toBe(1);
     expect(clampPage(99, 3)).toBe(3);
-    expect(clampOffset(-10, 3)).toBe(0);
-    expect(clampOffset(99, 3)).toBe(2);
   });
 
   it('creates correct meta values for empty result sets', () => {

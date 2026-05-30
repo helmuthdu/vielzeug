@@ -20,6 +20,12 @@
       "types": "./dist/format.d.ts",
       "import": "./dist/format.js",
       "require": "./dist/format.cjs"
+    },
+    "./validate": {
+      "source": "./src/validate.ts",
+      "types": "./dist/validate.d.ts",
+      "import": "./dist/validate.js",
+      "require": "./dist/validate.cjs"
     }
   },
   "scripts": {
@@ -34,6 +40,9 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",

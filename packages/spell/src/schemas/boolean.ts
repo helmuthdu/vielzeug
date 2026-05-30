@@ -16,13 +16,8 @@ export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
     return { type: 'boolean' };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'boolean',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'boolean' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

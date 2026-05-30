@@ -34,14 +34,14 @@ export const FORM_CONTEXT_KEY = createContext<FormContextValue>('craft:form-cont
  * ```ts
  * define('my-form', {
  *   setup() {
- *     const form = createForm({ onSubmit: async (e) => { ... } });
+ *     const form = createFormContext({ onSubmit: async (e) => { ... } });
  *     provide(FORM_CONTEXT_KEY, form);
  *     return html`<form @submit=${form.submit}><slot></slot></form>`;
  *   }
  * });
  * ```
  */
-export function createForm(
+export function createFormContext(
   options: {
     onReset?: () => void;
     onSubmit?: (e?: Event) => void | Promise<void>;

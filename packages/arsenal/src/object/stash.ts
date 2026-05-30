@@ -1,22 +1,12 @@
-import { Scheduler, type SchedulerLike } from '../async';
-
-type CacheKey = readonly unknown[];
-
-type CacheRecord<K extends CacheKey, T, M> = {
+type CacheRecord<K, T, M> = {
   key: K;
   meta: M | undefined;
   value: T;
 };
 
-type GcTask = {
-  controller: AbortController;
-  token: number;
-};
-
-export type CacheOptions<K extends CacheKey = CacheKey> = {
+export type CacheOptions<K = string, T = unknown> = {
   hash: (key: K) => string;
-  onError?: (error: unknown) => void;
-  scheduler?: Pick<SchedulerLike, 'postTask'>;
+  onEvict?: (key: K, value: T) => void;
 };
 
 export type CacheSetOptions<M> = {
@@ -24,14 +14,15 @@ export type CacheSetOptions<M> = {
   ttlMs?: number;
 };
 
-export type Stash<T, K extends CacheKey = CacheKey, M = never> = {
+export type Stash<T, K = string, M = never> = {
   cancelGc: (key: K) => void;
   clear: () => void;
   delete: (key: K) => boolean;
   entries: () => IterableIterator<[K, T]>;
   get: (key: K) => T | undefined;
   getEntry: (key: K) => Readonly<{ meta: M | undefined; value: T }> | undefined;
-  getOrSet: (key: K, factory: () => T, options?: CacheSetOptions<M>) => T;
+  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions<M>): Promise<T>;
+  getOrSet(key: K, factory: () => T, options?: CacheSetOptions<M>): T;
   scheduleGc: (key: K, delayMs: number) => void;
   set: (key: K, value: T, options?: CacheSetOptions<M>) => void;
   size: () => number;
@@ -39,39 +30,47 @@ export type Stash<T, K extends CacheKey = CacheKey, M = never> = {
 };
 
 /**
- * Creates a generic key-value cache with automatic garbage collection and observer support.
+ * Creates a generic key-value cache with TTL-based garbage collection, async stampede
+ * prevention, and optional eviction callback.
  *
  * @example
  * ```ts
- * const myCache = stash<string>({ hash: (key) => JSON.stringify(key) });
- * myCache.set(['user', 1], 'John Doe');
- * const value = myCache.get(['user', 1]); // 'John Doe'
- * myCache.scheduleGc(['user', 1], 5000); // Auto-delete after 5s
+ * const myCache = stash<string>({ hash: (key) => key });
+ * myCache.set('user:1', 'John Doe', { ttlMs: 5000 });
+ * const value = myCache.get('user:1'); // 'John Doe'
+ *
+ * // Async getOrSet prevents stampedes — concurrent callers share one in-flight promise
+ * const user = await myCache.getOrSet('user:1', () => fetchUser(1));
  * ```
  *
  * @template T - The type of values stored in the cache.
- *
- * @returns A cache instance with get, set, delete, clear, and GC methods.
  */
-export function stash<T, K extends CacheKey = CacheKey, M = never>(options: CacheOptions<K>): Stash<T, K, M> {
+export function stash<T, K = string, M = never>(options: CacheOptions<K, T>): Stash<T, K, M> {
   const store = new Map<string, CacheRecord<K, T, M>>();
-  const gcTasks = new Map<string, GcTask>();
-  const scheduler = options.scheduler ?? new Scheduler();
+  const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const inFlight = new Map<string, Promise<T>>();
   const hash = options.hash;
-  let gcToken = 0;
+  const onEvict = options.onEvict;
 
   function cancelGcByHash(keyHash: string): void {
-    gcTasks.get(keyHash)?.controller.abort();
-    gcTasks.delete(keyHash);
+    const id = gcTimers.get(keyHash);
+
+    if (id !== undefined) {
+      clearTimeout(id);
+      gcTimers.delete(keyHash);
+    }
   }
 
   function deleteByHash(keyHash: string): boolean {
-    const existed = store.has(keyHash);
+    const record = store.get(keyHash);
+
+    if (!record) return false;
 
     cancelGcByHash(keyHash);
+    onEvict?.(record.key, record.value);
     store.delete(keyHash);
 
-    return existed;
+    return true;
   }
 
   function get(key: K): T | undefined {
@@ -81,39 +80,60 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
   function getEntry(key: K): Readonly<{ meta: M | undefined; value: T }> | undefined {
     const entry = store.get(hash(key));
 
-    if (!entry) {
-      return undefined;
-    }
+    if (!entry) return undefined;
 
     return { meta: entry.meta, value: entry.value };
   }
 
-  function set(key: K, value: T, options?: CacheSetOptions<M>): void {
+  function set(key: K, value: T, opts?: CacheSetOptions<M>): void {
     const keyHash = hash(key);
     const existing = store.get(keyHash);
 
     cancelGcByHash(keyHash);
     store.set(keyHash, {
       key,
-      meta: options && 'meta' in options ? options.meta : existing?.meta,
+      meta: opts && 'meta' in opts ? opts.meta : existing?.meta,
       value,
     });
 
-    if (options?.ttlMs !== undefined) {
-      scheduleGc(key, options.ttlMs);
+    if (opts?.ttlMs !== undefined) {
+      scheduleGc(key, opts.ttlMs);
     }
   }
 
-  function getOrSet(key: K, factory: () => T, options?: CacheSetOptions<M>): T {
+  function getOrSet(key: K, factory: () => T | Promise<T>, opts?: CacheSetOptions<M>): T | Promise<T> {
     const existing = getEntry(key);
 
-    if (existing) {
-      return existing.value;
-    }
+    if (existing) return existing.value;
+
+    const keyHash = hash(key);
+
+    // Stampede prevention: return the in-flight promise if one exists
+    const pending = inFlight.get(keyHash);
+
+    if (pending) return pending;
 
     const value = factory();
 
-    set(key, value, options);
+    if (value instanceof Promise) {
+      const promise = value
+        .then((resolved) => {
+          inFlight.delete(keyHash);
+          set(key, resolved, opts);
+
+          return resolved;
+        })
+        .catch((err: unknown) => {
+          inFlight.delete(keyHash);
+          throw err;
+        });
+
+      inFlight.set(keyHash, promise);
+
+      return promise;
+    }
+
+    set(key, value, opts);
 
     return value;
   }
@@ -123,9 +143,17 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
   }
 
   function clear(): void {
-    for (const task of gcTasks.values()) task.controller.abort();
+    for (const id of gcTimers.values()) clearTimeout(id);
+
+    if (onEvict) {
+      for (const record of store.values()) {
+        onEvict(record.key, record.value);
+      }
+    }
+
     store.clear();
-    gcTasks.clear();
+    gcTimers.clear();
+    inFlight.clear();
   }
 
   function size(): number {
@@ -135,9 +163,7 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
   function scheduleGcByHash(keyHash: string, delayMs: number): void {
     cancelGcByHash(keyHash);
 
-    if (delayMs === Number.POSITIVE_INFINITY) {
-      return;
-    }
+    if (delayMs === Number.POSITIVE_INFINITY) return;
 
     if (!Number.isFinite(delayMs)) {
       throw new TypeError('stash.scheduleGc expects a finite number or Infinity');
@@ -149,40 +175,14 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
       return;
     }
 
-    if (!store.has(keyHash)) {
-      return;
-    }
+    if (!store.has(keyHash)) return;
 
-    const controller = new AbortController();
-    const token = ++gcToken;
+    const id = setTimeout(() => {
+      gcTimers.delete(keyHash);
+      deleteByHash(keyHash);
+    }, delayMs);
 
-    gcTasks.set(keyHash, { controller, token });
-    void scheduler
-      .postTask(
-        () => {
-          const current = gcTasks.get(keyHash);
-
-          if (!current || current.token !== token) {
-            return;
-          }
-
-          gcTasks.delete(keyHash);
-
-          deleteByHash(keyHash);
-        },
-        {
-          delay: delayMs,
-          priority: 'background',
-          signal: controller.signal,
-        },
-      )
-      .catch((error) => {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
-        }
-
-        options.onError?.(error);
-      });
+    gcTimers.set(keyHash, id);
   }
 
   function scheduleGc(key: K, delayMs: number): void {
@@ -196,9 +196,7 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
   function touch(key: K, ttlMs: number): boolean {
     const keyHash = hash(key);
 
-    if (!store.has(keyHash)) {
-      return false;
-    }
+    if (!store.has(keyHash)) return false;
 
     scheduleGcByHash(keyHash, ttlMs);
 
@@ -218,7 +216,7 @@ export function stash<T, K extends CacheKey = CacheKey, M = never>(options: Cach
     entries,
     get,
     getEntry,
-    getOrSet,
+    getOrSet: getOrSet as Stash<T, K, M>['getOrSet'],
     scheduleGc,
     set,
     size,

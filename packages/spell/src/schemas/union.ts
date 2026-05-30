@@ -1,4 +1,5 @@
 import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -11,7 +12,7 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     this.schemas = schemas;
   }
 
-  private _invalidUnionResult(value: unknown, errors: Issue[][]): { data: unknown; issues: Issue[] } {
+  private _invalidUnionResult(value: unknown, errors: Issue[][]): ParseValue {
     return {
       data: value,
       issues: [
@@ -22,16 +23,17 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
           path: [],
         },
       ],
+      typeOk: false,
     };
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const branchErrors: Issue[][] = [];
 
     for (const schema of this.schemas) {
       const result = schema.safeParse(value);
 
-      if (result.success) return { data: result.data, issues: [] };
+      if (result.success) return { data: result.data, issues: [], typeOk: true };
 
       branchErrors.push(result.error.issues);
     }
@@ -39,7 +41,7 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     return this._invalidUnionResult(value, branchErrors);
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     // Run all branches in parallel; return the first success (Promise.any semantics).
     // If all branches fail, collect all branch errors for the invalid_union issue.
     try {
@@ -53,7 +55,7 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
         ),
       );
 
-      return { data, issues: [] };
+      return { data, issues: [], typeOk: true };
     } catch (aggregateError) {
       const branchErrors = (aggregateError as AggregateError).errors.map((e: { issues: Issue[] }) => e.issues);
 
@@ -65,14 +67,8 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     return { anyOf: this.schemas.map((s) => s.toJsonSchema()) };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      branches: this.schemas.map((s) => s.describe()),
-      kind: 'union',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), branches: this.schemas.map((s) => s.toDescriptor()), kind: 'union' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

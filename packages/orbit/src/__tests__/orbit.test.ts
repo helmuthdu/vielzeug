@@ -1,4 +1,4 @@
-import { presets } from '@vielzeug/orbit/presets';
+import { contextMenu, dropdown, popover, tooltip } from '@vielzeug/orbit/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Middleware } from '../types';
@@ -7,6 +7,7 @@ import {
   arrow,
   autoPlacement,
   autoUpdate,
+  compose,
   computePosition,
   detectOverflow,
   float,
@@ -14,6 +15,7 @@ import {
   getAlignment,
   getSide,
   hide,
+  limitShift,
   offset,
   shift,
   size,
@@ -65,9 +67,27 @@ describe('computePosition', () => {
 
   it('throws when middleware resets too many times', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
-    const loop: Middleware = () => ({ reset: true });
+    const loop: Middleware = () => ({ reset: {} });
 
     expect(() => computePosition(reference, floating, { middleware: [loop] })).toThrow(/too many resets/i);
+  });
+
+  it('adjusts coordinates relative to containingBlock (position: absolute)', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const container = document.createElement('div');
+
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 200, width: 400, x: 50, y: 100 }),
+    );
+
+    const result = computePosition(reference, floating, {
+      containingBlock: container,
+      placement: 'bottom',
+    });
+
+    // Viewport: x=210, y=340. Subtract container offset (50, 100) → (160, 240).
+    expect(result.x).toBe(160);
+    expect(result.y).toBe(240);
   });
 
   it('supports virtual references', () => {
@@ -604,51 +624,71 @@ describe('float', () => {
 
   it('applies default left/top styles immediately', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const cleanup = float(reference, floating, { placement: 'bottom' });
+    const handle = float(reference, floating, { placement: 'bottom' });
 
     expect(floating.style.left).toBe('210px');
     expect(floating.style.top).toBe('340px');
-    cleanup();
+    handle.cleanup();
   });
 
   it('supports a custom apply function', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const apply = vi.fn();
-    const cleanup = float(reference, floating, { apply, middleware: [hide()] });
+    const handle = float(reference, floating, { apply, middleware: [hide()] });
 
     expect(apply).toHaveBeenCalledOnce();
     expect(apply.mock.calls[0][0]).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
     expect(apply.mock.calls[0][0].middlewareData.hide).toBeDefined();
-    cleanup();
+    handle.cleanup();
   });
 
-  it('positions once and returns a no-op cleanup when autoUpdate: false', () => {
+  it('positions once and returns a handle with no-op cleanup when autoUpdate: false', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const cleanup = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
+    const handle = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
 
     expect(floating.style.left).toBe('210px');
-    expect(() => cleanup()).not.toThrow();
+    expect(() => handle.cleanup()).not.toThrow();
+    expect(handle.getPosition()?.x).toBe(210);
+    expect(handle.getPosition()?.placement).toBe('bottom');
   });
 
   it('accepts nested autoUpdate options', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const cleanup = float(reference, floating, {
+    const handle = float(reference, floating, {
       autoUpdate: { animationFrame: false, observeFloating: false },
       placement: 'bottom',
     });
 
     expect(floating.style.left).toBe('210px');
-    cleanup();
+    handle.cleanup();
   });
 
   it('uses JS path (not CSS anchor) when a custom apply is provided with preferCssAnchor', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const apply = vi.fn();
-    const cleanup = float(reference, floating, { apply, placement: 'top', preferCssAnchor: true });
+    const handle = float(reference, floating, { apply, placement: 'top', preferCssAnchor: true });
 
     // custom apply must be called because CSS anchor path is bypassed
     expect(apply).toHaveBeenCalledOnce();
-    cleanup();
+    handle.cleanup();
+  });
+
+  it('returns a FloatHandle with getPosition() and update()', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
+
+    expect(handle.getPosition()).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
+    expect(typeof handle.update).toBe('function');
+    expect(typeof handle.cleanup).toBe('function');
+    handle.cleanup();
+  });
+
+  it('cssAnchor is false on JS-computed handles', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false });
+
+    expect(handle.cssAnchor).toBe(false);
+    handle.cleanup();
   });
 });
 
@@ -675,13 +715,13 @@ describe('custom middleware', () => {
     expect(result.middlewareData.snap).toEqual({ grid: 10 });
   });
 
-  it('supports reset: true (simple restart)', () => {
+  it('supports reset: {} (simple restart)', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     let callCount = 0;
     const onceMiddleware: Middleware = () => {
       callCount += 1;
 
-      if (callCount === 1) return { reset: true };
+      if (callCount === 1) return { reset: {} };
     };
 
     expect(() =>
@@ -728,50 +768,53 @@ describe('middleware data composition', () => {
 
 describe('presets', () => {
   it('tooltip() returns a valid preset with placement and middleware', () => {
-    const preset = presets.tooltip();
+    const preset = tooltip();
 
     expect(preset.placement).toBeTypeOf('string');
     expect(Array.isArray(preset.middleware)).toBe(true);
     expect(preset.middleware.length).toBeGreaterThan(0);
   });
 
+  it('tooltip() respects offset and placement overrides', () => {
+    const custom = tooltip({ offset: 16, placement: 'bottom' });
+
+    expect(custom.placement).toBe('bottom');
+    expect(custom.middleware.length).toBeGreaterThan(0);
+  });
+
   it('dropdown() returns a valid preset with placement and middleware', () => {
-    const preset = presets.dropdown();
+    const preset = dropdown();
 
     expect(preset.placement).toBeTypeOf('string');
     expect(Array.isArray(preset.middleware)).toBe(true);
+    // Always includes offset (default 4px)
+    expect(preset.middleware.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('dropdown() includes offset middleware when offset option is provided', () => {
-    const withOffset = presets.dropdown({ offset: 8 });
-    const withoutOffset = presets.dropdown();
+  it('dropdown() offset is overridable', () => {
+    const withOffset = dropdown({ offset: 8 });
+    const withDefault = dropdown();
 
-    expect(withOffset.middleware.length).toBeGreaterThan(withoutOffset.middleware.length);
+    // Both include offset; the count should be equal
+    expect(withOffset.middleware.length).toBe(withDefault.middleware.length);
   });
 
   it('popover() returns a valid preset', () => {
-    const preset = presets.popover();
+    const preset = popover();
 
     expect(preset.placement).toBeTypeOf('string');
     expect(Array.isArray(preset.middleware)).toBe(true);
   });
 
   it('contextMenu() returns a valid preset', () => {
-    const preset = presets.contextMenu();
+    const preset = contextMenu();
 
     expect(preset.placement).toBeTypeOf('string');
     expect(Array.isArray(preset.middleware)).toBe(true);
   });
 
-  it('contextMenu() includes offset middleware when offset option is provided', () => {
-    const withOffset = presets.contextMenu({ offset: 8 });
-    const withoutOffset = presets.contextMenu();
-
-    expect(withOffset.middleware.length).toBeGreaterThan(withoutOffset.middleware.length);
-  });
-
   it('contextMenu() respects a custom placement override', () => {
-    expect(presets.contextMenu({ placement: 'top-start' }).placement).toBe('top-start');
+    expect(contextMenu({ placement: 'top-start' }).placement).toBe('top-start');
   });
 
   it('presets can be spread into computePosition options', () => {
@@ -779,6 +822,136 @@ describe('presets', () => {
 
     setViewport();
 
-    expect(() => computePosition(reference, floating, { ...presets.tooltip() })).not.toThrow();
+    expect(() => computePosition(reference, floating, { ...tooltip() })).not.toThrow();
+  });
+});
+
+// ─── compose ─────────────────────────────────────────────────────────────────
+
+describe('compose', () => {
+  it('filters falsy entries and returns a Middleware array', () => {
+    const mws = compose(offset(8), null, undefined, false, flip());
+
+    expect(mws.length).toBe(2);
+  });
+
+  it('throws when a known-bad ordering is detected', () => {
+    expect(() => compose(arrow({ element: makeArrow() }), flip())).toThrow(/must come after/i);
+  });
+
+  it('throws when flip and autoPlacement are both included', () => {
+    expect(() => compose(flip(), autoPlacement())).toThrow(/flip.*autoPlacement/i);
+  });
+
+  it('accepts valid ordering without throwing', () => {
+    expect(() =>
+      compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: makeArrow() })),
+    ).not.toThrow();
+  });
+});
+
+// ─── autoPlacement alignment (F3) ────────────────────────────────────────────
+
+describe('autoPlacement alignment', () => {
+  beforeEach(() => setViewport());
+
+  it('restricts candidates to start variants when alignment: "start"', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 400 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [autoPlacement({ alignment: 'start' })],
+      placement: 'bottom',
+    });
+
+    expect(result.placement.endsWith('-start')).toBe(true);
+  });
+
+  it('restricts candidates to end variants when alignment: "end"', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 400 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [autoPlacement({ alignment: 'end' })],
+      placement: 'bottom',
+    });
+
+    expect(result.placement.endsWith('-end')).toBe(true);
+  });
+
+  it('evaluates all 12 variants when alignment: null', () => {
+    // With all variants available, the best fit is some aligned or cardinal placement.
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 400 }, { height: 30, width: 80 });
+
+    expect(() =>
+      computePosition(reference, floating, {
+        middleware: [autoPlacement({ alignment: null })],
+        placement: 'bottom',
+      }),
+    ).not.toThrow();
+  });
+
+  it('evaluates only cardinal sides by default (no alignment option)', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 400 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [autoPlacement()],
+      placement: 'bottom',
+    });
+
+    // Result should be a pure cardinal side (no dash).
+    expect(result.placement).not.toContain('-');
+  });
+});
+
+// ─── limitShift (F1) ─────────────────────────────────────────────────────────
+
+describe('limitShift', () => {
+  it('prevents cross-axis drift past the reference extent', () => {
+    setViewport(300);
+
+    // ref near right: x=280, width=40, float width=20.
+    // base (bottom, centered): float.x = 280+20-10 = 290.
+    // With padding=15: overflow.right = 290+20-(300-15)=25 → unclamped shift=-25 → x=265.
+    // limitShift: lo=280, hi=280+40-20=300. min=280, max=300. clamp(265,280,300)=280.
+    const { floating, reference } = makeElements({ height: 20, width: 40, x: 280, y: 200 }, { height: 30, width: 20 });
+    const unclamped = computePosition(reference, floating, {
+      middleware: [shift({ padding: 15 })],
+      placement: 'bottom',
+    });
+    const clamped = computePosition(reference, floating, {
+      middleware: [shift({ limiter: limitShift(), padding: 15 })],
+      placement: 'bottom',
+    });
+
+    expect(unclamped.x).toBe(265);
+    expect(clamped.x).toBe(280);
+    expect(clamped.x).toBeGreaterThan(unclamped.x);
+  });
+
+  it('limitShift({ offset }) expands the allowed drift range', () => {
+    setViewport(300);
+
+    const { floating, reference } = makeElements({ height: 20, width: 40, x: 280, y: 200 }, { height: 30, width: 20 });
+    // With offset=20: lo=280-20=260, hi=280+40+20-20=320. clamp(265,260,320)=265.
+    const extended = computePosition(reference, floating, {
+      middleware: [shift({ limiter: limitShift({ offset: 20 }), padding: 15 })],
+      placement: 'bottom',
+    });
+
+    // offset allows 20px of drift past reference edges, so 265 is within the allowed range.
+    expect(extended.x).toBe(265);
+  });
+
+  it('does not clamp when drift is already within the reference extent', () => {
+    setViewport(500);
+
+    // ref centered in viewport, small shift needed — within reference extent.
+    const { floating, reference } = makeElements({ height: 20, width: 100, x: 200, y: 200 }, { height: 30, width: 60 });
+    const withoutLimit = computePosition(reference, floating, {
+      middleware: [shift({ padding: 4 })],
+      placement: 'bottom',
+    });
+    const withLimit = computePosition(reference, floating, {
+      middleware: [shift({ limiter: limitShift(), padding: 4 })],
+      placement: 'bottom',
+    });
+
+    expect(withLimit.x).toBe(withoutLimit.x);
   });
 });

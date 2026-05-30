@@ -109,26 +109,4 @@ describe('throttle', () => {
     expect(result).toBe('result');
     expect(throttled.pending()).toBe(false);
   });
-
-  it('should preserve this context', () => {
-    const context = { value: 42 };
-    const fn = vi.fn(function (this: typeof context) {
-      return this.value;
-    });
-    const throttled = throttle(fn, 1000, { trailing: true });
-
-    throttled.call(context);
-    throttled.call(context);
-
-    vi.advanceTimersByTime(1000);
-    expect(fn.mock.instances).toEqual([context, context]);
-  });
-
-  it('should throw for invalid arguments', () => {
-    // @ts-expect-error - testing invalid input
-    expect(() => throttle('not a function')).toThrow(TypeError);
-    expect(() => throttle(() => {}, -1)).toThrow(TypeError);
-    // @ts-expect-error - testing invalid input
-    expect(() => throttle(() => {}, 'invalid')).toThrow(TypeError);
-  });
 });

@@ -1,6 +1,6 @@
 import { effect } from '@vielzeug/ripple';
 
-// ── A11y Host ─────────────────────────────────────────────────────────────────
+// ── Reactive Bindings ─────────────────────────────────────────────────────────
 //
 // Declarative reactive manager that keeps ARIA attributes, HTML attributes,
 // and DOM properties in sync with signals. Combines everything into a single
@@ -11,7 +11,7 @@ import { effect } from '@vielzeug/ripple';
 //
 // Usage:
 // ```ts
-// const { stop } = createA11yHost(el, {
+// const { stop } = createReactiveBindings(el, {
 //   aria: {
 //     'aria-expanded': () => isOpen.value ? 'true' : 'false',
 //     'aria-controls': listboxId,          // static — set once
@@ -49,7 +49,7 @@ export type AttrMap = Record<string, AttrValue>;
 /** Map of DOM property names to static values or reactive getter functions. */
 export type PropMap = Record<string, PropValue>;
 
-export type A11yHostOptions = {
+export type ReactiveBindingsOptions = {
   /** Reactive or static `aria-*` attribute values. Rendered in the same effect as `attrs`. */
   aria?: AttrMap;
   /** Reactive or static non-ARIA attribute values (e.g. `data-open`, `tabindex`). */
@@ -66,10 +66,16 @@ export type A11yHostOptions = {
   signal?: AbortSignal;
 };
 
-export type A11yHost = {
+/** @deprecated Use `ReactiveBindingsOptions` */
+export type A11yHostOptions = ReactiveBindingsOptions;
+
+export type ReactiveBindings = {
   /** Stops all reactive attribute and property sync effects. */
   stop: () => void;
 };
+
+/** @deprecated Use `ReactiveBindings` */
+export type A11yHost = ReactiveBindings;
 
 const resolveAttr = (value: AttrValue): string | null | undefined => (typeof value === 'function' ? value() : value);
 
@@ -87,7 +93,7 @@ const resolveProp = (value: PropValue): unknown => (typeof value === 'function' 
  *
  * @example
  * ```ts
- * const { stop } = createA11yHost(el, {
+ * const { stop } = createReactiveBindings(el, {
  *   aria: {
  *     'aria-checked': () => checked.value ? 'true' : 'false',
  *     'aria-controls': listboxId,   // static
@@ -98,7 +104,7 @@ const resolveProp = (value: PropValue): unknown => (typeof value === 'function' 
  * });
  * ```
  */
-export const createA11yHost = (element: Element, options: A11yHostOptions): A11yHost => {
+export const createReactiveBindings = (element: Element, options: ReactiveBindingsOptions): ReactiveBindings => {
   const attrEntries = [...Object.entries(options.aria ?? {}), ...Object.entries(options.attrs ?? {})] as [
     string,
     AttrValue,
@@ -106,7 +112,7 @@ export const createA11yHost = (element: Element, options: A11yHostOptions): A11y
 
   const propEntries = Object.entries(options.props ?? {}) as [string, PropValue][];
 
-  const stop = effect(() => {
+  const sub = effect(() => {
     for (const [attr, value] of attrEntries) {
       const resolved = resolveAttr(value);
 
@@ -124,7 +130,12 @@ export const createA11yHost = (element: Element, options: A11yHostOptions): A11y
     options.run?.();
   });
 
+  const stop = () => sub.dispose();
+
   options.signal?.addEventListener('abort', stop, { once: true });
 
   return { stop };
 };
+
+/** @deprecated Use `createReactiveBindings` */
+export const createA11yHost = createReactiveBindings;

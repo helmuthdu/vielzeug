@@ -1,4 +1,3 @@
-import { isArray } from './isArray';
 import { isNil } from './isNil';
 import { isObject } from './isObject';
 
@@ -26,7 +25,7 @@ import { isObject } from './isObject';
 export function isEmpty(arg: any): boolean {
   if (isNil(arg) || arg === '') return true;
 
-  if (isArray(arg)) return arg.length === 0;
+  if (Array.isArray(arg)) return arg.length === 0;
 
   if (arg instanceof Map || arg instanceof Set) return arg.size === 0;
 
@@ -34,5 +33,3 @@ export function isEmpty(arg: any): boolean {
 
   return false;
 }
-
-export const IS_EMPTY_ERROR_MSG = 'Expected an empty value';

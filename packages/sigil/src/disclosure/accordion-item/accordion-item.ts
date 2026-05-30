@@ -70,7 +70,8 @@ export type BitAccordionItemProps = {
  * ```
  */
 
-export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItemEvents>('bit-accordion-item', {
+export const ACCORDION_ITEM_TAG = 'bit-accordion-item' as const;
+define<BitAccordionItemProps, BitAccordionItemEvents>(ACCORDION_ITEM_TAG, {
   props: {
     disabled: prop.bool(false),
     expanded: prop.bool(false),

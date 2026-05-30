@@ -95,14 +95,14 @@ describe('createRemoteSource', () => {
   });
 
   describe('query updates and navigation', () => {
-    it('update applies multiple fields and performs one fetch', async () => {
+    it('hydrate applies multiple fields and performs one fetch', async () => {
       const fetch = vi.fn(async ({ limit, page, search }: { limit: number; page: number; search?: string }) => ({
         items: [`${limit}-${page}-${search ?? ''}`],
         total: 50,
       }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.update({ limit: 5, page: 3, search: 'x' });
+      await source.hydrate({ limit: 5, page: 3, search: 'x' });
 
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(source.toQuery().limit).toBe(5);
@@ -110,17 +110,19 @@ describe('createRemoteSource', () => {
       expect(source.current).toEqual(['5-3-x']);
     });
 
-    it('update resets page to 1 when limit changes', async () => {
+    it('hydrate preserves page when limit changes (no implicit reset)', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 20 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 5 });
 
       await source.goTo(3);
-      await source.update({ limit: 10 });
+      await source.hydrate({ limit: 10 });
 
-      expect(source.toQuery().page).toBe(1);
+      // hydrate does not reset to page 1; page is clamped to last valid page.
+      // With 20 items at limit 10 there are 2 pages, so page 3 is clamped to 2.
+      expect(source.toQuery().page).toBe(2);
     });
 
-    it('update is a no-op when nothing changes', async () => {
+    it('hydrate is a no-op when nothing changes', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
@@ -128,7 +130,7 @@ describe('createRemoteSource', () => {
 
       const callsBefore = fetch.mock.calls.length;
 
-      await source.update({ limit: 10, page: 1, search: '' });
+      await source.hydrate({ limit: 10, page: 1, search: '' });
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
@@ -146,7 +148,7 @@ describe('createRemoteSource', () => {
   });
 
   describe('search timing', () => {
-    it('debounces search and applies on commit', async () => {
+    it('debounces search and applies on flush', async () => {
       const fetch = vi.fn(async ({ search }: { search?: string }) => ({
         items: search ? [search] : ['init'],
         total: 1,
@@ -158,7 +160,7 @@ describe('createRemoteSource', () => {
       source.search('alpha');
       expect(source.meta.isSearchPending).toBe(true);
 
-      await source.commit();
+      await source.flush();
 
       expect(source.meta.isSearchPending).toBe(false);
       expect(source.current).toEqual(['alpha']);
@@ -279,7 +281,7 @@ describe('createRemoteSource', () => {
   });
 
   describe('serialization and hydration', () => {
-    it('roundtrips snapshot through encodeQuery + restore', async () => {
+    it('roundtrips snapshot through encodeQuery + hydrate', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 20 }));
       const source = createRemoteSource({
         autoFetch: false,
@@ -295,7 +297,7 @@ describe('createRemoteSource', () => {
       const params = encodeQuery(source.toQuery());
       const restored = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await restored.restore(decodeQuery(params, { defaultLimit: 10 }));
+      await restored.hydrate(decodeQuery(params, { defaultLimit: 10 }));
 
       expect(restored.toQuery()).toEqual({
         filter: { active: true },
@@ -306,13 +308,24 @@ describe('createRemoteSource', () => {
       });
     });
 
-    it('restore does not fetch on no-op', async () => {
+    it('hydrate with no changes does not fetch', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 2 });
 
-      await source.restore({ limit: 2, page: 1, search: '' });
+      await source.hydrate({ limit: 2, page: 1, search: '' });
       await Promise.resolve();
 
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('snapshot initialises source with pre-loaded data', async () => {
+      const fetch = vi.fn(async () => ({ items: ['server-item'], total: 1 }));
+      const snapshot = { items: ['prefetched'], total: 1 };
+      const source = createRemoteSource({ autoFetch: false, fetch, snapshot });
+
+      // Before first refresh, snapshot data is present immediately.
+      expect(source.current).toEqual(['prefetched']);
+      expect(source.meta.totalItems).toBe(1);
       expect(fetch).not.toHaveBeenCalled();
     });
   });
@@ -463,6 +476,72 @@ describe('createRemoteSource', () => {
       expect('hasNoItems' in meta).toBe(false);
       expect('isFirstPage' in meta).toBe(false);
       expect('isLastPage' in meta).toBe(false);
+    });
+  });
+
+  describe('retry', () => {
+    it('retries on failure and resolves on success', async () => {
+      const fetch = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('transient'))
+        .mockResolvedValueOnce({ items: ['retried'], total: 1 });
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch,
+        retry: { attempts: 1, delay: () => 10 },
+      });
+
+      const p = source.refresh();
+
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['retried']);
+      expect(source.meta.errorMessage).toBeNull();
+    });
+
+    it('reports error after all retries exhausted', async () => {
+      const fetch = vi.fn().mockRejectedValue(new Error('permanent failure'));
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch,
+        retry: { attempts: 2, delay: () => 10 },
+      });
+
+      const p = source.refresh();
+
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(source.meta.errorMessage).toBe('permanent failure');
+    });
+  });
+
+  describe('dispose', () => {
+    it('stops notifying listeners and aborts inflight requests', async () => {
+      let capturedSignal: AbortSignal | undefined;
+      const fetch = vi.fn(async (_q: unknown, signal: AbortSignal) => {
+        capturedSignal = signal;
+        await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+        return { items: ['x'], total: 1 };
+      });
+      const source = createRemoteSource({ autoFetch: false, fetch });
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+      source.refresh();
+
+      source.dispose();
+      listener.mockClear(); // clear any pre-dispose calls (e.g. isLoading notification)
+
+      expect(capturedSignal?.aborted).toBe(true);
+
+      await vi.runAllTimersAsync();
+
+      expect(listener).not.toHaveBeenCalled(); // no calls after dispose
     });
   });
 });

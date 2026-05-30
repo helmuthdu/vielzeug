@@ -1,6 +1,6 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, resolveMessage } from '../core';
+import { ErrorCode, Schema, fail, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class DateSchema<Input = Date> extends Schema<Date, Input> {
@@ -8,41 +8,27 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
     super((value) =>
       value instanceof Date && !Number.isNaN(value.getTime())
         ? null
-        : [{ code: ErrorCode.invalid_date, message: _messages().date.type(), path: [] }],
+        : fail(ErrorCode.invalid_date, _messages().date.type()),
     );
   }
 
   min(date: Date, message: MessageFn<{ min: Date; value: Date }> = (ctx) => _messages().date.min(ctx)): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Date;
 
-      if (typed >= date) return null;
-
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { min: date, value: typed }),
-          params: { min: date },
-          path: [],
-        },
-      ];
+      return typed >= date
+        ? null
+        : fail(ErrorCode.too_small, resolveMessage(message, { min: date, value: typed }), { min: date });
     });
   }
 
   max(date: Date, message: MessageFn<{ max: Date; value: Date }> = (ctx) => _messages().date.max(ctx)): this {
-    return this._addValidator((value) => {
+    return this._addConstraint((value) => {
       const typed = value as Date;
 
-      if (typed <= date) return null;
-
-      return [
-        {
-          code: ErrorCode.too_big,
-          message: resolveMessage(message, { max: date, value: typed }),
-          params: { max: date },
-          path: [],
-        },
-      ];
+      return typed <= date
+        ? null
+        : fail(ErrorCode.too_big, resolveMessage(message, { max: date, value: typed }), { max: date });
     });
   }
 
@@ -53,13 +39,8 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
     };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'date',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'date' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

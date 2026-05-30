@@ -139,7 +139,10 @@ describe('onError callback', () => {
     });
 
     await settle();
-    history.push('/fail');
+    // push is silent; use back() to trigger a history-listener navigation
+    history.push('/fail'); // silent: stack [/, /fail], cursor=1
+    history.push('/home2'); // silent: stack [/, /fail, /home2], cursor=2
+    history.back(); // triggers listener → navigates to /fail
     await settle();
 
     expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'history-listener' });

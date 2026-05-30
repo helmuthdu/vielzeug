@@ -217,7 +217,8 @@ function buildTable(
  * </bit-table>
  * ```
  */
-export const TABLE_TAG = define<BitTableProps>('bit-table', {
+export const TABLE_TAG = 'bit-table' as const;
+define<BitTableProps>(TABLE_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

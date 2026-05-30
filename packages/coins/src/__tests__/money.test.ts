@@ -1,0 +1,703 @@
+import {
+  abs,
+  add,
+  allocate,
+  compare,
+  currency,
+  divide,
+  fromJSON,
+  greaterThan,
+  greaterThanOrEqual,
+  isEqual,
+  isNegative,
+  isPositive,
+  isZero,
+  lessThan,
+  lessThanOrEqual,
+  max,
+  min,
+  money,
+  multiply,
+  negate,
+  splitEvenly,
+  subtract,
+  sum,
+  toDecimal,
+  toJSON,
+  toNumber,
+} from '../money';
+
+describe('currency factory', () => {
+  it('returns a valid CurrencyCode for recognised ISO 4217 code', () => {
+    expect(currency('USD')).toBe('USD');
+    expect(currency('EUR')).toBe('EUR');
+    expect(currency('JPY')).toBe('JPY');
+  });
+
+  it('throws RangeError for unrecognised currency code', () => {
+    expect(() => currency('NOTREAL')).toThrow(RangeError);
+    expect(() => currency('NOTREAL')).toThrow('Invalid ISO 4217 currency code');
+  });
+
+  it('throws for empty string', () => {
+    expect(() => currency('')).toThrow(RangeError);
+  });
+});
+
+describe('money factory', () => {
+  describe('from decimal string', () => {
+    it('parses standard two-decimal amounts', () => {
+      expect(money('1234.56', 'USD')).toEqual({ amount: 123456n, currency: 'USD' });
+    });
+
+    it('pads short fraction to currency decimals', () => {
+      expect(money('1.5', 'USD')).toEqual({ amount: 150n, currency: 'USD' });
+    });
+
+    it('handles missing fraction (whole number string)', () => {
+      expect(money('100', 'USD')).toEqual({ amount: 10000n, currency: 'USD' });
+    });
+
+    it('handles zero', () => {
+      expect(money('0.00', 'USD')).toEqual({ amount: 0n, currency: 'USD' });
+    });
+
+    it('handles negative amounts', () => {
+      expect(money('-10.50', 'USD')).toEqual({ amount: -1050n, currency: 'USD' });
+    });
+
+    it('rounds up when extra digit >= 5', () => {
+      expect(money('1.005', 'USD')).toEqual({ amount: 101n, currency: 'USD' });
+      expect(money('1.235', 'USD')).toEqual({ amount: 124n, currency: 'USD' });
+    });
+
+    it('rounds down when extra digit < 5', () => {
+      expect(money('1.004', 'USD')).toEqual({ amount: 100n, currency: 'USD' });
+    });
+  });
+
+  describe('from number', () => {
+    it('parses standard float', () => {
+      expect(money(1234.56, 'USD')).toEqual({ amount: 123456n, currency: 'USD' });
+    });
+
+    it('parses integer', () => {
+      expect(money(100, 'USD')).toEqual({ amount: 10000n, currency: 'USD' });
+    });
+  });
+
+  describe('from bigint (raw minor units)', () => {
+    it('uses bigint as-is', () => {
+      expect(money(123456n, 'USD')).toEqual({ amount: 123456n, currency: 'USD' });
+    });
+
+    it('accepts negative bigint', () => {
+      expect(money(-100n, 'USD')).toEqual({ amount: -100n, currency: 'USD' });
+    });
+  });
+
+  describe('currency validation', () => {
+    it('throws RangeError for invalid currency code (string amount)', () => {
+      expect(() => money('100.00', 'NOTREAL')).toThrow(RangeError);
+      expect(() => money('100.00', 'NOTREAL')).toThrow('Invalid ISO 4217 currency code');
+    });
+
+    it('throws RangeError for invalid currency code (number amount)', () => {
+      expect(() => money(100, 'NOTREAL')).toThrow(RangeError);
+    });
+
+    it('throws RangeError for invalid currency code (bigint amount)', () => {
+      expect(() => money(100n, 'NOTREAL')).toThrow(RangeError);
+    });
+  });
+
+  describe('zero-decimal currencies', () => {
+    it('JPY has no fractional units', () => {
+      expect(money('1234', 'JPY')).toEqual({ amount: 1234n, currency: 'JPY' });
+      expect(money(1234, 'JPY')).toEqual({ amount: 1234n, currency: 'JPY' });
+    });
+  });
+
+  describe('three-decimal currencies', () => {
+    it('KWD stores three decimal places', () => {
+      expect(money('1.234', 'KWD')).toEqual({ amount: 1234n, currency: 'KWD' });
+    });
+
+    it('BHD stores three decimal places', () => {
+      expect(money('123.456', 'BHD')).toEqual({ amount: 123456n, currency: 'BHD' });
+    });
+  });
+});
+
+describe('add', () => {
+  it('adds same-currency amounts', () => {
+    expect(add(money('10.00', 'USD'), money('5.50', 'USD'))).toEqual({ amount: 1550n, currency: 'USD' });
+  });
+
+  it('handles negative addends', () => {
+    expect(add(money('10.00', 'USD'), money('-3.00', 'USD'))).toEqual({ amount: 700n, currency: 'USD' });
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('subtract', () => {
+  it('subtracts same-currency amounts', () => {
+    expect(subtract(money('10.00', 'USD'), money('3.00', 'USD'))).toEqual({ amount: 700n, currency: 'USD' });
+  });
+
+  it('produces negative result when b > a', () => {
+    expect(subtract(money('3.00', 'USD'), money('10.00', 'USD'))).toEqual({ amount: -700n, currency: 'USD' });
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('multiply', () => {
+  it('multiplies by integer', () => {
+    expect(multiply(money('10.00', 'USD'), 3)).toEqual({ amount: 3000n, currency: 'USD' });
+  });
+
+  it('multiplies by decimal string', () => {
+    expect(multiply(money('100.00', 'USD'), '0.85')).toEqual({ amount: 8500n, currency: 'USD' });
+  });
+
+  it('multiplies by decimal number', () => {
+    expect(multiply(money('200.00', 'USD'), 1.5)).toEqual({ amount: 30000n, currency: 'USD' });
+  });
+
+  it('handles negative factor', () => {
+    expect(multiply(money('100.00', 'USD'), -1)).toEqual({ amount: -10000n, currency: 'USD' });
+  });
+
+  it('handles negative money with positive factor', () => {
+    expect(multiply(money('-100.00', 'USD'), 2)).toEqual({ amount: -20000n, currency: 'USD' });
+  });
+
+  it('handles negative money with negative factor', () => {
+    expect(multiply(money('-100.00', 'USD'), -1)).toEqual({ amount: 10000n, currency: 'USD' });
+  });
+
+  it('handles zero factor', () => {
+    expect(multiply(money('100.00', 'USD'), 0)).toEqual({ amount: 0n, currency: 'USD' });
+  });
+
+  describe('rounding modes', () => {
+    // 100 cents * 0.339 = 33.9 cents
+    it("'half-away-from-zero' rounds .5 away from zero (default)", () => {
+      expect(multiply(money('1.00', 'USD'), '1.005')).toEqual({ amount: 101n, currency: 'USD' });
+      expect(multiply(money('1.00', 'USD'), '1.004')).toEqual({ amount: 100n, currency: 'USD' });
+    });
+
+    it("'down' truncates toward zero", () => {
+      expect(multiply(money('1.00', 'USD'), '0.339', 'down')).toEqual({ amount: 33n, currency: 'USD' });
+      expect(multiply(money('-1.00', 'USD'), '0.339', 'down')).toEqual({ amount: -33n, currency: 'USD' });
+    });
+
+    it("'up' rounds away from zero", () => {
+      expect(multiply(money('1.00', 'USD'), '0.331', 'up')).toEqual({ amount: 34n, currency: 'USD' });
+      expect(multiply(money('-1.00', 'USD'), '0.331', 'up')).toEqual({ amount: -34n, currency: 'USD' });
+    });
+
+    it("'floor' rounds toward −∞", () => {
+      expect(multiply(money('1.00', 'USD'), '0.339', 'floor')).toEqual({ amount: 33n, currency: 'USD' });
+      expect(multiply(money('-1.00', 'USD'), '0.331', 'floor')).toEqual({ amount: -34n, currency: 'USD' });
+    });
+
+    it("'ceiling' rounds toward +∞", () => {
+      expect(multiply(money('1.00', 'USD'), '0.331', 'ceiling')).toEqual({ amount: 34n, currency: 'USD' });
+      expect(multiply(money('-1.00', 'USD'), '0.339', 'ceiling')).toEqual({ amount: -33n, currency: 'USD' });
+    });
+
+    it("'half-even' rounds to nearest even (banker's rounding)", () => {
+      // 100 * 0.045 = 4.5 → nearest even = 4
+      expect(multiply(money('1.00', 'USD'), '0.045', 'half-even')).toEqual({ amount: 4n, currency: 'USD' });
+      // 100 * 0.055 = 5.5 → nearest even = 6
+      expect(multiply(money('1.00', 'USD'), '0.055', 'half-even')).toEqual({ amount: 6n, currency: 'USD' });
+    });
+  });
+});
+
+describe('divide', () => {
+  it('divides by integer', () => {
+    expect(divide(money('99.00', 'USD'), 3)).toEqual({ amount: 3300n, currency: 'USD' });
+  });
+
+  it('divides by decimal string', () => {
+    expect(divide(money('100.00', 'USD'), '2.5')).toEqual({ amount: 4000n, currency: 'USD' });
+  });
+
+  it('divides by decimal number', () => {
+    expect(divide(money('150.00', 'USD'), 1.5)).toEqual({ amount: 10000n, currency: 'USD' });
+  });
+
+  it('handles negative divisor', () => {
+    expect(divide(money('100.00', 'USD'), -2)).toEqual({ amount: -5000n, currency: 'USD' });
+  });
+
+  it('handles negative money', () => {
+    expect(divide(money('-100.00', 'USD'), 4)).toEqual({ amount: -2500n, currency: 'USD' });
+  });
+
+  it('throws on division by zero', () => {
+    expect(() => divide(money('100.00', 'USD'), 0)).toThrow(RangeError);
+    expect(() => divide(money('100.00', 'USD'), '0.0')).toThrow(RangeError);
+  });
+
+  describe('rounding modes', () => {
+    // 10000 / 3 = 3333.33...
+    it("'down' truncates toward zero (default-equivalent when positive)", () => {
+      expect(divide(money('100.00', 'USD'), 3, 'down')).toEqual({ amount: 3333n, currency: 'USD' });
+    });
+
+    it("'half-away-from-zero' (default) rounds 3333.33 down to 3333", () => {
+      expect(divide(money('100.00', 'USD'), 3)).toEqual({ amount: 3333n, currency: 'USD' });
+    });
+
+    it("'ceiling' rounds fractional positive result up", () => {
+      expect(divide(money('100.00', 'USD'), 3, 'ceiling')).toEqual({ amount: 3334n, currency: 'USD' });
+    });
+
+    it("'floor' rounds fractional negative result down", () => {
+      expect(divide(money('-100.00', 'USD'), 3, 'floor')).toEqual({ amount: -3334n, currency: 'USD' });
+    });
+
+    it("'ceiling' truncates fractional negative result (toward zero)", () => {
+      expect(divide(money('-100.00', 'USD'), 3, 'ceiling')).toEqual({ amount: -3333n, currency: 'USD' });
+    });
+  });
+});
+
+describe('allocate', () => {
+  describe('equal splits', () => {
+    it('distributes evenly when divisible', () => {
+      expect(allocate(money('9.00', 'USD'), [1, 1, 1])).toEqual([
+        { amount: 300n, currency: 'USD' },
+        { amount: 300n, currency: 'USD' },
+        { amount: 300n, currency: 'USD' },
+      ]);
+    });
+
+    it('gives the extra penny to the first share (largest remainder first)', () => {
+      // $10.00 / 3 = $3.3333... → [$3.34, $3.33, $3.33]
+      const result = allocate(money('10.00', 'USD'), [1, 1, 1]);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({ amount: 334n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: 333n, currency: 'USD' });
+      expect(result[2]).toEqual({ amount: 333n, currency: 'USD' });
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(1000n);
+    });
+  });
+
+  describe('unequal ratios', () => {
+    it('distributes 30/70 split exactly', () => {
+      const result = allocate(money('10.00', 'USD'), [3, 7]);
+
+      expect(result[0]).toEqual({ amount: 300n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: 700n, currency: 'USD' });
+    });
+
+    it('distributes 1/2/3 split exactly', () => {
+      const result = allocate(money('10.00', 'USD'), [1, 2, 3]);
+
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(1000n);
+      // 1/6 ≈ 1.67, 2/6 ≈ 3.33, 3/6 = 5.00
+      expect(result[2]).toEqual({ amount: 500n, currency: 'USD' });
+    });
+  });
+
+  describe('string ratios', () => {
+    it('handles integer strings the same as numbers', () => {
+      const result = allocate(money('10.00', 'USD'), ['1', '2']);
+
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(1000n);
+      expect(result[0]).toEqual({ amount: 333n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: 667n, currency: 'USD' });
+    });
+
+    it('handles decimal string weights losslessly', () => {
+      const result = allocate(money('10.00', 'USD'), ['0.3', '0.7']);
+
+      expect(result[0]).toEqual({ amount: 300n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: 700n, currency: 'USD' });
+    });
+
+    it('never loses or gains a minor unit with string ratios', () => {
+      const result = allocate(money('7.00', 'USD'), ['0.333', '0.333', '0.334']);
+
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(700n);
+    });
+  });
+
+  describe('indivisible amounts', () => {
+    it('never loses or gains a penny with any ratio combination', () => {
+      for (const amount of [1n, 7n, 10n, 100n, 10000n]) {
+        for (const ratios of [
+          [1, 1],
+          [1, 1, 1],
+          [2, 3],
+          [1, 2, 3],
+        ] as number[][]) {
+          const parts = allocate(money(amount, 'USD'), ratios);
+          const total = parts.reduce((s, p) => s + p.amount, 0n);
+
+          expect(total).toBe(amount);
+        }
+      }
+    });
+  });
+
+  describe('negative amounts', () => {
+    it('allocates negative money correctly', () => {
+      const result = allocate(money('-10.00', 'USD'), [1, 1, 1]);
+
+      expect(result[0]).toEqual({ amount: -334n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: -333n, currency: 'USD' });
+      expect(result[2]).toEqual({ amount: -333n, currency: 'USD' });
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(-1000n);
+    });
+  });
+
+  describe('float ratios', () => {
+    it('handles fractional weights', () => {
+      // [0.5, 0.5] = [1, 1]
+      const result = allocate(money('10.00', 'USD'), [0.5, 0.5]);
+
+      expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(1000n);
+    });
+  });
+
+  describe('zero ratios', () => {
+    it('allocates nothing to zero-weight slots', () => {
+      const result = allocate(money('10.00', 'USD'), [0, 1]);
+
+      expect(result[0]).toEqual({ amount: 0n, currency: 'USD' });
+      expect(result[1]).toEqual({ amount: 1000n, currency: 'USD' });
+    });
+  });
+
+  describe('error cases', () => {
+    it('throws on empty ratios', () => {
+      expect(() => allocate(money('10.00', 'USD'), [])).toThrow('at least one ratio');
+    });
+
+    it('throws on negative ratios', () => {
+      expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow('non-negative');
+    });
+
+    it('throws when all ratios are zero', () => {
+      expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow();
+    });
+  });
+});
+
+describe('splitEvenly', () => {
+  it('splits $10.00 into 3 equal parts', () => {
+    const result = splitEvenly(money('10.00', 'USD'), 3);
+
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({ amount: 334n, currency: 'USD' });
+    expect(result[1]).toEqual({ amount: 333n, currency: 'USD' });
+    expect(result[2]).toEqual({ amount: 333n, currency: 'USD' });
+    expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(1000n);
+  });
+
+  it('splits $9.00 into 3 equal parts exactly', () => {
+    const result = splitEvenly(money('9.00', 'USD'), 3);
+
+    expect(result).toHaveLength(3);
+    expect(result.every((m) => m.amount === 300n)).toBe(true);
+    expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(900n);
+  });
+
+  it('works for a single part', () => {
+    const m = money('5.00', 'USD');
+
+    expect(splitEvenly(m, 1)).toEqual([m]);
+  });
+
+  it('handles negative amounts', () => {
+    const result = splitEvenly(money('-9.00', 'USD'), 3);
+
+    expect(result.every((m) => m.amount === -300n)).toBe(true);
+    expect(result.reduce((a, b) => a + b.amount, 0n)).toBe(-900n);
+  });
+
+  it('throws for non-integer parts', () => {
+    expect(() => splitEvenly(money('10.00', 'USD'), 1.5)).toThrow(RangeError);
+  });
+
+  it('throws for zero parts', () => {
+    expect(() => splitEvenly(money('10.00', 'USD'), 0)).toThrow(RangeError);
+  });
+
+  it('throws for negative parts', () => {
+    expect(() => splitEvenly(money('10.00', 'USD'), -1)).toThrow(RangeError);
+  });
+});
+
+describe('abs', () => {
+  it('returns positive amount unchanged', () => {
+    expect(abs(money('10.00', 'USD'))).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('makes negative amount positive', () => {
+    expect(abs(money('-10.00', 'USD'))).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('handles zero', () => {
+    expect(abs(money('0.00', 'USD'))).toEqual({ amount: 0n, currency: 'USD' });
+  });
+});
+
+describe('negate', () => {
+  it('flips sign of positive amount', () => {
+    expect(negate(money('10.00', 'USD'))).toEqual({ amount: -1000n, currency: 'USD' });
+  });
+
+  it('flips sign of negative amount', () => {
+    expect(negate(money('-10.00', 'USD'))).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('double negate is identity', () => {
+    const original = money('42.99', 'USD');
+
+    expect(negate(negate(original))).toEqual(original);
+  });
+});
+
+describe('sum', () => {
+  it('sums an array of money', () => {
+    expect(sum([money('1.00', 'USD'), money('2.00', 'USD'), money('3.00', 'USD')])).toEqual({
+      amount: 600n,
+      currency: 'USD',
+    });
+  });
+
+  it('handles a single element', () => {
+    expect(sum([money('5.00', 'USD')])).toEqual({ amount: 500n, currency: 'USD' });
+  });
+
+  it('throws on empty array', () => {
+    expect(() => sum([])).toThrow('at least one');
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
+  });
+});
+
+describe('min', () => {
+  it('returns the smallest value', () => {
+    expect(min(money('3.00', 'USD'), money('1.00', 'USD'), money('2.00', 'USD'))).toEqual({
+      amount: 100n,
+      currency: 'USD',
+    });
+  });
+
+  it('works with a single argument', () => {
+    expect(min(money('5.00', 'USD'))).toEqual({ amount: 500n, currency: 'USD' });
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => min(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('max', () => {
+  it('returns the largest value', () => {
+    expect(max(money('1.00', 'USD'), money('3.00', 'USD'), money('2.00', 'USD'))).toEqual({
+      amount: 300n,
+      currency: 'USD',
+    });
+  });
+
+  it('works with a single argument', () => {
+    expect(max(money('5.00', 'USD'))).toEqual({ amount: 500n, currency: 'USD' });
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => max(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('comparison predicates', () => {
+  const five = money('5.00', 'USD');
+  const ten = money('10.00', 'USD');
+
+  it('isZero', () => {
+    expect(isZero(money('0.00', 'USD'))).toBe(true);
+    expect(isZero(five)).toBe(false);
+  });
+
+  it('isPositive', () => {
+    expect(isPositive(five)).toBe(true);
+    expect(isPositive(money('0.00', 'USD'))).toBe(false);
+    expect(isPositive(money('-1.00', 'USD'))).toBe(false);
+  });
+
+  it('isNegative', () => {
+    expect(isNegative(money('-1.00', 'USD'))).toBe(true);
+    expect(isNegative(money('0.00', 'USD'))).toBe(false);
+    expect(isNegative(five)).toBe(false);
+  });
+
+  it('greaterThan', () => {
+    expect(greaterThan(ten, five)).toBe(true);
+    expect(greaterThan(five, ten)).toBe(false);
+    expect(greaterThan(five, five)).toBe(false);
+  });
+
+  it('greaterThanOrEqual', () => {
+    expect(greaterThanOrEqual(ten, five)).toBe(true);
+    expect(greaterThanOrEqual(five, five)).toBe(true);
+    expect(greaterThanOrEqual(five, ten)).toBe(false);
+  });
+
+  it('lessThan', () => {
+    expect(lessThan(five, ten)).toBe(true);
+    expect(lessThan(ten, five)).toBe(false);
+    expect(lessThan(five, five)).toBe(false);
+  });
+
+  it('lessThanOrEqual', () => {
+    expect(lessThanOrEqual(five, ten)).toBe(true);
+    expect(lessThanOrEqual(five, five)).toBe(true);
+    expect(lessThanOrEqual(ten, five)).toBe(false);
+  });
+
+  it('predicates throw on currency mismatch', () => {
+    const eur = money('5.00', 'EUR');
+
+    expect(() => greaterThan(five, eur)).toThrow('Currency mismatch');
+    expect(() => lessThan(five, eur)).toThrow('Currency mismatch');
+  });
+});
+
+describe('compare', () => {
+  it('returns -1 when a < b', () => {
+    expect(compare(money('5.00', 'USD'), money('10.00', 'USD'))).toBe(-1);
+  });
+
+  it('returns 0 when equal', () => {
+    expect(compare(money('10.00', 'USD'), money('10.00', 'USD'))).toBe(0);
+  });
+
+  it('returns 1 when a > b', () => {
+    expect(compare(money('10.00', 'USD'), money('5.00', 'USD'))).toBe(1);
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('isEqual', () => {
+  it('returns true for equal money', () => {
+    expect(isEqual(money('10.00', 'USD'), money('10.00', 'USD'))).toBe(true);
+  });
+
+  it('returns false for different amounts', () => {
+    expect(isEqual(money('10.00', 'USD'), money('10.01', 'USD'))).toBe(false);
+  });
+
+  it('throws on currency mismatch', () => {
+    expect(() => isEqual(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+});
+
+describe('toJSON / fromJSON', () => {
+  it('serializes to JSON-safe object', () => {
+    expect(toJSON(money('1234.56', 'USD'))).toEqual({ amount: '123456', currency: 'USD' });
+  });
+
+  it('serializes negative amounts', () => {
+    expect(toJSON(money('-50.00', 'USD'))).toEqual({ amount: '-5000', currency: 'USD' });
+  });
+
+  it('is JSON.stringify safe (bigint becomes string)', () => {
+    expect(() => JSON.stringify(toJSON(money('99.99', 'USD')))).not.toThrow();
+    expect(JSON.stringify(toJSON(money('99.99', 'USD')))).toBe('{"amount":"9999","currency":"USD"}');
+  });
+
+  it('round-trips via toJSON/fromJSON', () => {
+    const original = money('1234.56', 'USD');
+
+    expect(fromJSON(toJSON(original))).toEqual(original);
+  });
+
+  it('round-trips negative amounts', () => {
+    const original = money('-50.00', 'USD');
+
+    expect(fromJSON(toJSON(original))).toEqual(original);
+  });
+
+  it('throws RangeError for invalid currency in fromJSON', () => {
+    expect(() => fromJSON({ amount: '100', currency: 'FAKE' })).toThrow(RangeError);
+  });
+
+  it('throws SyntaxError for invalid amount string in fromJSON', () => {
+    expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(SyntaxError);
+  });
+});
+
+describe('toDecimal', () => {
+  it('converts minor units to decimal string', () => {
+    expect(toDecimal(money(123456n, 'USD'))).toBe('1234.56');
+  });
+
+  it('pads fraction with leading zeros', () => {
+    expect(toDecimal(money(5n, 'USD'))).toBe('0.05');
+    expect(toDecimal(money(10n, 'USD'))).toBe('0.10');
+  });
+
+  it('handles whole amounts', () => {
+    expect(toDecimal(money(10000n, 'USD'))).toBe('100.00');
+  });
+
+  it('handles zero', () => {
+    expect(toDecimal(money(0n, 'USD'))).toBe('0.00');
+  });
+
+  it('handles negative amounts', () => {
+    expect(toDecimal(money(-123456n, 'USD'))).toBe('-1234.56');
+    expect(toDecimal(money(-5n, 'USD'))).toBe('-0.05');
+  });
+
+  it('handles zero-decimal currencies', () => {
+    expect(toDecimal(money(1234n, 'JPY'))).toBe('1234');
+  });
+
+  it('handles three-decimal currencies', () => {
+    expect(toDecimal(money(123456n, 'KWD'))).toBe('123.456');
+  });
+
+  it('round-trips with money()', () => {
+    const original = money('9876.54', 'USD');
+
+    expect(money(toDecimal(original), 'USD')).toEqual(original);
+  });
+});
+
+describe('toNumber', () => {
+  it('converts to floating-point', () => {
+    expect(toNumber(money(123456n, 'USD'))).toBeCloseTo(1234.56, 5);
+  });
+
+  it('handles zero', () => {
+    expect(toNumber(money(0n, 'USD'))).toBe(0);
+  });
+
+  it('handles negative amounts', () => {
+    expect(toNumber(money(-100n, 'USD'))).toBeCloseTo(-1.0, 5);
+  });
+
+  it('handles zero-decimal currencies', () => {
+    expect(toNumber(money(1234n, 'JPY'))).toBe(1234);
+  });
+});

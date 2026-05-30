@@ -65,7 +65,8 @@ export type BitRatingProps = {
  * <bit-rating value="4" solid></bit-rating>
  * ```
  */
-export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', {
+export const RATING_TAG = 'bit-rating' as const;
+define<BitRatingProps, BitRatingEvents>(RATING_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

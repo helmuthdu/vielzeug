@@ -8,26 +8,27 @@
  */
 
 export type {
-  AnyKey,
   I18n,
   I18nOptions,
   I18nSnapshot,
+  I18nState,
   Loader,
   Locale,
   LocaleSource,
   MessageBranchKeys,
   MessageLeafKeys,
   Messages,
-  MissingInfo,
-  PluralTranslateOptions,
+  NamespaceFactory,
   ScopedI18n,
-  SupportedLocalesOptions,
   SubscribeOptions,
   TranslateVars,
   Unsubscribe,
-} from './types';
+  ValidationWarning,
+  WatchOptions,
+} from './i18n';
 
 export type { DurationFormatOptions, DurationValue, Formatter, ListFormatOptions } from './format';
 
 export { createFormatter } from './format';
 export { createI18n } from './i18n';
+export { validateCatalog } from './validate';

@@ -234,16 +234,15 @@ const _defaultMessages: Messages = {
 };
 
 let _activeMessages: Messages = _defaultMessages;
+let _activeLocale = 'en';
+const _localeRegistry = new Map<string, Messages>([['en', _defaultMessages]]);
 
-/** A function that receives internal warning messages from sieve. */
+/** A function that receives internal warning messages from spell. */
 export type Logger = (message: string) => void;
 
 let _logger: Logger = (msg) => console.warn(msg);
 
-/**
- * Emit an internal warning. Routes through the configured logger.
- * @internal
- */
+/** @internal */
 export function _warn(message: string): void {
   _logger(message);
 }
@@ -292,20 +291,27 @@ export function _messages(): Messages {
 }
 
 /**
- * Run `fn` with a scoped message override. The original messages are restored
- * after `fn` returns (or throws). Safe for synchronous code only — concurrent
- * async operations (multiple `parseAsync` calls in parallel) can interfere since
- * this relies on a module-level variable. Use per-constraint `message` parameters
- * for async or concurrent scoping.
+ * Register a full or partial locale message set under the given locale key.
+ * Call `useLocale(locale)` to activate it.
  */
-export function withMessages<T>(patch: DeepPartial<Messages>, fn: () => T): T {
-  const saved = _activeMessages;
+export function registerLocale(locale: string, messages: DeepPartial<Messages>): void {
+  _localeRegistry.set(locale, mergeMessages(_defaultMessages, messages));
+}
 
-  _activeMessages = mergeMessages(_defaultMessages, patch);
+/**
+ * Switch the active locale. The locale must have been previously registered
+ * with `registerLocale()`.
+ */
+export function useLocale(locale: string): void {
+  const msgs = _localeRegistry.get(locale);
 
-  try {
-    return fn();
-  } finally {
-    _activeMessages = saved;
-  }
+  if (!msgs) throw new Error(`[@vielzeug/spell] Locale "${locale}" is not registered. Call registerLocale() first.`);
+
+  _activeLocale = locale;
+  _activeMessages = msgs;
+}
+
+/** Returns the currently active locale key. */
+export function currentLocale(): string {
+  return _activeLocale;
 }

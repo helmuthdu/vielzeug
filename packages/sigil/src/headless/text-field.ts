@@ -1,4 +1,3 @@
-import { syncedSignal } from '@vielzeug/craft';
 import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import {
@@ -9,6 +8,7 @@ import {
   type FieldHandle,
   type ValidationTrigger,
 } from './field-base';
+import { syncedSignal } from './synced-signal';
 
 // Re-export AssistiveState types from field-base for consumers that need them
 // directly (e.g. components building custom counter UIs).

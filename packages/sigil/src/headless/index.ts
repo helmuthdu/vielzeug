@@ -2,11 +2,11 @@
 export { toAbortSignal } from './scope';
 
 // ── Field base ───────────────────────────────────────────────────────────────
+// NOTE: `FieldBaseOptions` is a deprecated alias for `FieldOptions`.
 export {
   createAssistiveState,
   createErrorHelperState,
   createField,
-  createFieldCore,
   type AssistiveOptions,
   type AssistiveState,
   type ControlValidationMode,
@@ -15,9 +15,8 @@ export {
   type ErrorHelperState,
   type FieldAriaState,
   type FieldBaseOptions,
-  type FieldCore,
-  type FieldCoreOptions,
   type FieldHandle,
+  type FieldOptions,
   type LabelPlacement,
   type LabelState,
   type ValidationTrigger,
@@ -112,7 +111,21 @@ export { createFocusManager, type FocusManager, type FocusManagerOptions } from 
 export { createDialogFocusControl, type DialogFocusControl, type DialogFocusControlOptions } from './dialog-focus';
 
 // ── Dev utilities ─────────────────────────────────────────────────────────────
-export { devAssert, HeadlessError, HeadlessException, type HeadlessErrorCode } from './dev';
+export { assert as devAssert } from '@vielzeug/arsenal';
+
+// ── Synced signal ─────────────────────────────────────────────────────────────
+export { syncedSignal } from './synced-signal';
+
+// ── Reactive bindings ─────────────────────────────────────────────────────────
+export {
+  createReactiveBindings,
+  type AttrMap,
+  type AttrValue,
+  type PropMap,
+  type PropValue,
+  type ReactiveBindings,
+  type ReactiveBindingsOptions,
+} from './a11y-host';
 
 // ── ID generation ────────────────────────────────────────────────────────────
 export { createStableId } from './id';

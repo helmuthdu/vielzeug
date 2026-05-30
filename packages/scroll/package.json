@@ -14,12 +14,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./dom": {
-      "source": "./src/dom/index.ts",
-      "types": "./dist/dom/index.d.ts",
-      "import": "./dist/dom.js",
-      "require": "./dist/dom.cjs"
     }
   },
   "scripts": {

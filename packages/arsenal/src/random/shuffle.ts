@@ -1,6 +1,3 @@
-import { assert } from '../function/assert';
-import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-
 /**
  * Shuffles an array randomly.
  *
@@ -17,8 +14,6 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  * @throws {TypeError} If the provided array is not an array.
  */
 export function shuffle<T>(array: T[]): T[] {
-  assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
   const result = [...array];
 
   for (let i = result.length - 1; i > 0; i--) {

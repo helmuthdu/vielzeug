@@ -18,7 +18,7 @@ describe('createMemoryHistory', () => {
     expect(h.location.pathname).toBe('/');
   });
 
-  it('push updates location and notifies subscribers', () => {
+  it('push updates location silently (no listener notification)', () => {
     const h = createMemoryHistory('/');
     const listener = vi.fn();
 
@@ -26,16 +26,44 @@ describe('createMemoryHistory', () => {
     h.push('/about');
 
     expect(h.location.pathname).toBe('/about');
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).not.toHaveBeenCalled(); // mirrors browser pushState — no popstate event
   });
 
-  it('replace updates location without stacking a new entry', () => {
+  it('replace updates location silently without stacking a new entry', () => {
     const h = createMemoryHistory('/a');
+    const listener = vi.fn();
 
+    h.subscribe(listener);
     h.push('/b');
     h.replace('/c');
 
     expect(h.location.pathname).toBe('/c');
+    expect(listener).not.toHaveBeenCalled(); // silent, like replaceState
+  });
+
+  it('back() moves to the previous entry and notifies subscribers', () => {
+    const h = createMemoryHistory('/');
+
+    h.push('/about'); // silent — stack: [/, /about], cursor=1
+
+    const listener = vi.fn();
+
+    h.subscribe(listener);
+    h.back();
+
+    expect(h.location.pathname).toBe('/');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('back() has no effect when at the first entry', () => {
+    const h = createMemoryHistory('/');
+    const listener = vi.fn();
+
+    h.subscribe(listener);
+    h.back();
+
+    expect(h.location.pathname).toBe('/');
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('subscribe returns an unsubscribe function that stops further notifications', () => {
@@ -44,7 +72,9 @@ describe('createMemoryHistory', () => {
     const unsub = h.subscribe(listener);
 
     unsub();
-    h.push('/other');
+    h.push('/a'); // silent; now at /a
+    h.push('/b'); // silent; now at /b, cursor=2
+    h.back(); // would notify if listener still active, but it was unsubscribed
 
     expect(listener).not.toHaveBeenCalled();
   });

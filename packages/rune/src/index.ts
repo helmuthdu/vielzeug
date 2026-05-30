@@ -2,16 +2,17 @@ export type {
   BatchTransport,
   BatchTransportOptions,
   Bindings,
+  ConsoleTheme,
+  ConsoleThemeEntry,
   ConsoleTransportOptions,
   JsonTransportOptions,
-  LazyBinding,
   LogEntry,
   LogLevel,
   LogMethod,
+  LogMiddleware,
   Logger,
   LogType,
   RedactTransportOptions,
-  RemoteHandler,
   RemoteLogData,
   RemoteTransportOptions,
   RuneConfig,
@@ -19,15 +20,17 @@ export type {
   SampleTransportOptions,
   SerializedError,
   Transport,
-  Variant,
 } from './types';
 
+export type { LazyBinding } from './lazy';
 export { isLazyBinding, lazy } from './lazy';
 export { Rune, createLogger } from './logger';
 export {
+  DEFAULT_THEME,
   batchTransport,
   consoleTransport,
   jsonTransport,
+  pipe,
   redactTransport,
   remoteTransport,
   sampleTransport,

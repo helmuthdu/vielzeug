@@ -1,25 +1,28 @@
-import type { RouteBranchDef, RouteRecord } from './router-internal';
+import type { RouteBranchDef, RouteRecord } from './types';
 import type { Middleware, RouteDefinition, RouteTable, RouterOptions } from './types';
 
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 
-export type CompiledRoutes<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown> = {
-  records: readonly RouteRecord<TRoutes, TMeta, TComponent>[];
-  routesByName: ReadonlyMap<string, RouteRecord<TRoutes, TMeta, TComponent>>;
+export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
+  records: readonly RouteRecord<TMeta, TComponent>[];
+  routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
 };
 
-export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
-  options: RouterOptions<TRoutes, TMeta, TComponent>,
-): CompiledRoutes<TRoutes, TMeta, TComponent> {
-  const globalMiddleware: Middleware<TRoutes>[] = [...(options.middleware ?? [])];
-  const records: RouteRecord<TRoutes, TMeta, TComponent>[] = [];
+export function compileRoutes<
+  TRoutes extends RouteTable,
+  TMeta,
+  TComponent,
+  TLocals extends Record<string, unknown> = Record<string, unknown>,
+>(options: RouterOptions<TRoutes, TMeta, TComponent, TLocals>): CompiledRoutes<TMeta, TComponent> {
+  const globalMiddleware: Middleware[] = [...(options.middleware ?? [])] as unknown as Middleware[];
+  const records: RouteRecord<TMeta, TComponent>[] = [];
 
   const compile = (
     name: string,
     route: RouteDefinition,
     ancestorPath: string,
     ancestorBranchDefs: RouteBranchDef<TMeta, TComponent>[],
-    ancestorMiddleware: RouteRecord<TRoutes, TMeta, TComponent>['middleware'],
+    ancestorMiddleware: RouteRecord<TMeta, TComponent>['middleware'],
   ): void => {
     if (route.index && route.path !== undefined) {
       throw new Error(`[wayfinder] Route "${name}" cannot define both index and path`);
@@ -42,13 +45,13 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
         lazy: route.lazy as RouteBranchDef<TMeta, TComponent>['lazy'],
         meta: route.meta as TMeta | undefined,
         name,
-        onLeave: route.onLeave,
+        onError: route.onError as RouteBranchDef<TMeta, TComponent>['onError'],
       },
     ];
 
-    const ownMiddleware: Middleware<TRoutes>[] = [
+    const ownMiddleware: Middleware[] = [
       ...ancestorMiddleware,
-      ...((route.middleware ?? []) as unknown as Middleware<TRoutes>[]),
+      ...((route.middleware ?? []) as unknown as Middleware[]),
     ];
 
     if (route.children) {
@@ -76,6 +79,7 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
     compile(name, route, '/', [], []);
   }
 
+  // Validate duplicate names.
   const namesSeen = new Set<string>();
 
   for (const record of records) {
@@ -86,6 +90,23 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
     }
 
     namesSeen.add(record.leaf.name);
+  }
+
+  // Warn when a catch-all or wildcard-param route precedes more specific routes.
+  // Routes match in array order (object key order), so a wildcard placed too early silently shadows later routes.
+  let wildcardSeen = false;
+
+  for (const record of records) {
+    const isCatchAll =
+      record.path === '/*' || record.path.endsWith('/*') || (record.path.includes(':') && record.path.endsWith('*'));
+
+    if (wildcardSeen && !isCatchAll) {
+      console.warn(
+        `[wayfinder] Route "${record.leaf.name}" (${record.path}) is defined after a wildcard/catch-all route and will never match. Move specific routes before wildcards.`,
+      );
+    }
+
+    if (isCatchAll) wildcardSeen = true;
   }
 
   return {

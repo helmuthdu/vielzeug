@@ -2,7 +2,7 @@ import type { ReadonlySignal } from '@vielzeug/ripple';
 
 // ── Events ───────────────────────────────────────────────────────────────────
 
-export type MachineEvent = { [key: string]: unknown; type: string };
+export type MachineEvent = { type: string };
 
 export type EventType<Ev extends MachineEvent> = Ev['type'] & string;
 
@@ -26,6 +26,13 @@ export type GuardFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> 
   args: ActionArgs<Ctx, Ev>,
 ) => boolean;
 
+// ── Lifecycle functions (symmetric entry/exit) ───────────────────────────────
+
+export type LifecycleFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: {
+  context: Ctx;
+  readonly event: Ev | LifecycleEvent;
+}) => void;
+
 // ── Transitions ──────────────────────────────────────────────────────────────
 
 export type TransitionDef<
@@ -39,7 +46,7 @@ export type TransitionDef<
   target: State;
 };
 
-/** User-facing transition input: a single transition object or an array of alternatives. */
+/** Internal: a single transition object or an array of alternatives. */
 export type TransitionInput<
   State extends string,
   Ctx extends object,
@@ -51,13 +58,13 @@ export type TransitionInput<
 
 export type InvokeSourceArgs<Ctx extends object, Ev extends MachineEvent> = {
   readonly context: Readonly<Ctx>;
-  readonly event: Ev | LifecycleEvent;
+  readonly entryEvent: Ev | LifecycleEvent;
   readonly signal: AbortSignal;
 };
 
 export type InvokeDispatchArgs<Ctx extends object, Ev extends MachineEvent> = {
   readonly context: Readonly<Ctx>;
-  readonly event: Ev | LifecycleEvent;
+  readonly entryEvent: Ev | LifecycleEvent;
 };
 
 export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
@@ -68,30 +75,28 @@ export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
 
 // ── State nodes ──────────────────────────────────────────────────────────────
 
-export type EntryFn<Ctx extends object> = (args: { context: Ctx }) => void;
-
 export type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  /** Called when entering this state. Receives only context — use transition actions if you need the event. */
-  entry?: EntryFn<Ctx>;
-  exit?: ActionFn<Ctx, Ev>;
+  entry?: LifecycleFn<Ctx, Ev>;
+  exit?: LifecycleFn<Ctx, Ev>;
+  /** Initial substate for compound states. */
+  initial?: string;
   invoke?: Array<InvokeDef<Ctx, Ev>>;
   on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
+  /** Nested substates — makes this a compound state. */
+  states?: Record<string, StateNode<string, Ctx, Ev>>;
 };
 
-// ── Machine config & definition ──────────────────────────────────────────────
+// ── Machine config ───────────────────────────────────────────────────────────
 
-export type ContextValidator<Ctx extends object> = (context: unknown) => context is Ctx;
+export type ContextValidator<Ctx extends object> = (context: Ctx) => boolean;
 
-export type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  context?: Ctx;
+type ContextField<Ctx extends object> = Record<string, never> extends Ctx ? { context?: Ctx } : { context: Ctx };
+
+export type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = ContextField<Ctx> & {
   initial: State;
   states: { [S in State]: StateNode<State, Ctx, Ev> };
   validateContext?: ContextValidator<Ctx>;
 };
-
-export type MachineDefinition<State extends string, Ctx extends object, Ev extends MachineEvent> = Readonly<
-  MachineConfig<State, Ctx, Ev>
->;
 
 // ── Snapshots & persistence ──────────────────────────────────────────────────
 
@@ -102,40 +107,41 @@ export type MachineSnapshot<State extends string, Ctx extends object> = {
 
 export type PersistenceAdapter<State extends string, Ctx extends object> = {
   clear?: () => void;
-  load?: () => MachineSnapshot<State, Ctx> | undefined;
-  save?: (snapshot: MachineSnapshot<State, Ctx>) => void;
+  load: () => MachineSnapshot<State, Ctx> | undefined;
+  save: (snapshot: MachineSnapshot<State, Ctx>) => void;
 };
 
-// ── Debug hooks ──────────────────────────────────────────────────────────────
+// ── Debug (single discriminated union) ───────────────────────────────────────
 
-export type GuardEvaluationInfo<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  readonly context: Readonly<Ctx>;
-  readonly event: Ev;
-  readonly from: State;
-  readonly passed: boolean;
-  readonly target: State;
-};
+export type DebugEvent<State extends string, Ctx extends object, Ev extends MachineEvent> =
+  | { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State; type: 'guard' }
+  | { event: Ev; from: State; type: 'transition-skipped' }
+  | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-start' }
+  | {
+      context: Readonly<Ctx>;
+      event: Ev | LifecycleEvent;
+      invokeId: number;
+      result: unknown;
+      state: State;
+      type: 'invoke-done';
+    }
+  | {
+      context: Readonly<Ctx>;
+      error: unknown;
+      event: Ev | LifecycleEvent;
+      invokeId: number;
+      state: State;
+      type: 'invoke-error';
+    }
+  | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-abort' };
 
-export type TransitionSkippedInfo<State extends string, Ev extends MachineEvent> = {
-  readonly event: Ev;
-  readonly from: State;
-};
+// ── Middleware (F3) ──────────────────────────────────────────────────────────
 
-export type InvokeDebugInfo<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  readonly context: Readonly<Ctx>;
-  readonly event: Ev | LifecycleEvent;
-  readonly invokeId: number;
-  readonly state: State;
-};
-
-export type DebugHooks<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  onEvaluateGuard?: (info: GuardEvaluationInfo<State, Ctx, Ev>) => void;
-  onInvokeAbort?: (info: InvokeDebugInfo<State, Ctx, Ev>) => void;
-  onInvokeDone?: (info: InvokeDebugInfo<State, Ctx, Ev> & { readonly result: unknown }) => void;
-  onInvokeError?: (info: InvokeDebugInfo<State, Ctx, Ev> & { readonly error: unknown }) => void;
-  onInvokeStart?: (info: InvokeDebugInfo<State, Ctx, Ev>) => void;
-  onTransitionSkipped?: (info: TransitionSkippedInfo<State, Ev>) => void;
-};
+export type MiddlewareFn<State extends string, Ctx extends object, Ev extends MachineEvent> = (
+  event: Ev,
+  snapshot: { readonly context: Readonly<Ctx>; readonly state: State },
+  next: () => boolean,
+) => boolean;
 
 // ── Tracing ──────────────────────────────────────────────────────────────────
 
@@ -155,9 +161,10 @@ export type InterpretOptions<State extends string, Ctx extends object, Ev extend
    * Use `(ctx) => Object.assign({}, ctx)` for shallow contexts to improve performance.
    */
   clone?: <T>(value: T) => T;
-  debug?: DebugHooks<State, Ctx, Ev>;
   maxTransitionsPerFlush?: number;
-  /** Called after every successful transition. Kept separate from the machine definition for reusability. */
+  middleware?: Array<MiddlewareFn<State, Ctx, Ev>>;
+  onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
+  /** Called after every successful transition. */
   onTransition?: (info: { event: Ev; from: State; to: State }) => void;
   persistence?: PersistenceAdapter<State, Ctx>;
   snapshot?: MachineSnapshot<State, Ctx>;
@@ -176,10 +183,10 @@ export interface MachineInstance<State extends string, Ctx extends object, Ev ex
   clearPersistence(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-  /** Returns true if the machine is currently in one of the given states. */
-  matches(...states: State[]): boolean;
+  /** Returns true if the machine is currently in one of the given states (prefix match for hierarchical). */
+  matches(...states: string[]): boolean;
   send(event: Ev): boolean;
+  /** Subscribe to state/context changes. Returns unsubscribe function. */
+  subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;
 }
-
-// ── (no TransitionResolution wrapper — resolveTransition returns TransitionDef directly) ──

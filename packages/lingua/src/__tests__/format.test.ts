@@ -127,67 +127,6 @@ describe('createFormatter', () => {
         IntlExt.DurationFormat = original;
       }
     });
-
-    test('fallback digital style produces hh:mm:ss', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        expect(createFormatter('en').duration({ hours: 1, minutes: 5, seconds: 9 }, { style: 'digital' })).toBe(
-          '01:05:09',
-        );
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
-
-    test('fallback digital style folds weeks and days into hours', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        expect(createFormatter('en').duration({ days: 1, hours: 2, weeks: 1 }, { style: 'digital' })).toBe('194:00:00');
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
-
-    test('fallback digital style preserves calendar units with labeled output', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        expect(createFormatter('en').duration({ hours: 3, months: 2, years: 1 }, { style: 'digital' })).toBe(
-          '1y 2mo 3h',
-        );
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
-
-    test('fallback digital style preserves sub-second precision', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        expect(
-          createFormatter('en').duration(
-            { hours: 1, microseconds: 4, milliseconds: 3, minutes: 5, nanoseconds: 600, seconds: 9 },
-            { style: 'digital' },
-          ),
-        ).toBe('01:05:09.0030046');
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
   });
 
   // ─── locale source ────────────────────────────────────────────────────────

@@ -39,8 +39,10 @@ describe('coerceSearch', () => {
 
   it('falls back to the raw query when coerceSearch throws', async () => {
     const handler = vi.fn();
+    const onError = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/page?x=bad'),
+      onError,
       routes: {
         page: {
           coerceSearch: () => {
@@ -55,6 +57,7 @@ describe('coerceSearch', () => {
     await settle();
 
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { x: 'bad' } }));
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'coerce-search' });
     router.dispose();
   });
 

@@ -221,6 +221,7 @@ export default defineConfig({
               { link: '/rune/', text: 'Rune' },
               { link: '/tempo/', text: 'Tempo' },
               { link: '/arsenal/', text: 'Arsenal' },
+              { link: '/coins/', text: 'Coins' },
             ],
             text: 'Core & Utilities',
           },
@@ -241,7 +242,7 @@ export default defineConfig({
               { link: '/grip/', text: 'Grip' },
               { link: '/orbit/', text: 'Orbit' },
               { link: '/forge/', text: 'Forge' },
-              { link: '/lingua/', text: 'lingua' },
+              { link: '/lingua/', text: 'Lingua' },
               { link: '/spell/', text: 'Spell' },
               { link: '/scroll/', text: 'Scroll' },
             ],
@@ -289,7 +290,6 @@ export default defineConfig({
             { link: '/arsenal/api#date', text: 'Date' },
             { link: '/arsenal/api#function', text: 'Function' },
             { link: '/arsenal/api#math', text: 'Math' },
-            { link: '/arsenal/api#money', text: 'Money' },
             { link: '/arsenal/api#object', text: 'Object' },
             { link: '/arsenal/api#random', text: 'Random' },
             { link: '/arsenal/api#string', text: 'String' },
@@ -339,13 +339,10 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { link: '/arsenal/examples/async/abortable', text: 'abortable' },
-                { link: '/arsenal/examples/async/attempt', text: 'attempt' },
-                { link: '/arsenal/examples/async/defer', text: 'defer' },
                 { link: '/arsenal/examples/async/parallel', text: 'parallel' },
                 { link: '/arsenal/examples/async/predict', text: 'predict' },
                 { link: '/arsenal/examples/async/queue', text: 'queue' },
                 { link: '/arsenal/examples/async/retry', text: 'retry' },
-                { link: '/arsenal/examples/async/scheduler', text: 'scheduler' },
                 { link: '/arsenal/examples/async/sleep', text: 'sleep' },
                 { link: '/arsenal/examples/async/timeout', text: 'timeout' },
                 { link: '/arsenal/examples/async/waitFor', text: 'waitFor' },
@@ -376,7 +373,6 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
-                { link: '/arsenal/examples/object/deepClone', text: 'deepClone' },
                 { link: '/arsenal/examples/object/defaults', text: 'defaults' },
                 { link: '/arsenal/examples/object/diff', text: 'diff' },
                 { link: '/arsenal/examples/object/entries', text: 'entries' },
@@ -451,19 +447,9 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
-                { link: '/arsenal/examples/money/currency', text: 'currency' },
-                { link: '/arsenal/examples/money/exchange', text: 'exchange' },
-              ],
-              link: '/arsenal/examples/money',
-              text: 'Money',
-            },
-            {
-              collapsed: true,
-              items: [
                 { link: '/arsenal/examples/random/draw', text: 'draw' },
                 { link: '/arsenal/examples/random/random', text: 'random' },
                 { link: '/arsenal/examples/random/shuffle', text: 'shuffle' },
-                { link: '/arsenal/examples/random/uuid', text: 'uuid' },
               ],
               link: '/arsenal/examples/random',
               text: 'Random',
@@ -592,6 +578,35 @@ export default defineConfig({
             { link: '/codex/examples/inspector', text: 'Inspector' },
           ],
           link: '/codex/examples',
+          text: 'Examples',
+        },
+      ],
+      '/coins/': [
+        { link: '/coins/', text: 'Overview' },
+        {
+          items: [
+            { link: '/coins/usage#the-money-type', text: 'The Money Type' },
+            { link: '/coins/usage#formatting-with-currency', text: 'Formatting' },
+            { link: '/coins/usage#converting-with-exchange', text: 'Converting' },
+          ],
+          link: '/coins/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/coins/api#currency', text: 'currency()' },
+            { link: '/coins/api#exchange', text: 'exchange()' },
+            { link: '/coins/api#types', text: 'Types' },
+          ],
+          link: '/coins/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/coins/examples/formatting', text: 'Formatting' },
+            { link: '/coins/examples/exchange', text: 'Exchange' },
+          ],
+          link: '/coins/examples',
           text: 'Examples',
         },
       ],

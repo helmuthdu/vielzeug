@@ -3,19 +3,7 @@
  */
 
 export const runAll = (fns: (() => void)[]): void => {
-  const errors: unknown[] = [];
-
-  for (let i = fns.length - 1; i >= 0; i--) {
-    try {
-      fns[i]();
-    } catch (err) {
-      errors.push(err);
-    }
-  }
-
-  if (errors.length > 0) {
-    throw new AggregateError(errors, 'One or more cleanup callbacks failed during dispose');
-  }
+  for (let i = fns.length - 1; i >= 0; i--) fns[i]!();
 };
 
 export const removeNodes = (nodes: Node[]): void => {

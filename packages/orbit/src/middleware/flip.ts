@@ -1,7 +1,7 @@
 import type { DetectOverflowOptions, Middleware, Placement } from '../types';
 
-import { detectOverflow, getPlacementOverflow, hasOverflow, totalOverflow } from '../core';
-import { OPPOSITE, getAlignment, getSide, withPlacement } from '../utils';
+import { detectOverflow, getPlacementOverflow, hasOverflow, totalOverflow } from '../overflow';
+import { OPPOSITE, getAlignment, getSide, tagMiddleware, withPlacement } from '../utils';
 
 export interface FlipOptions extends DetectOverflowOptions {
   /**
@@ -16,7 +16,7 @@ export interface FlipOptions extends DetectOverflowOptions {
  * Falls back to the candidate with the least total overflow when no candidate fits.
  */
 export function flip(options: FlipOptions = {}): Middleware {
-  return (state) => {
+  return tagMiddleware(function flipMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const currentOverflow = detectOverflow(state, options);
 
     if (!hasOverflow(currentOverflow)) return;
@@ -44,5 +44,5 @@ export function flip(options: FlipOptions = {}): Middleware {
     if (bestPlacement !== state.placement) {
       return { reset: { placement: bestPlacement } };
     }
-  };
+  }, 'flip');
 }

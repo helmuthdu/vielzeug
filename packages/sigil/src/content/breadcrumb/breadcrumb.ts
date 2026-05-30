@@ -34,7 +34,8 @@ export type BitBreadcrumbItemProps = {
  * <bit-breadcrumb-item active>Current Page</bit-breadcrumb-item>
  * ```
  */
-export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrumb-item', {
+export const BREADCRUMB_ITEM_TAG = 'bit-breadcrumb-item' as const;
+define<BitBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
   props: {
     active: prop.bool(),
     href: prop.string(),
@@ -89,7 +90,8 @@ import componentStyles from './breadcrumb.css?inline';
  * </bit-breadcrumb>
  * ```
  */
-export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
+export const BREADCRUMB_TAG = 'bit-breadcrumb' as const;
+define<BitBreadcrumbProps>(BREADCRUMB_TAG, {
   props: {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),

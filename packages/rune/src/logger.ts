@@ -1,7 +1,24 @@
-import type { Bindings, LogEntry, LogLevel, LogType, Logger, RuneConfig, RuneOptions, Transport } from './types';
+import type {
+  Bindings,
+  LogEntry,
+  LogLevel,
+  LogMiddleware,
+  LogType,
+  Logger,
+  RuneConfig,
+  RuneOptions,
+  Transport,
+} from './types';
 
 import { resolveBindings } from './lazy';
-import { CONSOLE_TRANSPORT_MARKER, PRIORITY, consoleTransport, detectEnv, renderGroup } from './transports';
+import {
+  CONSOLE_THEME_KEY,
+  CONSOLE_TRANSPORT_MARKER,
+  DEFAULT_THEME,
+  PRIORITY,
+  consoleTransport,
+  renderGroup,
+} from './transports';
 
 /* ─── Arg parsing ─── */
 
@@ -9,99 +26,137 @@ function serializeError(err: Error): { message: string; name: string; stack?: st
   return { message: err.message, name: err.name, stack: err.stack };
 }
 
-function parseArgs(
-  msgOrCtx: Bindings | Error | string,
-  msg: unknown,
-): { context: Bindings | undefined; message: string | undefined } {
+type ParsedArgs = { context: Bindings | undefined; message: string | undefined };
+
+function parseArgs(msgOrCtx: unknown, second: unknown, third: unknown): ParsedArgs {
+  // Error, context?, message?
   if (msgOrCtx instanceof Error) {
-    if (msg !== undefined && typeof msg !== 'string') {
-      throw new TypeError('[rune] error override messages must be strings.');
+    const ctx: Bindings = { err: serializeError(msgOrCtx) };
+
+    if (second !== undefined && typeof second === 'object' && second !== null && !(second instanceof Error)) {
+      return {
+        context: { ...ctx, ...(second as Bindings) },
+        message: third !== undefined ? String(third) : msgOrCtx.message,
+      };
     }
 
     return {
-      context: { err: serializeError(msgOrCtx) },
-      message: (msg as string | undefined) ?? msgOrCtx.message,
+      context: ctx,
+      message: second !== undefined ? String(second) : msgOrCtx.message,
     };
   }
 
+  // string message only
   if (typeof msgOrCtx === 'string') {
-    if (msg !== undefined) {
-      throw new TypeError(
-        '[rune] string-first log calls accept only one argument. Use log.info({ ... }, "message") for structured context.',
-      );
-    }
-
     return { context: undefined, message: msgOrCtx };
   }
 
-  if (msg !== undefined && typeof msg !== 'string') {
-    throw new TypeError('[rune] context-first log calls require the optional second argument to be a string message.');
+  // context object, optional message
+  if (typeof msgOrCtx === 'object' && msgOrCtx !== null) {
+    return {
+      context: msgOrCtx as Bindings,
+      message: second !== undefined ? String(second) : undefined,
+    };
   }
 
-  return { context: msgOrCtx as Bindings, message: msg as string | undefined };
+  // Fallback — coerce to string message
+  return { context: undefined, message: msgOrCtx !== undefined ? String(msgOrCtx) : undefined };
 }
 
 /* ─── Config resolution ─── */
 
+function defaultOnTransportError(error: unknown, _entry: LogEntry, index: number): void {
+  console.warn(`[rune] transport[${index}] error:`, error);
+}
+
 function resolveConfig(opts: RuneOptions): RuneConfig {
   return {
-    env: opts.env ?? detectEnv(),
     logLevel: opts.logLevel ?? 'debug',
+    middleware: opts.middleware ?? [],
     namespace: opts.namespace ?? '',
+    now: opts.now ?? (() => new Date()),
+    onTransportError: opts.onTransportError ?? defaultOnTransportError,
     transports: opts.transports ?? [consoleTransport()],
   };
 }
 
-/* ─── Group rendering ─── */
+/* ─── Group helpers ─── */
 
 function hasConsoleTransport(transports: Transport[]): boolean {
   return transports.some((t) => (t as unknown as Record<symbol, unknown>)[CONSOLE_TRANSPORT_MARKER] === true);
 }
 
+function getConsoleTheme(transports: Transport[]): typeof DEFAULT_THEME {
+  for (const t of transports) {
+    const theme = (t as unknown as Record<symbol, unknown>)[CONSOLE_THEME_KEY];
+
+    if (theme !== undefined) return theme as typeof DEFAULT_THEME;
+  }
+
+  return DEFAULT_THEME;
+}
+
 /* ─── createLogger ─── */
 
-export function createLogger(initial: RuneOptions | string = {}, initialBindings: Bindings = {}): Logger {
+export function createLogger(initial: RuneOptions | string = {}): Logger {
   const initialOpts: RuneOptions = typeof initial === 'string' ? { namespace: initial } : initial;
   const cfg = resolveConfig(initialOpts);
-  const ownBindings: Bindings = { ...initialBindings };
+  const ownBindings: Bindings = { ...(initialOpts.bindings ?? {}) };
 
   const passes = (type: LogLevel): boolean => PRIORITY[cfg.logLevel] <= PRIORITY[type];
   const hasConsole = hasConsoleTransport(cfg.transports);
 
-  const emit = (type: LogType, msgOrCtx: Bindings | Error | string, msg?: unknown): void => {
-    if (!passes(type)) return;
+  const dispatch = (entry: LogEntry): void => {
+    // Fast path — skip middleware loop when pipeline is empty (the common case)
+    let current: LogEntry = entry;
 
-    const { context, message } = parseArgs(msgOrCtx, msg);
+    if (cfg.middleware.length > 0) {
+      let c: LogEntry | null = entry;
 
-    // Resolve lazy bindings only after the level check passes.
-    const resolvedBindings = resolveBindings(ownBindings);
+      for (const mw of cfg.middleware) {
+        c = mw(c);
 
-    const entry: LogEntry = {
-      bindings: resolvedBindings,
-      context,
-      level: type,
-      message,
-      namespace: cfg.namespace,
-      timestamp: new Date(),
-    };
+        if (c === null) return;
+      }
 
-    for (const transport of cfg.transports) {
+      current = c;
+    }
+
+    for (let i = 0; i < cfg.transports.length; i++) {
       try {
-        transport(entry);
+        cfg.transports[i](current);
       } catch (err) {
-        console.warn('[rune] transport error:', err);
+        cfg.onTransportError(err, current, i);
       }
     }
   };
 
-  // ─── time() — measures execution time and emits a structured debug entry ───
-  const timeImpl = <T>(label: string, fn: () => T): T => {
+  const emit = (type: LogType, msgOrCtx: unknown, second?: unknown, third?: unknown): void => {
+    if (!passes(type)) return;
+
+    const { context, message } = parseArgs(msgOrCtx, second, third);
+    const resolvedBindings = resolveBindings(ownBindings);
+    // F5 — resolve lazy bindings in per-call context too
+    const resolvedContext = context ? resolveBindings(context) : undefined;
+
+    dispatch({
+      bindings: resolvedBindings,
+      context: resolvedContext,
+      level: type,
+      message,
+      namespace: cfg.namespace,
+      timestamp: cfg.now(),
+    });
+  };
+
+  // ─── time() — measures execution time; emits a structured entry with duration_ms and label in context ───
+  const timeImpl = <T>(label: string, fn: () => T, level: LogType = 'debug'): T => {
     const start = performance.now();
 
     const done = (): void => {
       const duration_ms = Math.round((performance.now() - start) * 100) / 100;
 
-      emit('debug', { duration_ms }, `timer: ${label}`);
+      emit(level, { duration_ms, label }, 'timer');
     };
 
     try {
@@ -120,11 +175,14 @@ export function createLogger(initial: RuneOptions | string = {}, initialBindings
     }
   };
 
-  // ─── group/groupCollapsed — console-only, runs only when a consoleTransport is configured ───
+  // ─── group/groupCollapsed — themed console grouping; skipped when no consoleTransport is configured ───
   const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T): T => {
     if (cfg.logLevel === 'off' || !hasConsole) return fn();
 
-    renderGroup(collapsed, label, cfg.namespace);
+    // R1 — read the resolved theme from the consoleTransport instance
+    const theme = getConsoleTheme(cfg.transports);
+
+    renderGroup(collapsed, label, cfg.namespace, theme);
 
     try {
       const result = fn();
@@ -145,47 +203,62 @@ export function createLogger(initial: RuneOptions | string = {}, initialBindings
       return { ...ownBindings };
     },
 
-    // Transports inherited by default; pass transports: [] to opt out.
+    // Transports, middleware, and config inherited by default.
+    // Pass overrides to replace; pass bindings to merge on top of parent's bindings.
     child: (overrides: RuneOptions = {}): Logger =>
-      createLogger(
-        {
-          env: overrides.env ?? cfg.env,
-          logLevel: overrides.logLevel ?? cfg.logLevel,
-          namespace: overrides.namespace ?? cfg.namespace,
-          transports: overrides.transports ?? cfg.transports,
-        },
-        ownBindings,
-      ),
+      createLogger({
+        bindings: { ...ownBindings, ...(overrides.bindings ?? {}) },
+        logLevel: overrides.logLevel ?? cfg.logLevel,
+        middleware: overrides.middleware ?? cfg.middleware,
+        namespace: overrides.namespace ?? cfg.namespace,
+        now: overrides.now ?? cfg.now,
+        onTransportError: overrides.onTransportError ?? cfg.onTransportError,
+        transports: overrides.transports ?? cfg.transports,
+      }),
 
     get config(): Readonly<RuneConfig> {
-      return { ...cfg, transports: [...cfg.transports] };
+      return { ...cfg, middleware: [...cfg.middleware], transports: [...cfg.transports] };
     },
 
-    debug: (m: Bindings | Error | string, s?: string) => emit('debug', m, s),
+    debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
 
     enabled: (type: LogLevel): boolean => passes(type),
 
-    error: (m: Bindings | Error | string, s?: string) => emit('error', m, s),
+    error: (m: unknown, s?: unknown, t?: unknown) => emit('error', m, s, t),
 
-    fatal: (m: Bindings | Error | string, s?: string) => emit('fatal', m, s),
+    fatal: (m: unknown, s?: unknown, t?: unknown) => emit('fatal', m, s, t),
 
     group: (label, fn) => wrapGroup(false, label, fn),
 
     groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
 
-    info: (m: Bindings | Error | string, s?: string) => emit('info', m, s),
-
-    scope: (name: string): Logger => logger.child({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
+    info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
 
     time: timeImpl,
 
-    warn: (m: Bindings | Error | string, s?: string) => emit('warn', m, s),
+    use: (middleware: LogMiddleware): Logger =>
+      createLogger({
+        bindings: ownBindings,
+        logLevel: cfg.logLevel,
+        middleware: [...cfg.middleware, middleware],
+        namespace: cfg.namespace,
+        now: cfg.now,
+        onTransportError: cfg.onTransportError,
+        transports: cfg.transports,
+      }),
+
+    warn: (m: unknown, s?: unknown, t?: unknown) => emit('warn', m, s, t),
 
     withBindings: (bindings: Bindings): Logger =>
-      createLogger(
-        { env: cfg.env, logLevel: cfg.logLevel, namespace: cfg.namespace, transports: cfg.transports },
-        { ...ownBindings, ...bindings },
-      ),
+      createLogger({
+        bindings: { ...ownBindings, ...bindings },
+        logLevel: cfg.logLevel,
+        middleware: cfg.middleware,
+        namespace: cfg.namespace,
+        now: cfg.now,
+        onTransportError: cfg.onTransportError,
+        transports: cfg.transports,
+      }),
   };
 
   return logger;

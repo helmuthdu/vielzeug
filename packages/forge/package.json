@@ -32,6 +32,12 @@
       "types": "./dist/adapters/vue.d.ts",
       "import": "./dist/adapters/vue.js",
       "require": "./dist/adapters/vue.cjs"
+    },
+    "./validators": {
+      "source": "./src/adapters/validators.ts",
+      "types": "./dist/adapters/validators.d.ts",
+      "import": "./dist/adapters/validators.js",
+      "require": "./dist/adapters/validators.cjs"
     }
   },
   "scripts": {
@@ -46,6 +52,10 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",

@@ -1,8 +1,5 @@
 import type { Predicate } from '../types';
 
-import { assert } from '../function/assert';
-import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-
 /**
  * Replaces the first element in an array that satisfies the provided predicate
  * function with a new value.
@@ -21,8 +18,6 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  * @throws {TypeError} If the first argument is not an array.
  */
 export function replace<T>(array: T[], predicate: Predicate<T>, value: T): T[] {
-  assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
   const index = array.findIndex(predicate);
 
   if (index === -1) return array;

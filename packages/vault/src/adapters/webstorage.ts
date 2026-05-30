@@ -9,7 +9,7 @@ import {
   encodeStorageTablePrefix,
   getRecordKey,
 } from '../internal';
-import { readWithTtl, wrapStored } from '../ttl';
+import { defaultCodec } from '../ttl';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
@@ -29,25 +29,30 @@ function createWebStorageAdapter<S extends AnySchema>(
     storageLabel: string;
   },
 ): Adapter<S> {
-  const { getStorage, logger, name, onMetrics, onQuotaExceeded, schema, signals, storageLabel, validators } = options;
+  const {
+    codec = defaultCodec,
+    getStorage,
+    logger,
+    name,
+    onMetrics,
+    onQuotaExceeded,
+    schema,
+    signals,
+    storageLabel,
+    validators,
+  } = options;
 
-  const storage = (): Storage => {
-    try {
-      return getStorage();
-    } catch {
-      throw new Error(
-        `[vault] ${storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
-      );
-    }
-  };
+  let resolvedStorage: Storage;
 
-  const tryGetStorage = (): Storage | undefined => {
-    try {
-      return getStorage();
-    } catch {
-      return undefined;
-    }
-  };
+  try {
+    resolvedStorage = getStorage();
+  } catch {
+    throw new Error(
+      `[vault] ${storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
+    );
+  }
+
+  const storage = (): Storage => resolvedStorage;
 
   const prefixMap = new Map(Object.keys(schema).map((table) => [table, encodeStorageTablePrefix(name, table)]));
   const getPrefix = (table: string): string => {
@@ -81,14 +86,10 @@ function createWebStorageAdapter<S extends AnySchema>(
   const ownedKeys = new Set<string>();
 
   const initOwnedKeys = (): void => {
-    const target = tryGetStorage();
-
-    if (!target) return;
-
     const dbPrefix = encodeDbPrefix(name);
 
-    for (let i = 0; i < target.length; i++) {
-      const key = target.key(i);
+    for (let i = 0; i < resolvedStorage.length; i++) {
+      const key = resolvedStorage.key(i);
 
       if (key !== null && key.startsWith(dbPrefix)) ownedKeys.add(key);
     }
@@ -113,9 +114,9 @@ function createWebStorageAdapter<S extends AnySchema>(
     if (!raw) return undefined;
 
     try {
-      const { expired, found, value } = readWithTtl<T>(JSON.parse(raw) as unknown);
+      const stored = codec.decode<T>(JSON.parse(raw) as unknown);
 
-      if (!found || expired) {
+      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
         if (cleanup) {
           storage().removeItem(storageKey);
           ownedKeys.delete(storageKey);
@@ -124,7 +125,7 @@ function createWebStorageAdapter<S extends AnySchema>(
         return undefined;
       }
 
-      return value;
+      return stored.value;
     } catch {
       // JSON parse failure — always treat as stale.
       if (cleanup) {
@@ -137,9 +138,9 @@ function createWebStorageAdapter<S extends AnySchema>(
   };
 
   const core: StorageBackend<S> = {
-    async clear<K extends keyof S>(table: K): Promise<void> {
+    async clear<K extends keyof S & string>(table: K): Promise<void> {
       const target = storage();
-      const prefix = getPrefix(String(table));
+      const prefix = getPrefix(table);
       const toRemove: string[] = [];
 
       for (const key of ownedKeys) {
@@ -152,9 +153,9 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
     },
 
-    async count<K extends keyof S>(table: K): Promise<number> {
+    async count<K extends keyof S & string>(table: K): Promise<number> {
       const target = storage();
-      const prefix = getPrefix(String(table));
+      const prefix = getPrefix(table);
       const expiredKeys: string[] = [];
       let liveCount = 0;
 
@@ -178,8 +179,8 @@ function createWebStorageAdapter<S extends AnySchema>(
       return liveCount;
     },
 
-    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const storageKey = encodeStorageKey(name, String(table), String(key));
+    async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const storageKey = encodeStorageKey(name, table, String(key));
       const value = readEntry<RecordOf<S, K>>(storageKey);
 
       if (value !== undefined) {
@@ -192,11 +193,11 @@ function createWebStorageAdapter<S extends AnySchema>(
       return false;
     },
 
-    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+    async deleteMany<K extends keyof S & string & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
       let deleted = 0;
 
       for (const key of keys) {
-        const storageKey = encodeStorageKey(name, String(table), String(key));
+        const storageKey = encodeStorageKey(name, table, String(key));
         const value = readEntry<RecordOf<S, K>>(storageKey);
 
         if (value !== undefined) {
@@ -209,15 +210,15 @@ function createWebStorageAdapter<S extends AnySchema>(
       return deleted;
     },
 
-    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, String(table), String(key)));
+    async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, table, String(key)));
     },
 
-    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+    async getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]> {
       const target = storage();
       const records: RecordOf<S, K>[] = [];
       const expiredKeys: string[] = [];
-      const prefix = getPrefix(String(table));
+      const prefix = getPrefix(table);
 
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
@@ -240,8 +241,8 @@ function createWebStorageAdapter<S extends AnySchema>(
       return records;
     },
 
-    async getRawCount<K extends keyof S>(table: K): Promise<number> {
-      const prefix = getPrefix(String(table));
+    async getRawCount<K extends keyof S & string>(table: K): Promise<number> {
+      const prefix = getPrefix(table);
       let count = 0;
 
       for (const key of ownedKeys) {
@@ -251,13 +252,13 @@ function createWebStorageAdapter<S extends AnySchema>(
       return count;
     },
 
-    async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, String(table), String(key))) !== undefined;
+    async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, table, String(key))) !== undefined;
     },
 
-    async pruneExpiredInTable<K extends keyof S>(table: K): Promise<number> {
+    async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
       const target = storage();
-      const prefix = getPrefix(String(table));
+      const prefix = getPrefix(table);
       const expiredKeys: string[] = [];
 
       for (const storageKey of ownedKeys) {
@@ -271,9 +272,11 @@ function createWebStorageAdapter<S extends AnySchema>(
         }
 
         try {
-          const { expired, found } = readWithTtl(JSON.parse(raw) as unknown);
+          const stored = codec.decode(JSON.parse(raw) as unknown);
 
-          if (!found || expired) expiredKeys.push(storageKey);
+          if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
+            expiredKeys.push(storageKey);
+          }
         } catch {
           expiredKeys.push(storageKey);
         }
@@ -287,18 +290,21 @@ function createWebStorageAdapter<S extends AnySchema>(
       return expiredKeys.length;
     },
 
-    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
-      const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
+    async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      const storageKey = encodeStorageKey(name, table, String(getRecordKey(schema, table, value)));
+      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
-      writeItem(table, storageKey, wrapStored(value, ttl));
+      writeItem(table, storageKey, codec.encode(value, expiresAt));
       ownedKeys.add(storageKey);
     },
 
-    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
-      for (const value of values) {
-        const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
+    async putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
-        writeItem(table, storageKey, wrapStored(value, ttl));
+      for (const value of values) {
+        const storageKey = encodeStorageKey(name, table, String(getRecordKey(schema, table, value)));
+
+        writeItem(table, storageKey, codec.encode(value, expiresAt));
         ownedKeys.add(storageKey);
       }
     },
@@ -312,16 +318,14 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
 
       const listener = (event: StorageEvent) => {
-        const expectedStorage = tryGetStorage();
-
-        if (event.storageArea && expectedStorage && event.storageArea !== expectedStorage) return;
+        if (event.storageArea && event.storageArea !== resolvedStorage) return;
 
         if (event.key === null) {
           // storage.clear() from another tab — all keys are gone; purge ownedKeys
           ownedKeys.clear();
 
           for (const table of Object.keys(schema)) {
-            notify(table as keyof S);
+            notify(table as keyof S & string);
           }
 
           return;
@@ -336,7 +340,7 @@ function createWebStorageAdapter<S extends AnySchema>(
             ownedKeys.add(event.key);
           }
 
-          notify(tableName as keyof S);
+          notify(tableName as keyof S & string);
         }
       };
 

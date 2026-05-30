@@ -69,7 +69,8 @@ export type BitSkeletonProps = {
  * <bit-skeleton width="100%" height="10rem"></bit-skeleton>
  * ```
  */
-export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
+export const SKELETON_TAG = 'bit-skeleton' as const;
+define<BitSkeletonProps>(SKELETON_TAG, {
   props: {
     ...sizableBundle,
     animated: prop.bool(true),

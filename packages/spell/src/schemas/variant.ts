@@ -1,4 +1,5 @@
 import type { AnySchema, Issue, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -76,24 +77,28 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return { matched, obj };
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const resolved = this._resolveVariant(value);
 
-    if ('issues' in resolved) return { data: value, issues: resolved.issues };
+    if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
 
     const result = resolved.matched.safeParse(value);
 
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
+    return result.success
+      ? { data: result.data, issues: [], typeOk: true }
+      : { data: value, issues: result.error.issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     const resolved = this._resolveVariant(value);
 
-    if ('issues' in resolved) return { data: value, issues: resolved.issues };
+    if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
 
     const result = await resolved.matched.safeParseAsync(value);
 
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
+    return result.success
+      ? { data: result.data, issues: [], typeOk: true }
+      : { data: value, issues: result.error.issues, typeOk: true };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
@@ -102,21 +107,14 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return { discriminator: { propertyName: this._discriminator }, oneOf };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     const branches: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of this._map.entries()) {
-      branches[key] = schema.describe();
+      branches[key] = schema.toDescriptor();
     }
 
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      branches,
-      discriminator: this._discriminator,
-      kind: 'variant',
-    };
+    return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

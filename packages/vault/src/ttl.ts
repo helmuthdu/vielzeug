@@ -6,6 +6,42 @@ declare const ttlMsBrand: unique symbol;
 /** A duration in milliseconds, produced by the `ttl.*` helpers. Branded to prevent accidental raw numbers. */
 export type TtlMs = number & { readonly [ttlMsBrand]: never };
 
+/* -------------------- Codec -------------------- */
+
+/**
+ * Pluggable serialization contract. Implement to change how vault stores values at rest
+ * (e.g. compressed JSON, msgpack, encrypted envelopes).
+ *
+ * The codec translates between the vault-internal TTL envelope `{ value, expiresAt? }` and
+ * whatever format is actually written to the underlying storage backend.
+ *
+ * The default codec stores `{ value: T, expiresAt?: number }` verbatim — identical to the
+ * previous behaviour.
+ *
+ * ```ts
+ * const compactCodec: VaultCodec = {
+ *   encode: (value, expiresAt) => expiresAt ? { v: value, e: expiresAt } : { v: value },
+ *   decode: (raw) => {
+ *     if (typeof raw !== 'object' || raw === null || !('v' in raw)) return undefined;
+ *     const { v, e } = raw as { v: unknown; e?: unknown };
+ *     return { value: v as any, expiresAt: typeof e === 'number' ? e : undefined };
+ *   },
+ * };
+ * ```
+ */
+export type VaultCodec = {
+  /**
+   * Parse a raw stored value into the internal TTL envelope.
+   * Return `undefined` for any unrecognized or corrupt data.
+   */
+  decode<T>(raw: unknown): { expiresAt?: number; value: T } | undefined;
+  /**
+   * Encode a value (and optional absolute expiry timestamp) into the storage format.
+   * `expiresAt` is an epoch-ms timestamp — use `Date.now() + ttlMs` to compute it.
+   */
+  encode<T>(value: T, expiresAt?: number): unknown;
+};
+
 /* -------------------- Duration helpers -------------------- */
 
 export const ttl = {
@@ -71,3 +107,9 @@ export function readWithTtl<T>(raw: unknown): { expired: boolean; found: boolean
 
   return { expired: value === undefined, found: true, value };
 }
+
+/** Default codec — stores `{ value, expiresAt? }` verbatim. Zero overhead vs. previous behaviour. */
+export const defaultCodec: VaultCodec = {
+  decode: parseStored as VaultCodec['decode'],
+  encode: <T>(value: T, expiresAt?: number): unknown => (expiresAt !== undefined ? { expiresAt, value } : { value }),
+};

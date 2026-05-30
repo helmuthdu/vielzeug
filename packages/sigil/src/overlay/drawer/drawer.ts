@@ -143,7 +143,8 @@ export type BitDrawerProps = {
  * ```
  */
 
-export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', {
+export const DRAWER_TAG = 'bit-drawer' as const;
+define<BitDrawerProps, BitDrawerEvents>(DRAWER_TAG, {
   props: {
     backdrop: prop.string<DrawerBackdrop>(),
     dismissible: prop.bool(true),

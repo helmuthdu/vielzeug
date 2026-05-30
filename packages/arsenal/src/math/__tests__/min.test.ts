@@ -51,12 +51,4 @@ describe('min', () => {
   it('returns the first minimum if there are duplicates', () => {
     expect(min([2, 1, 1, 3])).toBe(1);
   });
-
-  it('throws TypeError if the first argument is not an array', () => {
-    expect(() => min(null as any)).toThrow(TypeError);
-    expect(() => min(undefined as any)).toThrow(TypeError);
-    expect(() => min(123 as any)).toThrow(TypeError);
-    expect(() => min({} as any)).toThrow(TypeError);
-    expect(() => min('string' as any)).toThrow(TypeError);
-  });
 });

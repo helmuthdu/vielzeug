@@ -26,6 +26,50 @@ ward.can({ id: 'u2', roles: ['blocked'] }, 'posts', 'read');   // false
 
 To update the policy, create a new instance — rules are immutable after creation.
 
+## Fluent Rule Builder
+
+Use the `rule()` builder as an alternative to raw rule objects. It's especially readable for rules with multiple actions or predicates:
+
+```ts
+import { createWard, owns, rule } from '@vielzeug/ward';
+
+const ward = createWard<'read' | 'update' | 'delete', { authorId: string }>([
+  ...rule<'read' | 'update' | 'delete', { authorId: string }>()
+    .allow(['viewer', 'editor'])
+    .on('posts')
+    .to('read')
+    .build(),
+
+  ...rule<'read' | 'update' | 'delete', { authorId: string }>()
+    .allow('editor')
+    .on('posts')
+    .to('update', 'delete')
+    .when(owns('authorId'))
+    .build(),
+]);
+```
+
+Each `.to()` call produces one rule per action. Spread `build()` into the outer array.
+
+## Hierarchical Resources
+
+Use colon-namespaced patterns to scope rules to resource instances:
+
+```ts
+const ward = createWard([
+  // Applies to any resource under 'posts:' namespace
+  { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
+  // Applies only to one specific post
+  { role: 'viewer', resource: 'posts:123', action: 'read', effect: 'allow' },
+]);
+
+ward.can(editor, 'posts:456', 'update'); // true  — matches posts:*
+ward.can(viewer, 'posts:123', 'read');   // true  — exact match
+ward.can(viewer, 'posts:456', 'read');   // false — no matching rule
+```
+
+`matchesResource(pattern, resource)` is also exported for custom integration code.
+
 ## Check Permissions
 
 ```ts
@@ -242,6 +286,14 @@ const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', ef
 The logger runs after decision methods like `can()`, `canAll()`, `canAny()`, `checkAll()`, and `explain()`.
 Enumeration and introspection helpers like `allowedActions()` and `rulesInScope()` stay side-effect free.
 
+The `decision` field in `WardLoggerContext` is one of three values — not just `'deny'`:
+
+- `'allow'` — a matching allow rule won
+- `'explicit-deny'` — a matching deny rule won
+- `'no-matching-rule'` — no rule matched at all (default deny)
+
+This lets you distinguish explicit blocks from gaps in your policy in audit logs and metrics without inspecting the `rule` field.
+
 ## Decision Precedence
 
 Ward uses one deterministic model:
@@ -337,6 +389,65 @@ function useWard(user: { value: User | null }, resource: string, action: string)
 - **React:** If `WardProvider` is placed inside a component that re-renders often, `createWard()` is called on every render. Memoize with `useMemo(() => createWard(...), [role])`.
 - **Vue 3:** Injecting `ward` as a plain value (not a `ComputedRef`) means role changes don't propagate to child components. Always inject as a reactive ref.
 - **Svelte:** `setContext` must be called synchronously during component initialization. Calling it inside a reactive statement (`$:`) works only for setting the initial value — child components reading the context must use `getContext` in their own `<script>` block.
+
+## Middleware Integration
+
+Ward ships built-in middleware factories for Express-compatible and Hono-compatible servers.
+
+### Express / Connect
+
+```ts
+import { createWard, createExpressGuard } from '@vielzeug/ward';
+
+const ward = createWard([
+  { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
+]);
+
+// Extract principal from your auth system
+const requireEdit = createExpressGuard(
+  ward,
+  (req) => req.user ?? null,   // your principal extractor (sync or async)
+  'posts:*',
+  'update',
+);
+
+app.put('/posts/:id', requireEdit, handler);
+```
+
+On denial, returns `403 { reason: 'explicit-deny' | 'no-matching-rule' }`. Override with `options.onDenied`.
+
+### Hono
+
+```ts
+import { createWard, createHonoGuard } from '@vielzeug/ward';
+
+const ward = createWard([
+  { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
+]);
+
+const requireEdit = createHonoGuard(
+  ward,
+  (c) => c.get('user') ?? null,
+  'posts:*',
+  'update',
+);
+
+app.put('/posts/:id', requireEdit, handler);
+```
+
+### Framework-agnostic guard
+
+Use `guardRequest` to wire Ward into any async middleware pattern:
+
+```ts
+import { createWard, guardRequest } from '@vielzeug/ward';
+
+const result = await guardRequest(ward, req, getPrincipal, 'posts', 'update');
+
+if (!result.granted) {
+  return new Response(JSON.stringify({ reason: result.decision.reason }), { status: 403 });
+}
+```
 
 ## Working with Other Vielzeug Libraries
 

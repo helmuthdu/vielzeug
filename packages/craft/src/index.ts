@@ -12,66 +12,66 @@ export {
   type WatchOptions,
 } from '@vielzeug/ripple';
 
-export { memo, syncedSignal } from './reactive-utils';
+export { effect, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
-export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
-
-export { createRuntimeError, reportRuntimeError, type CraftitErrorKind, type CraftitRuntimeError } from './errors';
+export { CraftitError, reportRuntimeError } from './errors';
 
 export {
   define,
   LIFECYCLE_EVENTS,
+  prop,
   type ComponentDefinition,
   type HostBindFn,
   type InferPropsFromDefs,
   type InferPropsSignals,
   type LifecycleEventName,
-  prop,
   type PropDef,
   type PropInputDefs,
   type PropsDef,
   type SetupContextBag,
 } from './registration';
 
+export { ComponentPhase } from './types';
+export type { ComponentPhase as ComponentPhaseType } from './types';
+
 export {
-  createForm,
-  defineField,
+  createFormContext,
   FORM_CONTEXT_KEY,
   provideFormContext,
   useFormContext,
   type FormContextValue,
-  type FormFieldHandle,
-  type FormFieldOptions,
-} from './form';
+} from './form-context';
 
-export { suspend, type SuspendOptions } from './suspend';
+export { defineField, type FormFieldHandle, type FormFieldOptions } from './form-field';
 
 export { createContext, inject, injectStrict, provide, type InjectionKey } from './context';
 
 export { syncAria, type SyncAriaOptions } from './aria';
 
-export {
-  createBind,
-  type HostBindConfig,
-  type HostBindingValue,
-  type HostPropDescriptor,
-  type ReflectConfig,
-} from './host-bind';
+export { createBind, type HostBindConfig, type HostBindingValue, type ReflectConfig } from './host-bind';
 
 export { createSlots, type ComponentSlots } from './slots';
 
 export { html } from './template-compiler';
 export { each } from './directives/each';
 export { classMap } from './directives/classMap';
+export { model } from './directives/model';
 export { styleMap } from './directives/styleMap';
 export { when } from './directives/when';
 export { live } from './directives/live';
 export { raw, setRawSanitizer } from './directives/raw';
 
 export { css, type CSSResult } from './utils/css';
+export { createId, createStableId, resetIdCounter } from './utils/id';
 
-export { createId } from './utils/id';
-
-export { ref, refs, type Ref, type Refs, type RefCallback, type HTMLResult } from './types/bindings';
+export {
+  createSpreadObject,
+  isSpreadObject,
+  ref,
+  type HTMLResult,
+  type Ref,
+  type RefCallback,
+  type SpreadObject,
+} from './types/bindings';
 
 export { intersectionObserver, mediaObserver, mutationObserver, resizeObserver } from './observers';

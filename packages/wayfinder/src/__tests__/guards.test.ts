@@ -159,86 +159,76 @@ describe('beforeLeave', () => {
   });
 });
 
-describe('per-route onLeave', () => {
-  it('blocks navigation when the route onLeave returns false', async () => {
+describe('beforeLeave with route scope', () => {
+  it('fires only when navigating away from the specified route', async () => {
+    const blocker = vi.fn(async () => false);
     const handler = vi.fn();
     const history = createMemoryHistory('/home');
     const router = createRouter({
       history,
       routes: {
-        home: { onLeave: async () => false, path: '/home' },
+        home: { path: '/home' },
+        other: { path: '/other' },
         page: { handler, path: '/page' },
       },
     });
 
     await settle();
+    router.beforeLeave(blocker, { routes: ['home'] });
+
+    // Navigating away from /home — blocker should fire and block.
     await router.navigate({ path: '/page' });
 
+    expect(blocker).toHaveBeenCalledTimes(1);
     expect(handler).not.toHaveBeenCalled();
     expect(router.getSnapshot().location.pathname).toBe('/home');
     router.dispose();
   });
 
-  it('allows navigation when the route onLeave returns true', async () => {
-    const handler = vi.fn();
-    const history = createMemoryHistory('/home');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { onLeave: async () => true, path: '/home' },
-        page: { handler, path: '/page' },
-      },
-    });
-
-    await settle();
-    await router.navigate({ path: '/page' });
-
-    expect(handler).toHaveBeenCalledTimes(1);
-    router.dispose();
-  });
-
-  it('per-route onLeave only fires when that route is currently matched', async () => {
-    const onLeave = vi.fn(async () => false);
+  it('does not fire when not on the specified route', async () => {
+    const blocker = vi.fn(async () => false);
     const handler = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: { path: '/' },
-        other: { onLeave, path: '/other' },
+        other: { path: '/other' },
         page: { handler, path: '/page' },
       },
     });
 
     await settle();
+    router.beforeLeave(blocker, { routes: ['other'] });
 
-    // Navigate from / to /page — onLeave on /other should NOT fire.
+    // Currently on /, which is not 'other' — blocker should NOT fire.
     await router.navigate({ path: '/page' });
 
-    expect(onLeave).not.toHaveBeenCalled();
+    expect(blocker).not.toHaveBeenCalled();
     expect(handler).toHaveBeenCalledTimes(1);
     router.dispose();
   });
 
-  it('per-route onLeave fires before global beforeLeave', async () => {
+  it('route-scoped guard and global guard both run when applicable', async () => {
     const order: string[] = [];
     const history = createMemoryHistory('/home');
     const router = createRouter({
       history,
       routes: {
-        home: {
-          onLeave: async () => {
-            order.push('route');
-
-            return true;
-          },
-          path: '/home',
-        },
+        home: { path: '/home' },
         other: { path: '/other' },
       },
     });
 
     await settle();
+    router.beforeLeave(
+      async () => {
+        order.push('scoped');
+
+        return true;
+      },
+      { routes: ['home'] },
+    );
     router.beforeLeave(async () => {
       order.push('global');
 
@@ -246,42 +236,8 @@ describe('per-route onLeave', () => {
     });
     await router.navigate({ path: '/other' });
 
-    expect(order).toEqual(['route', 'global']);
-    router.dispose();
-  });
-
-  it('per-route onLeave fires leaf-to-root for nested routes', async () => {
-    const order: string[] = [];
-    const history = createMemoryHistory('/parent/child');
-    const router = createRouter({
-      history,
-      routes: {
-        other: { path: '/other' },
-        parent: {
-          children: {
-            child: {
-              onLeave: async () => {
-                order.push('child');
-
-                return true;
-              },
-              path: 'child',
-            },
-          },
-          onLeave: async () => {
-            order.push('parent');
-
-            return true;
-          },
-          path: '/parent',
-        },
-      },
-    });
-
-    await settle();
-    await router.navigate({ path: '/other' });
-
-    expect(order).toEqual(['child', 'parent']); // leaf fires before root
+    expect(order).toContain('scoped');
+    expect(order).toContain('global');
     router.dispose();
   });
 });

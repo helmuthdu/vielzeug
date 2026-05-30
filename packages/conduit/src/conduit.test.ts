@@ -4,29 +4,33 @@ import {
   CircularDependencyError,
   type Container,
   ContainerDisposedError,
+  type ContainerEvent,
+  type ContainerGraph,
+  type ContainerModule,
   createContainer,
-  createToken,
-  MultipleProvidersError,
+  DuplicateRegistrationError,
   ProviderNotFoundError,
+  scope,
   ScopedResolutionError,
   SyncResolutionError,
+  token,
 } from './conduit';
 
 // ---------------------------------------------------------------------------
-// Token creation
+// token()
 // ---------------------------------------------------------------------------
 
-describe('createToken', () => {
+describe('token', () => {
   it('returns a symbol whose description matches the argument', () => {
-    const t = createToken<string>('MyService');
+    const T = token<string>('MyService');
 
-    expect(typeof t).toBe('symbol');
-    expect(t.description).toBe('MyService');
+    expect(typeof T).toBe('symbol');
+    expect(T.description).toBe('MyService');
   });
 
   it('produces a unique symbol for every call, even with the same description', () => {
-    const a = createToken<string>('Same');
-    const b = createToken<string>('Same');
+    const a = token<string>('Same');
+    const b = token<string>('Same');
 
     expect(a).not.toBe(b);
   });
@@ -37,23 +41,9 @@ describe('createToken', () => {
 // ---------------------------------------------------------------------------
 
 describe('Container — registration', () => {
-  it('registers a value provider and chains', () => {
-    const T = createToken<number>('T');
-    const c = createContainer();
-
-    expect(() => c.value(T, 42)).not.toThrow();
-  });
-
-  it('registers a factory provider and chains', () => {
-    const T = createToken<number>('T');
-    const c = createContainer();
-
-    expect(() => c.factory(T, () => 1)).not.toThrow();
-  });
-
-  it('supports method chaining on registration', async () => {
-    const A = createToken<string>('A');
-    const B = createToken<string>('B');
+  it('registers a value provider and supports method chaining', async () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
     const c = createContainer();
 
     c.value(A, 'a').value(B, 'b');
@@ -62,33 +52,40 @@ describe('Container — registration', () => {
     await expect(c.resolve(B)).resolves.toBe('b');
   });
 
-  it('throws when a token is registered twice in single mode', () => {
-    const T = createToken<string>('T');
+  it('registers a factory provider', async () => {
+    const T = token<number>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 1);
+
+    await expect(c.resolve(T)).resolves.toBe(1);
+  });
+
+  it('throws DuplicateRegistrationError when a token is registered twice', () => {
+    const T = token<string>('T');
     const c = createContainer();
 
     c.value(T, 'first');
 
-    expect(() => c.value(T, 'second')).toThrow(/already registered/);
+    expect(() => c.value(T, 'second')).toThrow(DuplicateRegistrationError);
   });
 
-  it('accumulates registrations when multi is true', async () => {
-    const T = createToken<string>('T');
+  it('DuplicateRegistrationError message contains the token description', () => {
+    const T = token<string>('MyToken');
     const c = createContainer();
 
-    c.value(T, 'a', { multi: true });
-    c.value(T, 'b', { multi: true });
+    c.value(T, 'x');
 
-    await expect(c.resolveMany(T)).resolves.toEqual(['a', 'b']);
+    expect(() => c.value(T, 'y')).toThrow('MyToken');
   });
 
-  it('allows mixing value and factory registrations under one multi token', async () => {
-    const T = createToken<string>('T');
+  it('throws DuplicateRegistrationError for duplicate factory registration', () => {
+    const T = token<string>('T');
     const c = createContainer();
 
-    c.value(T, 'static', { multi: true });
-    c.factory(T, () => 'dynamic', { multi: true });
+    c.factory(T, () => 'x');
 
-    await expect(c.resolveMany(T)).resolves.toEqual(['static', 'dynamic']);
+    expect(() => c.factory(T, () => 'y')).toThrow(DuplicateRegistrationError);
   });
 });
 
@@ -98,7 +95,7 @@ describe('Container — registration', () => {
 
 describe('Container — resolve', () => {
   it('resolves a value provider', async () => {
-    const T = createToken<number>('T');
+    const T = token<number>('T');
     const c = createContainer();
 
     c.value(T, 99);
@@ -107,7 +104,7 @@ describe('Container — resolve', () => {
   });
 
   it('resolves a factory provider', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'built');
@@ -116,7 +113,7 @@ describe('Container — resolve', () => {
   });
 
   it('resolves an async factory provider', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, async () => 'async');
@@ -125,49 +122,33 @@ describe('Container — resolve', () => {
   });
 
   it('throws ProviderNotFoundError when no provider exists', async () => {
-    const T = createToken<string>('Missing');
+    const T = token<string>('Missing');
     const c = createContainer();
 
     await expect(c.resolve(T)).rejects.toThrow(ProviderNotFoundError);
   });
 
-  it('throws MultipleProvidersError when a multi token is resolved via resolve()', async () => {
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'a', { multi: true });
-    c.value(T, 'b', { multi: true });
-
-    await expect(c.resolve(T)).rejects.toThrow(MultipleProvidersError);
-  });
-
   it('ProviderNotFoundError message contains the token description', async () => {
-    const T = createToken<string>('AuthService');
+    const T = token<string>('AuthService');
     const c = createContainer();
 
     await expect(c.resolve(T)).rejects.toThrow('AuthService');
   });
-
-  it('MultipleProvidersError message contains the token description', async () => {
-    const T = createToken<string>('Plugin');
-    const c = createContainer();
-
-    c.value(T, 'a', { multi: true });
-    c.value(T, 'b', { multi: true });
-
-    await expect(c.resolve(T)).rejects.toThrow('Plugin');
-  });
 });
+
+// ---------------------------------------------------------------------------
+// resolveOptional
+// ---------------------------------------------------------------------------
 
 describe('Container — resolveOptional', () => {
   it('returns undefined when no provider is registered', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
 
     await expect(createContainer().resolveOptional(T)).resolves.toBeUndefined();
   });
 
   it('returns the value when a provider exists', async () => {
-    const T = createToken<number>('T');
+    const T = token<number>('T');
     const c = createContainer();
 
     c.value(T, 7);
@@ -176,7 +157,7 @@ describe('Container — resolveOptional', () => {
   });
 
   it('re-throws errors that are not ProviderNotFoundError', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => {
@@ -187,47 +168,118 @@ describe('Container — resolveOptional', () => {
   });
 });
 
-describe('Container — resolveMany', () => {
-  it('returns an empty array when no providers are registered', async () => {
-    const T = createToken<string>('T');
+// ---------------------------------------------------------------------------
+// resolveAll
+// ---------------------------------------------------------------------------
 
-    await expect(createContainer().resolveMany(T)).resolves.toEqual([]);
-  });
-
-  it('returns all providers in registration order', async () => {
-    const T = createToken<number>('T');
+describe('Container — resolveAll', () => {
+  it('eagerly resolves all singleton factories', async () => {
+    let calls = 0;
+    const A = token<string>('A');
+    const B = token<string>('B');
     const c = createContainer();
 
-    c.value(T, 1, { multi: true });
-    c.value(T, 2, { multi: true });
-    c.value(T, 3, { multi: true });
+    c.factory(A, () => {
+      calls++;
 
-    await expect(c.resolveMany(T)).resolves.toEqual([1, 2, 3]);
+      return 'a';
+    });
+    c.factory(B, () => {
+      calls++;
+
+      return 'b';
+    });
+
+    await c.resolveAll();
+
+    expect(calls).toBe(2);
+    expect(c.resolveSync(A)).toBe('a');
+    expect(c.resolveSync(B)).toBe('b');
   });
 
-  it('resolves async multi providers correctly', async () => {
-    const T = createToken<string>('T');
+  it('does not resolve transient or scoped factories', async () => {
+    let calls = 0;
+    const A = token<string>('A');
+    const B = token<string>('B');
     const c = createContainer();
 
-    c.factory(T, async () => 'x', { multi: true });
-    c.factory(T, async () => 'y', { multi: true });
+    c.factory(
+      A,
+      () => {
+        calls++;
 
-    await expect(c.resolveMany(T)).resolves.toEqual(['x', 'y']);
+        return 'a';
+      },
+      { lifetime: 'transient' },
+    );
+    c.factory(
+      B,
+      () => {
+        calls++;
+
+        return 'b';
+      },
+      { lifetime: 'scoped' },
+    );
+
+    await c.resolveAll();
+
+    expect(calls).toBe(0);
   });
 
-  it('child multi registrations shadow parent multi registrations entirely', async () => {
-    const T = createToken<string>('T');
+  it('resolves value registrations without invoking any factory', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'static');
+
+    await expect(c.resolveAll()).resolves.not.toThrow();
+  });
+
+  it('warms singletons inherited from parent when called on a child container', async () => {
+    let calls = 0;
+    const T = token<string>('T');
     const root = createContainer();
+
+    root.factory(T, () => {
+      calls++;
+
+      return 'v';
+    });
+
     const child = root.createChild();
 
-    root.value(T, 'parent-a', { multi: true });
-    root.value(T, 'parent-b', { multi: true });
-    child.value(T, 'child-only', { multi: true });
+    await child.resolveAll();
 
-    // child has a local registration so parent list is shadowed
-    await expect(child.resolveMany(T)).resolves.toEqual(['child-only']);
-    // root is unaffected
-    await expect(root.resolveMany(T)).resolves.toEqual(['parent-a', 'parent-b']);
+    expect(calls).toBe(1);
+    expect(child.resolveSync(T)).toBe('v');
+  });
+
+  it('does not double-resolve a singleton present in both parent and child hierarchies', async () => {
+    let calls = 0;
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => {
+      calls++;
+
+      return 'v';
+    });
+
+    const child = root.createChild();
+
+    await root.resolveAll();
+    await child.resolveAll();
+
+    expect(calls).toBe(1);
+  });
+
+  it('throws ContainerDisposedError when called on a disposed container', async () => {
+    const c = createContainer();
+
+    await c.dispose();
+
+    await expect(c.resolveAll()).rejects.toThrow(ContainerDisposedError);
   });
 });
 
@@ -238,7 +290,7 @@ describe('Container — resolveMany', () => {
 describe('Container — singleton lifetime', () => {
   it('returns the same instance on every resolution', async () => {
     let n = 0;
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
     c.factory(T, () => ({ id: ++n }));
@@ -252,7 +304,7 @@ describe('Container — singleton lifetime', () => {
 
   it('deduplicates concurrent resolutions of the same singleton', async () => {
     let n = 0;
-    const T = createToken<number>('T');
+    const T = token<number>('T');
     const c = createContainer();
 
     c.factory(T, async () => {
@@ -268,27 +320,24 @@ describe('Container — singleton lifetime', () => {
     expect(b).toBe(d);
   });
 
-  it('allows retry after a failed singleton resolution', async () => {
+  it('caches the rejection and rethrows on subsequent calls (no silent retry)', async () => {
     let calls = 0;
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, async () => {
       calls += 1;
-
-      if (calls === 1) throw new Error('first attempt fails');
-
-      return 'ok';
+      throw new Error('factory failed');
     });
 
-    await expect(c.resolve(T)).rejects.toThrow('first attempt fails');
-    await expect(c.resolve(T)).resolves.toBe('ok');
-    expect(calls).toBe(2);
+    await expect(c.resolve(T)).rejects.toThrow('factory failed');
+    await expect(c.resolve(T)).rejects.toThrow('factory failed');
+    expect(calls).toBe(1);
   });
 
-  it('value providers always return the same reference without calling a factory', async () => {
+  it('value providers always return the same reference', async () => {
     const obj = { id: 1 };
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
     c.value(T, obj);
@@ -304,7 +353,7 @@ describe('Container — singleton lifetime', () => {
 describe('Container — transient lifetime', () => {
   it('produces a new instance on every resolution', async () => {
     let n = 0;
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
     c.factory(T, () => ({ id: ++n }), { lifetime: 'transient' });
@@ -319,7 +368,7 @@ describe('Container — transient lifetime', () => {
 
 describe('Container — scoped lifetime', () => {
   it('throws ScopedResolutionError when resolved directly from the root container', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'v', { lifetime: 'scoped' });
@@ -329,7 +378,7 @@ describe('Container — scoped lifetime', () => {
 
   it('caches one instance per child container', async () => {
     let n = 0;
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const root = createContainer();
 
     root.factory(T, () => ({ id: ++n }), { lifetime: 'scoped' });
@@ -341,9 +390,25 @@ describe('Container — scoped lifetime', () => {
     const b = await child1.resolve(T);
     const c = await child2.resolve(T);
 
-    expect(a).toBe(b); // same scope
-    expect(a).not.toBe(c); // different scope
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
     expect(n).toBe(2);
+  });
+
+  it('separate children do not share scoped instances', async () => {
+    let n = 0;
+    const T = token<object>('T');
+    const root = createContainer();
+
+    root.factory(T, () => ({ id: ++n }), { lifetime: 'scoped' });
+
+    const c1 = root.createChild();
+    const c2 = root.createChild();
+
+    const a = await c1.resolve(T);
+    const b = await c2.resolve(T);
+
+    expect(a).not.toBe(b);
   });
 });
 
@@ -353,8 +418,8 @@ describe('Container — scoped lifetime', () => {
 
 describe('Container — dependency injection', () => {
   it('injects declared deps into a factory', async () => {
-    const A = createToken<string>('A');
-    const B = createToken<string>('B');
+    const A = token<string>('A');
+    const B = token<string>('B');
     const c = createContainer();
 
     c.value(A, 'hello');
@@ -364,9 +429,9 @@ describe('Container — dependency injection', () => {
   });
 
   it('resolves a deep dependency chain', async () => {
-    const Root = createToken<string>('Root');
-    const Mid = createToken<string>('Mid');
-    const Leaf = createToken<string>('Leaf');
+    const Root = token<string>('Root');
+    const Mid = token<string>('Mid');
+    const Leaf = token<string>('Leaf');
     const c = createContainer();
 
     c.value(Leaf, 'leaf');
@@ -378,10 +443,10 @@ describe('Container — dependency injection', () => {
 
   it('resolves a shared dependency only once across sibling branches', async () => {
     let calls = 0;
-    const Shared = createToken<object>('Shared');
-    const Left = createToken<object>('Left');
-    const Right = createToken<object>('Right');
-    const Parent = createToken<{ l: object; r: object }>('Parent');
+    const Shared = token<object>('Shared');
+    const Left = token<object>('Left');
+    const Right = token<object>('Right');
+    const Parent = token<{ l: object; r: object }>('Parent');
     const c = createContainer();
 
     c.factory(Shared, () => ({ id: ++calls }));
@@ -395,8 +460,8 @@ describe('Container — dependency injection', () => {
   });
 
   it('throws ProviderNotFoundError when a declared dep is missing', async () => {
-    const Missing = createToken<string>('Missing');
-    const Consumer = createToken<string>('Consumer');
+    const Missing = token<string>('Missing');
+    const Consumer = token<string>('Consumer');
     const c = createContainer();
 
     c.factory(Consumer, (m) => m, { deps: [Missing] });
@@ -405,8 +470,8 @@ describe('Container — dependency injection', () => {
   });
 
   it('throws CircularDependencyError for a direct two-token cycle', async () => {
-    const A = createToken('A');
-    const B = createToken('B');
+    const A = token('A');
+    const B = token('B');
     const c = createContainer();
 
     c.factory(A, (b) => b, { deps: [B] });
@@ -416,9 +481,9 @@ describe('Container — dependency injection', () => {
   });
 
   it('throws CircularDependencyError for an indirect three-token cycle', async () => {
-    const A = createToken('A');
-    const B = createToken('B');
-    const C = createToken('C');
+    const A = token('A');
+    const B = token('B');
+    const C = token('C');
     const c = createContainer();
 
     c.factory(A, (b) => b, { deps: [B] });
@@ -428,32 +493,20 @@ describe('Container — dependency injection', () => {
     await expect(c.resolve(A)).rejects.toThrow(CircularDependencyError);
   });
 
-  it('CircularDependencyError message contains the cycle path', async () => {
-    const A = createToken('Alpha');
-    const B = createToken('Beta');
+  it('CircularDependencyError message contains the full cycle path', async () => {
+    const A = token('Alpha');
+    const B = token('Beta');
     const c = createContainer();
 
     c.factory(A, (b) => b, { deps: [B] });
     c.factory(B, (a) => a, { deps: [A] });
 
-    const err = await c.resolve(A).catch((e) => e);
+    const err = (await c.resolve(A).catch((e) => e)) as CircularDependencyError;
 
     expect(err).toBeInstanceOf(CircularDependencyError);
     expect(err.message).toContain('Alpha');
     expect(err.message).toContain('Beta');
-  });
-
-  it('CircularDependencyError path does not duplicate tokens', async () => {
-    const A = createToken('A');
-    const B = createToken('B');
-    const c = createContainer();
-
-    c.factory(A, (b) => b, { deps: [B] });
-    c.factory(B, (a) => a, { deps: [A] });
-
-    const err = await c.resolve(A).catch((e) => e);
-
-    expect(err.message).toBe('Circular dependency detected: A -> B -> A');
+    expect(err.message).toBe('Circular dependency detected: Alpha -> Beta -> Alpha');
   });
 });
 
@@ -463,7 +516,7 @@ describe('Container — dependency injection', () => {
 
 describe('Container — child containers', () => {
   it('child inherits parent registrations', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
 
     root.value(T, 'from-root');
@@ -474,7 +527,7 @@ describe('Container — child containers', () => {
   });
 
   it('child local registration shadows the parent registration', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
 
     root.value(T, 'parent');
@@ -488,7 +541,7 @@ describe('Container — child containers', () => {
   });
 
   it('parent cannot see child-only registrations', async () => {
-    const T = createToken<string>('ChildOnly');
+    const T = token<string>('ChildOnly');
     const root = createContainer();
     const child = root.createChild();
 
@@ -497,24 +550,8 @@ describe('Container — child containers', () => {
     await expect(root.resolve(T)).rejects.toThrow(ProviderNotFoundError);
   });
 
-  it('separate children do not share scoped instances', async () => {
-    let n = 0;
-    const T = createToken<object>('T');
-    const root = createContainer();
-
-    root.factory(T, () => ({ id: ++n }), { lifetime: 'scoped' });
-
-    const c1 = root.createChild();
-    const c2 = root.createChild();
-
-    const a = await c1.resolve(T);
-    const b = await c2.resolve(T);
-
-    expect(a).not.toBe(b);
-  });
-
   it('child can resolve its own local registrations after parent is disposed', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
     const child = root.createChild();
 
@@ -525,7 +562,7 @@ describe('Container — child containers', () => {
   });
 
   it('child throws ContainerDisposedError when token lives only in disposed parent', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
     const child = root.createChild();
 
@@ -537,16 +574,529 @@ describe('Container — child containers', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ContainerModule / load()
+// ---------------------------------------------------------------------------
+
+describe('Container — load()', () => {
+  it('applies a module to the container', async () => {
+    const T = token<string>('T');
+    const mod: ContainerModule = (c) => void c.value(T, 'from-module');
+    const container = createContainer();
+
+    await container.load(mod);
+
+    await expect(container.resolve(T)).resolves.toBe('from-module');
+  });
+
+  it('applies multiple modules sequentially', async () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const modA: ContainerModule = (c) => void c.value(A, 'a');
+    const modB: ContainerModule = (c) => void c.value(B, 'b');
+    const container = createContainer();
+
+    await container.load(modA, modB);
+
+    await expect(container.resolve(A)).resolves.toBe('a');
+    await expect(container.resolve(B)).resolves.toBe('b');
+  });
+
+  it('awaits async modules in sequence', async () => {
+    const order: string[] = [];
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    const modA: ContainerModule = async (container) => {
+      await new Promise((r) => setTimeout(r, 10));
+
+      order.push('A');
+      container.value(A, 'a');
+    };
+    const modB: ContainerModule = (container) => {
+      order.push('B');
+      container.value(B, 'b');
+    };
+
+    await c.load(modA, modB);
+
+    expect(order).toEqual(['A', 'B']);
+    await expect(c.resolve(A)).resolves.toBe('a');
+    await expect(c.resolve(B)).resolves.toBe('b');
+  });
+
+  it('supports method chaining via the returned Promise', async () => {
+    const T = token<string>('T');
+    const container = createContainer();
+
+    const result = await container.load((c) => void c.value(T, 'v'));
+
+    expect(result).toBe(container);
+  });
+
+  it('throws ContainerDisposedError when called on a disposed container', async () => {
+    const c = createContainer();
+
+    await c.dispose();
+
+    await expect(c.load(() => {})).rejects.toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// loadAll()
+// ---------------------------------------------------------------------------
+
+describe('Container — loadAll()', () => {
+  it('applies all modules in parallel and registers all tokens', async () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    await c.loadAll(
+      (container) => void container.value(A, 'a'),
+      (container) => void container.value(B, 'b'),
+    );
+
+    await expect(c.resolve(A)).resolves.toBe('a');
+    await expect(c.resolve(B)).resolves.toBe('b');
+  });
+
+  it('resolves async modules concurrently (finish order may differ from input order)', async () => {
+    const finishOrder: string[] = [];
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    await c.loadAll(
+      async (container) => {
+        await new Promise((r) => setTimeout(r, 20));
+
+        finishOrder.push('A');
+        container.value(A, 'a');
+      },
+      async (container) => {
+        await new Promise((r) => setTimeout(r, 5));
+
+        finishOrder.push('B');
+        container.value(B, 'b');
+      },
+    );
+
+    // B finishes before A (faster timeout)
+    expect(finishOrder).toEqual(['B', 'A']);
+    await expect(c.resolve(A)).resolves.toBe('a');
+    await expect(c.resolve(B)).resolves.toBe('b');
+  });
+
+  it('throws ContainerDisposedError when called on a disposed container', async () => {
+    const c = createContainer();
+
+    await c.dispose();
+
+    await expect(c.loadAll(() => {})).rejects.toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deferred()
+// ---------------------------------------------------------------------------
+
+describe('Container — deferred()', () => {
+  it('defers resolution until first property access', async () => {
+    let calls = 0;
+    const T = token<{ greet(): string }>('T');
+    const c = createContainer();
+
+    c.factory(T, () => {
+      calls++;
+
+      return { greet: () => 'hello' };
+    });
+
+    const proxy = c.deferred(T);
+
+    expect(calls).toBe(0);
+
+    // Must pre-warm to use deferred (resolveSync requirement)
+    await c.resolve(T);
+
+    expect(proxy.greet()).toBe('hello');
+    expect(calls).toBe(1);
+  });
+
+  it('throws ProviderNotFoundError on first access if token not registered', () => {
+    const T = token<{ x: number }>('T');
+    const c = createContainer();
+    const proxy = c.deferred(T);
+
+    expect(() => proxy.x).toThrow(ProviderNotFoundError);
+  });
+
+  it('resolves value tokens without pre-warming', () => {
+    const T = token<{ val: number }>('T');
+    const c = createContainer();
+
+    c.value(T, { val: 42 });
+
+    const proxy = c.deferred(T);
+
+    expect(proxy.val).toBe(42);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inspect()
+// ---------------------------------------------------------------------------
+
+describe('Container — inspect()', () => {
+  it('returns nodes for all registered tokens', () => {
+    const A = token<string>('Alpha');
+    const B = token<string>('Beta');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.factory(B, (a) => a, { deps: [A] });
+
+    const graph: ContainerGraph = c.inspect();
+
+    expect(graph.nodes).toHaveLength(2);
+
+    const valueNode = graph.nodes.find((n) => n.description === 'Alpha');
+    const factoryNode = graph.nodes.find((n) => n.description === 'Beta');
+
+    expect(valueNode).toMatchObject({ deps: [], kind: 'value' });
+    expect(factoryNode).toMatchObject({ deps: ['Alpha'], kind: 'factory', lifetime: 'singleton' });
+  });
+
+  it('includes lifetime on factory nodes', () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'x', { lifetime: 'transient' });
+
+    const { nodes } = c.inspect();
+
+    expect(nodes[0].lifetime).toBe('transient');
+  });
+
+  it('returns an empty graph for an empty container', () => {
+    expect(createContainer().inspect()).toEqual({ nodes: [] });
+  });
+
+  it('includes parent nodes when deep:true (default)', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const root = createContainer();
+
+    root.value(A, 'a');
+
+    const child = root.createChild();
+
+    child.value(B, 'b');
+
+    const graph = child.inspect();
+
+    expect(graph.nodes).toHaveLength(2);
+    expect(graph.nodes.map((n) => n.description)).toContain('A');
+    expect(graph.nodes.map((n) => n.description)).toContain('B');
+  });
+
+  it('excludes parent nodes when deep:false', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const root = createContainer();
+
+    root.value(A, 'a');
+
+    const child = root.createChild();
+
+    child.value(B, 'b');
+
+    const graph = child.inspect({ deep: false });
+
+    expect(graph.nodes).toHaveLength(1);
+    expect(graph.nodes[0].description).toBe('B');
+  });
+
+  it('serializes named scope token lifetime as "scope:<name>"', () => {
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => 'v', { lifetime: RequestScope });
+
+    const { nodes } = c.inspect();
+
+    expect(nodes[0].lifetime).toBe('scope:request');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validate()
+// ---------------------------------------------------------------------------
+
+describe('Container — validate()', () => {
+  it('returns this for a valid graph (no cycles)', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.factory(B, (a) => a, { deps: [A] });
+
+    expect(c.validate()).toBe(c);
+  });
+
+  it('returns this for an empty container', () => {
+    const c = createContainer();
+
+    expect(c.validate()).toBe(c);
+  });
+
+  it('throws CircularDependencyError for a direct two-token cycle', () => {
+    const A = token('A');
+    const B = token('B');
+    const c = createContainer();
+
+    c.factory(A, (b) => b, { deps: [B] });
+    c.factory(B, (a) => a, { deps: [A] });
+
+    expect(() => c.validate()).toThrow(CircularDependencyError);
+  });
+
+  it('throws CircularDependencyError for a three-token indirect cycle', () => {
+    const A = token('A');
+    const B = token('B');
+    const C = token('C');
+    const c = createContainer();
+
+    c.factory(A, (b) => b, { deps: [B] });
+    c.factory(B, (cv) => cv, { deps: [C] });
+    c.factory(C, (a) => a, { deps: [A] });
+
+    expect(() => c.validate()).toThrow(CircularDependencyError);
+  });
+
+  it('supports method chaining: container.factory(...).validate()', () => {
+    const A = token<string>('A');
+    const c = createContainer();
+
+    c.value(A, 'a');
+
+    expect(c.validate()).toBe(c);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createScope() / named scope tokens
+// ---------------------------------------------------------------------------
+
+describe('Container — createScope() / named scopes', () => {
+  it('resolves named-scope factories within the correct scope container', async () => {
+    const RequestScope = scope('request');
+    const T = token<{ id: number }>('T');
+    let n = 0;
+    const root = createContainer();
+
+    root.factory(T, () => ({ id: ++n }), { lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    const a = await scopeContainer.resolve(T);
+    const b = await scopeContainer.resolve(T);
+
+    expect(a).toBe(b); // same scope instance
+    expect(n).toBe(1);
+  });
+
+  it('creates separate instances across different scope containers', async () => {
+    const RequestScope = scope('request');
+    const T = token<{ id: number }>('T');
+    let n = 0;
+    const root = createContainer();
+
+    root.factory(T, () => ({ id: ++n }), { lifetime: RequestScope });
+
+    const scope1 = root.createScope(RequestScope);
+    const scope2 = root.createScope(RequestScope);
+
+    const a = await scope1.resolve(T);
+    const b = await scope2.resolve(T);
+
+    expect(a).not.toBe(b);
+    expect(n).toBe(2);
+  });
+
+  it('throws ScopedResolutionError when scope container is missing in the hierarchy', async () => {
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'v', { lifetime: RequestScope });
+
+    // Resolved from root directly — no matching scope in chain
+    await expect(root.resolve(T)).rejects.toThrow(ScopedResolutionError);
+  });
+
+  it('ScopedResolutionError message contains the required scope name', async () => {
+    const RequestScope = scope('request-scope');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'v', { lifetime: RequestScope });
+
+    const err = (await root.resolve(T).catch((e) => e)) as ScopedResolutionError;
+
+    expect(err.message).toContain('request-scope');
+  });
+
+  it('resolves a named-scope token from a nested child that inherits the scope', async () => {
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'scoped-value', { lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+    const nested = scopeContainer.createChild();
+
+    await expect(nested.resolve(T)).resolves.toBe('scoped-value');
+  });
+
+  it('resolveSync throws SyncResolutionError for an unresolved named-scope factory', () => {
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'v', { lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    expect(() => scopeContainer.resolveSync(T)).toThrow(SyncResolutionError);
+  });
+
+  it('resolveSync works after the named-scope instance is pre-warmed', async () => {
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'warmed', { lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    await scopeContainer.resolve(T);
+
+    expect(scopeContainer.resolveSync(T)).toBe('warmed');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// on() — observable events
+// ---------------------------------------------------------------------------
+
+describe('Container — on()', () => {
+  it('emits a register event when a value is registered', () => {
+    const events: ContainerEvent[] = [];
+    const T = token<string>('MyValue');
+    const c = createContainer();
+
+    c.on((e) => events.push(e));
+    c.value(T, 'v');
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ description: 'MyValue', kind: 'value', type: 'register' });
+  });
+
+  it('emits a register event when a factory is registered', () => {
+    const events: ContainerEvent[] = [];
+    const T = token<string>('MyFactory');
+    const c = createContainer();
+
+    c.on((e) => events.push(e));
+    c.factory(T, () => 'v');
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ description: 'MyFactory', kind: 'factory', type: 'register' });
+  });
+
+  it('emits a resolve event after successful resolution', async () => {
+    const events: ContainerEvent[] = [];
+    const T = token<string>('Svc');
+    const c = createContainer();
+
+    c.value(T, 'x');
+    c.on((e) => events.push(e));
+    await c.resolve(T);
+
+    expect(events.some((e) => e.type === 'resolve' && 'description' in e && e.description === 'Svc')).toBe(true);
+  });
+
+  it('emits a dispose event when the container is disposed', async () => {
+    const events: ContainerEvent[] = [];
+    const c = createContainer();
+
+    c.on((e) => events.push(e));
+    await c.dispose();
+
+    expect(events.some((e) => e.type === 'dispose')).toBe(true);
+  });
+
+  it('returns an unsubscribe function that stops future events', () => {
+    const events: ContainerEvent[] = [];
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    const unsubscribe = c.on((e) => events.push(e));
+
+    c.value(A, 'a');
+    unsubscribe();
+    c.value(B, 'b');
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ description: 'A' });
+  });
+
+  it('swallows listener errors so they do not disrupt container operation', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.on(() => {
+      throw new Error('listener boom');
+    });
+
+    // Registration and resolution should still work
+    expect(() => c.value(T, 'v')).not.toThrow();
+    await expect(c.resolve(T)).resolves.toBe('v');
+  });
+
+  it('multiple listeners are all notified', () => {
+    const calls1: number[] = [];
+    const calls2: number[] = [];
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.on(() => calls1.push(1));
+    c.on(() => calls2.push(2));
+    c.value(T, 'v');
+
+    expect(calls1).toHaveLength(1);
+    expect(calls2).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Disposal
 // ---------------------------------------------------------------------------
 
 describe('Container — disposal', () => {
   it('calls the dispose hook on a resolved singleton', async () => {
     const log: string[] = [];
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
-    c.factory(T, () => ({}), { dispose: () => log.push('done') });
+    c.factory(T, () => ({}), { dispose: () => void log.push('done') });
 
     await c.resolve(T);
     await c.dispose();
@@ -556,34 +1106,22 @@ describe('Container — disposal', () => {
 
   it('does not call the dispose hook for an unresolved factory', async () => {
     const log: string[] = [];
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
-    c.factory(T, () => ({}), { dispose: () => log.push('should-not-run') });
+    c.factory(T, () => ({}), { dispose: () => void log.push('should-not-run') });
 
     await c.dispose();
 
     expect(log).toHaveLength(0);
   });
 
-  it('does not fire a dispose hook on a value provider registered without one', async () => {
-    // value() accepts an optional dispose hook — this confirms disposal does not throw
-    // and no hook is called when none was attached
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'static');
-    await c.resolve(T);
-
-    await expect(c.dispose()).resolves.not.toThrow();
-  });
-
   it('calls dispose hooks for scoped instances on the child that owns them', async () => {
     const log: string[] = [];
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const root = createContainer();
 
-    root.factory(T, () => ({}), { dispose: () => log.push('scoped-done'), lifetime: 'scoped' });
+    root.factory(T, () => ({}), { dispose: () => void log.push('scoped-done'), lifetime: 'scoped' });
 
     const child = root.createChild();
 
@@ -594,8 +1132,8 @@ describe('Container — disposal', () => {
   });
 
   it('runs all dispose hooks even if one throws, collecting failures in AggregateError', async () => {
-    const A = createToken<object>('A');
-    const B = createToken<object>('B');
+    const A = token<object>('A');
+    const B = token<object>('B');
     const c = createContainer();
 
     c.factory(A, () => ({}), {
@@ -612,14 +1150,14 @@ describe('Container — disposal', () => {
     await c.resolve(A);
     await c.resolve(B);
 
-    const err = await c.dispose().catch((e) => e);
+    const err = (await c.dispose().catch((e) => e)) as AggregateError;
 
     expect(err).toBeInstanceOf(AggregateError);
     expect(err.errors).toHaveLength(2);
   });
 
   it('marks the container as disposed even when a hook throws', async () => {
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
     c.factory(T, () => ({}), {
@@ -636,10 +1174,10 @@ describe('Container — disposal', () => {
 
   it('calling dispose more than once is a no-op after the first call', async () => {
     const log: string[] = [];
-    const T = createToken<object>('T');
+    const T = token<object>('T');
     const c = createContainer();
 
-    c.factory(T, () => ({}), { dispose: () => log.push('hook') });
+    c.factory(T, () => ({}), { dispose: () => void log.push('hook') });
 
     await c.resolve(T);
     await c.dispose();
@@ -649,13 +1187,54 @@ describe('Container — disposal', () => {
   });
 
   it('Symbol.asyncDispose delegates to dispose()', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.value(T, 'v');
     await c[Symbol.asyncDispose]();
 
     expect(c.disposed).toBe(true);
+  });
+
+  it('calls dispose hook on a value registration', async () => {
+    const log: string[] = [];
+    const T = token<{ close(): void }>('T');
+    const resource = { close: () => log.push('closed') };
+    const c = createContainer();
+
+    c.value(T, resource, { dispose: (r) => r.close() });
+
+    await c.dispose();
+
+    expect(log).toEqual(['closed']);
+  });
+
+  it('value dispose hook fires even if the value was never resolved', async () => {
+    const log: string[] = [];
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'x', { dispose: () => void log.push('done') });
+
+    await c.dispose();
+
+    expect(log).toEqual(['done']);
+  });
+
+  it('value dispose failures are collected in AggregateError', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'x', {
+      dispose: () => {
+        throw new Error('value-fail');
+      },
+    });
+
+    const err = (await c.dispose().catch((e) => e)) as AggregateError;
+
+    expect(err).toBeInstanceOf(AggregateError);
+    expect(err.errors[0].message).toBe('value-fail');
   });
 });
 
@@ -673,35 +1252,35 @@ describe('Container — post-disposal guards', () => {
   }
 
   it('resolve throws ContainerDisposedError', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = await disposedContainer();
 
     await expect(c.resolve(T)).rejects.toThrow(ContainerDisposedError);
   });
 
   it('resolveOptional throws ContainerDisposedError (does not swallow it)', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = await disposedContainer();
 
     await expect(c.resolveOptional(T)).rejects.toThrow(ContainerDisposedError);
   });
 
-  it('resolveMany throws ContainerDisposedError', async () => {
-    const T = createToken<string>('T');
+  it('resolveSync throws ContainerDisposedError', async () => {
+    const T = token<string>('T');
     const c = await disposedContainer();
 
-    await expect(c.resolveMany(T)).rejects.toThrow(ContainerDisposedError);
+    expect(() => c.resolveSync(T)).toThrow(ContainerDisposedError);
   });
 
   it('value() throws ContainerDisposedError', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = await disposedContainer();
 
     expect(() => c.value(T, 'x')).toThrow(ContainerDisposedError);
   });
 
   it('factory() throws ContainerDisposedError', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = await disposedContainer();
 
     expect(() => c.factory(T, () => 'x')).toThrow(ContainerDisposedError);
@@ -713,8 +1292,21 @@ describe('Container — post-disposal guards', () => {
     expect(() => c.createChild()).toThrow(ContainerDisposedError);
   });
 
+  it('has() throws ContainerDisposedError', async () => {
+    const T = token<string>('T');
+    const c = await disposedContainer();
+
+    expect(() => c.has(T)).toThrow(ContainerDisposedError);
+  });
+
+  it('load() throws ContainerDisposedError', async () => {
+    const c = await disposedContainer();
+
+    await expect(c.load(() => {})).rejects.toThrow(ContainerDisposedError);
+  });
+
   it('resolving from a child throws when the parent has been disposed', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
     const child = root.createChild();
 
@@ -731,13 +1323,13 @@ describe('Container — post-disposal guards', () => {
 
 describe('Container — has', () => {
   it('returns false when no provider is registered', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
 
     expect(createContainer().has(T)).toBe(false);
   });
 
   it('returns true when a value provider is registered', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.value(T, 'x');
@@ -746,7 +1338,7 @@ describe('Container — has', () => {
   });
 
   it('returns true when a factory provider is registered', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'x');
@@ -755,7 +1347,7 @@ describe('Container — has', () => {
   });
 
   it('returns true when token is registered on parent', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
 
     root.value(T, 'x');
@@ -765,7 +1357,7 @@ describe('Container — has', () => {
 
   it('does not execute the factory when checking has()', () => {
     let calls = 0;
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => {
@@ -779,17 +1371,8 @@ describe('Container — has', () => {
     expect(calls).toBe(0);
   });
 
-  it('throws ContainerDisposedError on disposed container', async () => {
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    await c.dispose();
-
-    expect(() => c.has(T)).toThrow(ContainerDisposedError);
-  });
-
   it('throws ContainerDisposedError when token lives only in a disposed parent', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
     const child = root.createChild();
 
@@ -806,7 +1389,7 @@ describe('Container — has', () => {
 
 describe('Container — resolveSync', () => {
   it('resolves a value provider synchronously', () => {
-    const T = createToken<number>('T');
+    const T = token<number>('T');
     const c = createContainer();
 
     c.value(T, 42);
@@ -815,7 +1398,7 @@ describe('Container — resolveSync', () => {
   });
 
   it('resolves an already-cached singleton synchronously', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'built');
@@ -825,7 +1408,7 @@ describe('Container — resolveSync', () => {
   });
 
   it('resolves an already-cached scoped instance synchronously', async () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
 
     root.factory(T, () => 'scoped', { lifetime: 'scoped' });
@@ -837,8 +1420,8 @@ describe('Container — resolveSync', () => {
     expect(child.resolveSync(T)).toBe('scoped');
   });
 
-  it('throws SyncResolutionError for an unresolved factory', () => {
-    const T = createToken<string>('T');
+  it('throws SyncResolutionError for an unresolved singleton factory', () => {
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'x');
@@ -846,8 +1429,8 @@ describe('Container — resolveSync', () => {
     expect(() => c.resolveSync(T)).toThrow(SyncResolutionError);
   });
 
-  it('throws SyncResolutionError for a transient factory (never cached)', async () => {
-    const T = createToken<string>('T');
+  it('throws SyncResolutionError for a transient factory (never cached)', () => {
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'x', { lifetime: 'transient' });
@@ -856,7 +1439,7 @@ describe('Container — resolveSync', () => {
   });
 
   it('throws ScopedResolutionError for a scoped token resolved from the root container', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, () => 'x', { lifetime: 'scoped' });
@@ -865,35 +1448,24 @@ describe('Container — resolveSync', () => {
   });
 
   it('throws SyncResolutionError for an unresolved scoped instance on a child container', () => {
-    const T = createToken<string>('T');
+    const T = token<string>('T');
     const root = createContainer();
 
     root.factory(T, () => 'x', { lifetime: 'scoped' });
 
     const child = root.createChild();
 
-    // child.resolve(T) has never been awaited, so no cached instance exists
     expect(() => child.resolveSync(T)).toThrow(SyncResolutionError);
   });
 
   it('throws ProviderNotFoundError when token is not registered', () => {
-    const T = createToken<string>('Missing');
+    const T = token<string>('Missing');
 
     expect(() => createContainer().resolveSync(T)).toThrow(ProviderNotFoundError);
   });
 
-  it('throws MultipleProvidersError for multi-registered token', () => {
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'a', { multi: true });
-    c.value(T, 'b', { multi: true });
-
-    expect(() => c.resolveSync(T)).toThrow(MultipleProvidersError);
-  });
-
   it('SyncResolutionError message contains the token description', () => {
-    const T = createToken<string>('ConfigService');
+    const T = token<string>('ConfigService');
     const c = createContainer();
 
     c.factory(T, () => 'x');
@@ -902,8 +1474,8 @@ describe('Container — resolveSync', () => {
   });
 
   it('SyncResolutionError message distinguishes transient from unresolved singleton', () => {
-    const Singleton = createToken<string>('MySingleton');
-    const Transient = createToken<string>('MyTransient');
+    const Singleton = token<string>('MySingleton');
+    const Transient = token<string>('MyTransient');
     const c = createContainer();
 
     c.factory(Singleton, () => 'x');
@@ -922,75 +1494,5 @@ describe('Container — resolveSync', () => {
 
     expect(singletonErr.message).toContain('not been resolved yet');
     expect(transientErr.message).toContain('transient');
-  });
-
-  it('throws ContainerDisposedError on disposed container', async () => {
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    await c.dispose();
-
-    expect(() => c.resolveSync(T)).toThrow(ContainerDisposedError);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Value dispose hooks
-// ---------------------------------------------------------------------------
-
-describe('Container — value dispose hooks', () => {
-  it('calls dispose hook on a value registration at container disposal', async () => {
-    const log: string[] = [];
-    const T = createToken<{ close(): void }>('T');
-    const resource = { close: () => log.push('closed') };
-    const c = createContainer();
-
-    c.value(T, resource, { dispose: (r) => r.close() });
-
-    await c.dispose();
-
-    expect(log).toEqual(['closed']);
-  });
-
-  it('calls dispose hooks for multi value registrations', async () => {
-    const log: string[] = [];
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'a', { dispose: (v) => log.push(`dispose:${v}`), multi: true });
-    c.value(T, 'b', { dispose: (v) => log.push(`dispose:${v}`), multi: true });
-
-    await c.dispose();
-
-    expect(log).toEqual(['dispose:a', 'dispose:b']);
-  });
-
-  it('value dispose hook fires even if the value was never resolved', async () => {
-    const log: string[] = [];
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'x', { dispose: () => log.push('done') });
-
-    await c.dispose();
-
-    expect(log).toEqual(['done']);
-  });
-
-  it('value dispose failures are collected in AggregateError', async () => {
-    const T = createToken<string>('T');
-    const c = createContainer();
-
-    c.value(T, 'x', {
-      dispose: () => {
-        throw new Error('value-fail');
-      },
-    });
-
-    const err = await c.dispose().catch((e) => e);
-
-    expect(err).toBeInstanceOf(AggregateError);
-    expect(err.errors).toHaveLength(1);
-    expect(err.errors[0].message).toBe('value-fail');
   });
 });

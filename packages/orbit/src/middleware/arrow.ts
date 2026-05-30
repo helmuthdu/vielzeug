@@ -1,6 +1,6 @@
 import type { Middleware, Padding } from '../types';
 
-import { getSide, toRect, toSideObject, clamp } from '../utils';
+import { clamp, getSide, tagMiddleware, toRect, toSideObject } from '../utils';
 
 export interface ArrowOptions {
   /** The arrow DOM element. Must be a child of the floating element. */
@@ -13,10 +13,12 @@ export interface ArrowOptions {
  * Positions an arrow element inside the floating element, pointed toward the reference.
  * Writes `{ x?, y?, centerOffset }` to `middlewareData.arrow`.
  *
+ * Must come **after** flip(), shift(), and autoPlacement() in the middleware pipeline.
+ *
  * @example
  * ```ts
  * const result = computePosition(ref, floating, {
- *   middleware: [arrow({ element: arrowEl, padding: 8 })],
+ *   middleware: [offset(8), flip(), shift(), arrow({ element: arrowEl })],
  * });
  * const { x, y } = result.middlewareData.arrow!;
  * arrowEl.style.left = x != null ? `${x}px` : '';
@@ -24,7 +26,7 @@ export interface ArrowOptions {
  * ```
  */
 export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
-  return (state) => {
+  return tagMiddleware(function arrowMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const side = getSide(state.placement);
     const inset = toSideObject(padding);
     const arrowRect = toRect(element.getBoundingClientRect());
@@ -44,5 +46,5 @@ export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
     const y = clamp(idealY, minY, maxY);
 
     return { data: { arrow: { centerOffset: idealY - y, y } } };
-  };
+  }, 'arrow');
 }

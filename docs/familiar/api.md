@@ -82,6 +82,7 @@ type RunOptions = {
 ```
 
 - `signal`: `AbortSignal` — cancel a queued task. In-flight tasks cannot be interrupted.
+- `timeout`: `number | undefined` — per-run timeout in milliseconds. Overrides the pool-level timeout for this task only.
 - `transferables`: `Transferable[]` — objects to move (not copy) to the worker thread.
 
 ---
@@ -93,15 +94,17 @@ type WorkerHandle<TInput, TOutput> = {
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
   readonly active: number;
-  close(): Promise<void>;
+  batch(inputs: TInput[], options?: Omit<RunOptions, 'signal'>): AsyncIterable<TOutput>;
+  close(timeoutMs?: number): Promise<void>;
   readonly completed: number;
   readonly concurrency: number;
   dispose(): void;
+  readonly failed: number;
+  prime(): Promise<void[]>;
   readonly queued: number;
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
   readonly status: WorkerStatus;
   readonly utilization: number;
-  warmup(): void;
 };
 ```
 
@@ -153,11 +156,11 @@ Dispatches a task to the next available worker slot. If all slots are busy, the 
 Rejects with:
 
 - `WorkerError` code `'queue_full'` — if `maxQueue` is configured and the queue is already full
-- `WorkerError` code `'timeout'` — if `timeout` is configured and the task exceeds it
+- `WorkerError` code `'timeout'` — if `timeout` (pool-level or per-run) is configured and the task exceeds it
 - `WorkerError` code `'terminated'` — if `dispose()` was called before or during the task
 - `WorkerError` code `'task'` — if the task function throws
 - `DOMException` (AbortError) — if the provided `signal` is aborted before the task starts
-- `WorkerError` code `'familiar'` — worker runtime/setup failures
+- `WorkerError` code `'worker'` — worker runtime/setup failures
 
 ::: warning
 The task function is serialized via `.toString()` and runs in an isolated scope. It cannot close over variables from the surrounding module. Keep task functions entirely self-contained.
@@ -181,11 +184,42 @@ Number of worker slots currently executing a task.
 
 ---
 
-### `close()`
+### `batch(inputs, options?)`
 
-`close(): Promise<void>`
+`batch(inputs: TInput[], options?: Omit<RunOptions, 'signal'>): AsyncIterable<TOutput>`
 
-Graceful shutdown. Waits until queued and in-flight tasks settle, then terminates all workers.
+Runs all inputs through the pool and yields results in submission order as each task completes. Cancels remaining tasks automatically if any task throws.
+
+```ts
+const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+
+for await (const result of pool.batch([1, 2, 3, 4, 5])) {
+  console.log(result); // 2, 4, 6, 8, 10
+}
+
+// With per-run timeout
+for await (const result of pool.batch([1, 2, 3], { timeout: 500 })) {
+  console.log(result);
+}
+
+pool.dispose();
+```
+
+---
+
+### `close(timeoutMs?)`
+
+`close(timeoutMs?: number): Promise<void>`
+
+Graceful shutdown. Waits until queued and in-flight tasks settle, then terminates all workers. If `timeoutMs` is provided and the pool has not gone idle within that window, rejects with `WorkerError` code `'timeout'` and force-terminates.
+
+```ts
+// Drain then terminate (no deadline)
+await pool.close();
+
+// Must be idle within 5 s or reject
+await pool.close(5000);
+```
 
 ---
 
@@ -202,6 +236,49 @@ Total number of successfully completed tasks since handle creation.
 `readonly concurrency: number`
 
 The number of worker slots configured for this handle (always ≥ 1).
+
+---
+
+### `failed`
+
+`readonly failed: number`
+
+Total number of tasks that have been rejected with a task / timeout / worker error since handle creation. Aborted tasks and termination-caused rejections are not counted.
+
+```ts
+const worker = createWorker<number, number>((n) => {
+  if (n < 0) throw new Error('negative');
+
+  return n;
+});
+
+await worker.run(1);
+await worker.run(-1).catch(() => {});
+console.log(worker.completed); // 1
+console.log(worker.failed);    // 1
+```
+
+---
+
+### `prime()`
+
+`prime(): Promise<void[]>`
+
+Pre-initializes all worker slots by spawning their underlying `Worker` instances immediately. Returns a Promise that resolves when all slots are ready.
+
+Call this during application startup to eliminate first-task latency when you know tasks will arrive soon.
+
+```ts
+const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+
+// Pre-spawn all 4 Worker threads during app init and await readiness
+await pool.prime();
+
+// Later — first run() has no cold-start overhead
+const result = await pool.run(21);
+```
+
+Prime is best-effort: if the Worker API is unavailable (SSR, Node without Worker support), it silently does nothing and errors surface on the first `run()` call.
 
 ---
 
@@ -229,28 +306,6 @@ Fraction of worker slots currently executing a task, from `0` (all idle) to `1` 
 
 ---
 
-### `warmup()`
-
-`warmup(): void`
-
-Pre-initializes all worker slots by spawning their underlying `Worker` instances immediately. Call this during application startup to eliminate first-task latency when you know tasks will arrive soon.
-
-```ts
-import { createWorker } from '@vielzeug/familiar';
-
-const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
-
-// Pre-spawn all 4 Worker threads during app init
-pool.warmup();
-
-// Later — first run() has no cold-start overhead
-const result = await pool.run(21);
-```
-
-Warmup is best-effort: if the Worker API is unavailable (SSR, Node without Worker support), it silently does nothing and errors surface on the first `run()` call instead.
-
----
-
 ### `[Symbol.dispose]()` / `[Symbol.asyncDispose]()`
 
 `[Symbol.dispose](): void` — alias for `dispose()`, enables the `using` keyword.
@@ -269,36 +324,6 @@ Warmup is best-effort: if the Worker API is unavailable (SSR, Node without Worke
   await using worker = createWorker<number, number>((n) => n * 2);
   await worker.run(21); // 42
 } // close() called automatically — waits for in-flight tasks
-```
----
-
-### `status`
-
-`readonly status: WorkerStatus`
-
-The current state of the worker handle. See [`WorkerStatus`](#workerstatus).
-
----
-
-### `utilization`
-
-`readonly utilization: number`
-
-Current active-slot ratio from `0` to `1`.
-
----
-
-### `[Symbol.dispose]()`
-
-`[Symbol.dispose](): void`
-
-Alias for `dispose()`. Enables the ES2025 explicit resource management `using` keyword:
-
-```ts
-{
-  using worker = createWorker<number, number>((n) => n * 2);
-  const result = await worker.run(21); // 42
-} // automatically disposed here
 ```
 
 ## Error Model
@@ -332,7 +357,7 @@ Supported `WorkerErrorCode` values:
 - `'task'`
 - `'terminated'`
 - `'timeout'`
-- `'familiar'`
+- `'worker'`
 
 ## Testing Utilities
 
@@ -387,5 +412,5 @@ Extends `WorkerHandle` with:
 All `WorkerHandle` members are implemented. Notable differences from the real familiar:
 
 - `concurrency` is always `1`.
-- `warmup()` is a no-op (tasks run in-process).
+- `prime()` is a no-op that resolves immediately (tasks run in-process).
 - `active`, `queued`, `utilization`, `completed`, `status` reflect in-process state accurately.

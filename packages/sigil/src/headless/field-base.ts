@@ -1,6 +1,6 @@
 import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
-import { createA11yHost } from './a11y-host';
+import { createReactiveBindings } from './a11y-host';
 import { createStableId } from './id';
 
 // ── Validation / context types ────────────────────────────────────────────────
@@ -8,48 +8,34 @@ import { createStableId } from './id';
 export type ValidationTrigger = 'blur' | 'change' | 'input' | 'submit';
 export type ControlValidationMode = ValidationTrigger | undefined;
 
-// ── Field core (internal building block) ─────────────────────────────────────
+// ── Field options + handle ───────────────────────────────────────────────────
 
-export type FieldCoreOptions = {
+/** Options shared by both `createTextField` and `createChoiceField`. */
+export type FieldOptions = {
   disabled?: ReadonlySignal<boolean | undefined>;
+  error?: ReadonlySignal<string | undefined>;
+  /**
+   * Override for label visibility that takes precedence over deriving it from
+   * the `label` text signal. Pass a computed signal that checks both prop and
+   * slot presence to enable slot-first composition.
+   *
+   * @example
+   * ```ts
+   * const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
+   * const field = createField({ ...options, hasLabel });
+   * ```
+   */
+  hasLabel?: ReadonlySignal<boolean>;
+  helper?: ReadonlySignal<string | undefined>;
+  /**
+   * Label text signal. When provided, `label.inset.show`/`label.outside.show` and
+   * `aria.labelledBy` are computed reactively from this value and `labelPlacement`.
+   */
+  label?: ReadonlySignal<string | undefined>;
+  /** Label placement signal. Defaults to `'inset'`. */
+  labelPlacement?: ReadonlySignal<LabelPlacement>;
   prefix?: string;
   validateOn?: ReadonlySignal<ControlValidationMode>;
-};
-
-/**
- * The minimal internal handle returned by `createFieldCore`.
- * Contains IDs, disabled state, and validation wiring.
- * Build on top of this via `createField` for the full composed handle.
- */
-export type FieldCore = {
-  /**
-   * The stable `id` used for `aria-describedby` on the input. Points at the
-   * assistive-text region (covers both helper text and error text per WAI-ARIA).
-   */
-  assistiveId: string;
-  bindFormField: (field: { reportValidity(): void }) => void;
-  disabled: ReadonlySignal<boolean>;
-  fieldId: string;
-  triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
-};
-
-export const createFieldCore = (options: FieldCoreOptions): FieldCore => {
-  const disabled = computed(() => Boolean(options.disabled?.value));
-  const validateOn = options.validateOn;
-  const fieldId = createStableId(options.prefix ?? 'field');
-  const assistiveId = createStableId('helper');
-
-  const formFieldRef = signal<{ reportValidity(): void } | null>(null);
-
-  const bindFormField = (field: { reportValidity(): void }): void => {
-    formFieldRef.value = field;
-  };
-
-  const triggerValidation = (on: Extract<ValidationTrigger, 'blur' | 'change'>): void => {
-    if (validateOn?.value === on) formFieldRef.value?.reportValidity();
-  };
-
-  return { assistiveId, bindFormField, disabled, fieldId, triggerValidation };
 };
 
 // ── Error/helper assistive state ──────────────────────────────────────────────
@@ -161,17 +147,7 @@ export type FieldAriaState = {
 // ── Field base options ────────────────────────────────────────────────────────
 
 /** Options shared by both `createTextField` and `createChoiceField`. */
-export type FieldBaseOptions = FieldCoreOptions & {
-  error?: ReadonlySignal<string | undefined>;
-  helper?: ReadonlySignal<string | undefined>;
-  /**
-   * Label text signal. When provided, `label.inset.show`/`label.outside.show` and
-   * `aria.labelledBy` are computed reactively from this value and `labelPlacement`.
-   */
-  label?: ReadonlySignal<string | undefined>;
-  /** Label placement signal. Defaults to `'inset'`. */
-  labelPlacement?: ReadonlySignal<LabelPlacement>;
-};
+export type FieldBaseOptions = FieldOptions;
 
 // ── Field handle ──────────────────────────────────────────────────────────────
 
@@ -179,10 +155,10 @@ export type FieldBaseOptions = FieldCoreOptions & {
  * Common handle returned by `createField` — the base for both `TextFieldHandle`
  * and `ChoiceFieldHandle`.
  */
-export type FieldHandle = FieldCore & {
+export type FieldHandle = {
   /**
    * Applies reactive ARIA bindings from `field.aria` to `element` in a single
-   * `createA11yHost` effect. Wires `aria-labelledby`, `aria-describedby`,
+   * `createReactiveBindings` effect. Wires `aria-labelledby`, `aria-describedby`,
    * `aria-errormessage`, and `aria-invalid`.
    *
    * Pass `signal` for automatic teardown, or call the returned stop function
@@ -199,10 +175,19 @@ export type FieldHandle = FieldCore & {
   aria: FieldAriaState;
   /** Reactive error + helper assistive text. */
   assistive: ReadonlySignal<ErrorHelperState>;
+  /**
+   * The stable `id` used for `aria-describedby` on the input. Points at the
+   * assistive-text region (covers both helper text and error text per WAI-ARIA).
+   */
+  assistiveId: string;
+  bindFormField: (field: { reportValidity(): void }) => void;
+  disabled: ReadonlySignal<boolean>;
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
   errorId: string;
+  fieldId: string;
   /** Nested label state with stable IDs and reactive show signals. */
   label: LabelState;
+  triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
 };
 
 /**
@@ -215,11 +200,24 @@ export type FieldHandle = FieldCore & {
  *   (as `createTextField` does), or any other `ReadonlySignal<ErrorHelperState>`
  *   for fully custom assistive content. Defaults to a plain `ErrorHelperState`.
  */
-export const createField = (
-  options: FieldBaseOptions,
-  customAssistive?: ReadonlySignal<ErrorHelperState>,
-): FieldHandle => {
-  const core = createFieldCore(options);
+export const createField = (options: FieldOptions, customAssistive?: ReadonlySignal<ErrorHelperState>): FieldHandle => {
+  // ── Core (formerly createFieldCore) ──────────────────────────────────────
+  const disabled = computed(() => Boolean(options.disabled?.value));
+  const validateOn = options.validateOn;
+  const fieldId = createStableId(options.prefix ?? 'field');
+  const assistiveId = createStableId('helper');
+
+  const formFieldRef = signal<{ reportValidity(): void } | null>(null);
+
+  const bindFormField = (field: { reportValidity(): void }): void => {
+    formFieldRef.value = field;
+  };
+
+  const triggerValidation = (on: Extract<ValidationTrigger, 'blur' | 'change'>): void => {
+    if (validateOn?.value === on) formFieldRef.value?.reportValidity();
+  };
+
+  // ── Label + ARIA state ────────────────────────────────────────────────────
   const insetId = createStableId('label');
   const outsideId = `${insetId}-outside`;
   const errorId = createStableId('error');
@@ -227,34 +225,40 @@ export const createField = (
   const label$ = options.label ?? computed(() => undefined);
   const placement$ = options.labelPlacement ?? computed(() => 'inset' as LabelPlacement);
 
+  // Slot-first composition: if the caller provides `hasLabel`, use it instead
+  // of deriving visibility purely from the label text signal. This allows
+  // components with a `<slot name="label">` to stay visible even when the
+  // `label` prop is empty but a slotted label element is present.
+  const labelVisible$ = options.hasLabel ?? computed(() => Boolean(label$.value));
+
   const resolvedAssistive = customAssistive ?? createErrorHelperState({ error: options.error, helper: options.helper });
 
   const label: LabelState = {
     inset: {
       id: insetId,
-      show: computed(() => Boolean(label$.value) && placement$.value !== 'outside'),
+      show: computed(() => labelVisible$.value && placement$.value !== 'outside'),
     },
     outside: {
       id: outsideId,
-      show: computed(() => Boolean(label$.value) && placement$.value === 'outside'),
+      show: computed(() => labelVisible$.value && placement$.value === 'outside'),
     },
   };
 
   const aria: FieldAriaState = {
     describedBy: computed(() =>
-      resolvedAssistive.value.errorText || resolvedAssistive.value.helperText ? core.assistiveId : null,
+      resolvedAssistive.value.errorText || resolvedAssistive.value.helperText ? assistiveId : null,
     ),
     errorMessage: computed(() => (resolvedAssistive.value.errorText ? errorId : null)),
     invalid: computed(() => (resolvedAssistive.value.errorText ? ('true' as const) : null)),
     labelledBy: computed(() => {
-      if (!label$.value) return null;
+      if (!labelVisible$.value) return null;
 
       return placement$.value === 'outside' ? outsideId : insetId;
     }),
   };
 
   const applyAria = (element: Element, signal?: AbortSignal): (() => void) =>
-    createA11yHost(element, {
+    createReactiveBindings(element, {
       aria: {
         'aria-describedby': () => aria.describedBy.value,
         'aria-errormessage': () => aria.errorMessage.value,
@@ -264,5 +268,16 @@ export const createField = (
       signal,
     }).stop;
 
-  return { ...core, applyAria, aria, assistive: resolvedAssistive, errorId, label };
+  return {
+    applyAria,
+    aria,
+    assistive: resolvedAssistive,
+    assistiveId,
+    bindFormField,
+    disabled,
+    errorId,
+    fieldId,
+    label,
+    triggerValidation,
+  };
 };

@@ -2,6 +2,7 @@ import type {
   Adapter,
   AnySchema,
   BaseAdapterOptions,
+  KeyOf,
   MigrationFn,
   RecordOf,
   TransactionContext,
@@ -12,7 +13,7 @@ import { buildAdapterOps, buildTxContext, type StorageBackend } from '../adapter
 import { VaultDisposedError, VaultMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
-import { type StoredRecord, parseStored, readWithTtl, unwrapStored, wrapStored } from '../ttl';
+import { defaultCodec, type VaultCodec } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -69,12 +70,40 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
   });
 }
 
-async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<T[]> {
-  const rawRecords = await idbReq<StoredRecord<T>[]>(store.getAll());
+async function getAllFromStore<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  decode: (raw: unknown) => T | undefined,
+): Promise<T[]> {
+  const rawRecords = await idbReq<unknown[]>(store.getAll());
   const records: T[] = [];
 
   for (const raw of rawRecords) {
-    const { value } = readWithTtl<T>(raw as unknown);
+    const value = decode(raw);
+
+    if (value !== undefined) records.push(value);
+  }
+
+  return records;
+}
+
+async function getAllFromStoreByIndex<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  indexName: string,
+  range: NativeRange,
+  decode: (raw: unknown) => T | undefined,
+): Promise<T[]> {
+  const index = store.index(indexName);
+  const idbRange =
+    range.type === 'eq'
+      ? IDBKeyRange.only(range.value as IDBValidKey)
+      : range.type === 'between'
+        ? IDBKeyRange.bound(range.lower as IDBValidKey, range.upper as IDBValidKey)
+        : IDBKeyRange.bound(range.prefix, range.prefix + '\uffff');
+  const rawRecords = await idbReq<unknown[]>(index.getAll(idbRange));
+  const records: T[] = [];
+
+  for (const raw of rawRecords) {
+    const value = decode(raw);
 
     if (value !== undefined) records.push(value);
   }
@@ -85,9 +114,10 @@ async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObje
 async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
   store: IDBObjectStore,
   range: NativeRange,
+  decode: (raw: unknown) => T | undefined,
 ): Promise<T[]> {
   if (range.type === 'eq') {
-    const record = await storeGet<T>(store, range.value as IDBValidKey);
+    const record = await storeGet<T>(store, range.value as IDBValidKey, decode);
 
     return record !== undefined ? [record] : [];
   }
@@ -98,11 +128,11 @@ async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
       : // 'starts': bound from prefix to prefix\uffff (covers all BMP strings starting with prefix)
         IDBKeyRange.bound(range.prefix, range.prefix + '\uffff');
 
-  const rawRecords = await idbReq<StoredRecord<T>[]>(store.getAll(idbRange));
+  const rawRecords = await idbReq<unknown[]>(store.getAll(idbRange));
   const records: T[] = [];
 
   for (const raw of rawRecords) {
-    const { value } = readWithTtl<T>(raw as unknown);
+    const value = decode(raw);
 
     if (value !== undefined) records.push(value);
   }
@@ -110,78 +140,61 @@ async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
   return records;
 }
 
-function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<number> {
-  return new Promise<number>((resolve, reject) => {
-    let count = 0;
-    const request = store.openCursor();
-
-    request.onerror = () => reject(request.error ?? new Error('[vault] IndexedDB cursor failed'));
-    request.onsuccess = () => {
-      const cursor = request.result;
-
-      if (!cursor) {
-        resolve(count);
-
-        return;
-      }
-
-      const { value } = readWithTtl<T>(cursor.value as unknown);
-
-      if (value !== undefined) count += 1;
-
-      cursor.continue();
-    };
-  });
-}
-
-async function storeClear(store: IDBObjectStore): Promise<void> {
-  await idbReq(store.clear());
-}
-
 async function storeGet<T extends Record<string, unknown>>(
   store: IDBObjectStore,
   key: IDBValidKey,
+  decode: (raw: unknown) => T | undefined,
 ): Promise<T | undefined> {
   const raw = await idbReq<unknown>(store.get(key));
 
   if (raw == null) return undefined;
 
-  const { value } = readWithTtl<T>(raw);
-
-  return value;
+  return decode(raw);
 }
 
-async function storeHas<T extends Record<string, unknown>>(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
-  const raw = await idbReq<unknown>(store.get(key));
-
-  if (raw == null) return false;
-
-  const { value } = readWithTtl<T>(raw);
-
-  return value !== undefined;
+async function storeHas<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  key: IDBValidKey,
+  decode: (raw: unknown) => T | undefined,
+): Promise<boolean> {
+  return (await storeGet<T>(store, key, decode)) !== undefined;
 }
 
-async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
-  const live = await storeHas(store, key);
+async function storeDelete<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  key: IDBValidKey,
+  decode: (raw: unknown) => T | undefined,
+): Promise<boolean> {
+  const live = await storeHas<T>(store, key, decode);
 
   await idbReq(store.delete(key));
 
   return live;
 }
 
-async function storeDeleteMany(store: IDBObjectStore, keys: IDBValidKey[]): Promise<number> {
+async function storeDeleteMany<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  keys: IDBValidKey[],
+  decode: (raw: unknown) => T | undefined,
+): Promise<number> {
   if (keys.length === 0) return 0;
 
-  const results = await Promise.all(keys.map((k) => storeDelete(store, k)));
+  const results = await Promise.all(keys.map((k) => storeDelete<T>(store, k, decode)));
 
   return results.filter(Boolean).length;
 }
 
-async function storePutAt<T>(store: IDBObjectStore, key: IDBValidKey, value: T, ttl?: TtlMs): Promise<void> {
-  await idbReq(store.put(wrapStored(value, ttl), key));
+async function storePutAt<T>(
+  store: IDBObjectStore,
+  key: IDBValidKey,
+  value: T,
+  encode: (v: T, ttl?: TtlMs) => unknown,
+  ttl?: TtlMs,
+): Promise<void> {
+  await idbReq(store.put(encode(value, ttl), key));
 }
 
-function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
+function pruneExpiredInStore(store: IDBObjectStore, codec: VaultCodec): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     let deleted = 0;
     const request = store.openCursor();
@@ -196,9 +209,9 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
         return;
       }
 
-      const parsed = parseStored(cursor.value as unknown);
+      const stored = codec.decode(cursor.value as unknown);
 
-      if (!parsed || unwrapStored(parsed) === undefined) {
+      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
         cursor.delete();
         deleted += 1;
       }
@@ -207,6 +220,17 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
     };
   });
 }
+
+/**
+ * Cursor state machine — a single discriminated union replaces five boolean/nullable variables.
+ * Transitions: idle → waiting (next() before cursor fires) | buffered (cursor fires first) | done | error
+ */
+type CursorState<T> =
+  | { type: 'idle' }
+  | { reject: (e: unknown) => void; resolve: (r: IteratorResult<T>) => void; type: 'waiting' }
+  | { result: IteratorResult<T>; type: 'buffered' }
+  | { error: unknown; type: 'error' }
+  | { type: 'done' };
 
 /**
  * F1: True cursor-based iteration for IndexedDB.
@@ -218,49 +242,36 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
  * before yielding — this keeps the IDB readonly transaction alive between consumer awaits,
  * because IDB auto-commits when there are no pending requests.
  */
-function iterateStoreWithCursor<T extends Record<string, unknown>>(store: IDBObjectStore): AsyncIterable<T> {
+function iterateStoreWithCursor<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  decode: (raw: unknown) => T | undefined,
+): AsyncIterable<T> {
   return {
     [Symbol.asyncIterator](): AsyncIterator<T> {
-      // Open the cursor synchronously so onsuccess/onerror are wired before any microtask.
       const cursorRequest = store.openCursor();
-
-      // One-slot buffer: the cursor advances eagerly (keeping the tx alive), and the
-      // resolved value sits here until the consumer calls next().
-      //
-      // Error buffering uses a dedicated slot — the previous approach of repurposing
-      // pendingReject as a throwing closure silently swallowed errors because the
-      // stored function was only ever called as pendingReject?.(err), not throw-invoked.
-      let buffered: IteratorResult<T> | null = null;
-      let bufferedError: unknown = undefined;
-      let hasBufferedError = false;
-      let pendingResolve: ((r: IteratorResult<T>) => void) | null = null;
-      let pendingReject: ((e: unknown) => void) | null = null;
+      let state: CursorState<T> = { type: 'idle' };
 
       const deliver = (result: IteratorResult<T>): void => {
-        if (pendingResolve) {
-          const res = pendingResolve;
+        if (state.type === 'waiting') {
+          const { resolve } = state;
 
-          pendingResolve = null;
-          pendingReject = null;
-          res(result);
+          state = result.done ? { type: 'done' } : { type: 'idle' };
+          resolve(result);
         } else {
-          buffered = result;
+          state = { result, type: 'buffered' };
         }
       };
 
       cursorRequest.onerror = () => {
         const err = cursorRequest.error ?? new Error('[vault] IndexedDB cursor iteration failed');
 
-        if (pendingReject) {
-          const rej = pendingReject;
+        if (state.type === 'waiting') {
+          const { reject } = state;
 
-          pendingResolve = null;
-          pendingReject = null;
-          rej(err);
+          state = { type: 'done' };
+          reject(err);
         } else {
-          // Consumer hasn't called next() yet — buffer the error for the next next() call.
-          hasBufferedError = true;
-          bufferedError = err;
+          state = { error: err, type: 'error' };
         }
       };
 
@@ -273,67 +284,99 @@ function iterateStoreWithCursor<T extends Record<string, unknown>>(store: IDBObj
           return;
         }
 
-        const { value } = readWithTtl<T>(cursor.value as unknown);
+        const value = decode(cursor.value as unknown);
 
-        if (value !== undefined) {
-          // Advance the cursor eagerly BEFORE yielding so the IDB transaction
-          // stays open while the consumer processes the current value.
-          cursor.continue();
-          deliver({ done: false, value });
-        } else {
-          // Skip expired record — advance immediately without yielding.
-          cursor.continue();
-        }
+        // Advance eagerly BEFORE yielding to keep the IDB transaction alive.
+        cursor.continue();
+
+        if (value !== undefined) deliver({ done: false, value });
       };
 
       return {
         next(): Promise<IteratorResult<T>> {
-          if (hasBufferedError) {
-            const err = bufferedError;
+          if (state.type === 'error') {
+            const { error } = state;
 
-            hasBufferedError = false;
-            bufferedError = undefined;
+            state = { type: 'done' };
 
-            return Promise.reject(err);
+            return Promise.reject(error);
           }
 
-          if (buffered !== null) {
-            const result = buffered;
+          if (state.type === 'buffered') {
+            const { result } = state;
 
-            buffered = null;
+            state = result.done ? { type: 'done' } : { type: 'idle' };
 
             return Promise.resolve(result);
           }
 
-          return new Promise<IteratorResult<T>>((res, rej) => {
-            pendingResolve = res;
-            pendingReject = rej;
+          if (state.type === 'done') return Promise.resolve({ done: true, value: undefined });
+
+          return new Promise<IteratorResult<T>>((resolve, reject) => {
+            state = { reject, resolve, type: 'waiting' };
           });
         },
 
         return(value?: unknown): Promise<IteratorResult<T>> {
-          // Clean up pending waiters on early exit.
-          pendingResolve?.({ done: true, value: undefined });
-          pendingResolve = null;
-          pendingReject = null;
-          buffered = null;
-          hasBufferedError = false;
-          bufferedError = undefined;
+          if (state.type === 'waiting') state.resolve({ done: true, value: undefined });
+
+          state = { type: 'done' };
 
           return Promise.resolve({ done: true, value });
         },
 
         throw(err?: unknown): Promise<IteratorResult<T>> {
-          pendingReject?.(err);
-          pendingResolve = null;
-          pendingReject = null;
-          buffered = null;
-          hasBufferedError = false;
-          bufferedError = undefined;
+          if (state.type === 'waiting') state.reject(err);
+
+          state = { type: 'done' };
 
           return Promise.reject(err);
         },
       };
+    },
+  };
+}
+
+/**
+ * R3: Extracted IDB batch core — builds a StorageBackend that operates within
+ * an existing IDBTransaction, shared by all tables in the batch.
+ * Eliminates the duplicated `txCore` block that was previously inlined in `idbBatch`.
+ */
+function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
+  schema: S,
+  idbTx: IDBTransaction,
+  decode: <T extends Record<string, unknown>>(raw: unknown) => T | undefined,
+  encode: <T>(value: T, ttl?: TtlMs) => unknown,
+): StorageBackend<S, K> {
+  const storeOf = (table: K): IDBObjectStore => idbTx.objectStore(table);
+
+  return {
+    clear: async (table) => {
+      await idbReq(storeOf(table).clear());
+    },
+    count: async (table) => {
+      const all = await idbReq<unknown[]>(storeOf(table).getAll());
+
+      return all.filter((r) => decode(r) !== undefined).length;
+    },
+    delete: (table, key) => storeDelete<RecordOf<S, K>>(storeOf(table), key as IDBValidKey, decode),
+    deleteMany: (table, keys) => storeDeleteMany<RecordOf<S, K>>(storeOf(table), keys as IDBValidKey[], decode),
+    get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey, decode),
+    getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table), decode),
+    getByIndexRange: (table, field, range) =>
+      getAllFromStoreByIndex<RecordOf<S, typeof table>>(storeOf(table), field, range, decode),
+    getByKeyRange: (table, range) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(storeOf(table), range, decode),
+    getMany: (table, keys) =>
+      Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(storeOf(table), k as IDBValidKey, decode))),
+    has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey, decode),
+    pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table), { decode, encode }),
+    put(table, value, ttl) {
+      return storePutAt(storeOf(table), getRecordKey(schema, table, value) as IDBValidKey, value, encode, ttl);
+    },
+    putAll(table, values, ttl) {
+      return Promise.all(
+        values.map((v) => storePutAt(storeOf(table), getRecordKey(schema, table, v) as IDBValidKey, v, encode, ttl)),
+      ).then(() => undefined);
     },
   };
 }
@@ -350,11 +393,38 @@ export type IndexedDbAdapter<S extends AnySchema> = Adapter<S> & {
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): IndexedDbAdapter<S> {
-  const { logger, migrate, name, onMetrics, schema, signals, validators, version = 1 } = options;
+  const {
+    codec: userCodec = defaultCodec,
+    logger,
+    migrate,
+    name,
+    onMetrics,
+    schema,
+    signals,
+    validators,
+    version = 1,
+  } = options;
 
   if (!Number.isInteger(version) || version < 1) {
     throw new RangeError(`[vault] createIndexedDB version must be a positive integer, got ${String(version)}`);
   }
+
+  // F4: Codec-bound encode/decode used throughout the IDB adapter.
+  const decode = <T extends Record<string, unknown>>(raw: unknown): T | undefined => {
+    const stored = userCodec.decode<T>(raw);
+
+    if (!stored) return undefined;
+
+    if (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt) return undefined;
+
+    return stored.value;
+  };
+
+  const encode = <T>(value: T, ttl?: TtlMs): unknown => {
+    const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
+
+    return userCodec.encode(value, expiresAt);
+  };
 
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`vault:${name}`) : undefined;
 
@@ -366,10 +436,24 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   let connectPromise: Promise<void> | null = null;
   let disposed = false;
 
-  const createObjectStores = (target: IDBDatabase): void => {
-    for (const tableName of Object.keys(schema)) {
+  const createObjectStores = (target: IDBDatabase, tx: IDBTransaction): void => {
+    for (const [tableName, entry] of Object.entries(schema)) {
+      let store: IDBObjectStore;
+
       if (!target.objectStoreNames.contains(tableName)) {
-        target.createObjectStore(tableName);
+        store = target.createObjectStore(tableName);
+      } else {
+        store = tx.objectStore(tableName);
+      }
+
+      // F5: Create secondary indexes for fields declared via .index() on the table() builder.
+      // Stored format is { value: T, expiresAt?: number } so IDB keyPath is `value.<field>`.
+      const indexes = (entry as { indexes?: readonly string[] }).indexes ?? [];
+
+      for (const field of indexes) {
+        if (!store.indexNames.contains(field)) {
+          store.createIndex(field, `value.${field}`);
+        }
       }
     }
   };
@@ -404,7 +488,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
             }
           }
 
-          createObjectStores(target);
+          createObjectStores(target, tx);
         };
 
         request.onsuccess = () => {
@@ -468,110 +552,119 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const core: StorageBackend<S> = {
-    clear: (table) => withStore(table, 'readwrite', storeClear),
+    clear: (table) => withStore(table, 'readwrite', (s) => idbReq(s.clear()).then(() => undefined)),
 
-    count: (table) => withStore(table, 'readonly', (s) => countLiveRecordsInStore<RecordOf<S, typeof table>>(s)),
+    count: (table) =>
+      withStore(table, 'readonly', async (s) => {
+        // R2: drop countLiveRecordsInStore cursor. Use getAll and filter — O(n) for TTL tables,
+        // O(1) path handled by the count cache in buildAdapterOps.
+        const all = await idbReq<unknown[]>(s.getAll());
 
-    delete: (table, key) => withStore(table, 'readwrite', (s) => storeDelete(s, key as IDBValidKey)),
+        return all.filter((r) => decode(r) !== undefined).length;
+      }),
+
+    delete: (table, key) =>
+      withStore(table, 'readwrite', (s) => storeDelete<RecordOf<S, typeof table>>(s, key as IDBValidKey, decode)),
 
     deleteMany: (table, keys) =>
       keys.length === 0
         ? Promise.resolve(0)
-        : withStore(table, 'readwrite', (s) => storeDeleteMany(s, keys as IDBValidKey[])),
+        : withStore(table, 'readwrite', (s) =>
+            storeDeleteMany<RecordOf<S, typeof table>>(s, keys as IDBValidKey[], decode),
+          ),
 
-    dispose() {
+    async dispose(): Promise<void> {
       disposed = true;
+      channel?.close();
+
+      // F7: Wait for any in-progress connect before closing the DB to avoid
+      // "database connection is closing" errors on in-flight requests.
+      if (connectPromise) await connectPromise.catch(() => {});
+
       db?.close();
       db = null;
       connectPromise = null;
-      channel?.close();
     },
 
     get: (table, key) =>
-      withStore(table, 'readonly', (s) => storeGet<RecordOf<S, typeof table>>(s, key as IDBValidKey)),
+      withStore(table, 'readonly', (s) => storeGet<RecordOf<S, typeof table>>(s, key as IDBValidKey, decode)),
 
-    getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s)),
+    getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s, decode)),
+
+    // R1: Fast key-only fetch via store.getAllKeys(). For tables with schema-level TTL
+    // we fall back to full record fetch to correctly exclude expired entries.
+    getAllKeys: (table) =>
+      withStore(table, 'readonly', async (s) => {
+        if (schema[table].defaultTtl) {
+          // TTL table: must check each record for expiry — keys() still O(n).
+          const records = await getAllFromStore<RecordOf<S, typeof table>>(s, decode);
+          const keyField = schema[table].key;
+
+          return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
+        }
+
+        // Non-TTL table: store.getAllKeys() is O(1) IDB engine call.
+        return idbReq<IDBValidKey[]>(s.getAllKeys()).then((keys) => keys as KeyOf<S, typeof table>[]);
+      }),
+
+    getByIndexRange: (table, field, range) =>
+      withStore(table, 'readonly', (s) => getAllFromStoreByIndex<RecordOf<S, typeof table>>(s, field, range, decode)),
 
     getByKeyRange: (table, range) =>
-      withStore(table, 'readonly', (s) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(s, range)),
+      withStore(table, 'readonly', (s) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(s, range, decode)),
 
     getMany: (table, keys) =>
       keys.length === 0
         ? Promise.resolve([])
         : withStore(table, 'readonly', (s) =>
-            Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(s, k as IDBValidKey))),
+            Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(s, k as IDBValidKey, decode))),
           ),
 
     getRawCount: (table) => withStore(table, 'readonly', (s) => idbReq(s.count())),
 
     has: (table, key) =>
-      withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, key as IDBValidKey)),
+      withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, key as IDBValidKey, decode)),
 
     async pruneAllExpired() {
       const idb = await requireDb();
       const tableNames = Object.keys(schema);
       const tx = idb.transaction(tableNames, 'readwrite');
       const results = await runIdbTx(tx, `${name}/pruneAll`, () =>
-        Promise.all(tableNames.map(async (t) => [t, await pruneExpiredInStore(tx.objectStore(t))] as const)),
+        Promise.all(tableNames.map(async (t) => [t, await pruneExpiredInStore(tx.objectStore(t), userCodec)] as const)),
       );
 
       return Object.fromEntries(results);
     },
 
-    pruneExpiredInTable: (table) => withStore(table, 'readwrite', pruneExpiredInStore),
+    pruneExpiredInTable: (table) => withStore(table, 'readwrite', (s) => pruneExpiredInStore(s, userCodec)),
 
     put(table, value, ttl) {
       const key = getRecordKey(schema, table, value) as IDBValidKey;
 
-      return withStore(table, 'readwrite', (s) => storePutAt(s, key, value, ttl));
+      return withStore(table, 'readwrite', (s) => storePutAt(s, key, value, encode, ttl));
     },
 
     putAll(table, values, ttl) {
       return withStore(table, 'readwrite', (s) =>
-        Promise.all(values.map((v) => storePutAt(s, getRecordKey(schema, table, v) as IDBValidKey, v, ttl))).then(
-          () => undefined,
-        ),
+        Promise.all(
+          values.map((v) => storePutAt(s, getRecordKey(schema, table, v) as IDBValidKey, v, encode, ttl)),
+        ).then(() => undefined),
       );
     },
   };
 
-  /* IDB-specific batch: runs inside a real IDB transaction (atomic) */
-  const idbBatch = async <K extends keyof S, R>(
+  const idbBatch = async <K extends keyof S & string, R>(
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
     notifyMutation: (table: K) => void,
     validateFn: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
     const idb = await requireDb();
-    const idbTx = idb.transaction(tables.map(String), 'readwrite');
-    const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
+    const idbTx = idb.transaction([...tables] as string[], 'readwrite');
     const dirtyTables = new Set<K>();
 
-    const txCore: StorageBackend<S, K> = {
-      clear: async (table) => {
-        await idbReq(storeOf(table).clear());
-      },
-      count: (table) => countLiveRecordsInStore<RecordOf<S, typeof table>>(storeOf(table)),
-      delete: (table, key) => storeDelete(storeOf(table), key as IDBValidKey),
-      deleteMany: (table, keys) => storeDeleteMany(storeOf(table), keys as IDBValidKey[]),
-      get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
-      getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table)),
-      getByKeyRange: (table, range) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(storeOf(table), range),
-      getMany: (table, keys) =>
-        Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(storeOf(table), k as IDBValidKey))),
-      has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
-      pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table)),
-      put(table, value, ttl) {
-        return storePutAt(storeOf(table), getRecordKey(schema, table, value) as IDBValidKey, value, ttl);
-      },
-      putAll(table, values, ttl) {
-        return Promise.all(
-          values.map((v) => storePutAt(storeOf(table), getRecordKey(schema, table, v) as IDBValidKey, v, ttl)),
-        ).then(() => undefined);
-      },
-    };
-
-    const scope = new Set(tables.map(String));
+    const txCore = buildIdbBatchCore<S, K>(schema, idbTx, decode, encode);
+    const scope = new Set<string>(tables);
     const tx = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn, scope);
     const result = await runIdbTx(idbTx, name, () => fn(tx));
 
@@ -598,7 +691,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
         if (!tableName) return;
 
-        notify(tableName as keyof S);
+        notify(tableName as keyof S & string);
       };
 
       return () => {
@@ -633,21 +726,20 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         const tx = idb.transaction(String(table), 'readonly');
         const store = tx.objectStore(String(table));
 
-        return iterateStoreWithCursor<RecordOf<S, K>>(store);
+        return iterateStoreWithCursor<RecordOf<S, K>>(store, decode as (raw: unknown) => RecordOf<S, K> | undefined);
       };
 
-      // Return an AsyncIterable that resolves the inner iterable on first iteration.
+      let inner: AsyncIterator<RecordOf<S, K>> | undefined;
+
+      const initInner = (): Promise<AsyncIterator<RecordOf<S, K>>> =>
+        getIterable().then((iterable) => {
+          inner = iterable[Symbol.asyncIterator]();
+
+          return inner;
+        });
+
       return {
-        [Symbol.asyncIterator]() {
-          let inner: AsyncIterator<RecordOf<S, K>> | null = null;
-
-          const initInner = (): Promise<AsyncIterator<RecordOf<S, K>>> =>
-            getIterable().then((iterable) => {
-              inner = iterable[Symbol.asyncIterator]();
-
-              return inner;
-            });
-
+        [Symbol.asyncIterator](): AsyncIterator<RecordOf<S, K>> {
           return {
             next(): Promise<IteratorResult<RecordOf<S, K>>> {
               // Sync check avoids an extra Promise allocation on every iteration after the first.

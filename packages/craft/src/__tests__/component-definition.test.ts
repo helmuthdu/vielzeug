@@ -92,7 +92,7 @@ describe('component definition and rendering', () => {
     it('creates a shadow root', async () => {
       const { shadow } = await mount(() => html`<div>Shadow Content</div>`);
 
-      expect(shadow.querySelector('div')?.textContent).toBe('Shadow Content');
+      expect(shadow?.querySelector('div')?.textContent).toBe('Shadow Content');
     });
 
     it('handles empty html results', async () => {

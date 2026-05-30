@@ -1,7 +1,8 @@
+import { anySignal, exponentialBackoff, getOrCreate, sleep } from '@vielzeug/arsenal';
+
 import type { Params } from './url';
 
 import { HttpError } from './errors';
-import { sleepWithAbort, toError } from './retry';
 import { buildRequestInit } from './serialize';
 import {
   buildTimeoutSignal,
@@ -28,14 +29,14 @@ export type StreamRequestConfig<P extends string = string> = {
 };
 
 export type ReconnectOptions = {
-  /** Total reconnect attempts after the first failure. Defaults to `5`. */
-  maxAttempts?: number;
   /**
    * Delay between reconnect attempts in ms, or a zero-based function where
    * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
    * Defaults to full-jitter exponential backoff: `[0, min(1s × 2ⁿ, 30s)]`.
    */
-  retryDelay?: number | ((attempt: number) => number);
+  delay?: number | ((attempt: number) => number);
+  /** Total reconnect attempts after the first failure. Defaults to `5`. */
+  times?: number;
 };
 
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
@@ -67,12 +68,8 @@ export type SseSource<TEvents extends Record<string, unknown> = Record<string, s
   on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void;
 };
 
-const DEFAULT_MAX_RECONNECT_DELAY = 30_000;
-
 function defaultReconnectDelay(attempt: number): number {
-  const cap = Math.min(1000 * Math.pow(2, attempt), DEFAULT_MAX_RECONNECT_DELAY);
-
-  return Math.random() * cap;
+  return Math.random() * exponentialBackoff(attempt);
 }
 
 /** Parse a raw SSE data string: try JSON, fall back to raw string. */
@@ -108,7 +105,7 @@ async function openStreamWith(
   // Normalize once — error paths and RequestInit both receive the canonical form.
   const method = config.method.toUpperCase();
   const full = buildUrl(transport.baseUrl, url, config.params, config.query);
-  const combined = config.extSignal ? AbortSignal.any([config.extSignal, ac.signal]) : ac.signal;
+  const combined = anySignal(config.extSignal, ac.signal) ?? ac.signal;
   // Streaming connections are long-lived — default to Infinity so the transport's
   // REST default (30s) does not cut off streams prematurely.
   const signal = buildTimeoutSignal(config.timeout ?? Number.POSITIVE_INFINITY, combined);
@@ -188,10 +185,9 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     let closed = false;
     let lastEventId = '';
 
-    const reconnectOpts: ReconnectOptions =
-      reconnect === true ? {} : reconnect === false ? { maxAttempts: 0 } : reconnect;
-    const maxReconnects = reconnectOpts.maxAttempts ?? (reconnect ? 5 : 0);
-    const reconnectDelay = reconnectOpts.retryDelay ?? defaultReconnectDelay;
+    const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
+    const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
+    const reconnectDelay = reconnectOpts.delay ?? defaultReconnectDelay;
 
     function dispatchEvent(event: string, rawData: string): void {
       const handlers = listeners.get(event);
@@ -288,14 +284,14 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
           try {
             await connect();
             // Clean server-side close — falls through to reconnect logic below.
-            // The attempt counter is intentionally NOT reset here: maxAttempts
+            // The attempt counter is intentionally NOT reset here: `times`
             // bounds total reconnects regardless of whether the close was clean or an
             // error, preventing infinite reconnection against servers that always close
             // after a response window (e.g. SSE keepalive patterns).
           } catch (err) {
             if (closed || transport.disposed || ac.signal.aborted) break;
 
-            connectError = toError(err);
+            connectError = err instanceof Error ? err : new Error(String(err));
           }
 
           if (closed || transport.disposed || ac.signal.aborted) break;
@@ -318,7 +314,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
           const delay = typeof reconnectDelay === 'function' ? reconnectDelay(attempt) : reconnectDelay;
 
           attempt++;
-          await sleepWithAbort(delay, ac.signal).catch(() => {});
+          await sleep(delay, ac.signal).catch(() => {});
         }
       } finally {
         untrack();
@@ -328,7 +324,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     // Surface unexpected programming errors (not network failures) via onError
     run().catch((err) => {
       if (!closed && !transport.disposed) {
-        onError?.(toError(err));
+        onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     });
 
@@ -343,9 +339,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
         // After close(), return a no-op to avoid silent dead-listener bugs
         if (closed) return () => {};
 
-        if (!listeners.has(event)) listeners.set(event, new Set());
-
-        const set = listeners.get(event)!;
+        const set = getOrCreate(listeners, event, () => new Set<(data: unknown) => void>());
 
         set.add(handler as (data: unknown) => void);
 

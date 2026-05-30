@@ -1,12 +1,7 @@
-import { assert } from '../function/assert';
-import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-
 /**
  * Picks up to n unique random values from an array.
  */
 export function sample<T>(array: T[], n: number): T[] {
-  assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
   const count = Math.max(0, Math.min(array.length, Math.floor(n)));
 
   if (count === 0) return [];

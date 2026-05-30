@@ -168,3 +168,108 @@ describe('pipeEvents - teardown', () => {
     source.dispose();
   });
 });
+
+describe('pipeEvents - cross-bus type piping', () => {
+  it('pipes shared events from a wider source type to a narrower target type', () => {
+    type Source = { 'auth:login': { userId: string }; 'ui:click': string };
+    type Target = { 'auth:login': { userId: string } };
+
+    const source = createBus<Source>();
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('auth:login', listener);
+    pipeEvents(source, target, ['auth:login']);
+
+    source.emit('auth:login', { userId: '42' });
+
+    expect(listener).toHaveBeenCalledWith({ userId: '42' });
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('does not require source and target to have identical event maps', () => {
+    type Source = { internal: string; tick: number };
+    type Target = { tick: number };
+
+    const source = createBus<Source>();
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('tick', listener);
+    pipeEvents(source, target, ['tick']);
+
+    source.emit('tick', 99);
+
+    expect(listener).toHaveBeenCalledWith(99);
+
+    source.dispose();
+    target.dispose();
+  });
+});
+
+describe('pipeEvents - event remapping', () => {
+  it('forwards events under a different name on the target bus', () => {
+    type Source = { 'auth:login': { userId: string } };
+    type Target = { 'user:authenticated': { userId: string } };
+
+    const source = createBus<Source>();
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('user:authenticated', listener);
+    pipeEvents(source, target, [{ from: 'auth:login', to: 'user:authenticated' }]);
+
+    source.emit('auth:login', { userId: '42' });
+
+    expect(listener).toHaveBeenCalledWith({ userId: '42' });
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('supports mixing same-name and renamed entries', () => {
+    type Source = { 'auth:login': { userId: string }; 'auth:logout': void };
+    type Target = { 'auth:login': { userId: string }; 'user:signed-out': void };
+
+    const source = createBus<Source>();
+    const target = createBus<Target>();
+    const onLogin = vi.fn();
+    const onSignedOut = vi.fn();
+
+    target.on('auth:login', onLogin);
+    target.on('user:signed-out', onSignedOut);
+
+    pipeEvents(source, target, ['auth:login', { from: 'auth:logout', to: 'user:signed-out' }]);
+
+    source.emit('auth:login', { userId: '1' });
+    source.emit('auth:logout');
+
+    expect(onLogin).toHaveBeenCalledWith({ userId: '1' });
+    expect(onSignedOut).toHaveBeenCalledOnce();
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('renamed pipe tears down when target disposes', () => {
+    type Source = { 'auth:login': { userId: string } };
+    type Target = { 'user:authenticated': { userId: string } };
+
+    const source = createBus<Source>();
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('user:authenticated', listener);
+    pipeEvents(source, target, [{ from: 'auth:login', to: 'user:authenticated' }]);
+
+    source.emit('auth:login', { userId: '1' });
+    target.dispose();
+    source.emit('auth:login', { userId: '2' });
+
+    expect(listener).toHaveBeenCalledOnce();
+
+    source.dispose();
+  });
+});

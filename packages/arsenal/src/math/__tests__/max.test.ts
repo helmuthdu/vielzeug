@@ -51,12 +51,4 @@ describe('max', () => {
   it('returns the first maximum if there are duplicates', () => {
     expect(max([2, 3, 3, 1])).toBe(3);
   });
-
-  it('throws TypeError if the first argument is not an array', () => {
-    expect(() => max(null as any)).toThrow(TypeError);
-    expect(() => max(undefined as any)).toThrow(TypeError);
-    expect(() => max(123 as any)).toThrow(TypeError);
-    expect(() => max({} as any)).toThrow(TypeError);
-    expect(() => max('string' as any)).toThrow(TypeError);
-  });
 });

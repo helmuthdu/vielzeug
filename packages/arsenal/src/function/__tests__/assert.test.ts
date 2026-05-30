@@ -1,4 +1,4 @@
-import { assert, assertAll } from '../assert';
+import { assert } from '../assert';
 
 describe('assert', () => {
   afterEach(() => {
@@ -54,10 +54,5 @@ describe('assert', () => {
     class CustomError extends Error {}
 
     expect(() => assert(false, 'Custom error', { type: CustomError as any })).toThrowError(CustomError);
-  });
-
-  it('should handle multiple conditions', () => {
-    expect(() => assertAll([true, true])).not.toThrow();
-    expect(() => assertAll([true, false], 'One condition failed')).toThrowError('One condition failed');
   });
 });

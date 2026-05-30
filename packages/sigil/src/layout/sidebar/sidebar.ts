@@ -185,7 +185,8 @@ export type BitSidebarProps = {
  * <bit-sidebar collapsible responsive="(max-width: 768px)">...</bit-sidebar>
  * ```
  */
-export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sidebar', {
+export const SIDEBAR_TAG = 'bit-sidebar' as const;
+define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
   props: {
     'bottom-nav-at': prop.string(),
     collapsed: prop.bool(false),
@@ -542,7 +543,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
         observer.disconnect();
         mediaCleanup?.();
         bottomNavCleanup?.();
-        stopResizeEffect?.();
+        stopResizeEffect?.dispose();
 
         for (const itemObserver of itemObservers.values()) {
           itemObserver.disconnect();
@@ -668,7 +669,8 @@ export type BitSidebarGroupProps = {
  * </bit-sidebar-group>
  * ```
  */
-export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEvents>('bit-sidebar-group', {
+export const SIDEBAR_GROUP_TAG = 'bit-sidebar-group' as const;
+define<BitSidebarGroupProps, BitSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
   props: {
     collapsible: prop.bool(false),
     'default-open': prop.bool(true),
@@ -809,7 +811,8 @@ export type BitSidebarItemProps = {
  * </bit-sidebar-item>
  * ```
  */
-export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', {
+export const SIDEBAR_ITEM_TAG = 'bit-sidebar-item' as const;
+define<BitSidebarItemProps>(SIDEBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     disabled: prop.bool(false),

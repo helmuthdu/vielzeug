@@ -90,7 +90,8 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
  * <bit-textarea></bit-textarea>
  * ```
  */
-export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-textarea', {
+export const TEXTAREA_TAG = 'bit-textarea' as const;
+define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -155,7 +156,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
-      const syncLayout = effect(() => {
+      const layoutEffect = effect(() => {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
 
@@ -166,7 +167,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
 
       return () => {
         unwireEl();
-        syncLayout();
+        layoutEffect.dispose();
       };
     });
 

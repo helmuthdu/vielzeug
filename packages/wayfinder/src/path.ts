@@ -1,5 +1,5 @@
-import type { RouteMatcher, RouteRecord } from './router-internal';
-import type { QueryParams, ResolvedQueryParams, RouteParams, RouteTable } from './types';
+import type { RouteMatcher, RouteRecord } from './types';
+import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteParams } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -94,9 +94,9 @@ export function compilePathMatcher(path: string): RouteMatcher {
   };
 }
 
-export function matchRecord<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
+export function matchRecord<TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  record: RouteRecord<TRoutes, TMeta, TComponent>,
+  record: RouteRecord<TMeta, TComponent>,
 ): RouteParams | null {
   const match = record.matcher.pattern.exec(pathname);
 
@@ -113,10 +113,10 @@ export function matchRecord<TRoutes extends RouteTable = RouteTable, TMeta = unk
   return params;
 }
 
-export function matchRouteFor<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
+export function matchRouteFor<TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  records: readonly RouteRecord<TRoutes, TMeta, TComponent>[],
-): { params: RouteParams; record?: RouteRecord<TRoutes, TMeta, TComponent> } {
+  records: readonly RouteRecord<TMeta, TComponent>[],
+): { params: RouteParams; record?: RouteRecord<TMeta, TComponent> } {
   for (const record of records) {
     const params = matchRecord(pathname, record);
 
@@ -126,9 +126,9 @@ export function matchRouteFor<TRoutes extends RouteTable = RouteTable, TMeta = u
   return { params: {} };
 }
 
-export function matchesPrefix<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown>(
+export function matchesPrefix<TMeta = unknown, TComponent = unknown>(
   pathname: string,
-  record: RouteRecord<TRoutes, TMeta, TComponent>,
+  record: RouteRecord<TMeta, TComponent>,
 ): boolean {
   return record.matcher.prefixPattern.test(pathname);
 }
@@ -186,4 +186,51 @@ export function buildUrl(base: string, pattern: string, params: RouteParams = {}
   }
 
   return joinPaths(base, path);
+}
+
+// ─── Location helpers (formerly in resolve.ts) ────────────────────────────────
+
+export function stripBase(pathname: string, base = '/'): string {
+  const normalizedPath = normalizePath(pathname);
+  const normalizedBase = normalizePath(base);
+
+  if (normalizedBase === '/') return normalizedPath;
+
+  if (normalizedPath === normalizedBase) return '/';
+
+  const prefix = `${normalizedBase}/`;
+
+  return normalizedPath.startsWith(prefix)
+    ? normalizePath(normalizedPath.slice(normalizedBase.length))
+    : normalizedPath;
+}
+
+export function readLocation(
+  base: string,
+  history: { location: { hash: string; pathname: string; search: string; state: unknown } },
+): RouteLocation {
+  return {
+    hash: history.location.hash.replace(/^#/, ''),
+    historyState: history.location.state,
+    pathname: stripBase(history.location.pathname || '/', base),
+    query: parseQuery(history.location.search || ''),
+  };
+}
+
+export function buildPreloadKey(base: string, path: string, params: RouteParams, query?: QueryParams): string {
+  const url = buildUrl(base, path, params);
+
+  if (!query || Object.keys(query).length === 0) return url;
+
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (Array.isArray(value)) {
+      value.forEach((v) => search.append(key, v));
+    } else {
+      search.set(key, value);
+    }
+  }
+
+  return `${url}?${search.toString()}`;
 }

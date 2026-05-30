@@ -30,14 +30,8 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
     return { const: this.value };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'literal',
-      value: this.value,
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'literal', value: this.value };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
@@ -51,19 +45,4 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
 
     return this.value === other.value;
   }
-}
-
-/* -------------------- Raw-or-schema helpers (internal only) -------------------- */
-
-import type { AnySchema } from '../core';
-
-export type LiteralValue = string | number | boolean | null | undefined;
-export type RawOrSchema = AnySchema | LiteralValue;
-export type NormalizeItem<T> = T extends AnySchema ? T : T extends LiteralValue ? LiteralSchema<T> : never;
-export type NormalizeItems<T extends readonly RawOrSchema[]> = { readonly [K in keyof T]: NormalizeItem<T[K]> };
-
-export function normalizeToSchemas<T extends readonly RawOrSchema[]>(items: T): NormalizeItems<T> {
-  return items.map((item) =>
-    item instanceof Schema ? item : new LiteralSchema(item as LiteralValue),
-  ) as unknown as NormalizeItems<T>;
 }

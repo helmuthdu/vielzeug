@@ -1,13 +1,17 @@
-import { syncedSignal } from '@vielzeug/craft';
+import { assert } from '@vielzeug/arsenal';
 import { type ReadonlySignal, type Signal, computed, signal } from '@vielzeug/ripple';
 
-import type { ValidationTrigger } from './field-base';
-
-import { createA11yHost } from './a11y-host';
-import { devAssert, HeadlessError } from './dev';
-import { createErrorHelperState, createFieldCore, type ErrorHelperState, type FieldCoreOptions } from './field-base';
+import { createReactiveBindings } from './a11y-host';
+import {
+  createErrorHelperState,
+  createField,
+  type ErrorHelperState,
+  type FieldOptions,
+  type ValidationTrigger,
+} from './field-base';
 import { createStableId } from './id';
 import { createInteraction } from './keyboard';
+import { syncedSignal } from './synced-signal';
 
 // ── Checkable control ─────────────────────────────────────────────────────────
 
@@ -17,7 +21,7 @@ export type CheckableChangePayload = {
   value: string;
 };
 
-export type CheckableOptions = FieldCoreOptions & {
+export type CheckableOptions = Pick<FieldOptions, 'disabled' | 'prefix' | 'validateOn'> & {
   checked: ReadonlySignal<boolean | undefined>;
   clearIndeterminateFirst?: boolean;
   error?: ReadonlySignal<string | undefined>;
@@ -75,7 +79,7 @@ export type CheckableHandle = {
 };
 
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
-  devAssert(!!options.host, HeadlessError.MISSING_HOST, 'createCheckable: host element is required');
+  assert(!!options.host, '[sigil] createCheckable: host element is required');
 
   const [checked, stopCheckedSync] = syncedSignal(options.checked, (v) => Boolean(v));
   const [indeterminate, stopIndeterminateSync] = options.indeterminate
@@ -88,7 +92,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
 
   const assistive = createErrorHelperState({ error: options.error, helper: options.helper });
 
-  const core = createFieldCore(options);
+  const { assistiveId, bindFormField, disabled, fieldId, triggerValidation } = createField(options);
 
   const createPayload = (event: Event): CheckableChangePayload => ({
     checked: checked.value,
@@ -97,7 +101,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   });
 
   const toggle = (event: Event): void => {
-    if (core.disabled.value) return;
+    if (disabled.value) return;
 
     if (options.group) {
       indeterminate.value = false;
@@ -132,7 +136,6 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   };
 
   const labelId = createStableId('label');
-  const assistiveId = core.assistiveId;
 
   // Set the ARIA role once — it is static for a given checkable instance.
   options.host.setAttribute('role', options.role);
@@ -140,12 +143,12 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   // Unified reactive ARIA sync + helper ID stamping via createA11yHost.
   // Re-runs whenever any tracked signal changes. _labelEl and _helperEl are
   // reactive so their effects fire automatically when the elements mount.
-  const { stop: stopAriaEffect } = createA11yHost(options.host, {
+  const { stop: stopAriaEffect } = createReactiveBindings(options.host, {
     aria: {
       'aria-checked': () =>
         options.role === 'checkbox' && indeterminate.value ? 'mixed' : checked.value ? 'true' : 'false',
       'aria-describedby': () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : undefined),
-      'aria-disabled': () => (core.disabled.value ? 'true' : undefined),
+      'aria-disabled': () => (disabled.value ? 'true' : undefined),
       'aria-invalid': () => (assistive.value.errorText ? 'true' : undefined),
       'aria-labelledby': () => {
         const el = _labelEl.value;
@@ -174,17 +177,19 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   options.signal?.addEventListener('abort', cleanup, { once: true });
 
   const interaction = createInteraction({
-    disabled: () => core.disabled.value,
+    disabled: () => disabled.value,
     onPress: (event) => toggle(event),
   });
 
   return {
-    ...core,
     assistive,
     assistiveId,
+    bindFormField,
     checkableFormValue,
     checked,
     cleanup,
+    disabled,
+    fieldId,
     handleClick: interaction.handleClick,
     handleKeydown: interaction.handleKeydown,
     indeterminate,
@@ -192,5 +197,6 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     setHelperEl,
     setLabelEl,
     toggle,
+    triggerValidation,
   };
 };

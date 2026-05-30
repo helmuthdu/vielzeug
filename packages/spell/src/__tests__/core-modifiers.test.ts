@@ -133,21 +133,11 @@ describe('metadata and type-level helpers', () => {
   it('describe() stores and preserves description metadata through transform()', () => {
     const schema = s
       .string()
-      .describe('raw input')
+      .label('raw input')
       .transform((s) => s.toUpperCase());
 
     expect(schema.description).toBe('raw input');
     expect(schema.parse('a')).toBe('A');
-  });
-
-  it('brand() affects type-level output while preserving runtime validation', () => {
-    const UserId = s.string().brand<'UserId'>();
-
-    type UserId = Infer<typeof UserId>;
-
-    const id: UserId = UserId.parse('abc');
-
-    expect(id).toBe('abc');
   });
 
   it('Infer infers object output types', () => {

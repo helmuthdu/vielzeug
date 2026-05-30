@@ -89,7 +89,8 @@ function buildPageRange(
  * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>
  * ```
  */
-export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('bit-pagination', {
+export const PAGINATION_TAG = 'bit-pagination' as const;
+define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

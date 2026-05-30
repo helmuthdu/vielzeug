@@ -109,7 +109,7 @@ typedWorker.dispose();
 - **Timeout support** — reject tasks that exceed a configurable time limit
 - **AbortSignal** — cancel queued tasks with the standard `AbortController` API
 - **Transferables** — move large buffers to the Worker without a structured-clone copy
-- **Warmup** — pre-initialize worker slots with `warmup()` to eliminate first-task latency
+- **Prime** — pre-initialize worker slots with `await pool.prime()` to eliminate first-task latency
 - **Metrics** — `active`, `queued`, `utilization`, and `completed` counters for observability
 - **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
 - **`WorkerError` hierarchy** — single `instanceof WorkerError` covers all error types

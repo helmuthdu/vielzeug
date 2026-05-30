@@ -69,15 +69,15 @@ export interface MiddlewareState {
 /**
  * Signal that the middleware pipeline should re-run.
  *
- * - `true` — restart with the current rects and placement.
- * - Object form — optionally update placement and/or re-measure rects before restarting.
+ * Use `{}` for a bare restart (same rects and placement). Optionally:
+ * - `rects: 'remeasure'` — re-read both rects from the DOM before restarting.
+ * - `rects: { floating, reference }` — restart using the provided rects directly.
+ * - `placement` — override the placement for the next pass.
  */
-export type MiddlewareReset =
-  | true
-  | {
-      placement?: Placement;
-      rects?: true | MiddlewareState['rects'];
-    };
+export type MiddlewareReset = {
+  placement?: Placement;
+  rects?: 'remeasure' | MiddlewareState['rects'];
+};
 
 export interface MiddlewareResult {
   x?: number;
@@ -103,9 +103,33 @@ export interface ComputePositionOptions {
   middleware?: Array<Middleware | null | undefined | false>;
   /** Initial placement. Defaults to `'bottom'`. */
   placement?: Placement;
+  /**
+   * The containing block element for `position: absolute` floating elements.
+   * Provide the floating element's `offsetParent` to convert viewport-relative
+   * coordinates to containing-block-relative coordinates.
+   *
+   * Without this option, coordinates are viewport-relative (correct for `position: fixed`).
+   */
+  containingBlock?: Element | null;
 }
 
-export type Cleanup = () => void;
+/**
+ * Handle returned by `float()`.
+ *
+ * - `cleanup()` — removes all event listeners and observers. Always call this on teardown.
+ * - `cssAnchor` — `true` when the browser is handling positioning natively via CSS Anchor
+ *   Positioning; `getPosition()` always returns `null` in this mode.
+ * - `update()` — manually trigger a position recalculation.
+ * - `getPosition()` — returns the most recently computed position, or `null` before the
+ *   first calculation completes (always `null` when `cssAnchor` is `true`).
+ */
+export interface FloatHandle {
+  /** `true` when position is managed natively by CSS Anchor Positioning (JS data unavailable). */
+  readonly cssAnchor: boolean;
+  cleanup(): void;
+  getPosition(): ComputePositionResult | null;
+  update(): void;
+}
 
 export interface DetectOverflowOptions {
   /** Boundary element or rect. Defaults to the visual viewport. */

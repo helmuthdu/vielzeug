@@ -7,14 +7,18 @@ description: Complete API reference for @vielzeug/herald.
 
 ## API At a Glance
 
-| Symbol             | Purpose                                 | Execution mode | Common gotcha                                 |
-| ------------------ | --------------------------------------- | -------------- | --------------------------------------------- |
-| `createBus()`      | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
-| `pipeEvents()`     | Forward events from one bus to another  | Sync           | Teardown is automatic when the target disposes |
-| `bus.wait()`       | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
-| `bus.waitAny()`    | Await the first event from many         | Async          | Result is a discriminated union by event key  |
-| `bus.eventNames()` | Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
-| `createTestBus()`  | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
+| Symbol                 | Purpose                                              | Execution mode | Common gotcha                                   |
+| ---------------------- | ---------------------------------------------------- | -------------- | ----------------------------------------------- |
+| `createBus()`          | Create a typed event bus instance                    | Sync           | Use a strict event map to avoid payload drift   |
+| `createBehaviorBus()`  | Create a bus that replays the last value to new subs | Sync           | `events()` and `wait()` do not replay           |
+| `pipeEvents()`         | Forward events from one bus to another               | Sync           | Supports cross-type buses and event renaming    |
+| `bus.on()`             | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe           |
+| `bus.pipe()`           | Instance-level event forwarding (no import needed)   | Sync           | Same as `pipeEvents` but attached to the source |
+| `bus.wait()`           | Await a one-time event occurrence                    | Async          | Handle timeout/cancellation for long waits      |
+| `bus.waitAny()`        | Await the first event from many                      | Async          | Result is a discriminated union by event key    |
+| `bus.onAny()`          | Subscribe to all events                              | Sync           | Fires after event-specific listeners            |
+| `bus.eventNames()`     | Inspect events with active listeners                 | Sync           | Snapshot reflects current subscriptions         |
+| `createTestBus()`      | Create deterministic test bus utilities              | Sync           | Reset emitted events between test cases         |
 
 ## Package Entry Points
 
@@ -34,14 +38,43 @@ type Listener<T> = (payload: T) => void;
 type Unsubscribe = () => void;
 ```
 
-`BusOptions<T>` — options object passed to `createBus()`:
+`BusOptions<T>` — options object passed to `createBus()` and `createBehaviorBus()`:
 
 ```ts
+type SubscribeOptions = {
+  once?: boolean;    // auto-remove after first invocation
+  signal?: AbortSignal; // auto-remove when signal aborts
+};
+
+type EmissionErrorContext<T extends EventMap = EventMap> = {
+  err: unknown;        // the thrown error
+  event: EventKey<T>;  // event key that triggered the failing listener
+  payload: unknown;    // payload passed to the listener
+  timestamp: number;   // ms since epoch at emit() call time
+};
+
 type BusOptions<T extends EventMap> = {
   debug?: boolean;
-  onDispatch?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
-  onError?: <K extends EventKey<T>>(err: unknown, event: K, payload: T[K]) => void;
+  maxListeners?: number;
+  onDispatch?: (event: EventKey<T>, payload: unknown) => void;
+  onError?: (context: EmissionErrorContext<T>) => void;
 };
+```
+
+`PipeableKey<S, T>` — keys shared between two event maps with compatible payload types:
+
+```ts
+type PipeableKey<S extends EventMap, T extends EventMap> = {
+  [K in EventKey<S> & EventKey<T>]: S[K] extends T[K] ? K : never;
+}[EventKey<S> & EventKey<T>];
+```
+
+`PipeEntry<S, T>` — a single entry for `pipeEvents`, either a key string or a `{ from, to }` rename:
+
+```ts
+type PipeEntry<S extends EventMap, T extends EventMap> =
+  | PipeableKey<S, T>
+  | { from: EventKey<S>; to: EventKey<T> };
 ```
 
 `WaitAnyResult<T, K>` — discriminated-union result returned by `waitAny()`:
@@ -62,16 +95,35 @@ type Bus<T extends EventMap> = {
   dispose(): void;
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
   eventNames(): EventKey<T>[];
-  events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): AsyncGenerator<T[K]>;
+  events<K extends EventKey<T>>(
+    event: K,
+    options?: { maxBuffer?: number; signal?: AbortSignal },
+  ): AsyncGenerator<T[K]> & AsyncDisposable;
   listenerCount(event?: EventKey<T>): number;
-  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
+  onAny(listener: (event: EventKey<T>, payload: unknown) => void, signal?: AbortSignal): Unsubscribe;
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  pipe<U extends EventMap>(
+    target: Bus<U>,
+    entries: readonly [PipeEntry<T, U>, ...PipeEntry<T, U>[]],
+    signal?: AbortSignal,
+  ): Unsubscribe;
   removeAllListeners(event?: EventKey<T>): void;
   wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     events: K,
     signal?: AbortSignal,
   ): Promise<WaitAnyResult<T, K>>;
+};
+```
+
+`BehaviorBus<T>` — extends `Bus<T>` with last-value replay. Full docs in the [`createBehaviorBus()`](#createbehaviorbus) section.
+
+```ts
+type BehaviorInitial<T extends EventMap> = { [K in EventKey<T>]?: T[K] };
+
+type BehaviorBus<T extends EventMap> = Bus<T> & {
+  current<K extends EventKey<T>>(event: K): T[K] | undefined;
 };
 ```
 
@@ -107,7 +159,7 @@ type AppEvents = {
 const bus = createBus<AppEvents>({
   debug: true, // log subscribe/emit/dispose to console.debug
   onDispatch: (event, payload) => console.debug('[bus]', event, payload),
-  onError: (err, event, payload) => console.error('[bus] error in', event, err, payload),
+  onError: ({ err, event, payload }) => console.error('[bus] error in', event, err, payload),
 });
 ```
 
@@ -135,7 +187,7 @@ An `AbortSignal` that fires when the bus is disposed. Use it to tie external lif
 
 ```ts
 // Automatically unsubscribe from another bus when this bus is torn down
-otherBus.on('count', syncState, bus.disposalSignal);
+otherBus.on('count', syncState, { signal: bus.disposalSignal });
 
 // Cancel a fetch when the bus is disposed
 fetch('/api/stream', { signal: bus.disposalSignal });
@@ -150,19 +202,19 @@ The signal is already aborted when `bus.disposed` is `true`.
 
 ### `bus.on()`
 
-Signature: `on(event, listener, signal?) => Unsubscribe`
+Signature: `on(event, listener, opts?) => Unsubscribe`
 
 Subscribe to an event. The listener runs synchronously on every emit.
 
-| Parameter  | Type             | Description                          |
-| ---------- | ---------------- | ------------------------------------ |
-| `event`    | `K`              | Event key to subscribe to            |
-| `listener` | `Listener<T[K]>` | Callback for each emit               |
-| `signal`   | `AbortSignal`    | Optional signal for auto-unsubscribe |
+| Parameter  | Type               | Description                                           |
+| ---------- | ------------------ | ----------------------------------------------------- |
+| `event`    | `K`                | Event key to subscribe to                             |
+| `listener` | `Listener<T[K]>`   | Callback for each emit                                |
+| `opts`     | `SubscribeOptions` | Optional `{ signal?, once? }` for lifecycle control   |
 
 **Returns:** `Unsubscribe` — call to remove the listener manually.
 
-If `signal` is already aborted, `on()` returns a no-op unsubscribe immediately without adding the listener.
+If `opts.signal` is already aborted, `on()` returns a no-op unsubscribe immediately without adding the listener.
 
 ::: tip Multiple registrations
 Registering the same listener function twice creates **two independent subscriptions**. The listener will fire twice per emit and each registration has its own unsubscribe handle. There is no deduplication.
@@ -174,10 +226,16 @@ const unsub = bus.on('user:login', ({ userId }) => {
 });
 unsub();
 
-// With AbortSignal
+// Auto-unsubscribe via AbortSignal
 const controller = new AbortController();
-bus.on('theme:change', applyTheme, controller.signal);
+bus.on('theme:change', applyTheme, { signal: controller.signal });
 controller.abort(); // listener removed
+
+// One-shot subscription inline
+bus.on('session:expired', redirectToLogin, { once: true });
+
+// Both options combined
+bus.on('cart:updated', syncState, { once: true, signal: controller.signal });
 ```
 
 ---
@@ -186,7 +244,7 @@ controller.abort(); // listener removed
 
 Signature: `once(event, listener, signal?) => Unsubscribe`
 
-Subscribe to the next emit of an event. The listener fires exactly once and is automatically removed.
+Convenience wrapper around `bus.on(event, listener, { once: true, signal })`. The listener fires exactly once and is automatically removed.
 
 | Parameter  | Type             | Description                  |
 | ---------- | ---------------- | ---------------------------- |
@@ -198,6 +256,36 @@ Subscribe to the next emit of an event. The listener fires exactly once and is a
 
 ```ts
 bus.once('session:expired', () => redirectToLogin());
+```
+
+---
+
+### `bus.onAny()`
+
+Signature: `onAny(listener, signal?) => Unsubscribe`
+
+Subscribe to **all** events. The listener is called after event-specific listeners on every emit.
+
+| Parameter  | Type                                          | Description                          |
+| ---------- | --------------------------------------------- | ------------------------------------ |
+| `listener` | `(event: EventKey<T>, payload: unknown) => void` | Wildcard callback               |
+| `signal`   | `AbortSignal`                                 | Optional signal for auto-unsubscribe |
+
+**Returns:** `Unsubscribe`
+
+`onAny` listeners are cleared by `removeAllListeners()` (no argument) but not by `removeAllListeners('event')`.
+
+```ts
+const unsub = bus.onAny((event, payload) => {
+  analytics.track(event, payload);
+});
+
+unsub(); // remove when done
+
+// With AbortSignal
+const controller = new AbortController();
+bus.onAny(logger, controller.signal);
+controller.abort();
 ```
 
 ---
@@ -248,7 +336,7 @@ Waits for the first emitted event among a list of event keys.
 - The provided `signal` aborts — rejects with `signal.reason`
 
 ```ts
-const winner = await bus.waitAny(['user:login', 'user:logout'] as const);
+const winner = await bus.waitAny(['user:login', 'user:logout']);
 
 if (winner.event === 'user:login') {
   console.log(winner.payload.userId);
@@ -259,7 +347,7 @@ if (winner.event === 'user:login') {
 
 ### `bus.events()`
 
-Signature: `events(event, options?) => AsyncGenerator<payload>`
+Signature: `events(event, options?) => AsyncGenerator<payload> & AsyncDisposable`
 
 Returns an `AsyncGenerator` that yields payloads for every future emit of `event`. Pull-based — only proceeds when the `for await` loop body is ready.
 
@@ -270,8 +358,8 @@ Returns an `AsyncGenerator` that yields payloads for every future emit of `event
 `events()` validates `maxBuffer` **synchronously** at call time. If `maxBuffer` is `0` or negative, a `RangeError` is thrown immediately — not on the first `await`.
 :::
 
-::: tip First-yield timing
-The generator starts listening when the `for await` loop begins its first iteration, not when the generator object is created. Events emitted between construction and first iteration are lost.
+::: tip Eager subscription
+`events()` subscribes when called, not when the first `for await` iteration begins. Events emitted before the first `await` are buffered and will be yielded on the next iteration.
 :::
 
 **Terminates when:**
@@ -279,7 +367,10 @@ The generator starts listening when the `for await` loop begins its first iterat
 - The bus is disposed — generator returns cleanly (no exception thrown)
 - The provided `signal` aborts — generator returns cleanly (no exception thrown)
 
+**`AsyncDisposable` support:** The returned value implements `Symbol.asyncDispose`, so it can be used with the `await using` keyword for guaranteed cleanup:
+
 ```ts
+// Standard iteration
 for await (const payload of bus.events('cart:updated')) {
   renderCart(payload.items);
   // loop exits cleanly when bus is disposed or signal aborts — no try/catch needed
@@ -289,6 +380,12 @@ for await (const payload of bus.events('cart:updated')) {
 const ctl = new AbortController();
 for await (const payload of bus.events('data:loaded', { signal: ctl.signal, maxBuffer: 50 })) {
   if (payload.count === 0) ctl.abort();
+}
+
+// await using — cleanup guaranteed even on break or throw
+await using stream = bus.events('user:login');
+for await (const { userId } of stream) {
+  if (userId === targetId) break; // stream is cleaned up automatically
 }
 ```
 
@@ -402,18 +499,95 @@ bus.removeAllListeners('user:login');
 bus.removeAllListeners(); // remove everything
 ```
 
+---
+
+### `bus.pipe()`
+
+Signature: `pipe(target, entries, signal?) => Unsubscribe`
+
+Forwards a selected subset of events from this bus to `target`. Instance-level convenience method; equivalent to calling `pipeEvents(this, target, entries, signal)`.
+
+| Parameter | Type                                               | Description                                       |
+| --------- | -------------------------------------------------- | ------------------------------------------------- |
+| `target`  | `Bus<U>`                                           | The bus to forward events to                      |
+| `entries` | `readonly [PipeEntry<T, U>, ...PipeEntry<T, U>[]]` | One or more string keys or `{ from, to }` renames |
+| `signal`  | `AbortSignal` (optional)                           | Optional signal to stop forwarding early          |
+
+**Returns:** `Unsubscribe` — call to stop forwarding manually.
+
+Forwarding stops automatically when `target` is disposed.
+
+```ts
+const stop = appBus.pipe(auditBus, ['user:login', 'user:logout']);
+stop(); // manual teardown
+
+// Rename events
+appBus.pipe(analyticsbus, [{ from: 'user:login', to: 'track:login' }]);
+
+// Scoped to a signal
+const controller = new AbortController();
+appBus.pipe(auditBus, ['user:login'], controller.signal);
+```
+
+## `createBehaviorBus()`
+
+Signature: `createBehaviorBus<T extends EventMap>(initial?, options?) => BehaviorBus<T>`
+
+Creates a bus that replays the last known value to new subscribers. Useful for state-like events where late subscribers should receive the current value immediately.
+
+| Parameter | Type                  | Description                                     |
+| --------- | --------------------- | ----------------------------------------------- |
+| `initial` | `BehaviorInitial<T>`  | Optional map of event names to starting values  |
+| `options` | `BusOptions<T>`       | Standard bus options (hooks, debug, etc.)       |
+
+**Returns:** `BehaviorBus<T>`
+
+**Replay rules:**
+- `on()` and `once()` — replay the current value synchronously to new subscribers.
+- `events()`, `wait()`, `waitAny()` — no replay; behave like a regular bus.
+- The returned `BehaviorBus<T>` adds a `current(event)` method.
+
+```ts
+import { createBehaviorBus } from '@vielzeug/herald';
+
+type UIEvents = { theme: 'light' | 'dark'; zoom: number };
+
+const bus = createBehaviorBus<UIEvents>({ theme: 'light', zoom: 1 });
+
+// New subscribers receive the current value immediately
+bus.on('theme', applyTheme);  // called with 'light' right now
+bus.emit('theme', 'dark');
+
+bus.on('theme', applyTheme);  // called with 'dark' right now
+
+// Read current value without subscribing
+bus.current('theme'); // 'dark'
+bus.current('zoom');  // 1 (from initial)
+```
+
+### `behaviorBus.current()`
+
+Signature: `current(event) => T[K] | undefined`
+
+Returns the last emitted value for the given event, or `undefined` if no value has been emitted and no initial value was provided.
+
+```ts
+bus.current('theme');  // 'dark'
+bus.current('unknown' as never); // undefined
+```
+
 ## `pipeEvents()`
 
-Signature: `pipeEvents<T extends EventMap>(source, target, events, signal?) => Unsubscribe`
+Signature: `pipeEvents<S, T>(source, target, entries, signal?) => Unsubscribe`
 
-Forwards a selected subset of events from a source bus to a target bus. Both buses must share the same event map type `T`.
+Forwards a selected subset of events from a source bus to a target bus. Source and target may have different event map types — only the listed keys must be compatible.
 
-| Parameter | Type                                         | Description                                     |
-| --------- | -------------------------------------------- | ----------------------------------------------- |
-| `source`  | `Bus<T>`                                     | The bus to listen on                            |
-| `target`  | `Bus<T>`                                     | The bus to forward events to                    |
-| `events`  | `readonly [EventKey<T>, ...EventKey<T>[]]`   | One or more event keys to forward               |
-| `signal`  | `AbortSignal` (optional)                     | Optional signal to stop forwarding early        |
+| Parameter | Type                                           | Description                                     |
+| --------- | ---------------------------------------------- | ----------------------------------------------- |
+| `source`  | `Bus<S>`                                       | The bus to listen on                            |
+| `target`  | `Bus<T>`                                       | The bus to forward events to                    |
+| `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames |
+| `signal`  | `AbortSignal` (optional)                       | Optional signal to stop forwarding early        |
 
 **Returns:** `Unsubscribe` — call to stop forwarding manually.
 
@@ -435,6 +609,18 @@ unpipe();
 const controller = new AbortController();
 pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
 controller.abort(); // forwarding stops
+
+// Rename events during forwarding
+type AuthEvents = { 'auth:login': { userId: string }; 'auth:logout': void };
+type AppEventsTarget = { 'user:authenticated': { userId: string }; 'user:signed-out': void };
+
+const authBus = createBus<AuthEvents>();
+const targetBus = createBus<AppEventsTarget>();
+
+pipeEvents(authBus, targetBus, [
+  { from: 'auth:login', to: 'user:authenticated' },
+  { from: 'auth:logout', to: 'user:signed-out' },
+]);
 ```
 
 ---

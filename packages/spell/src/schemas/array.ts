@@ -1,7 +1,15 @@
 import type { Issue, MessageFn, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
+
+/* -------------------- Typed annotations -------------------- */
+
+interface ArrayAnnotations extends Record<string, unknown> {
+  maxItems?: number;
+  minItems?: number;
+}
 
 export class ArraySchema<T> extends Schema<T[]> {
   readonly itemSchema: Schema<T, any>;
@@ -45,24 +53,24 @@ export class ArraySchema<T> extends Schema<T[]> {
     };
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     if (!Array.isArray(value)) {
-      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()) };
+      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()), typeOk: false };
     }
 
     const { data: items, issues } = this._parseItemsSync(value);
 
-    return { data: items, issues };
+    return { data: items, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     if (!Array.isArray(value)) {
-      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()) };
+      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()), typeOk: false };
     }
 
     const { data: items, issues } = await this._parseItemsAsync(value);
 
-    return { data: items, issues };
+    return { data: items, issues, typeOk: true };
   }
 
   min(
@@ -79,7 +87,7 @@ export class ArraySchema<T> extends Schema<T[]> {
       },
       (ann) => ({
         ...ann,
-        minItems: ann['minItems'] === undefined ? length : Math.max(ann['minItems'] as number, length),
+        minItems: ann.minItems === undefined ? length : Math.max(ann.minItems, length),
       }),
     );
   }
@@ -98,7 +106,7 @@ export class ArraySchema<T> extends Schema<T[]> {
       },
       (ann) => ({
         ...ann,
-        maxItems: ann['maxItems'] === undefined ? length : Math.min(ann['maxItems'] as number, length),
+        maxItems: ann.maxItems === undefined ? length : Math.min(ann.maxItems, length),
       }),
     );
   }
@@ -135,23 +143,21 @@ export class ArraySchema<T> extends Schema<T[]> {
     const ann = this._annotations;
     const base: Record<string, unknown> = { items: this.itemSchema.toJsonSchema(), type: 'array' };
 
-    if (ann['minItems'] !== undefined) base['minItems'] = ann['minItems'];
+    if (ann.minItems !== undefined) base['minItems'] = ann.minItems;
 
-    if (ann['maxItems'] !== undefined) base['maxItems'] = ann['maxItems'];
+    if (ann.maxItems !== undefined) base['maxItems'] = ann.maxItems;
 
     return base;
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     const ann = this._annotations;
 
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      ...(ann['maxItems'] !== undefined ? { maxItems: ann['maxItems'] as number } : {}),
-      ...(ann['minItems'] !== undefined ? { minItems: ann['minItems'] as number } : {}),
-      items: this.itemSchema.describe(),
+      ...this._describeBase(),
+      ...(ann.maxItems !== undefined ? { maxItems: ann.maxItems } : {}),
+      ...(ann.minItems !== undefined ? { minItems: ann.minItems } : {}),
+      items: this.itemSchema.toDescriptor(),
       kind: 'array',
     };
   }
@@ -171,8 +177,8 @@ export class ArraySchema<T> extends Schema<T[]> {
 
     return (
       this.itemSchema.equals(o.itemSchema as import('../core').AnySchema) &&
-      this._annotations['minItems'] === other._annotations['minItems'] &&
-      this._annotations['maxItems'] === other._annotations['maxItems']
+      this._annotations.minItems === other._annotations.minItems &&
+      this._annotations.maxItems === other._annotations.maxItems
     );
   }
 }

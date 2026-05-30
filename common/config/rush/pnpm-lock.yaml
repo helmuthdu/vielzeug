@@ -60,6 +60,25 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
+  ../../packages/coins:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
+
   ../../packages/conduit:
     devDependencies:
       '@types/node':
@@ -76,6 +95,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/courier:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -113,6 +136,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/familiar:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -128,6 +155,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/forge:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -158,6 +189,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/herald:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -173,6 +208,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/lingua:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -188,6 +227,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/orbit:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -316,6 +359,10 @@ importers:
         version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/spell:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -335,6 +382,9 @@ importers:
       '@js-temporal/polyfill':
         specifier: ^0.5.1
         version: 0.5.1
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.8.0

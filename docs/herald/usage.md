@@ -5,7 +5,7 @@ description: Event maps, subscriptions, wait(), async event streams, hooks, clea
 
 [[toc]]
 
-::: tip New to Relay?
+::: tip New to Herald?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
@@ -75,17 +75,24 @@ bus.on('user:logout', handler);
 console.log(bus.eventNames()); // ['user:login', 'user:logout']
 ```
 
-### AbortSignal
+### AbortSignal and `SubscribeOptions`
 
-Pass an `AbortSignal` as the third argument to `on()` or `once()`. The listener is automatically removed when the signal aborts — no manual `unsub()` call needed.
+Pass a `SubscribeOptions` object as the third argument to `on()`. Use `signal` to auto-unsubscribe when an `AbortSignal` fires, and `once` to auto-remove after the first invocation.
 
 ```ts
 const controller = new AbortController();
 
-bus.on('user:login', handler, controller.signal);
+// Auto-remove when signal aborts
+bus.on('user:login', handler, { signal: controller.signal });
 
 // Later — removes the listener automatically
 controller.abort();
+
+// One-shot subscription inline (equivalent to bus.once())
+bus.on('user:login', handler, { once: true });
+
+// Both combined — fires at most once, and only before signal aborts
+bus.on('cart:updated', handler, { once: true, signal: controller.signal });
 ```
 
 ## Emitting Events
@@ -124,7 +131,7 @@ const { userId } = await bus.wait('user:login', signal);
 `waitAny()` resolves with the first event that fires from a list and returns both the winning event key and payload.
 
 ```ts
-const result = await bus.waitAny(['user:login', 'user:logout'] as const);
+const result = await bus.waitAny(['user:login', 'user:logout']);
 
 if (result.event === 'user:login') {
   console.log(result.payload.userId);
@@ -136,6 +143,8 @@ Like `wait()`, it rejects when the bus is disposed or when the provided signal a
 ## Async Iteration
 
 `events()` returns an `AsyncGenerator` that yields every future emit of an event. It terminates when the bus is disposed or the provided signal aborts.
+
+`events()` subscribes **eagerly** — the listener is registered when `events()` is called, so events emitted before the first `await` are buffered and will be yielded on the next iteration.
 
 ```ts
 for await (const { items, total } of bus.events('cart:updated')) {
@@ -155,6 +164,15 @@ for await (const payload of bus.events('data:loaded', { signal: controller.signa
 // loop ends here — no exception thrown on abort or dispose
 ```
 
+The generator is `AsyncDisposable` — use `await using` for guaranteed cleanup even on early `break`:
+
+```ts
+await using stream = bus.events('user:login');
+for await (const { userId } of stream) {
+  if (userId === targetId) break; // stream subscription is torn down automatically
+}
+```
+
 ## Error Handling
 
 By default, a listener that throws propagates the error to the `emit()` caller, and subsequent listeners for that emit do not run.
@@ -163,18 +181,19 @@ Configure `onError` to capture errors instead. All remaining listeners still run
 
 ```ts
 const bus = createBus<AppEvents>({
-  onError: (err, event, payload) => {
-    // event and payload are fully typed to the specific event that failed
-    logger.error(`[herald] Error in "${event}" listener`, err, payload);
+  onError: ({ err, event, payload, timestamp }) => {
+    // Structured context — event, payload, and timestamp at the time emit() was called
+    logger.error(`[herald] Error in "${event}" listener`, err, { payload, timestamp });
   },
 });
 ```
 
-`onError` receives:
+`onError` receives an `EmissionErrorContext<T>` object:
 
 - `err` — the thrown value
 - `event` — the event key that was being emitted
-- `payload` — the payload, typed to `T[K]` for the specific event
+- `payload` — the payload passed to the failing listener (typed as `unknown`)
+- `timestamp` — `Date.now()` captured at the moment `emit()` was called
 
 ### `onDispatch` hook
 
@@ -228,21 +247,67 @@ Every bus exposes a `disposalSignal: AbortSignal` property. The signal fires whe
 const bus = createBus<AppEvents>();
 
 // Pass disposalSignal to another bus subscription — auto-unsubscribes on teardown
-otherBus.on('count', syncState, bus.disposalSignal);
+otherBus.on('count', syncState, { signal: bus.disposalSignal });
 
 // Use with any AbortSignal-aware API
 fetch('/api/stream', { signal: bus.disposalSignal });
 
-// Combine with other signals using AbortSignal.any()
+// Combine with other signals
 const combined = AbortSignal.any([bus.disposalSignal, AbortSignal.timeout(10_000)]);
 bus.events('data:loaded', { signal: combined });
 ```
 
 The signal is already aborted when `bus.disposed` is `true`.
 
+## Wildcard Listeners
+
+`onAny()` subscribes to **all events** on the bus. The listener receives the event name and payload on every emit, after event-specific listeners have run. Useful for cross-cutting concerns like logging, analytics, or dev-mode tracing.
+
+```ts
+const unsub = bus.onAny((event, payload) => {
+  console.debug(`[bus] ${event}`, payload);
+});
+
+unsub(); // remove the wildcard listener when done
+```
+
+Like `on()`, `onAny()` accepts an optional `AbortSignal`:
+
+```ts
+const controller = new AbortController();
+bus.onAny(logger, controller.signal);
+controller.abort(); // removes the wildcard listener
+```
+
+`onAny` listeners are removed by `removeAllListeners()` (no argument), but not by `removeAllListeners('event')`.
+
+::: tip `onAny` vs `onDispatch`
+- `onDispatch` is a **constructor-time hook** that fires before listeners; set once, cannot be removed.
+- `onAny` is a **runtime listener** that fires after listeners; can be added and removed dynamically.
+
+Prefer `onAny` for observable, removable side effects. Use `onDispatch` for permanent bus-wide tracing.
+:::
+
 ## Event Piping
 
-`pipeEvents()` forwards a selected subset of events from a source bus to a target bus. Both buses must share the same event map type.
+Events can be forwarded between buses either via the standalone `pipeEvents()` function or the instance method `bus.pipe()`. Both approaches support same-name forwarding and event renaming.
+
+### `bus.pipe()` — Instance method
+
+`bus.pipe(target, entries, signal?)` is attached directly to every bus. No import needed.
+
+```ts
+// Forward same-named events
+const stop = appBus.pipe(auditBus, ['user:login', 'user:logout']);
+stop(); // stop forwarding
+
+// Rename events inline
+appBus.pipe(analyticsbus, [{ from: 'user:login', to: 'track:login' }]);
+```
+
+### `pipeEvents()` — Standalone function
+
+`pipeEvents()` is useful when piping from a bus you don't own, or from outside the component that created the bus.
 
 ```ts
 import { createBus, pipeEvents } from '@vielzeug/herald';
@@ -250,7 +315,7 @@ import { createBus, pipeEvents } from '@vielzeug/herald';
 type AppEvents = {
   'user:login': { userId: string; email: string };
   'user:logout': void;
-   'cart:updated': { items: CartItem[]; total: number };
+  'cart:updated': { items: CartItem[]; total: number };
 };
 
 const appBus = createBus<AppEvents>();
@@ -278,6 +343,71 @@ pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
 setTimeout(() => controller.abort(), 30_000);
 ```
 
+### Event renaming
+
+Pass a `{ from, to }` object to forward an event under a different name on the target bus. This enables cross-domain event translation without manually wiring `on()` + `emit()`.
+
+```ts
+type AuthEvents = { 'auth:login': { userId: string }; 'auth:logout': void };
+type AppEvents = { 'user:authenticated': { userId: string }; 'user:signed-out': void };
+
+const authBus = createBus<AuthEvents>();
+const appBus = createBus<AppEvents>();
+
+pipeEvents(authBus, appBus, [
+  { from: 'auth:login', to: 'user:authenticated' },
+  { from: 'auth:logout', to: 'user:signed-out' },
+]);
+```
+
+Mix string keys and `{ from, to }` objects freely in the same array:
+
+```ts
+pipeEvents(sourceBus, targetBus, [
+  'config:updated',                                   // same name
+  { from: 'auth:login', to: 'user:authenticated' },  // renamed
+]);
+```
+
+## Behavior Bus
+
+`createBehaviorBus()` creates a bus that remembers and replays the last emitted value to new subscribers. This is useful for state-like events where late subscribers should receive the current value immediately — similar to a BehaviorSubject in RxJS.
+
+```ts
+import { createBehaviorBus } from '@vielzeug/herald';
+
+type UIState = { theme: 'light' | 'dark'; zoom: number };
+
+// Provide initial values — these are replayed to first subscribers
+const bus = createBehaviorBus<UIState>({ theme: 'light', zoom: 1 });
+
+bus.on('theme', applyTheme); // called with 'light' immediately
+bus.on('zoom', setZoom);     // called with 1 immediately
+
+bus.emit('theme', 'dark');
+
+bus.on('theme', applyTheme); // called with 'dark' immediately — gets current value
+```
+
+### `current()`
+
+Read the current value for any event without subscribing:
+
+```ts
+bus.current('theme'); // 'dark'
+bus.current('zoom');  // 1
+```
+
+### Replay rules
+
+| Method          | Replays current value? |
+| --------------- | ---------------------- |
+| `on()`          | ✅ Yes                 |
+| `once()`        | ✅ Yes (then done)     |
+| `on({ once })`  | ✅ Yes (then done)     |
+| `events()`      | ❌ No                  |
+| `wait()`        | ❌ No                  |
+
 ## Debug Mode
 
 Pass `debug: true` to `createBus()` to log all subscribe, emit, and dispose activity to `console.debug`. This is useful during development to trace the event flow through your application.
@@ -297,6 +427,19 @@ bus.dispose();
 
 Debug mode has no effect on behavior and should not be enabled in production.
 
+### Detecting listener leaks with `maxListeners`
+
+Pass `maxListeners` to `createBus()` to receive a `console.warn` whenever a single event's listener count exceeds the threshold. This helps catch accidental listener accumulation during development.
+
+```ts
+const bus = createBus<AppEvents>({ maxListeners: 10 });
+
+// Registering an 11th listener for 'cart:updated' prints:
+// [herald:warn] "cart:updated" has 11 listeners, exceeding maxListeners (10). Possible memory leak.
+```
+
+The warning fires for both event-specific listeners (`on`, `once`) and wildcard listeners (`onAny`). There is no effect on bus behavior — all listeners are still registered and invoked normally.
+
 ### Counting listeners
 
 `listenerCount()` lets you inspect active subscriptions without needing to track them manually:
@@ -307,7 +450,7 @@ bus.on('user:login', handler2);
 bus.on('user:logout', handler3);
 
 bus.listenerCount('user:login'); // 2
-bus.listenerCount(); // 3 — total across all events
+bus.listenerCount(); // 3 — total across all events (including onAny wildcards)
 ```
 
 This is useful for debugging, assertions in tests, or conditional emit optimizations.

@@ -283,21 +283,21 @@ describe('toJsonSchema()', () => {
 
   describe('describe', () => {
     it('attaches description to the schema', () => {
-      expect(s.string().describe('A label').toJsonSchema()).toEqual({
+      expect(s.string().label('A label').toJsonSchema()).toEqual({
         description: 'A label',
         type: 'string',
       });
     });
 
     it('description is preserved through nullable wrapping', () => {
-      const result = s.string().nullable().describe('optional name').toJsonSchema();
+      const result = s.string().nullable().label('optional name').toJsonSchema();
 
       expect(result['description']).toBe('optional name');
     });
 
     it('field descriptions propagate into object properties', () => {
       const objSchema = s.object({
-        name: s.string().describe('The user name'),
+        name: s.string().label('The user name'),
       });
 
       const result = objSchema.toJsonSchema() as any;
@@ -441,7 +441,7 @@ describe('toJsonSchema()', () => {
     });
 
     it('int stores type hint instead of constraint key', () => {
-      expect(s.number().int().describe()).toMatchObject({ typeHint: 'integer' });
+      expect(s.number().int().toDescriptor()).toMatchObject({ typeHint: 'integer' });
     });
 
     it('int does not leak integer into constraints', () => {
@@ -453,7 +453,7 @@ describe('toJsonSchema()', () => {
     });
 
     it('int + min keeps both hint and constraints in metadata', () => {
-      expect(s.number().int().min(1).describe()).toMatchObject({ minimum: 1, typeHint: 'integer' });
+      expect(s.number().int().min(1).toDescriptor()).toMatchObject({ minimum: 1, typeHint: 'integer' });
     });
 
     it('repeated max keeps the most restrictive bound', () => {

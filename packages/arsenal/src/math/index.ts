@@ -2,6 +2,7 @@ export * from './abs';
 export * from './allocate';
 export * from './average';
 export * from './clamp';
+export * from './exponentialBackoff';
 export * from './gcd';
 export * from './lcm';
 export * from './lerp';

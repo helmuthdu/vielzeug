@@ -1,29 +1,13 @@
-import { computed, effect as rawEffect, isSignal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, signal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
 
-import {
-  applyBindingsWithTargets,
-  applyHtmlBinding,
-  indexBindingTargets,
-  parseHTML,
-  type RegisterCleanup,
-} from '../template-bindings';
-import {
-  createDirectiveResult,
-  htmlResult,
-  isHtmlResult,
-  type DirectiveResult,
-  type HtmlBinding,
-  type HTMLResult,
-} from '../types/bindings';
-import { escapeHtml, removeNodes, runAll } from '../utils/dom';
-import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
+import type { RegisterCleanup } from '../template-bindings';
+
+import { createDirectiveResult, isHtmlResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
+import { removeNodes, runAll } from '../utils/dom';
 
 type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 
-type WhenRenderable = string | HTMLResult;
-
-const toHtmlResult = (value: WhenRenderable): HTMLResult =>
-  isHtmlResult(value) ? value : htmlResult(escapeHtml(String(value)));
+type WhenRenderable = HTMLResult | string | null | undefined | false;
 
 const mountBranch = (
   result: HTMLResult,
@@ -31,27 +15,10 @@ const mountBranch = (
   insertBefore: Node,
   registerCleanup: RegisterCleanup,
 ): Node[] => {
-  const rekeyed = rekeyHtmlResult(result, createMarkerIdFactory());
-  const fragment = parseHTML(rekeyed.html);
-  const nodes = Array.from(fragment.childNodes);
+  const nodes = Array.from(result.fragment.childNodes);
 
-  for (const node of nodes) parent.insertBefore(node, insertBefore);
-
-  if (rekeyed.bindings.length > 0) {
-    const deferred: HtmlBinding[] = [];
-    const targets = indexBindingTargets(nodes);
-
-    applyBindingsWithTargets(rekeyed.bindings, registerCleanup, targets, {
-      onHtml: (b) => deferred.push(b),
-    });
-
-    for (const b of deferred) {
-      const comment = targets.comments.get(b.uid);
-      const searchRoot = (comment?.parentElement ?? parent) as Node;
-
-      applyHtmlBinding(searchRoot, b, registerCleanup);
-    }
-  }
+  parent.insertBefore(result.fragment, insertBefore);
+  result.apply(registerCleanup);
 
   return nodes;
 };
@@ -78,11 +45,7 @@ export function when(
       ? computed(condition as () => boolean)
       : isSignal(condition)
         ? condition
-        : ({
-            get value() {
-              return condition as boolean;
-            },
-          } as ReadonlySignal<boolean>);
+        : signal(condition as boolean);
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode!;
@@ -93,7 +56,7 @@ export function when(
     let currentNodes: Node[] = [];
     let currentCleanups: (() => void)[] = [];
 
-    const stop = rawEffect(() => {
+    const sub = rawEffect(() => {
       const next = conditionSignal.value;
 
       runAll(currentCleanups);
@@ -103,17 +66,15 @@ export function when(
 
       const branch = next ? truthy() : falsy ? falsy() : null;
 
-      if (branch == null) return;
+      if (!branch || !isHtmlResult(branch)) return;
 
       const branchCleanups: (() => void)[] = [];
 
-      currentNodes = untrack(() =>
-        mountBranch(toHtmlResult(branch), parent, endMarker, (fn) => branchCleanups.push(fn)),
-      );
+      currentNodes = untrack(() => mountBranch(branch, parent, endMarker, (fn) => branchCleanups.push(fn)));
       currentCleanups = branchCleanups;
     });
 
-    registerCleanup(stop);
+    registerCleanup(() => sub.dispose());
     registerCleanup(() => {
       runAll(currentCleanups);
       removeNodes(currentNodes);

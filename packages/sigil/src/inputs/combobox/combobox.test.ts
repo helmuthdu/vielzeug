@@ -375,9 +375,18 @@ describe('bit-combobox', () => {
 
       const input = fixture.query<HTMLInputElement>('input')!;
 
-      await user.type(input, 'Atlantis');
+      // Open the dropdown first, then type a query with no matches.
+      await user.click(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Type a non-matching query to trigger the creatable row.
+      // Use direct DOM manipulation + dispatching events to ensure the handler fires.
+      input.value = 'Atlantis';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: 'Atlantis', inputType: 'insertText' }));
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await fixture.flush();
 
       expect(fixture.query('.no-results-create')?.textContent).toContain('Create "Atlantis"');
     });

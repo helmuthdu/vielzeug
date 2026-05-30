@@ -2,18 +2,18 @@ import type {
   BatchTransport,
   BatchTransportOptions,
   Bindings,
+  ConsoleTheme,
+  ConsoleThemeEntry,
   ConsoleTransportOptions,
   JsonTransportOptions,
   LogEntry,
   LogLevel,
   LogType,
   RedactTransportOptions,
-  RemoteHandler,
   RemoteLogData,
   RemoteTransportOptions,
   SampleTransportOptions,
   Transport,
-  Variant,
 } from './types';
 
 /* ─── Shared level priority ─── */
@@ -64,20 +64,18 @@ export function detectEnv(): 'development' | 'production' {
   return (import.meta as ImportMeta & { env?: { PROD?: boolean } }).env?.PROD ? 'production' : 'development';
 }
 
-const IS_NODE = typeof window === 'undefined';
-
 /* ─── Console transport internals ─── */
 
-type Theme = { bg: string; border: string; color: string; icon?: string; symbol?: string };
+type ResolvedTheme = Record<LogType | 'group' | 'ns', ConsoleThemeEntry>;
 
-const THEME: Record<LogType | 'group' | 'ns', Theme> = {
-  debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '☕', symbol: '🅳' },
-  error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '✘', symbol: '🅴' },
-  fatal: { bg: '#4a148c', border: '#38006b', color: '#fff', icon: '💀', symbol: '🅵' },
-  group: { bg: '#546e7a', border: '#455a64', color: '#fff', icon: '⚭', symbol: '🅶' },
-  info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
-  ns: { bg: '#424242', border: '#212121', color: '#fff' },
-  warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
+export const DEFAULT_THEME: ResolvedTheme = {
+  debug: { badge: '🅳', bg: '#616161', border: '#424242', color: '#fff' },
+  error: { badge: '🅴', bg: '#d32f2f', border: '#c62828', color: '#fff' },
+  fatal: { badge: '🅵', bg: '#4a148c', border: '#38006b', color: '#fff' },
+  group: { badge: '🅶', bg: '#546e7a', border: '#455a64', color: '#fff' },
+  info: { badge: '🅸', bg: '#1976d2', border: '#1565c0', color: '#fff' },
+  ns: { badge: '', bg: '#424242', border: '#212121', color: '#fff' },
+  warn: { badge: '🆆', bg: '#ffb300', border: '#ffa000', color: '#fff' },
 };
 
 const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
@@ -90,50 +88,80 @@ const LOG_METHOD: Record<LogType, 'error' | 'info' | 'log' | 'warn'> = {
   warn: 'warn',
 };
 
-function badge(type: LogType | 'group', variant: Variant): string {
-  const theme = THEME[type];
+/** Deep-merges per-level overrides onto the default theme. Only specified fields within each level entry are replaced. */
+function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme {
+  if (!override) return DEFAULT_THEME;
 
-  if (variant === 'text' || !theme[variant]) return type.toUpperCase();
+  const result: ResolvedTheme = { ...DEFAULT_THEME };
 
-  return theme[variant]!;
-}
+  for (const key of Object.keys(override) as Array<LogType | 'group' | 'ns'>) {
+    const entry = override[key];
 
-function badgeStyle(type: LogType | 'group' | 'ns', variant: Variant, extra = ''): string {
-  const { bg, border, color } = THEME[type];
-  const base = `border: 1px solid ${border}; border-radius: 4px`;
-
-  switch (variant) {
-    case 'icon':
-      return `color: ${bg}; ${base}; padding: 0 3px${extra}`;
-    case 'symbol':
-      return `color: ${bg}; ${base}; padding: 0 1px${extra}`;
-    default:
-      return `background: ${bg}; color: ${color}; ${base}; font-weight: bold; padding: 0 3px${extra}`;
+    if (entry) result[key] = { ...DEFAULT_THEME[key], ...entry };
   }
+
+  return result;
 }
 
-function buildNodePrefix(type: LogType, namespace: string, timestamp: string, variant: Variant): string {
-  const meta = [badge(type, variant)];
+/* ─── ANSI helpers (Node) ─── */
 
-  if (namespace) meta.push(`[${namespace}]`);
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
 
-  if (timestamp) meta.push(timestamp);
+function ansiColor(hex: string, text: string): string {
+  const [r, g, b] = hexToRgb(hex);
+
+  return `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
+}
+
+function ansiMuted(text: string): string {
+  return `\x1b[90m${text}\x1b[0m`;
+}
+
+function supportsAnsi(): boolean {
+  if (typeof window !== 'undefined') return false;
+
+  return (
+    (globalThis as Record<string, unknown> & { process?: { stdout?: { isTTY?: boolean } } }).process?.stdout?.isTTY ===
+    true
+  );
+}
+
+function badgeStyle(entry: ConsoleThemeEntry, extra = ''): string {
+  return `color: ${entry.bg}; border: 1px solid ${entry.border}; border-radius: 4px; padding: 0 1px${extra}`;
+}
+
+function buildNodePrefix(
+  theme: ResolvedTheme,
+  type: LogType,
+  namespace: string,
+  timestamp: string,
+  useAnsi: boolean,
+): string {
+  const t = theme[type];
+  const badgeText = useAnsi ? ansiColor(t.bg, t.badge) : t.badge;
+  const meta = [badgeText];
+
+  if (namespace) meta.push(useAnsi ? ansiMuted(`[${namespace}]`) : `[${namespace}]`);
+
+  if (timestamp) meta.push(useAnsi ? ansiMuted(timestamp) : timestamp);
 
   return `${meta.join(' | ')} |`;
 }
 
 function buildBrowserPrefix(
+  theme: ResolvedTheme,
   type: LogType,
   namespace: string,
   timestamp: string,
-  variant: Variant,
 ): { fmt: string; parts: string[] } {
-  let fmt = `%c${badge(type, variant)}%c`;
-  const parts: string[] = [badgeStyle(type, variant), ''];
+  let fmt = `%c${theme[type].badge}%c`;
+  const parts: string[] = [badgeStyle(theme[type]), ''];
 
   if (namespace) {
     fmt += ` %c${namespace}%c`;
-    parts.push(badgeStyle('ns', variant, `; ${NS_STYLE}`), '');
+    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}`), '');
   }
 
   if (timestamp) {
@@ -144,22 +172,37 @@ function buildBrowserPrefix(
   return { fmt, parts };
 }
 
-/* ─── consoleTransport marker ─── */
+/* ─── consoleTransport marker and theme key ─── */
 
 /** Runtime symbol used to identify consoleTransport instances for group() gating. */
 export const CONSOLE_TRANSPORT_MARKER = Symbol.for('rune.consoleTransport');
+
+/** Runtime symbol used to read the resolved theme from a consoleTransport instance. */
+export const CONSOLE_THEME_KEY = Symbol.for('rune.consoleTheme');
 
 /* ─── consoleTransport ─── */
 
 /**
  * Formats and writes log entries to the browser or Node.js console.
  * Uses CSS-styled badges in browsers and plain text in Node.
+ * Accepts an optional partial `theme` to override colors and badges per level.
  * This is the default transport when no transports are configured.
+ *
+ * @example
+ * consoleTransport()
+ * consoleTransport({ level: 'warn', timestamp: false })
+ * consoleTransport({
+ *   theme: {
+ *     error: { bg: '#ff1744', border: '#d50000', color: '#fff', badge: '✖' },
+ *   },
+ * })
  */
 export function consoleTransport(options: ConsoleTransportOptions = {}): Transport {
   const level = options.level ?? 'debug';
   const showTimestamp = options.timestamp ?? true;
-  const variant = options.variant ?? 'symbol';
+  const theme = resolveTheme(options.theme);
+  const isNode = typeof window === 'undefined';
+  const useAnsi = options.ansi ?? (isNode ? supportsAnsi() : false);
 
   function transport(entry: LogEntry): void {
     if (!passes(level, entry.level)) return;
@@ -169,37 +212,43 @@ export function consoleTransport(options: ConsoleTransportOptions = {}): Transpo
     const payload = buildPayload(merged, entry.message);
     const method = console[LOG_METHOD[entry.level]] as (...args: unknown[]) => void;
 
-    if (IS_NODE) {
-      method(buildNodePrefix(entry.level, entry.namespace, timestamp, variant), ...payload);
+    if (isNode) {
+      method(buildNodePrefix(theme, entry.level, entry.namespace, timestamp, useAnsi), ...payload);
     } else {
-      const { fmt, parts } = buildBrowserPrefix(entry.level, entry.namespace, timestamp, variant);
+      const { fmt, parts } = buildBrowserPrefix(theme, entry.level, entry.namespace, timestamp);
 
       method(fmt, ...parts, ...payload);
     }
   }
 
   (transport as unknown as Record<symbol, unknown>)[CONSOLE_TRANSPORT_MARKER] = true;
+  (transport as unknown as Record<symbol, unknown>)[CONSOLE_THEME_KEY] = theme;
 
   return transport;
 }
 
 /* ─── remoteTransport ─── */
 
-export type { RemoteHandler, RemoteLogData };
+export type { RemoteLogData };
 
 /**
  * Forwards log entries asynchronously to a remote handler.
- * The handler is fire-and-forget: errors are swallowed to a console.warn.
+ * The handler is fire-and-forget: errors are swallowed to console.warn.
  * Console and remote thresholds are fully independent.
  *
  * @example
- * remoteTransport(async (type, data) => {
- *   await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
- * }, { level: 'error' })
+ * remoteTransport({
+ *   handler: async (type, data) => {
+ *     await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+ *   },
+ *   level: 'error',
+ * })
  */
-export function remoteTransport(handler: RemoteHandler, options: RemoteTransportOptions = {}): Transport {
+export function remoteTransport(options: RemoteTransportOptions): Transport {
+  const { handler } = options;
   const level = options.level ?? 'debug';
   const env = options.env ?? detectEnv();
+  const onError = options.onError ?? ((err: unknown) => console.warn('[rune] remote transport error:', err));
 
   return (entry: LogEntry): void => {
     if (!passes(level, entry.level)) return;
@@ -216,9 +265,7 @@ export function remoteTransport(handler: RemoteHandler, options: RemoteTransport
 
     Promise.resolve()
       .then(() => handler(entry.level, data))
-      .catch((err: unknown) => {
-        console.warn('[rune] remote transport error:', err);
-      });
+      .catch((err: unknown) => onError(err, data));
   };
 }
 
@@ -234,6 +281,11 @@ export function remoteTransport(handler: RemoteHandler, options: RemoteTransport
  */
 export function jsonTransport(options: JsonTransportOptions = {}): Transport {
   const level = options.level ?? 'debug';
+  const f = options.fields ?? {};
+  const fLevel = f.level ?? 'level';
+  const fTime = f.time ?? 'time';
+  const fNs = f.ns ?? 'ns';
+  const fMsg = f.msg ?? 'msg';
   const output =
     options.output ??
     ((line: string) => {
@@ -247,10 +299,10 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
 
     const merged = mergeContext(entry.bindings, entry.context);
     const record: Record<string, unknown> = {
-      level: entry.level,
-      time: entry.timestamp.toISOString(),
-      ...(entry.namespace && { ns: entry.namespace }),
-      ...(entry.message !== undefined && { msg: entry.message }),
+      [fLevel]: entry.level,
+      [fTime]: entry.timestamp.toISOString(),
+      ...(entry.namespace && { [fNs]: entry.namespace }),
+      ...(entry.message !== undefined && { [fMsg]: entry.message }),
       ...merged,
     };
 
@@ -328,13 +380,16 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
  * Useful for reducing volume of high-frequency debug logs in production.
  *
  * @example
- * sampleTransport({ rate: 0.1, transport: remoteTransport(handler) })
- * // forwards ~10% of entries
+ * sampleTransport({ rate: 0.1, transport: remoteTransport({ handler }) })
+ * // forwards ~10% of entries at or above 'warn'
  */
 export function sampleTransport(options: SampleTransportOptions): Transport {
   const { rate, transport } = options;
+  const level = options.level ?? 'debug';
 
   return (entry: LogEntry): void => {
+    if (!passes(level, entry.level)) return;
+
     if (Math.random() < rate) transport(entry);
   };
 }
@@ -343,30 +398,32 @@ export function sampleTransport(options: SampleTransportOptions): Transport {
 
 /**
  * Strips sensitive fields from bindings and context before forwarding to a downstream transport.
- * Redaction is applied recursively at any depth.
+ * Redaction is applied recursively at any depth, including inside arrays.
  *
  * @example
  * redactTransport({
  *   keys: ['password', 'token', 'ssn'],
  *   replacement: '[REDACTED]',
- *   transport: remoteTransport(handler),
+ *   transport: remoteTransport({ handler }),
  * })
  */
 export function redactTransport(options: RedactTransportOptions): Transport {
   const { keys, replacement = '[REDACTED]', transport } = options;
   const keySet = new Set(keys);
 
+  function redactValue(v: unknown): unknown {
+    if (Array.isArray(v)) return v.map(redactValue);
+
+    if (typeof v === 'object' && v !== null) return redactObject(v as Bindings);
+
+    return v;
+  }
+
   function redactObject(obj: Bindings): Bindings {
     const result: Bindings = {};
 
     for (const [k, v] of Object.entries(obj)) {
-      if (keySet.has(k)) {
-        result[k] = replacement;
-      } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-        result[k] = redactObject(v as Bindings);
-      } else {
-        result[k] = v;
-      }
+      result[k] = keySet.has(k) ? replacement : redactValue(v);
     }
 
     return result;
@@ -385,11 +442,12 @@ export function redactTransport(options: RedactTransportOptions): Transport {
 
 /* ─── Group rendering (exported for logger.ts wrapGroup) ─── */
 
-export function renderGroup(collapsed: boolean, label: string, namespace: string): void {
+export function renderGroup(collapsed: boolean, label: string, namespace: string, theme: ResolvedTheme): void {
   const fn = collapsed ? console.groupCollapsed : console.group;
+  const isNode = typeof window === 'undefined';
 
-  if (IS_NODE) {
-    const meta = [badge('group', 'symbol'), label];
+  if (isNode) {
+    const meta = [theme.group.badge, label];
 
     if (namespace) meta.push(`[${namespace}]`);
 
@@ -398,13 +456,30 @@ export function renderGroup(collapsed: boolean, label: string, namespace: string
     return;
   }
 
-  let fmt = `%c${label}%c`;
-  const parts: string[] = [badgeStyle('group', 'symbol', '; margin-right: 6px; padding: 1px 3px 0'), ''];
+  let fmt = `${theme.group.badge} %c${label}%c`;
+  const parts: string[] = [badgeStyle(theme.group, '; margin-right: 6px; padding: 1px 3px 0'), ''];
 
   if (namespace) {
     fmt += ` %c${namespace}%c`;
-    parts.push(badgeStyle('ns', 'symbol', `; ${NS_STYLE}; margin-right: 6px`), '');
+    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}; margin-right: 6px`), '');
   }
 
   fn(fmt, ...parts);
+}
+
+/* ─── pipe — fan-out to multiple transports ─── */
+
+/**
+ * Fan-out: dispatches each entry to all provided transports independently.
+ * Useful for sending entries to multiple destinations simultaneously.
+ *
+ * @example
+ * createLogger({
+ *   transports: [pipe(consoleTransport(), remoteTransport({ handler }))],
+ * })
+ */
+export function pipe(...transports: Transport[]): Transport {
+  return (entry: LogEntry): void => {
+    for (const t of transports) t(entry);
+  };
 }

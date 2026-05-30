@@ -72,7 +72,8 @@ export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
  * </bit-combobox>
  * ```
  */
-export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-combobox', {
+export const COMBOBOX_TAG = 'bit-combobox' as const;
+define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
     color: prop.string<ThemeColor>(),
@@ -162,28 +163,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
         size: fCtxProps.size,
         variant: fCtxProps.variant,
       },
-      prop: {
-        value: {
-          get: () => (isMultiple() ? selectedValues.value : selectedValue.value),
-          set: (val: unknown) => {
-            const v = val as string | string[] | null | undefined;
-
-            if (Array.isArray(v)) {
-              choice.setValues(v.map((entry) => String(entry ?? '')));
-
-              return;
-            }
-
-            if (v == null || v === '') {
-              choice.clear();
-
-              return;
-            }
-
-            choice.setValues([String(v)]);
-          },
-        },
-      },
     });
 
     let lastQueryBeforeClear: string | null = null;
@@ -191,6 +170,30 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
     // Convenience getter for single-select
     const selectedValue = computed(() => selectedValues.value[0] ?? '');
+
+    // Expose .value as a JS property accessor on the host element
+    Object.defineProperty(el, 'value', {
+      configurable: true,
+      get: () => (isMultiple() ? selectedValues.value : selectedValue.value),
+      set: (val: unknown) => {
+        const v = val as string | string[] | null | undefined;
+
+        if (Array.isArray(v)) {
+          choice.setValues(v.map((entry) => String(entry ?? '')));
+
+          return;
+        }
+
+        if (v == null || v === '') {
+          choice.clear();
+
+          return;
+        }
+
+        choice.setValues([String(v)]);
+      },
+    });
+
     const hasValue = () => selectedValues.value.length > 0;
 
     function focusLiveInput() {

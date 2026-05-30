@@ -1,3 +1,11 @@
+import { sleep } from './sleep';
+
+export type WaitForOptions = {
+  interval?: number;
+  signal?: AbortSignal;
+  timeout?: number;
+};
+
 /**
  * Waits for a condition to become true by polling.
  * Useful for waiting for DOM elements, API states, or other conditions.
@@ -13,77 +21,32 @@
  *     const res = await fetch('/api/health');
  *     return res.ok;
  *   },
- *   { timeout: 30000, interval: 1000 }
+ *   { timeout: 30000, interval: 1000 },
  * );
  * ```
  *
  * @param condition - Function that returns true when condition is met
  * @param options - Configuration options
- * @param options.timeout - Maximum time to wait in ms (default: 5000)
- * @param options.interval - Polling interval in ms (default: 100)
- * @param options.signal - AbortSignal to cancel waiting
+ * @param [options.timeout=5000] - Maximum time to wait in ms
+ * @param [options.interval=100] - Polling interval in ms
+ * @param [options.signal] - AbortSignal to cancel waiting
  * @returns Promise that resolves when condition becomes true
- * @throws {unknown} Rejects with the merged AbortSignal reason (timeout or abort)
+ * @throws Rejects with the abort reason when timed out or cancelled
  */
 export async function waitFor(
   condition: () => boolean | Promise<boolean>,
-  options: {
-    interval?: number;
-    signal?: AbortSignal;
-    timeout?: number;
-  } = {},
+  { interval = 100, signal, timeout: ms = 5000 }: WaitForOptions = {},
 ): Promise<void> {
-  const { interval = 100, signal, timeout: timeoutMs = 5000 } = options;
-  const timeoutSignal = AbortSignal.timeout(timeoutMs);
-  const mergedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+  const deadline = AbortSignal.timeout(ms);
+  const merged = signal ? AbortSignal.any([signal, deadline]) : deadline;
 
-  mergedSignal.throwIfAborted();
+  merged.throwIfAborted();
 
-  return new Promise<void>((resolve, reject) => {
-    let intervalId: ReturnType<typeof setTimeout> | null = null;
+  while (true) {
+    if (await condition()) return;
 
-    const cleanup = () => {
-      if (intervalId !== null) {
-        clearTimeout(intervalId);
-        intervalId = null;
-      }
-
-      mergedSignal.removeEventListener('abort', onAbort);
-    };
-
-    const onAbort = () => {
-      cleanup();
-      reject(mergedSignal.reason);
-    };
-
-    const check = async () => {
-      try {
-        if (mergedSignal.aborted) {
-          cleanup();
-          reject(mergedSignal.reason);
-
-          return;
-        }
-
-        const result = await condition();
-
-        if (result) {
-          cleanup();
-          resolve();
-
-          return;
-        }
-
-        intervalId = setTimeout(check, interval);
-      } catch (error) {
-        cleanup();
-        reject(error);
-      }
-    };
-
-    mergedSignal.addEventListener('abort', onAbort, { once: true });
-
-    // Start checking
-    check();
-  });
+    merged.throwIfAborted();
+    await sleep(interval);
+    merged.throwIfAborted();
+  }
 }

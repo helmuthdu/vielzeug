@@ -49,8 +49,21 @@ export interface SortableOptions {
   dragImage?: HTMLElement | ((id: string, item: HTMLElement, event: DragEvent) => HTMLElement | null | undefined);
   /** CSS class applied to the placeholder element. @default 'grip-placeholder' */
   placeholderClass?: string;
-  /** Called with the new order of item ids after a successful drag, only when the order changed. */
-  onReorder?: (orderedIds: string[]) => void;
+  /** Called with the new order of item ids after a successful drag, only when the order changed.
+   *
+   * May optionally return a revert function. If returned, calling `sortable.revert()` will invoke
+   * it and clear the stored function — useful for rolling back optimistic UI updates on failure.
+   *
+   * @example
+   * ```ts
+   * onReorder: (ids) => {
+   *   const prev = currentOrder;
+   *   reorderItems(ids);
+   *   return () => reorderItems(prev); // revert on server error
+   * },
+   * ```
+   */
+  onReorder?: (orderedIds: string[]) => void | (() => void);
   /**
    * When truthy, drag interactions are ignored.
    * Accepts a function for reactive framework integration.
@@ -71,6 +84,11 @@ export interface SortableOptions {
 
 export interface Sortable extends Disposable {
   readonly isDragging: boolean;
+  /**
+   * Calls the revert function returned by the last `onReorder` invocation (if any) and clears it.
+   * A no-op when no revert function was provided or has already been consumed.
+   */
+  revert(): void;
   sync(): void;
 }
 
@@ -84,33 +102,39 @@ interface ResolvedAutoScrollOptions {
 }
 
 interface SortableController {
-  element: HTMLElement;
   getOrderedIds: () => string[];
   isDisabled: () => boolean;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
-  notifyReorder: (orderedIds: string[]) => void;
+  notifyReorder: (orderedIds: string[]) => void | (() => void);
+  setLastRevert: (fn: (() => void) | null) => void;
 }
 
-interface ActiveSortableDrag {
+/**
+ * Encapsulates all mutable state for a single in-progress drag operation.
+ * Created at dragstart, destroyed on dragend/cancel. All drag mutations go through
+ * the helpers below — no scattered null checks or external state mutation.
+ */
+interface DragSession {
   draggedEl: HTMLElement;
   draggedId: string;
-  hideFrame: number | null;
   /**
    * Order snapshots captured lazily: snapshot is taken the first time a controller
    * becomes the active target (and always for the source at drag start).
    */
   initialOrders: Map<SortableController, string[]>;
-  originalNextSibling: ChildNode | null;
   originalDisplay: string;
+  originalNextSibling: ChildNode | null;
   originalParent: HTMLElement;
   placeholder: HTMLElement;
   source: SortableController;
   target: SortableController | null;
+  /** rAF handle for the deferred element-hide; null once fired or cancelled. */
+  hideFrame: number | null;
 }
 
 interface SortableScopeState {
-  active: ActiveSortableDrag | null;
+  active: DragSession | null;
   controllers: Set<SortableController>;
 }
 
@@ -126,12 +150,17 @@ const DEFAULT_AUTO_SCROLL: ResolvedAutoScrollOptions = {
   viewport: false,
 };
 
-// ─── Internal helpers ─────────────────────────────────────────────────────────
+// ─── Scope helpers ────────────────────────────────────────────────────────────
 
-/** The scope state is always pre-registered by createSortableScope(), so this is a direct lookup. */
 function getSortableScopeState(scope: SortableScope): SortableScopeState {
-  return sortableScopeStates.get(scope)!;
+  const state = sortableScopeStates.get(scope);
+
+  if (!state) throw new Error('@vielzeug/grip: Invalid scope — use createSortableScope() to create scopes.');
+
+  return state;
 }
+
+// ─── Option resolution ────────────────────────────────────────────────────────
 
 function resolveAutoScrollOptions(
   autoScroll: boolean | AutoScrollOptions | undefined,
@@ -148,91 +177,120 @@ function resolveAutoScrollOptions(
   };
 }
 
+// ─── DOM helpers ──────────────────────────────────────────────────────────────
+
 function hasOrderChanged(before: string[], after: string[]): boolean {
   return after.length !== before.length || after.some((id, index) => id !== before[index]);
 }
 
-function restoreDraggedElement(active: ActiveSortableDrag): void {
-  if (active.hideFrame !== null) {
-    cancelAnimationFrame(active.hideFrame);
-    active.hideFrame = null;
-  }
+function clearHandleAttributes(element: HTMLElement): void {
+  element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
+    handleEl.removeAttribute(HANDLE_ATTR);
+    handleEl.removeAttribute('draggable');
+  });
+}
 
-  active.draggedEl.style.display = active.originalDisplay;
-  active.draggedEl.removeAttribute('data-dragging');
+// ─── Drag session helpers ─────────────────────────────────────────────────────
+
+function scheduleHide(session: DragSession): void {
+  if (typeof requestAnimationFrame !== 'function') return;
+
+  session.hideFrame = requestAnimationFrame(() => {
+    session.hideFrame = null;
+    session.draggedEl.style.display = 'none';
+  });
+}
+
+function cancelHide(session: DragSession): void {
+  if (session.hideFrame !== null) {
+    cancelAnimationFrame(session.hideFrame);
+    session.hideFrame = null;
+  }
+}
+
+function restoreSessionElement(session: DragSession): void {
+  cancelHide(session);
+  session.draggedEl.style.display = session.originalDisplay;
+  session.draggedEl.removeAttribute('data-dragging');
 }
 
 /**
  * Snapshot a controller's current order if not already recorded.
- * Call this when a controller first becomes an active target so we only capture
+ * Called the first time a controller becomes an active target so we only capture
  * lists that actually participate in the drag.
  */
-function snapshotOrder(active: ActiveSortableDrag, controller: SortableController): void {
-  if (!active.initialOrders.has(controller)) {
-    active.initialOrders.set(controller, controller.getOrderedIds());
+function snapshotOrder(session: DragSession, controller: SortableController): void {
+  if (!session.initialOrders.has(controller)) {
+    session.initialOrders.set(controller, controller.getOrderedIds());
   }
 }
 
-function cancelActiveDrag(scope: SortableScopeState, event: DragEvent): void {
-  const active = scope.active;
+// ─── Session commit / cancel ──────────────────────────────────────────────────
 
-  if (!active) return;
+function cancelSession(scope: SortableScopeState, event: DragEvent): void {
+  const session = scope.active;
 
-  restoreDraggedElement(active);
-  active.originalParent.insertBefore(active.draggedEl, active.originalNextSibling);
-  active.placeholder.remove();
+  if (!session) return;
+
+  restoreSessionElement(session);
+  session.originalParent.insertBefore(session.draggedEl, session.originalNextSibling);
+  session.placeholder.remove();
   scope.active = null;
 
-  active.source.notifyDragEnd(active.draggedId, event);
+  session.source.notifyDragEnd(session.draggedId, event);
 }
 
-function commitActiveDrag(scope: SortableScopeState, event: DragEvent): void {
-  const active = scope.active;
+function commitSession(scope: SortableScopeState, event: DragEvent): void {
+  const session = scope.active;
 
-  if (!active) return;
+  if (!session) return;
 
-  const targetController = active.target;
-  const targetElement = active.placeholder.parentElement;
+  const targetController = session.target;
+  const targetElement = session.placeholder.parentElement;
 
-  restoreDraggedElement(active);
+  restoreSessionElement(session);
 
   if (targetController && scope.controllers.has(targetController) && targetElement) {
-    targetElement.insertBefore(active.draggedEl, active.placeholder);
+    targetElement.insertBefore(session.draggedEl, session.placeholder);
   } else {
-    active.originalParent.insertBefore(active.draggedEl, active.originalNextSibling);
+    session.originalParent.insertBefore(session.draggedEl, session.originalNextSibling);
   }
 
-  active.placeholder.remove();
+  session.placeholder.remove();
   scope.active = null;
 
-  active.source.notifyDragEnd(active.draggedId, event);
+  session.source.notifyDragEnd(session.draggedId, event);
 
-  for (const [controller, beforeOrder] of active.initialOrders) {
+  for (const [controller, beforeOrder] of session.initialOrders) {
     if (!scope.controllers.has(controller)) continue;
 
     const afterOrder = controller.getOrderedIds();
 
     if (!hasOrderChanged(beforeOrder, afterOrder)) continue;
 
-    controller.notifyReorder(afterOrder);
+    const revert = controller.notifyReorder(afterOrder);
+
+    controller.setLastRevert(typeof revert === 'function' ? revert : null);
   }
 }
 
-function finishActiveDrag(scope: SortableScopeState, event: DragEvent, forceCancel: boolean): void {
+function finishSession(scope: SortableScopeState, event: DragEvent, forceCancel: boolean): void {
   if (!scope.active) return;
+
+  const { active } = scope;
 
   if (
     forceCancel ||
     !event.dataTransfer ||
     event.dataTransfer.dropEffect === 'none' ||
-    !scope.active.target ||
-    !scope.controllers.has(scope.active.target) ||
-    scope.active.source.isDisabled() ||
-    scope.active.target.isDisabled()
+    !active.target ||
+    !scope.controllers.has(active.target) ||
+    active.source.isDisabled() ||
+    active.target.isDisabled()
   ) {
-    cancelActiveDrag(scope, event);
+    cancelSession(scope, event);
   } else {
-    commitActiveDrag(scope, event);
+    commitSession(scope, event);
   }
 }
 
@@ -276,13 +334,7 @@ function maybeAutoScroll(
   }
 }
 
-function canReceiveActiveDrag(scope: SortableScopeState, controller: SortableController): boolean {
-  const active = scope.active;
-
-  if (!active) return false;
-
-  return !active.source.isDisabled() && !controller.isDisabled();
-}
+// ─── Keyboard reorder ─────────────────────────────────────────────────────────
 
 function applyKeyboardReorder(
   item: HTMLElement,
@@ -291,8 +343,7 @@ function applyKeyboardReorder(
   getOrderedIds: () => string[],
   key: string,
   axis: 'vertical' | 'horizontal',
-  onReorder?: (orderedIds: string[]) => void,
-): boolean {
+): string[] | boolean {
   const items = getItems();
   const currentIndex = items.indexOf(item);
 
@@ -321,28 +372,13 @@ function applyKeyboardReorder(
 
   if (!targetItem) return false;
 
-  if (targetIndex > currentIndex) {
-    element.insertBefore(item, targetItem.nextSibling);
-  } else {
-    element.insertBefore(item, targetItem);
-  }
+  element.insertBefore(item, targetIndex > currentIndex ? targetItem.nextSibling : targetItem);
 
   item.focus();
 
   const nextOrder = getOrderedIds();
 
-  if (hasOrderChanged(prevOrder, nextOrder)) {
-    onReorder?.(nextOrder);
-  }
-
-  return true;
-}
-
-function clearHandleAttributes(element: HTMLElement): void {
-  element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
-    handleEl.removeAttribute(HANDLE_ATTR);
-    handleEl.removeAttribute('draggable');
-  });
+  return hasOrderChanged(prevOrder, nextOrder) ? nextOrder : true;
 }
 
 // ─── createSortableScope ──────────────────────────────────────────────────────
@@ -444,13 +480,17 @@ export function createSortable(options: SortableOptions): Sortable {
     return p;
   };
 
+  let lastRevert: (() => void) | null = null;
+
   const controller: SortableController = {
-    element,
     getOrderedIds,
     isDisabled: () => resolveDisabled(options.disabled),
     notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
     notifyDragStart: (id, event) => options.onDragStart?.(id, event),
     notifyReorder: (orderedIds) => options.onReorder?.(orderedIds),
+    setLastRevert: (fn) => {
+      lastRevert = fn;
+    },
   };
 
   sortableScope.controllers.add(controller);
@@ -482,19 +522,10 @@ export function createSortable(options: SortableOptions): Sortable {
     item.setAttribute('data-dragging', '');
     originalParent.insertBefore(placeholder, originalNextSibling);
 
-    sortableScope.active = {
+    const session: DragSession = {
       draggedEl: item,
       draggedId: activeId,
-      hideFrame:
-        typeof requestAnimationFrame === 'function'
-          ? requestAnimationFrame(() => {
-              if (sortableScope.active?.draggedEl !== item) return;
-
-              item.style.display = 'none';
-
-              if (sortableScope.active) sortableScope.active.hideFrame = null;
-            })
-          : null,
+      hideFrame: null,
       initialOrders,
       originalDisplay: item.style.display,
       originalNextSibling,
@@ -503,6 +534,9 @@ export function createSortable(options: SortableOptions): Sortable {
       source: controller,
       target: controller,
     };
+
+    scheduleHide(session);
+    sortableScope.active = session;
 
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
@@ -517,27 +551,23 @@ export function createSortable(options: SortableOptions): Sortable {
       }
     }
 
-    controller.notifyDragStart(sortableScope.active.draggedId, e);
+    controller.notifyDragStart(session.draggedId, e);
   };
 
   const handleDragOver = (e: DragEvent): void => {
-    if (!canReceiveActiveDrag(sortableScope, controller)) return;
+    const session = sortableScope.active;
 
-    // Re-check per frame: disabled may change reactively after a drag entered.
-    if (controller.isDisabled()) return;
+    if (!session) return;
+
+    if (session.source.isDisabled() || controller.isDisabled()) return;
 
     e.preventDefault();
     maybeAutoScroll(e, element, axis, autoScrollOptions);
 
-    const active = sortableScope.active;
-
-    if (!active) return;
-
     // Lazily snapshot this controller's order the first time it becomes a target.
-    snapshotOrder(active, controller);
+    snapshotOrder(session, controller);
 
-    const { draggedEl, placeholder } = active;
-
+    const { draggedEl, placeholder } = session;
     const target = (e.target as HTMLElement).closest<HTMLElement>(`[${itemAttribute}]`);
 
     if (!target) {
@@ -545,7 +575,7 @@ export function createSortable(options: SortableOptions): Sortable {
         element.appendChild(placeholder);
       }
 
-      active.target = controller;
+      session.target = controller;
 
       return;
     }
@@ -557,21 +587,26 @@ export function createSortable(options: SortableOptions): Sortable {
       axis === 'vertical' ? e.clientY >= rect.top + rect.height / 2 : e.clientX >= rect.left + rect.width / 2;
 
     element.insertBefore(placeholder, insertAfter ? target.nextSibling : target);
-    active.target = controller;
+    session.target = controller;
   };
 
   const handleDrop = (e: DragEvent): void => {
-    if (!canReceiveActiveDrag(sortableScope, controller) || controller.isDisabled()) return;
+    const session = sortableScope.active;
+
+    if (!session) return;
+
+    if (session.source.isDisabled() || controller.isDisabled()) return;
 
     e.preventDefault();
-
-    if (sortableScope.active) sortableScope.active.target = controller;
+    // Record the drop target; the actual commit happens in handleDragEnd where
+    // dataTransfer.dropEffect tells us whether the browser accepted the operation.
+    session.target = controller;
   };
 
   const handleDragEnd = (e: DragEvent): void => {
     if (sortableScope.active?.source !== controller) return;
 
-    finishActiveDrag(sortableScope, e, false);
+    finishSession(sortableScope, e, false);
   };
 
   const handleKeydown = (e: KeyboardEvent): void => {
@@ -585,11 +620,17 @@ export function createSortable(options: SortableOptions): Sortable {
 
     if (!item || !element.contains(item)) return;
 
-    const changed = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis, options.onReorder);
+    const result = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis);
 
-    if (!changed) return;
+    if (result === false) return;
 
     e.preventDefault();
+
+    if (Array.isArray(result)) {
+      const revert = options.onReorder?.(result);
+
+      lastRevert = typeof revert === 'function' ? revert : null;
+    }
   };
 
   syncItems();
@@ -606,7 +647,7 @@ export function createSortable(options: SortableOptions): Sortable {
       sortableScope.active &&
       (sortableScope.active.source === controller || sortableScope.active.target === controller)
     ) {
-      finishActiveDrag(sortableScope, new Event('dragend') as DragEvent, true);
+      finishSession(sortableScope, new Event('dragend') as DragEvent, true);
     }
 
     sortableScope.controllers.delete(controller);
@@ -624,6 +665,10 @@ export function createSortable(options: SortableOptions): Sortable {
     destroy,
     get isDragging() {
       return sortableScope.active?.source === controller;
+    },
+    revert: () => {
+      lastRevert?.();
+      lastRevert = null;
     },
     [Symbol.dispose]: destroy,
     sync: syncItems,
@@ -649,9 +694,7 @@ export function applyReorder<T>(items: T[], ids: string[], getId: (item: T) => s
     byId.delete(id);
   }
 
-  for (const item of items) {
-    if (byId.has(getId(item))) ordered.push(item);
-  }
+  for (const item of byId.values()) ordered.push(item);
 
   return ordered;
 }

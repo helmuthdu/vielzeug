@@ -168,4 +168,62 @@ describe('createCursorSource', () => {
       expect(source.current).toEqual([]);
     });
   });
+
+  describe('flush', () => {
+    it('immediately applies pending debounced search', async () => {
+      const fetch = vi.fn(async ({ search }: { cursor?: string; search?: string }) => ({
+        cursor: null,
+        items: search ? [search] : ['init'],
+      }));
+      const source = createCursorSource({ autoFetch: false, debounceMs: 300, fetch });
+
+      await source.refresh();
+
+      source.search('fast');
+      expect(source.meta.isSearchPending).toBe(true);
+
+      await source.flush();
+
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.current).toEqual(['fast']);
+    });
+  });
+
+  describe('retry', () => {
+    it('retries on failure and resolves on success', async () => {
+      const fetch = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('transient'))
+        .mockResolvedValueOnce({ cursor: null, items: ['retried'] });
+      const source = createCursorSource({
+        autoFetch: false,
+        fetch,
+        retry: { attempts: 1, delay: () => 10 },
+      });
+
+      const p = source.refresh();
+
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['retried']);
+      expect(source.meta.errorMessage).toBeNull();
+    });
+  });
+
+  describe('dispose', () => {
+    it('stops notifying listeners after dispose', async () => {
+      const fetch = vi.fn(async () => ({ cursor: null, items: ['x'] }));
+      const source = createCursorSource({ autoFetch: false, fetch });
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+      source.dispose();
+
+      await source.refresh();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 });

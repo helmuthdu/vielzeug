@@ -21,10 +21,6 @@ export const clampPage = (page: number, pages: number) => {
   return Math.max(1, Math.min(clampInt(page, 1), Math.max(1, pages)));
 };
 
-export const clampOffset = (offset: number, pages: number) => {
-  return Math.max(0, Math.min(clampInt(offset, 0), Math.max(1, pages) - 1));
-};
-
 export const createMeta = (state: {
   errorMessage: string | null;
   isLoading: boolean;

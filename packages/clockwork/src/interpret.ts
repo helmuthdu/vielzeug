@@ -1,21 +1,22 @@
-import { batch, readonly, signal } from '@vielzeug/ripple';
+import { batch, effect, readonly, signal } from '@vielzeug/ripple';
 
 import type {
   ContextValidator,
-  DebugHooks,
   EventByType,
   EventType,
   InterpretOptions,
-  MachineDefinition,
+  MachineConfig,
   MachineEvent,
   MachineInstance,
   MachineSnapshot,
+  MiddlewareFn,
+  StateNode,
   TransitionDef,
   TransitionTraceEntry,
 } from './types.js';
 
+import { getAncestorPaths, getNodeAtPath, resolveLeaf } from './definition.js';
 import { MachineError } from './errors.js';
-import { assertContext, normalizeTransitions } from './internal.js';
 
 // ── Internal constants ────────────────────────────────────────────────────────
 
@@ -27,32 +28,37 @@ const HYDRATE_EVENT = { type: '$hydrate' } as const;
 /**
  * Resolves which transition (if any) should be taken for a given state and event.
  * Pure function — no side effects. Useful for testing transition logic independently.
- * @example
- * const result = resolveTransition(machine, { state: 'idle', context: { ok: true }, event: { type: 'GO' } });
- * if (result) console.log('Transition to:', result.transition.target);
+ *
+ * For hierarchical machines, walks up the state tree checking each ancestor for a handler.
  */
 export const resolveTransition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  definition: MachineDefinition<State, Ctx, Ev>,
+  definition: Readonly<MachineConfig<State, Ctx, Ev>>,
   input: {
     context: Readonly<Ctx>;
-    debug?: DebugHooks<State, Ctx, Ev>;
     event: NoInfer<Ev>;
     state: State;
   },
 ): TransitionDef<State, Ctx, Ev> | undefined => {
-  const { context, debug, event, state } = input;
-  const raw = definition.states[state].on?.[event.type as EventType<Ev>];
+  const { context, event, state } = input;
+  const ancestors = getAncestorPaths(state);
 
-  if (!raw) return undefined;
+  // Walk from deepest to shallowest — event bubbling
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    const node = getNodeAtPath(definition.states, ancestors[i]) as StateNode<State, Ctx, Ev> | undefined;
 
-  const defs = normalizeTransitions(raw as Array<TransitionDef<State, Ctx, Ev>> | TransitionDef<State, Ctx, Ev>);
+    if (!node?.on) continue;
 
-  for (const def of defs) {
-    const passed = !def.guard || def.guard({ context: context as Ctx, event: event as EventByType<Ev, EventType<Ev>> });
+    const raw = node.on[event.type as EventType<Ev>];
 
-    debug?.onEvaluateGuard?.({ context, event, from: state, passed, target: def.target });
+    if (!raw) continue;
 
-    if (passed) return def as TransitionDef<State, Ctx, Ev>;
+    const defs = Array.isArray(raw) ? raw : [raw];
+
+    for (const def of defs) {
+      if (!def.guard || def.guard({ context: context as Ctx, event: event as EventByType<Ev, EventType<Ev>> })) {
+        return def as TransitionDef<State, Ctx, Ev>;
+      }
+    }
   }
 
   return undefined;
@@ -62,14 +68,10 @@ export const resolveTransition = <State extends string, Ctx extends object, Ev e
 
 /**
  * Creates a live machine instance from a definition.
- * Handles state reactivity, event dispatch, async invokes, persistence, and tracing.
- * @example
- * const m = interpret(definition, { traceLimit: 100 });
- * m.send({ type: 'GO' });
- * console.log(m.state.value);
+ * Handles state reactivity, event dispatch, async invokes, persistence, middleware, and tracing.
  */
 export const interpret = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  definition: MachineDefinition<State, Ctx, Ev>,
+  definition: Readonly<MachineConfig<State, Ctx, Ev>>,
   options: InterpretOptions<State, Ctx, Ev> = {},
 ): MachineInstance<State, Ctx, Ev> => {
   const traceLimit = options.traceLimit ?? 0;
@@ -84,9 +86,11 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
   const maxTransitionsPerFlush = options.maxTransitionsPerFlush ?? 1_000;
   const clone = options.clone ?? structuredClone;
-  const persistedSnapshot = options.snapshot ?? options.persistence?.load?.();
+  const debug = options.onDebug;
+  const middlewares = options.middleware ?? [];
+  const persistedSnapshot = options.snapshot ?? options.persistence?.load();
 
-  if (persistedSnapshot && !(persistedSnapshot.state in definition.states)) {
+  if (persistedSnapshot && !(persistedSnapshot.state.split('.')[0] in definition.states)) {
     throw new MachineError(
       'MACHINE_INVALID_SNAPSHOT_STATE',
       `[machine] snapshot state "${persistedSnapshot.state}" not found in states`,
@@ -96,16 +100,33 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
   const validator: ContextValidator<Ctx> | undefined = options.validateSnapshot ?? definition.validateContext;
 
+  const assertContext = (context: Ctx, phase: 'hydrate' | 'init' | 'transition'): void => {
+    if (!validator) return;
+
+    if (!validator(context)) {
+      throw new MachineError(
+        'MACHINE_INVALID_VALIDATE_CONTEXT',
+        `[machine] context failed validation during ${phase}`,
+        { phase },
+      );
+    }
+  };
+
+  // Resolve initial state to leaf (for hierarchical machines)
+  const resolvedInitial = persistedSnapshot
+    ? persistedSnapshot.state
+    : (resolveLeaf(definition.states, definition.initial) as State);
+
   const initialContext = persistedSnapshot
     ? clone(persistedSnapshot.context)
-    : clone((definition.context ?? ({} as Ctx)) as Ctx);
+    : clone(('context' in definition ? definition.context : ({} as Ctx)) as Ctx);
 
-  assertContext(validator, initialContext, persistedSnapshot ? 'hydrate' : 'init');
+  assertContext(initialContext, persistedSnapshot ? 'hydrate' : 'init');
 
-  const state_ = signal(persistedSnapshot ? persistedSnapshot.state : definition.initial);
+  const state_ = signal(resolvedInitial);
   const context_ = signal(initialContext);
 
-  // Ring buffer for traces — O(1) insertions. Null when tracing is disabled.
+  // Ring buffer for traces
   const traceBuffer: TransitionTraceEntry<State, Ev>[] | null = traceLimit > 0 ? new Array(traceLimit) : null;
   let traceHead = 0;
   let traceCount = 0;
@@ -122,7 +143,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   }>();
 
   const pushTrace = (entry: TransitionTraceEntry<State, Ev>): void => {
-    if (traceBuffer === null) return;
+    if (!traceBuffer) return;
 
     traceBuffer[traceHead] = entry;
     traceHead = (traceHead + 1) % traceLimit;
@@ -130,22 +151,19 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     if (traceCount < traceLimit) traceCount++;
   };
 
-  type QueueItem = {
-    event: Ev;
-    invokeId?: number;
-    resultBox?: { result: boolean };
-  };
+  type QueueItem = { event: Ev; invokeId?: number };
 
   const queue: QueueItem[] = [];
 
   const stopInvokes = (): void => {
     for (const invoke of activeInvokes) {
       invoke.controller.abort();
-      options.debug?.onInvokeAbort?.({
+      debug?.({
         context: context_.value,
         event: invoke.event,
         invokeId: invoke.id,
         state: invoke.state,
+        type: 'invoke-abort',
       });
     }
 
@@ -153,100 +171,191 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   };
 
   const saveSnapshot = (): void => {
-    options.persistence?.save?.({ context: clone(context_.value), state: state_.value });
+    options.persistence?.save({ context: clone(context_.value), state: state_.value });
   };
 
   const runInvokes = (triggerEvent: Ev | typeof INIT_EVENT | typeof HYDRATE_EVENT): void => {
-    const node = definition.states[state_.value];
+    // Collect invokes from all active ancestors (leaf to root)
+    const ancestors = getAncestorPaths(state_.value);
 
-    if (!node.invoke?.length) return;
+    for (const path of ancestors) {
+      const node = getNodeAtPath(definition.states, path) as StateNode<State, Ctx, Ev> | undefined;
 
-    for (const invoke of node.invoke) {
-      const controller = new AbortController();
-      const invokeId = ++invokeCounter;
-      const invokeInfo = { controller, event: triggerEvent, id: invokeId, state: state_.value };
+      if (!node?.invoke?.length) continue;
 
-      activeInvokes.add(invokeInfo);
-      options.debug?.onInvokeStart?.({ context: context_.value, event: triggerEvent, invokeId, state: state_.value });
+      for (const invoke of node.invoke) {
+        const controller = new AbortController();
+        const invokeId = ++invokeCounter;
+        const invokeInfo = { controller, event: triggerEvent, id: invokeId, state: state_.value };
 
-      void invoke
-        .src({ context: context_.value, event: triggerEvent, signal: controller.signal })
-        .then((result) => {
-          activeInvokes.delete(invokeInfo);
+        activeInvokes.add(invokeInfo);
+        debug?.({ context: context_.value, event: triggerEvent, invokeId, state: state_.value, type: 'invoke-start' });
 
-          if (disposed || controller.signal.aborted || !invoke.onDone) return;
+        void invoke
+          .src({ context: context_.value, entryEvent: triggerEvent, signal: controller.signal })
+          .then((result) => {
+            activeInvokes.delete(invokeInfo);
 
-          options.debug?.onInvokeDone?.({
-            context: context_.value,
-            event: triggerEvent,
-            invokeId,
-            result,
-            state: state_.value,
+            if (disposed || controller.signal.aborted || !invoke.onDone) return;
+
+            debug?.({
+              context: context_.value,
+              event: triggerEvent,
+              invokeId,
+              result,
+              state: state_.value,
+              type: 'invoke-done',
+            });
+
+            queue.push({
+              event: invoke.onDone(result, { context: context_.value, entryEvent: triggerEvent }),
+              invokeId,
+            });
+
+            if (!draining) drainQueue();
+          })
+          .catch((error: unknown) => {
+            activeInvokes.delete(invokeInfo);
+
+            if (disposed || controller.signal.aborted || !invoke.onError) return;
+
+            debug?.({
+              context: context_.value,
+              error,
+              event: triggerEvent,
+              invokeId,
+              state: state_.value,
+              type: 'invoke-error',
+            });
+
+            queue.push({
+              event: invoke.onError(error, { context: context_.value, entryEvent: triggerEvent }),
+              invokeId,
+            });
+
+            if (!draining) drainQueue();
           });
-
-          queue.push({ event: invoke.onDone(result, { context: context_.value, event: triggerEvent }), invokeId });
-
-          if (!draining) drainQueue();
-        })
-        .catch((error: unknown) => {
-          activeInvokes.delete(invokeInfo);
-
-          if (disposed || controller.signal.aborted || !invoke.onError) return;
-
-          options.debug?.onInvokeError?.({
-            context: context_.value,
-            error,
-            event: triggerEvent,
-            invokeId,
-            state: state_.value,
-          });
-
-          queue.push({ event: invoke.onError(error, { context: context_.value, event: triggerEvent }), invokeId });
-
-          if (!draining) drainQueue();
-        });
+      }
     }
+  };
+
+  /**
+   * Computes exit/entry paths for a transition considering hierarchy.
+   * Returns { exitPaths: paths to exit (leaf-first), entryPaths: paths to enter (root-first) }
+   */
+  const computeTransitionPaths = (from: string, to: string): { entryPaths: string[]; exitPaths: string[] } => {
+    const fromAncestors = getAncestorPaths(from);
+    const toAncestors = getAncestorPaths(to);
+
+    // Self-transition: exit and re-enter the leaf state
+    if (from === to) {
+      return { entryPaths: [to], exitPaths: [from] };
+    }
+
+    // Find the lowest common ancestor
+    let lcaIndex = 0;
+
+    while (
+      lcaIndex < fromAncestors.length &&
+      lcaIndex < toAncestors.length &&
+      fromAncestors[lcaIndex] === toAncestors[lcaIndex]
+    ) {
+      lcaIndex++;
+    }
+
+    // Exit: from leaf up to (but not including) LCA — reversed for leaf-first
+    const exitPaths = fromAncestors.slice(lcaIndex).reverse();
+
+    // Entry: from LCA down to leaf
+    const entryPaths = toAncestors.slice(lcaIndex);
+
+    return { entryPaths, exitPaths };
   };
 
   const processEvent = (item: QueueItem): boolean => {
     if (disposed) return false;
 
     const from = state_.value;
+
+    // Resolve transition using the pure resolver (R1: no duplication)
     const transition = resolveTransition(definition, {
       context: context_.value,
-      debug: options.debug,
       event: item.event,
       state: from,
     });
 
+    // Fire debug guard events (inline, since resolveTransition is pure)
+    if (debug) {
+      const ancestors = getAncestorPaths(from);
+
+      outer: for (let i = ancestors.length - 1; i >= 0; i--) {
+        const node = getNodeAtPath(definition.states, ancestors[i]) as StateNode<State, Ctx, Ev> | undefined;
+
+        if (!node?.on) continue;
+
+        const raw = node.on[item.event.type as EventType<Ev>];
+
+        if (!raw) continue;
+
+        const defs = Array.isArray(raw) ? raw : [raw];
+
+        for (const def of defs) {
+          const passed =
+            !def.guard ||
+            def.guard({
+              context: context_.value,
+              event: item.event as EventByType<Ev, EventType<Ev>>,
+            });
+
+          debug({ context: context_.value, event: item.event, from, passed, target: def.target, type: 'guard' });
+
+          if (passed) break outer;
+        }
+      }
+    }
+
     if (!transition) {
-      options.debug?.onTransitionSkipped?.({ event: item.event, from });
+      debug?.({ event: item.event, from, type: 'transition-skipped' });
 
       return false;
     }
 
-    const currentNode = definition.states[from];
-    const targetNode = definition.states[transition.target];
+    // Resolve target to leaf state (hierarchical support)
+    const resolvedTarget = resolveLeaf(definition.states, transition.target) as State;
 
-    // Exit, actions, and entry all operate on `draft` — the live context_ signal is
-    // still the pre-transition value at this point. The commit happens atomically below.
-    // Validating here, before batch, guarantees the machine is unchanged if assertContext throws.
+    // Compute entry/exit paths for proper hierarchy handling
+    const { entryPaths, exitPaths } = computeTransitionPaths(from, resolvedTarget);
+
     const draft = clone(context_.value);
 
-    currentNode.exit?.({ context: draft, event: item.event });
-    transition.actions?.forEach((fn) => fn({ context: draft, event: item.event as EventByType<Ev, EventType<Ev>> }));
-    targetNode.entry?.({ context: draft });
-    assertContext(validator, draft, 'transition');
+    // Exit handlers (leaf → root)
+    for (const path of exitPaths) {
+      const node = getNodeAtPath(definition.states, path);
 
-    // All validations passed — commit atomically and stop current invokes.
+      node?.exit?.({ context: draft, event: item.event });
+    }
+
+    // Transition actions
+    transition.actions?.forEach((fn) => fn({ context: draft, event: item.event as EventByType<Ev, EventType<Ev>> }));
+
+    // Entry handlers (root → leaf)
+    for (const path of entryPaths) {
+      const node = getNodeAtPath(definition.states, path);
+
+      node?.entry?.({ context: draft, event: item.event });
+    }
+
+    assertContext(draft, 'transition');
+
+    // Commit atomically
     batch(() => {
       stopInvokes();
-      state_.value = transition.target;
+      state_.value = resolvedTarget;
       context_.value = draft;
     });
 
-    options.onTransition?.({ event: item.event, from, to: transition.target });
-    pushTrace({ event: item.event, from, invokeId: item.invokeId, timestamp: Date.now(), to: transition.target });
+    options.onTransition?.({ event: item.event, from, to: resolvedTarget });
+    pushTrace({ event: item.event, from, invokeId: item.invokeId, timestamp: Date.now(), to: resolvedTarget });
     saveSnapshot();
     runInvokes(item.event);
 
@@ -264,11 +373,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
       while (queue.length > 0) {
         const item = queue.shift()!;
 
-        processed++;
-
-        // processed is incremented before this check: throwing when processed > limit
-        // means exactly `limit` transitions complete before the guard fires.
-        if (processed > maxTransitionsPerFlush) {
+        if (++processed > maxTransitionsPerFlush) {
           throw new MachineError(
             'MACHINE_TRANSITION_LOOP_GUARD',
             '[machine] transition queue exceeded maxTransitionsPerFlush',
@@ -276,19 +381,18 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
           );
         }
 
-        const result = processEvent(item);
-
-        if (item.resultBox) item.resultBox.result = result;
+        processEvent(item);
       }
     } finally {
       draining = false;
     }
   };
 
+  // ── Public API ──────────────────────────────────────────────────────────────
+
   const can = (event: Ev): boolean => {
     if (disposed) return false;
 
-    // No debug hooks — can() is a pure read probe, not a dispatch.
     return !!resolveTransition(definition, {
       context: context_.value,
       event,
@@ -299,12 +403,69 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const send = (event: Ev): boolean => {
     if (disposed) return false;
 
-    const resultBox = { result: false };
+    // Apply middleware chain (F3)
+    if (middlewares.length > 0) {
+      const snapshot = { context: context_.value, state: state_.value };
 
-    queue.push({ event, resultBox });
-    drainQueue();
+      const runCore = (): boolean => {
+        if (draining) {
+          queue.push({ event });
 
-    return resultBox.result;
+          return false;
+        }
+
+        draining = true;
+
+        try {
+          const result = processEvent({ event });
+
+          while (queue.length > 0) {
+            const item = queue.shift()!;
+
+            processEvent(item);
+          }
+
+          return result;
+        } finally {
+          draining = false;
+        }
+      };
+
+      // Build middleware chain (last middleware calls core)
+      let chain = runCore;
+
+      for (let i = middlewares.length - 1; i >= 0; i--) {
+        const mw = middlewares[i];
+        const next = chain;
+
+        chain = () => mw(event, snapshot, next);
+      }
+
+      return chain();
+    }
+
+    // Fast path: no middleware (R3: simplified send)
+    if (draining) {
+      queue.push({ event });
+
+      return false;
+    }
+
+    draining = true;
+
+    try {
+      const result = processEvent({ event });
+
+      while (queue.length > 0) {
+        const item = queue.shift()!;
+
+        processEvent(item);
+      }
+
+      return result;
+    } finally {
+      draining = false;
+    }
   };
 
   const getSnapshot = (): MachineSnapshot<State, Ctx> => ({
@@ -313,41 +474,69 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   });
 
   const getTrace = (): readonly TransitionTraceEntry<State, Ev>[] => {
-    if (traceBuffer === null || traceCount === 0) return [];
+    if (!traceBuffer || traceCount === 0) return [];
 
-    // Buffer not yet full — entries are at indices [0, traceCount)
     if (traceCount < traceLimit) {
       return traceBuffer.slice(0, traceCount);
     }
 
-    // Buffer is full — traceHead points to the oldest entry
     return [...traceBuffer.slice(traceHead), ...traceBuffer.slice(0, traceHead)];
   };
 
-  const matches = (...states: State[]): boolean => !disposed && states.includes(state_.value);
+  const matches = (...states: string[]): boolean => {
+    if (disposed) return false;
+
+    const current = state_.value;
+
+    return states.some((s) => current === s || current.startsWith(`${s}.`));
+  };
 
   const clearPersistence = (): void => {
     options.persistence?.clear?.();
+  };
+
+  const subscribe = (fn: (snapshot: MachineSnapshot<State, Ctx>) => void): (() => void) => {
+    let first = true;
+    const e = effect(() => {
+      const snap: MachineSnapshot<State, Ctx> = { context: context_.value, state: state_.value };
+
+      if (first) {
+        first = false;
+
+        return;
+      }
+
+      fn(snap);
+    });
+
+    return () => e.dispose();
   };
 
   // ── Initialization ────────────────────────────────────────────────────────
 
   if (persistedSnapshot) {
     runInvokes(HYDRATE_EVENT);
-    saveSnapshot();
+    // R8: Don't save on hydrate — we just loaded this snapshot
   } else {
-    const initNode = definition.states[definition.initial];
+    // Run entry handlers for all ancestor paths of initial state (root → leaf)
+    const initPaths = getAncestorPaths(resolvedInitial);
+    const hasEntry = initPaths.some((p) => getNodeAtPath(definition.states, p)?.entry);
 
-    if (initNode.entry) {
+    if (hasEntry) {
       const initDraft = clone(context_.value);
 
-      initNode.entry({ context: initDraft });
-      assertContext(validator, initDraft, 'init');
+      for (const p of initPaths) {
+        getNodeAtPath(definition.states, p)?.entry?.({ context: initDraft, event: INIT_EVENT });
+      }
+
+      assertContext(initDraft, 'init');
       context_.value = initDraft;
     }
 
     runInvokes(INIT_EVENT);
-    saveSnapshot();
+
+    // R8: Only save if persistence adapter exists
+    if (options.persistence) saveSnapshot();
   }
 
   return {
@@ -359,11 +548,10 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     matches,
     send,
     state: readonly(state_),
+    subscribe,
     [Symbol.dispose]: () => {
       disposed = true;
       stopInvokes();
-      // Do NOT call persistence.clear() — disposal should release resources, not delete data.
-      // Use clearPersistence() explicitly if you want to clear stored state.
       state_.dispose();
       context_.dispose();
     },

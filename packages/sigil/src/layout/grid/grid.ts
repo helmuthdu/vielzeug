@@ -138,7 +138,8 @@ export type BitGridProps = {
  *   <main style="grid-area: main">Main</main>
  * </bit-grid>
  */
-export const GRID_TAG = define<BitGridProps>('bit-grid', {
+export const GRID_TAG = 'bit-grid' as const;
+define<BitGridProps>(GRID_TAG, {
   props: {
     align: prop.string<'start' | 'center' | 'end' | 'stretch' | 'baseline'>(),
     areas: prop.string(),

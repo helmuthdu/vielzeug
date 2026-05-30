@@ -1,23 +1,33 @@
-import { search as defaultSearch } from '@vielzeug/arsenal';
-
 import type { LocalConfig, LocalSource, Predicate, Sorter, SourceMeta, SourceQuery } from './types';
 
-import { clampOffset, createMeta, pageCount } from './pagination';
+import { createSourceCore } from './core';
+import { clampPage, createMeta, pageCount } from './pagination';
 
 const DEFAULTS = { debounceMs: 300, limit: 10 } as const;
 
+/**
+ * Default search: case-insensitive JSON substring match.
+ * For production use with large datasets or domain-specific relevance, supply a custom `searchFn`.
+ */
+const defaultSearchFn = <T>(items: readonly T[], query: string): readonly T[] => {
+  const q = query.toLowerCase();
+
+  return items.filter((item) => JSON.stringify(item).toLowerCase().includes(q));
+};
+
 export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): LocalSource<T> {
-  const listeners = new Set<() => void>();
-  const searchFn = cfg.searchFn ?? ((items, q) => defaultSearch(items as T[], q) as readonly T[]);
+  const core = createSourceCore();
+  const debounceMs = cfg.debounceMs ?? DEFAULTS.debounceMs;
+  const searchFn = cfg.searchFn ?? (defaultSearchFn as (items: readonly T[], query: string) => readonly T[]);
+  const limitDefault = Math.max(1, cfg.limit ?? DEFAULTS.limit);
 
   let rawData: readonly T[] = [...initialData];
-  let limit = Math.max(1, cfg.limit ?? DEFAULTS.limit);
+  let limit = limitDefault;
   let filterFn: Predicate<T> | undefined = cfg.filter;
   let sortFn: Sorter<T> | undefined = cfg.sort;
   let query = '';
-  let offset = 0;
+  let page = 1;
   let view: readonly T[] = [];
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let cachedCurrent!: readonly T[];
   let cachedMeta!: SourceMeta;
 
@@ -25,7 +35,7 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
     if (!view.length) {
       cachedCurrent = [];
     } else {
-      const start = offset * limit;
+      const start = (page - 1) * limit;
 
       cachedCurrent = view.slice(start, start + limit);
     }
@@ -33,8 +43,8 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
     cachedMeta = createMeta({
       errorMessage: null,
       isLoading: false,
-      isSearchPending: timer !== undefined,
-      pageNumber: offset + 1,
+      isSearchPending: core.isScheduled,
+      pageNumber: page,
       pageSize: limit,
       totalItems: view.length,
     });
@@ -42,10 +52,7 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
 
   const notify = () => {
     refreshCache();
-
-    for (const listener of listeners) {
-      listener();
-    }
+    core.notify();
   };
 
   const recompute = () => {
@@ -59,9 +66,7 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
       next = [...next].sort(sortFn);
     }
 
-    const pages = pageCount(next.length, limit);
-
-    offset = clampOffset(offset, pages);
+    page = clampPage(page, pageCount(next.length, limit));
     view = next;
   };
 
@@ -70,70 +75,79 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
     notify();
   };
 
-  const toQuery = (): SourceQuery => ({
-    limit,
-    page: offset + 1,
-    search: query,
-  });
-
-  const scheduleSearch = (searchTerm: string) => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-
-    query = searchTerm;
-    offset = 0;
-
-    timer = setTimeout(() => {
-      timer = undefined;
-      emit();
-    }, cfg.debounceMs ?? DEFAULTS.debounceMs);
-
-    notify();
-  };
-
-  const searchNow = (searchTerm: string): Promise<void> => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = undefined;
-    }
-
-    query = searchTerm;
-    offset = 0;
-    emit();
-
-    return Promise.resolve();
-  };
-
   recompute();
   refreshCache();
 
   return {
-    commit(): Promise<void> {
-      if (!timer) {
-        return Promise.resolve();
-      }
-
-      clearTimeout(timer);
-      timer = undefined;
-      emit();
-
-      return Promise.resolve();
-    },
-
     get current() {
       return cachedCurrent;
     },
 
-    goTo(page: number): Promise<void> {
-      offset = clampOffset(page - 1, pageCount(view.length, limit));
+    dispose() {
+      core.dispose();
+    },
+
+    flush(): Promise<void> {
+      return core.flush(() => {
+        emit();
+
+        return Promise.resolve();
+      });
+    },
+
+    goTo(p: number): Promise<void> {
+      page = clampPage(Math.trunc(p), pageCount(view.length, limit));
       notify();
 
       return Promise.resolve();
     },
 
     goToLast(): Promise<void> {
-      return this.goTo(pageCount(view.length, limit));
+      page = pageCount(view.length, limit);
+      notify();
+
+      return Promise.resolve();
+    },
+
+    hydrate(patch): Promise<void> {
+      let changed = false;
+
+      if (patch.limit !== undefined) {
+        const nextLimit = Math.max(1, Math.trunc(patch.limit));
+
+        if (nextLimit !== limit) {
+          limit = nextLimit;
+          changed = true;
+        }
+      }
+
+      if (patch.search !== undefined && patch.search !== query) {
+        query = patch.search;
+        changed = true;
+      }
+
+      if ('filter' in patch && patch.filter !== filterFn) {
+        filterFn = patch.filter as Predicate<T> | undefined;
+        changed = true;
+      }
+
+      if ('sort' in patch && patch.sort !== sortFn) {
+        sortFn = patch.sort as Sorter<T> | undefined;
+        changed = true;
+      }
+
+      if (patch.page !== undefined) {
+        const nextPage = Math.max(1, Math.trunc(patch.page));
+
+        if (nextPage !== page) {
+          page = nextPage;
+          changed = true;
+        }
+      }
+
+      if (changed) emit();
+
+      return Promise.resolve();
     },
 
     get meta() {
@@ -143,70 +157,54 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
     next(): Promise<void> {
       const pages = pageCount(view.length, limit);
 
-      if (offset >= pages - 1) return Promise.resolve();
+      if (page >= pages) return Promise.resolve();
 
-      return this.goTo(this.meta.pageNumber + 1);
+      page += 1;
+      notify();
+
+      return Promise.resolve();
     },
 
     prev(): Promise<void> {
-      if (offset <= 0) return Promise.resolve();
+      if (page <= 1) return Promise.resolve();
 
-      return this.goTo(this.meta.pageNumber - 1);
+      page -= 1;
+      notify();
+
+      return Promise.resolve();
     },
 
     reset(): Promise<void> {
-      limit = Math.max(1, cfg.limit ?? DEFAULTS.limit);
+      limit = limitDefault;
       filterFn = cfg.filter;
       sortFn = cfg.sort;
       query = '';
-      offset = 0;
+      page = 1;
+      core.cancelTimer();
       emit();
 
       return Promise.resolve();
     },
 
-    restore(state: Partial<SourceQuery>): Promise<void> {
-      let changed = false;
+    search(searchTerm: string) {
+      query = searchTerm;
+      page = 1;
+      core.schedule(() => emit(), debounceMs);
+      notify();
+    },
 
-      if (state.limit !== undefined) {
-        const nextLimit = Math.max(1, Math.trunc(state.limit));
-
-        if (nextLimit !== limit) {
-          limit = nextLimit;
-          changed = true;
-        }
-      }
-
-      if (state.search !== undefined && state.search !== query) {
-        query = state.search;
-        changed = true;
-      }
-
-      if (state.page !== undefined) {
-        const nextOffset = Math.max(0, Math.trunc(state.page) - 1);
-
-        if (nextOffset !== offset) {
-          offset = nextOffset;
-          changed = true;
-        }
-      }
-
-      if (changed) {
-        emit();
-      }
+    searchNow(searchTerm: string): Promise<void> {
+      core.cancelTimer();
+      query = searchTerm;
+      page = 1;
+      emit();
 
       return Promise.resolve();
     },
 
-    search(searchTerm: string) {
-      scheduleSearch(searchTerm);
-    },
-
-    searchNow,
-
     setData(data: readonly T[]): Promise<void> {
       rawData = [...data];
-      offset = 0;
+      page = 1;
       emit();
 
       return Promise.resolve();
@@ -214,7 +212,7 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
 
     setFilter(filter?: Predicate<T>): Promise<void> {
       filterFn = filter;
-      offset = 0;
+      page = 1;
       emit();
 
       return Promise.resolve();
@@ -222,7 +220,7 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
 
     setLimit(nextLimit: number): Promise<void> {
       limit = Math.max(1, Math.trunc(nextLimit));
-      offset = 0;
+      page = 1;
       emit();
 
       return Promise.resolve();
@@ -230,67 +228,18 @@ export function createLocalSource<T>(initialData: readonly T[], cfg: LocalConfig
 
     setSort(sort?: Sorter<T>): Promise<void> {
       sortFn = sort;
-      offset = 0;
+      page = 1;
       emit();
 
       return Promise.resolve();
     },
 
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-
-      return () => listeners.delete(listener);
+    subscribe(listener) {
+      return core.subscribe(listener);
     },
 
-    toQuery() {
-      return toQuery();
-    },
-
-    update(patch): Promise<void> {
-      let changed = false;
-
-      if (patch.limit !== undefined) {
-        const nextLimit = Math.max(1, Math.trunc(patch.limit));
-
-        if (nextLimit !== limit) {
-          limit = nextLimit;
-          changed = true;
-          offset = 0;
-        }
-      }
-
-      if (patch.search !== undefined && patch.search !== query) {
-        query = patch.search;
-        changed = true;
-        offset = 0;
-      }
-
-      if (patch.page !== undefined) {
-        const nextOffset = Math.max(0, Math.trunc(patch.page) - 1);
-
-        if (nextOffset !== offset) {
-          offset = nextOffset;
-          changed = true;
-        }
-      }
-
-      if (Object.prototype.hasOwnProperty.call(patch, 'filter') && patch.filter !== filterFn) {
-        filterFn = patch.filter as Predicate<T> | undefined;
-        changed = true;
-        offset = 0;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(patch, 'sort') && patch.sort !== sortFn) {
-        sortFn = patch.sort as Sorter<T> | undefined;
-        changed = true;
-        offset = 0;
-      }
-
-      if (changed) {
-        emit();
-      }
-
-      return Promise.resolve();
+    toQuery(): SourceQuery {
+      return { limit, page, search: query };
     },
   };
 }

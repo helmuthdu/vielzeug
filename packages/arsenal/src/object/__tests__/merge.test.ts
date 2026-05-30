@@ -1,7 +1,7 @@
-import { deepMerge, shallowMerge } from '../merge';
+import { deepMerge, deepMergeWith, shallowMerge } from '../merge';
 
 describe('merge', () => {
-  test('should perform deep merge', () => {
+  test('should perform deep merge (arrays replaced by default)', () => {
     const obj1 = { a: 1, b: { x: 10, y: 'hello' }, c: [1] };
     const obj2 = { b: { y: 20, z: true }, c: [2] };
     const obj3 = { c: [3], d: false };
@@ -11,9 +11,31 @@ describe('merge', () => {
     expect(result).toEqual({
       a: 1,
       b: { x: 10, y: 20, z: true },
+      c: [3],
+      d: false,
+    });
+  });
+
+  test('deepMergeWith({ arrayStrategy: concat }) concatenates arrays', () => {
+    const merge = deepMergeWith({ arrayStrategy: 'concat' });
+    const obj1 = { a: 1, b: { x: 10, y: 'hello' }, c: [1] };
+    const obj2 = { b: { y: 20, z: true }, c: [2] };
+    const obj3 = { c: [3], d: false };
+
+    const result = merge(obj1, obj2, obj3);
+
+    expect(result).toEqual({
+      a: 1,
+      b: { x: 10, y: 20, z: true },
       c: [1, 2, 3],
       d: false,
     });
+  });
+
+  test('deepMergeWith({ arrayStrategy: replace }) replaces arrays', () => {
+    const merge = deepMergeWith({ arrayStrategy: 'replace' });
+
+    expect(merge({ tags: ['a'] }, { tags: ['b', 'c'] })).toEqual({ tags: ['b', 'c'] });
   });
 
   test('should perform shallow merge', () => {

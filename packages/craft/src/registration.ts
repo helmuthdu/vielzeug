@@ -1,8 +1,8 @@
 import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 
-import { CRAFTIT_ERRORS, createRuntimeError, reportRuntimeError, type CraftitRuntimeError } from './errors';
+import { inject, injectStrict, provide } from './context';
+import { CraftitError, CRAFTIT_ERRORS, reportRuntimeError } from './errors';
 import { createBind, type HostBindFn } from './host-bind';
-import { ComponentPhase } from './lifecycle';
 import {
   createProps,
   normalizePropDefinition,
@@ -15,204 +15,228 @@ import {
   type PropInputDefs,
   type PropsDef,
 } from './props';
-import { getCurrentElement, type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
+import {
+  effect,
+  onCleanup,
+  onMounted,
+  withRuntimeContext,
+  type OnMountedCallback,
+  type RuntimeContext,
+} from './runtime';
 import { createSlots, type ComponentSlots } from './slots';
-import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
-import { extractResult, type HTMLResult } from './types/bindings';
+import { ComponentPhase, LIFECYCLE_EVENTS } from './types';
+import { type HTMLResult } from './types/bindings';
 import { type CSSResult, loadStylesheet } from './utils/css';
 import { toKebab } from './utils/dom';
 import { createEmitFn, type EmitFn } from './utils/emit';
 
-// ─── Lifecycle event constants ────────────────────────────────────────────────────────────
+// ─── Re-export from types.ts (R12) ─────────────────────────────────────────────
 
-/**
- * Lifecycle event names dispatched on the component's host element.
- *
- * - `craft:connect` — fires after every `connectedCallback` (after setup and initial render)
- * - `craft:disconnect` — fires after every `disconnectedCallback` (after scope cleanup)
- *
- * Both events are non-bubbling by default. Listen from outside the component:
- *
- * @example
- * ```ts
- * element.addEventListener(LIFECYCLE_EVENTS.CONNECT, () => {
- *   console.log('component mounted');
- * });
- * ```
- */
-export const LIFECYCLE_EVENTS = {
-  CONNECT: 'craft:connect',
-  DISCONNECT: 'craft:disconnect',
-} as const;
+export { ComponentPhase, LIFECYCLE_EVENTS } from './types';
+export type { LifecycleEventName } from './types';
 
-export type LifecycleEventName = (typeof LIFECYCLE_EVENTS)[keyof typeof LIFECYCLE_EVENTS];
+// ─── Public component API types ───────────────────────────────────────────────
 
-export type ComponentRegistrationOptions = {
-  /** Indicates if this should be a form-associated element */
+export type SetupContextBag<
+  Emits extends Record<string, unknown> = Record<string, unknown>,
+  SlotNames extends string = string,
+> = {
+  bind: HostBindFn;
+  /** Scoped reactive effect — auto-disposed on component disconnect. */
+  effect: typeof effect;
+  /** The host element. */
+  el: HTMLElement;
+  emit: EmitFn<Emits>;
+  /** Inject a context value from a parent component. */
+  inject: typeof inject;
+  /** Inject a context value, throwing if not found. */
+  injectStrict: typeof injectStrict;
+  /** Register a cleanup function to run on component disconnect. */
+  onCleanup: typeof onCleanup;
+  /** Register a callback to run after the component template mounts to DOM. */
+  onMounted: typeof onMounted;
+  /** Provide a context value to descendant components. */
+  provide: typeof provide;
+  slots: ComponentSlots<SlotNames>;
+};
+
+export type ComponentDefinition<
+  Props extends Record<string, unknown> = Record<never, never>,
+  Emits extends Record<string, unknown> = Record<string, never>,
+  SlotNames extends string = string,
+> = {
   formAssociated?: boolean;
-  /** @internal — list of attribute names to observe via attributeChangedCallback */
-  observedAttrs?: string[];
   /**
-   * Optional error handler called when setup throws.
-   * Receives a structured error envelope with full context.
-   * If a recovery template is returned, it will be rendered instead of failing.
-   * Otherwise, an error event is dispatched on the element.
+   * Rendered while async `setup()` is still pending.
+   * Only used when `setup` returns a `Promise`.
    */
-  onError?: (error: CraftitRuntimeError, element: HTMLElement) => HTMLResult | void;
-  /** Shadow root init options. `mode` defaults to `'open'`; set to `'closed'` for
-   * security-sensitive components where shadow DOM internals must not be reachable
-   * via `element.shadowRoot`. */
-  shadow?: Partial<ShadowRootInit>;
-  /** Component styles applied to the shadow root. Static — set at definition time, not per-render. */
+  loading?: () => HTMLResult;
+  /**
+   * Error handler called when setup throws.
+   * If a recovery HTMLResult is returned, it replaces the failed template.
+   */
+  onError?: (error: CraftitError, element: HTMLElement) => HTMLResult | void;
+  props?: PropsDef<Props>;
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult | Promise<HTMLResult>;
+  /**
+   * Shadow DOM configuration. `mode` defaults to `'open'`.
+   * Set to `false` to opt out of shadow DOM entirely (light DOM rendering).
+   */
+  shadow?: Partial<ShadowRootInit> | false;
+  slots?: readonly SlotNames[];
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
+
+// ─── Internal component state ─────────────────────────────────────────────────
 
 type ComponentState = {
   mountCallbacks: OnMountedCallback[];
   mountToken: number;
   phase: ComponentPhase;
   scope: Scope;
-  styles?: (string | CSSStyleSheet | CSSResult)[];
   templateResult: HTMLResult | null;
 };
 
-const createComponentState = (styles?: (string | CSSStyleSheet | CSSResult)[]): ComponentState => ({
+const createComponentState = (): ComponentState => ({
   mountCallbacks: [],
   mountToken: 0,
   phase: ComponentPhase.UNINITIALIZED,
   scope: _scope(),
-  styles,
   templateResult: null,
 });
 
+// ─── BaseElement ──────────────────────────────────────────────────────────────
+
 class BaseElement extends HTMLElement {
-  /**
-   * Lifecycle:
-   *
-   * 1. UNINITIALIZED → SETUP_RUNNING → SETUP_DONE (first connect)
-   *    - setup() runs once, returns HTMLResult
-   *    - signals created in setup closure survive reconnect
-   *    - computeds are re-created on each reconnect (scope-managed)
-   *
-   * 2. SETUP_DONE (every connect after first)
-   *    - Template mounted if not already mounted
-   *    - onMounted callbacks queued and executed
-   *
-   * 3. SETUP_DONE → UNMOUNTED (disconnect)
-   *    - scope.dispose() runs all effect cleanups
-   *    - Phase resets to allow setup re-run on reconnect
-   */
-  static _options?: ComponentRegistrationOptions;
-  static _setup: () => HTMLResult;
+  static _definition: ComponentDefinition<Record<never, never>, Record<string, never>, string>;
+  static _normalizedPropDefs: PropsDef<Record<never, never>> | undefined;
   static formAssociated = false;
   static observedAttributes: string[] = [];
 
-  shadow: ShadowRoot;
+  shadow: ShadowRoot | null;
   private _component: ComponentState;
 
   constructor() {
     super();
 
-    const options = (this.constructor as typeof BaseElement)._options;
+    const def = (this.constructor as typeof BaseElement)._definition;
 
-    this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this._component = createComponentState(options?.styles);
+    this.shadow =
+      def?.shadow !== false
+        ? this.attachShadow({ mode: 'open', ...(def?.shadow as Partial<ShadowRootInit> | undefined) })
+        : null;
+    this._component = createComponentState();
   }
 
   connectedCallback(): void {
     untrack(() => {
-      if (this._component.phase === ComponentPhase.UNINITIALIZED) {
-        this._runSetup();
-      }
+      if (this._component.phase === ComponentPhase.UNINITIALIZED) this._runSetup();
 
       this._init();
     });
-
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.CONNECT, { bubbles: false, composed: false }));
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
 
-    const attrName = name;
-    const propMeta = propRegistry.get(this)?.get(attrName);
+    const propMeta = propRegistry.get(this)?.get(name);
 
     if (!propMeta) return;
 
-    // Parse the new attribute value
     const parsed = propMeta.parse(newValue);
 
-    // Only update signal if value actually changed
     if (
       !Object.is(
         untrack(() => propMeta.signal.value),
         parsed,
       )
-    ) {
+    )
       propMeta.signal.value = parsed as never;
-    }
   }
 
   disconnectedCallback(): void {
     this._component.mountToken++;
     this._component.phase = ComponentPhase.UNMOUNTED;
     this._component.scope.dispose();
-
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
-
-    // Reset component state while preserving shadow and styles
-    this._component.scope = _scope();
-    this._component.mountCallbacks = [];
-    this._component.templateResult = null;
-    this._component.phase = ComponentPhase.UNINITIALIZED;
+    // Reset state (scope, callbacks, template) for next connect
+    this._component = createComponentState();
   }
 
-  private _handleSetupError(error: unknown, operation: string = 'connectedCallback'): HTMLResult | void {
+  private _handleSetupError(error: unknown, operation = 'connectedCallback'): HTMLResult | void {
     const err = error instanceof Error ? error : new Error(String(error));
-    const runtimeError = createRuntimeError({
-      cause: err,
-      code: 'SETUP_FAILED',
-      component: this.localName,
-      hint: 'Check component setup function and prop definitions',
-      kind: 'setup',
-      operation,
-      phase: this._component.phase,
-    });
+    const craftError = new CraftitError(
+      `[craft] <${this.localName}> failed during ${this._component.phase} (${operation})`,
+      { cause: err, component: this.localName, phase: this._component.phase },
+    );
+    const def = (this.constructor as typeof BaseElement)._definition;
 
-    const options = (this.constructor as typeof BaseElement)._options;
-    const handler = options?.onError;
-
-    if (handler) {
+    if (def?.onError) {
       try {
-        return handler(runtimeError, this);
+        return def.onError(craftError, this);
       } catch {
-        // If error handler itself throws, fall through to default
+        /* fall through */
       }
     }
 
-    // Default: report structured error and dispatch event
-    reportRuntimeError(runtimeError, this);
-
-    return undefined;
+    reportRuntimeError(craftError, this);
   }
 
   private _runSetup(): void {
     this._component.phase = ComponentPhase.SETUP_RUNNING;
 
-    const ctx: RuntimeContext = {
-      element: this,
-      mountCallbacks: [],
-    };
+    const def = (this.constructor as typeof BaseElement)._definition;
+    const normalizedPropDefs = (this.constructor as typeof BaseElement)._normalizedPropDefs;
+    const ctx: RuntimeContext = { element: this, mountCallbacks: [] };
 
     try {
-      this._component.scope.run(() => {
-        this._component.templateResult = withRuntimeContext(ctx, () =>
-          (this.constructor as typeof BaseElement)._setup(),
-        );
-      });
+      let setupResult: HTMLResult | Promise<HTMLResult> | undefined;
 
+      this._component.scope.run(() => {
+        setupResult = withRuntimeContext(ctx, () => {
+          // createProps must run inside withRuntimeContext since registerProp calls getCurrentElement()
+          const setupProps = normalizedPropDefs
+            ? createProps(normalizedPropDefs)
+            : ({} as InferPropsSignals<Record<never, never>>);
+          const bind = createBind(this);
+          const emit = createEmitFn(this);
+          const slots = createSlots() as ComponentSlots<string>;
+
+          const contextBag: SetupContextBag<Record<string, never>, string> = {
+            bind,
+            effect,
+            el: this,
+            emit,
+            inject,
+            injectStrict,
+            onCleanup,
+            onMounted,
+            provide,
+            slots,
+          };
+
+          return def.setup(setupProps as InferPropsSignals<Record<never, never>>, contextBag);
+        });
+      });
       this._component.mountCallbacks.push(...ctx.mountCallbacks);
-      this._component.phase = ComponentPhase.SETUP_DONE;
+
+      if (setupResult instanceof Promise) {
+        // Async setup (F3): show loading template immediately, swap when resolved.
+        // Store captured mount callbacks; they will be scheduled after the real template mounts.
+        const pendingCallbacks = this._component.mountCallbacks.splice(0);
+
+        this._component.phase = ComponentPhase.LOADING;
+
+        if (def.loading) {
+          this._component.templateResult = def.loading();
+        }
+
+        void this._runSetupAsync(setupResult, pendingCallbacks);
+      } else {
+        this._component.templateResult = setupResult as HTMLResult;
+        this._component.phase = ComponentPhase.SETUP_DONE;
+      }
     } catch (error) {
       const recoveryTemplate = this._handleSetupError(error);
 
@@ -226,32 +250,70 @@ class BaseElement extends HTMLElement {
     }
   }
 
+  private async _runSetupAsync(promise: Promise<HTMLResult>, pendingCallbacks: OnMountedCallback[]): Promise<void> {
+    try {
+      const result = await promise;
+
+      if (!this.isConnected || this._component.phase === ComponentPhase.UNMOUNTED) return;
+
+      // Replace loading template with resolved template
+      this._component.templateResult = result;
+      this._component.phase = ComponentPhase.SETUP_DONE;
+      this._component.mountCallbacks.push(...pendingCallbacks);
+
+      const host: Element | ShadowRoot = this.shadow ?? this;
+
+      host.replaceChildren(result.fragment);
+      this._component.scope.run(() => {
+        result.apply(_onCleanup);
+      });
+      this._scheduleMountCallbacks();
+    } catch (error) {
+      if (!this.isConnected || this._component.phase === ComponentPhase.UNMOUNTED) return;
+
+      const recovery = this._handleSetupError(error, 'asyncSetup');
+
+      if (recovery) {
+        this._component.templateResult = recovery;
+        this._component.phase = ComponentPhase.SETUP_DONE;
+
+        const host: Element | ShadowRoot = this.shadow ?? this;
+
+        host.replaceChildren(recovery.fragment);
+        this._component.scope.run(() => {
+          recovery.apply(_onCleanup);
+        });
+      }
+    }
+  }
+
   private _init(): void {
     this._applyStyles();
     this._mountTemplate();
-    this._scheduleMountCallbacks();
+
+    // Only schedule mount callbacks once setup is fully complete (not in LOADING state)
+    if (this._component.phase === ComponentPhase.SETUP_DONE) this._scheduleMountCallbacks();
   }
 
   private _applyStyles(): void {
-    const { styles } = this._component;
+    const def = (this.constructor as typeof BaseElement)._definition;
 
-    if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
+    if (this.shadow && def?.styles?.length) {
+      this.shadow.adoptedStyleSheets = def.styles.map(loadStylesheet);
+    }
   }
 
   private _mountTemplate(): void {
-    if (this._component.templateResult == null) return;
+    const result = this._component.templateResult;
 
-    const { bindings, html: htmlString } = extractResult(this._component.templateResult);
+    if (!result) return;
 
-    this.shadow.replaceChildren(parseHTML(htmlString));
+    const host: Element | ShadowRoot = this.shadow ?? this;
 
-    if (bindings.length) {
-      this._component.scope.run(() => {
-        applyBindingsInContainer(this.shadow, bindings, _onCleanup, {
-          onHtml: (binding) => applyHtmlBinding(this.shadow, binding, _onCleanup),
-        });
-      });
-    }
+    host.replaceChildren(result.fragment);
+    this._component.scope.run(() => {
+      result.apply(_onCleanup);
+    });
   }
 
   private _scheduleMountCallbacks(): void {
@@ -279,100 +341,52 @@ class BaseElement extends HTMLElement {
   }
 }
 
-const defineComponent = (tag: string, setup: () => HTMLResult, options: ComponentRegistrationOptions = {}): string => {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const defineComponent = <
+  Props extends Record<string, unknown>,
+  Emits extends Record<string, unknown>,
+  SlotNames extends string,
+>(
+  tag: string,
+  definition: ComponentDefinition<Props, Emits, SlotNames>,
+  normalizedPropDefs: PropsDef<Props> | undefined,
+  observedAttrs: string[],
+): string => {
   if (!tag) throw new Error(CRAFTIT_ERRORS.defineRequiresTag);
 
-  if (customElements.get(tag)) {
-    throw new Error(CRAFTIT_ERRORS.defineDuplicate(tag));
-  }
+  if (customElements.get(tag)) throw new Error(CRAFTIT_ERRORS.defineDuplicate(tag));
 
-  class Element extends BaseElement {
-    static override _options = options;
-    static override _setup = setup;
-    static override formAssociated = options.formAssociated ?? false;
-    static override observedAttributes = options.observedAttrs ?? [];
-  }
+  // Named class for DevTools and error messages (R8)
+  const ComponentClass = class extends BaseElement {
+    static override _definition = definition as unknown as ComponentDefinition<
+      Record<never, never>,
+      Record<string, never>,
+      string
+    >;
+    static override _normalizedPropDefs = normalizedPropDefs as PropsDef<Record<never, never>> | undefined;
+    static override formAssociated = definition.formAssociated ?? false;
+    static override observedAttributes = observedAttrs;
+  };
 
-  customElements.define(tag, Element);
+  Object.defineProperty(ComponentClass, 'name', { value: tag });
+  customElements.define(tag, ComponentClass);
 
   return tag;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PUBLIC COMPONENT AUTHORING API
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export { prop };
 export type { HostBindFn } from './host-bind';
 export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropsDef };
 
 /**
- * Setup context passed as the second argument to the component setup function.
- *
- * The `SlotNames` generic is inferred from the `slots` array in `ComponentDefinition` when
- * a const array is provided, giving TypeScript knowledge of all valid slot names.
- */
-export type SetupContextBag<
-  Emits extends Record<string, unknown> = Record<string, unknown>,
-  SlotNames extends string = string,
-> = {
-  bind: HostBindFn;
-  el: HTMLElement;
-  emit: EmitFn<Emits>;
-  slots: ComponentSlots<SlotNames>;
-};
-
-export type ComponentDefinition<
-  Props extends Record<string, unknown> = Record<never, never>,
-  Emits extends Record<string, unknown> = Record<string, never>,
-  SlotNames extends string = string,
-> = {
-  /** Enable form association for the custom element */
-  formAssociated?: boolean;
-  /** Component properties and their metadata */
-  props?: PropsDef<Props>;
-  /** Main setup function. Returns an `HTMLResult` template. All reactive behaviour is
-   * expressed through reactive directives inside the template (`when`, `each`, etc.). */
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult;
-  /** Shadow DOM configuration. `mode` defaults to `'open'`; use `mode: 'closed'`
-   * for security-sensitive components where shadow DOM internals must not be
-   * reachable via `element.shadowRoot`. */
-  shadow?: Partial<ShadowRootInit>;
-  /**
-   * Declare the slot names this component exposes.
-   * When provided as a `const` array, TypeScript narrows `slots.has()` / `slots.elements()`
-   * to only accept the declared names, catching slot name typos at compile time.
-   *
-   * @example
-   * ```ts
-   * define('my-card', {
-   *   slots: ['header', 'footer'] as const,
-   *   setup(props, { slots }) {
-   *     const hasFooter = slots.has('footer'); // ✓ typed
-   *     const typo = slots.has('foooter');     // ✗ TypeScript error
-   *   },
-   * });
-   * ```
-   */
-  slots?: readonly SlotNames[];
-  /** Component-specific styles */
-  styles?: (string | CSSStyleSheet | CSSResult)[];
-};
-
-const createSetupProps = <Props extends Record<string, unknown>>(
-  defs: PropsDef<Props> | undefined,
-): InferPropsSignals<Props> => {
-  if (!defs) return {} as InferPropsSignals<Props>;
-
-  return createProps(defs) as InferPropsSignals<Props>;
-};
-
-/**
  * Define and register a web component.
  *
- * The `setup` function runs once per component instance on first connect and returns an
- * `HTMLResult` directly. All reactive behaviour is expressed through reactive directives
- * inside the template — not by re-evaluating the setup function itself.
+ * The `setup` function runs once per instance on first connect and returns an
+ * `HTMLResult`. All reactive behaviour is expressed through reactive directives
+ * inside the template — not by re-evaluating setup itself.
  *
  * @example
  * ```ts
@@ -389,17 +403,14 @@ export function define<
   Emits extends Record<string, unknown> = Record<string, never>,
   SlotNames extends string = string,
 >(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): string {
-  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+  const { props: propDefs } = definition;
 
-  // Normalize and validate all props at define-time for early, complete error feedback
   const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
     if (!propDefs) return undefined;
 
     const errors = validatePropDefs(propDefs as Record<string, unknown>);
 
-    if (errors.length > 0) {
-      throw new Error(CRAFTIT_ERRORS.validationFailed(tag, errors));
-    }
+    if (errors.length > 0) throw new Error(CRAFTIT_ERRORS.validationFailed(tag, errors));
 
     const normalized: PropInputDefs = {};
 
@@ -412,17 +423,5 @@ export function define<
 
   const observedAttrs = normalizedPropDefs ? Object.keys(normalizedPropDefs).map(toKebab) : [];
 
-  return defineComponent(
-    tag,
-    () => {
-      const props = createSetupProps(normalizedPropDefs);
-      const el = getCurrentElement();
-      const bind = createBind(el);
-      const emit = createEmitFn<Emits>(el);
-      const slots = createSlots() as ComponentSlots<SlotNames>;
-
-      return setup(props, { bind, el, emit, slots });
-    },
-    { formAssociated, observedAttrs, shadow: shadowOptions, styles },
-  );
+  return defineComponent(tag, definition, normalizedPropDefs, observedAttrs);
 }

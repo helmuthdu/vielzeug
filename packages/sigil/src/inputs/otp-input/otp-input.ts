@@ -73,7 +73,8 @@ export type BitOtpInputProps = {
  * <bit-otp-input length="6" color="primary"></bit-otp-input>
  * ```
  */
-export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-otp-input', {
+export const OTP_INPUT_TAG = 'bit-otp-input' as const;
+define<BitOtpInputProps, BitOtpInputEvents>(OTP_INPUT_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

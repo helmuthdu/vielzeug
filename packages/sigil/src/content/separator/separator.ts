@@ -41,7 +41,8 @@ export type BitSeparatorProps = {
  * <bit-separator orientation="vertical"></bit-separator>
  * ```
  */
-export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
+export const SEPARATOR_TAG = 'bit-separator' as const;
+define<BitSeparatorProps>(SEPARATOR_TAG, {
   props: {
     color: prop.string<ThemeColor>(),
     decorative: prop.bool(true),

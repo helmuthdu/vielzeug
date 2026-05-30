@@ -70,7 +70,7 @@ export function raw(value: string | Signal<string> | ReadonlySignal<string>): Di
         currentNodes = parseRaw(sanitize(src.value), parent, endMarker);
       });
 
-      registerCleanup(stop);
+      registerCleanup(() => stop.dispose());
       registerCleanup(() => {
         removeNodes(currentNodes);
         endMarker.remove();

@@ -60,7 +60,8 @@ export type BitPasswordStrengthProps = {
  * <bit-password-strength></bit-password-strength>
  * ```
  */
-export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-password-strength', {
+export const PASSWORD_STRENGTH_TAG = 'bit-password-strength' as const;
+define<BitPasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
   props: {
     label: prop.string('Password strength'),
     labels: prop.json(undefined as string[] | undefined),

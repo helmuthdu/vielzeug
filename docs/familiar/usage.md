@@ -212,6 +212,7 @@ console.log(worker.status); // 'terminated'
 Use lightweight counters for visibility and load monitoring:
 
 - `completed`: successful tasks since creation
+- `failed`: tasks rejected with a task / timeout / worker error (aborts and terminations excluded)
 - `active`: number of slots currently executing a task
 - `queued`: tasks currently waiting in the queue
 - `utilization`: active slot ratio from `0` to `1`
@@ -222,16 +223,65 @@ import { createWorker } from '@vielzeug/familiar';
 const pool = createWorker<number, number>((n) => n + 1, { concurrency: 4 });
 
 console.log(pool.completed);   // 0
+console.log(pool.failed);      // 0
 console.log(pool.utilization); // 0
 console.log(pool.active);      // 0
 console.log(pool.queued);      // 0
 
-const p = pool.run(1);
-console.log(pool.utilization); // > 0 while running
-console.log(pool.active);      // 1
-
-await p;
+await pool.run(1);
+await pool.run(-1).catch(() => {});   // throws inside worker
 console.log(pool.completed);   // 1
+console.log(pool.failed);      // 1
+```
+
+## Batch Processing (`batch`)
+
+Use `batch()` to run a list of inputs through the pool and consume results as they arrive, in submission order:
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>(
+  (n) => {
+    function fib(x: number): number {
+      return x <= 1 ? x : fib(x - 1) + fib(x - 2);
+    }
+    return fib(n);
+  },
+  { concurrency: 4 },
+);
+
+for await (const result of pool.batch([30, 31, 32, 33])) {
+  console.log(result); // printed in submission order as each task finishes
+}
+
+pool.dispose();
+```
+
+`batch()` accepts the same per-run options as `run()` (except `signal`, which is managed internally):
+
+```ts
+// Apply a 500ms timeout to every task in the batch
+for await (const result of pool.batch([1, 2, 3], { timeout: 500 })) {
+  console.log(result);
+}
+```
+
+If any task throws, `batch()` cancels remaining queued tasks and re-throws the error.
+
+## Per-Run Timeout
+
+The `timeout` option can also be passed per `run()` call, overriding the pool-level timeout for that specific task:
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<string, string>((s) => s.toUpperCase(), {
+  timeout: 5000, // default: 5 s
+});
+
+// This specific task must complete in 100ms
+await pool.run('hello', { timeout: 100 });
 ```
 
 ## Graceful Shutdown (`close`)
@@ -251,6 +301,16 @@ await worker.close();
 await p1;
 await p2;
 console.log(worker.status); // 'terminated'
+```
+
+Pass a timeout to prevent indefinite hangs — if the pool hasn't drained within that window, `close()` rejects with `WorkerError` code `'timeout'` and force-terminates:
+
+```ts
+try {
+  await worker.close(5000); // must drain within 5 s
+} catch (err) {
+  // timed out — worker is now force-terminated
+}
 ```
 
 Use `dispose()` for immediate forceful termination.
@@ -346,17 +406,17 @@ describe('add worker', () => {
 }
 ```
 
-## Warmup
+## Prime (Pre-initialize)
 
-Call `warmup()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task. This is particularly useful when the pool is created during application startup but tasks don't arrive until later.
+Call `prime()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task. Unlike the old `warmup()`, `prime()` returns a `Promise<void[]>` you can `await` to know when all slots are genuinely ready.
 
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
 const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
 
-// Pre-spawn during app init
-pool.warmup();
+// Pre-spawn during app init and await readiness
+await pool.prime();
 
 // First run() has no cold-start overhead
 const result = await pool.run(21); // 42
@@ -364,7 +424,7 @@ const result = await pool.run(21); // 42
 pool.dispose();
 ```
 
-Warmup is best-effort. If the Worker API is unavailable (SSR, Node.js without Worker support), `warmup()` silently does nothing and the error surfaces on the first `run()` call instead.
+Prime is best-effort. If the Worker API is unavailable (SSR, Node.js without Worker support), it silently does nothing and the error surfaces on the first `run()` call instead.
 
 ## Framework Integration
 
@@ -382,7 +442,7 @@ function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2
 
   useEffect(() => {
     const worker = createWorker(fn, { concurrency });
-    worker.warmup();
+    void worker.prime();
     ref.current = worker;
     return () => { worker.close(); };
   }, []);
@@ -409,7 +469,7 @@ import { createWorker } from '@vielzeug/familiar';
 import { onScopeDispose, ref } from 'vue';
 
 const pool = createWorker((n: number) => n * n, { concurrency: 2 });
-pool.warmup();
+void pool.prime();
 onScopeDispose(() => pool.close());
 
 const result = ref<number | null>(null);
@@ -431,7 +491,7 @@ async function runTask(n: number) {
   import { onDestroy } from 'svelte';
 
   const pool = createWorker((n: number) => n * n, { concurrency: 2 });
-  pool.warmup();
+  void pool.prime();
   onDestroy(() => pool.close());
 
   let result: number | null = null;
@@ -504,7 +564,7 @@ async function runTask(input: number) {
 - Set `maxQueue` to bound memory usage when consumers are slower than producers.
 - Pass large binary data (images, audio, WASM buffers) as `Transferable` to avoid copying.
 - Use `AbortSignal` to cancel queued tasks when the user navigates away.
-- Call `warmup()` at startup when you know tasks will arrive soon, to eliminate first-task cold-start latency.
+- Call `await pool.prime()` at startup when you know tasks will arrive soon, to eliminate first-task cold-start latency.
 - Always call `close()` in framework cleanup callbacks to terminate worker threads and free resources.
 - Keep worker task functions pure and self-contained — avoid closures over mutable main-thread state.
 - Use `createTestWorker()` in unit tests to run tasks in-process without spinning up real Worker threads.

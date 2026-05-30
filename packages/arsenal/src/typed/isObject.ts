@@ -17,5 +17,3 @@
 export function isObject(arg: unknown): arg is object {
   return typeof arg === 'object' && arg !== null && !Array.isArray(arg);
 }
-
-export const IS_OBJECT_ERROR_MSG = 'Expected an object';

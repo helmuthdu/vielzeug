@@ -9,7 +9,7 @@ describe('createCourier', () => {
   it('applies shared mutation defaults to created mutations', async () => {
     const client = createCourier({
       mutationDefaults: {
-        maxAttempts: 2,
+        times: 2,
       },
     });
 
@@ -29,7 +29,7 @@ describe('createCourier', () => {
   it('allows per-mutation options to override defaults', async () => {
     const client = createCourier({
       mutationDefaults: {
-        maxAttempts: 3,
+        times: 3,
       },
     });
 
@@ -40,7 +40,7 @@ describe('createCourier', () => {
         throw new Error('fail');
       },
       {
-        maxAttempts: 1,
+        times: 1,
       },
     );
 

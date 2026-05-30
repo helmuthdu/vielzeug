@@ -24,7 +24,7 @@ interface AsyncLocalStorageType<T> {
   run<R>(store: T, callback: () => R): R;
 }
 
-type TrackingContext = import('../types').TrackingCtx;
+type TrackingContext = import('../tracking').TrackingCtx;
 
 // ── Public interfaces ─────────────────────────────────────────────────────────
 

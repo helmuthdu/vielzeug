@@ -1,75 +1,29 @@
-import type {
-  ComputedSignal,
-  DepSource,
-  DirtyComputed,
-  ReactiveNode,
-  ReactiveOptions,
-  Signal,
-  Subscriber,
-  Subscription,
-} from './types';
+import type { ComputedSignal, ReactiveOptions, Signal, SignalOptions, Subscription } from './types';
 
 import { computed } from './computed';
-import { IS_SIGNAL, toSubscription } from './helpers';
+import { ReactiveBase } from './reactive-base';
 import { notifyNodeChange } from './scheduling';
-import { trackSource } from './tracking';
+import { SubscriptionImpl } from './subscription';
+import { tickRevision, trackSource } from './tracking';
 
-export class SignalImpl<T> implements Signal<T>, DepSource, ReactiveNode {
-  version = 0;
-  readonly name: string | undefined;
-  [IS_SIGNAL] = true;
-
+export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
   private value_: T;
   private equals_: (a: T, b: T) => boolean;
-  private disposed_ = false;
-  private computedSubs_ = new Set<DirtyComputed>();
-  private subscribers_ = new Set<Subscriber>();
+  private disposed_: boolean;
+  private batched_: boolean;
+  private batchPending_: boolean;
 
-  constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string) {
-    this.name = name;
+  constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string, batched?: boolean) {
+    super(name);
     this.value_ = initial;
     this.equals_ = equals ?? Object.is;
-  }
-
-  private track(): void {
-    trackSource(this);
-  }
-
-  addComputedSub(c: DirtyComputed): void {
-    this.computedSubs_.add(c);
-  }
-
-  removeComputedSub(c: DirtyComputed): void {
-    this.computedSubs_.delete(c);
-  }
-
-  addEffectSub(subscriber: Subscriber): void {
-    this.subscribers_.add(subscriber);
-  }
-
-  removeEffectSub(subscriber: Subscriber): void {
-    this.subscribers_.delete(subscriber);
-  }
-
-  private clearSubscribers(): void {
-    this.computedSubs_.clear();
-    this.subscribers_.clear();
-  }
-
-  hasSubscribers(): boolean {
-    return this.computedSubs_.size > 0 || this.subscribers_.size > 0;
-  }
-
-  computedSubs(): ReadonlySet<DirtyComputed> {
-    return this.computedSubs_;
-  }
-
-  subscribers(): ReadonlySet<Subscriber> {
-    return this.subscribers_;
+    this.batched_ = batched ?? false;
+    this.disposed_ = false;
+    this.batchPending_ = false;
   }
 
   get value(): T {
-    if (!this.disposed_) this.track();
+    if (!this.disposed_) trackSource(this);
 
     return this.value_;
   }
@@ -80,8 +34,20 @@ export class SignalImpl<T> implements Signal<T>, DepSource, ReactiveNode {
     if (this.equals_(this.value_, next)) return;
 
     this.value_ = next;
-    this.version++;
-    notifyNodeChange(this);
+    // F1: use global revision clock so ComputedImpl can do O(1) fast-path check.
+    this.version = tickRevision();
+
+    if (this.batched_) {
+      if (!this.batchPending_) {
+        this.batchPending_ = true;
+        queueMicrotask(() => {
+          this.batchPending_ = false;
+          notifyNodeChange(this);
+        });
+      }
+    } else {
+      notifyNodeChange(this);
+    }
   }
 
   peek(): T {
@@ -93,12 +59,12 @@ export class SignalImpl<T> implements Signal<T>, DepSource, ReactiveNode {
   }
 
   readonly subscribe = (listener: () => void): Subscription => {
-    if (this.disposed_) return toSubscription(() => {});
+    if (this.disposed_) return new SubscriptionImpl(() => {});
 
-    this.subscribers_.add(listener);
+    this.addEffectSub(listener);
 
-    return toSubscription(() => {
-      this.subscribers_.delete(listener);
+    return new SubscriptionImpl(() => {
+      this.removeEffectSub(listener);
     });
   };
 
@@ -135,5 +101,5 @@ export class SignalImpl<T> implements Signal<T>, DepSource, ReactiveNode {
   }
 }
 
-export const signal = <T>(initial: T, options?: ReactiveOptions<T>): Signal<T> =>
-  new SignalImpl(initial, options?.equals, options?.name);
+export const signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> =>
+  new SignalImpl(initial, options?.equals, options?.name, options?.batched);

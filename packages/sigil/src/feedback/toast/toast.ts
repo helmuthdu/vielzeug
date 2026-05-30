@@ -1,3 +1,4 @@
+import { uuid } from '@vielzeug/arsenal';
 import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craft';
 
 import type { SwipeControl } from '../../headless';
@@ -122,7 +123,8 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   `;
 }
 
-export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
+export const TOAST_TAG = 'bit-toast' as const;
+define<BitToastProps, BitToastEvents>(TOAST_TAG, {
   props: {
     max: prop.number(5),
     position: prop.oneOf(
@@ -261,7 +263,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     };
 
     const addToast = (toast: ToastItem): string => {
-      const id = toast.id || crypto.randomUUID();
+      const id = toast.id || uuid();
       const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
       const maxToasts = props.max?.value ?? 5;
 

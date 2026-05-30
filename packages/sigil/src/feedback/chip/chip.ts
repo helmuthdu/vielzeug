@@ -147,7 +147,8 @@ export type BitChipProps = ChipBaseProps &
  * </bit-chip>
  * ```
  */
-export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip', {
+export const CHIP_TAG = 'bit-chip' as const;
+define<BitChipComponentProps, BitChipEvents>(CHIP_TAG, {
   props: {
     checked: {
       default: undefined as BitChipComponentProps['checked'],

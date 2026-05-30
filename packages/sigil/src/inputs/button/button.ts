@@ -97,7 +97,8 @@ export type BitButtonProps = {
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-button', {
+export const BUTTON_TAG = 'bit-button' as const;
+define<BitButtonProps, { click: MouseEvent }>(BUTTON_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

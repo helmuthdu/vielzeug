@@ -69,7 +69,8 @@ export type BitTextProps = {
  * ```
  */
 
-export const TEXT_TAG = define<BitTextProps>('bit-text', {
+export const TEXT_TAG = 'bit-text' as const;
+define<BitTextProps>(TEXT_TAG, {
   props: {
     align: prop.string<'left' | 'center' | 'right' | 'justify'>(),
     as: prop.string<'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'>(),

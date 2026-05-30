@@ -1,8 +1,8 @@
 import type { Middleware, Padding, Rect, ReferenceElement } from './types';
 
-import { getSide, toRect, toSideObject } from './utils';
+import { getSide, tagMiddleware, toRect, toSideObject } from './utils';
 
-// ── Private helpers (only used by inline) ────────────────────────────────────
+// ── Private helpers (only used by inline) ────────────────────────────────────────────
 
 function getClientRects(reference: ReferenceElement): Rect[] {
   if (!('getClientRects' in reference) || typeof reference.getClientRects !== 'function') return [];
@@ -25,7 +25,7 @@ function sameRect(a: Rect, b: Rect): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-// ── Inline middleware ─────────────────────────────────────────────────────────
+// ── Inline middleware ─────────────────────────────────────────────────────────────────
 
 export interface InlineOptions {
   /**
@@ -39,8 +39,7 @@ export interface InlineOptions {
    * Padding used when hit-testing cursor coordinates against client rects.
    * Prevents snapping when the cursor is just outside a rect edge. Default: `2`.
    *
-   * @remarks Only applies when both `x` and `y` are provided. Has no effect in
-   * the proximity-based fallback (no cursor coordinates).
+   * @remarks Only applies when both `x` and `y` are provided.
    */
   padding?: Padding;
 }
@@ -60,7 +59,6 @@ export interface InlineOptions {
  * ```ts
  * import { inline } from '@vielzeug/orbit/inline';
  *
- * // Supply cursor position so the tooltip hugs the right line fragment.
  * float(selectionRef, tooltip, {
  *   placement: 'top',
  *   middleware: [inline({ x: cursorX, y: cursorY }), flip(), shift({ padding: 6 })],
@@ -68,7 +66,7 @@ export interface InlineOptions {
  * ```
  */
 export function inline(options: InlineOptions = {}): Middleware {
-  return (state) => {
+  function inlineMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const rects = getClientRects(state.elements.reference);
 
     if (rects.length <= 1) return;
@@ -102,5 +100,7 @@ export function inline(options: InlineOptions = {}): Middleware {
     if (sameRect(nextRect, state.rects.reference)) return;
 
     return { reset: { rects: { ...state.rects, reference: nextRect } } };
-  };
+  }
+
+  return tagMiddleware(inlineMiddleware, 'inline');
 }

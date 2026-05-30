@@ -121,4 +121,40 @@ describe('createTestBus - lifecycle helpers', () => {
     bus.on('greet', vi.fn());
     expect(bus.eventNames()).toContain('greet');
   });
+
+  it('onAny is delegated and receives all emitted events', () => {
+    const bus = createTestBus<TestEvents>();
+    const received: Array<{ event: string; payload: unknown }> = [];
+
+    bus.onAny((event, payload) => received.push({ event, payload }));
+
+    bus.emit('count', 7);
+    bus.emit('toggle');
+
+    expect(received).toEqual([
+      { event: 'count', payload: 7 },
+      { event: 'toggle', payload: undefined },
+    ]);
+
+    // emitted() still records correctly alongside onAny
+    expect(bus.emitted('count')).toEqual([7]);
+  });
+
+  it('pipe() is delegated and forwards events to the target bus', () => {
+    const source = createTestBus<TestEvents>();
+    const target = createTestBus<TestEvents>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    source.pipe(target, ['count']);
+
+    source.emit('count', 42);
+
+    expect(listener).toHaveBeenCalledWith(42);
+    expect(source.emitted('count')).toEqual([42]);
+    expect(target.emitted('count')).toEqual([42]);
+
+    source.dispose();
+    target.dispose();
+  });
 });

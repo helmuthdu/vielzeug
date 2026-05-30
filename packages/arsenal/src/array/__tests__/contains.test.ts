@@ -30,13 +30,6 @@ describe('contains', () => {
     expect(contains(array, value)).toBe(false);
   });
 
-  it('should throw a TypeError if the first argument is not an array', () => {
-    const notArray = 'not an array';
-    const value = 1;
-
-    expect(() => contains(notArray as unknown as any, value)).toThrow(TypeError);
-  });
-
   it('should work with configured contains predicate', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };

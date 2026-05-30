@@ -1,6 +1,6 @@
 import type { Middleware, MiddlewareState } from '../types';
 
-import { getSide } from '../utils';
+import { getSide, tagMiddleware } from '../utils';
 
 export type OffsetConfig = {
   /** Offset perpendicular to the main axis. */
@@ -22,9 +22,11 @@ function resolveOffsetConfig(value: OffsetValue, state: MiddlewareState): Requir
 /**
  * Shifts the floating element along the main axis (away from reference) and/or
  * the cross axis. Accepts a number, config object, or a function for dynamic values.
+ *
+ * Must be the **first** middleware in the pipeline.
  */
 export function offset(value: OffsetValue): Middleware {
-  return (state) => {
+  return tagMiddleware(function offsetMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const side = getSide(state.placement);
     const { crossAxis, mainAxis } = resolveOffsetConfig(value, state);
 
@@ -38,5 +40,5 @@ export function offset(value: OffsetValue): Middleware {
       case 'top':
         return { x: state.x + crossAxis, y: state.y - mainAxis };
     }
-  };
+  }, 'offset');
 }

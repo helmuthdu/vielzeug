@@ -28,6 +28,12 @@
       "import": "./dist/async/index.js",
       "require": "./dist/async/index.cjs"
     },
+    "./concurrency": {
+      "source": "./src/concurrency/index.ts",
+      "types": "./dist/concurrency/index.d.ts",
+      "import": "./dist/concurrency/index.js",
+      "require": "./dist/concurrency/index.cjs"
+    },
     "./function": {
       "source": "./src/function/index.ts",
       "types": "./dist/function/index.d.ts",
@@ -39,12 +45,6 @@
       "types": "./dist/math/index.d.ts",
       "import": "./dist/math/index.js",
       "require": "./dist/math/index.cjs"
-    },
-    "./money": {
-      "source": "./src/money/index.ts",
-      "types": "./dist/money/index.d.ts",
-      "import": "./dist/money/index.js",
-      "require": "./dist/money/index.cjs"
     },
     "./object": {
       "source": "./src/object/index.ts",

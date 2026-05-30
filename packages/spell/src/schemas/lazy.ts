@@ -1,5 +1,5 @@
-import type { Issue, SchemaState } from '../core';
-import type { SchemaDescriptor } from '../core';
+import type { SchemaDescriptor, SchemaState } from '../core';
+import type { ParseValue } from '../core';
 
 import { Schema } from '../core';
 
@@ -16,29 +16,24 @@ export class LazySchema<T> extends Schema<T> {
     return (this._resolved ??= this._getter());
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const result = this._resolve().safeParse(value);
 
-    if (result.success) return { data: result.data, issues: [] };
+    if (result.success) return { data: result.data, issues: [], typeOk: true };
 
-    return { data: value, issues: result.error.issues };
+    return { data: value, issues: result.error.issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     const result = await this._resolve().safeParseAsync(value);
 
-    if (result.success) return { data: result.data, issues: [] };
+    if (result.success) return { data: result.data, issues: [], typeOk: true };
 
-    return { data: value, issues: result.error.issues };
+    return { data: value, issues: result.error.issues, typeOk: true };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'lazy',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'lazy' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

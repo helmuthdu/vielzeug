@@ -1,13 +1,11 @@
 import type { Fn } from '../types';
 
-import { assert } from './assert';
-
 export type ThrottleOptions = {
   leading?: boolean; // invoke at the start of the window
   trailing?: boolean; // invoke at the end with the last args
 };
 
-export type Throttled<T extends Fn> = ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) & {
+export type Throttled<T extends Fn> = ((...args: Parameters<T>) => void) & {
   cancel(): void;
   flush(): ReturnType<T> | undefined;
   pending(): boolean; // whether there's a pending call that flush() would execute
@@ -27,22 +25,12 @@ export function throttle<T extends Fn>(
   delay = 700,
   options: ThrottleOptions = { leading: true, trailing: false },
 ): Throttled<T> {
-  assert(typeof fn === 'function', 'First argument must be a function', {
-    args: { fn },
-    type: TypeError,
-  });
-  assert(typeof delay === 'number' && delay >= 0, 'Delay must be a non-negative number', {
-    args: { delay },
-    type: TypeError,
-  });
-
   const leading = options.leading ?? true;
   const trailing = options.trailing ?? false;
 
   let timerId: number | undefined;
   let lastInvokeTime = 0;
   let lastArgs: Parameters<T> | undefined;
-  let lastThis: ThisParameterType<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
 
   const clearTimer = () => {
@@ -63,11 +51,9 @@ export function throttle<T extends Fn>(
     if (!lastArgs) return undefined;
 
     const args = lastArgs;
-    const ctx = lastThis as ThisParameterType<T>;
 
     lastArgs = undefined;
-    lastThis = undefined;
-    lastResult = fn.apply(ctx as any, args) as ReturnType<T>;
+    lastResult = fn(...args) as ReturnType<T>;
 
     return lastResult;
   };
@@ -88,46 +74,40 @@ export function throttle<T extends Fn>(
     }
   };
 
-  const throttled = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-    const now = Date.now();
+  return Object.assign(
+    (...args: Parameters<T>): void => {
+      const now = Date.now();
 
-    if (lastInvokeTime === 0 && !leading) {
-      // If leading is false, start the window now but don't invoke immediately
-      lastInvokeTime = now;
-    }
+      if (lastInvokeTime === 0 && !leading) {
+        // If leading is false, start the window now but don't invoke immediately
+        lastInvokeTime = now;
+      }
 
-    lastArgs = args;
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    lastThis = this;
+      lastArgs = args;
 
-    const rem = remaining(now);
+      const rem = remaining(now);
 
-    if (rem <= 0) {
-      // Window elapsed: invoke now
-      invoke(now);
-    } else if (trailing && !timerId) {
-      // Schedule trailing call if not already scheduled
-      scheduleTimer(rem);
-    }
-  } as Throttled<T>;
+      if (rem <= 0) {
+        // Window elapsed: invoke now
+        invoke(now);
+      } else if (trailing && !timerId) {
+        // Schedule trailing call if not already scheduled
+        scheduleTimer(rem);
+      }
+    },
+    {
+      cancel: () => {
+        clearTimer();
+        lastArgs = undefined;
+        lastInvokeTime = 0;
+      },
+      flush: (): ReturnType<T> | undefined => {
+        if (!lastArgs) return undefined;
 
-  throttled.cancel = () => {
-    clearTimer();
-    lastArgs = undefined;
-    lastThis = undefined;
-    lastInvokeTime = 0;
-  };
-
-  throttled.flush = () => {
-    if (!lastArgs) return undefined;
-
-    const now = Date.now();
-
-    return invoke(now) as ReturnType<T> | undefined;
-  };
-
-  // Pending if a trailing call is scheduled OR there are queued args.
-  throttled.pending = () => lastArgs !== undefined || timerId !== undefined;
-
-  return throttled;
+        return invoke(Date.now()) as ReturnType<T> | undefined;
+      },
+      // Pending if a trailing call is scheduled OR there are queued args.
+      pending: () => lastArgs !== undefined || timerId !== undefined,
+    },
+  );
 }

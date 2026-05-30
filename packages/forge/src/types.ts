@@ -11,14 +11,12 @@ export type FormValidator<TValues extends Record<string, unknown> = Record<strin
 ) => MaybePromise<Partial<Record<ErrorKeyOf<TValues>, string>> | undefined>;
 
 export type SetOptions = {
-  /** Whether to update dirty tracking. Default: true. */
-  dirty?: boolean;
   /** Whether to mark the field as touched. Default: false. */
   touched?: boolean;
 };
 
 export type FormState = {
-  errors: Readonly<Record<string, string>>;
+  errors: Readonly<Record<string, string> & { [FORM_ERROR]?: string }>;
   isDirty: boolean;
   /** `true` while an async `defaultValues` factory is resolving. */
   isLoading: boolean;
@@ -118,9 +116,12 @@ export type ScopedValues<TValues, P extends string> =
 /**
  * The live connection object returned by `form.connect()`.
  * Getters re-evaluate on every property access — store the object once per field, do not destructure.
+ * Call `disconnect()` to cancel any pending debounce timers when the field unmounts.
  */
 export type ConnectionResult<V = unknown> = {
   readonly dirty: boolean;
+  /** Cancels any pending debounce timer for this field binding. Safe to call multiple times. */
+  disconnect(): void;
   readonly error: string | undefined;
   onBlur(): void;
   onChange(value: V): void;
@@ -145,13 +146,16 @@ export type ConnectOptions = {
   validateOnTouch?: boolean;
 };
 
-export type ArrayField = {
-  append(value: unknown): void;
-  insert(index: number, value: unknown): void;
+// Resolves the element type of an array, or `unknown` for non-arrays.
+type ElementOf<T> = T extends readonly (infer E)[] ? E : unknown;
+
+export type ArrayField<T = unknown> = {
+  append(value: T): void;
+  insert(index: number, value: T): void;
   move(from: number, to: number): void;
-  prepend(value: unknown): void;
+  prepend(value: T): void;
   remove(index: number): void;
-  replace(index: number, value: unknown): void;
+  replace(index: number, value: T): void;
   swap(a: number, b: number): void;
 };
 
@@ -160,6 +164,31 @@ export type FieldState<V = unknown> = {
   error: string | undefined;
   touched: boolean;
   value: V;
+};
+
+/**
+ * Options for registering a dynamic field. Both properties are optional;
+ * omitting `defaultValue` leaves the field uninitialized and omitting `validator`
+ * skips field-level validation.
+ */
+export type RegisterFieldOptions<V = unknown> = {
+  /** Initial value. Also becomes the baseline, so the field starts clean. */
+  defaultValue?: V;
+  /** Field-level validator to attach. */
+  validator?: FieldValidator<V>;
+};
+
+/**
+ * A complete snapshot of form state that can be restored via `form.restore()`.
+ * Captures values, errors, touched/dirty sets, and submission history.
+ */
+export type FormSnapshot<_TValues extends Record<string, unknown> = Record<string, unknown>> = {
+  readonly baseline: Record<string, unknown>;
+  readonly dirty: readonly string[];
+  readonly errors: Readonly<Record<string, string>>;
+  readonly store: Record<string, unknown>;
+  readonly submitCount: number;
+  readonly touched: readonly string[];
 };
 
 export type FormOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
@@ -198,8 +227,8 @@ export const ValidationModes = {
 } as const satisfies Record<string, ConnectOptions>;
 
 export interface Form<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  /** Returns a cached `ArrayField` helper for mutating array-valued fields. */
-  array(name: FlatKeyOf<TValues>): ArrayField;
+  /** Returns a cached typed `ArrayField` helper for mutating array-valued fields. */
+  array<K extends FlatKeyOf<TValues>>(name: K): ArrayField<ElementOf<TypeAtPath<TValues, K>>>;
   batch(fn: () => void): void;
   /** Clear a single field error. No-op if the field has no error. */
   clearError(name: ErrorKeyOf<TValues>): void;
@@ -220,6 +249,22 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * for each provided field, marking them clean. Fields not included in `partial` are untouched.
    */
   patch(partial: DeepPartial<TValues>): void;
+  /**
+   * Declare a dynamic field with an optional default value and validator.
+   * If the field does not yet exist in the store, `defaultValue` is written to both the
+   * store and the baseline so the field starts clean (not dirty).
+   * Returns an **unregister** callback that calls `removeField()` on the same field.
+   *
+   * @example
+   * // Conditional field — register on mount, unregister on unmount
+   * const unregister = form.registerField('promoCode', {
+   *   validator: (v) => (v && v.length < 4 ? 'Too short' : undefined),
+   * });
+   */
+  registerField<K extends FlatKeyOf<TValues>>(
+    name: K,
+    options?: RegisterFieldOptions<TypeAtPath<TValues, K>>,
+  ): Unsubscribe;
   /** Remove a field entirely: drops value, dirty, touched, error, and any registered validator. */
   removeField(name: FlatKeyOf<TValues>): void;
   /** Replace values and baseline in one operation. Aborts any in-flight validation. */
@@ -229,8 +274,7 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   resetField(name: FlatKeyOf<TValues>): void;
   /** Replace the entire error map. Use `undefined` values to omit entries. */
   resetErrors(errors?: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void;
-  /**
-   * Returns a scoped sub-form whose field paths are relative to `prefix`.
+  /** Returns a scoped sub-form whose field paths are relative to `prefix`.
    * `scopedForm.get('city')` is equivalent to `form.get('${prefix}.city')`.
    * The scoped form shares state and lifecycle with the parent — `dispose()` on a scoped
    * form is a no-op; call `parentForm.dispose()` to tear down the whole form.
@@ -252,6 +296,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * Removing a validator (passing `undefined`) also immediately clears any existing error for that field.
    */
   setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void;
+  /**
+   * Capture the complete form state into a snapshot that can be passed to `restore()`.
+   * Useful for undo/redo, draft saving, and "discard changes" flows.
+   */
+  snapshot(): FormSnapshot<TValues>;
+  /**
+   * Restore the form to a previously captured snapshot. Replaces all state:
+   * values, baseline, errors, touched, dirty, and submitCount.
+   * Aborts any in-flight validation.
+   */
+  restore(snapshot: FormSnapshot<TValues>): void;
   readonly state: FormState;
   submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<SubmitResult<TResult>>;
   subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
@@ -260,6 +315,18 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: SubscribeOptions,
   ): Unsubscribe;
+  /**
+   * Iterate over form state changes via `for await`.
+   * Yields the current state immediately, then once per mutation until the iterator
+   * is returned (e.g. `break` or early return from the loop) or the form is disposed.
+   *
+   * @example
+   * for await (const state of form) {
+   *   if (state.isSubmitting) showSpinner();
+   *   if (state.submitCount > 0 && !state.isValid) highlightErrors();
+   * }
+   */
+  [Symbol.asyncIterator](): AsyncIterableIterator<FormState>;
   /** Mark a field as touched. */
   touch(name: FlatKeyOf<TValues>): void;
   /** Mark all known fields (store + validators) as touched. */
@@ -280,5 +347,15 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
   /** Validate specific fields. Preserves other fields' errors. Does not run the form-level validator. */
   validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
+  /**
+   * Streaming validation — yields each field result as soon as its validator resolves.
+   * Better perceived responsiveness than `validate()` when validators have varying latency.
+   *
+   * @example
+   * for await (const result of form.validateStream()) {
+   *   console.log(result.field, result.error ?? 'ok');
+   * }
+   */
+  validateStream(signal?: AbortSignal): AsyncIterableIterator<{ error: string | undefined; field: string }>;
   values(): TValues;
 }

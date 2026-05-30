@@ -207,45 +207,83 @@ describe('stash', () => {
     ]);
   });
 
-  it('calls onError when scheduler rejects for non-abort reasons', async () => {
-    const onError = vi.fn();
-    const c = stash<string>({
-      hash,
-      onError,
-      scheduler: {
-        postTask: async () => {
-          throw new Error('scheduler-failed');
-        },
-      },
-    });
+  it('getOrSet() supports async factories and prevents stampedes', async () => {
+    let resolveFactory!: (v: string) => void;
+    const factory = vi.fn(
+      () =>
+        new Promise<string>((r) => {
+          resolveFactory = r;
+        }),
+    );
+    const c = stash<string>({ hash });
 
-    c.set(['k'], 'v');
-    c.scheduleGc(['k'], 10);
+    const p1 = c.getOrSet(['k'], factory);
+    const p2 = c.getOrSet(['k'], factory); // concurrent call — same in-flight
 
-    await Promise.resolve();
+    expect(factory).toHaveBeenCalledTimes(1); // factory only called once
 
-    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'scheduler-failed' }));
+    resolveFactory('hello');
+    await expect(p1).resolves.toBe('hello');
+    await expect(p2).resolves.toBe('hello');
+
+    // After resolution, the value is cached
+    expect(c.get(['k'])).toBe('hello');
   });
 
-  it('does not call onError for abort errors', async () => {
-    const onError = vi.fn();
-    const c = stash<string>({
-      hash,
-      onError,
-      scheduler: {
-        postTask: async (_callback, taskOptions) => {
-          taskOptions?.signal?.addEventListener('abort', () => {}, { once: true });
-          throw new DOMException('Aborted', 'AbortError');
-        },
-      },
-    });
+  it('getOrSet() removes in-flight entry on rejection', async () => {
+    let rejectFactory!: (err: Error) => void;
+    const factory = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((_, reject) => {
+            rejectFactory = reject;
+          }),
+      )
+      .mockResolvedValueOnce('ok');
 
-    c.set(['k'], 'v');
-    c.scheduleGc(['k'], 10);
-    c.cancelGc(['k']);
+    const c = stash<string>({ hash });
 
-    await Promise.resolve();
+    const p1 = c.getOrSet(['k'], factory);
 
-    expect(onError).not.toHaveBeenCalled();
+    rejectFactory(new Error('fail'));
+    await expect(p1).rejects.toThrow('fail');
+
+    // Key should be gone, next call retries
+    const p2 = c.getOrSet(['k'], factory);
+
+    await expect(p2).resolves.toBe('ok');
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('onEvict callback fires when a key is explicitly deleted', () => {
+    const onEvict = vi.fn();
+    const c = stash<string, readonly unknown[]>({ hash, onEvict });
+
+    c.set(['k'], 'value');
+    c.delete(['k']);
+
+    expect(onEvict).toHaveBeenCalledWith(['k'], 'value');
+  });
+
+  it('onEvict callback fires on GC expiry', () => {
+    const onEvict = vi.fn();
+    const c = stash<number, readonly unknown[]>({ hash, onEvict });
+
+    c.set(['n'], 42, { ttlMs: 500 });
+    vi.advanceTimersByTime(500);
+
+    expect(onEvict).toHaveBeenCalledWith(['n'], 42);
+  });
+
+  it('onEvict callback fires for each entry on clear()', () => {
+    const onEvict = vi.fn();
+    const c = stash<string, readonly unknown[]>({ hash, onEvict });
+
+    c.set(['a'], 'A');
+    c.set(['b'], 'B');
+    c.clear();
+
+    expect(onEvict).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,4 +1,4 @@
-// Public API — all exports for /ripple
+// Public API — all exports for @vielzeug/ripple
 // Internal implementation files (tracking.ts, helpers.ts, scheduling.ts)
 // are intentionally NOT exported to keep the surface stable.
 
@@ -17,6 +17,7 @@ export type {
   ReadonlySignal,
   Scope,
   Signal,
+  SignalOptions,
   Store,
   Subscription,
   WatchOptions,
@@ -32,7 +33,7 @@ export { store } from './store';
 
 // Effect system
 export { batch } from './scheduling';
-export { effect, effectAsync, onCleanup, scope } from './effect';
+export { asyncScope, effect, effectAsync, onCleanup, scope, traceEffect } from './effect';
 
 // Watch
 export { watch } from './watch';

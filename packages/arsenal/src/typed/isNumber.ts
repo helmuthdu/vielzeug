@@ -14,5 +14,3 @@
 export function isNumber(arg: unknown): arg is number {
   return typeof arg === 'number' && !Number.isNaN(arg);
 }
-
-export const IS_NUMBER_ERROR_MSG = 'Expected a number';

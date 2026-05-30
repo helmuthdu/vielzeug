@@ -4,7 +4,7 @@ import { createCursorSource } from '../cursorSource';
 import { createInfiniteSource } from '../infiniteSource';
 import { createLocalSource } from '../localSource';
 import { createRemoteSource } from '../remoteSource';
-import { toCursorSignals, toInfiniteSignals, toSignals } from '../signals';
+import { toSignals } from '../signals';
 
 describe('toSignals', () => {
   it('current signal reflects source current', () => {
@@ -77,17 +77,15 @@ describe('toSignals', () => {
     expect(meta.value.totalItems).toBe(2);
     dispose();
   });
-});
 
-describe('toCursorSignals', () => {
-  it('current and meta signals reflect cursor source state', async () => {
+  it('works with a cursor source', async () => {
     const fetch = vi.fn(async () => ({
       items: ['p1-a', 'p1-b'],
       nextCursor: 'c1',
       total: 4,
     }));
     const source = createCursorSource({ autoFetch: false, fetch });
-    const { current, dispose, meta } = toCursorSignals(source);
+    const { current, dispose, meta } = toSignals(source);
 
     expect(current.value).toEqual([]);
 
@@ -99,14 +97,14 @@ describe('toCursorSignals', () => {
     dispose();
   });
 
-  it('signals update on navigation', async () => {
+  it('signals update on cursor navigation', async () => {
     const fetch = vi.fn(async ({ after }: { after?: string }) => {
       if (after === 'c1') return { items: ['p2-a'], nextCursor: undefined, prevCursor: 'c0', total: 3 };
 
       return { items: ['p1-a'], nextCursor: 'c1', total: 3 };
     });
     const source = createCursorSource({ autoFetch: false, fetch });
-    const { current, dispose, meta } = toCursorSignals(source);
+    const { current, dispose, meta } = toSignals(source);
 
     await source.refresh();
     expect(current.value).toEqual(['p1-a']);
@@ -117,38 +115,36 @@ describe('toCursorSignals', () => {
     expect(meta.value.hasNextPage).toBe(false);
     dispose();
   });
-});
 
-describe('toInfiniteSignals', () => {
-  it('all and meta signals reflect infinite source state', async () => {
+  it('works with an infinite source', async () => {
     const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 5 }));
     const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
-    const { all, dispose, meta } = toInfiniteSignals(source);
+    const { current, dispose, meta } = toSignals(source);
 
-    expect(all.value).toEqual([]);
+    expect(current.value).toEqual([]);
 
     await source.reset();
 
-    expect(all.value).toEqual(['a', 'b']);
+    expect(current.value).toEqual(['a', 'b']);
     expect(meta.value.hasMore).toBe(true);
     expect(meta.value.totalItems).toBe(5);
     dispose();
   });
 
-  it('all signal updates on loadMore', async () => {
+  it('current signal updates on infinite loadMore', async () => {
     const pages = [['a', 'b'], ['c']];
     const fetch = vi.fn(async ({ page }: { page: number }) => ({
       items: pages[page - 1] ?? [],
       total: 3,
     }));
     const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
-    const { all, dispose } = toInfiniteSignals(source);
+    const { current, dispose } = toSignals(source);
 
     await source.reset();
-    expect(all.value).toEqual(['a', 'b']);
+    expect(current.value).toEqual(['a', 'b']);
 
     await source.loadMore();
-    expect(all.value).toEqual(['a', 'b', 'c']);
+    expect(current.value).toEqual(['a', 'b', 'c']);
     dispose();
   });
 });

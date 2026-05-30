@@ -456,11 +456,25 @@ describe('createSortable', () => {
   });
 
   describe('keyboard reordering', () => {
+    let container: HTMLElement;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+    });
+
+    afterEach(() => {
+      container.remove();
+    });
+
     it('moves item forward with ArrowDown', () => {
       const {
         element,
         items: [, second],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -476,6 +490,9 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -491,6 +508,9 @@ describe('createSortable', () => {
         element,
         items: [, , third],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -506,6 +526,9 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -521,6 +544,9 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ axis: 'horizontal', element, onReorder });
 
@@ -536,6 +562,9 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -551,6 +580,9 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ element, keyboard: false, onReorder });
 
@@ -569,6 +601,7 @@ describe('createSortable', () => {
       li.setAttribute('data-sort-id', 'a');
       li.append(input);
       element.append(li);
+      container.appendChild(element);
 
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
@@ -585,6 +618,9 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b');
+
+      container.appendChild(element);
+
       const onReorder = vi.fn();
       const sortable = createSortable({ disabled: true, element, onReorder });
 
@@ -757,5 +793,49 @@ describe('applyReorder', () => {
     const result = applyReorder([], ['a', 'b'], (i: { id: string }) => i.id);
 
     expect(result).toEqual([]);
+  });
+});
+
+// ─── scope validation ─────────────────────────────────────────────────────────
+
+describe('scope validation', () => {
+  it('throws a clear error when a plain object is passed as scope', () => {
+    const { element } = makeList('a');
+    const invalidScope = {} as ReturnType<typeof createSortableScope>;
+
+    expect(() => createSortable({ element, scope: invalidScope })).toThrowError(
+      '@vielzeug/grip: Invalid scope — use createSortableScope() to create scopes.',
+    );
+  });
+});
+
+// ─── dragover: last position wins ────────────────────────────────────────────
+
+describe('dragover position resolution', () => {
+  it('uses the last dragover position when multiple events fire before dragend', () => {
+    const {
+      element,
+      items: [first, second],
+    } = makeList('a', 'b');
+    const onReorder = vi.fn();
+
+    Object.defineProperty(second, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+    });
+
+    const sortable = createSortable({ element, onReorder });
+
+    startDrag(first);
+
+    // Two dragover events; only the last position (after midpoint) should determine the result.
+    second.dispatchEvent(makeDragEvent('dragover', { clientY: 35, dropEffect: 'move' })); // before midpoint
+    second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' })); // after midpoint → insert after
+
+    endDrag(first);
+
+    expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
+
+    sortable.destroy();
   });
 });

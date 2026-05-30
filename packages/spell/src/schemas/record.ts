@@ -1,4 +1,5 @@
 import type { Issue, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -61,20 +62,20 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     return { issues, output };
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const guarded = this._guardRecordInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const { issues, output } = this._parseRecordEntries(guarded.value);
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     const guarded = this._guardRecordInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const obj = guarded.value;
     const keys = Object.keys(obj);
@@ -113,21 +114,19 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
       }
     }
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
     return { additionalProperties: this.valueSchema.toJsonSchema(), type: 'object' };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      key: this.keySchema.describe(),
+      ...this._describeBase(),
+      key: this.keySchema.toDescriptor(),
       kind: 'record',
-      value: this.valueSchema.describe(),
+      value: this.valueSchema.toDescriptor(),
     };
   }
 

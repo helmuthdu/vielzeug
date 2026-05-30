@@ -1,5 +1,4 @@
-import type { ValidateFn } from '../core';
-import type { SchemaDescriptor } from '../core';
+import type { SchemaDescriptor, ValidateFn } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -7,7 +6,7 @@ import { _messages } from '../messages';
 export type EnumValues = readonly [string | number, ...(string | number)[]];
 type EnumType<T extends EnumValues> = T[number];
 
-export function buildEnumValidator(values: readonly unknown[]): ValidateFn {
+function buildEnumValidator(values: readonly unknown[]): ValidateFn {
   const set = new Set<unknown>(values);
 
   return (value) =>
@@ -28,14 +27,8 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
     return { enum: [...this.values] };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'enum',
-      values: this.values,
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'enum', values: this.values };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

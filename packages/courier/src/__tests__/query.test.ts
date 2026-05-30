@@ -114,24 +114,24 @@ describe('Query Client', () => {
 
   describe('Retry', () => {
     it('retries the fn up to the specified count before succeeding', async () => {
-      const qc = createQuery({ maxAttempts: 3 });
+      const qc = createQuery({ times: 3 });
       let attempts = 0;
 
       await qc.fetch({
+        delay: 0,
         fn: async () => {
           if (++attempts < 3) throw new Error('transient');
 
           return { id: 1 };
         },
         key: ['users', 1],
-        retryDelay: 0,
       });
 
       expect(attempts).toBe(3);
     });
 
-    it('maxAttempts:1 makes exactly one attempt then rejects', async () => {
-      const qc = createQuery({ maxAttempts: 1 });
+    it('times:1 makes exactly one attempt then rejects', async () => {
+      const qc = createQuery({ times: 1 });
       let attempts = 0;
 
       await expect(
@@ -430,6 +430,7 @@ describe('Query Client', () => {
 
       // Seed with successful data then fail a refetch to arrive at error + stale data
       await qc.fetch({
+        delay: 0,
         fn: async () => {
           calls++;
 
@@ -438,22 +439,21 @@ describe('Query Client', () => {
           throw new Error('transient');
         },
         key: ['err-recovery'],
-        maxAttempts: 1,
-        retryDelay: 0,
         staleTime: 0,
+        times: 1,
       });
 
       calls = 0;
       await expect(
         qc.fetch({
+          delay: 0,
           fn: async () => {
             calls++;
             throw new Error('fail');
           },
           key: ['err-recovery'],
-          maxAttempts: 1,
-          retryDelay: 0,
           staleTime: 0,
+          times: 1,
         }),
       ).rejects.toThrow();
 

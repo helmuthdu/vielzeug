@@ -1,3 +1,4 @@
+import { getOrCreate } from '@vielzeug/arsenal';
 import {
   computed,
   define,
@@ -145,7 +146,8 @@ export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass'
  * </bit-select>
  * ```
  */
-export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', {
+export const SELECT_TAG = 'bit-select' as const;
+define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -316,9 +318,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       for (const opt of opts) {
         const key = opt.group;
 
-        if (!groups.has(key)) groups.set(key, []);
-
-        groups.get(key)!.push(opt);
+        getOrCreate(groups, key, () => [] as OptionItem[]).push(opt);
       }
 
       let globalIdx = 0;

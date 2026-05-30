@@ -43,6 +43,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {

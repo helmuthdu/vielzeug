@@ -3,7 +3,7 @@
  * Tests for core craft directives: each, raw
  */
 
-import { classMap, computed, each, html, live, memo, raw, setRawSanitizer, signal, styleMap, when } from '../index';
+import { classMap, computed, each, html, live, raw, setRawSanitizer, signal, styleMap, when } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -552,40 +552,6 @@ describe('Directive: when()', () => {
     await flush();
 
     expect(query('.off')?.textContent?.trim()).toBe('World');
-  });
-});
-
-describe('Directive: memo() (replaces guard)', () => {
-  it('should only recompute when dependency tuple changes', async () => {
-    const trigger = signal(1);
-    const other = signal(0);
-    let renders = 0;
-
-    const { flush, query } = await mount(
-      () =>
-        html`<div class="value">
-          ${memo(
-            () => [trigger.value],
-            () => {
-              renders++;
-
-              return html`<span>${trigger.value}</span>`;
-            },
-          )}
-        </div>`,
-    );
-
-    expect(query('.value span')?.textContent).toBe('1');
-    expect(renders).toBe(1);
-
-    other.value = 1;
-    await flush();
-    expect(renders).toBe(1);
-
-    trigger.value = 2;
-    await flush();
-    expect(renders).toBe(2);
-    expect(query('.value span')?.textContent).toBe('2');
   });
 });
 

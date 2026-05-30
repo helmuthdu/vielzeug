@@ -115,7 +115,8 @@ export type BitDialogProps = {
  * ```
  */
 
-export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
+export const DIALOG_TAG = 'bit-dialog' as const;
+define<BitDialogProps, BitDialogEvents>(DIALOG_TAG, {
   props: {
     backdrop: prop.string<DialogBackdrop>(),
     dismissible: prop.bool(false),

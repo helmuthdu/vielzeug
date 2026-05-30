@@ -10,7 +10,7 @@ import {
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { getCurrentElement } from '../index';
+import {} from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -71,114 +71,6 @@ describe('core/host.ts', () => {
       expect(element.classList.contains('ready')).toBe(true);
       expect(element.classList.contains('open')).toBe(true);
       expect(element.classList.contains('active')).toBe(false);
-    });
-
-    it('prop binding exposes reactive get/set on the host element', async () => {
-      const { element, flush } = await mount((_props, { bind, el: _el }) => {
-        const internalValue = signal('initial');
-
-        bind({
-          prop: {
-            value: {
-              get: () => internalValue.value,
-              set: (v: unknown) => {
-                internalValue.value = String(v);
-              },
-            },
-          },
-        });
-
-        return html`<div>${internalValue}</div>`;
-      });
-
-      expect((element as HTMLElement & { value: string }).value).toBe('initial');
-
-      (element as HTMLElement & { value: string }).value = 'updated';
-      await flush();
-
-      expect((element as HTMLElement & { value: string }).value).toBe('updated');
-    });
-
-    it('supports style and prop bindings via host.bind', async () => {
-      const { element, flush } = await mount((_props, { bind, el: _el }) => {
-        const color = signal('rgb(255, 0, 0)');
-
-        bind({
-          prop: {
-            value: {
-              get: () => color.value,
-              set: (next: unknown) => {
-                color.value = String(next);
-              },
-            },
-          },
-          style: { color },
-        });
-
-        return html`<div></div>`;
-      });
-
-      expect((element as HTMLElement & { value: string }).value).toBe('rgb(255, 0, 0)');
-      expect(element.style.getPropertyValue('color')).toContain('255');
-
-      (element as HTMLElement & { value: string }).value = 'rgb(0, 128, 0)';
-      await flush();
-
-      expect(element.style.getPropertyValue('color')).toContain('128');
-    });
-
-    it('prop binding is cleaned up on component destroy', async () => {
-      const { destroy, element } = await mount((_props, { bind, el: _el }) => {
-        bind({
-          prop: {
-            value: {
-              get: () => 'alive',
-            },
-          },
-        });
-
-        return html`<div></div>`;
-      });
-
-      expect((element as HTMLElement & { value?: string }).value).toBe('alive');
-
-      destroy();
-
-      expect((element as HTMLElement & { value?: string }).value).toBeUndefined();
-    });
-
-    it('keeps the latest prop binding active when overlapping bindings target the same property', async () => {
-      const tag = `test-host-bind-overlap-${Math.random().toString(36).slice(2)}`;
-
-      register(tag, (_props, { bind, el: _el }) => {
-        const baseCleanup = bind({
-          prop: {
-            value: {
-              get: () => 'base',
-            },
-          },
-        });
-
-        bind({
-          prop: {
-            value: {
-              get: () => 'override',
-            },
-          },
-        });
-
-        baseCleanup();
-
-        return html`<div>ok</div>`;
-      });
-
-      const { destroy, element } = await mount(tag);
-
-      expect((element as HTMLElement & { value?: string }).value).toBe('override');
-
-      destroy();
-
-      expect((element as HTMLElement & { value?: string }).value).toBeUndefined();
     });
 
     it('supports listener options for host event bindings', async () => {
@@ -440,7 +332,7 @@ describe('mount slot timing', () => {
     const mountFn = vi.fn();
 
     register('test-slot-timing-element', () => {
-      const host = getCurrentElement();
+      const host = el;
 
       onMounted(() => {
         mountFn();

@@ -16,7 +16,7 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
 
   const bus = createBus<T>({
     ...options,
-    onDispatch<K extends EventKey<T>>(event: K, payload: T[K]) {
+    onDispatch(event: EventKey<T>, payload: unknown) {
       const list = records.get(event);
 
       if (list) list.push(payload);
@@ -51,7 +51,9 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     events: bus.events,
     listenerCount: bus.listenerCount,
     on: bus.on,
+    onAny: bus.onAny,
     once: bus.once,
+    pipe: bus.pipe,
     removeAllListeners: bus.removeAllListeners,
     reset: () => records.clear(),
     [Symbol.dispose]: dispose,

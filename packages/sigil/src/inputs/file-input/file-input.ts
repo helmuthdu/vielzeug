@@ -11,7 +11,7 @@ import {
   signal,
   onMounted,
 } from '@vielzeug/craft';
-import { createDropZone } from '@vielzeug/grip';
+import { createDropZone, matchesAccept } from '@vielzeug/grip';
 
 import { createInteraction, createStableId } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared/config';
@@ -35,22 +35,6 @@ const formatBytes = (bytes: number) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-};
-
-const isFileAccepted = (file: File, accept: string) => {
-  if (!accept || accept === '*') return true;
-
-  const types = accept.split(',').map((t) => t.trim().toLowerCase());
-  const fileName = file.name.toLowerCase();
-  const fileType = file.type.toLowerCase();
-
-  return types.some((type) => {
-    if (type.startsWith('.')) return fileName.endsWith(type);
-
-    if (type.endsWith('/*')) return fileType.startsWith(type.replace('/*', '/'));
-
-    return fileType === type;
-  });
 };
 
 const isFileSizeAllowed = (file: File, maxSize?: number) => !maxSize || file.size <= maxSize;
@@ -132,7 +116,8 @@ export type BitFileInputEvents = {
  * <bit-file-input variant="bordered" color="primary" />
  * ```
  */
-export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit-file-input', {
+export const FILE_INPUT_TAG = 'bit-file-input' as const;
+define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
   formAssociated: true,
   props: {
     accept: prop.string(),
@@ -239,7 +224,11 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
 
       if (!isMultiple) incoming = incoming.slice(0, 1);
 
-      incoming = incoming.filter((f) => isFileAccepted(f, acceptVal || '') && isFileSizeAllowed(f, maxSizeLimit.value));
+      incoming = incoming.filter(
+        (f) =>
+          matchesAccept(f, acceptVal ? acceptVal.split(',').map((t) => t.trim()) : []) &&
+          isFileSizeAllowed(f, maxSizeLimit.value),
+      );
 
       let updated: File[] = isMultiple ? [...files.value] : [];
 

@@ -1,4 +1,4 @@
-import { and, not, or } from '../predicates';
+import { allOf as and, anyOf as or, not } from '@vielzeug/arsenal';
 
 describe('predicates', () => {
   it('negates a predicate with not()', () => {

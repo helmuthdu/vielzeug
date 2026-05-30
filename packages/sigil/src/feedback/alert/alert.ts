@@ -84,7 +84,8 @@ export type BitAlertProps = {
  * </bit-alert>
  * ```
  */
-export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
+export const ALERT_TAG = 'bit-alert' as const;
+define<BitAlertProps, BitAlertEvents>(ALERT_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

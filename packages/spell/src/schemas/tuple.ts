@@ -1,4 +1,5 @@
 import type { AnySchema, Issue, ParseResult, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -77,10 +78,18 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     return { ok: true, value };
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
+    if (!Array.isArray(value)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
+        typeOk: false,
+      };
+    }
+
     const guarded = this._guardTupleInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const issues: Issue[] = [];
     const output: unknown[] = [];
@@ -100,13 +109,21 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
       }
     }
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
+    if (!Array.isArray(value)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
+        typeOk: false,
+      };
+    }
+
     const guarded = this._guardTupleInput(value);
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues };
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const tupleValue = guarded.value;
 
@@ -135,7 +152,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
       }
     }
 
-    return { data: output, issues };
+    return { data: output, issues, typeOk: true };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
@@ -148,14 +165,12 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     return base;
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      items: this.items.map((s) => s.describe()),
+      ...this._describeBase(),
+      items: this.items.map((s) => s.toDescriptor()),
       kind: 'tuple',
-      rest: this.restSchema !== null ? this.restSchema.describe() : null,
+      rest: this.restSchema !== null ? this.restSchema.toDescriptor() : null,
     };
   }
 

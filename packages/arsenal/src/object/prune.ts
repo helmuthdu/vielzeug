@@ -1,4 +1,4 @@
-import { isArray } from '../typed/isArray';
+import { filterMap } from '../array/filterMap';
 import { isEmpty } from '../typed/isEmpty';
 import { isNil } from '../typed/isNil';
 import { isObject } from '../typed/isObject';
@@ -32,8 +32,12 @@ export function prune<T>(value: T): T | undefined {
     return (trimmed === '' ? undefined : trimmed) as T | undefined;
   }
 
-  if (isArray(value)) {
-    const cleaned = value.map((item) => prune(item)).filter((item) => !isEmpty(item));
+  if (Array.isArray(value)) {
+    const cleaned = filterMap(value as unknown[], (item) => {
+      const pruned = prune(item);
+
+      return isEmpty(pruned) ? undefined : (pruned as unknown);
+    });
 
     return (cleaned.length === 0 ? undefined : cleaned) as T | undefined;
   }

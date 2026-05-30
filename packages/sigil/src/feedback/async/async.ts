@@ -67,7 +67,8 @@ export type BitAsyncProps = {
  * </bit-async>
  * ```
  */
-export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
+export const ASYNC_TAG = 'bit-async' as const;
+define<BitAsyncProps, BitAsyncEvents>(ASYNC_TAG, {
   props: {
     'empty-description': prop.string(),
     'empty-label': prop.string('No content yet'),

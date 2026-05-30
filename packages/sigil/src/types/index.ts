@@ -1,12 +1,3 @@
-/**
- * Sigil Component Types
- *
- * Central export point for all TypeScript types used in Sigil components.
- */
-
-// Export all shared types
-export * from './shared';
-
-// Component-specific types will be imported from their respective files
-// This allows consumers to import types like:
-// import type { BitButtonProps, ThemeColor, BitCheckboxChangeEvent } from '@vielzeug/sigil/types';
+// Authoritative source for all Sigil shared types, prop bundles, and size presets.
+// Component-specific types are exported from their respective component files.
+export * from '../shared/config';

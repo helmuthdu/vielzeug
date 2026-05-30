@@ -44,12 +44,16 @@ class WorkerMock {
   }
 
   postMessage(data: { input: unknown }, _transfer?: Transferable[] | StructuredSerializeOptions): void {
+    // Simulate structured-clone semantics so tests catch non-cloneable inputs and
+    // mutation-after-send bugs that would fail in production.
+    const cloned = structuredClone(data);
+
     void this.#init
       .then(async () => {
         if (this.#terminated || !this.#innerOnMessage) return;
 
         try {
-          await this.#innerOnMessage({ data } as MessageEvent<{ input: unknown }>);
+          await this.#innerOnMessage({ data: cloned } as MessageEvent<{ input: unknown }>);
         } catch (error) {
           this.onerror?.({ message: error instanceof Error ? error.message : String(error) } as ErrorEvent);
         }

@@ -1,7 +1,7 @@
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
 import { dispatchKeyboardAction } from './keyboard';
-import { clampNumber, toFiniteNumber, toPositiveStep } from './numbers';
+import { clamp as clampRange, toFiniteNumber, toPositiveStep } from './numbers';
 
 export type SpinnerControlOptions = {
   commit: (value: number | null, originalEvent?: Event) => void;
@@ -33,7 +33,7 @@ export const createSpinnerControl = (options: SpinnerControlOptions): SpinnerCon
   };
 
   const clamp = (value: number): number => {
-    return clampNumber(value, min(), max());
+    return clampRange(value, min(), max());
   };
 
   const step = (): number => toPositiveStep(options.step?.value, 1);

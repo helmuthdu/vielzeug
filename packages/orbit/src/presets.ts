@@ -24,79 +24,80 @@ export interface PresetOptions {
 }
 
 /**
- * Ready-made middleware stacks for common floating UI patterns.
- *
- * Import from the dedicated entrypoint:
- * ```ts
- * import { presets } from '@vielzeug/orbit/presets';
- * ```
+ * Small informational tooltip.
+ * Stack: `offset(8) → flip({ padding }) → shift({ padding })`
  *
  * @example
  * ```ts
- * const cleanup = float(trigger, tooltip, presets.tooltip());
+ * import { tooltip } from '@vielzeug/orbit/presets';
+ * const cleanup = float(trigger, tooltipEl, tooltip());
+ * ```
+ */
+export function tooltip(options: PresetOptions = {}): PositioningPreset {
+  const padding = options.padding ?? 6;
+
+  return {
+    middleware: [offset(options.offset ?? 8), flip({ padding }), shift({ padding })],
+    placement: options.placement ?? 'top',
+  };
+}
+
+/**
+ * Dropdown panel (select, combobox, menu).
+ * Stack: `offset(4) → flip({ padding }) → shift({ padding }) → size({ padding })`
  *
- * // Customize:
- * const cleanup = float(trigger, menu, {
- *   ...presets.dropdown({ placement: 'top-start' }),
- *   autoUpdate: { throttle: 16 },
+ * @example
+ * ```ts
+ * import { dropdown } from '@vielzeug/orbit/presets';
+ * const cleanup = float(trigger, panel, dropdown());
+ * ```
+ */
+export function dropdown(options: PresetOptions = {}): PositioningPreset {
+  const padding = options.padding ?? 6;
+
+  return {
+    middleware: [offset(options.offset ?? 4), flip({ padding }), shift({ padding }), size({ padding })],
+    placement: options.placement ?? 'bottom-start',
+  };
+}
+
+/**
+ * Rich popover or flyout panel (often with an arrow and close button).
+ * Stack: `offset(12) → flip({ padding }) → shift({ padding })`
+ *
+ * @example
+ * ```ts
+ * import { popover } from '@vielzeug/orbit/presets';
+ * const cleanup = float(trigger, panel, popover());
+ * ```
+ */
+export function popover(options: PresetOptions = {}): PositioningPreset {
+  const padding = options.padding ?? 8;
+
+  return {
+    middleware: [offset(options.offset ?? 12), flip({ padding }), shift({ padding })],
+    placement: options.placement ?? 'top',
+  };
+}
+
+/**
+ * Right-click context menu anchored to cursor coordinates (virtual reference).
+ * Stack: `offset(2) → flip({ padding }) → shift({ padding })`
+ *
+ * @example
+ * ```ts
+ * import { contextMenu } from '@vielzeug/orbit/presets';
+ * document.addEventListener('contextmenu', (e) => {
+ *   const vref = { getBoundingClientRect: () => ({ x: e.clientX, y: e.clientY, width: 0, height: 0, ... }) };
+ *   float(vref, menu, contextMenu());
  * });
  * ```
  */
-export const presets = {
-  /**
-   * Right-click context menu anchored to cursor coordinates (virtual reference).
-   * Stack: `[offset] → flip({ padding }) → shift({ padding })`
-   */
-  contextMenu(options: PresetOptions = {}): PositioningPreset {
-    const padding = options.padding ?? 8;
+export function contextMenu(options: PresetOptions = {}): PositioningPreset {
+  const padding = options.padding ?? 8;
 
-    return {
-      middleware: [...(options.offset ? [offset(options.offset)] : []), flip({ padding }), shift({ padding })],
-      placement: options.placement ?? 'bottom-start',
-    };
-  },
-
-  /**
-   * Dropdown panel (select, combobox, menu).
-   * Stack: `[offset] → flip({ padding }) → shift({ padding }) → size({ padding })`
-   */
-  dropdown(options: PresetOptions = {}): PositioningPreset {
-    const padding = options.padding ?? 6;
-
-    return {
-      middleware: [
-        ...(options.offset ? [offset(options.offset)] : []),
-        flip({ padding }),
-        shift({ padding }),
-        size({ padding }),
-      ],
-      placement: options.placement ?? 'bottom-start',
-    };
-  },
-
-  /**
-   * Rich popover or flyout panel (often with an arrow and close button).
-   * Stack: `offset(12) → flip({ padding }) → shift({ padding })`
-   */
-  popover(options: PresetOptions = {}): PositioningPreset {
-    const padding = options.padding ?? 8;
-
-    return {
-      middleware: [offset(options.offset ?? 12), flip({ padding }), shift({ padding })],
-      placement: options.placement ?? 'top',
-    };
-  },
-
-  /**
-   * Small informational tooltip.
-   * Stack: `offset(8) → flip() → shift({ padding: 6 })`
-   */
-  tooltip(options: PresetOptions = {}): PositioningPreset {
-    const padding = options.padding ?? 6;
-
-    return {
-      middleware: [offset(options.offset ?? 8), flip({ padding }), shift({ padding })],
-      placement: options.placement ?? 'top',
-    };
-  },
-} as const;
+  return {
+    middleware: [offset(options.offset ?? 2), flip({ padding }), shift({ padding })],
+    placement: options.placement ?? 'bottom-start',
+  };
+}

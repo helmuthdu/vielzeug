@@ -1,4 +1,5 @@
 import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared/config';
 import type { InputType, VisualVariant } from '../../types';
@@ -74,8 +75,8 @@ const VALID_INPUT_TYPES = [
  * @attr {string} value - Current input value
  * @attr {string} placeholder - Placeholder text
  * @attr {string} name - Form field name
- * @attr {string} helper - Helper text displayed below the input
- * @attr {string} error - Error message (marks field as invalid)
+ * @attr {string} helper - Helper text displayed below the input (fallback when the `helper` slot is empty)
+ * @attr {string} error - Error message — marks the field as invalid (fallback when the `error` slot is empty)
  * @attr {boolean} disabled - Disable input interaction
  * @attr {boolean} readonly - Make the input read-only
  * @attr {boolean} required - Mark the field as required
@@ -89,7 +90,9 @@ const VALID_INPUT_TYPES = [
  *
  * @slot prefix - Content before the input (e.g., icons)
  * @slot suffix - Content after the input (e.g., clear button, validation icon)
- * @slot helper - Complex helper content below the input
+ * @slot label - Replaces the label text — slotted content takes precedence over the `label` prop
+ * @slot helper - Replaces the helper text — slotted content takes precedence over the `helper` prop
+ * @slot error - Replaces the error text — slotted content takes precedence over the `error` prop
  *
  * @part wrapper - The input wrapper element
  * @part label - The label element (inset or outside)
@@ -98,15 +101,15 @@ const VALID_INPUT_TYPES = [
  * @part input - The input element
  * @part helper - The helper text element
  *
- * @cssprop --input-bg - Background color
- * @cssprop --input-color - Text color
- * @cssprop --input-border-color - Border color
- * @cssprop --input-focus - Focus border color
- * @cssprop --input-placeholder-color - Placeholder text color
- * @cssprop --input-radius - Border radius
- * @cssprop --input-padding - Inner padding (vertical horizontal)
- * @cssprop --input-gap - Gap between prefix/suffix and input
- * @cssprop --input-font-size - Font size
+ * @cssprop --bit-input-bg - Background color (maps to internal --_bg)
+ * @cssprop --bit-input-color - Text color (maps to internal --_color)
+ * @cssprop --bit-input-border-color - Border color
+ * @cssprop --bit-input-focus-color - Focus ring / border color
+ * @cssprop --bit-input-placeholder-color - Placeholder text color
+ * @cssprop --bit-input-radius - Border radius override
+ * @cssprop --bit-input-padding - Inner padding (vertical horizontal)
+ * @cssprop --bit-input-gap - Gap between prefix/suffix and input
+ * @cssprop --bit-input-font-size - Font size override
  *
  * @example
  * ```html
@@ -114,7 +117,8 @@ const VALID_INPUT_TYPES = [
  * <bit-input label="Name" variant="bordered" color="primary" />
  * ```
  */
-export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
+export const INPUT_TAG = 'bit-input' as const;
+define<BitInputProps, BitInputEvents>(INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -140,16 +144,19 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el: _el, emit }) {
+  setup(props, { bind, el: _el, emit, slots }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
+    const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
+
     const tf = useTextField(
       {
         disabled: fCtxProps.disabled,
         error: props.error,
+        hasLabel,
         helper: props.helper,
         label: props.label,
         labelPlacement: props['label-placement'],
@@ -228,7 +235,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
           id="${label.outside.id}"
           part="label"
           ?hidden="${() => !label.outside.show.value}"
-          >${props.label}</label
+          ><slot name="label">${props.label}</slot></label
         >
         <div class="field" part="field">
           <label
@@ -237,7 +244,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
             id="${label.inset.id}"
             part="label"
             ?hidden="${() => !label.inset.show.value}"
-            >${props.label}</label
+            ><slot name="label">${props.label}</slot></label
           >
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
@@ -277,8 +284,12 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
             </button>
           </div>
         </div>
-        <div class="helper-text" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
-        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
+        <div class="helper-text" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">
+          <slot name="helper">${helperText}</slot>
+        </div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">
+          <slot name="error">${errorText}</slot>
+        </div>
         <div
           class="char-counter"
           part="char-counter"

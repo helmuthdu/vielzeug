@@ -229,13 +229,13 @@ describe('ObjectSchema shape-transform methods preserve metadata', () => {
   });
 
   it('partial() preserves description', () => {
-    const schema = s.object({ a: s.string() }).describe('My object');
+    const schema = s.object({ a: s.string() }).label('My object');
 
     expect(schema.partial().description).toBe('My object');
   });
 
   it('extend() preserves description', () => {
-    const schema = s.object({ a: s.string() }).describe('My object');
+    const schema = s.object({ a: s.string() }).label('My object');
 
     expect(schema.extend({ b: s.number() }).description).toBe('My object');
   });

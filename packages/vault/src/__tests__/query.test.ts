@@ -140,5 +140,19 @@ describe('QueryBuilder (via query)', () => {
     test('first returns undefined for empty result', async () => {
       expect(await db.query('rows').equals('id', 99).first()).toBeUndefined();
     });
+
+    test('first short-circuits on unfiltered query — returns first item without full scan', async () => {
+      // No filter/sort: short-circuit path returns the first item directly.
+      const result = await db.query('rows').first();
+
+      expect(result).toBeDefined();
+      expect(rowsData).toContainEqual(result);
+    });
+
+    test('first with only limit(1) uses short-circuit path', async () => {
+      const result = await db.query('rows').limit(1).first();
+
+      expect(result).toBeDefined();
+    });
   });
 });

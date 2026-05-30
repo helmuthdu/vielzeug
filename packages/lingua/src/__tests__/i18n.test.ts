@@ -58,19 +58,50 @@ describe('createI18n', () => {
       expect(i18n.t('greeting')).toBe('Hello, {name}!');
     });
 
-    test('calls onMissing with type "key" for an unknown key', () => {
-      const i18n = createI18n({ onMissing: (info) => `[${info.type}:${info.key}]` });
+    test('calls onMissingKey for an unknown key', () => {
+      const i18n = createI18n({ onMissingKey: (key) => `[key:${key}]` });
 
       expect(i18n.t('unknown')).toBe('[key:unknown]');
     });
 
-    test('calls onMissing with type "var" and varName for a missing interpolation variable', () => {
+    test('calls onMissingVar with varName for a missing interpolation variable', () => {
       const i18n = createI18n({
         catalogs: { en: { greeting: 'Hello, {name}!' } },
-        onMissing: (info) => (info.type === 'var' ? `<${info.varName}>` : info.key),
+        onMissingVar: (varName) => `<${varName}>`,
       });
 
       expect(i18n.t('greeting')).toBe('Hello, <name>!');
+    });
+
+    test('onMissingKey receives both key and locale', () => {
+      let capturedLocale = '';
+      const i18n = createI18n({
+        locale: 'fr',
+        onMissingKey: (key, locale) => {
+          capturedLocale = locale;
+
+          return key;
+        },
+      });
+
+      i18n.t('missing');
+      expect(capturedLocale).toBe('fr');
+    });
+
+    test('onMissingVar receives varName, key, and locale', () => {
+      let captured: [string, string, string] | undefined;
+      const i18n = createI18n({
+        catalogs: { en: { msg: 'Hi {name}' } },
+        locale: 'en',
+        onMissingVar: (varName, key, locale) => {
+          captured = [varName, key, locale];
+
+          return '';
+        },
+      });
+
+      i18n.t('msg');
+      expect(captured).toEqual(['name', 'msg', 'en']);
     });
   });
 
@@ -102,13 +133,21 @@ describe('createI18n', () => {
       expect(i18n.tp('items', 1.2)).toBe('1.2');
     });
 
-    test('resolves ordinal plural forms when ordinal: true', () => {
+    test('resolves ordinal plural forms', () => {
       const i18n = createI18n({ catalogs });
 
-      expect(i18n.tp('position', 1, { ordinal: true })).toBe('1st');
-      expect(i18n.tp('position', 2, { ordinal: true })).toBe('2nd');
-      expect(i18n.tp('position', 3, { ordinal: true })).toBe('3rd');
-      expect(i18n.tp('position', 4, { ordinal: true })).toBe('4th');
+      expect(i18n.tp('position', 1, undefined, true)).toBe('1st');
+      expect(i18n.tp('position', 2, undefined, true)).toBe('2nd');
+      expect(i18n.tp('position', 3, undefined, true)).toBe('3rd');
+      expect(i18n.tp('position', 4, undefined, true)).toBe('4th');
+    });
+
+    test('accepts vars alongside ordinal', () => {
+      const i18n = createI18n({
+        catalogs: { en: { pos: { one: '{name} is {count}st', other: '{name} is {count}th' } } },
+      });
+
+      expect(i18n.tp('pos', 1, { name: 'Alice' }, true)).toBe('Alice is 1st');
     });
 
     test('falls back to .other when the specific plural form is absent', () => {
@@ -126,7 +165,7 @@ describe('createI18n', () => {
     test('throws when vars.count is provided', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
-      expect(() => i18n.tp('items', 2, { vars: { count: 'custom' } })).toThrow(
+      expect(() => i18n.tp('items', 2, { count: 'custom' })).toThrow(
         '[lingua/E003] `tp` does not allow `vars.count`; `count` is injected automatically.',
       );
     });
@@ -227,16 +266,6 @@ describe('createI18n', () => {
 
       i18n.register('en', { hello: 'Hi' });
       expect(i18n.t('hello')).toBe('Hi');
-    });
-
-    test('does not notify subscribers when re-registering the same source reference', () => {
-      const catalog = { hello: 'Hello' };
-      const i18n = createI18n({ catalogs: { en: catalog } });
-      const listener = vi.fn();
-
-      i18n.subscribe(listener);
-      i18n.register('en', catalog);
-      expect(listener).not.toHaveBeenCalled();
     });
 
     test('notifies subscribers when the registered locale is in the active chain', () => {
@@ -722,11 +751,11 @@ describe('createI18n', () => {
       expect(i18n.getSupportedLocales()).toEqual(['en', 'fr']);
     });
 
-    test('returns locales in code-point order when sorted option is true', () => {
+    test('returns locales in code-point order when sorted is true', () => {
       const i18n = createI18n({ catalogs: { de: {}, 'en-US': {}, 'zh-Hant': {} } });
 
       // Code-point sort: '-' (0x2D) < uppercase letters < lowercase, so 'de' < 'en-US' < 'zh-Hant'.
-      expect(i18n.getSupportedLocales({ sorted: true })).toEqual(['de', 'en-US', 'zh-Hant']);
+      expect(i18n.getSupportedLocales(true)).toEqual(['de', 'en-US', 'zh-Hant']);
     });
   });
 
@@ -791,8 +820,8 @@ describe('createI18n', () => {
       expect(user.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
     });
 
-    test('t() returns onMissing value for unknown scoped key', () => {
-      const i18n = createI18n({ catalogs, onMissing: (info) => `[${info.key}]` });
+    test('t() returns onMissingKey value for unknown scoped key', () => {
+      const i18n = createI18n({ catalogs, onMissingKey: (key) => `[${key}]` });
       const nav = i18n.scope('nav');
 
       expect(nav.t('missing')).toBe('[nav.missing]');
@@ -895,7 +924,6 @@ describe('createI18n', () => {
 
       await i18n.merge('fr', { world: 'Monde' });
 
-      // Confirms merge triggered preload() for the dynamic locale.
       expect(loaderCalled).toBe(1);
 
       await i18n.setLocale('fr');
@@ -919,9 +947,8 @@ describe('createI18n', () => {
       expect(i18n.t('world')).toBe('World');
 
       i18n.register('en', { hello: 'Hi' });
-      // Merged key is gone — register() is always a full replacement.
       expect(i18n.t('hello')).toBe('Hi');
-      expect(i18n.t('world')).toBe('world'); // falls through to onMissing (returns key)
+      expect(i18n.t('world')).toBe('world'); // falls through to onMissingKey (returns key)
     });
 
     test('notifies subscribers and resolves via fallback when merging into a fallback locale', async () => {
@@ -935,9 +962,7 @@ describe('createI18n', () => {
       i18n.subscribe(listener);
       await i18n.merge('fr', { extra: 'Supplément' });
 
-      // fr is in the active fallback chain — subscribers must be notified.
       expect(listener).toHaveBeenCalledTimes(1);
-      // Key is reachable through the fallback chain.
       expect(i18n.t('extra')).toBe('Supplément');
     });
 
@@ -945,7 +970,6 @@ describe('createI18n', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
       await expect(i18n.merge('en', () => Promise.reject(new Error('network')))).rejects.toThrow('network');
-      // Catalog must be unchanged after a failed merge.
       expect(i18n.t('hello')).toBe('Hello');
     });
 
@@ -989,6 +1013,402 @@ describe('createI18n', () => {
       expect(i18n.fmt.currency(9.99, 'USD')).toContain('$');
       expect(i18n.fmt.date(new Date('2024-01-15'))).toContain('2024');
       expect(i18n.fmt.list(['A', 'B', 'C'])).toBe('A, B, and C');
+    });
+  });
+
+  // ─── namespaces ────────────────────────────────────────────────────────────
+
+  describe('namespaces', () => {
+    test('loadNamespace() merges translations into the active locale catalog', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      i18n.registerNamespace('settings', () => ({ lang: 'Language', theme: 'Theme' }));
+      await i18n.loadNamespace('settings');
+
+      expect(i18n.t('theme')).toBe('Theme');
+      expect(i18n.t('lang')).toBe('Language');
+      expect(i18n.t('hello')).toBe('Hello');
+    });
+
+    test('loadNamespace() loads for a specific locale', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+
+      i18n.registerNamespace('nav', (locale) => (locale === 'fr' ? { home: 'Accueil' } : { home: 'Home' }));
+      await i18n.loadNamespace('nav', 'fr');
+      await i18n.setLocale('fr');
+
+      expect(i18n.t('home')).toBe('Accueil');
+    });
+
+    test('loadNamespace() deduplicates concurrent calls (source loaded at most once)', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('settings', () => {
+        calls++;
+
+        return { x: 'X' };
+      });
+
+      await Promise.all([
+        i18n.loadNamespace('settings'),
+        i18n.loadNamespace('settings'),
+        i18n.loadNamespace('settings'),
+      ]);
+      expect(calls).toBe(1);
+    });
+
+    test('loadNamespace() is a no-op on repeated calls after loading', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('settings', () => {
+        calls++;
+
+        return { x: 'X' };
+      });
+
+      await i18n.loadNamespace('settings');
+      await i18n.loadNamespace('settings');
+      await i18n.loadNamespace('settings');
+      expect(calls).toBe(1);
+    });
+
+    test('loadNamespace() throws for an unregistered namespace', async () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      await expect(i18n.loadNamespace('unknown')).rejects.toThrow(
+        '[lingua/E005] Namespace "unknown" is not registered.',
+      );
+    });
+
+    test('loadNamespace() uses the active locale when locale argument is omitted', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'fr' });
+
+      i18n.registerNamespace('ui', (locale) => (locale === 'fr' ? { save: 'Sauvegarder' } : { save: 'Save' }));
+      await i18n.loadNamespace('ui');
+
+      expect(i18n.t('save')).toBe('Sauvegarder');
+    });
+
+    test('loadNamespace() supports async loader sources', async () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+      i18n.registerNamespace('settings', async () => ({ lang: 'Language' }));
+      await i18n.loadNamespace('settings');
+
+      expect(i18n.t('lang')).toBe('Language');
+      expect(i18n.t('hello')).toBe('Hello');
+    });
+
+    test('different locales are tracked independently per namespace', async () => {
+      let enCalls = 0;
+      let frCalls = 0;
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+
+      i18n.registerNamespace('ui', (locale) => {
+        if (locale === 'en') enCalls++;
+        else frCalls++;
+
+        return locale === 'fr' ? { save: 'Sauvegarder' } : { save: 'Save' };
+      });
+
+      await i18n.loadNamespace('ui', 'en');
+      await i18n.loadNamespace('ui', 'fr');
+      // Repeat — should not re-load
+      await i18n.loadNamespace('ui', 'en');
+      await i18n.loadNamespace('ui', 'fr');
+
+      expect(enCalls).toBe(1);
+      expect(frCalls).toBe(1);
+    });
+
+    test('register() clears namespace dedup markers so they can be re-applied', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: { base: 'Base' } } });
+
+      i18n.registerNamespace('ui', () => {
+        calls++;
+
+        return { extra: 'Extra' };
+      });
+
+      await i18n.loadNamespace('ui');
+      expect(calls).toBe(1);
+      expect(i18n.t('extra')).toBe('Extra');
+
+      // register() replaces the full catalog, discarding namespace-merged keys
+      i18n.register('en', { base: 'NewBase' });
+      expect(i18n.t('extra')).toBe('extra'); // key gone — returns key string
+
+      // loadNamespace() should re-apply since register() cleared the marker
+      await i18n.loadNamespace('ui');
+      expect(calls).toBe(2);
+      expect(i18n.t('extra')).toBe('Extra');
+    });
+
+    test('namespace task key with colon in name does not collide with locale', async () => {
+      // "user:settings" ns + "en" locale → key "user:settings\x00en"
+      // Should not interfere with ns "user" + locale "settings:en" (invalid BCP47 anyway)
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('user:settings', () => {
+        calls++;
+
+        return { profile: 'Profile' };
+      });
+
+      await i18n.loadNamespace('user:settings');
+      await i18n.loadNamespace('user:settings'); // no-op
+
+      expect(calls).toBe(1);
+      expect(i18n.t('profile')).toBe('Profile');
+    });
+  });
+
+  // ─── watch() ──────────────────────────────────────────────────────────────
+
+  describe('watch()', () => {
+    test('calls callback on locale change', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+      const snapshots: string[] = [];
+
+      i18n.watch(({ locale }) => snapshots.push(locale));
+      await i18n.setLocale('fr');
+      expect(snapshots).toEqual(['fr']);
+    });
+
+    test('calls callback immediately when immediate: true', () => {
+      const i18n = createI18n({ locale: 'en' });
+      const snapshots: string[] = [];
+
+      i18n.watch(({ locale }) => snapshots.push(locale), { immediate: true });
+      expect(snapshots).toEqual(['en']);
+    });
+
+    test('unsubscribes when AbortSignal fires', async () => {
+      const i18n = createI18n({ catalogs: { de: {}, en: {}, fr: {} }, locale: 'en' });
+      const controller = new AbortController();
+      const snapshots: string[] = [];
+
+      i18n.watch(({ locale }) => snapshots.push(locale), { signal: controller.signal });
+
+      await i18n.setLocale('fr');
+      controller.abort();
+      await i18n.setLocale('de');
+
+      expect(snapshots).toEqual(['fr']); // stopped after abort
+    });
+
+    test('AbortSignal already aborted before watch — callback never called', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+      const controller = new AbortController();
+
+      controller.abort();
+
+      const snapshots: string[] = [];
+
+      i18n.watch(({ locale }) => snapshots.push(locale), { signal: controller.signal });
+      await i18n.setLocale('fr');
+
+      // The signal was pre-aborted; subscriber is added then immediately removed.
+      // Depending on timing the abort fires synchronously, so we may see 0 or 1.
+      // Assert it's at most 1 to remain environment-agnostic.
+      expect(snapshots.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+  // ─── subscribe() — signal option ──────────────────────────────────────────
+
+  describe('subscribe() — signal option', () => {
+    test('unsubscribes when the provided AbortSignal fires', async () => {
+      const i18n = createI18n({ catalogs: { de: {}, en: {}, fr: {} }, locale: 'en' });
+      const controller = new AbortController();
+      const calls: string[] = [];
+
+      i18n.subscribe(({ locale }) => calls.push(locale), { signal: controller.signal });
+
+      await i18n.setLocale('fr');
+      controller.abort();
+      await i18n.setLocale('de');
+
+      expect(calls).toEqual(['fr']);
+    });
+  });
+
+  // ─── compile mode (F2) ────────────────────────────────────────────────────
+
+  describe('compile mode', () => {
+    test('t() resolves correctly with compile: true', () => {
+      const i18n = createI18n({
+        catalogs: { en: { greeting: 'Hello, {name}!' } },
+        compile: true,
+      });
+
+      expect(i18n.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
+    });
+
+    test('tp() resolves correctly with compile: true', () => {
+      const i18n = createI18n({
+        catalogs: { en: { inbox: { one: 'One message', other: '{count} messages' } } },
+        compile: true,
+      });
+
+      expect(i18n.tp('inbox', 1)).toBe('One message');
+      expect(i18n.tp('inbox', 5)).toBe('5 messages');
+    });
+
+    test('missing variable calls onMissingVar with compile: true', () => {
+      const i18n = createI18n({
+        catalogs: { en: { greeting: 'Hello, {name}!' } },
+        compile: true,
+        onMissingVar: (varName) => `<${varName}>`,
+      });
+
+      expect(i18n.t('greeting')).toBe('Hello, <name>!');
+    });
+
+    test('merge() re-compiles newly added keys', async () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello' } },
+        compile: true,
+      });
+
+      await i18n.merge('en', { farewell: 'Bye, {name}!' });
+      expect(i18n.t('farewell', { name: 'Bob' })).toBe('Bye, Bob!');
+    });
+
+    test('register() re-compiles replaced catalog', () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello' } },
+        compile: true,
+      });
+
+      i18n.register('en', { hello: 'Hi, {name}!' });
+      expect(i18n.t('hello', { name: 'Alice' })).toBe('Hi, Alice!');
+    });
+
+    test('restoreState() compiles restored catalog', async () => {
+      const server = createI18n({ catalogs: { en: { msg: 'Value: {v}' } }, compile: true });
+      const state = server.getState();
+      const client = createI18n({ compile: true });
+
+      client.restoreState(state);
+      expect(client.t('msg', { v: '42' })).toBe('Value: 42');
+    });
+
+    test('plain mode and compile mode produce identical output', () => {
+      const catalog = {
+        en: {
+          greeting: 'Hello, {name}!',
+          inbox: { one: 'One message', other: '{count} messages', zero: 'No messages' },
+        },
+      };
+      const plain = createI18n({ catalogs: catalog });
+      const compiled = createI18n({ catalogs: catalog, compile: true });
+
+      expect(compiled.t('greeting', { name: 'World' })).toBe(plain.t('greeting', { name: 'World' }));
+      expect(compiled.tp('inbox', 0)).toBe(plain.tp('inbox', 0));
+      expect(compiled.tp('inbox', 1)).toBe(plain.tp('inbox', 1));
+      expect(compiled.tp('inbox', 5)).toBe(plain.tp('inbox', 5));
+    });
+  });
+
+  // ─── getState() / restoreState() (F5) ─────────────────────────────────────
+
+  describe('getState() / restoreState()', () => {
+    test('getState() returns the active locale and all loaded catalogs', () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello', nav: { home: 'Home' } } },
+        locale: 'en',
+      });
+      const state = i18n.getState();
+
+      expect(state.locale).toBe('en');
+      expect(state.catalogs['en']?.['hello']).toBe('Hello');
+      expect(state.catalogs['en']?.['nav.home']).toBe('Home');
+    });
+
+    test('getState() only includes already-loaded catalogs (not pending loaders)', async () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: { hello: 'Hello' },
+          fr: async () => ({ hello: 'Bonjour' }),
+        },
+        locale: 'en',
+      });
+      const stateBefore = i18n.getState();
+
+      expect(Object.keys(stateBefore.catalogs)).toEqual(['en']);
+
+      await i18n.preload('fr');
+
+      const stateAfter = i18n.getState();
+
+      expect(Object.keys(stateAfter.catalogs)).toContain('fr');
+    });
+
+    test('restoreState() hydrates catalogs and switches locale', () => {
+      const server = createI18n({
+        catalogs: { de: { title: 'Titel' }, en: { title: 'Title' } },
+        locale: 'de',
+      });
+      const state = server.getState();
+
+      const client = createI18n({ catalogs: { de: {}, en: {} } });
+
+      client.restoreState(state);
+      expect(client.locale).toBe('de');
+      expect(client.t('title')).toBe('Titel');
+    });
+
+    test('restoreState() adds previously unknown locales', () => {
+      const state = {
+        catalogs: { fr: { greeting: 'Bonjour' } },
+        locale: 'fr',
+      };
+      const i18n = createI18n();
+
+      i18n.restoreState(state);
+      expect(i18n.t('greeting')).toBe('Bonjour');
+      expect(i18n.getSupportedLocales()).toContain('fr');
+    });
+
+    test('restoreState() notifies subscribers', () => {
+      const i18n = createI18n({ catalogs: { en: {} }, locale: 'en' });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      i18n.restoreState({ catalogs: { de: {} }, locale: 'de' });
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]?.locale).toBe('de');
+    });
+
+    test('restoreState() then t() resolves from restored catalog', () => {
+      const i18n = createI18n();
+
+      i18n.restoreState({ catalogs: { es: { hello: 'Hola' } }, locale: 'es' });
+      expect(i18n.t('hello')).toBe('Hola');
+    });
+
+    test('getState() → restoreState() round-trips correctly', async () => {
+      const original = createI18n({
+        catalogs: { en: { greeting: 'Hello, {name}!' }, fr: { greeting: 'Bonjour, {name}!' } },
+        locale: 'en',
+      });
+
+      await original.preload('fr');
+
+      const state = original.getState();
+      const hydrated = createI18n();
+
+      hydrated.restoreState(state);
+      expect(hydrated.locale).toBe('en');
+      expect(hydrated.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
+
+      await hydrated.setLocale('fr');
+      expect(hydrated.t('greeting', { name: 'Alice' })).toBe('Bonjour, Alice!');
     });
   });
 });

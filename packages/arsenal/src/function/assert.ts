@@ -48,15 +48,3 @@ export function assert(
 
   throw new type(`${message}${errorDetails}`);
 }
-
-/**
- * Asserts that every condition in the array is true.
- *
- * @example
- * ```ts
- * assertAll([cond1, cond2, cond3], 'One or more conditions failed');
- * ```
- */
-export function assertAll(conditions: boolean[], message = 'Assertion failed', options: AssertOptions = {}): void {
-  assert(conditions.every(Boolean), message, options);
-}

@@ -1,12 +1,7 @@
 import { memo } from '../../function/memo';
 import { abortable } from '../abortable';
-import { timeout } from '../timeout';
 
 describe('async extras', () => {
-  it('times out slow promises', async () => {
-    await expect(timeout(new Promise((resolve) => setTimeout(resolve, 30)), 5)).rejects.toThrow('Operation timed out');
-  });
-
   it('supports abortable promises', async () => {
     const controller = new AbortController();
     const promise = abortable(new Promise((resolve) => setTimeout(() => resolve('ok'), 20)), controller.signal);

@@ -1,4 +1,5 @@
 import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { Schema, isPlainObject } from '../core';
 
@@ -47,7 +48,7 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
     state.output = index === 0 ? result.data : deepMerge(state.output, result.data);
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     const state: { issues: Issue[]; output: unknown } = { issues: [], output: value };
 
     for (let i = 0; i < this.schemas.length; i++) {
@@ -56,30 +57,24 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
       this._applyBranchResult(i, result, state);
     }
 
-    return { data: state.output, issues: state.issues };
+    return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     const results = await Promise.all(this.schemas.map((s) => s.safeParseAsync(value)));
     const state: { issues: Issue[]; output: unknown } = { issues: [], output: value };
 
     results.forEach((result, i) => this._applyBranchResult(i, result, state));
 
-    return { data: state.output, issues: state.issues };
+    return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
     return { allOf: this.schemas.map((s) => s.toJsonSchema()) };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      branches: this.schemas.map((s) => s.describe()),
-      kind: 'intersect',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), branches: this.schemas.map((s) => s.toDescriptor()), kind: 'intersect' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

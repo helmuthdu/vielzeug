@@ -93,7 +93,7 @@ describe('createBus - subscription lifecycle', () => {
 
     controller.abort();
 
-    const unsub = bus.on('count', listener, controller.signal);
+    const unsub = bus.on('count', listener, { signal: controller.signal });
 
     unsub(); // noop unsub — should not throw
     bus.emit('count', 1);
@@ -106,7 +106,7 @@ describe('createBus - subscription lifecycle', () => {
     const listener = vi.fn();
     const controller = new AbortController();
 
-    bus.on('count', listener, controller.signal);
+    bus.on('count', listener, { signal: controller.signal });
 
     bus.emit('count', 1);
     controller.abort();
@@ -166,6 +166,31 @@ describe('createBus - subscription lifecycle', () => {
     bus.emit('count', 2); // both consumed — no further calls
 
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('on() with { once: true } fires exactly once and auto-removes', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.on('count', listener, { once: true });
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(1);
+  });
+
+  it('on() with { once: true, signal } cancels before first fire when signal aborts', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    bus.on('count', listener, { once: true, signal: controller.signal });
+    controller.abort();
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('removeAllListeners(event) removes only that event listeners', () => {
@@ -295,7 +320,12 @@ describe('createBus - emit behavior', () => {
     bus.emit('count', 99);
 
     expect(onError).toHaveBeenCalledOnce();
-    expect(onError.mock.calls[0]).toEqual([expect.any(Error), 'count', 99]);
+    expect(onError).toHaveBeenCalledWith({
+      err: expect.any(Error),
+      event: 'count',
+      payload: 99,
+      timestamp: expect.any(Number),
+    });
     expect(after).toHaveBeenCalledWith(99);
   });
 
@@ -483,6 +513,18 @@ describe('createBus - events async generator', () => {
     await stream.return(undefined);
   });
 
+  it('captures events emitted before the first next() call (eager subscription)', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count');
+
+    // Emit before starting iteration — subscription is already active
+    bus.emit('count', 42);
+
+    expect(await stream.next()).toEqual({ done: false, value: 42 });
+
+    await stream.return(undefined);
+  });
+
   it('throws RangeError synchronously when maxBuffer is not a positive number', () => {
     const bus = createBus<TestEvents>();
 
@@ -555,6 +597,208 @@ describe('createBus - events async generator', () => {
 
     expect(collected).toEqual([10]);
   });
+
+  it('Symbol.asyncDispose tears down the subscription', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count');
+
+    expect(bus.listenerCount('count')).toBe(1);
+
+    await stream[Symbol.asyncDispose]();
+
+    expect(bus.listenerCount('count')).toBe(0);
+  });
+
+  it('supports await using for automatic cleanup', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    {
+      await using stream = bus.events('count');
+
+      bus.emit('count', 1);
+      collected.push((await stream.next()).value as number);
+    }
+
+    // After the using block, the subscription should be gone
+    expect(bus.listenerCount('count')).toBe(0);
+    expect(collected).toEqual([1]);
+  });
+});
+
+describe('createBus - onAny (wildcard listener)', () => {
+  it('receives all emitted events regardless of type', () => {
+    const bus = createBus<TestEvents>();
+    const received: Array<{ event: string; payload: unknown }> = [];
+
+    bus.onAny((event, payload) => received.push({ event, payload }));
+
+    bus.emit('count', 1);
+    bus.emit('greet', { name: 'Alice' });
+    bus.emit('toggle');
+
+    expect(received).toEqual([
+      { event: 'count', payload: 1 },
+      { event: 'greet', payload: { name: 'Alice' } },
+      { event: 'toggle', payload: undefined },
+    ]);
+  });
+
+  it('fires after event-specific listeners', () => {
+    const bus = createBus<TestEvents>();
+    const order: string[] = [];
+
+    bus.on('count', () => order.push('specific'));
+    bus.onAny(() => order.push('wildcard'));
+
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['specific', 'wildcard']);
+  });
+
+  it('returns an independent unsubscribe handle', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const unsub = bus.onAny(listener);
+
+    bus.emit('count', 1);
+    unsub();
+    bus.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('auto-unsubscribes when the provided signal aborts', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    bus.onAny(listener, controller.signal);
+    bus.emit('count', 1);
+    controller.abort();
+    bus.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('does not register when the provided signal is already aborted', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    controller.abort();
+    bus.onAny(listener, controller.signal);
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('is cleared by removeAllListeners() without argument', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.onAny(listener);
+    bus.removeAllListeners();
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(bus.listenerCount()).toBe(0);
+  });
+
+  it('is NOT cleared by removeAllListeners(event)', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.on('count', vi.fn());
+    bus.onAny(listener);
+    bus.removeAllListeners('count');
+    bus.emit('count', 1);
+
+    expect(listener).toHaveBeenCalledWith('count', 1);
+  });
+
+  it('is stopped when bus is disposed', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.onAny(listener);
+    bus.emit('count', 1);
+    bus.dispose();
+    bus.emit('count', 2); // no-op after disposal
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('counts toward listenerCount() total', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.onAny(vi.fn());
+    bus.onAny(vi.fn());
+
+    expect(bus.listenerCount()).toBe(2);
+  });
+
+  it('errors forwarded to onError and remaining wildcard listeners continue', () => {
+    const onError = vi.fn();
+    const after = vi.fn();
+    const bus = createBus<TestEvents>({ onError });
+
+    bus.onAny(() => {
+      throw new Error('wildcard boom');
+    });
+    bus.onAny(after);
+
+    bus.emit('count', 1);
+
+    expect(onError).toHaveBeenCalledOnce();
+    expect(after).toHaveBeenCalledWith('count', 1);
+  });
+});
+
+describe('createBus - maxListeners', () => {
+  it('warns via console.warn when listener count exceeds the threshold', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ maxListeners: 2 });
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+    expect(spy).not.toHaveBeenCalled(); // exactly at limit — no warning
+
+    bus.on('count', vi.fn()); // exceeds limit
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toContain('[herald:warn]');
+    expect(spy.mock.calls[0][0]).toContain('"count"');
+
+    spy.mockRestore();
+    bus.dispose();
+  });
+
+  it('warns for onAny listeners that exceed the threshold', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ maxListeners: 1 });
+
+    bus.onAny(vi.fn());
+    expect(spy).not.toHaveBeenCalled();
+
+    bus.onAny(vi.fn());
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toContain('[herald:warn]');
+
+    spy.mockRestore();
+    bus.dispose();
+  });
+
+  it('does not warn when maxListeners is not configured', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = createBus<TestEvents>();
+
+    for (let i = 0; i < 20; i++) bus.on('count', vi.fn());
+
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockRestore();
+    bus.dispose();
+  });
 });
 
 describe('createBus - disposal', () => {
@@ -625,7 +869,7 @@ describe('createBus - disposalSignal', () => {
     const other = createBus<TestEvents>();
     const listener = vi.fn();
 
-    other.on('count', listener, bus.disposalSignal);
+    other.on('count', listener, { signal: bus.disposalSignal });
 
     other.emit('count', 1);
     expect(listener).toHaveBeenCalledOnce();
@@ -692,5 +936,103 @@ describe('createBus - debug mode', () => {
     expect(spy).not.toHaveBeenCalled();
 
     spy.mockRestore();
+  });
+});
+
+describe('createBus - pipe()', () => {
+  it('forwards listed events from source to target', () => {
+    const source = createBus<TestEvents>();
+    const target = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    source.pipe(target, ['count']);
+
+    source.emit('count', 42);
+
+    expect(listener).toHaveBeenCalledWith(42);
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('forwards multiple events and supports renamed entries', () => {
+    type SourceEvents = { count: number; greet: { name: string } };
+    type TargetEvents = { count: number; hello: { name: string } };
+
+    const source = createBus<SourceEvents>();
+    const target = createBus<TargetEvents>();
+    const onCount = vi.fn();
+    const onHello = vi.fn();
+
+    target.on('count', onCount);
+    target.on('hello', onHello);
+    source.pipe(target, ['count', { from: 'greet', to: 'hello' }]);
+
+    source.emit('count', 1);
+    source.emit('greet', { name: 'Alice' });
+
+    expect(onCount).toHaveBeenCalledWith(1);
+    expect(onHello).toHaveBeenCalledWith({ name: 'Alice' });
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('returned function stops forwarding', () => {
+    const source = createBus<TestEvents>();
+    const target = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+
+    const stop = source.pipe(target, ['count']);
+
+    source.emit('count', 1);
+    stop();
+    source.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(1);
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('tears down automatically when target is disposed', () => {
+    const source = createBus<TestEvents>();
+    const target = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    source.pipe(target, ['count']);
+
+    source.emit('count', 1);
+    target.dispose();
+    source.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(1);
+
+    source.dispose();
+  });
+
+  it('respects an optional external signal for teardown', () => {
+    const source = createBus<TestEvents>();
+    const target = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    target.on('count', listener);
+    source.pipe(target, ['count'], controller.signal);
+
+    source.emit('count', 1);
+    controller.abort();
+    source.emit('count', 2);
+
+    expect(listener).toHaveBeenCalledOnce();
+
+    source.dispose();
+    target.dispose();
   });
 });

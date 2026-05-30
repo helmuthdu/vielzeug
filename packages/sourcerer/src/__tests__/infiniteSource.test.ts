@@ -16,7 +16,7 @@ describe('createInfiniteSource', () => {
 
       await source.ready();
 
-      expect(source.all).toEqual(['a', 'b']);
+      expect(source.current).toEqual(['a', 'b']);
       expect(source.meta.hasMore).toBe(true);
       expect(source.meta.totalItems).toBe(5);
     });
@@ -28,7 +28,7 @@ describe('createInfiniteSource', () => {
       await Promise.resolve();
 
       expect(fetch).not.toHaveBeenCalled();
-      expect(source.all).toEqual([]);
+      expect(source.current).toEqual([]);
     });
   });
 
@@ -44,13 +44,13 @@ describe('createInfiniteSource', () => {
 
       await source.reset();
 
-      expect(source.all).toEqual(['a', 'b']);
+      expect(source.current).toEqual(['a', 'b']);
 
       await source.loadMore();
-      expect(source.all).toEqual(['a', 'b', 'c', 'd']);
+      expect(source.current).toEqual(['a', 'b', 'c', 'd']);
 
       await source.loadMore();
-      expect(source.all).toEqual(['a', 'b', 'c', 'd', 'e']);
+      expect(source.current).toEqual(['a', 'b', 'c', 'd', 'e']);
 
       expect(source.meta.hasMore).toBe(false);
     });
@@ -80,11 +80,11 @@ describe('createInfiniteSource', () => {
       await source.reset();
       await source.loadMore();
 
-      expect(source.all).toEqual(['page-1', 'page-2']);
+      expect(source.current).toEqual(['page-1', 'page-2']);
 
       await source.reset();
 
-      expect(source.all).toEqual(['page-1']);
+      expect(source.current).toEqual(['page-1']);
     });
   });
 
@@ -104,7 +104,7 @@ describe('createInfiniteSource', () => {
       vi.advanceTimersByTime(300);
       await source.ready();
 
-      expect(source.all).toEqual(['found-hello']);
+      expect(source.current).toEqual(['found-hello']);
     });
 
     it('searchNow applies immediately and resets accumulator', async () => {
@@ -116,7 +116,7 @@ describe('createInfiniteSource', () => {
 
       await source.searchNow('instant');
 
-      expect(source.all).toEqual(['instant']);
+      expect(source.current).toEqual(['instant']);
     });
   });
 
@@ -132,6 +132,64 @@ describe('createInfiniteSource', () => {
       await source.reset();
 
       expect(source.meta.errorMessage).toBe('infinite-fail');
+    });
+  });
+
+  describe('flush', () => {
+    it('immediately applies pending debounced search', async () => {
+      const fetch = vi.fn(async ({ search }: { search?: string }) => ({
+        items: search ? [search] : ['init'],
+        total: 1,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, debounceMs: 300, fetch });
+
+      await source.reset();
+
+      source.search('instant-query');
+      expect(source.meta.isSearchPending).toBe(true);
+
+      await source.flush();
+
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.current).toEqual(['instant-query']);
+    });
+  });
+
+  describe('retry', () => {
+    it('retries on failure and resolves on success', async () => {
+      const fetch = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('transient'))
+        .mockResolvedValueOnce({ items: ['retried'], total: 1 });
+      const source = createInfiniteSource({
+        autoFetch: false,
+        fetch,
+        retry: { attempts: 1, delay: () => 10 },
+      });
+
+      const p = source.reset();
+
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['retried']);
+      expect(source.meta.errorMessage).toBeNull();
+    });
+  });
+
+  describe('dispose', () => {
+    it('stops notifying listeners after dispose', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+      source.dispose();
+
+      await source.reset();
+
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 });

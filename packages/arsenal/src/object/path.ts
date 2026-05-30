@@ -1,8 +1,6 @@
 import type { Obj } from '../types';
 
-import { assert } from '../function/assert';
 import { isNil } from '../typed/isNil';
-import { IS_OBJECT_ERROR_MSG, isObject } from '../typed/isObject';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T
@@ -42,14 +40,12 @@ type PathOptions = {
  *
  * @throws If throwOnMissing is true and the path doesn't exist.
  */
-export function get<T extends Obj, P extends string>(
+export function getPath<T extends Obj, P extends string>(
   item: T,
   path: P,
   defaultValue?: unknown,
   options: PathOptions = {},
 ): PathValue<T, P> | undefined {
-  assert(isObject(item), IS_OBJECT_ERROR_MSG, { args: { item }, type: TypeError });
-
   const { throwOnMissing = false } = options;
 
   const fragments = path.split(/[.[\]]+/).filter(Boolean);

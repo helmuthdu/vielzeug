@@ -1,5 +1,6 @@
 import {
   StateError,
+  asyncScope,
   batch,
   computed,
   effect,
@@ -12,6 +13,7 @@ import {
   scope,
   signal,
   store,
+  traceEffect,
   untrack,
   watch,
 } from '../';
@@ -30,7 +32,7 @@ describe('ripple', () => {
 
       expect(seen).toEqual([0, 1]);
 
-      stop();
+      stop.dispose();
     });
 
     it('update applies atomic transforms', () => {
@@ -51,7 +53,7 @@ describe('ripple', () => {
       count.value = 1;
       expect(listener).not.toHaveBeenCalled();
 
-      stop();
+      stop.dispose();
     });
 
     it('dispose makes signal inert — reads return last value, writes are silently ignored', () => {
@@ -74,7 +76,7 @@ describe('ripple', () => {
       n.value = 2; // no-op
       expect(listener).not.toHaveBeenCalled();
 
-      unsub();
+      unsub.dispose();
     });
 
     it('dispose drops existing subscribers', () => {
@@ -91,7 +93,7 @@ describe('ripple', () => {
 
       expect(listener).toHaveBeenCalledTimes(1);
 
-      stop();
+      stop.dispose();
     });
 
     it('supports using declaration via Symbol.dispose', () => {
@@ -104,7 +106,7 @@ describe('ripple', () => {
         });
       });
 
-      stop();
+      stop.dispose();
       expect(disposed).toBe(true);
     });
   });
@@ -123,7 +125,7 @@ describe('ripple', () => {
 
       expect(seen).toEqual([4, 8]);
 
-      stop();
+      stop.dispose();
       doubled.dispose();
     });
 
@@ -183,7 +185,7 @@ describe('ripple', () => {
 
       expect(computedLog).toEqual([100, 105, 105]);
 
-      stop();
+      stop.dispose();
     });
 
     it('throws StateError on circular computed dependency', () => {
@@ -225,7 +227,7 @@ describe('ripple', () => {
 
       expect(seen).toEqual([1, 10, 11]);
 
-      stop();
+      stop.dispose();
       selected.dispose();
     });
 
@@ -244,7 +246,7 @@ describe('ripple', () => {
 
       expect(seen).toEqual([0, 1]);
 
-      stop();
+      stop.dispose();
       parity.dispose();
     });
 
@@ -291,6 +293,58 @@ describe('ripple', () => {
     });
   });
 
+  describe('computed — explicit dep array (F5)', () => {
+    it('derives a value from an explicit dep array without auto-tracking', () => {
+      const a = signal(2);
+      const b = signal(3);
+      const sum = computed([a, b], (av, bv) => av + bv);
+
+      expect(sum.value).toBe(5);
+
+      a.value = 10;
+      expect(sum.value).toBe(13);
+
+      b.value = 7;
+      expect(sum.value).toBe(17);
+
+      sum.dispose();
+    });
+
+    it('does not re-run when an untracked signal changes', () => {
+      const tracked = signal(1);
+      const untracked = signal(100);
+      const runCount = { n: 0 };
+      const c = computed([tracked], (t) => {
+        runCount.n++;
+
+        return t + untracked.value; // reads untracked inside, but not in dep list
+      });
+
+      void c.value;
+      expect(runCount.n).toBe(1);
+
+      untracked.value = 200; // not in dep list → should NOT re-run
+      void c.value;
+      expect(runCount.n).toBe(1);
+
+      tracked.value = 2; // in dep list → should re-run
+      void c.value;
+      expect(runCount.n).toBe(2);
+
+      c.dispose();
+    });
+
+    it('is branded as computed', () => {
+      const a = signal(0);
+      const c = computed([a], (v) => v * 2);
+
+      expect(isComputed(c)).toBe(true);
+      expect(isSignal(c)).toBe(true);
+
+      c.dispose();
+    });
+  });
+
   describe('effects and cleanup', () => {
     it('runs cleanups before re-run and on dispose', () => {
       const n = signal(0);
@@ -311,7 +365,7 @@ describe('ripple', () => {
       expect(cleanA).toHaveBeenCalledTimes(1);
       expect(cleanB).toHaveBeenCalledTimes(1);
 
-      stop();
+      stop.dispose();
       expect(cleanA).toHaveBeenCalledTimes(1);
       expect(cleanB).toHaveBeenCalledTimes(1);
     });
@@ -342,7 +396,7 @@ describe('ripple', () => {
           innerLog.push(b.value);
         });
 
-        onCleanup(stopInner);
+        onCleanup(() => stopInner.dispose());
       });
 
       b.value = 1;
@@ -357,7 +411,7 @@ describe('ripple', () => {
       b.value = 2;
       expect(innerLog.length).toBe(prevInnerLen + 1);
 
-      stopOuter();
+      stopOuter.dispose();
     });
 
     it('throws after the loop guard limit for self-triggering effects', () => {
@@ -410,7 +464,7 @@ describe('ripple', () => {
       );
       expect((caught as AggregateError).cause).toMatchObject({ message: 'effect-boom' });
 
-      stop();
+      stop.dispose();
     });
   });
 
@@ -432,7 +486,7 @@ describe('ripple', () => {
 
       expect(results).toEqual([1]);
 
-      stop();
+      stop.dispose();
     });
 
     it('aborts in-flight work when dependencies change', async () => {
@@ -459,7 +513,7 @@ describe('ripple', () => {
       expect(completed).not.toContain(1);
       expect(completed).toContain(2);
 
-      stop();
+      stop.dispose();
     });
 
     it('calls resolved cleanup on re-run and dispose', async () => {
@@ -483,7 +537,7 @@ describe('ripple', () => {
 
       expect(cleanups).toContain(0);
 
-      stop();
+      stop.dispose();
       expect(cleanups).toContain(1);
     });
 
@@ -501,7 +555,7 @@ describe('ripple', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      stop();
+      stop.dispose();
 
       expect(errors).toHaveLength(1);
       expect((errors[0] as Error).message).toBe('async-boom');
@@ -523,7 +577,7 @@ describe('ripple', () => {
 
       src.value = 1;
       await Promise.resolve();
-      stop();
+      stop.dispose();
       await Promise.resolve();
 
       expect(errors).toHaveLength(0);
@@ -546,12 +600,12 @@ describe('ripple', () => {
     it('disposeAsync returns an AsyncSubscription with correct shape', () => {
       const stop = effectAsync(async () => {});
 
-      expect(typeof stop).toBe('function');
+      expect(typeof stop).toBe('object');
       expect(typeof stop.dispose).toBe('function');
       expect(typeof stop.disposeAsync).toBe('function');
       expect(typeof stop[Symbol.dispose]).toBe('function');
 
-      stop();
+      stop.dispose();
     });
   });
 
@@ -567,7 +621,7 @@ describe('ripple', () => {
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith(1, 0);
 
-      stop();
+      stop.dispose();
     });
 
     it('supports getter sources', () => {
@@ -587,7 +641,7 @@ describe('ripple', () => {
       cart.patch({ count: 2 });
       expect(listener).toHaveBeenCalledWith(2, 0);
 
-      stop();
+      stop.dispose();
       cart.patch({ count: 3 });
       expect(listener).toHaveBeenCalledTimes(1);
     });
@@ -604,7 +658,7 @@ describe('ripple', () => {
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenLastCalledWith({ value: 2 }, { value: 1 });
 
-      stop();
+      stop.dispose();
     });
 
     it('does not fire after stop', () => {
@@ -613,11 +667,13 @@ describe('ripple', () => {
 
       const stop = watch(
         () => s.value.x,
-        (next) => log.push(next),
+        (next) => {
+          log.push(next);
+        },
       );
 
       s.value = { x: 1, y: 99 };
-      stop();
+      stop.dispose();
       s.value = { x: 2, y: 0 };
 
       expect(log).toEqual([1]);
@@ -628,8 +684,8 @@ describe('ripple', () => {
       const stop = watch(s, vi.fn());
 
       expect(() => {
-        stop();
-        stop();
+        stop.dispose();
+        stop.dispose();
       }).not.toThrow();
     });
 
@@ -646,11 +702,17 @@ describe('ripple', () => {
     it('immediate: provides real prev on subsequent changes', () => {
       const s = signal(1);
       const calls: Array<[number, number | undefined]> = [];
-      const stop = watch(s, (v, p) => calls.push([v, p]), { immediate: true });
+      const stop = watch(
+        s,
+        (v, p) => {
+          calls.push([v, p]);
+        },
+        { immediate: true },
+      );
 
       s.value = 2;
       s.value = 3;
-      stop();
+      stop.dispose();
 
       expect(calls).toEqual([
         [1, undefined],
@@ -792,7 +854,7 @@ describe('ripple', () => {
 
       expect(log).toEqual([0]);
 
-      stop();
+      stop.dispose();
     });
 
     it('peek reads signal value without subscribing', () => {
@@ -808,7 +870,7 @@ describe('ripple', () => {
 
       expect(log).toEqual([0]);
 
-      stop();
+      stop.dispose();
     });
 
     it('peek reads computed value without subscribing', () => {
@@ -825,7 +887,7 @@ describe('ripple', () => {
       expect(log).toEqual([4]);
       expect(doubled.peek()).toBe(10);
 
-      stop();
+      stop.dispose();
       doubled.dispose();
     });
   });
@@ -842,7 +904,7 @@ describe('ripple', () => {
 
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsubscribe();
+      unsubscribe.dispose();
     });
 
     it('subscribe skips initial emission and only reacts to changes', () => {
@@ -858,7 +920,7 @@ describe('ripple', () => {
 
       expect(listener).toHaveBeenCalledTimes(2);
 
-      unsubscribe();
+      unsubscribe.dispose();
       n.value = 3;
 
       expect(listener).toHaveBeenCalledTimes(2);
@@ -877,7 +939,7 @@ describe('ripple', () => {
 
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsubscribe();
+      unsubscribe.dispose();
       parity.dispose();
     });
 
@@ -901,7 +963,7 @@ describe('ripple', () => {
       expect(computeRuns).toBe(2);
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsubscribe();
+      unsubscribe.dispose();
       doubled.dispose();
     });
 
@@ -943,7 +1005,7 @@ describe('ripple', () => {
       const user = store({ count: 0, profile: { name: 'Ada' } });
 
       user.patch({ count: 1 });
-      user.update((state) => ({ ...state, count: state.count + 1 }));
+      user.replace((state) => ({ ...state, count: state.count + 1 }));
 
       const external = user.value;
 
@@ -985,17 +1047,77 @@ describe('ripple', () => {
       expect((patchCaught as StateError).code).toBe('INVALID_STORE');
     });
 
-    it('update() is a no-op when the callback returns the same reference', () => {
+    it('replace() is a no-op when the callback returns the same reference', () => {
       const s = store({ count: 5 });
       const listener = vi.fn();
       const stop = s.subscribe(listener);
 
-      s.update((state) => state); // same reference — should silently no-op
+      s.replace((state) => state); // same reference — should silently no-op
 
       expect(s.value.count).toBe(5);
       expect(listener).not.toHaveBeenCalled();
 
-      stop();
+      stop.dispose();
+    });
+  });
+
+  describe('store — value proxy protection (F3)', () => {
+    it('throws StateError when attempting to write a top-level property on store.value', () => {
+      const s = store({ count: 0, name: 'Ada' });
+      const snapshot = s.value;
+
+      let caught: unknown;
+
+      try {
+        (snapshot as { count: number }).count = 99;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(s.value.count).toBe(0);
+    });
+
+    it('throws StateError when attempting to delete a property on store.value', () => {
+      const s = store<{ count: number; name?: string }>({ count: 0, name: 'Ada' });
+      const snapshot = s.value;
+
+      let caught: unknown;
+
+      try {
+        delete (snapshot as { name?: string }).name;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(s.value.name).toBe('Ada');
+    });
+
+    it('read access through store.value still works normally', () => {
+      const s = store({ x: 1, y: 2 });
+
+      expect(s.value.x).toBe(1);
+      expect(s.value.y).toBe(2);
+    });
+
+    it('store.peek() also returns the protected proxy', () => {
+      const s = store({ count: 0 });
+      const peeked = s.peek();
+
+      let caught: unknown;
+
+      try {
+        (peeked as { count: number }).count = 42;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(s.value.count).toBe(0);
     });
   });
 
@@ -1025,7 +1147,7 @@ describe('ripple', () => {
       cart.patch({ label: 'full' });
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsubscribe();
+      unsubscribe.dispose();
       label.dispose();
     });
 
@@ -1118,11 +1240,11 @@ describe('ripple', () => {
 
       const n = signal(0, { name: 'counter' });
 
-      const stop = effect(
+      const stop = traceEffect(
         () => {
           void n.value;
         },
-        { name: 'tracer', trace: true },
+        { name: 'tracer' },
       );
 
       n.value = 1;
@@ -1130,7 +1252,7 @@ describe('ripple', () => {
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('tracer'));
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('counter'));
 
-      stop();
+      stop.dispose();
       vi.restoreAllMocks();
     });
 
@@ -1142,16 +1264,13 @@ describe('ripple', () => {
 
       const n = signal(0);
 
-      const stop = effect(
-        () => {
-          void n.value;
-        },
-        { trace: true },
-      );
+      const stop = traceEffect(() => {
+        void n.value;
+      });
 
       expect(groupSpy).not.toHaveBeenCalled();
 
-      stop();
+      stop.dispose();
       vi.restoreAllMocks();
     });
   });
@@ -1174,7 +1293,7 @@ describe('ripple', () => {
       }).not.toThrow();
 
       expect(log).toContain(1);
-      stop();
+      stop.dispose();
     });
   });
 
@@ -1329,7 +1448,7 @@ describe('ripple', () => {
       });
 
       n.value = 1;
-      stop();
+      stop.dispose();
 
       expect(effectLog).toEqual([1, 1]);
       expect(scopeLog).toEqual([]);
@@ -1351,6 +1470,58 @@ describe('ripple', () => {
     });
   });
 
+  describe('asyncScope (F6)', () => {
+    it('creates a scope and awaits async setup before returning it', async () => {
+      const log: string[] = [];
+
+      const s = await asyncScope(async () => {
+        onCleanup(() => log.push('setup-cleanup')); // sync, before any await
+        await Promise.resolve(); // async work after cleanup is registered
+      });
+
+      expect(log).toEqual([]);
+      s.dispose();
+      expect(log).toEqual(['setup-cleanup']);
+    });
+
+    it('captures multiple cleanups registered synchronously in setup', async () => {
+      const log: string[] = [];
+
+      const s = await asyncScope(async () => {
+        onCleanup(() => log.push('first'));
+        onCleanup(() => log.push('second'));
+        await Promise.resolve();
+      });
+
+      s.dispose();
+      expect(log).toEqual(['second', 'first']);
+    });
+
+    it('dispose is idempotent', async () => {
+      const log: number[] = [];
+      const s = await asyncScope(async () => {
+        onCleanup(() => log.push(1));
+      });
+
+      s.dispose();
+      s.dispose();
+      expect(log).toEqual([1]);
+    });
+
+    it('returns a Scope that can run further synchronous work after setup', async () => {
+      const log: string[] = [];
+
+      const s = await asyncScope(async () => {
+        onCleanup(() => log.push('setup'));
+        await Promise.resolve();
+      });
+
+      s.run(() => onCleanup(() => log.push('extra')));
+      s.dispose();
+      expect(log).toEqual(['extra', 'setup']);
+    });
+  });
+
   describe('graph propagation correctness', () => {
     it('nested effects do not leak subscriptions across scope boundaries', () => {
       const a = signal(0);
@@ -1365,7 +1536,7 @@ describe('ripple', () => {
           innerLog.push(b.value);
         });
 
-        onCleanup(stopInner);
+        onCleanup(() => stopInner.dispose());
       });
 
       b.value = 1;
@@ -1380,7 +1551,7 @@ describe('ripple', () => {
       b.value = 2;
       expect(innerLog.length).toBe(prevInnerLen + 1);
 
-      stopOuter();
+      stopOuter.dispose();
     });
 
     it('runs effect subscribed to source+computed once per source write', () => {
@@ -1399,7 +1570,7 @@ describe('ripple', () => {
       n.value = 5;
       expect(runs).toHaveLength(2);
 
-      stop();
+      stop.dispose();
       doubled.dispose();
     });
 
@@ -1413,7 +1584,7 @@ describe('ripple', () => {
       });
 
       n.value = 5;
-      stop();
+      stop.dispose();
 
       for (const [raw, derived] of seen) {
         expect(derived).toBe(raw * 2);
@@ -1436,7 +1607,7 @@ describe('ripple', () => {
       expect(seen).toHaveLength(2);
       expect(seen.at(-1)).toEqual([5, 10, 15]);
 
-      stop();
+      stop.dispose();
       doubled.dispose();
       tripled.dispose();
     });
@@ -1461,8 +1632,8 @@ describe('ripple', () => {
       expect(seen.at(-1)).toEqual([1, 7]);
       expect(seen).toContainEqual([1, 0]);
 
-      stopB();
-      stopA();
+      stopB.dispose();
+      stopA.dispose();
     });
   });
 
@@ -1608,13 +1779,13 @@ describe('ripple', () => {
     it('does not throw when effect returns undefined', () => {
       const stop = effect(() => undefined);
 
-      expect(() => stop()).not.toThrow();
+      expect(() => stop.dispose()).not.toThrow();
     });
 
     it('does not throw when effect returns a function (cleanup)', () => {
       const stop = effect(() => () => {});
 
-      expect(() => stop()).not.toThrow();
+      expect(() => stop.dispose()).not.toThrow();
     });
   });
 
@@ -1646,7 +1817,7 @@ describe('ripple', () => {
       expect(d.value).toBe(10);
       expect(seen.at(-1)).toBe(10);
 
-      stop();
+      stop.dispose();
       b.dispose();
       c.dispose();
       d.dispose();
@@ -1714,7 +1885,7 @@ describe('ripple', () => {
       s.patch({ x: 5 }); // should re-run
       expect(log).toEqual([0, 5]);
 
-      stop();
+      stop.dispose();
     });
 
     it('lens.subscribe works', () => {
@@ -1727,7 +1898,7 @@ describe('ripple', () => {
       s.patch({ x: 1 });
       expect(listener).toHaveBeenCalledTimes(1);
 
-      unsub();
+      unsub.dispose();
     });
 
     it('dispose() evicts the lens from cache — re-acquisition creates a fresh working lens', () => {
@@ -1780,10 +1951,10 @@ describe('ripple', () => {
       s.patch({ value: 99 }); // unrelated — should not re-run
       expect(log).toEqual([0]);
 
-      s.update((st) => ({ ...st, meta: { ...st.meta, count: 5 } }));
+      s.replace((st) => ({ ...st, meta: { ...st.meta, count: 5 } }));
       expect(log).toEqual([0, 5]);
 
-      stop();
+      stop.dispose();
     });
 
     it('nested lens no-ops when value is the same (via update same-ref)', () => {
@@ -1795,7 +1966,7 @@ describe('ripple', () => {
       b.value = 'hello'; // same value — no notification expected
       expect(listener).not.toHaveBeenCalled();
 
-      stop();
+      stop.dispose();
     });
 
     it('throws StateError when writing through a null intermediate path segment', () => {
@@ -1825,7 +1996,7 @@ describe('ripple', () => {
       n.value = 1;
       expect(log).toEqual([0, 1]); // synchronous
 
-      stop();
+      stop.dispose();
     });
 
     it('scheduler: microtask defers re-runs via queueMicrotask', async () => {
@@ -1847,7 +2018,7 @@ describe('ripple', () => {
       await Promise.resolve(); // flush microtask
       expect(log).toEqual([0, 1]);
 
-      stop();
+      stop.dispose();
     });
 
     it('scheduler: microtask coalesces multiple writes into one re-run', async () => {
@@ -1867,7 +2038,119 @@ describe('ripple', () => {
       await Promise.resolve();
       expect(log).toEqual([0, 3]); // one deferred run with latest value
 
-      stop();
+      stop.dispose();
+    });
+  });
+
+  describe('batched signal (F3)', () => {
+    it('coalesces multiple synchronous writes into one microtask notification', async () => {
+      const n = signal(0, { batched: true });
+      const log: number[] = [];
+      const stop = effect(() => {
+        log.push(n.value);
+      });
+
+      // Initial run is synchronous
+      expect(log).toEqual([0]);
+
+      n.value = 1;
+      n.value = 2;
+      n.value = 3;
+
+      // Not yet — batched defers until next microtask
+      expect(log).toEqual([0]);
+
+      await Promise.resolve();
+
+      // One notification with the final value
+      expect(log).toEqual([0, 3]);
+
+      stop.dispose();
+    });
+
+    it('batched signal only notifies once for rapid writes even if value returns to original', async () => {
+      const n = signal(5, { batched: true });
+      const log: number[] = [];
+      const sub = n.subscribe(() => {
+        log.push(n.value);
+      });
+
+      n.value = 10;
+      n.value = 20;
+      n.value = 30;
+
+      expect(log).toHaveLength(0); // nothing fired yet
+
+      await Promise.resolve();
+
+      // Exactly one notification, not three
+      expect(log).toHaveLength(1);
+      expect(log[0]).toBe(30);
+
+      sub.dispose();
+    });
+  });
+
+  describe('computed fallback (F4)', () => {
+    it('returns fallback value when compute throws', () => {
+      let shouldThrow = false;
+      const n = signal(1);
+      const safe = computed(
+        () => {
+          if (shouldThrow) throw new Error('boom');
+
+          return n.value * 2;
+        },
+        { fallback: (_err, last) => last ?? -1 },
+      );
+
+      expect(safe.value).toBe(2);
+
+      shouldThrow = true;
+      n.value = 2; // triggers recompute → throws → fallback called with last=2
+
+      expect(safe.value).toBe(2); // last value preserved
+
+      safe.dispose();
+    });
+
+    it('calls fallback with undefined lastValue on first-run failure', () => {
+      const safe = computed(
+        () => {
+          throw new Error('always fails');
+        },
+        { fallback: (_err, last) => last ?? -1 },
+      );
+
+      expect(safe.value).toBe(-1);
+
+      safe.dispose();
+    });
+
+    it('without fallback, throws on compute error', () => {
+      const n = signal(0);
+      const risky = computed(() => {
+        if (n.value > 0) throw new Error('too big');
+
+        return n.value;
+      });
+
+      expect(risky.value).toBe(0);
+
+      n.value = 1;
+
+      let caught: unknown;
+
+      try {
+        void risky.value;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toBe('too big');
+
+      risky.dispose();
     });
   });
 });

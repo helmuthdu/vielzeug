@@ -51,7 +51,8 @@ export type BitTabPanelProps = {
  * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
  * ```
  */
-export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
+export const TAB_PANEL_TAG = 'bit-tab-panel' as const;
+define<BitTabPanelProps>(TAB_PANEL_TAG, {
   props: {
     active: prop.bool(false),
     lazy: prop.bool(false),

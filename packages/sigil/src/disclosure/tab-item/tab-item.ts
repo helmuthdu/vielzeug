@@ -56,7 +56,8 @@ export type BitTabItemProps = {
  * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
  * ```
  */
-export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
+export const TAB_ITEM_TAG = 'bit-tab-item' as const;
+define<BitTabItemProps>(TAB_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     color: prop.string<ThemeColor>(),

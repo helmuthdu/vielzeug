@@ -55,7 +55,8 @@ export type BitGridItemProps = {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
+export const GRID_ITEM_TAG = 'bit-grid-item' as const;
+define<BitGridItemProps>(GRID_ITEM_TAG, {
   props: {
     align: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
     area: prop.string(),

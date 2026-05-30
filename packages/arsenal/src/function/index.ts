@@ -11,5 +11,6 @@ export * from './memo';
 export * from './once';
 export * from './partial';
 export * from './pipe';
+export * from './runAll';
 export * from './tap';
 export * from './throttle';

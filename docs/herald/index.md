@@ -14,7 +14,7 @@ exports: [createBus, pipeEvents, createTestBus]
 
 <img src="/logo-herald.svg" alt="Herald logo" width="156" class="logo-highlight"/>
 
-# Relay
+# Herald
 
 <details>
 <summary>⚡ Quick Reference</summary>
@@ -70,7 +70,7 @@ bus.emit('user:login', { email: 'alice@example.com', userId: '42' });
 bus.emit('user:logout');
 
 const nextLogin = await bus.wait('user:login');
-const nextSessionChange = await bus.waitAny(['user:login', 'user:logout'] as const);
+const nextSessionChange = await bus.waitAny(['user:login', 'user:logout']);
 
 if (nextSessionChange.event === 'user:login') {
   console.log(nextSessionChange.payload.userId);
@@ -96,7 +96,7 @@ try {
 }
 ```
 
-## Why Relay?
+## Why Herald?
 
 Manual event emitters lack TypeScript inference across event names and payloads, and offer no async patterns — `await`ing an event or streaming all future emits requires bespoke wiring.
 
@@ -112,7 +112,7 @@ function emit<K extends keyof Handlers>(event: K, payload: Parameters<Handlers[K
 }
 // No await, no stream, no AbortSignal, no error isolation
 
-// After — Relay
+// After — Herald
 import { createBus } from '@vielzeug/herald';
 const bus = createBus<AppEvents>();
 bus.on('user:login', ({ userId }) => loadProfile(userId));
@@ -122,7 +122,7 @@ for await (const event of bus.events('cart:updated')) {
 } // async stream
 ```
 
-| Feature              | Relay                                       | mitt     | EventEmitter3 |
+| Feature              | Herald                                      | mitt     | EventEmitter3 |
 | -------------------- | --------------------------------------------- | -------- | ------------- |
 | Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
 | TypeScript inference | ✅ Full                                       | ⚠️ Basic | ⚠️ Basic      |
@@ -130,11 +130,12 @@ for await (const event of bus.events('cart:updated')) {
 | Async streaming      | ✅                                            | ❌       | ❌            |
 | AbortSignal          | ✅                                            | ❌       | ❌            |
 | Event piping         | ✅                                            | ❌       | ❌            |
+| Wildcard (`onAny`)   | ✅                                            | ✅       | ❌            |
 | Disposal signal      | ✅                                            | ❌       | ❌            |
 | Error isolation      | ✅                                            | ❌       | ❌            |
 | Zero dependencies    | ✅                                            | ✅       | ✅            |
 
-**Use Relay when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
+**Use Herald when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
 
 **Consider mitt when** you only need a bare-minimum synchronous pub/sub with the smallest possible footprint.
 
@@ -142,12 +143,14 @@ for await (const event of bus.events('cart:updated')) {
 
 - **Typed event maps** for strict event/payload correctness
 - **Persistent + one-shot listeners** with `on` and `once` — each registration is independent, including duplicate handlers
+- **Wildcard listeners** with `onAny` — subscribe to all events for cross-cutting concerns like logging and analytics
 - **Listener management APIs** with unsubscribe handles, `removeAllListeners`, and `eventNames`
 - **Async event coordination** with `wait`
 - **First-event racing** with `waitAny`
-- **Async streaming** with `events`
-- **Event piping** with `pipeEvents` — forward events across buses with automatic teardown
+- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called
+- **Event piping** with `pipeEvents` — forward events across buses with optional renaming and automatic teardown
 - **Disposal signal** via `bus.disposalSignal` — use as an `AbortSignal` to tie external lifecycles to the bus
+- **Leak detection** via `maxListeners` — warn when a single event accumulates too many listeners
 - **Debug mode** via `createBus({ debug: true })` — logs subscribe/emit/dispose activity to `console.debug`
 - **Abort-aware APIs** for lifecycle-safe teardown
 - **`onDispatch` and `onError` hooks** for logging and resilience

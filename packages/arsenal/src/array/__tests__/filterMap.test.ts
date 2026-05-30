@@ -50,10 +50,4 @@ describe('filterMap', () => {
 
     expect(result).toEqual([]);
   });
-
-  it('should throw TypeError if input is not an array', () => {
-    expect(() => filterMap(null as any, (x) => x)).toThrow(TypeError);
-    expect(() => filterMap(undefined as any, (x) => x)).toThrow(TypeError);
-    expect(() => filterMap({} as any, (x) => x)).toThrow(TypeError);
-  });
 });

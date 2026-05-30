@@ -1,5 +1,3 @@
-import { assert } from '../function/assert';
-
 type TruncateOptions = {
   completeWords?: boolean;
   ellipsis?: string;
@@ -31,16 +29,6 @@ export function truncate(
   limit = 25,
   { completeWords = false, ellipsis = '…' }: TruncateOptions = {},
 ): string {
-  assert(typeof str === 'string', 'First argument must be a string', {
-    args: { str },
-    type: TypeError,
-  });
-  assert(
-    typeof limit === 'number' && limit >= 0 && Number.isFinite(limit),
-    'Limit must be a non-negative finite number',
-    { args: { limit }, type: TypeError },
-  );
-
   if (str.length <= limit) {
     return str;
   }

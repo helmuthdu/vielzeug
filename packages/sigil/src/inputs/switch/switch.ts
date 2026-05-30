@@ -69,7 +69,8 @@ export type BitSwitchProps = CheckableProps & {
  * <bit-switch></bit-switch>
  * ```
  */
-export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
+export const SWITCH_TAG = 'bit-switch' as const;
+define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

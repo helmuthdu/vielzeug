@@ -46,3 +46,15 @@ export function anyOf<T>(...predicates: Predicate<T>[]): Predicate<T> {
 export function noneOf<T>(...predicates: Predicate<T>[]): Predicate<T> {
   return (value, index, array) => predicates.every((predicate) => !predicate(value, index, array));
 }
+
+/**
+ * Returns a predicate that negates the given predicate.
+ *
+ * @example
+ * ```ts
+ * [1, 2, 3, 4].filter(not((n) => n % 2 === 0)); // [1, 3]
+ * ```
+ */
+export function not<T>(predicate: Predicate<T>): Predicate<T> {
+  return (value, index, array) => !predicate(value, index, array);
+}

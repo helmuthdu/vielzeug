@@ -70,11 +70,18 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
   if (a instanceof Set && b instanceof Set) {
     if (a.size !== b.size) return false;
 
+    const bItems = [...b];
+
     for (const v of a) {
-      if (![...b].some((bv) => safeIsEqual(v, bv, visited))) return false;
+      if (!bItems.some((bv) => safeIsEqual(v, bv, visited))) return false;
     }
 
     return true;
+  }
+
+  // RegExp comparison
+  if (a instanceof RegExp || b instanceof RegExp) {
+    return a instanceof RegExp && b instanceof RegExp && a.source === b.source && a.flags === b.flags;
   }
 
   // Object comparison
@@ -121,5 +128,3 @@ function shallowCompare(a: unknown, b: unknown): boolean {
 
   return true;
 }
-
-export const IS_EQUAL_ERROR_MSG = 'Expected two values to be equal';

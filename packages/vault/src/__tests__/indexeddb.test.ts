@@ -604,3 +604,78 @@ describe('createIndexedDB input validation', () => {
     adapter.dispose();
   });
 });
+
+/* -------------------- Secondary indexes (F5) -------------------- */
+
+describe('Secondary indexes (F5)', () => {
+  type Product = { category: string; id: number; name: string; price: number };
+
+  const indexedSchema = {
+    products: table<Product>('id').index('category').index('name'),
+  };
+
+  let db: ReturnType<typeof createIndexedDB<typeof indexedSchema>>;
+
+  beforeEach(async () => {
+    db = createIndexedDB({ name: 'IDB-indexes', schema: indexedSchema, version: 1 });
+    await db.clear('products');
+    await db.putAll('products', [
+      { category: 'electronics', id: 1, name: 'Laptop', price: 999 },
+      { category: 'electronics', id: 2, name: 'Phone', price: 499 },
+      { category: 'furniture', id: 3, name: 'Chair', price: 199 },
+      { category: 'electronics', id: 4, name: 'Tablet', price: 299 },
+    ]);
+  });
+
+  afterEach(() => {
+    db.dispose();
+  });
+
+  test('equals() pushes down to secondary index when field is indexed', async () => {
+    const results = await db.query('products').equals('category', 'electronics').toArray();
+
+    expect(results).toHaveLength(3);
+    expect(results.map((p) => p.id).sort()).toEqual([1, 2, 4]);
+  });
+
+  test('equals() on non-indexed field still returns correct results (in-memory filter)', async () => {
+    const results = await db.query('products').equals('price', 499).toArray();
+
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Phone');
+  });
+
+  test('equals() returns empty array when no records match indexed field', async () => {
+    const results = await db.query('products').equals('category', 'sports').toArray();
+
+    expect(results).toEqual([]);
+  });
+
+  test('between() pushes down to secondary index', async () => {
+    const results = await db.query('products').between('name', 'L', 'P\uffff').toArray();
+
+    // Laptop and Phone fall between 'L' and 'P\uffff'
+    expect(results.map((p) => p.name).sort()).toEqual(['Laptop', 'Phone']);
+  });
+
+  test('startsWith() pushes down to secondary index', async () => {
+    const results = await db.query('products').startsWith('name', 'Tab').toArray();
+
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Tablet');
+  });
+
+  test('secondary index query composes with filter()', async () => {
+    const results = await db
+      .query('products')
+      .equals('category', 'electronics')
+      .filter((p) => p.price > 400)
+      .toArray();
+
+    expect(results.map((p) => p.id).sort()).toEqual([1, 2]);
+  });
+
+  test('table().index() chaining creates correct schema entry', () => {
+    expect(indexedSchema.products.indexes).toEqual(['category', 'name']);
+  });
+});

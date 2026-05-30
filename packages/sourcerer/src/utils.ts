@@ -1,19 +1,12 @@
-/**
- * Produces a stable, order-independent JSON key for an arbitrary query object.
- * Object keys are recursively sorted so `{ b: 1, a: 2 }` and `{ a: 2, b: 1 }` produce
- * the same key. Arrays are left in their original order.
- */
-export const defaultKeyOf = (q: unknown): string =>
-  JSON.stringify(q, (_, value: unknown) => {
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      const sorted: Record<string, unknown> = {};
+import { exponentialBackoff, retry, stableStringify } from '@vielzeug/arsenal';
 
-      for (const k of Object.keys(value as object).sort()) {
-        sorted[k] = (value as Record<string, unknown>)[k];
-      }
+export { retry };
 
-      return sorted;
-    }
+// Internal stable-key helper — used by source factories, not exposed as public API.
+export const defaultKeyOf = stableStringify;
 
-    return value;
-  });
+/** Extracts a user-facing error message from a caught exception. */
+export const extractError = (reason: unknown): string => (reason as { message?: string })?.message ?? 'Request failed';
+
+/** Default exponential backoff: 1 s, 2 s, 4 s, … capped at 30 s. Receives a 0-indexed failure count. */
+export const defaultRetryDelay = (attempt: number): number => exponentialBackoff(attempt);

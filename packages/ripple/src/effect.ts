@@ -1,8 +1,8 @@
+import type { DepEntry } from './tracking';
 import type {
   AsyncEffectCallback,
   AsyncSubscription,
   CleanupFn,
-  DepEntry,
   EffectCallback,
   EffectOptions,
   Scope,
@@ -11,14 +11,19 @@ import type {
 } from './types';
 
 import { StateError } from './error';
-import { collectErrors, rethrowWith, runAll, toSubscription } from './helpers';
+import { collectErrors, rethrowWith, runAll } from './errors';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
-import { getTracking, withTracking } from './tracking';
+import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
+import { getTracking, withSourceObserver, withTracking } from './tracking';
 
 /**
  * Wraps a core `run` function with a scheduler that coalesces rapid re-runs.
  * The `subscriber` returned here is what gets registered in signal subscriber sets —
  * so notifications call the deferred wrapper, not `run` directly.
+ *
+ * NOTE (R7): The scheduler wrapper identity is stable for the lifetime of the effect.
+ * Never replace `subscriber` with a new function after creation — doing so would break
+ * the removeEffectSub calls that rely on reference identity.
  */
 const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): Subscriber => {
   if (scheduler === 'sync' || scheduler === undefined) return run;
@@ -51,26 +56,26 @@ const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): 
 export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const scheduler = options?.scheduler ?? 'sync';
   const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
-  const isTrace = options?.trace ?? false;
   const effectName = options?.name;
 
-  let cleanup: CleanupFn | undefined;
+  // R11: single shared array for cleanups — used directly by onCleanup() via the
+  // tracking context, and cleared + run by teardown() on each re-run or dispose.
+  // No wrapper closure allocated per run; the array is re-used in place.
+  const runCleanups: CleanupFn[] = [];
   const subscriptions = new Set<CleanupFn>();
   let isRunning = false;
   let isDirty = false;
   let isDisposed = false;
-  // Non-null only when trace mode is active — lazily populated after the first run.
-  let prevDeps: DepEntry[] | null = null;
 
   const teardown = (): void => {
-    if (!cleanup && subscriptions.size === 0) return;
+    if (runCleanups.length === 0 && subscriptions.size === 0) return;
 
-    const callbacks = cleanup ? [cleanup, ...subscriptions] : [...subscriptions];
+    const toRun = [...runCleanups, ...subscriptions];
 
-    cleanup = undefined;
+    runCleanups.length = 0;
     subscriptions.clear();
 
-    runAll(callbacks, 'effect teardown errors');
+    runAll(toRun, 'effect teardown errors');
   };
 
   // The inner do-while handles self-cascade: when the effect body writes to a signal it reads,
@@ -96,45 +101,25 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
           throw new StateError('INFINITE_LOOP', `infinite effect loop (> ${maxIterations} iterations)${label}`);
         }
 
-        // Trace: log which sources changed before each re-run (skip first run).
-        // prevDeps is non-null iff trace mode is on (depCollector is only assigned when isTrace is true).
-        if (prevDeps !== null && prevDeps.length > 0) {
-          const changed = prevDeps.filter((d) => d.source.version !== d.version);
-
-          if (changed.length > 0) {
-            const label = effectName ?? 'anonymous';
-
-            console.group(`[ripple:trace] "${label}" re-running — changed sources:`);
-
-            for (const dep of changed) {
-              console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} → v${dep.source.version})`);
-            }
-
-            console.groupEnd();
-          }
-        }
-
         isDirty = false;
         teardown();
 
-        const localCleanups: CleanupFn[] = [];
-        const depCollector: DepEntry[] | null = isTrace ? [] : null;
+        // R2: effect() no longer checks for/applies a source observer.
+        // traceEffect wraps fn with withSourceObserver before passing it here,
+        // so the observer is already active inside fn() when trackSource fires.
         let returnedCleanup: CleanupFn | void = undefined;
 
         try {
           returnedCleanup = withTracking(
-            { cleanups: localCleanups, depCollector, effect: subscriber, kind: 'effect', subscriptions },
+            { cleanups: runCleanups, effect: subscriber, kind: 'effect', subscriptions },
             fn,
           );
         } catch (error) {
-          const cleanupErrors = [...collectErrors(subscriptions), ...collectErrors(localCleanups)];
+          const cleanupErrors = [...collectErrors(subscriptions), ...collectErrors(runCleanups)];
 
+          runCleanups.length = 0;
           subscriptions.clear();
           rethrowWith(error, cleanupErrors, 'effect failure with cleanup errors');
-        }
-
-        if (depCollector) {
-          prevDeps = depCollector;
         }
 
         // Throws on non-function truthy returns — catches bugs like returning array.push() result
@@ -145,14 +130,8 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
           );
         }
 
-        if (typeof returnedCleanup === 'function') localCleanups.push(returnedCleanup);
-
-        cleanup =
-          localCleanups.length > 0
-            ? () => {
-                runAll(localCleanups, 'effect cleanup errors');
-              }
-            : undefined;
+        // R11: push returned cleanup directly into runCleanups (no wrapper closure).
+        if (typeof returnedCleanup === 'function') runCleanups.push(returnedCleanup);
       } while (isDirty && !isDisposed);
     } finally {
       isRunning = false;
@@ -166,7 +145,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
   // Always run synchronously on creation to establish initial tracking.
   run();
 
-  return toSubscription(() => {
+  return new SubscriptionImpl(() => {
     if (isDisposed) return;
 
     isDisposed = true;
@@ -204,7 +183,7 @@ export const effectAsync = (
   const onError =
     options?.onError ??
     ((err: unknown) => {
-      void Promise.reject(err);
+      console.error('[ripple] unhandled effectAsync error:', err);
     });
 
   const syncStop = effect(() => {
@@ -235,19 +214,66 @@ export const effectAsync = (
     };
   });
 
-  const disposeAsync = async (): Promise<void> => {
+  return new AsyncSubscriptionImpl(syncStop, async () => {
     const runningPromise = currentRunPromise;
 
-    syncStop();
-
     if (runningPromise) await runningPromise;
+  });
+};
+
+/**
+ * Wraps `effect()` and logs which reactive sources changed between re-runs.
+ * Produces a `console.group` before each re-run listing sources whose version
+ * has advanced since the last run. Does NOT log on the initial run.
+ *
+ * Use instead of `effect()` when debugging unexpected re-renders (R11).
+ *
+ * @example
+ * ```ts
+ * const stop = traceEffect(() => {
+ *   renderUser(userId.value, name.value);
+ * }, { name: 'renderUser' });
+ * ```
+ */
+export const traceEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription => {
+  const label = options?.name ?? 'anonymous';
+
+  // Track versions seen on the last run so we can diff on the next run.
+  let prevDeps: DepEntry[] = [];
+
+  const wrappedFn = (): CleanupFn | void => {
+    const currentDeps: DepEntry[] = [];
+
+    // Log changed sources on every run after the first.
+    if (prevDeps.length > 0) {
+      const changed = prevDeps.filter((d) => d.source.version !== d.version);
+
+      if (changed.length > 0) {
+        console.group(`[ripple:trace] "${label}" re-running — changed sources:`);
+
+        for (const dep of changed) {
+          console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} -> v${dep.source.version})`);
+        }
+
+        console.groupEnd();
+      }
+    }
+
+    // R4: Run the effect body while observing accessed sources.
+    // Only record sources accessed directly by the effect (ctx.kind === 'effect'),
+    // not sources accessed during nested computed recomputes triggered inside the body.
+    const result = withSourceObserver((source) => {
+      if (getTracking()?.kind === 'effect') {
+        currentDeps.push({ source, version: source.version });
+      }
+    }, fn);
+
+    prevDeps = currentDeps;
+
+    return result;
   };
 
-  return Object.assign(syncStop, {
-    dispose: syncStop,
-    disposeAsync,
-    [Symbol.dispose]: syncStop,
-  }) as AsyncSubscription;
+  return effect(wrappedFn, options);
 };
 
 export const onCleanup = (fn: CleanupFn): void => {
@@ -284,4 +310,31 @@ export const scope = (setup?: () => void): Scope => {
   if (setup) run(setup);
 
   return api;
+};
+
+/**
+ * Creates a {@link Scope} that captures cleanups registered synchronously
+ * during the setup function's preamble (before the first `await`), then
+ * awaits the rest of setup and returns the ready scope.
+ *
+ * Any `onCleanup()` calls that happen asynchronously (after the first `await`)
+ * will NOT be captured, as reactive tracking cannot cross `await` boundaries.
+ *
+ * @example
+ * ```ts
+ * const s = await asyncScope(async () => {
+ *   onCleanup(() => closeDB());
+ *   const db = await openDB();
+ *   onCleanup(() => db.close());
+ * });
+ * // later:
+ * s.dispose();
+ * ```
+ */
+export const asyncScope = async (setup: () => Promise<void>): Promise<Scope> => {
+  const s = scope();
+
+  await s.run(setup);
+
+  return s;
 };

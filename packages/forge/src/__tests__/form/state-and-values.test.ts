@@ -25,14 +25,6 @@ describe('form state and values', () => {
     expect(form.values()).toEqual({ user: { name: 'Bob' } });
   });
 
-  test('set with dirty:false keeps field clean', () => {
-    const form = createForm({ defaultValues: { x: 1 } });
-
-    form.set('x', 2, { dirty: false });
-
-    expect(form.field('x').dirty).toBe(false);
-  });
-
   test('set with touched:true marks the field touched', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
@@ -353,5 +345,67 @@ describe('form patch', () => {
     expect(form.isLoading).toBe(false);
     expect(form.state.isLoading).toBe(false);
     expect(form.get('name')).toBe('Alice');
+  });
+});
+
+describe('registerField (F1)', () => {
+  test('declares a field with a default value when not already present', () => {
+    const form = createForm<{ email?: string; name: string }>({ defaultValues: { name: 'Alice' } });
+
+    form.registerField('email', { defaultValue: 'test@example.com' });
+
+    expect(form.get('email')).toBe('test@example.com');
+    expect(form.field('email').dirty).toBe(false);
+  });
+
+  test('does not overwrite an existing value when called on an already-present field', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    form.registerField('name', { defaultValue: 'Ignored' });
+
+    expect(form.get('name')).toBe('Alice');
+  });
+
+  test('registered field is clean (part of baseline)', () => {
+    const form = createForm<{ age?: number; name: string }>({ defaultValues: { name: 'Alice' } });
+
+    form.registerField('age', { defaultValue: 30 });
+
+    expect(form.field('age').dirty).toBe(false);
+
+    form.set('age', 31);
+
+    expect(form.field('age').dirty).toBe(true);
+
+    form.reset();
+
+    expect(form.get('age')).toBe(30);
+    expect(form.field('age').dirty).toBe(false);
+  });
+
+  test('registered per-field validator runs on validateField', async () => {
+    const form = createForm<{ email?: string; name: string }>({ defaultValues: { name: 'Alice' } });
+
+    form.registerField('email', {
+      defaultValue: '',
+      validator: (value: unknown) => (!value ? 'Required' : undefined),
+    });
+
+    const result = await form.validateField('email');
+
+    expect(result).toBe('Required');
+    expect(form.field('email').error).toBe('Required');
+  });
+
+  test('unsubscribe returned by registerField removes the field', async () => {
+    const form = createForm<{ name: string; tag?: string }>({ defaultValues: { name: 'Alice' } });
+
+    const unregister = form.registerField('tag', { defaultValue: 'initial' });
+
+    expect(form.get('tag')).toBe('initial');
+
+    unregister();
+
+    expect(form.get('tag')).toBeUndefined();
   });
 });

@@ -3,6 +3,9 @@ import type { HistoryDriver } from './types';
 /** Creates a history driver backed by the browser History API. */
 export function createBrowserHistory(): HistoryDriver {
   return {
+    back() {
+      window.history.back();
+    },
     get location() {
       return {
         hash: window.location.hash,
@@ -28,7 +31,14 @@ export function createBrowserHistory(): HistoryDriver {
 
 type MemoryLocation = { hash: string; pathname: string; search: string; state: unknown };
 
-/** Creates an in-memory history driver. Suitable for SSR, tests, and non-browser environments. */
+/**
+ * Creates an in-memory history driver. Suitable for SSR, tests, and non-browser environments.
+ *
+ * Semantics mirror the browser History API:
+ * - `push()` and `replace()` update the location silently (no listener notification),
+ *   matching `pushState`/`replaceState` which do not fire `popstate`.
+ * - `back()` moves one entry back and notifies subscribers, matching a browser back-button press.
+ */
 export function createMemoryHistory(initialPath = '/'): HistoryDriver {
   const parsed = new URL(initialPath, 'http://localhost');
   const stack: MemoryLocation[] = [
@@ -38,6 +48,12 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
   const listeners = new Set<() => void>();
 
   return {
+    back() {
+      if (cursor <= 0) return;
+
+      cursor -= 1;
+      listeners.forEach((l) => l());
+    },
     get location(): MemoryLocation {
       return stack[cursor]!;
     },
@@ -47,13 +63,13 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
       stack.splice(cursor + 1);
       stack.push({ hash: p.hash, pathname: p.pathname, search: p.search, state });
       cursor = stack.length - 1;
-      listeners.forEach((l) => l());
+      // Silent — mirrors browser pushState semantics. Router drives navigation via #handleRoute directly.
     },
     replace(url, state = null) {
       const p = new URL(url, 'http://localhost');
 
       stack[cursor] = { hash: p.hash, pathname: p.pathname, search: p.search, state };
-      listeners.forEach((l) => l());
+      // Silent — mirrors browser replaceState semantics.
     },
     subscribe(listener) {
       listeners.add(listener);

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   assign,
+  createMachine,
   defineMachine,
   interpret,
   MachineError,
@@ -10,6 +11,7 @@ import {
   type MachineConfig,
   type MachineEvent,
   type MachineSnapshot,
+  type MiddlewareFn,
 } from '../index.js';
 
 type TrafficEvent = { type: 'NEXT' };
@@ -17,7 +19,6 @@ type TrafficEvent = { type: 'NEXT' };
 const trafficDefinition = defineMachine<'green' | 'red' | 'yellow', Record<string, never>, TrafficEvent>({
   initial: 'green',
   states: {
-    // Shorthand (single object) transition syntax
     green: { on: { NEXT: { target: 'yellow' } } },
     red: { on: { NEXT: { target: 'green' } } },
     yellow: { on: { NEXT: { target: 'red' } } },
@@ -214,14 +215,12 @@ describe('core runtime', () => {
         a: { on: { GO: [{ actions: [assign(() => ({ count: -1 }))], target: 'b' }] } },
         b: {},
       },
-      validateContext: (ctx): ctx is { count: number } =>
-        typeof ctx === 'object' && ctx !== null && (ctx as { count: number }).count >= 0,
+      validateContext: (ctx) => ctx.count >= 0,
     });
 
     const m = interpret(machine);
 
     expect(() => m.send({ type: 'GO' })).toThrow(MachineError);
-    // Machine must be unchanged after a validation failure
     expect(m.state.value).toBe('a');
     expect(m.context.value.count).toBe(0);
   });
@@ -361,8 +360,7 @@ describe('snapshot cloning and hydration', () => {
     expect(() => {
       interpret(machine, {
         snapshot: { context: { count: -1 }, state: 'idle' },
-        validateSnapshot: (value): value is { count: number } =>
-          typeof value === 'object' && value !== null && (value as { count?: number }).count === 0,
+        validateSnapshot: (value) => value.count === 0,
       });
     }).toThrowError(MachineError);
   });
@@ -389,9 +387,6 @@ describe('typed event unions and pure resolver', () => {
 
     m.send({ type: 'INC' });
     m.send({ type: 'SET', value: 7 });
-
-    // @ts-expect-error missing value for SET
-    const _invalid: Event = { type: 'SET' };
 
     expect(m.context.value.value).toBe(7);
   });
@@ -422,7 +417,7 @@ describe('typed event unions and pure resolver', () => {
   });
 });
 
-describe('invoke support and queued event processing', () => {
+describe('invoke support', () => {
   it('maps onDone result to event and transitions', async () => {
     type Event = { type: 'RESOLVE'; value: number };
 
@@ -566,7 +561,7 @@ describe('invoke support and queued event processing', () => {
   });
 });
 
-describe('onTransition callback in InterpretOptions', () => {
+describe('onTransition callback', () => {
   it('calls onTransition after each successful transition', () => {
     const onTransition = vi.fn();
     const m = interpret(trafficDefinition, { onTransition });
@@ -601,12 +596,11 @@ describe('onTransition callback in InterpretOptions', () => {
   });
 });
 
-describe('debug hooks, trace mode, and persistence adapter', () => {
-  it('calls debug hooks and records transition trace', () => {
+describe('debug events and tracing', () => {
+  it('fires debug events and records transition trace', () => {
     type Event = { type: 'GO' };
 
-    const onEvaluateGuard = vi.fn();
-    const onTransitionSkipped = vi.fn();
+    const onDebug = vi.fn();
 
     const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
@@ -617,14 +611,18 @@ describe('debug hooks, trace mode, and persistence adapter', () => {
       },
     });
 
-    const m = interpret(machine, {
-      debug: { onEvaluateGuard, onTransitionSkipped },
-      traceLimit: 10,
-    });
+    const m = interpret(machine, { onDebug, traceLimit: 10 });
 
     expect(m.send({ type: 'GO' })).toBe(false);
-    expect(onEvaluateGuard).toHaveBeenCalled();
-    expect(onTransitionSkipped).toHaveBeenCalledWith({ event: { type: 'GO' }, from: 'a' });
+
+    const guardEvent = onDebug.mock.calls.find((c) => c[0].type === 'guard');
+
+    expect(guardEvent).toBeDefined();
+    expect(guardEvent![0].passed).toBe(false);
+
+    const skippedEvent = onDebug.mock.calls.find((c) => c[0].type === 'transition-skipped');
+
+    expect(skippedEvent).toBeDefined();
 
     (m.context.value as { ok: boolean }).ok = true;
     m.send({ type: 'GO' });
@@ -636,14 +634,12 @@ describe('debug hooks, trace mode, and persistence adapter', () => {
     expect(trace[0].to).toBe('b');
   });
 
-  it('trace buffer behaves as circular ring buffer — oldest entries are dropped', () => {
-    type Event = { type: 'NEXT' };
-
+  it('trace buffer behaves as circular ring buffer', () => {
     const m = interpret(trafficDefinition, { traceLimit: 2 });
 
     m.send({ type: 'NEXT' }); // green→yellow
     m.send({ type: 'NEXT' }); // yellow→red
-    m.send({ type: 'NEXT' }); // red→green (oldest: green→yellow dropped)
+    m.send({ type: 'NEXT' }); // red→green (oldest dropped)
 
     const trace = m.getTrace();
 
@@ -651,7 +647,9 @@ describe('debug hooks, trace mode, and persistence adapter', () => {
     expect(trace[0].from).toBe('yellow');
     expect(trace[1].from).toBe('red');
   });
+});
 
+describe('persistence adapter', () => {
   it('uses persistence adapter load/save — does NOT clear on dispose', () => {
     type Event = { type: 'NEXT' };
 
@@ -684,7 +682,6 @@ describe('debug hooks, trace mode, and persistence adapter', () => {
 
     m[Symbol.dispose]();
 
-    // Disposal must NOT call persistence.clear() — that destroys data unexpectedly
     expect(clear).not.toHaveBeenCalled();
   });
 
@@ -701,16 +698,350 @@ describe('debug hooks, trace mode, and persistence adapter', () => {
       },
     });
 
-    const m = interpret(machine, { persistence: { clear } });
+    const m = interpret(machine, { persistence: { clear, load: () => undefined, save: vi.fn() } });
 
     m.clearPersistence();
 
     expect(clear).toHaveBeenCalledOnce();
   });
+
+  it('does NOT save snapshot on hydrate (R8)', () => {
+    type Event = { type: 'GO' };
+
+    const save = vi.fn();
+
+    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    interpret(machine, {
+      persistence: { load: () => ({ context: {}, state: 'a' as const }), save },
+    });
+
+    // save should NOT be called during hydration
+    expect(save).not.toHaveBeenCalled();
+  });
+});
+
+describe('subscribe (R9)', () => {
+  it('calls subscriber on state change', () => {
+    const m = interpret(trafficDefinition);
+    const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
+
+    m.subscribe((snap) => snapshots.push(snap));
+
+    m.send({ type: 'NEXT' });
+    m.send({ type: 'NEXT' });
+
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[0].state).toBe('yellow');
+    expect(snapshots[1].state).toBe('red');
+  });
+
+  it('returns unsubscribe function', () => {
+    const m = interpret(trafficDefinition);
+    const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
+
+    const unsub = m.subscribe((snap) => snapshots.push(snap));
+
+    m.send({ type: 'NEXT' });
+    unsub();
+    m.send({ type: 'NEXT' });
+
+    expect(snapshots).toHaveLength(1);
+  });
+});
+
+describe('middleware (F3)', () => {
+  it('middleware can intercept and allow events', () => {
+    type Event = { type: 'GO' };
+
+    const log: string[] = [];
+
+    const logger: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (event, _snap, next) => {
+      log.push(`before:${event.type}`);
+
+      const result = next();
+
+      log.push(`after:${event.type}:${result}`);
+
+      return result;
+    };
+
+    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = interpret(machine, { middleware: [logger] });
+
+    m.send({ type: 'GO' });
+
+    expect(m.state.value).toBe('b');
+    expect(log).toEqual(['before:GO', 'after:GO:true']);
+  });
+
+  it('middleware can block events', () => {
+    type Event = { type: 'GO' };
+
+    const blocker: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap, _next) => {
+      return false; // never call next
+    };
+
+    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = interpret(machine, { middleware: [blocker] });
+
+    expect(m.send({ type: 'GO' })).toBe(false);
+    expect(m.state.value).toBe('a');
+  });
+
+  it('multiple middleware are chained in order', () => {
+    type Event = { type: 'GO' };
+
+    const order: string[] = [];
+
+    const mw1: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap, next) => {
+      order.push('mw1:before');
+
+      const r = next();
+
+      order.push('mw1:after');
+
+      return r;
+    };
+
+    const mw2: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap, next) => {
+      order.push('mw2:before');
+
+      const r = next();
+
+      order.push('mw2:after');
+
+      return r;
+    };
+
+    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    interpret(machine, { middleware: [mw1, mw2] }).send({ type: 'GO' });
+
+    expect(order).toEqual(['mw1:before', 'mw2:before', 'mw2:after', 'mw1:after']);
+  });
+});
+
+describe('builder pattern (F4)', () => {
+  it('creates a machine definition with fluent API', () => {
+    type Event = { type: 'GO' };
+
+    const machine = createMachine<'a' | 'b', Record<string, never>, Event>()
+      .initial('a')
+      .state('a', (s) => s.on('GO', { target: 'b' }))
+      .state('b')
+      .build();
+
+    const m = interpret(machine);
+
+    expect(m.state.value).toBe('a');
+    m.send({ type: 'GO' });
+    expect(m.state.value).toBe('b');
+  });
+
+  it('supports context and actions', () => {
+    type Event = { type: 'INC' };
+
+    const machine = createMachine<'idle', { count: number }, Event>()
+      .context({ count: 0 })
+      .initial('idle')
+      .state('idle', (s) =>
+        s.on('INC', { actions: [assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' }),
+      )
+      .build();
+
+    const m = interpret(machine);
+
+    m.send({ type: 'INC' });
+
+    expect(m.context.value.count).toBe(1);
+  });
+
+  it('supports entry/exit lifecycle', () => {
+    type Event = { type: 'GO' };
+
+    const entrySpy = vi.fn();
+
+    const machine = createMachine<'a' | 'b', Record<string, never>, Event>()
+      .initial('a')
+      .state('a', (s) => s.on('GO', { target: 'b' }))
+      .state('b', (s) => s.entry(entrySpy))
+      .build();
+
+    interpret(machine).send({ type: 'GO' });
+
+    expect(entrySpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('hierarchical states (F5)', () => {
+  it('resolves initial state to leaf substate', () => {
+    type Event = { type: 'DONE' } | { type: 'RETRY' };
+
+    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        idle: {},
+        loading: {
+          initial: 'fetching',
+          on: { DONE: { target: 'idle' } },
+          states: {
+            fetching: { on: { RETRY: { target: 'loading.retrying' as 'idle' | 'loading' } } },
+            retrying: {},
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    // Should resolve to the leaf initial state
+    expect(m.state.value).toBe('loading.fetching');
+    expect(m.matches('loading')).toBe(true);
+    expect(m.matches('loading.fetching')).toBe(true);
+  });
+
+  it('events bubble up to parent state', () => {
+    type Event = { type: 'DONE' } | { type: 'RETRY' };
+
+    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        idle: {},
+        loading: {
+          initial: 'fetching',
+          on: { DONE: { target: 'idle' } },
+          states: {
+            fetching: { on: { RETRY: { target: 'loading.retrying' as 'idle' | 'loading' } } },
+            retrying: {},
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    // DONE is on parent 'loading' — should bubble up from 'loading.fetching'
+    m.send({ type: 'DONE' });
+
+    expect(m.state.value).toBe('idle');
+  });
+
+  it('transitions between sibling substates', () => {
+    type Event = { type: 'DONE' } | { type: 'RETRY' };
+
+    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        idle: {},
+        loading: {
+          initial: 'fetching',
+          on: { DONE: { target: 'idle' } },
+          states: {
+            fetching: { on: { RETRY: { target: 'loading.retrying' as 'idle' | 'loading' } } },
+            retrying: { on: { RETRY: { target: 'loading.fetching' as 'idle' | 'loading' } } },
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    m.send({ type: 'RETRY' });
+
+    expect(m.state.value).toBe('loading.retrying');
+    expect(m.matches('loading')).toBe(true);
+    expect(m.matches('idle')).toBe(false);
+
+    m.send({ type: 'RETRY' });
+
+    expect(m.state.value).toBe('loading.fetching');
+  });
+
+  it('runs entry/exit in hierarchical order', () => {
+    type Event = { type: 'GO' };
+
+    const order: string[] = [];
+
+    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        idle: {
+          entry: () => order.push('idle:entry'),
+        },
+        loading: {
+          entry: () => order.push('loading:entry'),
+          exit: () => order.push('loading:exit'),
+          initial: 'fetching',
+          on: { GO: { target: 'idle' } },
+          states: {
+            fetching: {
+              entry: () => order.push('fetching:entry'),
+              exit: () => order.push('fetching:exit'),
+            },
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    // Init entries: loading (parent) then fetching (leaf)
+    expect(order).toEqual(['loading:entry', 'fetching:entry']);
+
+    order.length = 0;
+    m.send({ type: 'GO' });
+
+    // Transition loading.fetching → idle:
+    // exit fetching, exit loading, enter idle
+    expect(order).toEqual(['fetching:exit', 'loading:exit', 'idle:entry']);
+  });
+
+  it('validates compound states have initial property', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      defineMachine<'a', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: {
+            // states without initial — should throw
+            states: { sub: {} },
+          },
+        },
+      });
+    }).toThrow(MachineError);
+  });
 });
 
 describe('validation and typed errors', () => {
-  it('throws MachineError (not MachinitError) for unknown initial state', () => {
+  it('throws MachineError for unknown initial state', () => {
     const error = (() => {
       try {
         defineMachine({
@@ -723,7 +1054,6 @@ describe('validation and typed errors', () => {
     })();
 
     expect(error).toBeInstanceOf(MachineError);
-    expect((error as MachineError).name).toBe('MachineError');
     expect((error as MachineError).code).toBe('MACHINE_INVALID_INITIAL_STATE');
   });
 
@@ -755,28 +1085,5 @@ describe('validation and typed errors', () => {
         },
       });
     }).toThrowError(MachineError);
-  });
-
-  it('supports broad MachineEvent when explicitly requested', () => {
-    const machine = defineMachine<'idle', Record<string, never>, MachineEvent>({
-      initial: 'idle',
-      states: {
-        idle: {
-          on: {
-            ANY: [
-              {
-                actions: [() => {}],
-                guard: () => true,
-                target: 'idle',
-              },
-            ],
-          },
-        },
-      },
-    });
-
-    const m = interpret(machine);
-
-    expect(m.send({ payload: 1, type: 'ANY' })).toBe(true);
   });
 });

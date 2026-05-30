@@ -1,75 +1,42 @@
-import type {
-  ComputedSignal,
-  DepEntry,
-  DepSource,
-  DirtyComputed,
-  ReactiveNode,
-  ReactiveOptions,
-  Subscriber,
-  Subscription,
-} from './types';
+import type { DepEntry } from './tracking';
+import type { ComputedSignal, ReactiveOptions, ReadonlySignal, Subscription } from './types';
 
 import { StateError } from './error';
-import { IS_COMPUTED, IS_SIGNAL, UNINITIALIZED, ensureError, toSubscription } from './helpers';
-import { getTracking, trackSource, withTracking } from './tracking';
+import { ensureError } from './errors';
+import { ComputedBase } from './reactive-base';
+import { SubscriptionImpl } from './subscription';
+import { UNINITIALIZED } from './symbols';
+import { getRevision, getTracking, trackSource, withTracking } from './tracking';
+import { untrack } from './utilities';
 
-export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSource, ReactiveNode {
-  version = 0;
-  readonly name: string | undefined;
-  [IS_SIGNAL] = true;
-  [IS_COMPUTED] = true;
-
-  private value_: T | typeof UNINITIALIZED = UNINITIALIZED;
-  private dirty_ = true;
-  private computing_ = false;
-  private disposed_ = false;
-  private deps_: DepEntry[] = [];
+export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T> {
+  private value_: T | typeof UNINITIALIZED;
+  private dirty_: boolean;
+  private computing_: boolean;
+  private disposed_: boolean;
+  private deps_: DepEntry[];
   private compute_: () => T;
   private equals_: (a: unknown, b: unknown) => boolean;
-  private computedSubs_ = new Set<DirtyComputed>();
-  private subscribers_ = new Set<Subscriber>();
+  private fallback_: ((error: unknown, lastValue: T | undefined) => T) | undefined;
+  // F1: global revision at last successful compute — enables O(1) "nothing changed" fast-path.
+  private maxRevision_: number;
 
-  constructor(compute: () => T, equals?: (a: T, b: T) => boolean, name?: string) {
-    this.name = name;
+  constructor(
+    compute: () => T,
+    equals?: (a: T, b: T) => boolean,
+    name?: string,
+    fallback?: (error: unknown, lastValue: T | undefined) => T,
+  ) {
+    super(name);
+    this.value_ = UNINITIALIZED;
+    this.dirty_ = true;
+    this.computing_ = false;
+    this.disposed_ = false;
+    this.deps_ = [];
+    this.maxRevision_ = -1;
     this.compute_ = compute;
     this.equals_ = equals !== undefined ? (a, b) => equals(a as T, b as T) : Object.is;
-  }
-
-  private track(): void {
-    trackSource(this);
-  }
-
-  addComputedSub(c: DirtyComputed): void {
-    this.computedSubs_.add(c);
-  }
-
-  removeComputedSub(c: DirtyComputed): void {
-    this.computedSubs_.delete(c);
-  }
-
-  addEffectSub(subscriber: Subscriber): void {
-    this.subscribers_.add(subscriber);
-  }
-
-  removeEffectSub(subscriber: Subscriber): void {
-    this.subscribers_.delete(subscriber);
-  }
-
-  private clearSubscribers(): void {
-    this.computedSubs_.clear();
-    this.subscribers_.clear();
-  }
-
-  hasSubscribers(): boolean {
-    return this.computedSubs_.size > 0 || this.subscribers_.size > 0;
-  }
-
-  computedSubs(): ReadonlySet<DirtyComputed> {
-    return this.computedSubs_;
-  }
-
-  subscribers(): ReadonlySet<Subscriber> {
-    return this.subscribers_;
+    this.fallback_ = fallback;
   }
 
   markDirty(): boolean {
@@ -83,10 +50,20 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
   refreshIfDirty(): boolean {
     if (!this.dirty_) return false;
 
-    // Version fast-path: if all dep versions still match, the value cannot have changed.
-    // Skip recompute — clear dirty flag and return false (no change).
+    // F1 — O(1) global revision fast-path:
+    // If the global revision clock has not advanced past our recorded maximum,
+    // no signal anywhere in the system has been written since our last compute.
+    // No dep can have changed — clear dirty and skip the per-dep scan entirely.
+    if (getRevision() <= this.maxRevision_) {
+      this.dirty_ = false;
+
+      return false;
+    }
+
+    // Per-dep scan: if all dep versions still match, value cannot have changed.
     if (this.deps_.length > 0 && this.deps_.every((d) => d.source.version === d.version)) {
       this.dirty_ = false;
+      this.maxRevision_ = getRevision();
 
       return false;
     }
@@ -106,14 +83,27 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
     try {
       const newDeps: DepEntry[] = [];
 
-      const next = withTracking(
-        { computed: this as unknown as DirtyComputed, depCollector: newDeps, kind: 'computed' },
-        this.compute_,
-      );
+      let next: T;
+
+      try {
+        next = withTracking({ computed: this, depCollector: newDeps, kind: 'computed' }, this.compute_);
+      } catch (error) {
+        if (this.fallback_) {
+          const lastValue = this.value_ !== UNINITIALIZED ? (this.value_ as T) : undefined;
+
+          next = this.fallback_(error, lastValue);
+        } else {
+          // Sources accessed before the throw remain in their computedSubs_ until the
+          // next successful recompute or dispose(). The computed stays dirty and will retry.
+          throw ensureError(error);
+        }
+      }
 
       this.dirty_ = false;
+      this.maxRevision_ = getRevision();
 
-      // Diff deps: remove subscriptions for sources that are no longer dependencies
+      // Diff deps: remove subscriptions for sources that are no longer dependencies.
+      // Only subscribe to genuinely NEW deps — prevents duplicate WeakRef entries.
       this.updateDeps(newDeps);
 
       const isNew = this.value_ === UNINITIALIZED;
@@ -126,10 +116,6 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
       }
 
       return false;
-    } catch (error) {
-      // Sources accessed before the throw remain in their computedSubs_ until the
-      // next successful recompute or dispose(). The computed stays dirty and will retry.
-      throw ensureError(error);
     } finally {
       this.computing_ = false;
     }
@@ -141,18 +127,29 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
     // Fast path: same sources in same order — just refresh stored versions
     if (oldDeps.length === newDeps.length && oldDeps.every((d, i) => d.source === newDeps[i].source)) {
       for (let i = 0; i < newDeps.length; i++) {
-        oldDeps[i].version = newDeps[i].version;
+        oldDeps[i]!.version = newDeps[i]!.version;
       }
 
       return;
     }
 
-    // Slow path: deps changed — unsubscribe from dropped sources
-    const newSources = new Set(newDeps.map((d) => d.source));
+    // Slow path: deps changed.
+    // Build a set of OLD sources so we can detect which are genuinely NEW and
+    // need a fresh addComputedSub call (WeakRef registration).
+    const oldSourceSet = new Set(oldDeps.map((d) => d.source));
+    const newSourceSet = new Set(newDeps.map((d) => d.source));
 
+    // Unsubscribe from sources that are no longer dependencies
     for (const old of oldDeps) {
-      if (!newSources.has(old.source)) {
-        old.source.removeComputedSub(this as unknown as DirtyComputed);
+      if (!newSourceSet.has(old.source)) {
+        old.source.removeComputedSub(this);
+      }
+    }
+
+    // Subscribe to sources that are genuinely NEW (not in old deps)
+    for (const dep of newDeps) {
+      if (!oldSourceSet.has(dep.source)) {
+        dep.source.addComputedSub(this);
       }
     }
 
@@ -167,7 +164,7 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
     }
 
     this.refreshIfDirty();
-    this.track();
+    trackSource(this);
 
     return this.value_ as T;
   }
@@ -192,10 +189,10 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
     }
 
     this.refreshIfDirty();
-    this.subscribers_.add(listener);
+    this.addEffectSub(listener);
 
-    return toSubscription(() => {
-      this.subscribers_.delete(listener);
+    return new SubscriptionImpl(() => {
+      this.removeEffectSub(listener);
     });
   };
 
@@ -220,7 +217,7 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
 
     // Unsubscribe from all upstream sources
     for (const dep of this.deps_) {
-      dep.source.removeComputedSub(this as unknown as DirtyComputed);
+      dep.source.removeComputedSub(this);
     }
 
     this.deps_ = [];
@@ -232,8 +229,52 @@ export class ComputedImpl<T> implements ComputedSignal<T>, DirtyComputed, DepSou
   }
 }
 
-export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T> => {
-  const comp = new ComputedImpl(compute, options?.equals, options?.name);
+// ── Utility type for the explicit-dep overload (F5) ──────────────────────────
+
+type SignalValues<D extends readonly ReadonlySignal<unknown>[]> = {
+  [K in keyof D]: D[K] extends ReadonlySignal<infer V> ? V : never;
+};
+
+// ── computed() ───────────────────────────────────────────────────────────────
+//
+// F5: second overload accepts an explicit dependency array so the computation
+// function receives pre-read values with precise TypeScript types, without
+// needing to call `.value` inside the body.
+
+export function computed<T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;
+export function computed<D extends readonly ReadonlySignal<unknown>[], T>(
+  deps: readonly [...D],
+  fn: (...values: SignalValues<D>) => T,
+  options?: ReactiveOptions<T>,
+): ComputedSignal<T>;
+export function computed<T>(
+  computeOrDeps: (() => T) | ReadonlyArray<ReadonlySignal<unknown>>,
+  fnOrOptions?: ((...args: never[]) => T) | ReactiveOptions<T>,
+  options?: ReactiveOptions<T>,
+): ComputedSignal<T> {
+  let comp: ComputedImpl<T>;
+
+  if (typeof computeOrDeps === 'function') {
+    const opts = fnOrOptions as ReactiveOptions<T> | undefined;
+
+    comp = new ComputedImpl(computeOrDeps, opts?.equals, opts?.name, opts?.fallback);
+  } else {
+    const deps = computeOrDeps as ReadonlyArray<ReadonlySignal<unknown>>;
+    const fn = fnOrOptions as (...args: unknown[]) => T;
+    const opts = options;
+
+    comp = new ComputedImpl(
+      () => {
+        const values = deps.map((d) => d.value); // tracked reads for explicit deps
+
+        return untrack(() => fn(...values)); // fn runs untracked — no extra dep registration
+      },
+      opts?.equals,
+      opts?.name,
+      opts?.fallback,
+    );
+  }
+
   const ctx = getTracking();
 
   // Auto-dispose when created inside an effect or scope — they own the lifetime.
@@ -242,4 +283,4 @@ export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): Com
   }
 
   return comp;
-};
+}

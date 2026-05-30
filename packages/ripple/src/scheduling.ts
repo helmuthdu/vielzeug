@@ -1,23 +1,25 @@
-import type { BatchOptions, DirtyComputed, ReactiveNode, Subscriber } from './types';
+import type { ComputedBase } from './reactive-base';
+import type { BatchOptions, Subscriber } from './types';
 
 import { StateError } from './error';
-import { _NONE, ensureError, runAll } from './helpers';
+import { ensureError, runAll } from './errors';
+import { _NONE } from './symbols';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
 let batchDepth = 0;
 const pendingSubscribers = new Set<Subscriber>();
-const dirtyQueue = new Set<DirtyComputed>();
+const dirtyQueue = new Set<ComputedBase<unknown>>();
 
 /**
  * Topological sort of dirty computeds so upstream computeds refresh before downstream ones.
  * Uses index-based iteration (O(n)) instead of queue.shift() (O(n²)).
  */
-const topoSort = (dirtyComputeds: readonly DirtyComputed[]): DirtyComputed[] => {
+const topoSort = (dirtyComputeds: readonly ComputedBase<unknown>[]): ComputedBase<unknown>[] => {
   if (dirtyComputeds.length <= 1) return [...dirtyComputeds];
 
   const pendingSet = new Set(dirtyComputeds);
-  const indegree = new Map<DirtyComputed, number>();
+  const indegree = new Map<ComputedBase<unknown>, number>();
 
   for (const c of dirtyComputeds) {
     indegree.set(c, 0);
@@ -31,13 +33,13 @@ const topoSort = (dirtyComputeds: readonly DirtyComputed[]): DirtyComputed[] => 
     }
   }
 
-  const queue: DirtyComputed[] = [];
+  const queue: ComputedBase<unknown>[] = [];
 
   for (const c of dirtyComputeds) {
     if ((indegree.get(c) ?? 0) === 0) queue.push(c);
   }
 
-  const ordered: DirtyComputed[] = [];
+  const ordered: ComputedBase<unknown>[] = [];
   let i = 0;
 
   while (i < queue.length) {
@@ -68,11 +70,14 @@ const topoSort = (dirtyComputeds: readonly DirtyComputed[]): DirtyComputed[] => 
   return ordered;
 };
 
-const queueNode = (node: ReactiveNode): void => {
-  const dirtyComputeds: DirtyComputed[] = [...node.computedSubs()];
-  const seenComputeds = new Set<DirtyComputed>();
+const queueNode = (node: {
+  computedSubs(): Iterable<ComputedBase<unknown>>;
+  effectSubs(): ReadonlySet<Subscriber>;
+}): void => {
+  const dirtyComputeds: ComputedBase<unknown>[] = [...node.computedSubs()];
+  const seenComputeds = new Set<ComputedBase<unknown>>();
 
-  for (const subscriber of node.subscribers()) {
+  for (const subscriber of node.effectSubs()) {
     pendingSubscribers.add(subscriber);
   }
 
@@ -106,7 +111,7 @@ const flushDirtyComputeds = (): void => {
 
       if (!changed) continue;
 
-      for (const subscriber of computed.subscribers()) {
+      for (const subscriber of computed.effectSubs()) {
         pendingSubscribers.add(subscriber);
       }
 
@@ -136,7 +141,11 @@ const flushEffects = (maxIterations: number): void => {
   }
 };
 
-export const notifyNodeChange = (node: ReactiveNode): void => {
+export const notifyNodeChange = (node: {
+  computedSubs(): Iterable<ComputedBase<unknown>>;
+  effectSubs(): ReadonlySet<Subscriber>;
+  hasSubscribers(): boolean;
+}): void => {
   if (!node.hasSubscribers()) return;
 
   queueNode(node);
@@ -177,7 +186,7 @@ export const batch = <T>(fn: () => T, options?: BatchOptions): T => {
     }
   }
 
-  if (bodyError !== _NONE) throw ensureError(bodyError);
+  if (bodyError !== _NONE) throw bodyError;
 
   return result as T;
 };

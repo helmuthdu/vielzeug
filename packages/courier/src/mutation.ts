@@ -1,7 +1,9 @@
+import { anySignal, isAbortError, retry } from '@vielzeug/arsenal';
+
 import type { RetryOptions } from './retry';
 import type { MutationState, SyncStore, Unsubscribe } from './types';
 
-import { runWithRetry, toError } from './retry';
+import { resolveRetryDelay } from './retry';
 
 const IDLE_STATE: MutationState<unknown> = {
   data: undefined,
@@ -54,7 +56,7 @@ export function createMutation<TData, TVariables = void>(
     } catch (err) {
       if (mutOpts?.onCallbackError) {
         try {
-          mutOpts.onCallbackError(toError(err));
+          mutOpts.onCallbackError(err instanceof Error ? err : new Error(String(err)));
         } catch {
           // Silently ignore errors in error handler itself.
         }
@@ -83,9 +85,7 @@ export function createMutation<TData, TVariables = void>(
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
       const localController = new AbortController();
 
-      const signal = callOpts?.signal
-        ? AbortSignal.any([callOpts.signal, localController.signal])
-        : localController.signal;
+      const signal = callOpts?.signal ? anySignal(callOpts.signal, localController.signal)! : localController.signal;
       const run = ++currentRun;
 
       snap = createPendingState();
@@ -93,13 +93,12 @@ export function createMutation<TData, TVariables = void>(
 
       const operation = (async () => {
         try {
-          const data = await runWithRetry(
-            () => mutationFn(variables, signal),
-            mutOpts?.maxAttempts ?? 1,
-            mutOpts?.retryDelay,
-            mutOpts?.shouldRetry,
+          const data = await retry(() => mutationFn(variables, signal), {
+            delay: (attempt) => resolveRetryDelay(attempt, mutOpts?.delay),
+            shouldRetry: mutOpts?.shouldRetry,
             signal,
-          );
+            times: mutOpts?.times ?? 1,
+          });
 
           if (run === currentRun) {
             snap = { data, error: null, isFetching: false, status: 'success', updatedAt: Date.now() };
@@ -113,7 +112,7 @@ export function createMutation<TData, TVariables = void>(
           return data;
         } catch (err) {
           const error = err instanceof Error ? err : new Error(String(err));
-          const isAborted = signal.aborted || error.name === 'AbortError';
+          const isAborted = signal.aborted || isAbortError(error);
 
           if (run === currentRun) {
             snap = isAborted

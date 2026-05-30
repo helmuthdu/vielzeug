@@ -1,6 +1,6 @@
+import { assert } from '@vielzeug/arsenal';
 import { type ReadonlySignal, effect, signal } from '@vielzeug/ripple';
 
-import { devAssert, HeadlessError } from './dev';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import {
   type DialogCloseReason,
@@ -128,21 +128,9 @@ export type OptionListHandle<T extends BaseOptionItem> = {
  * overlay wiring. Composes overlay.ts + nav.ts into a single complete API.
  */
 export const createOptionList = <T extends BaseOptionItem>(options: OptionListOptions<T>): OptionListHandle<T> => {
-  devAssert(
-    typeof options.getBoundary === 'function',
-    HeadlessError.MISSING_BOUNDARY,
-    'createOptionList: getBoundary is required',
-  );
-  devAssert(
-    typeof options.getPanel === 'function',
-    HeadlessError.MISSING_PANEL,
-    'createOptionList: getPanel is required',
-  );
-  devAssert(
-    typeof options.getReference === 'function',
-    HeadlessError.MISSING_REFERENCE,
-    'createOptionList: getReference is required',
-  );
+  assert(typeof options.getBoundary === 'function', '[sigil] createOptionList: getBoundary is required');
+  assert(typeof options.getPanel === 'function', '[sigil] createOptionList: getPanel is required');
+  assert(typeof options.getReference === 'function', '[sigil] createOptionList: getReference is required');
 
   const isOpen = signal(false);
   const focusedIndex = signal(-1);
@@ -166,7 +154,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
   // aria-activedescendant: set when getOptionId is provided and an item is focused.
   //   Cleared when nothing is focused or the overlay is closed.
 
-  const stopAriaEffects = effect(() => {
+  const ariaEffects = effect(() => {
     const trigger = options.getTrigger?.();
 
     if (!trigger) return;
@@ -239,7 +227,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
   };
 
   const cleanup = (): void => {
-    stopAriaEffects();
+    ariaEffects.dispose();
     overlay.cleanup();
   };
 

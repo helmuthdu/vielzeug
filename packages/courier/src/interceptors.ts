@@ -1,3 +1,5 @@
+import { uuid } from '@vielzeug/arsenal';
+
 import type { Interceptor } from './transport';
 
 function flattenHeaders(h: HeadersInit | undefined | null): Record<string, string> {
@@ -42,7 +44,7 @@ export function withBearerAuth(token: string | (() => string | Promise<string>))
  */
 export function withRequestId(opts?: { generate?: () => string; header?: string }): Interceptor {
   const header = opts?.header ?? 'x-request-id';
-  const generate = opts?.generate ?? (() => crypto.randomUUID());
+  const generate = opts?.generate ?? uuid;
 
   return async (ctx, next) => {
     ctx.init.headers = { ...flattenHeaders(ctx.init.headers), [header]: generate() };

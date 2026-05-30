@@ -14,5 +14,3 @@
 export function isString(arg: unknown): arg is string {
   return typeof arg === 'string';
 }
-
-export const IS_STRING_ERROR_MSG = 'Expected a string';

@@ -7,11 +7,12 @@ import { EnumSchema, type EnumValues } from './schemas/enum';
 import { InstanceOfSchema } from './schemas/instanceof';
 import { IntersectSchema } from './schemas/intersect';
 import { LazySchema } from './schemas/lazy';
-import { LiteralSchema, type NormalizeItems, type RawOrSchema, normalizeToSchemas } from './schemas/literal';
+import { LiteralSchema } from './schemas/literal';
 import { MapSchema } from './schemas/map';
 import { NeverSchema } from './schemas/never';
 import { NumberSchema } from './schemas/number';
 import { ObjectSchema, type ObjectShape } from './schemas/object';
+import { type NormalizeItems, type RawOrSchema, normalizeToSchemas } from './schemas/raw-or';
 import { RecordSchema } from './schemas/record';
 import { SetSchema } from './schemas/set';
 import { StringSchema } from './schemas/string';
@@ -21,6 +22,10 @@ import { VariantSchema } from './schemas/variant';
 
 /* -------------------- Tree-shakeable standalone exports -------------------- */
 
+export const sAnd = <A, B>(
+  a: Schema<A, any>,
+  b: Schema<B, any>,
+): IntersectSchema<readonly [Schema<A, any>, Schema<B, any>]> => sIntersect(a, b);
 export const sAny = (): Schema<any> => new Schema();
 export const sArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
 export const sBigint = (): BigIntSchema => new BigIntSchema();
@@ -53,6 +58,10 @@ export const sUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSch
   ...items: T
 ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
+export const sOr = <A, B>(
+  a: Schema<A, any>,
+  b: Schema<B, any>,
+): UnionSchema<readonly [Schema<A, any>, Schema<B, any>]> => sUnion(a, b);
 export const sUnknown = (): Schema<unknown> => new Schema();
 export const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
   discriminator: K,
@@ -73,6 +82,7 @@ export const sCoerce = {
  * All methods are identical to the tree-shakeable `sXxx` exports.
  */
 export const s = {
+  and: sAnd,
   any: sAny,
   array: sArray,
   bigint: sBigint,
@@ -89,6 +99,7 @@ export const s = {
   null: sNull,
   number: sNumber,
   object: sObject,
+  or: sOr,
   record: sRecord,
   set: sSet,
   string: sString,

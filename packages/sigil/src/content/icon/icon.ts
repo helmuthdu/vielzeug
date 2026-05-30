@@ -118,7 +118,8 @@ export type BitIconProps = {
  * <bit-icon name="star" solid></bit-icon>
  * ```
  */
-export const ICON_TAG = define<BitIconProps>('bit-icon', {
+export const ICON_TAG = 'bit-icon' as const;
+define<BitIconProps>(ICON_TAG, {
   props: {
     absoluteStrokeWidth: prop.bool(),
     label: prop.string(),

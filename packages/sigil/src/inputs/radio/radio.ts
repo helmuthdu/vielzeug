@@ -76,7 +76,8 @@ export type BitRadioProps = CheckableProps & {
  * <bit-radio></bit-radio>
  * ```
  */
-export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
+export const RADIO_TAG = 'bit-radio' as const;
+define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

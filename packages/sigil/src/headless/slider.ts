@@ -1,6 +1,6 @@
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
-import { clampNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
+import { clamp as clampRange, toFiniteNumberOr, toPositiveStep } from './numbers';
 
 /** Returns `value` if finite, otherwise `fallback`. Slider-local utility. */
 const normalizeFinite = (value: number, fallback: number): number => (Number.isFinite(value) ? value : fallback);
@@ -41,7 +41,7 @@ export const createSliderControl = (options: SliderControlOptions): SliderContro
     const maxValue = max();
     const normalized = normalizeFinite(value, minValue);
 
-    return clampNumber(normalized, minValue, maxValue);
+    return clampRange(normalized, minValue, maxValue);
   };
 
   const snap = (value: number): number => {

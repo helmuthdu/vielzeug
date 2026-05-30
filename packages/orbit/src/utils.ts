@@ -1,4 +1,8 @@
-import type { Alignment, Padding, Placement, Rect, Side, SideObject } from './types';
+import { clamp } from '@vielzeug/arsenal';
+
+import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject } from './types';
+
+export { clamp };
 
 export const OPPOSITE: Record<Side, Side> = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
 
@@ -37,11 +41,60 @@ export function toSideObject(padding: Padding = 0): SideObject {
 }
 
 /** @internal */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-/** @internal */
 export function isElement(value: unknown): value is Element {
   return typeof Element !== 'undefined' && value instanceof Element;
+}
+
+// ── Middleware helpers ────────────────────────────────────────────────────────
+
+/**
+ * Ordering rules used by both `compose()` and `computePosition()` for dev-mode validation.
+ * Each tuple is [before, after], meaning `before` must NOT appear before `after` in the pipeline.
+ * @internal
+ */
+export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
+  ['arrow', 'flip'],
+  ['arrow', 'shift'],
+  ['arrow', 'autoPlacement'],
+  ['size', 'flip'],
+  ['size', 'autoPlacement'],
+];
+
+/**
+ * Tags a middleware function with a `__name` string used for dev-mode ordering validation.
+ * @internal
+ */
+export function tagMiddleware<F extends Middleware>(fn: F, name: string): F & { __name: string } {
+  return Object.assign(fn, { __name: name });
+}
+
+// ── Geometry ──────────────────────────────────────────────────────────────────
+
+function alignedOffset(align: Alignment | null, refStart: number, refSize: number, floatSize: number): number {
+  if (align === 'start') return refStart;
+
+  if (align === 'end') return refStart + refSize - floatSize;
+
+  return refStart + (refSize - floatSize) / 2;
+}
+
+/**
+ * Computes the base (un-shifted) x/y coordinates for a floating element
+ * given the placement and the reference/floating rects.
+ * @internal
+ */
+export function baseCoords(placement: Placement, ref: Rect, float: Rect): { x: number; y: number } {
+  const side = getSide(placement);
+  const align = getAlignment(placement);
+
+  switch (side) {
+    case 'bottom':
+      return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
+    case 'left':
+      return { x: ref.x - float.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+    case 'right':
+      return { x: ref.x + ref.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+    case 'top':
+      return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y - float.height };
+  }
 }

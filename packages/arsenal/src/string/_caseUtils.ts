@@ -7,7 +7,7 @@ const CASE_SPLIT_PATTERN = /([a-z])([A-Z\d])|([A-Z\d])([A-Z][a-z])|(\d)([a-zA-Z]
 
 /** Escapes all regex metacharacters in a string (per MDN spec). */
 function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\/\-]/g, '\\$&');
+  return str.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
 }
 
 /**

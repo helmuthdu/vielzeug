@@ -1,5 +1,6 @@
 // Core engine
-export { computePosition, detectOverflow } from './core';
+export { computePosition, getRects } from './core';
+export { detectOverflow } from './overflow';
 
 // High-level API
 export { float } from './float';
@@ -8,6 +9,9 @@ export type { FloatOptions } from './float';
 // Auto-update
 export { autoUpdate } from './auto-update';
 export type { AutoUpdateOptions } from './auto-update';
+
+// Middleware composition utility
+export { compose } from './compose';
 
 // Middleware
 export { arrow } from './middleware/arrow';
@@ -26,7 +30,8 @@ export { offset } from './middleware/offset';
 export type { OffsetConfig, OffsetValue } from './middleware/offset';
 
 export { shift } from './middleware/shift';
-export type { ShiftOptions } from './middleware/shift';
+export type { LimitShiftOptions, ShiftLimiter, ShiftOptions } from './middleware/shift';
+export { limitShift } from './middleware/shift';
 
 export { size } from './middleware/size';
 export type { SizeApplyArgs, SizeOptions } from './middleware/size';
@@ -41,10 +46,10 @@ export { getAlignment, getSide } from './utils';
 export type {
   Alignment,
   ArrowData,
-  Cleanup,
   ComputePositionOptions,
   ComputePositionResult,
   DetectOverflowOptions,
+  FloatHandle,
   HideData,
   Middleware,
   MiddlewareData,

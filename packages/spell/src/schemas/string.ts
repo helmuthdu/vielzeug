@@ -1,7 +1,40 @@
-import type { MessageFn, SchemaDescriptor } from '../core';
+import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, fail, resolveMessage } from '../core';
+import {
+  isBase64,
+  isBase64url,
+  isCuid,
+  isCuid2,
+  isDuration,
+  isEmail,
+  isEmoji,
+  isHex,
+  isHexColor,
+  isIp,
+  isIsoDate,
+  isIsoDateTime,
+  isJwt,
+  isNanoid,
+  isNumeric,
+  isSemver,
+  isSlug,
+  isTime,
+  isUlid,
+  isUrl,
+  isUuid,
+} from '../formats';
 import { _messages, _warn } from '../messages';
+
+/* -------------------- Typed annotations -------------------- */
+
+interface StringAnnotations extends Record<string, unknown> {
+  contentEncoding?: string;
+  format?: string;
+  maxLength?: number;
+  minLength?: number;
+  pattern?: string | null;
+}
 
 type UrlOptions = {
   message?: MessageFn<{ value: string }>;
@@ -11,19 +44,6 @@ type UrlOptions = {
 export class StringSchema<Input = string> extends Schema<string, Input> {
   constructor() {
     super((value) => (typeof value === 'string' ? null : fail(ErrorCode.invalid_type, _messages().string.type())));
-  }
-
-  private _checkRegex(
-    format: string,
-    pattern: RegExp,
-    message: MessageFn<{ value: string }>,
-    code: ErrorCode = ErrorCode.invalid_string,
-  ): this {
-    return this._addConstraint((value) => {
-      if (pattern.test(value as string)) return null;
-
-      return fail(code, resolveMessage(message, { value: value as string }), { format });
-    });
   }
 
   min(length: number, message: MessageFn<{ min: number; value: string }> = (ctx) => _messages().string.min(ctx)): this {
@@ -37,7 +57,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
       },
       (ann) => ({
         ...ann,
-        minLength: ann['minLength'] === undefined ? length : Math.max(ann['minLength'] as number, length),
+        minLength: ann.minLength === undefined ? length : Math.max(ann.minLength, length),
       }),
     );
   }
@@ -53,7 +73,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
       },
       (ann) => ({
         ...ann,
-        maxLength: ann['maxLength'] === undefined ? length : Math.min(ann['maxLength'] as number, length),
+        maxLength: ann.maxLength === undefined ? length : Math.min(ann.maxLength, length),
       }),
     );
   }
@@ -79,7 +99,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
         return fail(ErrorCode.too_small, resolveMessage(message, { min: 1, value: value as string }), { min: 1 });
       },
-      (ann) => ({ ...ann, minLength: Math.max((ann['minLength'] as number | undefined) ?? 0, 1) }),
+      (ann) => ({ ...ann, minLength: Math.max(ann.minLength ?? 0, 1) }),
     );
   }
 
@@ -128,15 +148,13 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
         });
       },
       (ann) => {
-        const current = ann['pattern'];
+        if (ann.pattern === null) return ann; // already ambiguous
 
-        if (current === null) return ann; // already ambiguous
+        if (ann.pattern === undefined) return { ...ann, pattern: pattern.source };
 
-        if (current === undefined) return { ...ann, pattern: pattern.source };
-
-        if (current !== pattern.source) {
+        if (ann.pattern !== pattern.source) {
           _warn(
-            '[sieve] Multiple .regex() constraints detected on a single string schema. ' +
+            '[spell] Multiple .regex() constraints detected on a single string schema. ' +
               'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from toJsonSchema() output.',
           );
 
@@ -151,7 +169,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   email(message: MessageFn<{ value: string }> = () => _messages().string.email()): this {
     return this._addConstraint(
       (value) => {
-        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value as string)) return null;
+        if (isEmail(value as string)) return null;
 
         return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'email' });
       },
@@ -161,17 +179,10 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
   url(options: UrlOptions = {}): this {
     const { message = () => _messages().string.url(), protocols = ['http', 'https'] } = options;
-    const allowedProtocols = new Set(protocols.map((p) => p.toLowerCase()));
 
     return this._addConstraint(
       (value) => {
-        try {
-          const parsed = new URL(value as string);
-
-          if (allowedProtocols.has(parsed.protocol.replace(':', '').toLowerCase())) return null;
-        } catch {
-          // invalid URL
-        }
+        if (isUrl(value as string, protocols)) return null;
 
         return fail(ErrorCode.invalid_url, resolveMessage(message, { value: value as string }), { format: 'url' });
       },
@@ -182,7 +193,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   uuid(message: MessageFn<{ value: string }> = () => _messages().string.uuid()): this {
     return this._addConstraint(
       (value) => {
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value as string)) return null;
+        if (isUuid(value as string)) return null;
 
         return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'uuid' });
       },
@@ -193,15 +204,11 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   isoDate(message: MessageFn<{ value: string }> = () => _messages().string.date()): this {
     return this._addConstraint(
       (value) => {
-        const v = value as string;
+        if (isIsoDate(value as string)) return null;
 
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-          const d = new Date(v);
-
-          if (!Number.isNaN(d.getTime()) && d.toISOString().startsWith(v)) return null;
-        }
-
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'iso-date' });
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
+          format: 'iso-date',
+        });
       },
       (ann) => ({ ...ann, format: 'date' }),
     );
@@ -210,18 +217,156 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   isoDateTime(message: MessageFn<{ value: string }> = () => _messages().string.dateTime()): this {
     return this._addConstraint(
       (value) => {
-        const v = value as string;
+        if (isIsoDateTime(value as string)) return null;
 
-        if (
-          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(v) &&
-          !Number.isNaN(new Date(v).getTime())
-        )
-          return null;
-
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'iso-datetime' });
+        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
+          format: 'iso-datetime',
+        });
       },
       (ann) => ({ ...ann, format: 'date-time' }),
     );
+  }
+
+  ip(message: MessageFn<{ value: string }> = () => _messages().string.ip()): this {
+    return this._addConstraint((value) => {
+      if (isIp(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'ip' });
+    });
+  }
+
+  cuid(message: MessageFn<{ value: string }> = () => _messages().string.cuid()): this {
+    return this._addConstraint((value) => {
+      if (isCuid(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'cuid' });
+    });
+  }
+
+  cuid2(message: MessageFn<{ value: string }> = () => _messages().string.cuid2()): this {
+    return this._addConstraint((value) => {
+      if (isCuid2(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'cuid2' });
+    });
+  }
+
+  ulid(message: MessageFn<{ value: string }> = () => _messages().string.ulid()): this {
+    return this._addConstraint((value) => {
+      if (isUlid(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'ulid' });
+    });
+  }
+
+  nanoid(message: MessageFn<{ value: string }> = () => _messages().string.nanoid()): this {
+    return this._addConstraint((value) => {
+      if (isNanoid(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'nanoid' });
+    });
+  }
+
+  base64(message: MessageFn<{ value: string }> = () => _messages().string.base64()): this {
+    return this._addConstraint(
+      (value) => {
+        if (isBase64(value as string)) return null;
+
+        return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
+          format: 'base64',
+        });
+      },
+      (ann) => ({ ...ann, contentEncoding: 'base64' }),
+    );
+  }
+
+  base64url(message: MessageFn<{ value: string }> = () => _messages().string.base64url()): this {
+    return this._addConstraint((value) => {
+      if (isBase64url(value as string)) return null;
+
+      return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
+        format: 'base64url',
+      });
+    });
+  }
+
+  hex(message: MessageFn<{ value: string }> = () => _messages().string.hex()): this {
+    return this._addConstraint((value) => {
+      if (isHex(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'hex' });
+    });
+  }
+
+  hexColor(message: MessageFn<{ value: string }> = () => _messages().string.hexColor()): this {
+    return this._addConstraint((value) => {
+      if (isHexColor(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
+        format: 'hex-color',
+      });
+    });
+  }
+
+  emoji(message: MessageFn<{ value: string }> = () => _messages().string.emoji()): this {
+    return this._addConstraint((value) => {
+      if (isEmoji(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'emoji' });
+    });
+  }
+
+  jwt(message: MessageFn<{ value: string }> = () => _messages().string.jwt()): this {
+    return this._addConstraint((value) => {
+      if (isJwt(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'jwt' });
+    });
+  }
+
+  time(message: MessageFn<{ value: string }> = () => _messages().string.time()): this {
+    return this._addConstraint((value) => {
+      if (isTime(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'time' });
+    });
+  }
+
+  duration(message: MessageFn<{ value: string }> = () => _messages().string.duration()): this {
+    return this._addConstraint(
+      (value) => {
+        if (isDuration(value as string)) return null;
+
+        return fail(ErrorCode.invalid_duration, resolveMessage(message, { value: value as string }), {
+          format: 'duration',
+        });
+      },
+      (ann) => ({ ...ann, format: 'duration' }),
+    );
+  }
+
+  semver(message: MessageFn<{ value: string }> = () => _messages().string.semver()): this {
+    return this._addConstraint((value) => {
+      if (isSemver(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'semver' });
+    });
+  }
+
+  slug(message: MessageFn<{ value: string }> = () => _messages().string.slug()): this {
+    return this._addConstraint((value) => {
+      if (isSlug(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'slug' });
+    });
+  }
+
+  numeric(message: MessageFn<{ value: string }> = () => _messages().string.numeric()): this {
+    return this._addConstraint((value) => {
+      if (isNumeric(value as string)) return null;
+
+      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'numeric' });
+    });
   }
 
   trim(): this {
@@ -236,130 +381,19 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
   }
 
-  ip(message: MessageFn<{ value: string }> = () => _messages().string.ip()): this {
-    return this._addConstraint((value) => {
-      const v = value as string;
-
-      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) {
-        if (
-          v.split('.').every((o) => {
-            const n = parseInt(o, 10);
-
-            return n >= 0 && n <= 255;
-          })
-        )
-          return null;
-      } else {
-        try {
-          new URL(`http://[${v}]/`);
-
-          return null;
-        } catch {
-          /* invalid */
-        }
-      }
-
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: v }), { format: 'ip' });
-    });
-  }
-
-  cuid(message: MessageFn<{ value: string }> = () => _messages().string.cuid()): this {
-    return this._checkRegex('cuid', /^c[a-z0-9]{8,}$/, message);
-  }
-
-  cuid2(message: MessageFn<{ value: string }> = () => _messages().string.cuid2()): this {
-    return this._checkRegex('cuid2', /^[a-z][a-z0-9]{23}$/, message);
-  }
-
-  ulid(message: MessageFn<{ value: string }> = () => _messages().string.ulid()): this {
-    return this._checkRegex('ulid', /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/, message);
-  }
-
-  nanoid(message: MessageFn<{ value: string }> = () => _messages().string.nanoid()): this {
-    return this._checkRegex('nanoid', /^[A-Za-z0-9_-]{10,}$/, message);
-  }
-
-  base64(message: MessageFn<{ value: string }> = () => _messages().string.base64()): this {
-    return this._addConstraint(
-      (value) => {
-        if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/.test(value as string))
-          return null;
-
-        return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
-          format: 'base64',
-        });
-      },
-      (ann) => ({ ...ann, contentEncoding: 'base64' }),
-    );
-  }
-
-  base64url(message: MessageFn<{ value: string }> = () => _messages().string.base64url()): this {
-    return this._checkRegex('base64url', /^[A-Za-z0-9_-]+$/, message, ErrorCode.invalid_base64);
-  }
-
-  hex(message: MessageFn<{ value: string }> = () => _messages().string.hex()): this {
-    return this._checkRegex('hex', /^[A-Fa-f0-9]+$/, message);
-  }
-
-  hexColor(message: MessageFn<{ value: string }> = () => _messages().string.hexColor()): this {
-    return this._checkRegex('hex-color', /^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/, message);
-  }
-
-  emoji(message: MessageFn<{ value: string }> = () => _messages().string.emoji()): this {
-    return this._checkRegex('emoji', /^\p{Extended_Pictographic}+$/u, message);
-  }
-
-  jwt(message: MessageFn<{ value: string }> = () => _messages().string.jwt()): this {
-    return this._checkRegex('jwt', /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/, message);
-  }
-
-  time(message: MessageFn<{ value: string }> = () => _messages().string.time()): this {
-    return this._checkRegex('time', /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/, message);
-  }
-
-  duration(message: MessageFn<{ value: string }> = () => _messages().string.duration()): this {
-    return this._addConstraint(
-      (value) => {
-        if (/^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(?:\.\d+)?S)?)?$/.test(value as string))
-          return null;
-
-        return fail(ErrorCode.invalid_duration, resolveMessage(message, { value: value as string }), {
-          format: 'duration',
-        });
-      },
-      (ann) => ({ ...ann, format: 'duration' }),
-    );
-  }
-
-  semver(message: MessageFn<{ value: string }> = () => _messages().string.semver()): this {
-    return this._checkRegex(
-      'semver',
-      /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/,
-      message,
-    );
-  }
-
-  slug(message: MessageFn<{ value: string }> = () => _messages().string.slug()): this {
-    return this._checkRegex('slug', /^[a-z0-9]+(?:-[a-z0-9]+)*$/, message);
-  }
-
-  numeric(message: MessageFn<{ value: string }> = () => _messages().string.numeric()): this {
-    return this._checkRegex('numeric', /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i, message);
-  }
-
   protected override _toSchemaBase(): Record<string, unknown> {
     const ann = this._annotations;
     const base: Record<string, unknown> = { type: 'string' };
 
-    if (ann['minLength'] !== undefined) base['minLength'] = ann['minLength'];
+    if (ann.minLength !== undefined) base['minLength'] = ann.minLength;
 
-    if (ann['maxLength'] !== undefined) base['maxLength'] = ann['maxLength'];
+    if (ann.maxLength !== undefined) base['maxLength'] = ann.maxLength;
 
-    if (ann['pattern'] != null) base['pattern'] = ann['pattern']; // null = ambiguous, omit
+    if (ann.pattern != null) base['pattern'] = ann.pattern;
 
-    if (ann['format'] !== undefined) base['format'] = ann['format'];
+    if (ann.format !== undefined) base['format'] = ann.format;
 
-    if (ann['contentEncoding'] !== undefined) base['contentEncoding'] = ann['contentEncoding'];
+    if (ann.contentEncoding !== undefined) base['contentEncoding'] = ann.contentEncoding;
 
     return base;
   }
@@ -370,35 +404,24 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     return super._walk(visitor);
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     const ann = this._annotations;
 
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      ...(ann['contentEncoding'] !== undefined ? { contentEncoding: ann['contentEncoding'] as string } : {}),
-      ...(ann['format'] !== undefined ? { format: ann['format'] as string } : {}),
-      ...(ann['maxLength'] !== undefined ? { maxLength: ann['maxLength'] as number } : {}),
-      ...(ann['minLength'] !== undefined ? { minLength: ann['minLength'] as number } : {}),
-      ...(ann['pattern'] !== undefined ? { pattern: ann['pattern'] as string | null } : {}),
+      ...this._describeBase(),
+      ...(ann.contentEncoding !== undefined ? { contentEncoding: ann.contentEncoding } : {}),
+      ...(ann.format !== undefined ? { format: ann.format } : {}),
+      ...(ann.maxLength !== undefined ? { maxLength: ann.maxLength } : {}),
+      ...(ann.minLength !== undefined ? { minLength: ann.minLength } : {}),
+      ...(ann.pattern !== undefined ? { pattern: ann.pattern } : {}),
       kind: 'string',
     };
   }
 
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+  protected override _equalsImpl(other: AnySchema): boolean {
     if (!(other instanceof StringSchema)) return false;
 
-    const a = this._annotations;
-    const b = other._annotations;
-
-    return (
-      a['minLength'] === b['minLength'] &&
-      a['maxLength'] === b['maxLength'] &&
-      a['pattern'] === b['pattern'] &&
-      a['format'] === b['format'] &&
-      a['contentEncoding'] === b['contentEncoding']
-    );
+    return this._annotationsEqual(other);
   }
 
   static coerce(): StringSchema<unknown> {

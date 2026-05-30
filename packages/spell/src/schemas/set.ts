@@ -1,20 +1,22 @@
-import type { Issue, MessageFn, ParseResult, Schema as BaseSchema, SchemaDescriptor } from '../core';
+import type { Issue, MessageFn, ParseResult, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
 import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
-  readonly itemSchema: BaseSchema<T, any>;
+  readonly itemSchema: Schema<T, any>;
 
-  constructor(itemSchema: BaseSchema<T, any>) {
+  constructor(itemSchema: Schema<T, any>) {
     super();
     this.itemSchema = itemSchema;
   }
 
-  private _invalidSet(value: unknown): { data: unknown; issues: Issue[] } {
+  private _invalidSet(value: unknown): ParseValue {
     return {
       data: value,
       issues: [{ code: ErrorCode.invalid_type, message: _messages().set.type(), path: [] }],
+      typeOk: false,
     };
   }
 
@@ -26,7 +28,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     }
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     if (!(value instanceof Set)) {
       return this._invalidSet(value);
     }
@@ -43,10 +45,10 @@ export class SetSchema<T> extends Schema<Set<T>> {
       i += 1;
     }
 
-    return { data: parsed, issues };
+    return { data: parsed, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     if (!(value instanceof Set)) {
       return this._invalidSet(value);
     }
@@ -60,7 +62,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
       this._mergeItemResult(parsed, issues, i, itemResults[i]);
     }
 
-    return { data: parsed, issues };
+    return { data: parsed, issues, typeOk: true };
   }
 
   min(
@@ -116,14 +118,8 @@ export class SetSchema<T> extends Schema<Set<T>> {
     return { $comment: 'Set<T> — no JSON Schema equivalent' };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      item: this.itemSchema.describe(),
-      kind: 'set',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), item: this.itemSchema.toDescriptor(), kind: 'set' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

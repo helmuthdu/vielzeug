@@ -1,11 +1,11 @@
 /**
- * Host element binding API — reactive attr, class, style, prop, and event bindings
+ * Host element binding API — reactive attr, class, style, and event bindings
  * applied directly to the component's host element.
  */
 
 import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
-import { effect, onCleanup } from './runtime';
+import { effect } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
 
@@ -26,26 +26,14 @@ export type HostBindingValue =
  */
 export type ReflectConfig = Record<string, HostBindingValue>;
 
-/**
- * Describes a reactive property accessor binding on the host element.
- * The getter is called lazily; the optional setter is used when external code
- * assigns `element.propName = value`.
- */
-export type HostPropDescriptor<T = unknown> = {
-  get: () => T;
-  set?: (value: T) => void;
-};
-
 type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
-// Bivariant callback allows consumers to use narrower event types
-// (e.g. KeyboardEvent, MouseEvent) while preserving runtime Event semantics.
+// Bivariant callback allows consumers to use narrower event types.
 type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 
 export type HostBindConfig = {
   attr?: ReflectConfig;
   class?: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>;
   on?: Record<string, HostEventListener | undefined>;
-  prop?: Record<string, HostPropDescriptor>;
   style?: Record<string, HostBindingValue>;
 };
 
@@ -68,24 +56,11 @@ export const createBind = (el: HTMLElement): HostBindFn => {
       disposers.push(applyClassMap(el, config.class));
     }
 
-    if (config.prop) {
-      for (const [key, descriptor] of Object.entries(config.prop)) {
-        const { get, set } = descriptor;
+    if (config.style) {
+      for (const [key, value] of Object.entries(config.style)) {
+        const dispose = applyStyle(el, key, value);
 
-        Object.defineProperty(el, key, {
-          configurable: true,
-          enumerable: true,
-          get,
-          ...(set ? { set } : {}),
-        });
-
-        disposers.push(() => {
-          const descriptor = Object.getOwnPropertyDescriptor(el, key);
-
-          if (!descriptor || descriptor.get !== get || descriptor.set !== set) return;
-
-          delete (el as unknown as Record<string, unknown>)[key];
-        });
+        if (dispose) disposers.push(dispose);
       }
     }
 
@@ -99,19 +74,9 @@ export const createBind = (el: HTMLElement): HostBindFn => {
       }
     }
 
-    if (config.style) {
-      for (const [key, value] of Object.entries(config.style)) {
-        const dispose = applyStyle(el, key, value);
-
-        if (dispose) disposers.push(dispose);
-      }
-    }
-
-    const cleanup = () => {
-      while (disposers.length > 0) disposers.pop()?.();
+    const cleanup = (): void => {
+      for (const dispose of disposers) dispose();
     };
-
-    onCleanup(cleanup);
 
     return cleanup;
   };
@@ -143,14 +108,11 @@ function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
   const cssName = name.startsWith('--') ? name : toKebab(name);
   let owned = false;
-
-  const setStyle = (v: string | number | boolean | null | undefined) => {
+  const setStyle = (v: string | number | boolean | null | undefined): void => {
     if (v != null && v !== '') {
       owned = true;
       host.style.setProperty(cssName, String(v));
-    } else if (owned) {
-      host.style.removeProperty(cssName);
-    }
+    } else if (owned) host.style.removeProperty(cssName);
   };
 
   return applyReactiveBinding(value, setStyle);
@@ -175,7 +137,7 @@ function applyClassMap(
 
   let prev = new Set<string>();
 
-  return effect(() => {
+  const sub = effect(() => {
     const next = new Set<string>();
 
     for (const [cls, active] of Object.entries(getMap())) {
@@ -185,11 +147,11 @@ function applyClassMap(
 
       if (!prev.has(cls)) host.classList.add(cls);
     }
-
     for (const cls of prev) {
       if (!next.has(cls)) host.classList.remove(cls);
     }
-
     prev = next;
   });
+
+  return sub;
 }

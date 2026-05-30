@@ -1,77 +1,60 @@
-import {
-  computed,
-  effect as rawEffect,
-  isSignal,
-  StateError,
-  type CleanupFn,
-  type ReadonlySignal,
-  untrack,
-} from '@vielzeug/ripple';
+import { effect as rawEffect, isSignal, StateError, untrack, type ReadonlySignal } from '@vielzeug/ripple';
 
-import { isLiveSignal } from './directives/live';
 import { propRegistry } from './props';
-import { type AttrBinding, type Binding, type EventBinding, type HtmlBinding, type RefBinding } from './types/bindings';
+import {
+  isHtmlResult,
+  type AttrBinding,
+  type Binding,
+  type DirectiveBinding,
+  type EventBinding,
+  type HtmlBinding,
+  type HtmlBindingValue,
+  type RefBinding,
+  type SpreadBinding,
+  type TextBinding,
+} from './types/bindings';
 import { listen, removeNodes, runAll, setAttr, isStructuredValue } from './utils/dom';
-import { CF_ID_ATTR } from './utils/id';
 
-export type RegisterCleanup = (fn: CleanupFn) => void;
+export type RegisterCleanup = (fn: () => void) => void;
 
-export type BindingTargets = {
-  comments: Map<string, Comment>;
-  elements: Map<string, HTMLElement>;
+// ─── Signal helpers ───────────────────────────────────────────────────────────
+
+const signalEffect = (
+  signal: ReadonlySignal<unknown>,
+  update: (v: unknown) => void,
+  registerCleanup: RegisterCleanup,
+): void => {
+  const sub = rawEffect(() => update(signal.value));
+
+  registerCleanup(() => sub.dispose());
 };
 
-export const parseHTML = (html: string): DocumentFragment => {
-  const tpl = document.createElement('template');
+/**
+ * Read a signal safely, suppressing disposed-signal errors during scope teardown.
+ */
+const readSignalSafe = <T>(sig: ReadonlySignal<T>): T | undefined => {
+  try {
+    return sig.value;
+  } catch (error) {
+    if (error instanceof StateError && error.code === 'DISPOSED_READ') return undefined;
 
-  tpl.innerHTML = html;
-
-  return tpl.content.cloneNode(true) as DocumentFragment;
-};
-
-const collectBindingTarget = (node: Node, targets: BindingTargets): void => {
-  if (node.nodeType === Node.COMMENT_NODE) {
-    const marker = (node as Comment).nodeValue;
-
-    if (marker) targets.comments.set(marker, node as Comment);
-
-    return;
+    throw error;
   }
-
-  if (node.nodeType !== Node.ELEMENT_NODE) return;
-
-  const id = (node as Element).getAttribute(CF_ID_ATTR);
-
-  if (id) targets.elements.set(id, node as HTMLElement);
 };
 
-const walkBindingTargets = (root: Node, visit: (node: Node) => void): void => {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT);
+// ─── Text ─────────────────────────────────────────────────────────────────────
 
-  visit(root);
-
-  while (walker.nextNode()) visit(walker.currentNode);
+const applyTextBinding = (binding: TextBinding, registerCleanup: RegisterCleanup): void => {
+  signalEffect(
+    binding.signal,
+    (v) => {
+      binding.node.textContent = String(v ?? '');
+    },
+    registerCleanup,
+  );
 };
 
-export const indexBindingTargets = (nodes: Iterable<Node>): BindingTargets => {
-  const targets: BindingTargets = { comments: new Map(), elements: new Map() };
-
-  for (const node of nodes) walkBindingTargets(node, (current) => collectBindingTarget(current, targets));
-
-  return targets;
-};
-
-export const findCommentMarker = (root: Node, marker: string): Comment | null => {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
-
-  while (walker.nextNode()) {
-    const comment = walker.currentNode as Comment;
-
-    if (comment.nodeValue === marker) return comment;
-  }
-
-  return null;
-};
+// ─── Attributes ───────────────────────────────────────────────────────────────
 
 const isNativeFormInput = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
@@ -126,8 +109,6 @@ const syncRegisteredProp = (el: HTMLElement, meta: PropMetaLike, binding: AttrBi
     meta.signal.value = parsed as never;
   }
 
-  // When reflect:false the prop signal has no reflect-effect; write the attribute
-  // directly so the DOM stays in sync with template bindings.
   if (!meta.reflect) {
     if (isStructuredValue(value)) return;
 
@@ -136,87 +117,62 @@ const syncRegisteredProp = (el: HTMLElement, meta: PropMetaLike, binding: AttrBi
   }
 };
 
-const signalEffect = (
-  signal: ReadonlySignal<unknown>,
-  update: (v: unknown) => void,
-  registerCleanup: RegisterCleanup,
-): void => {
-  registerCleanup(rawEffect(() => update(signal.value)));
-};
-
-type AttrTarget =
-  | { el: HTMLInputElement; kind: 'formChecked' }
-  | { el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; kind: 'formValue' }
-  | { kind: 'generic' }
-  | { kind: 'prop'; meta: PropMetaLike };
-
-const resolveAttrTarget = (el: HTMLElement, name: string): AttrTarget => {
+export const applyAttrBinding = (binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
+  const { el, mode, name } = binding;
   const meta = propRegistry.get(el)?.get(name) as PropMetaLike | undefined;
-
-  if (meta) return { kind: 'prop', meta };
-
-  if (name === 'value' && isNativeFormInput(el)) return { el, kind: 'formValue' };
-
-  if (name === 'checked' && el instanceof HTMLInputElement) return { el, kind: 'formChecked' };
-
-  return { kind: 'generic' };
-};
-
-export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
-  const target = resolveAttrTarget(el, binding.name);
   const liveState: LiveWriteState = { last: undefined };
 
   const update = (value: unknown): void => {
-    if (target.kind !== 'prop' && isStructuredValue(value)) {
-      (el as unknown as Record<string, unknown>)[binding.name] = value;
+    if (meta) {
+      if (!isStructuredValue(value)) syncRegisteredProp(el, meta, binding, value);
+      else syncRegisteredProp(el, meta, binding, value);
 
       return;
     }
 
-    switch (target.kind) {
-      case 'formChecked':
-        applyCheckedValue(target.el, value, binding.live, liveState);
-        break;
-      case 'formValue':
-        applyFormValue(target.el, value, binding.live, liveState);
-        break;
-      case 'prop':
-        syncRegisteredProp(el, target.meta, binding, value);
-        break;
-      default:
-        if (binding.mode === 'bool') el.toggleAttribute(binding.name, Boolean(value));
-        else setAttr(el, binding.name, value);
+    if (!isSignal(value) && isStructuredValue(value)) {
+      (el as unknown as Record<string, unknown>)[name] = value;
+
+      return;
     }
+
+    if (name === 'value' && isNativeFormInput(el)) {
+      applyFormValue(el, value, binding.live, liveState);
+
+      return;
+    }
+
+    if (name === 'checked' && el instanceof HTMLInputElement) {
+      applyCheckedValue(el, value, binding.live, liveState);
+
+      return;
+    }
+
+    if (mode === 'bool') el.toggleAttribute(name, Boolean(value));
+    else setAttr(el, name, value);
   };
 
-  if (binding.signal) {
+  if ('signal' in binding) {
     signalEffect(binding.signal, update, registerCleanup);
   } else {
-    update(binding.value!);
+    update(binding.value);
   }
 };
 
-export const applyEventBinding = (el: HTMLElement, binding: EventBinding, registerCleanup: RegisterCleanup) => {
-  registerCleanup(listen(el, binding.name, binding.handler, binding.options));
+// ─── Events ───────────────────────────────────────────────────────────────────
+
+const applyEventBinding = (binding: EventBinding, registerCleanup: RegisterCleanup): void => {
+  registerCleanup(listen(binding.el, binding.name, binding.handler, binding.options));
 };
 
-export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCleanup: RegisterCleanup) => {
-  const { ref } = binding;
+// ─── Refs ─────────────────────────────────────────────────────────────────────
+
+const applyRefBinding = (binding: RefBinding, registerCleanup: RegisterCleanup): void => {
+  const { el, ref } = binding;
 
   if (typeof ref === 'function') {
     ref(el as never);
     registerCleanup(() => ref(null as never));
-
-    return;
-  }
-
-  if (Array.isArray(ref)) {
-    ref.push(el);
-    registerCleanup(() => {
-      const i = ref.indexOf(el);
-
-      if (i !== -1) ref.splice(i, 1);
-    });
 
     return;
   }
@@ -227,179 +183,103 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
   });
 };
 
-type ElementBinding = AttrBinding | EventBinding | RefBinding;
+// ─── HTML (reactive) ─────────────────────────────────────────────────────────
 
-export const applyBindingsWithTargets = (
-  bindings: Binding[],
+const insertHtmlValues = (
+  values: HtmlBindingValue[],
+  insertBefore: ChildNode,
   registerCleanup: RegisterCleanup,
-  targets: BindingTargets,
-  opts?: { onHtml?: (b: HtmlBinding) => void },
-) => {
-  const bindingMap = new Map<string, ElementBinding[]>();
-
-  for (const b of bindings) {
-    const id = b.uid;
-
-    if (b.type === 'text') {
-      const found = targets.comments.get(id);
-
-      if (found) {
-        const textNode = document.createTextNode('');
-
-        found.replaceWith(textNode);
-        targets.comments.delete(id);
-        signalEffect(
-          b.signal,
-          (v) => {
-            textNode.textContent = String(v);
-          },
-          registerCleanup,
-        );
-      }
-    } else if (b.type === 'directive') {
-      const found = targets.comments.get(id);
-
-      if (found) {
-        b.directive.mount(found, registerCleanup);
-        targets.comments.delete(id);
-      }
-    } else if (b.type === 'html') {
-      opts?.onHtml?.(b);
-    } else {
-      const grouped = bindingMap.get(id);
-
-      if (grouped) grouped.push(b);
-      else bindingMap.set(id, [b]);
-    }
-  }
-
-  for (const [id, elBindings] of bindingMap) {
-    const el = targets.elements.get(id);
-
-    if (!el) continue;
-
-    el.removeAttribute(CF_ID_ATTR);
-    targets.elements.delete(id);
-
-    // Inline element binding dispatch
-    for (const b of elBindings) {
-      if (b.type === 'attr') {
-        applyAttrBinding(el, b, registerCleanup);
-      } else if (b.type === 'event') {
-        applyEventBinding(el, b, registerCleanup);
-      } else if (b.type === 'ref') {
-        applyRefBinding(el, b, registerCleanup);
-      }
-    }
-  }
-};
-
-export const applyBindingsInContainer = (
-  container: ParentNode,
-  bindings: Binding[],
-  registerCleanup: RegisterCleanup,
-  opts?: { onHtml?: (b: HtmlBinding) => void },
-) => {
-  applyBindingsWithTargets(bindings, registerCleanup, indexBindingTargets([container]), opts);
-};
-
-export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: string, value: unknown): AttrBinding => {
-  if (isLiveSignal(value)) {
-    return { live: true, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr', uid };
-  }
-
-  if (typeof value === 'function') {
-    return { mode, name, signal: computed(value as () => unknown), type: 'attr', uid };
-  }
-
-  if (isSignal(value)) {
-    return { mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr', uid };
-  }
-
-  return { mode, name, type: 'attr', uid, value };
-};
-
-/**
- * Safely read a binding signal, suppressing disposed-signal errors during scope teardown.
- */
-const readSignalSafe = <T>(sig: ReadonlySignal<T>): T | undefined => {
-  try {
-    return sig.value;
-  } catch (error) {
-    if (error instanceof StateError && error.code === 'DISPOSED_READ') return undefined;
-
-    throw error;
-  }
-};
-
-/**
- * Replace the current HTML content at a marker with new parsed content and apply bindings.
- */
-const replaceHtmlContent = (
-  marker: Comment,
-  root: Node,
-  html: string,
-  bindings: Binding[],
-  lastInsertedNodes: Node[],
-  registerInnerCleanup: RegisterCleanup,
 ): Node[] => {
-  const container = (marker.parentElement || root) as ParentNode;
+  const nodes: Node[] = [];
+  const parent = insertBefore.parentNode!;
 
-  removeNodes(lastInsertedNodes);
+  for (const v of values) {
+    if (isHtmlResult(v)) {
+      const captured = Array.from(v.fragment.childNodes);
 
-  const parsed = parseHTML(html);
-  const newNodes = Array.from(parsed.childNodes);
+      parent.insertBefore(v.fragment, insertBefore);
+      v.apply(registerCleanup);
+      nodes.push(...captured);
+    } else if (v != null && v !== false) {
+      const text = document.createTextNode(String(v));
 
-  marker.after(parsed);
+      parent.insertBefore(text, insertBefore);
+      nodes.push(text);
+    }
+  }
 
-  applyBindingsInContainer(container, bindings, registerInnerCleanup, {
-    onHtml: (binding) => applyHtmlBinding(container as unknown as Node, binding, registerInnerCleanup),
-  });
-
-  return newNodes;
+  return nodes;
 };
 
-/**
- * Sets up the reactive effect for an html-binding marker using full fragment replacement.
- */
-export const applyHtmlBinding = (root: Node, b: HtmlBinding, registerCleanup: RegisterCleanup): void => {
-  const found = findCommentMarker(root, b.uid);
+export const applyHtmlBinding = (binding: HtmlBinding, registerCleanup: RegisterCleanup): void => {
+  const { anchor, signal } = binding;
 
-  if (!found) return;
-
-  const marker = document.createComment('html-binding');
-
-  found.replaceWith(marker);
-
-  let currentCleanups: CleanupFn[] = [];
-  const registerInnerCleanup: RegisterCleanup = (fn) => currentCleanups.push(fn);
-  const runCurrentCleanups = () => {
+  let currentCleanups: (() => void)[] = [];
+  const clearCurrent = (): void => {
     runAll(currentCleanups);
     currentCleanups = [];
   };
-  let lastHtml: string | null = null;
-  let lastInsertedNodes: Node[] = [];
+  let currentNodes: Node[] = [];
 
   const stop = rawEffect(() => {
-    const data = readSignalSafe(b.signal);
+    const raw = readSignalSafe(signal);
 
-    if (!data || data.html === lastHtml) return;
+    clearCurrent();
+    removeNodes(currentNodes);
+    currentNodes = [];
 
-    lastHtml = data.html;
-    runCurrentCleanups();
+    if (raw == null) return;
 
     untrack(() => {
-      lastInsertedNodes = replaceHtmlContent(
-        marker,
-        root,
-        data.html,
-        data.bindings,
-        lastInsertedNodes,
-        registerInnerCleanup,
-      );
+      const values = Array.isArray(raw) ? raw : [raw];
+
+      currentNodes = insertHtmlValues(values as HtmlBindingValue[], anchor, (fn) => currentCleanups.push(fn));
     });
   });
 
-  registerCleanup(stop);
-  registerCleanup(runCurrentCleanups);
+  registerCleanup(() => stop.dispose());
+  registerCleanup(() => {
+    clearCurrent();
+    removeNodes(currentNodes);
+  });
+};
+
+// ─── Directives ───────────────────────────────────────────────────────────────
+
+const applyDirectiveBinding = (binding: DirectiveBinding, registerCleanup: RegisterCleanup): void => {
+  binding.directive.mount(binding.anchor, registerCleanup);
+};
+
+// ─── Spread ───────────────────────────────────────────────────────────────────
+
+const applySpreadBinding = (binding: SpreadBinding, registerCleanup: RegisterCleanup): void => {
+  binding.spread.apply(binding.el, registerCleanup);
+};
+
+// ─── Dispatch ─────────────────────────────────────────────────────────────────
+
+export const applyBinding = (binding: Binding, registerCleanup: RegisterCleanup): void => {
+  switch (binding.type) {
+    case 'attr':
+      applyAttrBinding(binding, registerCleanup);
+      break;
+    case 'directive':
+      applyDirectiveBinding(binding, registerCleanup);
+      break;
+    case 'event':
+      applyEventBinding(binding, registerCleanup);
+      break;
+    case 'html':
+      applyHtmlBinding(binding, registerCleanup);
+      break;
+    case 'ref':
+      applyRefBinding(binding, registerCleanup);
+      break;
+    case 'spread':
+      applySpreadBinding(binding, registerCleanup);
+      break;
+    case 'text':
+      applyTextBinding(binding, registerCleanup);
+      break;
+  }
 };

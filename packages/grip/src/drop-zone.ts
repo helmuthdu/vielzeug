@@ -1,5 +1,31 @@
 import { type Disposable, resolveDisabled } from './shared';
 
+// ─── Accept matching ─────────────────────────────────────────────────────────
+
+/**
+ * Test whether a `File` matches an accept pattern list.
+ *
+ * Each pattern can be:
+ *   - A MIME type:            `'image/png'`
+ *   - A MIME wildcard:        `'image/*'`
+ *   - A file extension:       `'.pdf'`
+ *
+ * An empty list accepts everything.
+ */
+export function matchesAccept(file: File, accept: string[]): boolean {
+  if (!accept.length) return true;
+
+  return accept.some((pattern) => {
+    const p = pattern.trim();
+
+    if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p.toLowerCase());
+
+    if (p.endsWith('/*')) return file.type.startsWith(p.slice(0, -1));
+
+    return file.type === p;
+  });
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DropZoneOptions {
@@ -54,20 +80,6 @@ export interface DropZone extends Disposable {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-function matchesAccept(file: File, accept: string[]): boolean {
-  if (!accept.length) return true;
-
-  return accept.some((pattern) => {
-    const p = pattern.trim();
-
-    if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p.toLowerCase());
-
-    if (p.endsWith('/*')) return file.type.startsWith(p.slice(0, -1));
-
-    return file.type === p;
-  });
-}
-
 /**
  * DataTransferItem does not expose file names, so extension patterns (for example
  * `.pdf`) cannot be validated during drag-over. We treat these as a permissive
@@ -117,9 +129,7 @@ function itemsMatchAccept(items: DataTransferItemList, accept: string[]): boolea
 export function createDropZone(options: DropZoneOptions): DropZone {
   const { disabled, dropEffect = 'copy', element, maxFiles, onDrop, onDropRejected, onHoverChange } = options;
 
-  // Resolve static accept patterns once; call the getter only when it's a function.
-  const acceptPatterns = typeof options.accept === 'function' ? null : (options.accept ?? []);
-  const getAccept = (): string[] => acceptPatterns ?? (options.accept as () => string[])();
+  const getAccept: () => string[] = typeof options.accept === 'function' ? options.accept : () => options.accept ?? [];
 
   let dragCounter = 0;
   // Whether the *current* drag's payload passes the accept filter.
@@ -128,17 +138,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   let files: File[] = [];
   let rejected: File[] = [];
 
-  const isDragRejectedByFilter = (e: DragEvent): boolean => {
-    const accept = getAccept();
-
-    if (!accept.length) return false;
-
-    const items = e.dataTransfer?.items;
-
-    return !!items?.length && !itemsMatchAccept(items, accept);
-  };
-
-  const setDepth = (next: number): void => {
+  const updateCounter = (next: number): void => {
     const wasHovered = dragCounter > 0 && dragAccepted;
 
     dragCounter = Math.max(0, next);
@@ -151,8 +151,8 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     if (hovered !== wasHovered) onHoverChange?.(hovered);
   };
 
-  const resetHoverState = (): void => {
-    setDepth(0);
+  const resetCounter = (): void => {
+    updateCounter(0);
   };
 
   const handleDragEnter = (e: DragEvent): void => {
@@ -163,7 +163,10 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     // Evaluate the filter once per drag (on first entry) — the payload is
     // constant for the lifetime of a drag operation.
     if (dragCounter === 0) {
-      dragAccepted = !isDragRejectedByFilter(e);
+      const accept = getAccept();
+      const items = e.dataTransfer?.items;
+
+      dragAccepted = !accept.length || !items?.length || itemsMatchAccept(items, accept);
     }
 
     if (!dragAccepted && e.dataTransfer) {
@@ -172,7 +175,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     // Always increment so every dragenter is paired with its dragleave,
     // regardless of acceptance. This prevents counter under-runs.
-    setDepth(dragCounter + 1);
+    updateCounter(dragCounter + 1);
   };
 
   const handleDragOver = (e: DragEvent): void => {
@@ -180,24 +183,18 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     if (resolveDisabled(disabled)) return;
 
-    if (isDragRejectedByFilter(e)) {
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
-
-      return;
-    }
-
-    if (e.dataTransfer) e.dataTransfer.dropEffect = dropEffect;
+    if (e.dataTransfer) e.dataTransfer.dropEffect = dragAccepted ? dropEffect : 'none';
   };
 
   const handleDragLeave = (_e: DragEvent): void => {
     // Always decrement to balance the paired dragenter — disabling after enter
     // must not leave the counter permanently incremented.
-    setDepth(dragCounter - 1);
+    updateCounter(dragCounter - 1);
   };
 
   const handleDrop = (e: DragEvent): void => {
     e.preventDefault();
-    resetHoverState();
+    resetCounter();
 
     if (resolveDisabled(disabled)) return;
 
@@ -231,19 +228,17 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   element.addEventListener('dragleave', handleDragLeave);
   element.addEventListener('drop', handleDrop);
 
-  window.addEventListener('dragend', resetHoverState);
-  window.addEventListener('drop', resetHoverState);
+  window.addEventListener('dragend', resetCounter);
+  window.addEventListener('drop', resetCounter);
 
   const destroy = (): void => {
     element.removeEventListener('dragenter', handleDragEnter);
     element.removeEventListener('dragover', handleDragOver);
     element.removeEventListener('dragleave', handleDragLeave);
     element.removeEventListener('drop', handleDrop);
-    window.removeEventListener('dragend', resetHoverState);
-    window.removeEventListener('drop', resetHoverState);
-    resetHoverState();
-    files = [];
-    rejected = [];
+    window.removeEventListener('dragend', resetCounter);
+    window.removeEventListener('drop', resetCounter);
+    resetCounter();
   };
 
   return {

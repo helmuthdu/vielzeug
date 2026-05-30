@@ -10,7 +10,7 @@
 import { cleanup } from './mount';
 
 export { fire, createPointerEvent } from './events';
-export { flush, type FlushOptions } from './flush';
+export { FLUSH_DEEP, flush, type FlushOptions } from './flush';
 export { user } from './interactions';
 export {
   cleanup,
@@ -25,6 +25,7 @@ export {
 } from './mount';
 export { within, type QueryScope } from './query';
 export { waitFor, waitForEvent, type WaitOptions } from './wait';
+export { renderHook, type HookFixture } from './render-hook';
 
 /**
  * Register auto-cleanup after each test. Call once in your test setup file.

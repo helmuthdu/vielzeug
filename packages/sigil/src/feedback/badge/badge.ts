@@ -72,7 +72,8 @@ export type BitBadgeProps = {
  * <bit-badge color="warning" variant="flat">Beta</bit-badge>
  * ```
  */
-export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
+export const BADGE_TAG = 'bit-badge' as const;
+define<BitBadgeProps>(BADGE_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

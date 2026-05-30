@@ -103,7 +103,8 @@ export type BitRadioGroupEvents = {
  * <bit-radio-group></bit-radio-group>
  * ```
  */
-export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
+export const RADIO_GROUP_TAG = 'bit-radio-group' as const;
+define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

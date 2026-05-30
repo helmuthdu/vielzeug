@@ -10,7 +10,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { configure, reset, s, withMessages } from '../index';
+import { configure, reset, s } from '../index';
 
 // ---------------------------------------------------------------------------
 // Prototype mutation — relaxed ObjectSchema

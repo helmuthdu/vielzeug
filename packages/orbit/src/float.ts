@@ -1,9 +1,9 @@
-import type { Cleanup, ComputePositionResult, Middleware, Placement, ReferenceElement } from './types';
+import type { ComputePositionResult, FloatHandle, Middleware, Placement, ReferenceElement } from './types';
 
 import { type AutoUpdateOptions, autoUpdate } from './auto-update';
 import { computePosition } from './core';
 
-// ── CSS Anchor Positioning (progressive enhancement) ─────────────────────────
+// ── CSS Anchor Positioning (progressive enhancement) ─────────────────────────────────────────
 
 let _cssAnchorSupported: boolean | undefined;
 
@@ -36,68 +36,61 @@ const POSITION_AREA: Record<Placement, string> = {
   'top-start': 'block-start span-inline-start',
 };
 
-/**
- * Sets up CSS Anchor Positioning on the two elements and returns a cleanup function.
- * The browser handles repositioning natively — no scroll or resize listeners needed.
- */
-function setupCssAnchorPositioning(reference: HTMLElement, floating: HTMLElement, placement: Placement): Cleanup {
-  const name = `--orbit-${++anchorCounter}`;
-  const refEl = reference;
+/** Applies a set of CSS properties to an element and returns a cleanup that restores them. */
+function withStyles(el: HTMLElement, props: Record<string, string>): () => void {
+  const saved: Record<string, string> = {};
 
-  const prevAnchorName = refEl.style.getPropertyValue('anchor-name');
-  const prevPositionAnchor = floating.style.getPropertyValue('position-anchor');
-  const prevPosition = floating.style.position;
-  const prevPositionArea = floating.style.getPropertyValue('position-area');
-  const prevTryFallbacks = floating.style.getPropertyValue('position-try-fallbacks');
+  for (const prop of Object.keys(props)) {
+    saved[prop] = el.style.getPropertyValue(prop);
+    el.style.setProperty(prop, props[prop]);
+  }
 
-  refEl.style.setProperty('anchor-name', name);
-  floating.style.setProperty('position-anchor', name);
-  floating.style.position = 'fixed';
-  floating.style.setProperty('position-area', POSITION_AREA[placement]);
-  floating.style.setProperty('position-try-fallbacks', 'flip-block, flip-inline, flip-block flip-inline');
-
-  return (): void => {
-    if (prevAnchorName) {
-      refEl.style.setProperty('anchor-name', prevAnchorName);
-    } else {
-      refEl.style.removeProperty('anchor-name');
-    }
-
-    if (prevPositionAnchor) {
-      floating.style.setProperty('position-anchor', prevPositionAnchor);
-    } else {
-      floating.style.removeProperty('position-anchor');
-    }
-
-    floating.style.position = prevPosition;
-
-    if (prevPositionArea) {
-      floating.style.setProperty('position-area', prevPositionArea);
-    } else {
-      floating.style.removeProperty('position-area');
-    }
-
-    if (prevTryFallbacks) {
-      floating.style.setProperty('position-try-fallbacks', prevTryFallbacks);
-    } else {
-      floating.style.removeProperty('position-try-fallbacks');
+  return () => {
+    for (const prop of Object.keys(props)) {
+      if (saved[prop]) {
+        el.style.setProperty(prop, saved[prop]);
+      } else {
+        el.style.removeProperty(prop);
+      }
     }
   };
 }
 
-// ── float() ──────────────────────────────────────────────────────────────────
+/**
+ * Sets up CSS Anchor Positioning on the two elements and returns a cleanup function.
+ * The browser handles repositioning natively — no scroll or resize listeners needed.
+ */
+function setupCssAnchorPositioning(reference: HTMLElement, floating: HTMLElement, placement: Placement): () => void {
+  const name = `--orbit-${++anchorCounter}`;
+
+  const cleanupRef = withStyles(reference, { 'anchor-name': name });
+  const cleanupFloat = withStyles(floating, {
+    position: 'fixed',
+    'position-anchor': name,
+    'position-area': POSITION_AREA[placement],
+    'position-try-fallbacks': 'flip-block, flip-inline, flip-block flip-inline',
+  });
+
+  return () => {
+    cleanupRef();
+    cleanupFloat();
+  };
+}
+
+// ── float() ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface FloatOptions {
   placement?: Placement;
   middleware?: Array<Middleware | null | undefined | false>;
   /**
    * Custom callback to apply the computed position to the DOM.
+   * Called once per position update with the full `ComputePositionResult`.
    * Defaults to writing `left` / `top` on the floating element (requires `position: fixed`).
    */
   apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;
   /**
    * Options for the auto-update loop. Omit to use defaults.
-   * Pass `autoUpdate: false` to disable auto-updating (position is computed once on call).
+   * Pass `false` to disable auto-updating (position is computed once on call).
    */
   autoUpdate?: AutoUpdateOptions | false;
   /**
@@ -120,11 +113,12 @@ function applyDefault(result: ComputePositionResult, elements: { floating: HTMLE
 /**
  * High-level API: positions the floating element and continuously keeps it updated.
  *
- * Returns a cleanup function — **always call it** to remove scroll/resize listeners.
+ * Returns a {@link FloatHandle} with `cleanup()`, `update()`, and `getPosition()`.
+ * Always call `cleanup()` on teardown to remove listeners.
  *
  * @example
  * ```ts
- * const cleanup = float(trigger, tooltip, {
+ * const { cleanup } = float(trigger, tooltip, {
  *   placement: 'top',
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
  * });
@@ -142,7 +136,7 @@ export function float(
     placement = 'bottom',
     preferCssAnchor = false,
   }: FloatOptions = {},
-): Cleanup {
+): FloatHandle {
   const hasMiddleware = middleware && middleware.some(Boolean);
   const useCssAnchor =
     preferCssAnchor &&
@@ -152,20 +146,27 @@ export function float(
     isCssAnchorPositioningSupported();
 
   if (useCssAnchor) {
-    return setupCssAnchorPositioning(reference, floating, placement);
+    const cleanup = setupCssAnchorPositioning(reference, floating, placement);
+
+    return { cleanup, cssAnchor: true, getPosition: () => null, update: () => {} };
   }
+
+  let lastPosition: ComputePositionResult | null = null;
 
   function update(): void {
     const result = computePosition(reference, floating, { middleware, placement });
 
+    lastPosition = result;
     apply(result, { floating, reference });
   }
 
   if (autoUpdateOptions === false) {
     update();
 
-    return (): void => {};
+    return { cleanup: () => {}, cssAnchor: false, getPosition: () => lastPosition, update };
   }
 
-  return autoUpdate(reference, floating, update, autoUpdateOptions);
+  const cleanup = autoUpdate(reference, floating, update, autoUpdateOptions);
+
+  return { cleanup, cssAnchor: false, getPosition: () => lastPosition, update };
 }

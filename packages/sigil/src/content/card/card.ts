@@ -95,7 +95,8 @@ export type BitCardProps = {
  * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
  * ```
  */
-export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
+export const CARD_TAG = 'bit-card' as const;
+define<BitCardProps, BitCardEvents>(CARD_TAG, {
   props: {
     ...themableBundle,
     ...disablableBundle,

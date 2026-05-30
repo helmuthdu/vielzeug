@@ -169,3 +169,93 @@ describe('batch() error handling', () => {
     expect(calls).toBe(2); // one from the throw, one from the subsequent set
   });
 });
+
+describe('async iterator (F4)', () => {
+  test('yields the current state immediately on first iteration', async () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    const iter = form[Symbol.asyncIterator]();
+    const first = await iter.next();
+
+    expect(first.done).toBe(false);
+    expect(first.value.isDirty).toBe(false);
+    expect(form.get('name')).toBe('Alice');
+
+    iter.return?.();
+  });
+
+  test('yields each state change as mutations are applied', async () => {
+    const form = createForm({ defaultValues: { count: 0 } });
+
+    const received: boolean[] = [];
+
+    async function consume() {
+      for await (const state of form) {
+        received.push(state.isDirty);
+
+        if (received.length === 3) break;
+      }
+    }
+
+    const done = consume();
+
+    await Promise.resolve(); // let iterator attach
+
+    form.set('count', 1);
+    form.set('count', 2);
+
+    await done;
+
+    // First state is clean; subsequent sets make it dirty
+    expect(received[0]).toBe(false);
+    expect(received[1]).toBe(true);
+    expect(received[2]).toBe(true);
+    expect(received).toHaveLength(3);
+  });
+
+  test('terminates cleanly when the form is disposed', async () => {
+    const form = createForm({ defaultValues: { x: 0 } });
+
+    const states: boolean[] = [];
+
+    async function consume() {
+      for await (const state of form) {
+        states.push(state.isDirty);
+      }
+    }
+
+    const done = consume();
+
+    await Promise.resolve();
+
+    form.set('x', 1);
+    form.dispose();
+
+    await done;
+
+    // First state was clean; should have yielded at least one state.
+    expect(states.length).toBeGreaterThanOrEqual(1);
+    expect(states[0]).toBe(false);
+  });
+
+  test('for-await break calls return() and stops the iterator', async () => {
+    const form = createForm({ defaultValues: { n: 0 } });
+
+    const seen: boolean[] = [];
+
+    for await (const state of form) {
+      seen.push(state.isDirty);
+      break;
+    }
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBe(false);
+
+    // Subsequent mutations must not buffer state after break.
+    form.set('n', 99);
+    await Promise.resolve();
+
+    // No crash, no memory leak — just silence.
+    expect(seen).toHaveLength(1);
+  });
+});

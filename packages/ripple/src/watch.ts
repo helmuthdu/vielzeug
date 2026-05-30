@@ -22,7 +22,7 @@ import { withTracking } from './tracking';
  * const count = signal(0);
  * const stop = watch(count, (next, prev) => console.log(next, prev));
  * count.value = 1; // logs: 1 0
- * stop();
+ * stop.dispose();
  * ```
  */
 export const watch = <T>(

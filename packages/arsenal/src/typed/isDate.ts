@@ -14,5 +14,3 @@
 export function isDate(arg: unknown): arg is Date {
   return arg instanceof Date && !Number.isNaN(arg.getTime());
 }
-
-export const IS_DATE_ERROR_MSG = 'Expected a Date object';

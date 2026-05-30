@@ -160,4 +160,36 @@ describe('validate preset defaults', () => {
 
     vi.useRealTimers();
   });
+
+  test('R2: dispose clears pending debounce timers so validation never fires after dispose', async () => {
+    vi.useFakeTimers();
+
+    let validatorCalls = 0;
+    const form = createForm({
+      connect: { debounce: 500, validateOnChange: true },
+      defaultValues: { name: 'Alice' },
+      validators: {
+        name: (_v: unknown) => {
+          validatorCalls++;
+
+          return undefined;
+        },
+      },
+    });
+    const binding = form.connect('name');
+
+    // Trigger a debounced validation — timer is now pending, validator not called yet.
+    binding.onChange('Bob');
+    expect(validatorCalls).toBe(0);
+
+    // Dispose before debounce resolves.
+    form.dispose();
+
+    // Advance time fully — the timer must NOT fire the validator.
+    await vi.runAllTimersAsync();
+
+    expect(validatorCalls).toBe(0);
+
+    vi.useRealTimers();
+  });
 });

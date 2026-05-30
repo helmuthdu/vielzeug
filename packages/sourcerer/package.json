@@ -14,6 +14,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./signals": {
+      "source": "./src/signals.ts",
+      "types": "./dist/signals.d.ts",
+      "import": "./dist/signals.js",
+      "require": "./dist/signals.cjs"
     }
   },
   "scripts": {
@@ -30,8 +36,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@vielzeug/ripple": "workspace:*",
-    "@vielzeug/arsenal": "workspace:*"
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",

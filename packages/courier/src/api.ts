@@ -1,3 +1,5 @@
+import { anySignal } from '@vielzeug/arsenal';
+
 import type { HttpRequestConfig, Params } from './url';
 
 import { HttpError } from './errors';
@@ -118,7 +120,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
 
     const requestAc = new AbortController();
     const untrack = transport.track(requestAc);
-    const combinedExt = extSignal ? AbortSignal.any([extSignal, requestAc.signal]) : requestAc.signal;
+    const combinedExt = anySignal(extSignal, requestAc.signal) ?? requestAc.signal;
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combinedExt);
 
     const init = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});

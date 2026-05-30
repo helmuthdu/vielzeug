@@ -172,3 +172,37 @@ export const getAriaState = (
   required: el.getAttribute('aria-required'),
   role: el.getAttribute('role'),
 });
+
+// ── Component setup helper ────────────────────────────────────────────────────
+
+/**
+ * Registers a component for testing by wrapping the dynamic import in a
+ * `beforeAll`. The imported module is side-effectful (calls `define()`), so a
+ * single import per test file is enough.
+ *
+ * Reduces boilerplate from:
+ * ```ts
+ * beforeAll(async () => { await import('./my-component'); });
+ * ```
+ * to:
+ * ```ts
+ * setupComponent(() => import('./my-component'));
+ * ```
+ *
+ * @example
+ * ```ts
+ * import { setupComponent } from '@vielzeug/sigil/testing';
+ *
+ * setupComponent(() => import('../input'));
+ *
+ * it('renders the input', async () => {
+ *   const fixture = mount('<bit-input></bit-input>');
+ *   // ...
+ * });
+ * ```
+ */
+export const setupComponent = (importFn: () => Promise<unknown>): void => {
+  beforeAll(async () => {
+    await importFn();
+  });
+};

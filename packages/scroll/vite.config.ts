@@ -9,10 +9,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
-      entry: {
-        dom: resolve(__dirname, 'src/dom/index.ts'),
-        index: resolve(__dirname, 'src/index.ts'),
-      },
       name: 'scroll',
     }),
     {},

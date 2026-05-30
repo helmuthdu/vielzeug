@@ -50,11 +50,11 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
     if (typeof rawValue === 'function') {
       const getter = rawValue as () => string | number | boolean | null | undefined;
 
-      disposers.push(
-        rawEffect(() => {
-          setA11yAttr(target, key, getter());
-        }),
-      );
+      const sub = rawEffect(() => {
+        setA11yAttr(target, key, getter());
+      });
+
+      disposers.push(() => sub.dispose());
 
       continue;
     }

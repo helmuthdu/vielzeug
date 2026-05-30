@@ -63,7 +63,8 @@ export type BitMenuProps = {
  * @slot - Item label/content
  * @slot icon - Optional leading icon content
  */
-export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
+export const MENU_ITEM_TAG = 'bit-menu-item' as const;
+define<BitMenuItemProps>(MENU_ITEM_TAG, {
   props: {
     checked: prop.bool(false),
     disabled: prop.bool(false),
@@ -123,7 +124,8 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
  *
  * @element bit-menu-separator
  */
-export const SEPARATOR_TAG = define('bit-menu-separator', {
+export const SEPARATOR_TAG = 'bit-menu-separator' as const;
+define(SEPARATOR_TAG, {
   setup() {
     return html``;
   },
@@ -170,7 +172,8 @@ const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
  * </bit-menu>
  * ```
  */
-export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
+export const MENU_TAG = 'bit-menu' as const;
+define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

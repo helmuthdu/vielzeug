@@ -1,4 +1,8 @@
+import { type Debounced, anySignal, debounce, isAbortError } from '@vielzeug/arsenal';
+import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
+
 import { createArrayField } from './internal/array';
+import { type ScopeContext, createScopedForm } from './internal/scope';
 import {
   FORM_ERROR,
   type ArrayField,
@@ -10,9 +14,11 @@ import {
   type FlatKeyOf,
   type Form,
   type FormOptions,
+  type FormSnapshot,
   type FormState,
   type FormValidator,
   type MaybePromise,
+  type RegisterFieldOptions,
   type SafeParseSchema,
   type ScopedValues,
   type SetOptions,
@@ -25,18 +31,6 @@ import {
 import { flattenValues, isSafeKey, unflattenValues } from './utils';
 
 /* -------------------- Private helpers -------------------- */
-
-function isAbortError(err: unknown): boolean {
-  return err instanceof Error && err.name === 'AbortError';
-}
-
-function composeSignal(...signals: Array<AbortSignal | undefined>): AbortSignal {
-  const active = signals.filter((s): s is AbortSignal => s !== undefined);
-
-  if (active.length === 1) return active[0];
-
-  return AbortSignal.any(active);
-}
 
 /**
  * Resolves the `validator` option to a FormValidator.
@@ -115,10 +109,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   /* ---- Caches ---- */
 
   let cachedValues: TValues | null = null;
-  let cachedState: FormState | null = null;
   let cachedErrors: Readonly<Record<string, string>> | null = null;
   const fieldStateCache = new Map<string, FieldState<unknown>>();
   const arrayCache = new Map<string, ArrayField>();
+
+  /* ---- Debounced validators (one per field, lazily created) ---- */
+  const debouncedValidators = new Map<string, Debounced<() => void>>();
 
   /* ---- Submission state ---- */
 
@@ -129,18 +125,24 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   let disposed = false;
 
-  /* ---- Notifications ---- */
+  /* ---- Reactive signals ---- */
 
-  type LocalListener = (state: FormState) => void;
-  type AnyFieldListener = (payload: FieldState<unknown>) => void;
+  const fieldSignals = new Map<string, Signal<FieldState<unknown>>>();
+  const rippleSubs = new Set<{ dispose(): void }>();
 
-  const listeners = new Set<LocalListener>();
-  const fieldListeners = new Map<string, Set<AnyFieldListener>>();
+  function getOrCreateFieldSignal(key: string): Signal<FieldState<unknown>> {
+    if (!fieldSignals.has(key)) {
+      fieldSignals.set(
+        key,
+        signal<FieldState<unknown>>(buildFieldState(key), {
+          equals: (a, b) =>
+            a.value === b.value && a.error === b.error && a.touched === b.touched && a.dirty === b.dirty,
+        }),
+      );
+    }
 
-  let batchDepth = 0;
-  let pendingAll = false;
-  let pendingStateOnly = false;
-  const pendingFields = new Set<string>();
+    return fieldSignals.get(key)!;
+  }
 
   /* ---- Async defaultValues ---- */
 
@@ -154,15 +156,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       })
       .catch(() => {
         loadingState = false;
-        requestStateNotify();
+        requestNotify();
       });
   }
 
   /* ======== Notification helpers ======== */
-
-  function invalidateState(): void {
-    cachedState = null;
-  }
 
   function invalidateValues(): void {
     cachedValues = null;
@@ -170,7 +168,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function invalidateErrors(): void {
     cachedErrors = null;
-    cachedState = null;
   }
 
   function computeErrors(): Readonly<Record<string, string>> {
@@ -192,8 +189,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }) as unknown as FormState;
   }
 
+  /* Initialised here; computeState() and buildFieldState() are function declarations, so they are hoisted. */
+  const formStateSignal = signal<FormState>(computeState());
+
   function getStateSnapshot(): FormState {
-    return (cachedState ??= computeState());
+    return formStateSignal.value;
   }
 
   function buildFieldState(name: string): FieldState<unknown> {
@@ -217,81 +217,62 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return snapshot;
   }
 
-  function notifyField(name: string): void {
-    const bucket = fieldListeners.get(name);
-
-    if (!bucket?.size) return;
-
-    const payload = getFieldSnapshot(name);
-
-    for (const listener of bucket) listener(payload);
-  }
-
-  function flushNotifications(): void {
-    if (!pendingAll && !pendingStateOnly && pendingFields.size === 0) return;
-
-    if (listeners.size > 0) {
-      const state = getStateSnapshot();
-
-      for (const listener of listeners) listener(state);
-    }
-
-    if (pendingAll) {
-      fieldStateCache.clear();
-
-      for (const name of fieldListeners.keys()) notifyField(name);
-    } else if (!pendingStateOnly) {
-      for (const name of pendingFields) notifyField(name);
-    }
-
-    pendingAll = false;
-    pendingStateOnly = false;
-    pendingFields.clear();
-  }
-
-  /** Notify form listeners + all field listeners (full mutation). */
+  /**
+   * F2: Notify field listeners only when the field state has actually changed.
+   * Shallow-compares all four FieldState properties to skip spurious notifications
+   * that arise when only form-level state (isValidating, isSubmitting) changed but
+   * individual field values/errors/touched/dirty did not.
+   */
+  /**
+   * Push form-level and optionally field-level updates into the ripple signal graph.
+   * `rippleBatch` deduplicates signal writes within the synchronous call stack when
+   * `batch()` is active; outside a batch it flushes watchers immediately.
+   */
   function requestNotify(field?: string): void {
-    invalidateState();
+    if (disposed) return;
+
     invalidateValues();
+    cachedErrors = null;
 
     if (field === undefined) {
-      pendingAll = true;
-      pendingFields.clear();
       fieldStateCache.clear();
+      rippleBatch(() => {
+        formStateSignal.value = computeState();
+
+        for (const [name, sig] of fieldSignals) {
+          sig.value = buildFieldState(name);
+        }
+      });
     } else {
       fieldStateCache.delete(field);
+      rippleBatch(() => {
+        formStateSignal.value = computeState();
 
-      if (!pendingAll) pendingFields.add(field);
+        const sig = fieldSignals.get(field);
+
+        if (sig) sig.value = buildFieldState(field);
+      });
     }
-
-    if (batchDepth === 0) flushNotifications();
   }
 
-  /** Notify form listeners only (isValidating / isSubmitting / isLoading changes). */
-  function requestStateNotify(): void {
-    invalidateState();
-
-    if (!pendingAll) pendingStateOnly = true;
-
-    if (batchDepth === 0) flushNotifications();
-  }
-
-  /** Notify form listeners + a specific set of field listeners (validation results). */
+  /** Notify form listeners + a specific set of field listeners (partial validation results). */
   function requestNotifyFields(fields: Iterable<string>): void {
-    if (pendingAll) return;
+    if (disposed) return;
 
-    let hasAny = false;
-
-    invalidateState();
     invalidateValues();
+    cachedErrors = null;
 
-    for (const field of fields) {
-      fieldStateCache.delete(field);
-      pendingFields.add(field);
-      hasAny = true;
-    }
+    rippleBatch(() => {
+      formStateSignal.value = computeState();
 
-    if (hasAny && batchDepth === 0) flushNotifications();
+      for (const field of fields) {
+        fieldStateCache.delete(field);
+
+        const sig = fieldSignals.get(field);
+
+        if (sig) sig.value = buildFieldState(field);
+      }
+    });
   }
 
   /* ======== Lifecycle guards ======== */
@@ -304,17 +285,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function batch(fn: () => void): void {
     ensureNotDisposed();
-    batchDepth++;
-
-    try {
-      fn();
-    } finally {
-      batchDepth--;
-
-      // Always flush even when fn() throws: state may have been partially mutated
-      // before the exception and subscribers should see the current (post-mutation) state.
-      if (batchDepth === 0) flushNotifications();
-    }
+    // Always flush even when fn() throws: state may have been partially mutated
+    // before the exception and subscribers should see the current (post-mutation) state.
+    rippleBatch(fn);
   }
 
   /* ======== Value access ======== */
@@ -336,6 +309,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* ======== Field mutation ======== */
 
+  // R7: SetOptions.dirty removed — set() always tracks dirty via reference equality.
   function set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options: SetOptions = {}): void {
     ensureNotDisposed();
 
@@ -346,9 +320,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
 
     store.set(key, value);
-
-    if (options.dirty ?? true) trackDirty(key, value);
-    else dirty.delete(key);
+    trackDirty(key, value);
 
     if (options.touched) touched.add(key);
 
@@ -426,6 +398,37 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         requestNotify(key);
       }
     }
+  }
+
+  /* ======== F1: Dynamic field registration ======== */
+
+  function registerField<K extends FlatKeyOf<TValues>>(
+    name: K,
+    options: RegisterFieldOptions<TypeAtPath<TValues, K>> = {},
+  ): Unsubscribe {
+    ensureNotDisposed();
+
+    const key = name as string;
+
+    if (!isSafeKey(key)) {
+      throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+    }
+
+    if (options.validator !== undefined) {
+      setValidator(name, options.validator as FieldValidator<unknown>);
+    }
+
+    // Only set default value if the field doesn't exist yet.
+    // Write to both store and baseline so the field starts clean (not dirty).
+    if (options.defaultValue !== undefined && !store.has(key)) {
+      store.set(key, options.defaultValue);
+      baseline.set(key, options.defaultValue);
+      requestNotify(key);
+    }
+
+    return () => {
+      if (!disposed) removeField(name);
+    };
   }
 
   /* ======== Touch ======== */
@@ -545,7 +548,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
 
     const runCtrl = new AbortController();
-    const runSignal = composeSignal(runCtrl.signal, signal, disposeController.signal);
+    const runSignal = anySignal(runCtrl.signal, signal, disposeController.signal)!;
 
     runCtrls.add(runCtrl);
 
@@ -553,13 +556,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       validatingFieldCounts.set(name, (validatingFieldCounts.get(name) ?? 0) + 1);
     }
 
-    requestStateNotify();
+    // R5: requestNotify() replaces requestStateNotify(). F2 shallow equality gating ensures
+    // field listeners only fire when their FieldState actually changed, not just because
+    // isValidating toggled on the parent FormState.
+    requestNotify();
 
     try {
       const results = await Promise.all(
         [...fieldSet].map(async (name) => {
-          const fieldSignal =
-            scope === 'partial' ? composeSignal(fieldRunCtrls.get(name)!.signal, runSignal) : runSignal;
+          const fieldSignal = scope === 'partial' ? anySignal(fieldRunCtrls.get(name)!.signal, runSignal)! : runSignal;
 
           return [name, await runFieldValidator(name, fieldSignal)] as const;
         }),
@@ -596,7 +601,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         else validatingFieldCounts.set(name, n - 1);
       }
 
-      requestStateNotify();
+      requestNotify();
 
       for (const [name, ctrl] of fieldRunCtrls) {
         if (fieldCtrls.get(name) === ctrl) fieldCtrls.delete(name);
@@ -656,20 +661,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       // otherwise state.isSubmitting stays true forever in any captured snapshot.
       isSubmitting = false;
 
-      if (!disposed) requestStateNotify();
+      if (!disposed) requestNotify();
     }
   }
 
   /* ======== Subscriptions ======== */
 
-  function subscribe(listener: LocalListener, options?: SubscribeOptions): Unsubscribe {
+  function subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
     if (disposed) return () => {};
 
-    listeners.add(listener);
+    const sub = watch(formStateSignal, listener);
 
-    if (options?.sync) listener(getStateSnapshot());
+    rippleSubs.add(sub);
 
-    return () => listeners.delete(listener);
+    if (options?.sync) listener(formStateSignal.value);
+
+    return () => {
+      sub.dispose();
+      rippleSubs.delete(sub);
+    };
   }
 
   function subscribeField<K extends FlatKeyOf<TValues>>(
@@ -680,21 +690,20 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     if (disposed) return () => {};
 
     const key = name as string;
-    const bucket = fieldListeners.get(key) ?? new Set<AnyFieldListener>();
+    const sig = getOrCreateFieldSignal(key);
+    const sub = watch(sig, listener as (state: FieldState<unknown>) => void);
 
-    fieldListeners.set(key, bucket);
-    bucket.add(listener as AnyFieldListener);
+    rippleSubs.add(sub);
 
-    if (options?.sync) listener(getFieldSnapshot(key) as FieldState<TypeAtPath<TValues, K>>);
+    if (options?.sync) listener(sig.value as FieldState<TypeAtPath<TValues, K>>);
 
     return () => {
-      bucket.delete(listener as AnyFieldListener);
-
-      if (bucket.size === 0) fieldListeners.delete(key);
+      sub.dispose();
+      rippleSubs.delete(sub);
     };
   }
 
-  /* ======== Connect (was: wire) ======== */
+  /* ======== Connect ======== */
 
   function connect<K extends FlatKeyOf<TValues>>(
     name: K,
@@ -708,19 +717,26 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     const validateOnChange = config?.validateOnChange ?? connectDefaults.validateOnChange ?? false;
     const validateOnTouch = config?.validateOnTouch ?? connectDefaults.validateOnTouch ?? false;
     const debounceMs = config?.debounce ?? connectDefaults.debounce ?? 0;
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // Use arsenal.debounce so dispose()/reset()/resetField() can cancel pending
+    // validation via .cancel() without manual timer bookkeeping.
     function scheduleValidation(): void {
-      clearTimeout(debounceTimer);
-
       if (debounceMs > 0) {
-        debounceTimer = setTimeout(() => {
-          if (disposed) return;
+        let fn = debouncedValidators.get(key);
 
-          void validateField(name).catch((err) => {
-            if (!isAbortError(err)) throw err;
-          });
-        }, debounceMs);
+        if (!fn) {
+          fn = debounce(() => {
+            if (disposed) return;
+
+            void validateField(name).catch((err) => {
+              if (!isAbortError(err)) throw err;
+            });
+          }, debounceMs);
+
+          debouncedValidators.set(key, fn);
+        }
+
+        fn();
       } else {
         void validateField(name).catch((err) => {
           if (!isAbortError(err)) throw err;
@@ -732,15 +748,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       get dirty() {
         return dirty.has(key);
       },
+      /** R6: cancel any pending debounce timer for this field binding on unmount. */
+      disconnect() {
+        debouncedValidators.get(key)?.cancel();
+      },
       get error() {
         return fieldErrors.get(key);
       },
+      // R1: silent no-op after dispose instead of throwing
       onBlur: () => {
+        if (disposed) return;
+
         if (touchOnBlur) touch(name);
 
         if (validateOnBlur) scheduleValidation();
       },
+      // R1: silent no-op after dispose instead of throwing
       onChange: (value: TypeAtPath<TValues, K>) => {
+        if (disposed) return;
+
         set(name, value);
 
         const shouldValidate = validateOnChange || (validateOnTouch && touched.has(key));
@@ -766,7 +792,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     if (cached) return cached;
 
-    const helpers = createArrayField(name, store, set);
+    const helpers = createArrayField(name, store, set as (name: string, value: unknown) => void);
 
     arrayCache.set(key, helpers);
 
@@ -779,6 +805,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     const key = name as string;
+
+    // cancel any pending debounced validation for this field
+    debouncedValidators.get(key)?.cancel();
+    debouncedValidators.delete(key);
 
     fieldCtrls.get(key)?.abort();
     fieldCtrls.delete(key);
@@ -797,6 +827,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
+    // cancel any pending debounced validation for this field
+    debouncedValidators.get(key)?.cancel();
+    debouncedValidators.delete(key);
+
     store.delete(key);
     baseline.delete(key);
     dirty.delete(key);
@@ -813,6 +847,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function reset(): void {
     ensureNotDisposed();
+
+    // cancel all pending debounced validations
+    for (const fn of debouncedValidators.values()) fn.cancel();
+    debouncedValidators.clear();
 
     for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
@@ -831,6 +869,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function replace(newValues: TValues): void {
     ensureNotDisposed();
+
+    // cancel all pending debounced validations
+    for (const fn of debouncedValidators.values()) fn.cancel();
+    debouncedValidators.clear();
 
     for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
@@ -873,297 +915,292 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     disposed = true;
     disposeController.abort();
 
+    // cancel all pending debounced validations
+    for (const fn of debouncedValidators.values()) fn.cancel();
+    debouncedValidators.clear();
+
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
     fieldCtrls.clear();
     runCtrls.clear();
     arrayCache.clear();
-    pendingAll = false;
-    pendingStateOnly = false;
-    pendingFields.clear();
-    listeners.clear();
-    fieldListeners.clear();
+
+    for (const sub of rippleSubs) sub.dispose();
+
+    rippleSubs.clear();
+    fieldSignals.clear();
   }
 
-  /* ======== Scoped sub-form ======== */
+  /* ======== F5: Snapshot / Restore ======== */
 
-  function scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>> {
-    const pfx = prefix as string;
-    const pfxDot = `${pfx}.`;
-
-    function pre(name: string): string {
-      return `${pfx}.${name}`;
-    }
-
-    function isScopedKey(key: string): boolean {
-      return key === pfx || key.startsWith(pfxDot);
-    }
-
-    function scopedValues(): ScopedValues<TValues, P> {
-      const subStore: Record<string, unknown> = {};
-
-      for (const [key, value] of store) {
-        if (key.startsWith(pfxDot)) {
-          subStore[key.slice(pfxDot.length)] = value;
-        }
-      }
-
-      return unflattenValues(subStore) as ScopedValues<TValues, P>;
-    }
-
-    function scopedTouchAll(): void {
-      ensureNotDisposed();
-
-      for (const name of store.keys()) {
-        if (isScopedKey(name)) touched.add(name);
-      }
-
-      for (const name of validators.keys()) {
-        if (isScopedKey(name)) touched.add(name);
-      }
-
-      requestNotify();
-    }
+  function snapshot(): FormSnapshot<TValues> {
+    ensureNotDisposed();
 
     return {
-      array(name) {
-        return array(pre(name as string) as FlatKeyOf<TValues>);
-      },
-      batch,
-      clearError(name) {
-        return clearError(pre(name as string) as ErrorKeyOf<TValues>);
-      },
-      connect(name, config?) {
-        return connect(pre(name as string) as FlatKeyOf<TValues>, config) as ConnectionResult<
-          TypeAtPath<ScopedValues<TValues, P>, typeof name>
-        >;
-      },
-      dispose() {
-        // Scoped forms share lifecycle with the parent form.
-        // Call parentForm.dispose() to tear down the whole form.
-      },
-      get disposed() {
-        return disposed;
-      },
-      field(name) {
-        return field(pre(name as string) as FlatKeyOf<TValues>) as FieldState<
-          TypeAtPath<ScopedValues<TValues, P>, typeof name>
-        >;
-      },
-      get(name) {
-        return get(pre(name as string) as FlatKeyOf<TValues>) as TypeAtPath<ScopedValues<TValues, P>, typeof name>;
-      },
-      get isLoading() {
-        return loadingState;
-      },
-      patch(partial) {
-        ensureNotDisposed();
+      baseline: Object.fromEntries(baseline),
+      dirty: [...dirty],
+      errors: Object.fromEntries(fieldErrors),
+      store: Object.fromEntries(store),
+      submitCount,
+      touched: [...touched],
+    };
+  }
 
-        const flat = flattenValues(partial as Record<string, unknown>);
+  function restore(snap: FormSnapshot<TValues>): void {
+    ensureNotDisposed();
 
-        batch(() => {
-          for (const [key, value] of Object.entries(flat)) {
-            const fullKey = pre(key);
+    // cancel all in-flight validation
+    for (const fn of debouncedValidators.values()) fn.cancel();
+    debouncedValidators.clear();
+    for (const ctrl of runCtrls) ctrl.abort();
+    for (const ctrl of fieldCtrls.values()) ctrl.abort();
+    fieldCtrls.clear();
 
-            baseline.set(fullKey, value);
-            store.set(fullKey, value);
-            dirty.delete(fullKey);
-            requestNotify(fullKey);
-          }
-        });
-      },
-      removeField(name) {
-        return removeField(pre(name as string) as FlatKeyOf<TValues>);
-      },
-      replace(newValues) {
-        ensureNotDisposed();
+    store.clear();
+    baseline.clear();
+    fieldErrors.clear();
+    touched.clear();
+    dirty.clear();
 
-        for (const key of [...fieldCtrls.keys()]) {
-          if (isScopedKey(key)) {
-            fieldCtrls.get(key)?.abort();
-            fieldCtrls.delete(key);
-          }
-        }
+    for (const [k, v] of Object.entries(snap.store)) store.set(k, v);
+    for (const [k, v] of Object.entries(snap.baseline)) baseline.set(k, v);
+    for (const [k, v] of Object.entries(snap.errors)) fieldErrors.set(k, v);
+    for (const t of snap.touched) touched.add(t);
+    for (const d of snap.dirty) dirty.add(d);
 
-        const flat = flattenValues(newValues as Record<string, unknown>);
+    submitCount = snap.submitCount;
 
-        for (const key of [...store.keys()]) {
-          if (isScopedKey(key)) {
-            store.delete(key);
-            baseline.delete(key);
-            dirty.delete(key);
-            touched.delete(key);
-            fieldErrors.delete(key);
-          }
-        }
+    invalidateErrors();
+    invalidateValues();
+    requestNotify();
+  }
 
-        invalidateErrors();
+  /* ======== F4: validateStream ======== */
 
-        for (const [key, value] of Object.entries(flat)) {
-          const fullKey = pre(key);
+  function validateStream(signal?: AbortSignal): AsyncIterableIterator<{ error: string | undefined; field: string }> {
+    ensureNotDisposed();
 
-          store.set(fullKey, value);
-          baseline.set(fullKey, value);
-        }
+    const fields = [...validators.keys()];
+    const ctrl = new AbortController();
+    const combined = signal
+      ? anySignal(ctrl.signal, signal, disposeController.signal)!
+      : anySignal(ctrl.signal, disposeController.signal)!;
 
-        requestNotify();
-      },
-      reset() {
-        ensureNotDisposed();
+    let done = false;
 
-        for (const key of [...store.keys()]) {
-          if (isScopedKey(key)) {
-            fieldCtrls.get(key)?.abort();
-            fieldCtrls.delete(key);
-            store.set(key, baseline.get(key));
-            dirty.delete(key);
-            touched.delete(key);
+    type Resolver = (result: IteratorResult<{ error: string | undefined; field: string }, undefined>) => void;
 
-            if (fieldErrors.delete(key)) invalidateErrors();
-          }
-        }
+    const queue: Array<{ error: string | undefined; field: string }> = [];
+    let waitingResolve: Resolver | null = null;
 
-        requestNotify();
-      },
-      resetErrors(nextErrors?) {
-        ensureNotDisposed();
+    function enqueue(item: { error: string | undefined; field: string }): void {
+      if (waitingResolve) {
+        const resolve = waitingResolve;
 
-        for (const key of [...fieldErrors.keys()]) {
-          if (isScopedKey(key)) fieldErrors.delete(key);
-        }
+        waitingResolve = null;
+        resolve({ done: false, value: item });
+      } else {
+        queue.push(item);
+      }
+    }
 
-        if (nextErrors) {
-          for (const [key, message] of Object.entries(nextErrors)) {
-            if (typeof message === 'string') fieldErrors.set(pre(key), message);
-          }
-        }
+    function finish(): void {
+      if (done) return;
 
-        invalidateErrors();
-        requestNotify();
-      },
-      resetField(name) {
-        return resetField(pre(name as string) as FlatKeyOf<TValues>);
-      },
-      scope(subPrefix) {
-        return scope(pre(subPrefix as string) as FlatKeyOf<TValues>) as Form<
-          ScopedValues<ScopedValues<TValues, P>, typeof subPrefix>
-        >;
-      },
-      set(name, value, options?) {
-        return set(
-          pre(name as string) as FlatKeyOf<TValues>,
-          value as TypeAtPath<TValues, FlatKeyOf<TValues>>,
-          options,
-        );
-      },
-      setError(name, message) {
-        return setError(pre(name as string) as ErrorKeyOf<TValues>, message);
-      },
-      setValidator(name, validator?) {
-        return setValidator(pre(name as string) as FlatKeyOf<TValues>, validator);
-      },
-      get state() {
-        return getStateSnapshot();
-      },
-      async submit(handler) {
-        ensureNotDisposed();
+      done = true;
+      ctrl.abort();
 
-        if (isSubmitting) throw new Error('submit() called while a submission is already in progress');
+      if (waitingResolve) {
+        const resolve = waitingResolve;
 
-        batch(() => {
-          submitCount++;
-          isSubmitting = true;
-          scopedTouchAll();
-        });
+        waitingResolve = null;
+        resolve({ done: true, value: undefined });
+      }
+    }
+
+    // run validators in parallel, streaming results as each settles
+    Promise.all(
+      fields.map(async (field) => {
+        if (combined.aborted) return;
 
         try {
-          const scopedFields = [...validators.keys()].filter(isScopedKey);
+          const error = await validateField(field as FlatKeyOf<TValues>, combined);
 
-          await runValidationCore(scopedFields, 'partial');
-
-          ensureNotDisposed();
-
-          const unscopedErrors: Record<string, string> = {};
-
-          for (const [key, message] of fieldErrors) {
-            if (!isScopedKey(key)) continue;
-
-            unscopedErrors[key.startsWith(pfxDot) ? key.slice(pfxDot.length) : key] = message;
-          }
-
-          if (Object.keys(unscopedErrors).length > 0) {
-            return { errors: unscopedErrors, ok: false, type: 'validation' as const };
-          }
-
-          return { ok: true as const, value: await handler(scopedValues()) };
-        } finally {
-          isSubmitting = false;
-
-          if (!disposed) requestStateNotify();
+          if (!combined.aborted) enqueue({ error, field });
+        } catch {
+          // aborted or disposed — stop streaming
         }
+      }),
+    ).finally(() => finish());
+
+    return {
+      next(): Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>> {
+        if (queue.length > 0) return Promise.resolve({ done: false, value: queue.shift()! });
+
+        if (done) return Promise.resolve({ done: true, value: undefined });
+
+        return new Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>>((resolve) => {
+          waitingResolve = resolve;
+        });
       },
-      subscribe(listener, options?) {
-        return subscribe(listener, options);
+
+      return(): Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>> {
+        finish();
+
+        return Promise.resolve({ done: true, value: undefined });
       },
-      subscribeField(name, listener, options?) {
-        return subscribeField(pre(name as string) as FlatKeyOf<TValues>, listener as AnyFieldListener, options);
+
+      [Symbol.asyncIterator]() {
+        return this;
       },
-      touch(name) {
-        return touch(pre(name as string) as FlatKeyOf<TValues>);
-      },
-      touchAll: scopedTouchAll,
-      untouch(name) {
-        return untouch(pre(name as string) as FlatKeyOf<TValues>);
-      },
-      untouchAll() {
-        ensureNotDisposed();
-
-        for (const name of [...touched]) {
-          if (isScopedKey(name)) touched.delete(name);
-        }
-
-        requestNotify();
-      },
-      async validate(signal?) {
-        ensureNotDisposed();
-
-        const scopedFields = [...validators.keys()].filter(isScopedKey);
-
-        await runValidationCore(scopedFields, 'partial', signal);
-
-        // Build the result from only the scoped portion of fieldErrors so that
-        // pre-existing errors on sibling/parent fields do not leak in and the
-        // `valid` flag accurately reflects only this scope's validity.
-        const unscopedErrors: Record<string, string> = {};
-
-        for (const [key, message] of fieldErrors) {
-          if (!isScopedKey(key)) continue;
-
-          const unscopedKey = key.startsWith(pfxDot) ? key.slice(pfxDot.length) : key;
-
-          unscopedErrors[unscopedKey] = message;
-        }
-
-        return { errors: unscopedErrors, valid: Object.keys(unscopedErrors).length === 0 };
-      },
-      validateField(name, signal?) {
-        return validateField(pre(name as string) as FlatKeyOf<TValues>, signal);
-      },
-      async validateFields(fields, signal?) {
-        await validateFields(fields.map((f) => pre(f as string)) as FlatKeyOf<TValues>[], signal);
-
-        const unscopedErrors: Record<string, string> = {};
-
-        for (const [key, message] of fieldErrors) {
-          if (!isScopedKey(key)) continue;
-
-          unscopedErrors[key.startsWith(pfxDot) ? key.slice(pfxDot.length) : key] = message;
-        }
-
-        return { errors: unscopedErrors, valid: Object.keys(unscopedErrors).length === 0 };
-      },
-      values: scopedValues,
     };
+  }
+
+  /* ======== F4: Async iterator ======== */
+
+  function createAsyncIterator(): AsyncIterableIterator<FormState> {
+    type Resolver = (result: IteratorResult<FormState, undefined>) => void;
+
+    let pending: FormState[] = [getStateSnapshot()]; // yield the current state first
+    let waitingResolve: Resolver | null = null;
+    let done = false;
+
+    const unsubscribe = subscribe((state) => {
+      if (done) return;
+
+      if (waitingResolve) {
+        const resolve = waitingResolve;
+
+        waitingResolve = null;
+        resolve({ done: false, value: state });
+      } else {
+        pending.push(state);
+      }
+    });
+
+    // Terminate any pending `for await` loop when the form is disposed.
+    disposeController.signal.addEventListener(
+      'abort',
+      () => {
+        done = true;
+        unsubscribe();
+
+        if (waitingResolve) {
+          const resolve = waitingResolve;
+
+          waitingResolve = null;
+          resolve({ done: true, value: undefined } as IteratorResult<FormState, undefined>);
+        }
+
+        pending = [];
+      },
+      { once: true },
+    );
+
+    return {
+      next(): Promise<IteratorResult<FormState, undefined>> {
+        if (pending.length > 0) {
+          return Promise.resolve({ done: false, value: pending.shift()! });
+        }
+
+        if (done) {
+          return Promise.resolve({ done: true, value: undefined });
+        }
+
+        return new Promise<IteratorResult<FormState, undefined>>((resolve) => {
+          waitingResolve = resolve;
+        });
+      },
+
+      return(): Promise<IteratorResult<FormState, undefined>> {
+        done = true;
+        unsubscribe();
+
+        if (waitingResolve) {
+          const resolve = waitingResolve;
+
+          waitingResolve = null;
+          resolve({ done: true, value: undefined });
+        }
+
+        pending = [];
+
+        return Promise.resolve({ done: true, value: undefined });
+      },
+
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+  }
+
+  /* ======== R1: Scoped sub-form ======== */
+
+  function scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>> {
+    // Build the ScopeContext, capturing this closure's mutable scalars via getter/setters.
+    // Maps and Sets are shared by reference — mutations are visible to both root and scope.
+    const ctx: ScopeContext = {
+      array: (name) => array(name as FlatKeyOf<TValues>),
+      asyncIterator: createAsyncIterator,
+      baseline,
+      batch,
+      clearError: (name) => clearError(name as ErrorKeyOf<TValues>),
+      connect: (name, config) => connect(name as FlatKeyOf<TValues>, config) as ConnectionResult<unknown>,
+      dirty,
+
+      ensureNotDisposed,
+      field: (name) => getFieldSnapshot(name) as FieldState<unknown>,
+      fieldCtrls,
+      fieldErrors,
+      getStateSnapshot,
+
+      incrementSubmitCount: () => {
+        submitCount++;
+      },
+      invalidateErrors,
+      isDisposed: () => disposed,
+      isLoading: () => loadingState,
+      isSubmitting: () => isSubmitting,
+      registerField: (name, options) =>
+        registerField(
+          name as FlatKeyOf<TValues>,
+          options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
+        ),
+
+      removeField: (name) => removeField(name as FlatKeyOf<TValues>),
+      requestNotify,
+      resetField: (name) => resetField(name as FlatKeyOf<TValues>),
+      restore,
+      runValidationCore,
+      set: (name, value, options) =>
+        set(name as FlatKeyOf<TValues>, value as TypeAtPath<TValues, FlatKeyOf<TValues>>, options),
+      setError: (name, message) => setError(name as ErrorKeyOf<TValues>, message),
+      setSubmitting: (v) => {
+        isSubmitting = v;
+      },
+      setValidator: (name, v) => setValidator(name as FlatKeyOf<TValues>, v),
+      snapshot,
+      store,
+      subscribe,
+      subscribeField: (name, listener, options) =>
+        subscribeField(
+          name as FlatKeyOf<TValues>,
+          listener as (state: FieldState<TypeAtPath<TValues, FlatKeyOf<TValues>>>) => void,
+          options,
+        ),
+
+      touch: (name) => touch(name as FlatKeyOf<TValues>),
+
+      touched,
+      untouch: (name) => untouch(name as FlatKeyOf<TValues>),
+
+      validateField: (name, signal) => validateField(name as FlatKeyOf<TValues>, signal),
+      validateFields: (names, signal) => validateFields(names as FlatKeyOf<TValues>[], signal),
+      validateStream,
+      validators,
+    };
+
+    return createScopedForm<TValues, P>(ctx, prefix as unknown as P) as Form<ScopedValues<TValues, P>>;
   }
 
   /* ======== Public form object ======== */
@@ -1183,21 +1220,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       return loadingState;
     },
     patch: patch as Form<TValues>['patch'],
+    registerField,
     removeField,
     replace,
     reset,
     resetErrors,
     resetField,
+    restore,
     scope,
     set,
     setError,
     setValidator,
+    snapshot,
     get state() {
       return getStateSnapshot();
     },
     submit,
     subscribe,
     subscribeField,
+    [Symbol.asyncIterator]: createAsyncIterator,
     touch,
     touchAll,
     untouch,
@@ -1205,6 +1246,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     validate,
     validateField,
     validateFields,
+    validateStream,
     values,
   };
 }

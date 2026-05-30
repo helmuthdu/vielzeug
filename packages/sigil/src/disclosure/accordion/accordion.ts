@@ -64,7 +64,8 @@ export type BitAccordionProps = {
  * ```
  */
 
-export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-accordion', {
+export const ACCORDION_TAG = 'bit-accordion' as const;
+define<BitAccordionProps, BitAccordionEvents>(ACCORDION_TAG, {
   props: {
     selectionMode: prop.string<'single' | 'multiple'>(),
     size: prop.string<ComponentSize>(),

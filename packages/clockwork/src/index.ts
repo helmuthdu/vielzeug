@@ -1,4 +1,5 @@
-export { defineMachine } from './definition.js';
+export { createMachine } from './builder.js';
+export { defineMachine, getAncestorPaths, getNodeAtPath, resolveLeaf } from './definition.js';
 export { MachineError } from './errors.js';
 export { assign } from './helpers.js';
 export { interpret, resolveTransition } from './interpret.js';
@@ -7,27 +8,23 @@ export type {
   ActionArgs,
   ActionFn,
   ContextValidator,
-  DebugHooks,
-  EntryFn,
+  DebugEvent,
   EventByType,
   EventType,
-  GuardEvaluationInfo,
   GuardFn,
   InterpretOptions,
-  InvokeDebugInfo,
   InvokeDispatchArgs,
   InvokeDef,
   InvokeSourceArgs,
   LifecycleEvent,
+  LifecycleFn,
   MachineConfig,
-  MachineDefinition,
   MachineEvent,
   MachineInstance,
   MachineSnapshot,
+  MiddlewareFn,
   PersistenceAdapter,
   StateNode,
   TransitionDef,
-  TransitionInput,
-  TransitionSkippedInfo,
   TransitionTraceEntry,
 } from './types.js';

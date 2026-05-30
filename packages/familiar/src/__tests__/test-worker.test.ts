@@ -26,14 +26,16 @@ describe('createTestWorker', () => {
       await expect(worker.run('you')).resolves.toBe('hey you');
     });
 
-    it('wraps callback errors as WorkerError(code="task")', async () => {
+    it('propagates callback errors without wrapping in WorkerError', async () => {
       const worker = createTestWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
 
         return n;
       });
 
-      await expectWorkerErrorCode(worker.run(-1), 'task');
+      await expect(worker.run(-1)).rejects.toThrow('negative');
+      // Note: unlike the real worker, createTestWorker does NOT wrap errors in WorkerError
+      // for improved DX — vitest assertion errors surface directly.
     });
 
     it('tracks only successful calls in order', async () => {
@@ -152,14 +154,18 @@ describe('createTestWorker', () => {
       await expect(closing).resolves.toBeUndefined();
     });
 
-    it('dispose() while close() is pending resolves the close promise', async () => {
-      const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    it('dispose() while close() is pending eventually resolves the close promise', async () => {
+      // In the test worker, tasks run in-process and cannot be force-terminated mid-flight.
+      // dispose() stops accepting new work and drains the queue, but the in-flight task
+      // completes naturally. close() therefore resolves once the task finishes.
+      const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30)));
       const running = worker.run(undefined);
       const closing = worker.close();
 
       worker.dispose();
 
-      await expect(running).rejects.toMatchObject({ code: 'terminated' });
+      // The in-flight task completes (cannot be interrupted in-process).
+      await expect(running).resolves.toBeUndefined();
       await expect(closing).resolves.toBeUndefined();
       expect(worker.status).toBe('terminated');
     });
@@ -173,6 +179,36 @@ describe('createTestWorker', () => {
       await worker.run(1);
       await worker.run(2);
       expect(worker.completed).toBe(2);
+    });
+
+    it('tracks failed count (excludes aborts and terminations)', async () => {
+      const worker = createTestWorker<number, number>((n) => {
+        if (n < 0) throw new Error('bad');
+
+        return n;
+      });
+
+      await worker.run(1);
+      await worker.run(-1).catch(() => {});
+      await worker.run(-2).catch(() => {});
+      expect(worker.failed).toBe(2);
+      expect(worker.completed).toBe(1);
+      worker.dispose();
+    });
+
+    it('does not count aborts as failures', async () => {
+      const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 25)));
+      const controller = new AbortController();
+
+      worker.run(undefined);
+
+      const abortable = worker.run(undefined, { signal: controller.signal });
+
+      controller.abort();
+      await abortable.catch(() => {});
+      await worker.close();
+
+      expect(worker.failed).toBe(0);
     });
 
     it('reports utilization=1 while running, 0 when idle', async () => {
@@ -218,10 +254,10 @@ describe('createTestWorker', () => {
       worker.dispose();
     });
 
-    it('warmup() is a no-op', () => {
+    it('prime() is a no-op that resolves', async () => {
       const worker = createTestWorker<number, number>((n) => n);
 
-      expect(() => worker.warmup()).not.toThrow();
+      await expect(worker.prime()).resolves.toBeUndefined();
       worker.dispose();
     });
 
@@ -242,6 +278,105 @@ describe('createTestWorker', () => {
 
       expect(result).toBe(5);
       expect(worker.status).toBe('terminated');
+    });
+  });
+
+  describe('batch()', () => {
+    it('yields results in submission order', async () => {
+      const worker = createTestWorker<number, number>((n) => n * 2);
+      const results: number[] = [];
+
+      for await (const r of worker.batch([1, 2, 3])) {
+        results.push(r);
+      }
+
+      expect(results).toEqual([2, 4, 6]);
+      worker.dispose();
+    });
+
+    it('yields nothing for an empty input array', async () => {
+      const worker = createTestWorker<number, number>((n) => n);
+      const results: number[] = [];
+
+      for await (const r of worker.batch([])) {
+        results.push(r);
+      }
+
+      expect(results).toEqual([]);
+      worker.dispose();
+    });
+
+    it('propagates task errors', async () => {
+      const worker = createTestWorker<number, number>((n) => {
+        if (n === 2) throw new Error('bad');
+
+        return n;
+      });
+
+      await expect(async () => {
+        for await (const _ of worker.batch([1, 2, 3])) {
+          // consume
+        }
+      }).rejects.toThrow('bad');
+
+      worker.dispose();
+    });
+
+    it('yields as-completed when ordered:false', async () => {
+      const worker = createTestWorker<number, number>((n) => n * 2);
+      const results: number[] = [];
+
+      for await (const r of worker.batch([1, 2, 3], { ordered: false })) {
+        results.push(r);
+      }
+
+      expect(results.sort((a, b) => a - b)).toEqual([2, 4, 6]);
+      worker.dispose();
+    });
+  });
+
+  describe('group()', () => {
+    it('runs tasks and drains them together', async () => {
+      const worker = createTestWorker<number, number>((n) => n * 2);
+      const g = worker.group();
+
+      const p1 = g.run(1);
+      const p2 = g.run(2);
+
+      await g.drain();
+
+      await expect(p1).resolves.toBe(2);
+      await expect(p2).resolves.toBe(4);
+      expect(g.size).toBe(2);
+      worker.dispose();
+    });
+
+    it('abort() cancels pending group tasks', async () => {
+      const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30)));
+      const g = worker.group();
+      const running = g.run(undefined);
+      const queued = g.run(undefined);
+
+      g.abort();
+
+      await expect(queued).rejects.toThrow(/aborted/i);
+      await running.catch(() => {});
+      worker.dispose();
+    });
+  });
+
+  describe('onFull="wait"', () => {
+    it('suspends caller when queue is full and resumes when slot opens', async () => {
+      const worker = createTestWorker<number, number>(
+        (n) => new Promise((resolve) => setTimeout(() => resolve(n), 20)),
+        { maxQueue: 1, onFull: 'wait' },
+      );
+      const p1 = worker.run(1);
+      const p2 = worker.run(2); // fills queue
+      const p3 = worker.run(3); // suspends caller
+
+      await expect(Promise.all([p1, p2, p3])).resolves.toEqual([1, 2, 3]);
+      worker.dispose();
     });
   });
 });

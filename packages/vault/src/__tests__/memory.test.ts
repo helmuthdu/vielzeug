@@ -70,7 +70,7 @@ describe('Memory adapter', () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
-    expect(await db.update('users', 99, { city: 'Berlin' })).toBeUndefined();
+    await expect(db.update('users', 99, { city: 'Berlin' })).rejects.toThrow('not found');
   });
 
   test('upsert inserts when record does not exist', async () => {
@@ -622,8 +622,8 @@ describe('Memory adapter', () => {
       multiDb = createMemory({ name: 'multi', schema: multiSchema });
     });
 
-    afterEach(() => {
-      multiDb.dispose();
+    afterEach(async () => {
+      await multiDb.dispose();
     });
 
     test('fires combined snapshot after all tables deliver initial state', async () => {
@@ -631,7 +631,7 @@ describe('Memory adapter', () => {
       await multiDb.put('posts', { authorId: 1, id: 1, title: 'Hello' });
 
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: true });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
@@ -643,7 +643,7 @@ describe('Memory adapter', () => {
 
     test('coalesces batch writes across multiple tables into one callback', async () => {
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       // Wait for the initial prefetch to complete before triggering writes.
       await new Promise<void>((r) => setTimeout(r, 0));
@@ -656,9 +656,9 @@ describe('Memory adapter', () => {
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      expect(snapshots).toHaveLength(1);
-      expect(snapshots[0].users).toHaveLength(1);
-      expect(snapshots[0].posts).toHaveLength(1);
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1].users).toHaveLength(1);
+      expect(snapshots[1].posts).toHaveLength(1);
     });
 
     test('throws VaultScopeError when tables array is empty', () => {
@@ -667,7 +667,7 @@ describe('Memory adapter', () => {
 
     test('stop unsubscribes all underlying observers', async () => {
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       stop();
 
@@ -681,7 +681,7 @@ describe('Memory adapter', () => {
       // Regression: before the prefetch fix, writing only to users would never trigger
       // the listener because posts had never delivered a snapshot.
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       // Wait for initial prefetch of both tables to complete.
       await new Promise<void>((r) => setTimeout(r, 0));
@@ -691,15 +691,15 @@ describe('Memory adapter', () => {
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      expect(snapshots).toHaveLength(1);
-      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
-      expect(snapshots[0].posts).toEqual([]);
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots[1].posts).toEqual([]);
     });
 
     test('stop() before prefetch resolves does not leak observers', async () => {
       // Call stop() synchronously — the prefetch promise has not yet resolved.
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       // stop() before any await — prefetch .then() has not fired yet
       stop();
@@ -718,7 +718,7 @@ describe('Memory adapter', () => {
       // Normal operation: both tables prefetch successfully with empty arrays and
       // mutations subsequently trigger the listener.
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       await new Promise<void>((r) => setTimeout(r, 0));
 
@@ -726,9 +726,9 @@ describe('Memory adapter', () => {
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      expect(snapshots).toHaveLength(1);
-      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
-      expect(snapshots[0].posts).toEqual([]);
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots[1].posts).toEqual([]);
     });
 
     test('subscription stays live when a prefetch getAll() throws (empty-array fallback)', async () => {
@@ -739,7 +739,7 @@ describe('Memory adapter', () => {
       vi.spyOn(multiDb, 'getAll').mockRejectedValueOnce(new Error('simulated prefetch failure'));
 
       const snapshots: { posts: Post[]; users: User[] }[] = [];
-      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s));
 
       // Wait for both prefetch promises (one of which throws) to settle.
       await new Promise<void>((r) => setTimeout(r, 0));
@@ -749,8 +749,8 @@ describe('Memory adapter', () => {
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      expect(snapshots).toHaveLength(1);
-      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1].users).toEqual([{ id: 1, name: 'Alice' }]);
     });
 
     test('stop() called during prefetch .then() callback does not leak registered observers', async () => {
@@ -759,15 +759,11 @@ describe('Memory adapter', () => {
       let calls = 0;
       const stopRef = { fn: (): void => {} };
 
-      const stop = multiDb.observeMany(
-        ['users', 'posts'],
-        (_s) => {
-          calls += 1;
-          // Stop on first call — simulates stop() called during a flush triggered by the .then()
-          stopRef.fn();
-        },
-        { immediate: true },
-      );
+      const stop = multiDb.observeMany(['users', 'posts'], (_s) => {
+        calls += 1;
+        // Stop on first call — simulates stop() called during a flush triggered by the .then()
+        stopRef.fn();
+      });
 
       stopRef.fn = stop;
 
@@ -784,10 +780,9 @@ describe('Memory adapter', () => {
     test('deduplicates tables — fires listener exactly once per microtask even with duplicate entries', async () => {
       const snapshots: { users: User[] }[] = [];
       // Pass 'users' twice — should register only one observer and fire only once per change.
-      const stop = (multiDb as Adapter<{ users: (typeof multiSchema)['users'] }>).observeMany(
+      const stop = (multiDb as unknown as Adapter<{ users: (typeof multiSchema)['users'] }>).observeMany(
         ['users', 'users'] as const,
         (s) => snapshots.push(s as { users: User[] }),
-        { immediate: false },
       );
 
       await new Promise<void>((r) => setTimeout(r, 0));
@@ -796,7 +791,7 @@ describe('Memory adapter', () => {
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      expect(snapshots).toHaveLength(1);
+      expect(snapshots).toHaveLength(2);
     });
   });
 });

@@ -1,7 +1,48 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createDropZone } from '../drop-zone';
+import { createDropZone, matchesAccept } from '../drop-zone';
 import { makeDragEvent } from './helpers';
+
+// ─── matchesAccept ────────────────────────────────────────────────────────────
+
+describe('matchesAccept', () => {
+  it('returns true for empty accept list', () => {
+    const file = new File([''], 'a.txt', { type: 'text/plain' });
+
+    expect(matchesAccept(file, [])).toBe(true);
+  });
+
+  it('matches exact MIME type', () => {
+    const file = new File([''], 'a.png', { type: 'image/png' });
+
+    expect(matchesAccept(file, ['image/png'])).toBe(true);
+    expect(matchesAccept(file, ['image/jpeg'])).toBe(false);
+  });
+
+  it('matches MIME wildcard', () => {
+    const png = new File([''], 'a.png', { type: 'image/png' });
+    const jpg = new File([''], 'b.jpg', { type: 'image/jpeg' });
+    const txt = new File([''], 'c.txt', { type: 'text/plain' });
+
+    expect(matchesAccept(png, ['image/*'])).toBe(true);
+    expect(matchesAccept(jpg, ['image/*'])).toBe(true);
+    expect(matchesAccept(txt, ['image/*'])).toBe(false);
+  });
+
+  it('matches file extension case-insensitively', () => {
+    const file = new File([''], 'report.PDF', { type: 'application/pdf' });
+
+    expect(matchesAccept(file, ['.pdf'])).toBe(true);
+    expect(matchesAccept(file, ['.PDF'])).toBe(true);
+    expect(matchesAccept(file, ['.docx'])).toBe(false);
+  });
+
+  it('matches against first matching pattern in list', () => {
+    const file = new File([''], 'a.png', { type: 'image/png' });
+
+    expect(matchesAccept(file, ['image/jpeg', 'image/png', '.png'])).toBe(true);
+  });
+});
 
 describe('createDropZone', () => {
   describe('basic drop', () => {
@@ -308,6 +349,9 @@ describe('createDropZone', () => {
       const element = document.createElement('div');
 
       const zone = createDropZone({ dropEffect: 'move', element });
+
+      // dragenter must precede dragover to initialise dragAccepted
+      element.dispatchEvent(makeDragEvent('dragenter'));
 
       const dt = { dropEffect: 'none' as string };
       const event = makeDragEvent('dragover');

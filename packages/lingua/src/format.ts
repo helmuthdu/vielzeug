@@ -25,6 +25,8 @@
  * ```
  */
 
+import { getOrCreate } from '@vielzeug/arsenal';
+
 export type DurationValue = Partial<
   Record<
     | 'days'
@@ -63,17 +65,7 @@ export type Formatter = {
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   duration(value: DurationValue, options?: DurationFormatOptions): string;
   list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
-  /**
-   * Formats a number with the current locale.
-   *
-   * **Performance tip:** pass a stable (referentially equal) `options` object across calls so the
-   * underlying `Intl.NumberFormat` instance is retrieved from cache in O(1) without re-serializing
-   * the options on every call.
-   *
-   * @example
-   * const opts = { style: 'percent', maximumFractionDigits: 1 } as const;
-   * effect(() => label.textContent = fmt.number(ratio.value, opts));
-   */
+  /** Formats a number with the current locale. */
   number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
 };
@@ -111,16 +103,6 @@ type DurationFormatterCtor = new (
   options?: DurationFormatOptions,
 ) => { format(value: DurationValue): string };
 
-function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
-  if (!cache.has(key)) cache.set(key, build());
-
-  return cache.get(key) as F;
-}
-
-function pad2(value: number): string {
-  return value < 10 ? `0${value}` : String(value);
-}
-
 function durationLabeled(value: DurationValue): string {
   return DURATION_UNITS.map((unit) => {
     const amount = value[unit];
@@ -129,37 +111,6 @@ function durationLabeled(value: DurationValue): string {
   })
     .filter((part): part is string => part !== undefined)
     .join(' ');
-}
-
-function durationFallback(value: DurationValue, options?: DurationFormatOptions): string {
-  if (options?.style === 'digital') {
-    const years = Math.trunc(value.years ?? 0);
-    const months = Math.trunc(value.months ?? 0);
-
-    // Calendar units have locale/calendar-dependent lengths, so keep labeled output.
-    if (years !== 0 || months !== 0) return durationLabeled(value);
-
-    const weeks = Math.trunc(value.weeks ?? 0);
-    const days = Math.trunc(value.days ?? 0);
-    const hours = Math.trunc(value.hours ?? 0) + days * 24 + weeks * 24 * 7;
-    const minutes = Math.trunc(value.minutes ?? 0);
-    const seconds = Math.trunc(value.seconds ?? 0);
-
-    const subsecondNanos =
-      Math.trunc(value.milliseconds ?? 0) * 1_000_000 +
-      Math.trunc(value.microseconds ?? 0) * 1_000 +
-      Math.trunc(value.nanoseconds ?? 0);
-
-    if (subsecondNanos <= 0) {
-      return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
-    }
-
-    const fraction = String(subsecondNanos).padStart(9, '0').replace(/0+$/, '');
-
-    return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${fraction}`;
-  }
-
-  return durationLabeled(value);
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -174,16 +125,11 @@ export function createFormatter(source: string | (() => string)): Formatter {
   const relativeCache = new Map<string, Intl.RelativeTimeFormat>();
   const listCache = new Map<string, Intl.ListFormat>();
   const durationCache = new Map<string, { format(value: DurationValue): string }>();
-  const optionsKeyCache = new WeakMap<object, string>();
 
   const getLocale = typeof source === 'string' ? () => source : source;
 
   function cachedKey(locale: string, options?: object): string {
     if (!options) return locale;
-
-    const existing = optionsKeyCache.get(options);
-
-    if (existing?.startsWith(`${locale}:`)) return existing;
 
     const sorted: Record<string, unknown> = {};
 
@@ -192,14 +138,9 @@ export function createFormatter(source: string | (() => string)): Formatter {
     }
 
     try {
-      const result = `${locale}:${JSON.stringify(sorted)}`;
-
-      optionsKeyCache.set(options, result);
-
-      return result;
+      return `${locale}:${JSON.stringify(sorted)}`;
     } catch {
       // Circular references or BigInt values — fall back to locale key only.
-      // The Intl formatter is created without caching, preventing DoS via malformed options.
       return locale;
     }
   }
@@ -232,7 +173,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const locale = getLocale();
       const IntlExt = Intl as typeof Intl & { DurationFormat?: DurationFormatterCtor };
 
-      if (!IntlExt.DurationFormat) return durationFallback(value, options);
+      if (!IntlExt.DurationFormat) return durationLabeled(value);
 
       return getOrCreate(
         durationCache,
@@ -244,12 +185,16 @@ export function createFormatter(source: string | (() => string)): Formatter {
     list(value, options) {
       const locale = getLocale();
       const items = value.map(String);
+      // list() has exactly two string options with small finite value domains.
+      // We normalize both to their resolved defaults and build the key directly
+      // rather than using cachedKey(). This also prevents cache misses when
+      // callers pass { style: 'long', type: 'and' } vs {} (same ListFormat).
       const style = options?.style ?? 'long';
       const type = options?.type === 'or' ? 'disjunction' : 'conjunction';
 
       return getOrCreate(
         listCache,
-        `${locale}:${type}:${style}`,
+        cachedKey(locale, { style, type }),
         () => new Intl.ListFormat(locale, { style, type }),
       ).format(items);
     },

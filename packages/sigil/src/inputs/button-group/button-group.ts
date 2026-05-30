@@ -59,7 +59,8 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('B
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', {
+export const BUTTON_GROUP_TAG = 'bit-button-group' as const;
+define<BitButtonGroupProps>(BUTTON_GROUP_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

@@ -1,4 +1,4 @@
 export * from './types';
 export * from './router';
 export * from './history';
-export * from './middleware';
+export { redirectTo } from './context';

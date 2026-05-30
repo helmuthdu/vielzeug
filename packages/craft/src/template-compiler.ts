@@ -1,53 +1,61 @@
-import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
-import { createAttrBinding } from './template-bindings';
+import { isLiveSignal } from './directives/live';
+import { applyBinding } from './template-bindings';
 import {
-  htmlResult,
+  createHtmlResult,
   isDirectiveResult,
   isHtmlResult,
+  isSpreadObject,
+  type AttrBinding,
   type Binding,
+  type HtmlBindingValue,
   type HTMLResult,
   type Ref,
   type RefCallback,
 } from './types/bindings';
-import { escapeHtml } from './utils/dom';
 import { applyModifiers } from './utils/event-modifiers';
-import { CF_ID_ATTR, createMarkerIdFactory, rekeyHtmlResult } from './utils/id';
 
-// Templates use the HTML as-is; no aggressive whitespace normalization
+// ─── Slot detection ───────────────────────────────────────────────────────────
 
-// Slot patterns applied in priority order; first match wins
 const EVENT_RE = /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/;
 const REF_RE = /\s+ref\s*=\s*["']?$/;
 const BOOL_ATTR_RE = /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 const ATTR_RE = /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
-type CompiledTemplateSlot = {
-  kind: 'event' | 'ref' | 'boolAttr' | 'attr' | 'node';
-  mode?: 'attr' | 'bool';
+const isInsideStartTag = (str: string): boolean => {
+  const lastOpen = str.lastIndexOf('<');
+  const lastClose = str.lastIndexOf('>');
+
+  if (lastOpen <= lastClose) return false;
+
+  // Must not be a closing tag (</...)
+  return str[lastOpen + 1] !== '/';
+};
+
+type DetectedSlotKind = 'event' | 'ref' | 'boolAttr' | 'attr' | 'spread' | 'node' | 'tagname' | 'closeTag';
+
+type DetectedSlot = {
+  kind: DetectedSlotKind;
   modifiers?: string[];
-  // For 'event' and attribute slots
   name?: string;
   prefix: string;
   raw: string;
 };
 
-type CompiledTemplatePlan = {
-  slots: CompiledTemplateSlot[];
-  tail: string;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Template caching and compilation
-// ─────────────────────────────────────────────────────────────────────────────
-
-// We cache only the template parsing plan (CompiledTemplatePlan) because it's stable
-// and parsing is relatively expensive. Signal wrapping and computed derivation is
-// cheap enough that caching provides negligible benefit and adds complexity.
-const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan>();
-
-const detectSlot = (str: string): CompiledTemplateSlot => {
+const detectSlot = (str: string): DetectedSlot => {
   let m: RegExpExecArray | null;
+  const trimmed = str.trimEnd();
+
+  // Dynamic closing tag: interpolation is the closing tag name, e.g. strings[i] = "</"
+  if (trimmed.endsWith('</')) {
+    return { kind: 'closeTag', prefix: str, raw: str };
+  }
+
+  // Dynamic opening tag name: interpolation is the tag name itself, e.g. strings[i] = "<"
+  if (trimmed.endsWith('<')) {
+    return { kind: 'tagname', prefix: str, raw: str };
+  }
 
   if ((m = EVENT_RE.exec(str))) {
     const prefix = str.slice(0, -m[0].length);
@@ -61,247 +69,413 @@ const detectSlot = (str: string): CompiledTemplateSlot => {
   }
 
   if ((m = BOOL_ATTR_RE.exec(str))) {
-    return { kind: 'boolAttr', mode: 'bool', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+    return { kind: 'boolAttr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
   }
 
   if ((m = ATTR_RE.exec(str))) {
-    return { kind: 'attr', mode: 'attr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+    return { kind: 'attr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+  }
+
+  if (isInsideStartTag(str)) {
+    return { kind: 'spread', prefix: str.trimEnd(), raw: str };
   }
 
   return { kind: 'node', prefix: str, raw: str };
 };
 
-const resolveDirectiveValue = (value: unknown): string => {
-  if (typeof value === 'string') return escapeHtml(value);
+// ─── Static template cache ───────────────────────────────────────────────────
 
-  if (value == null) return '';
+type NodePath = readonly number[];
 
-  if (isHtmlResult(value)) return value.html;
-
-  return escapeHtml(String(value));
+type SlotMeta = {
+  commentId?: number;
+  elementId?: number;
+  kind: DetectedSlotKind;
+  mode?: 'attr' | 'bool';
+  modifiers?: string[];
+  name?: string;
 };
 
+type CompiledStaticTemplate = {
+  commentPaths: ReadonlyMap<number, NodePath>;
+  element: HTMLTemplateElement;
+  elementPaths: ReadonlyMap<number, NodePath>;
+  slots: SlotMeta[];
+};
+
+const templateCache = new WeakMap<TemplateStringsArray, CompiledStaticTemplate>();
+
 /**
- * Collect html and bindings from a list of items (array or single value).
+ * Pre-process template strings to strip surrounding attribute quotes and the
+ * closing `>` that follows a dynamic tag-name slot. This lets the main loop
+ * operate on clean strings with no per-iteration state flags (R5).
  */
-const collectHtmlItems = (items: unknown[], getNextId: () => string): { bindings: Binding[]; html: string } => {
-  let html = '';
-  const bindings: Binding[] = [];
+const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
+  const out = Array.from(strings);
 
-  for (const item of items) {
-    if (isHtmlResult(item)) {
-      const entry = rekeyHtmlResult(item, getNextId);
+  for (let i = 0; i < out.length - 1; i++) {
+    const s = out[i];
+    const lastChar = s[s.length - 1];
 
-      html += entry.html;
-      bindings.push(...entry.bindings);
-    } else {
-      html += resolveDirectiveValue(item);
+    // Strip wrapping attribute quotes: attr="${value}" → attr=${value}
+    if (lastChar === '"' || lastChar === "'") {
+      out[i] = s.slice(0, -1);
+
+      const next = out[i + 1];
+
+      if (next.startsWith(lastChar)) out[i + 1] = next.slice(1);
+    }
+
+    // Strip leading `>` from the string that follows a dynamic closing tag:
+    // </${tagName}> — the `>` is the first character of strings[i+1]
+    const cur = out[i];
+
+    if (cur.trimEnd().endsWith('</')) {
+      const next = out[i + 1];
+
+      if (next.startsWith('>')) out[i + 1] = next.slice(1);
     }
   }
 
-  return { bindings, html };
+  return out;
 };
 
-/**
- * Create a reactive signal that renders HTML items, for use with HtmlBinding.
- */
-const createReactiveHtmlSignal = (value: unknown): ReadonlySignal<{ bindings: Binding[]; html: string }> | null => {
-  if (typeof value === 'function') {
-    return computed(() => {
-      const res = (value as () => unknown)();
-      const items = Array.isArray(res) ? res : [res];
+const walkNode = (
+  node: Node,
+  path: number[],
+  elementPaths: Map<number, NodePath>,
+  commentPaths: Map<number, NodePath>,
+): void => {
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const marker = el.getAttribute('u');
 
-      return collectHtmlItems(items, createMarkerIdFactory());
-    });
+    if (marker !== null) {
+      elementPaths.set(Number(marker), [...path]);
+      el.removeAttribute('u');
+    }
+  } else if (node.nodeType === Node.COMMENT_NODE) {
+    const content = (node as Comment).nodeValue;
+
+    if (content !== null && /^\d+$/.test(content)) {
+      commentPaths.set(Number(content), [...path]);
+    }
   }
 
-  if (isSignal(value) && isHtmlResult((value as ReadonlySignal<unknown>).value)) {
-    const htmlSignal = value as ReadonlySignal<unknown>;
+  const children = node.childNodes;
 
-    return computed(() => {
-      const next = htmlSignal.value;
+  for (let i = 0; i < children.length; i++) walkNode(children[i], [...path, i], elementPaths, commentPaths);
+};
 
-      if (!isHtmlResult(next)) {
-        return { bindings: [], html: resolveDirectiveValue(next) };
+const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTemplate => {
+  const normalized = normalizeTemplateStrings(strings);
+  let html = '';
+  let activeElementId: number | undefined;
+  let elementCounter = 0;
+  let commentCounter = 0;
+  const slots: SlotMeta[] = [];
+  const tagNameStack: number[] = [];
+
+  for (let i = 0; i < normalized.length - 1; i++) {
+    const raw = normalized[i];
+    const slot = detectSlot(raw);
+
+    if (slot.kind === 'tagname') {
+      // Dynamic opening tag name: emit a placeholder custom element
+      const id = elementCounter++;
+
+      activeElementId = id;
+      tagNameStack.push(id);
+
+      // Remove trailing '<' from prefix and open placeholder element
+      const prefixWithoutAngle = raw.replace(/<\s*$/, '');
+
+      html += prefixWithoutAngle + `<craft-dyn-${id} u="${id}"`;
+      slots.push({ elementId: id, kind: 'tagname' });
+    } else if (slot.kind === 'closeTag') {
+      // Dynamic closing tag: close the matching placeholder element
+      const id = tagNameStack.pop() ?? 0;
+      const prefixWithoutClose = raw.replace(/<\/\s*$/, '');
+
+      html += prefixWithoutClose + `</craft-dyn-${id}>`;
+      slots.push({ kind: 'closeTag' });
+      activeElementId = undefined;
+    } else if (slot.kind === 'node') {
+      html += slot.prefix + `<!--${commentCounter}-->`;
+      slots.push({ commentId: commentCounter, kind: 'node' });
+      commentCounter++;
+      activeElementId = undefined;
+    } else {
+      const needsNewMarker =
+        activeElementId === undefined || slot.prefix.lastIndexOf('<') > slot.prefix.lastIndexOf('>');
+
+      if (needsNewMarker) {
+        activeElementId = elementCounter++;
+        html += `${slot.prefix} u="${activeElementId}"`;
+      } else {
+        html += slot.prefix;
       }
 
-      const entry = rekeyHtmlResult(next, createMarkerIdFactory());
+      const mode: 'attr' | 'bool' | undefined =
+        slot.kind === 'boolAttr' ? 'bool' : slot.kind === 'attr' ? 'attr' : undefined;
 
-      return { bindings: entry.bindings, html: entry.html };
-    });
+      slots.push({ elementId: activeElementId, kind: slot.kind, mode, modifiers: slot.modifiers, name: slot.name });
+    }
   }
 
-  return null;
+  html += normalized[normalized.length - 1] ?? '';
+
+  const tpl = document.createElement('template');
+
+  tpl.innerHTML = html;
+
+  const elementPaths = new Map<number, NodePath>();
+  const commentPaths = new Map<number, NodePath>();
+  const topChildren = tpl.content.childNodes;
+
+  for (let i = 0; i < topChildren.length; i++) walkNode(topChildren[i], [i], elementPaths, commentPaths);
+
+  return { commentPaths, element: tpl, elementPaths, slots };
 };
 
-type NodeSlotResult =
-  | { bindings: Binding[]; html: string; kind: 'static' }
-  | { binding: Binding; html: string; kind: 'reactive' };
+const getStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTemplate => {
+  let tpl = templateCache.get(strings);
+
+  if (!tpl) {
+    tpl = buildStaticTemplate(strings);
+    templateCache.set(strings, tpl);
+  }
+
+  return tpl;
+};
+
+// ─── Path navigation ─────────────────────────────────────────────────────────
+
+const followPath = (root: Node, path: NodePath): Node => {
+  let node: Node = root;
+
+  for (const i of path) node = node.childNodes[i];
+
+  return node;
+};
+
+// ─── Attr binding helpers ─────────────────────────────────────────────────────
+
+const createAttrBindingFromValue = (
+  el: HTMLElement,
+  mode: 'attr' | 'bool',
+  name: string,
+  value: unknown,
+): AttrBinding => {
+  if (isLiveSignal(value)) {
+    return { el, live: true, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+  }
+
+  if (typeof value === 'function') {
+    return { el, mode, name, signal: computed(value as () => unknown), type: 'attr' };
+  }
+
+  if (isSignal(value)) {
+    return { el, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+  }
+
+  return { el, mode, name, type: 'attr', value };
+};
+
+const resolveStaticText = (value: unknown): string => {
+  if (value == null) return '';
+
+  return String(value);
+};
+
+// ─── Template instantiation ──────────────────────────────────────────────────
 
 /**
- * Resolve a node-slot value into either static html+bindings or a reactive binding.
+ * Instantiate a compiled template: clone the cached DOM template, navigate
+ * to each binding target using pre-recorded paths, and build bindings with
+ * direct node references. Returns an HTMLResult whose fragment is ready to insert.
  */
-const resolveNodeSlot = (value: unknown, getNextId: () => string): NodeSlotResult => {
-  // Reactive HTML (functions returning templates, signals of templates)
-  const reactiveSignal = createReactiveHtmlSignal(value);
-
-  if (reactiveSignal) {
-    const id = getNextId();
-
-    return { binding: { signal: reactiveSignal, type: 'html', uid: id }, html: `<!--${id}-->`, kind: 'reactive' };
-  }
-
-  // Plain signal → text binding
-  if (isSignal(value)) {
-    const id = getNextId();
-
-    return {
-      binding: { signal: value as Signal<unknown>, type: 'text', uid: id },
-      html: `<!--${id}-->`,
-      kind: 'reactive',
-    };
-  }
-
-  // Static array of items
-  if (Array.isArray(value)) {
-    const { bindings, html } = collectHtmlItems(value, getNextId);
-
-    return { bindings, html, kind: 'static' };
-  }
-
-  // Single static HTMLResult
-  if (isHtmlResult(value)) {
-    const entry = rekeyHtmlResult(value, getNextId);
-
-    return { bindings: entry.bindings, html: entry.html, kind: 'static' };
-  }
-
-  // Primitive static value
-  return { bindings: [], html: resolveDirectiveValue(value), kind: 'static' };
-};
-
-const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
-  const slots: CompiledTemplateSlot[] = [];
-
-  for (let i = 0; i < strings.length - 1; i++) {
-    slots.push(detectSlot(strings[i]));
-  }
-
-  return { slots, tail: strings[strings.length - 1] ?? '' };
-};
-
-const getCompiledTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
-  let plan = templatePlanCache.get(strings);
-
-  if (!plan) {
-    plan = buildTemplatePlan(strings);
-    templatePlanCache.set(strings, plan);
-  }
-
-  return plan;
-};
-
 export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]): HTMLResult => {
-  const plan = getCompiledTemplatePlan(strings);
-  let result = '';
+  const compiled = getStaticTemplate(strings);
+  const fragment = compiled.element.content.cloneNode(true) as DocumentFragment;
   const bindings: Binding[] = [];
-  let activeElementId: string | null = null;
+  // For static HTMLResult embeds: chain their apply calls
+  const chainedApplies: Array<(rc: (fn: () => void) => void) => void> = [];
 
-  const getNextId = createMarkerIdFactory();
-  const isInsideStartTag = (prefix: string) => prefix.lastIndexOf('<') > prefix.lastIndexOf('>');
-  const getElementBindingId = (prefix: string): string => {
-    if (!activeElementId || isInsideStartTag(prefix)) {
-      activeElementId = getNextId();
+  // Phase 1: Resolve all binding targets BEFORE any DOM modifications
+  type BoundSlot = { comment?: Comment; el?: HTMLElement; slot: SlotMeta; value: unknown };
+
+  const boundSlots: BoundSlot[] = compiled.slots.map((slot, i) => {
+    const value = values[i];
+
+    if (slot.kind === 'closeTag') {
+      return { slot, value };
     }
 
-    return activeElementId;
-  };
-  const resetElementBindingId = (): void => {
-    activeElementId = null;
-  };
+    if (slot.kind === 'node') {
+      const comment = followPath(fragment, compiled.commentPaths.get(slot.commentId!)!) as Comment;
 
-  for (let i = 0; i < plan.slots.length; i++) {
-    const slot = plan.slots[i];
-    const value = values[i];
+      return { comment, slot, value };
+    }
+
+    const el = followPath(fragment, compiled.elementPaths.get(slot.elementId!)!) as HTMLElement;
+
+    return { el, slot, value };
+  });
+
+  // Phase 2a: Process tagname slots first — replace placeholders with real elements
+  const tagReplacements = new Map<HTMLElement, HTMLElement>();
+
+  for (const { el, slot, value } of boundSlots) {
+    if (slot.kind !== 'tagname') continue;
+
+    const tagName = String(value);
+    const realEl = document.createElement(tagName);
+
+    for (const attr of Array.from(el!.attributes)) realEl.setAttribute(attr.name, attr.value);
+
+    while (el!.firstChild) realEl.appendChild(el!.firstChild);
+
+    el!.replaceWith(realEl);
+    tagReplacements.set(el!, realEl);
+  }
+
+  // Phase 2b: Build bindings (may modify DOM for static content)
+  for (const { comment, el: rawEl, slot, value } of boundSlots) {
+    if (slot.kind === 'tagname' || slot.kind === 'closeTag') continue;
+
+    // Resolve element through tagname replacements
+    const el = rawEl ? (tagReplacements.get(rawEl) ?? rawEl) : rawEl;
+
+    if (slot.kind === 'node') {
+      const anchor = comment!;
+
+      if (isDirectiveResult(value)) {
+        bindings.push({ anchor, directive: value, type: 'directive' });
+        continue;
+      }
+
+      if (isHtmlResult(value)) {
+        // Static embed: move fragment children into place, chain apply
+        const parent = anchor.parentNode!;
+
+        while (value.fragment.firstChild) parent.insertBefore(value.fragment.firstChild, anchor);
+
+        anchor.remove();
+        chainedApplies.push(value.apply.bind(value));
+        continue;
+      }
+
+      if (typeof value === 'function') {
+        const sig = computed(() => {
+          const res = (value as () => unknown)();
+
+          return Array.isArray(res) ? (res as HtmlBindingValue[]) : (res as HtmlBindingValue);
+        });
+
+        bindings.push({ anchor, signal: sig, type: 'html' });
+        continue;
+      }
+
+      if (isSignal(value)) {
+        const sig = value as ReadonlySignal<unknown>;
+
+        // For HTMLResult signals, use the html binding path.
+        // Peek at value without tracking to detect initial type; for uninitialized
+        // computeds (globalRevision=0 edge case) we fall back to the html binding
+        // which uses an effect and will render correctly on first effect run.
+        let initial: unknown;
+
+        try {
+          initial = sig.value;
+
+          // If initial is still the ripple uninitialized sentinel (Symbol), treat as unknown
+          if (typeof initial === 'symbol') initial = undefined;
+        } catch {
+          initial = undefined;
+        }
+
+        if (isHtmlResult(initial)) {
+          bindings.push({ anchor, signal: sig as ReadonlySignal<HtmlBindingValue>, type: 'html' });
+          continue;
+        }
+
+        // Text signal: replace comment with text node
+        const textNode = document.createTextNode(initial == null ? '' : String(initial));
+
+        anchor.replaceWith(textNode);
+        bindings.push({ node: textNode, signal: sig, type: 'text' });
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        const parent = anchor.parentNode!;
+
+        for (const item of value) {
+          if (isHtmlResult(item)) {
+            while (item.fragment.firstChild) parent.insertBefore(item.fragment.firstChild, anchor);
+
+            chainedApplies.push(item.apply.bind(item));
+          } else {
+            parent.insertBefore(document.createTextNode(resolveStaticText(item)), anchor);
+          }
+        }
+        anchor.remove();
+        continue;
+      }
+
+      // Static primitive: replace with text node, no binding
+      anchor.replaceWith(document.createTextNode(resolveStaticText(value)));
+      continue;
+    }
+
+    // Element slot
+    const target = el!;
 
     if (slot.kind === 'event') {
       if (typeof value === 'function') {
-        const id = getElementBindingId(slot.prefix);
         const { handler, options } = applyModifiers(value as (e: Event) => void, slot.modifiers ?? []);
 
-        result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-        bindings.push({ handler, name: slot.name!, options, type: 'event', uid: id });
+        bindings.push({ el: target, handler, name: slot.name!, options, type: 'event' });
       } else if (isSignal(value)) {
-        // If a signal is passed to an event binding, we assume its current value
-        // is the intended handler.
-        const id = getElementBindingId(slot.prefix);
-        const signalHandler = (e: Event) => {
-          const currentHandler = (value as ReadonlySignal<unknown>).value;
+        const signalValue = value as ReadonlySignal<unknown>;
+        const handler = (e: Event) => {
+          const h = signalValue.value;
 
-          if (typeof currentHandler === 'function') {
-            (currentHandler as (e: Event) => void)(e);
-          }
+          if (typeof h === 'function') (h as (e: Event) => void)(e);
         };
-        const { handler, options } = applyModifiers(signalHandler, slot.modifiers ?? []);
+        const { handler: wrapped, options } = applyModifiers(handler, slot.modifiers ?? []);
 
-        result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-        bindings.push({ handler, name: slot.name!, options, type: 'event', uid: id });
-      } else result += slot.raw;
+        bindings.push({ el: target, handler: wrapped, name: slot.name!, options, type: 'event' });
+      }
 
       continue;
     }
 
     if (slot.kind === 'ref') {
       if (value) {
-        const id = getElementBindingId(slot.prefix);
-
-        result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-        bindings.push({
-          ref: value as Ref<Element> | RefCallback<Element>,
-          type: 'ref',
-          uid: id,
-        });
-      } else result += slot.raw;
-
-      continue;
-    }
-
-    if (slot.kind === 'boolAttr' || slot.kind === 'attr') {
-      const id = getElementBindingId(slot.prefix);
-
-      result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createAttrBinding(slot.mode!, slot.name!, id, value));
-      continue;
-    }
-
-    if (slot.kind === 'node') {
-      resetElementBindingId();
-
-      if (isDirectiveResult(value)) {
-        const id = getNextId();
-
-        result += `${slot.raw}<!--${id}-->`;
-        bindings.push({ directive: value, type: 'directive', uid: id });
-        continue;
-      }
-
-      const resolved = resolveNodeSlot(value, getNextId);
-
-      result += slot.raw + resolved.html;
-
-      if (resolved.kind === 'reactive') {
-        bindings.push(resolved.binding);
-      } else {
-        bindings.push(...resolved.bindings);
+        bindings.push({ el: target, ref: value as Ref<Element> | RefCallback<Element>, type: 'ref' });
       }
 
       continue;
     }
+
+    if (slot.kind === 'spread') {
+      if (isSpreadObject(value)) {
+        bindings.push({ el: target, spread: value, type: 'spread' });
+      }
+
+      continue;
+    }
+
+    // attr / boolAttr
+    bindings.push(createAttrBindingFromValue(target, slot.mode ?? 'attr', slot.name!, value));
   }
 
-  result += plan.tail;
-
-  return htmlResult(result, bindings);
+  return createHtmlResult(fragment, (registerCleanup) => {
+    for (const binding of bindings) applyBinding(binding, registerCleanup);
+    for (const chainedApply of chainedApplies) chainedApply(registerCleanup);
+  });
 };
 
 export const html = (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult =>

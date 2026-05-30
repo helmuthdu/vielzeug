@@ -79,7 +79,8 @@ export type BitTooltipProps = {
  * </bit-tooltip>
  * ```
  */
-export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
+export const TOOLTIP_TAG = 'bit-tooltip' as const;
+define<BitTooltipProps>(TOOLTIP_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,

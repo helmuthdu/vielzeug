@@ -15,7 +15,7 @@ export type {
   Unsubscribe,
 } from './types';
 
-// Retry options (type only — runWithRetry/sleepWithAbort/toError are internal)
+// Retry options (type only)
 export type { RetryOptions } from './retry';
 
 // URL / request config

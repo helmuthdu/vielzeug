@@ -1,27 +1,51 @@
-import type { DetectOverflowOptions, Middleware, Placement } from '../types';
+import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
 
-import { getBoundaryRect, getAvailableSpace, getPlacementOverflow, totalOverflow } from '../core';
-import { toSideObject } from '../utils';
+import { getAvailableSpace, getBoundaryRect, getPlacementOverflow, totalOverflow } from '../overflow';
+import { tagMiddleware, toSideObject } from '../utils';
 
 export interface AutoPlacementOptions extends DetectOverflowOptions {
   /**
-   * Placements to evaluate. Defaults to the four cardinal sides.
+   * Placements to evaluate. When provided, takes precedence over `alignment`.
    * Note: use either `flip` or `autoPlacement`, not both.
    */
   allowedPlacements?: Placement[];
+  /**
+   * Constrains auto-placement to variants with the given alignment.
+   *
+   * - `'start'` — evaluates only `top-start`, `right-start`, `bottom-start`, `left-start`.
+   * - `'end'` — evaluates only `top-end`, `right-end`, `bottom-end`, `left-end`.
+   * - `null` — evaluates all 12 variants (4 cardinal + 4 start + 4 end).
+   * - omitted (default) — evaluates the 4 cardinal sides only.
+   */
+  alignment?: Alignment | null;
+}
+
+const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];
+
+function getDefaultPlacements(alignment?: Alignment | null): Placement[] {
+  if (alignment === undefined) return SIDES;
+
+  if (alignment === null) {
+    return SIDES.flatMap((side) => [side, `${side}-start`, `${side}-end`] as Placement[]);
+  }
+
+  return SIDES.map((side) => `${side}-${alignment}` as Placement);
 }
 
 /**
  * Automatically selects the placement with the most available space and least overflow.
  * Evaluates all allowed placements and picks the optimal one.
  *
+ * Use the `alignment` option to restrict evaluation to aligned variants (e.g. `'start'`)
+ * when you want to preserve a consistent alignment across all candidate sides.
+ *
  * @see {@link flip} for simple opposite-side flipping.
  */
 export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
-  return (state) => {
+  return tagMiddleware(function autoPlacementMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const padding = toSideObject(options.padding);
     const boundary = getBoundaryRect(options.boundary);
-    const placements = options.allowedPlacements ?? (['top', 'right', 'bottom', 'left'] as Placement[]);
+    const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
     if (import.meta.env.DEV && placements.length === 0) {
       console.warn('[orbit] autoPlacement: allowedPlacements is empty — no placement will be evaluated.');
@@ -46,5 +70,5 @@ export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
     if (bestPlacement !== state.placement) {
       return { reset: { placement: bestPlacement } };
     }
-  };
+  }, 'autoPlacement');
 }

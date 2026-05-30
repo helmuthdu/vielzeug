@@ -11,6 +11,11 @@ type CacheEntry<T> = {
   value: T;
 };
 
+export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & {
+  clear(): void;
+  invalidate(...args: Parameters<T>): void;
+};
+
 const UNDEFINED_SENTINEL = '\x00undefined\x00';
 
 const defaultKey = (args: unknown[]): string => {
@@ -35,6 +40,7 @@ const isPromise = (value: unknown): value is Promise<unknown> =>
 /**
  * Creates a function that memoizes the result of the provided function.
  * Supports sync and async functions, including in-flight deduplication for async calls.
+ * The returned function exposes `.clear()` and `.invalidate(...args)` methods.
  *
  * @example
  * ```ts
@@ -43,24 +49,29 @@ const isPromise = (value: unknown): value is Promise<unknown> =>
  *
  * memoizedAdd(1, 2); // 3 (caches the result)
  * memoizedAdd(1, 2); // 3 (from cache)
+ * memoizedAdd.invalidate(1, 2); // remove specific entry
+ * memoizedAdd.clear(); // wipe entire cache
  * ```
  *
  * @param fn - The function to memorize.
  * @param options - Memoization options.
- * @param [options.ttl] - (optional) time-to-live (TTL) for cache expiration (in milliseconds).
+ * @param [options.ttl] - (optional) time-to-live for cache expiration (ms).
  * @param [options.maxSize] - (optional) maximum cache size (LRU eviction).
  * @param [options.key] - (optional) custom function to resolve the cache key.
  *
- * @returns A new function that memorizes the input function.
+ * @returns A memoized function with `.clear()` and `.invalidate()` methods.
  */
 export function memo<T extends Fn>(
   fn: T,
   { key, maxSize = Infinity, ttl = Infinity }: MemoOptions<T> = {},
-): (...args: Parameters<T>) => ReturnType<T> {
+): Memoized<T> {
   const cache = new Map<PropertyKey, CacheEntry<ReturnType<T>>>();
+  const inFlight = new Set<PropertyKey>();
 
-  return (...args: Parameters<T>): ReturnType<T> => {
-    const cacheKey = key ? key(...args) : defaultKey(args);
+  const resolveKey = (...args: Parameters<T>): PropertyKey => (key ? key(...args) : defaultKey(args));
+
+  const memoized = (...args: Parameters<T>): ReturnType<T> => {
+    const cacheKey = resolveKey(...args);
     const now = Date.now();
     const cached = cache.get(cacheKey);
 
@@ -78,20 +89,40 @@ export function memo<T extends Fn>(
     cache.set(cacheKey, entry);
 
     if (isPromise(result)) {
-      // Evict on rejection so subsequent calls retry instead of returning a settled failure
-      void result.catch(() => cache.delete(cacheKey));
+      inFlight.add(cacheKey);
+      void (result as Promise<unknown>)
+        .then(() => inFlight.delete(cacheKey))
+        .catch(() => {
+          inFlight.delete(cacheKey);
+          cache.delete(cacheKey);
+        });
     }
 
+    // LRU eviction — skip in-flight entries to avoid evicting pending Promises
     while (cache.size > maxSize) {
-      const oldestKey = cache.keys().next().value;
+      let evicted = false;
 
-      if (oldestKey === undefined) {
-        break;
+      for (const oldestKey of cache.keys()) {
+        if (!inFlight.has(oldestKey)) {
+          cache.delete(oldestKey);
+          evicted = true;
+          break;
+        }
       }
 
-      cache.delete(oldestKey);
+      if (!evicted) break; // all remaining entries are in-flight
     }
 
     return result as ReturnType<T>;
   };
+
+  return Object.assign(memoized, {
+    clear: () => {
+      cache.clear();
+      inFlight.clear();
+    },
+    invalidate: (...args: Parameters<T>): void => {
+      cache.delete(resolveKey(...args));
+    },
+  });
 }

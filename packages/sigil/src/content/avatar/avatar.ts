@@ -73,7 +73,8 @@ export type BitAvatarProps = {
  * <bit-avatar alt="John Smith" status="online"></bit-avatar>
  * ```
  */
-export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
+export const AVATAR_TAG = 'bit-avatar' as const;
+define<BitAvatarProps>(AVATAR_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -206,7 +207,8 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', {
+export const AVATAR_GROUP_TAG = 'bit-avatar-group' as const;
+define<BitAvatarGroupProps>(AVATAR_GROUP_TAG, {
   props: {
     max: prop.number(5),
     total: prop.json(undefined as number | undefined),

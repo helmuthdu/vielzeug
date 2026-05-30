@@ -1,4 +1,4 @@
-import { define, getCurrentElement, html, inject, onCleanup, prop, provide, ref, refs } from '../index';
+import { define, html, inject, onCleanup, prop, provide, ref } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
 import { mount } from '../testing';
 
@@ -45,14 +45,13 @@ describe('component helpers and exports', () => {
   it('exposes core utilities during setup', async () => {
     let elementInstance: HTMLElement | undefined;
 
-    const { element } = await mount(() => {
-      elementInstance = getCurrentElement();
+    const { element } = await mount((_props, { el }) => {
+      elementInstance = el;
 
       expect(onCleanup).toBeDefined();
       expect(provide).toBeDefined();
       expect(inject).toBeDefined();
       expect(ref).toBeDefined();
-      expect(refs).toBeDefined();
       expect(define).toBeDefined();
       expect(resizeObserver).toBeDefined();
       expect(intersectionObserver).toBeDefined();
@@ -62,27 +61,5 @@ describe('component helpers and exports', () => {
     });
 
     expect(elementInstance).toBe(element);
-  });
-
-  it('supports refs() array aggregation and cleanup', async () => {
-    let items: HTMLElement[] | undefined;
-
-    const { destroy } = await mount(() => {
-      items = refs<HTMLLIElement>();
-
-      return html`
-        <ul>
-          <li ref=${items}>Item 1</li>
-          <li ref=${items}>Item 2</li>
-          <li ref=${items}>Item 3</li>
-        </ul>
-      `;
-    });
-
-    expect(items?.map((el) => el.textContent)).toEqual(['Item 1', 'Item 2', 'Item 3']);
-
-    destroy();
-
-    expect(items?.length).toBe(0);
   });
 });

@@ -1,34 +1,64 @@
-import { assert } from '../function/assert';
-import { seek } from '../object/_seek';
-import { IS_STRING_ERROR_MSG, isString } from '../typed/isString';
+import { similarity } from '../string/similarity';
+import { isNil } from '../typed/isNil';
+import { isNumber } from '../typed/isNumber';
+import { isString } from '../typed/isString';
+
+export type SearchOptions<T> = {
+  fields?: ReadonlyArray<keyof T & string>;
+  threshold?: number;
+};
+
+function seekValue(item: unknown, query: string, threshold: number): boolean {
+  if (isNil(item)) return false;
+
+  if (isString(item) || isNumber(item)) return similarity(String(item), query) >= threshold;
+
+  if (Array.isArray(item)) return (item as unknown[]).some((v) => seekValue(v, query, threshold));
+
+  if (typeof item === 'object')
+    return Object.values(item as Record<string, unknown>).some((v) =>
+      isNil(v) ? false : seekValue(v, query, threshold),
+    );
+
+  return false;
+}
 
 /**
- * Performs a search on an array of objects, checking all values for a match with the search string.
+ * Performs a fuzzy search on an array of items using string similarity.
+ * When `fields` is provided, only those keys are searched; otherwise all values are scanned.
  *
  * @example
  * ```ts
  * const data = [{ name: 'John Doe', age: 25 }, { name: 'Jane Doe', age: 30 }];
- * search(data, 'doe', 0.5); // [{ name: 'John Doe', age: 25 }, { name: 'Jane Doe', age: 30 }]
+ *
+ * // Search all values
+ * search(data, 'doe'); // [{ name: 'John Doe' }, { name: 'Jane Doe' }]
+ *
+ * // Search only specific fields
+ * search(data, 'john', { fields: ['name'] });
  * ```
  *
- * @param array - The array of objects to search.
+ * @param array - The array of items to search.
  * @param query - The string to search for.
- * @param [tone=0.25] - Degree of similarity between 0 and 1.
+ * @param [options.threshold=0.25] - Similarity threshold between 0 and 1. Higher = stricter match.
+ * @param [options.fields] - Limit search to these object keys. Searches all values when omitted.
  *
- * @returns The filtered array of objects that match the search string.
- *
- * @throws {Error} If input values are invalid.
+ * @returns The filtered array of items that match the search string.
  */
-export function search<T>(array: T[], query: string, tone = 0.25): T[] {
-  assert(isString(query), IS_STRING_ERROR_MSG, { args: { query }, type: TypeError });
-  assert(typeof tone === 'number' && tone >= 0 && tone <= 1, 'Tone must be a number between 0 and 1', {
-    args: { tone },
-    type: TypeError,
-  });
+export function search<T>(array: T[], query: string, options: SearchOptions<T> = {}): T[] {
+  const { fields, threshold = 0.25 } = options;
 
   if (!query) return [...array];
 
-  const searchTerm = query.toLowerCase();
+  const searchTerm = query.trim().toLowerCase();
 
-  return array.filter((obj) => seek(obj as object, searchTerm, tone));
+  if (!searchTerm) return [...array];
+
+  return array.filter((item) => {
+    if (fields && fields.length > 0 && typeof item === 'object' && item !== null) {
+      return fields.some((field) => seekValue((item as Record<string, unknown>)[field], searchTerm, threshold));
+    }
+
+    return seekValue(item, searchTerm, threshold);
+  });
 }

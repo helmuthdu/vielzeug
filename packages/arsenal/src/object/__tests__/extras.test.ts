@@ -1,4 +1,3 @@
-import { deepClone } from '../deepClone';
 import { defaults } from '../defaults';
 import { entries } from '../entries';
 import { filterValues } from '../filterValues';
@@ -52,14 +51,5 @@ describe('object extras', () => {
     expect(invert(input)).toEqual({ x: 'a', y: 'b' });
     expect(has(input, 'a')).toBe(true);
     expect(defaults(target, { b: 2, c: 3 } as any)).toEqual({ a: 1, b: 2, c: 3 });
-  });
-
-  it('deep clones nested data', () => {
-    const input = { a: [1, { b: 2 }], c: new Set([1, 2]) };
-    const output = deepClone(input);
-
-    expect(output).toEqual(input);
-    expect(output).not.toBe(input);
-    expect(output.a).not.toBe(input.a);
   });
 });

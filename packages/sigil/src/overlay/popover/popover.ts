@@ -55,7 +55,8 @@ export type BitPopoverProps = {
  * @slot content - Panel content
  * @part panel - Panel container.
  */
-export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
+export const POPOVER_TAG = 'bit-popover' as const;
+define<BitPopoverProps, BitPopoverEvents>(POPOVER_TAG, {
   props: {
     ...disablableBundle,
     label: prop.string(),

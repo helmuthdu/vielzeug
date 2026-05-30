@@ -1,15 +1,17 @@
-import { createForm, defineField, html, signal } from '../index';
+import type { Signal } from '@vielzeug/ripple';
+
+import { createFormContext, defineField, html, signal } from '../index';
 import { mount } from '../testing';
 
-describe('createForm()', () => {
+describe('createFormContext()', () => {
   it('valid is reactive — false when no fields registered', () => {
-    const form = createForm();
+    const form = createFormContext();
 
     expect(form.valid.value).toBe(true); // vacuously true with no fields
   });
 
   it('valid reacts to registered field validity signals', () => {
-    const form = createForm();
+    const form = createFormContext();
     const fieldValid = signal(false);
 
     const unregister = form.registerField(fieldValid);
@@ -24,7 +26,7 @@ describe('createForm()', () => {
   });
 
   it('valid reacts when field signal is removed via cleanup', () => {
-    const form = createForm();
+    const form = createFormContext();
     const f1 = signal(true);
     const f2 = signal(false);
 
@@ -39,7 +41,7 @@ describe('createForm()', () => {
   });
 
   it('dirty is false at creation and after reset', () => {
-    const form = createForm();
+    const form = createFormContext();
 
     expect(form.dirty.value).toBe(false);
 
@@ -49,9 +51,9 @@ describe('createForm()', () => {
   });
 
   it('reset sets dirty to false', () => {
-    const form = createForm();
+    const form = createFormContext();
 
-    form.dirty.value = true;
+    (form.dirty as Signal<boolean>).value = true;
     form.reset();
     expect(form.dirty.value).toBe(false);
   });
@@ -61,7 +63,7 @@ describe('createForm()', () => {
     const submitted = new Promise<void>((res) => {
       resolveFn = res;
     });
-    const form = createForm({ onSubmit: () => submitted });
+    const form = createFormContext({ onSubmit: () => submitted });
 
     expect(form.submitting.value).toBe(false);
 
@@ -80,7 +82,7 @@ describe('createForm()', () => {
     const submitted = new Promise<void>((res) => {
       resolveFn = res;
     });
-    const form = createForm({
+    const form = createFormContext({
       onSubmit: async () => {
         callCount++;
         await submitted;

@@ -35,12 +35,14 @@ describe('Core: Signal System', () => {
     it('watch() stops watching after cleanup is called', () => {
       const count = signal(0);
       const values: number[] = [];
-      const stop = watch(count, (val) => values.push(val));
+      const stop = watch(count, (val) => {
+        values.push(val);
+      });
 
       count.value = 1;
       count.value = 2;
       expect(values).toEqual([1, 2]);
-      stop();
+      stop.dispose();
       count.value = 3;
       expect(values).toEqual([1, 2]);
     });
@@ -49,7 +51,9 @@ describe('Core: Signal System', () => {
       const count = signal(10);
       const pairs: [number, number | undefined][] = [];
 
-      watch(count, (next, prev) => pairs.push([next, prev]));
+      watch(count, (next, prev) => {
+        pairs.push([next, prev]);
+      });
       count.value = 20;
       count.value = 30;
       expect(pairs).toEqual([
@@ -130,7 +134,9 @@ describe('Core: Signal System', () => {
       const count = signal(0);
       const values: number[] = [];
 
-      watch(count, (val) => values.push(val));
+      watch(count, (val) => {
+        values.push(val);
+      });
       count.value = 1;
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(values).toContain(1);
@@ -140,7 +146,13 @@ describe('Core: Signal System', () => {
       const count = signal(5);
       const values: number[] = [];
 
-      watch(count, (val) => values.push(val), { immediate: true });
+      watch(
+        count,
+        (val) => {
+          values.push(val);
+        },
+        { immediate: true },
+      );
       expect(values).toEqual([5]);
     });
 
@@ -149,11 +161,17 @@ describe('Core: Signal System', () => {
       const b = signal(2);
       const sum = computed(() => a.value + b.value);
       const values: number[] = [];
-      const stop = watch(sum, (val) => values.push(val), { immediate: true });
+      const stop = watch(
+        sum,
+        (val) => {
+          values.push(val);
+        },
+        { immediate: true },
+      );
 
       a.value = 10;
       b.value = 20;
-      stop();
+      stop.dispose();
       a.value = 99;
 
       expect(values).toEqual([3, 12, 30]);
@@ -164,14 +182,14 @@ describe('Core: Signal System', () => {
       const parity = computed(() => count.value % 2);
       const values: number[] = [];
       // No-op until the watch() assignment completes (immediate run fires synchronously before assignment).
-      let stop: () => void = () => {};
+      let stop: { dispose(): void } = { dispose: () => {} };
 
       stop = watch(
         parity,
         (val, prev) => {
           values.push(val);
 
-          if (val !== prev) stop();
+          if (val !== prev) stop.dispose();
         },
         { immediate: true },
       );
@@ -185,7 +203,13 @@ describe('Core: Signal System', () => {
       const s = signal([1, 2, 3]);
       let fires = 0;
 
-      watch(s, () => fires++, { equals: (a, b) => a.length === b.length });
+      watch(
+        s,
+        () => {
+          fires++;
+        },
+        { equals: (a, b) => a.length === b.length },
+      );
       s.value = [4, 5, 6]; // same length — suppressed
       expect(fires).toBe(0);
       s.value = [1, 2, 3, 4]; // different length — fires

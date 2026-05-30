@@ -17,8 +17,8 @@ import { queryAllByText, queryByText, type QueryScope } from './query';
 export interface Fixture<T extends HTMLElement = HTMLElement> {
   /** The component element */
   element: T;
-  /** The component's shadow root */
-  readonly shadow: ShadowRoot;
+  /** The component's shadow root (null for light-DOM components) */
+  readonly shadow: ShadowRoot | null;
   /** Query a single element within shadow root */
   query<E extends Element = Element>(selector: string): E | null;
   /** Query all elements within shadow root */
@@ -60,7 +60,7 @@ type MountProps = { readonly [x: string]: ReadonlySignal<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult;
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult | Promise<HTMLResult>;
 }['bivarianceHack'];
 
 // ─── Test environment state ───────────────────────────────────────────────────
@@ -206,31 +206,31 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     flush,
 
     query<E extends Element = Element>(selector: string): E | null {
-      return element.shadowRoot?.querySelector<E>(selector) ?? null;
+      return (element.shadowRoot ?? element).querySelector<E>(selector);
     },
 
     queryAll<E extends Element = Element>(selector: string): E[] {
-      return Array.from(element.shadowRoot?.querySelectorAll<E>(selector) ?? []);
+      return Array.from((element.shadowRoot ?? element).querySelectorAll<E>(selector));
     },
 
     queryAllByTestId<E extends Element = Element>(testId: string): E[] {
-      return Array.from(element.shadowRoot?.querySelectorAll<E>(`[data-testid="${testId}"]`) ?? []);
+      return Array.from((element.shadowRoot ?? element).querySelectorAll<E>(`[data-testid="${testId}"]`));
     },
 
     queryAllByText<E extends Element = Element>(text: string, selector = '*'): E[] {
-      return queryAllByText<E>(element.shadowRoot!, text, selector);
+      return queryAllByText<E>((element.shadowRoot ?? element) as Element, text, selector);
     },
 
     queryByTestId<E extends Element = Element>(testId: string): E | null {
-      return element.shadowRoot?.querySelector<E>(`[data-testid="${testId}"]`) ?? null;
+      return (element.shadowRoot ?? element).querySelector<E>(`[data-testid="${testId}"]`);
     },
 
     queryByText<E extends Element = Element>(text: string, selector = '*'): E | null {
-      return queryByText<E>(element.shadowRoot!, text, selector);
+      return queryByText<E>((element.shadowRoot ?? element) as Element, text, selector);
     },
 
-    get shadow(): ShadowRoot {
-      return element.shadowRoot!;
+    get shadow(): ShadowRoot | null {
+      return element.shadowRoot;
     },
   };
 }

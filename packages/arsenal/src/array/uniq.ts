@@ -1,8 +1,5 @@
 import type { Primitive } from '../types';
 
-import { assert } from '../function/assert';
-import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-
 /**
  * Creates a new array with duplicate values removed.
  *
@@ -21,8 +18,6 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  * @throws {TypeError} - If the input is not an array.
  */
 export function uniq<T>(array: T[], selector?: (item: T) => Primitive): T[] {
-  assert(isArray(array), IS_ARRAY_ERROR_MSG, { type: TypeError });
-
   if (array.length <= 1) {
     return [...array];
   }

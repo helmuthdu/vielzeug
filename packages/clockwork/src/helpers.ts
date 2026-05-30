@@ -2,9 +2,6 @@ import type { ActionArgs, ActionFn, MachineEvent } from './types.js';
 
 /**
  * Creates an action that shallow-merges partial context updates.
- * Note: Uses `Object.assign` — performs a shallow merge. For nested objects,
- * spread the nested property explicitly:
- * `assign(({ context }) => ({ nested: { ...context.nested, key: val } }))`
  * @example
  * assign(({ context }) => ({ count: context.count + 1 }))
  */

@@ -2,7 +2,7 @@ import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } f
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { getRecordKey } from '../internal';
-import { type StoredRecord, parseStored, readWithTtl, wrapStored } from '../ttl';
+import { defaultCodec, type StoredRecord, parseStored } from '../ttl';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -53,7 +53,7 @@ type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
 };
 
 export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Adapter<S> {
-  const { logger, name, onMetrics, schema, signals, validators } = options;
+  const { codec = defaultCodec, logger, name, onMetrics, schema, signals, validators } = options;
   const tables = new Map(Object.keys(schema).map((k) => [k, new Map<string, StoredRecord<unknown>>()]));
   const getTableStore = (table: string) => tables.get(table)!;
 
@@ -63,20 +63,21 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       : undefined;
 
   const core: StorageBackend<S> = {
-    async clear<K extends keyof S>(table: K): Promise<void> {
-      getTableStore(String(table)).clear();
-      channel?.postMessage({ table: String(table), type: 'clear' });
+    async clear<K extends keyof S & string>(table: K): Promise<void> {
+      getTableStore(table).clear();
+      channel?.postMessage({ table, type: 'clear' });
     },
 
-    async count<K extends keyof S>(table: K): Promise<number> {
-      const store = getTableStore(String(table));
+    async count<K extends keyof S & string>(table: K): Promise<number> {
+      const store = getTableStore(table);
       let liveCount = 0;
       const expiredKeys: string[] = [];
 
       for (const [key, raw] of store) {
-        const { expired } = readWithTtl<RecordOf<S, K>>(raw);
+        const decoded = codec.decode<RecordOf<S, K>>(raw);
+        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (expired) {
+        if (!decoded || expired) {
           expiredKeys.push(key);
         } else {
           liveCount += 1;
@@ -88,24 +89,25 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       return liveCount;
     },
 
-    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const store = getTableStore(String(table));
+    async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const store = getTableStore(table);
       const raw = store.get(String(key));
 
       if (!raw) return false;
 
-      const { value } = readWithTtl<RecordOf<S, K>>(raw);
-      const isLive = value !== undefined;
+      const decoded = codec.decode<RecordOf<S, K>>(raw);
+      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
+      const isLive = decoded !== undefined && !expired;
 
       store.delete(String(key));
 
-      if (isLive) channel?.postMessage({ key: String(key), table: String(table), type: 'delete' });
+      if (isLive) channel?.postMessage({ key: String(key), table, type: 'delete' });
 
       return isLive;
     },
 
-    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
-      const store = getTableStore(String(table));
+    async deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+      const store = getTableStore(table);
       const deletedKeys: string[] = [];
 
       for (const key of keys) {
@@ -113,46 +115,53 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
         const raw = store.get(strKey);
 
         if (raw) {
-          const { value } = readWithTtl<RecordOf<S, K>>(raw);
+          const decoded = codec.decode<RecordOf<S, K>>(raw);
+          const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-          if (value !== undefined) deletedKeys.push(strKey);
+          if (decoded !== undefined && !expired) deletedKeys.push(strKey);
 
           store.delete(strKey);
         }
       }
 
-      if (deletedKeys.length > 0) channel?.postMessage({ keys: deletedKeys, table: String(table), type: 'deleteMany' });
+      if (deletedKeys.length > 0) channel?.postMessage({ keys: deletedKeys, table, type: 'deleteMany' });
 
       return deletedKeys.length;
     },
 
-    dispose: channel ? () => channel.close() : undefined,
+    dispose: channel ? async () => channel.close() : undefined,
 
-    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      const store = getTableStore(String(table));
+    async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      const store = getTableStore(table);
       const raw = store.get(String(key));
 
       if (!raw) return undefined;
 
-      const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
+      const decoded = codec.decode<RecordOf<S, K>>(raw);
+      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-      if (expired) store.delete(String(key));
+      if (!decoded || expired) {
+        store.delete(String(key));
 
-      return value;
+        return undefined;
+      }
+
+      return decoded.value;
     },
 
-    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-      const store = getTableStore(String(table));
+    async getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]> {
+      const store = getTableStore(table);
       const records: RecordOf<S, K>[] = [];
       const expiredKeys: string[] = [];
 
       for (const [key, raw] of store) {
-        const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
+        const decoded = codec.decode<RecordOf<S, K>>(raw);
+        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (expired) {
+        if (!decoded || expired) {
           expiredKeys.push(key);
-        } else if (value !== undefined) {
-          records.push(value);
+        } else {
+          records.push(decoded.value);
         }
       }
 
@@ -161,31 +170,33 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       return records;
     },
 
-    async getRawCount<K extends keyof S>(table: K): Promise<number> {
-      return getTableStore(String(table)).size;
+    async getRawCount<K extends keyof S & string>(table: K): Promise<number> {
+      return getTableStore(table).size;
     },
 
-    async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const store = getTableStore(String(table));
+    async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const store = getTableStore(table);
       const raw = store.get(String(key));
 
       if (!raw) return false;
 
-      const { expired, value } = readWithTtl<RecordOf<S, K>>(raw);
+      const decoded = codec.decode<RecordOf<S, K>>(raw);
+      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-      if (expired) store.delete(String(key));
+      if (!decoded || expired) store.delete(String(key));
 
-      return value !== undefined;
+      return decoded !== undefined && !expired;
     },
 
-    async pruneExpiredInTable<K extends keyof S>(table: K): Promise<number> {
-      const store = getTableStore(String(table));
+    async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
+      const store = getTableStore(table);
       let pruned = 0;
 
       for (const [key, raw] of store) {
-        const { expired } = readWithTtl<RecordOf<S, K>>(raw);
+        const decoded = codec.decode<RecordOf<S, K>>(raw);
+        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (expired) {
+        if (!decoded || expired) {
           store.delete(key);
           pruned += 1;
         }
@@ -194,27 +205,29 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       return pruned;
     },
 
-    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+    async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
       const key = String(getRecordKey(schema, table, value));
-      const stored = wrapStored(value, ttl);
+      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
+      const stored = codec.encode(value, expiresAt) as StoredRecord<unknown>;
 
-      getTableStore(String(table)).set(key, stored);
-      channel?.postMessage({ key, stored, table: String(table), type: 'put' });
+      getTableStore(table).set(key, stored);
+      channel?.postMessage({ key, stored, table, type: 'put' });
     },
 
-    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
-      const store = getTableStore(String(table));
+    async putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      const store = getTableStore(table);
       const entries: Array<{ key: string; stored: StoredRecord<unknown> }> = [];
+      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
       for (const value of values) {
         const key = String(getRecordKey(schema, table, value));
-        const stored = wrapStored(value, ttl);
+        const stored = codec.encode(value, expiresAt) as StoredRecord<unknown>;
 
         store.set(key, stored);
         entries.push({ key, stored });
       }
 
-      if (entries.length > 0) channel?.postMessage({ entries, table: String(table), type: 'putAll' });
+      if (entries.length > 0) channel?.postMessage({ entries, table, type: 'putAll' });
     },
   };
 
@@ -261,22 +274,22 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
             switch (msg.type) {
               case 'clear':
                 store.clear();
-                notify(msg.table as keyof S);
+                notify(msg.table as keyof S & string);
 
                 return;
               case 'delete':
                 store.delete(msg.key);
-                notify(msg.table as keyof S);
+                notify(msg.table as keyof S & string);
 
                 return;
               case 'deleteMany':
                 for (const key of msg.keys) store.delete(key);
-                notify(msg.table as keyof S);
+                notify(msg.table as keyof S & string);
 
                 return;
               case 'put':
                 if (applyStoredWithValidation(msg.key, msg.stored)) {
-                  notify(msg.table as keyof S);
+                  notify(msg.table as keyof S & string);
                 }
 
                 return;
@@ -288,7 +301,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
                     if (applyStoredWithValidation(key, stored)) anyApplied = true;
                   }
 
-                  if (anyApplied) notify(msg.table as keyof S);
+                  if (anyApplied) notify(msg.table as keyof S & string);
                 }
 
                 return;

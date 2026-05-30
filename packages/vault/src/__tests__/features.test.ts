@@ -5,6 +5,7 @@
  *   - getMany()
  *   - pruneExpired() + scheduleExpiredPrune
  *   - onQuotaExceeded hook (WebStorage)
+ *   - keys() and entries() (F2)
  */
 
 import type { ReactiveSignal } from '../index';
@@ -391,5 +392,73 @@ describe('onQuotaExceeded (WebStorage)', () => {
 
     await expect(db.put('users', { id: 1, name: 'Alice' })).resolves.toBeUndefined();
     expect(exceeded).toBe(true);
+  });
+});
+
+/* -------------------- keys() and entries() (F2) -------------------- */
+
+describe('keys()', () => {
+  test('returns primary key of each live record', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const keys = await db.keys('users');
+
+    expect(keys).toHaveLength(2);
+    expect(keys).toContain(1);
+    expect(keys).toContain(2);
+  });
+
+  test('returns empty array when table is empty', async () => {
+    const db = createMemory({ schema });
+
+    expect(await db.keys('users')).toEqual([]);
+  });
+
+  test('keys() inside batch transaction', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 42, name: 'Charlie' });
+
+    const result = await db.batch(['users'], async (tx) => tx.keys('users'));
+
+    expect(result).toEqual([42]);
+  });
+});
+
+describe('entries()', () => {
+  test('returns [key, record] pairs for each live record', async () => {
+    const db = createMemory({ schema });
+    const alice = { id: 1, name: 'Alice' };
+    const bob = { id: 2, name: 'Bob' };
+
+    await db.putAll('users', [alice, bob]);
+
+    const entries = await db.entries('users');
+
+    expect(entries).toHaveLength(2);
+    expect(entries).toContainEqual([1, alice]);
+    expect(entries).toContainEqual([2, bob]);
+  });
+
+  test('returns empty array when table is empty', async () => {
+    const db = createMemory({ schema });
+
+    expect(await db.entries('users')).toEqual([]);
+  });
+
+  test('entries() inside batch transaction', async () => {
+    const db = createMemory({ schema });
+    const user = { id: 7, name: 'Dave' };
+
+    await db.put('users', user);
+
+    const result = await db.batch(['users'], async (tx) => tx.entries('users'));
+
+    expect(result).toEqual([[7, user]]);
   });
 });

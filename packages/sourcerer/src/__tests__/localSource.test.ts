@@ -43,8 +43,8 @@ describe('createLocalSource', () => {
     });
   });
 
-  describe('update — atomic bulk mutations', () => {
-    it('applies multiple fields atomically in a single update call', async () => {
+  describe('hydrate — bulk URL state restore', () => {
+    it('applies multiple fields atomically in a single hydrate call', async () => {
       // Data: [1,2,3,4,5,6], filter evens → [2,4,6], sort asc → [2,4,6], limit 1, page 2 → [4]
       const source = createLocalSource([1, 2, 3, 4, 5, 6], {
         filter: (item: number) => item % 2 === 0,
@@ -56,29 +56,31 @@ describe('createLocalSource', () => {
       expect(source.current).toEqual([2, 4, 6]);
 
       // Reduce limit to 1, go to page 2 → [4]
-      await source.update({ limit: 1, page: 2 });
+      await source.hydrate({ limit: 1, page: 2 });
 
       expect(source.current).toEqual([4]);
       expect(source.meta.pageNumber).toBe(2);
     });
 
-    it('update resets page when limit changes', async () => {
+    it('hydrate preserves page when limit changes (no implicit reset)', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 2 });
 
-      await source.goTo(3);
-      await source.update({ limit: 6 });
+      await source.goTo(2);
+      await source.hydrate({ limit: 6 });
 
+      // hydrate applies exactly what is given — page is naturally clamped to last
+      // valid page, NOT reset to 1 (old update() behavior). With 6 items / limit 6 = 1 page.
       expect(source.meta.pageNumber).toBe(1);
-      expect(source.current).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(source.meta.pageCount).toBe(1);
     });
 
-    it('update is a no-op when nothing changes', async () => {
+    it('hydrate is a no-op when nothing changes', async () => {
       const source = createLocalSource([1, 2, 3], { limit: 10 });
       const listener = vi.fn();
 
       source.subscribe(listener);
 
-      await source.update({ limit: 10, page: 1, search: '' });
+      await source.hydrate({ limit: 10, page: 1, search: '' });
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -108,14 +110,14 @@ describe('createLocalSource', () => {
   });
 
   describe('search behavior', () => {
-    it('debounces search and applies on commit', async () => {
+    it('debounces search and applies on flush', async () => {
       const source = createLocalSource(['apple', 'banana', 'cherry']);
 
       source.search('ban');
       expect(source.meta.isSearchPending).toBe(true);
       expect(source.current).toEqual(['apple', 'banana', 'cherry']);
 
-      await source.commit();
+      await source.flush();
 
       expect(source.meta.isSearchPending).toBe(false);
       expect(source.current).toEqual(['banana']);
@@ -175,7 +177,7 @@ describe('createLocalSource', () => {
   });
 
   describe('serialization and hydration', () => {
-    it('roundtrips through encodeQuery + restore', async () => {
+    it('roundtrips through encodeQuery + hydrate', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 2 });
 
       await source.searchNow('2');
@@ -183,17 +185,17 @@ describe('createLocalSource', () => {
       const serialized = encodeQuery(source.toQuery());
       const restored = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 10 });
 
-      await restored.restore(decodeQuery(serialized, { defaultLimit: 10 }));
+      await restored.hydrate(decodeQuery(serialized, { defaultLimit: 10 }));
 
       expect(restored.toQuery()).toEqual({ limit: 2, page: 1, search: '2' });
     });
 
-    it('restore is a no-op when nothing changes', async () => {
+    it('hydrate with no changes is a no-op', async () => {
       const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
       const listener = vi.fn();
 
       source.subscribe(listener);
-      await source.restore({ limit: 2, page: 1, search: '' });
+      await source.hydrate({ limit: 2, page: 1, search: '' });
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -223,6 +225,42 @@ describe('createLocalSource', () => {
 
       expect(source.meta.itemStart).toBe(0);
       expect(source.meta.itemEnd).toBe(0);
+    });
+  });
+
+  describe('dispose', () => {
+    it('stops notifying listeners after dispose', async () => {
+      const source = createLocalSource([1, 2, 3]);
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+      source.dispose();
+
+      await source.goTo(2);
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('subscribe returns no-op unsubscribe after dispose', () => {
+      const source = createLocalSource([1, 2, 3]);
+
+      source.dispose();
+
+      const unsubscribe = source.subscribe(() => {});
+
+      expect(() => unsubscribe()).not.toThrow();
+    });
+  });
+
+  describe('default search', () => {
+    it('performs case-insensitive substring match by default', async () => {
+      const source = createLocalSource([{ name: 'Alice' }, { name: 'Bob' }, { name: 'ALICE' }], {
+        searchFn: (items, q) => items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())),
+      });
+
+      await source.searchNow('alice');
+
+      expect(source.current).toEqual([{ name: 'Alice' }, { name: 'ALICE' }]);
     });
   });
 });

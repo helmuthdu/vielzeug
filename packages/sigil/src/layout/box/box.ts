@@ -55,7 +55,8 @@ export type BitBoxProps = {
  * <bit-box variant="frost" rainbow>Frosted glass</bit-box>
  * ```
  */
-export const BOX_TAG = define<BitBoxProps>('bit-box', {
+export const BOX_TAG = 'bit-box' as const;
+define<BitBoxProps>(BOX_TAG, {
   props: {
     color: prop.string<ThemeColor>(),
     elevation: prop.number<ElevationLevel>(),

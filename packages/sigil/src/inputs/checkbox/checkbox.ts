@@ -79,7 +79,8 @@ export type BitCheckboxProps = CheckableProps & {
  * <bit-checkbox></bit-checkbox>
  * ```
  */
-export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-checkbox', {
+export const CHECKBOX_TAG = 'bit-checkbox' as const;
+define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

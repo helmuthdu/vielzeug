@@ -1,7 +1,7 @@
 import type { DetectOverflowOptions, Middleware, ReferenceElement, SizeData } from '../types';
 
-import { getBoundaryRect } from '../core';
-import { getSide, toSideObject } from '../utils';
+import { getBoundaryRect } from '../overflow';
+import { getSide, tagMiddleware, toSideObject } from '../utils';
 
 export interface SizeApplyArgs extends SizeData {
   elements: { floating: HTMLElement; reference: ReferenceElement };
@@ -10,9 +10,10 @@ export interface SizeApplyArgs extends SizeData {
 export interface SizeOptions extends DetectOverflowOptions {
   /**
    * Optional callback to mutate the floating element based on available space.
-   * Called after `middlewareData.size` is populated.
    *
-   * Prefer reading `result.middlewareData.size` directly over using this callback.
+   * @deprecated Read `result.middlewareData.size` directly and apply in the `float()` `apply`
+   * callback instead. DOM mutations inside middleware break the pure computation model.
+   * This option will be removed in the next major version.
    */
   apply?: (args: SizeApplyArgs) => void;
 }
@@ -20,26 +21,30 @@ export interface SizeOptions extends DetectOverflowOptions {
 /**
  * Reports the available space between the reference and boundary edges.
  *
- * Available dimensions are written to `middlewareData.size` and optionally
- * passed to an `apply` callback for immediate DOM mutations.
+ * Available dimensions are written to `middlewareData.size`.
  *
- * @example Read from result (preferred):
+ * @example
  * ```ts
- * const result = computePosition(ref, el, { middleware: [size()] });
- * el.style.maxHeight = `${result.middlewareData.size!.availableHeight}px`;
- * ```
- *
- * @example Mutate in callback (convenient shorthand):
- * ```ts
- * size({ apply({ availableHeight, elements }) {
- *   elements.floating.style.maxHeight = `${availableHeight}px`;
- * }})
+ * const cleanup = float(ref, el, {
+ *   middleware: [offset(8), flip(), shift(), size()],
+ *   apply({ middlewareData }) {
+ *     el.style.maxHeight = `${middlewareData.size!.availableHeight}px`;
+ *   },
+ * });
  * ```
  */
 export function size(options: SizeOptions = {}): Middleware {
   const { apply } = options;
 
-  return (state) => {
+  if (import.meta.env.DEV && apply) {
+    console.warn(
+      '[orbit] size({ apply }) is deprecated. ' +
+        'Read `middlewareData.size` in the `float()` `apply` callback instead. ' +
+        'DOM mutations inside middleware break the pure computation model.',
+    );
+  }
+
+  return tagMiddleware(function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const boundary = getBoundaryRect(options.boundary);
     const padding = toSideObject(options.padding);
     const side = getSide(state.placement);
@@ -67,5 +72,5 @@ export function size(options: SizeOptions = {}): Middleware {
     apply?.({ ...sizeData, elements: state.elements });
 
     return { data: { size: sizeData } };
-  };
+  }, 'size');
 }

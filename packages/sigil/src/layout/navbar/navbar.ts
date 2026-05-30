@@ -4,7 +4,6 @@ import {
   define,
   html,
   inject,
-  listen,
   onMounted,
   provide,
   signal,
@@ -13,6 +12,19 @@ import {
   prop,
 } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
+
+const listen = (
+  el: EventTarget | null | undefined,
+  name: string,
+  handler: (e: any) => void,
+  options?: AddEventListenerOptions,
+): (() => void) => {
+  if (!el) return () => {};
+
+  el.addEventListener(name, handler as EventListener, options);
+
+  return () => el.removeEventListener(name, handler as EventListener, options);
+};
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -210,7 +222,8 @@ export type BitNavbarItemProps = {
  * <bit-navbar></bit-navbar>
  * ```
  */
-export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', {
+export const NAVBAR_TAG = 'bit-navbar' as const;
+define<BitNavbarProps, BitNavbarEvents>(NAVBAR_TAG, {
   props: {
     breakpoint: prop.string('(max-width: 768px)'),
     color: prop.string<ThemeColor>(),
@@ -575,13 +588,13 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
         stopEscape?.();
         stopScroll?.();
         stopContainerScroll?.();
-        stopModeWatch?.();
-        stopModeTransitionWatch?.();
-        stopMobileMenuSlotWatch?.();
-        stopMobileSidebarWatch?.();
+        stopModeWatch?.dispose();
+        stopModeTransitionWatch?.dispose();
+        stopMobileMenuSlotWatch?.dispose();
+        stopMobileSidebarWatch?.dispose();
         mediaCleanup?.();
         mobileSidebarCleanup?.();
-        stopResizeEffect?.();
+        stopResizeEffect?.dispose();
 
         if (modeTransitionTimeout != null) {
           clearTimeout(modeTransitionTimeout);
@@ -663,7 +676,8 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
  *
  * @element bit-navbar-item
  */
-export const NAVBAR_ITEM_TAG = define<BitNavbarItemProps>('bit-navbar-item', {
+export const NAVBAR_ITEM_TAG = 'bit-navbar-item' as const;
+define<BitNavbarItemProps>(NAVBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     disabled: prop.bool(false),

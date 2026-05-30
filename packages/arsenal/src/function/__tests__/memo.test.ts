@@ -123,4 +123,61 @@ describe('memoize', () => {
     expect(memoizedFn(anotherCircular)).toBe(first);
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
+
+  it('clear() wipes all cached entries', () => {
+    const mockFn = vi.fn((x: number) => x * 2);
+    const memoizedFn = memo(mockFn);
+
+    expect(memoizedFn(1)).toBe(2);
+    expect(memoizedFn(2)).toBe(4);
+    expect(mockFn).toHaveBeenCalledTimes(2);
+
+    memoizedFn.clear();
+
+    expect(memoizedFn(1)).toBe(2);
+    expect(memoizedFn(2)).toBe(4);
+    expect(mockFn).toHaveBeenCalledTimes(4); // called again after clear
+  });
+
+  it('invalidate() removes a specific cached entry', () => {
+    const mockFn = vi.fn((x: number) => x * 2);
+    const memoizedFn = memo(mockFn);
+
+    expect(memoizedFn(1)).toBe(2);
+    expect(memoizedFn(2)).toBe(4);
+    expect(mockFn).toHaveBeenCalledTimes(2);
+
+    memoizedFn.invalidate(1);
+
+    expect(memoizedFn(1)).toBe(2); // recomputed
+    expect(memoizedFn(2)).toBe(4); // still cached
+    expect(mockFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not LRU-evict in-flight async entries', async () => {
+    const resolvers: Array<(v: number) => void> = [];
+    const slow = vi.fn(
+      (_x: number) =>
+        new Promise<number>((r) => {
+          resolvers.push(r);
+        }),
+    );
+    const memoizedFn = memo(slow, { maxSize: 1 });
+
+    const p1 = memoizedFn(1); // starts in-flight for key 1
+
+    memoizedFn(2); // second in-flight entry — would evict key 1 if not guarded
+
+    expect(slow).toHaveBeenCalledTimes(2);
+
+    // Resolve key 1 — inFlight.delete runs as a microtask after this
+    resolvers[0]!(42);
+    await p1;
+
+    // Key 1 is still in cache (was not LRU-evicted while in-flight)
+    const p3 = memoizedFn(1);
+
+    expect(slow).toHaveBeenCalledTimes(2); // NOT called again for key 1
+    await expect(p3).resolves.toBe(42);
+  });
 });

@@ -10,6 +10,7 @@ export default defineConfig(
   getConfig(__dirname, {
     entry: {
       'src/index': resolve(__dirname, 'src/index.ts'),
+      'src/validate': resolve(__dirname, 'src/validate.ts'),
     },
     name: 'lingua',
   }),

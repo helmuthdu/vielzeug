@@ -107,7 +107,8 @@ export type BitSliderProps = {
  * <bit-slider range from="20" to="80" color="primary">Price range</bit-slider>
  * ```
  */
-export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', {
+export const SLIDER_TAG = 'bit-slider' as const;
+define<BitSliderProps, BitSliderEvents>(SLIDER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

@@ -1,7 +1,9 @@
+import { isAbortError, retry } from '@vielzeug/arsenal';
+
 import type { RetryOptions } from './retry';
 import type { AsyncStatus, QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
-import { NO_RETRY, runWithRetry } from './retry';
+import { NO_RETRY, resolveRetryDelay } from './retry';
 import { stableStringify } from './serialize';
 
 const DEFAULT_GC = 5 * 60_000;
@@ -50,12 +52,12 @@ type QueryObserver<T, S> = {
 // Fetch configuration stored separately from cache state so entry data fields
 // are never mutated by late-arriving fetchQuery calls from different callers.
 type FetchConfig<T = unknown> = {
+  delay: RetryOptions['delay'];
   fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime: number;
-  maxAttempts: number;
-  retryDelay: RetryOptions['retryDelay'];
   shouldRetry: RetryOptions['shouldRetry'];
   staleTime: number;
+  times: number;
 };
 
 type CacheEntry<T = unknown> = {
@@ -88,8 +90,8 @@ function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefine
 export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const maxAttemptsDefault = opts?.maxAttempts ?? NO_RETRY;
-  const retryDelayDefault = opts?.retryDelay;
+  const timesDefault = opts?.times ?? NO_RETRY;
+  const delayDefault = opts?.delay;
   const shouldRetryDefault = opts?.shouldRetry;
 
   let disposed = false;
@@ -298,7 +300,7 @@ export function createQuery(opts?: QueryClientOptions) {
   function startFetch<T>(entry: CacheEntry<T>, config: FetchConfig<T>): Promise<T> {
     if (entry.inflight) return entry.inflight.promise;
 
-    const { fn, gcTime, maxAttempts, retryDelay, shouldRetry } = config;
+    const { delay, fn, gcTime, shouldRetry, times } = config;
     const controller = new AbortController();
     const prev: EntrySnapshot<T> = {
       data: entry.data,
@@ -318,20 +320,19 @@ export function createQuery(opts?: QueryClientOptions) {
     // notification round returns this promise instead of spawning a second fetch.
     const promise = (async () => {
       try {
-        const data = await runWithRetry(
-          () => fn({ key: entry.key, signal: controller.signal }),
-          maxAttempts,
-          retryDelay,
+        const data = await retry(() => fn({ key: entry.key, signal: controller.signal }), {
+          delay: (attempt) => resolveRetryDelay(attempt, delay),
           shouldRetry,
-          controller.signal,
-        );
+          signal: controller.signal,
+          times,
+        });
 
         commitSuccess(entry, data, gcTime);
 
         return data;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        const isAborted = controller.signal.aborted || error.name === 'AbortError';
+        const isAborted = controller.signal.aborted || isAbortError(error);
 
         if (isAborted) {
           rollback(entry, prev, gcTime);
@@ -353,19 +354,19 @@ export function createQuery(opts?: QueryClientOptions) {
     if (disposed) throw new Error('[courier] QueryClient has been disposed');
 
     const {
+      delay = delayDefault,
       enabled = true,
       fn,
       gcTime = gcTimeDefault,
       initialData,
       key,
-      maxAttempts = maxAttemptsDefault,
-      retryDelay = retryDelayDefault,
       shouldRetry = shouldRetryDefault,
       staleTime = staleTimeDefault,
+      times = timesDefault,
     } = options;
 
     const entry = ensureEntry<T>(key);
-    const config: FetchConfig<T> = { fn, gcTime, maxAttempts, retryDelay, shouldRetry, staleTime };
+    const config: FetchConfig<T> = { delay, fn, gcTime, shouldRetry, staleTime, times };
 
     if (initialData !== undefined && entry.data === undefined) {
       const initVal = resolveValue(initialData);

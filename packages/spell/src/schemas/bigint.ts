@@ -97,13 +97,8 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     return super._walk(visitor);
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'bigint',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'bigint' };
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {

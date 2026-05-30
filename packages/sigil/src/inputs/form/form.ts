@@ -59,7 +59,8 @@ export type BitFormEvents = {
  * </bit-form>
  * ```
  */
-export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
+export const FORM_TAG = 'bit-form' as const;
+define<BitFormProps, BitFormEvents>(FORM_TAG, {
   props: {
     disabled: prop.bool(false),
     novalidate: prop.bool(false),

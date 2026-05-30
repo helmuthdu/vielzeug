@@ -1,22 +1,24 @@
-import type { Issue, ParseResult, Schema as BaseSchema, SchemaDescriptor } from '../core';
+import type { Issue, ParseResult, SchemaDescriptor } from '../core';
+import type { ParseValue } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { ErrorCode, Schema, prependIssuePath } from '../core';
 import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
-  readonly keySchema: BaseSchema<K, any>;
-  readonly valueSchema: BaseSchema<V, any>;
+  readonly keySchema: Schema<K, any>;
+  readonly valueSchema: Schema<V, any>;
 
-  constructor(keySchema: BaseSchema<K, any>, valueSchema: BaseSchema<V, any>) {
+  constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
     super();
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
   }
 
-  private _invalidMap(value: unknown): { data: unknown; issues: Issue[] } {
+  private _invalidMap(value: unknown): ParseValue {
     return {
       data: value,
       issues: [{ code: ErrorCode.invalid_type, message: _messages().map.type(), path: [] }],
+      typeOk: false,
     };
   }
 
@@ -34,7 +36,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     if (keyResult.success && valueResult.success) out.set(keyResult.data, valueResult.data);
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): ParseValue {
     if (!(value instanceof Map)) {
       return this._invalidMap(value);
     }
@@ -52,10 +54,10 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
       i += 1;
     }
 
-    return { data: out, issues };
+    return { data: out, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
     if (!(value instanceof Map)) {
       return this._invalidMap(value);
     }
@@ -72,21 +74,19 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
       this._applyEntryResult(out, issues, i, keyResult, valResult);
     }
 
-    return { data: out, issues };
+    return { data: out, issues, typeOk: true };
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
     return { $comment: 'Map<K,V> — no JSON Schema equivalent' };
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      key: this.keySchema.describe(),
+      ...this._describeBase(),
+      key: this.keySchema.toDescriptor(),
       kind: 'map',
-      value: this.valueSchema.describe(),
+      value: this.valueSchema.toDescriptor(),
     };
   }
 

@@ -10,8 +10,8 @@
 export interface FlushOptions {
   /**
    * Maximum number of microtask drain turns.
-   * Default: 12, which covers worst-case reactive propagation depth
-   * (effect → queueMicrotask → nested updates + buffer for computed chains).
+   * Default: 5, sufficient for normal reactive propagation depth.
+   * For deep async chains use `FLUSH_DEEP` (12 turns).
    */
   maxTurns?: number;
   /**
@@ -20,6 +20,17 @@ export interface FlushOptions {
    */
   debug?: boolean;
 }
+
+/**
+ * Pre-built flush options for deep async chains (async setup, nested effects).
+ * Use when the default `flush()` isn't sufficient to drain all pending work.
+ *
+ * @example
+ * ```ts
+ * await flush(FLUSH_DEEP);
+ * ```
+ */
+export const FLUSH_DEEP: FlushOptions = { maxTurns: 12 };
 
 // ─── Core ────────────────────────────────────────────────────────────────────
 
@@ -45,7 +56,7 @@ export interface FlushOptions {
  * ```
  */
 export async function flush(options: FlushOptions = {}): Promise<void> {
-  const { debug = false, maxTurns = 12 } = options;
+  const { debug = false, maxTurns = 5 } = options;
 
   const drainMicrotasks = async (turns: number, label: string): Promise<void> => {
     for (let i = 0; i < turns; i++) {

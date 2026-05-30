@@ -12,13 +12,8 @@ export class InstanceOfSchema<T> extends Schema<T> {
     );
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'instanceof',
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'instanceof' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

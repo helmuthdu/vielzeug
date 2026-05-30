@@ -34,7 +34,7 @@ All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `re
 ```ts
 i18n.t('greeting', { name: 'Alice' });
 i18n.tp('inbox', 3);
-i18n.tp('position', 2, { ordinal: true });
+i18n.tp('position', 2, undefined, true); // ordinal
 ```
 
 `t()` resolves leaf keys. `tp()` resolves plural branch keys (`.zero`, then CLDR category, then `.other`).
@@ -110,29 +110,76 @@ fmt.relative(-3, 'day');
 fmt.list(['a', 'b', 'c']);
 ```
 
-Alternatively, access `i18n.fmt` which is a lazy-initialised formatter tied to the instance:
+Alternatively, access `i18n.fmt` which is a formatter pre-wired to the instance locale:
 
 ```ts
 const price = i18n.fmt.currency(49.95, 'USD');
 ```
 
-`i18n.fmt` invalidates its cached `Intl` objects when the locale changes.
+`i18n.fmt` creates fresh `Intl` instances on each locale change because it reads locale lazily via a getter.
+
+## Namespace-based Lazy Loading
+
+Namespaces let you load partial catalogs on demand (e.g. per-route or per-feature translations) without using `merge()` manually for each locale.
+
+```ts
+// Register once at startup
+i18n.registerNamespace('settings', (locale) =>
+  () => import(`./locales/${locale}/settings.json`).then((m) => m.default),
+);
+
+// Load when entering the settings route
+async function onEnterSettings() {
+  await i18n.loadNamespace('settings');
+  // Keys from settings.json are now merged into the active locale catalog
+}
+
+// Pre-load a specific locale
+await i18n.loadNamespace('settings', 'de');
+```
+
+Key characteristics:
+
+- `loadNamespace(ns)` resolves for the active locale by default.
+- Concurrent calls for the same `ns + locale` pair are deduplicated — the source is loaded at most once.
+- Subsequent calls after a successful load are no-ops.
+- Throws `[lingua/E005]` if the namespace was not registered with `registerNamespace()` first.
+
+## Validating Catalogs
+
+Use `validateCatalog()` during development or CI to detect plural branches that are missing CLDR forms for a target locale.
+
+```ts
+import { validateCatalog } from '@vielzeug/lingua';
+import ar from './locales/ar.json';
+
+const warnings = validateCatalog(ar, 'ar');
+// Arabic requires: zero, one, two, few, many, other
+// warnings = [{ key: 'inbox', locale: 'ar', form: 'zero' }, ...]
+
+if (warnings.length > 0) {
+  console.warn('Missing plural forms:', warnings);
+}
+```
+
+The function inspects the catalog for keys that look like plural branches (i.e. have at least one CLDR form as a child) and compares the present forms against the full CLDR set for the given locale. It uses `Intl.PluralRules` internally.
 
 ## Missing Handling
 
-Pass `onMissing` to `createI18n` to handle missing keys and unresolved interpolation variables.
+Pass `onMissingKey` and/or `onMissingVar` to `createI18n` to handle missing keys and unresolved interpolation variables.
 
 ```ts
 const strictI18n = createI18n({
-  onMissing(info) {
-    if (info.type === 'var') return `<missing:${info.varName}>`;
-
-    return `[missing:${info.key}]`;
+  onMissingKey(key, locale) {
+    return `[missing:${key}]`;
+  },
+  onMissingVar(varName, key, locale) {
+    return `<missing:${varName}>`;
   },
 });
 ```
 
-Without `onMissing`, missing keys return the key string and missing interpolation variables keep their placeholder text.
+Without `onMissingKey`, missing keys return the key string. Without `onMissingVar`, missing variables keep their `{placeholder}` text.
 
 ## Framework Integration
 
@@ -233,7 +280,68 @@ router.subscribe(() => {
 - Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
 - Set `fallback` to a locale that has 100% coverage so missing keys degrade gracefully.
 - Register additional locales with `register()` at runtime rather than including them in the initial catalogs.
-- Use `merge()` for per-route or per-feature key sets; call it in your route enter hook.
-- Use `tp()` for pluralizable branch keys — `count` is injected automatically.
-- Use `onMissing` in development to surface untranslated keys early; omit it in production.
+- Use `registerNamespace` + `loadNamespace` for per-route key sets instead of calling `merge()` manually.
+- Use `watch({ signal })` for lifecycle-safe subscriptions in components; use `subscribe()` when you need the `Unsubscribe` return value.
+- Use `getState()` / `restoreState()` for SSR hydration instead of re-fetching catalogs on the client.
+- Enable `compile: true` for hot render paths (e.g. high-frequency reactive lists) where regex overhead is measurable.
+- Use `tp()` for pluralizable branch keys — `count` is injected automatically. Pass the fourth argument `true` for ordinals.
+- Use `onMissingKey` and `onMissingVar` in development to surface untranslated keys early; omit them in production.
+- Import `validateCatalog` from `@vielzeug/lingua/validate` in CI scripts; never import it in application code.
 - Share one `i18n` instance per app entry point; avoid creating separate instances per component.
+
+## SSR Hydration
+
+Use `getState()` on the server and `restoreState()` on the client to avoid re-fetching catalogs:
+
+```ts
+// Server (Node.js / Deno)
+const i18n = createI18n({ catalogs: { de: deMessages, en: enMessages }, locale: 'de' });
+const state = i18n.getState();
+// Embed state in the HTML response:
+// <script>window.__I18N__ = ${JSON.stringify(state)}</script>
+
+// Client
+const i18n = createI18n({ catalogs: { en: enMessages, de: () => import('./de.json').then(m => m.default) } });
+i18n.restoreState(window.__I18N__);
+// Catalogs from state are immediately available; no network request needed.
+```
+
+`restoreState()` stores all catalogs as flat dot-notation maps. It notifies subscribers once and switches the active locale.
+
+## Template Pre-compilation
+
+For high-frequency render paths, enable `compile: true` to parse message templates once at registration time instead of re-running the regex on every `t()` call:
+
+```ts
+const i18n = createI18n({
+  catalogs: { en: { greeting: 'Hello, {name}!' } },
+  compile: true,
+});
+
+// Regex is never run at render time
+i18n.t('greeting', { name: 'Alice' }); // => 'Hello, Alice!'
+```
+
+Output is identical to non-compile mode. The flag is transparent — switch it on or off without changing call sites.
+
+## Using watch() with AbortController
+
+`watch()` is the preferred subscription API in modern environments. It integrates directly with `AbortController` / `AbortSignal`:
+
+```ts
+// React
+useEffect(() => {
+  const controller = new AbortController();
+
+  i18n.watch(({ locale }) => {
+    document.documentElement.lang = locale;
+  }, { immediate: true, signal: controller.signal });
+
+  return () => controller.abort();
+}, []);
+
+// Svelte (onDestroy)
+const controller = new AbortController();
+i18n.watch(({ locale }) => snapshot = locale, { signal: controller.signal });
+onDestroy(() => controller.abort());
+```

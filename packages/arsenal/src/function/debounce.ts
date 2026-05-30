@@ -1,8 +1,6 @@
 import type { Fn } from '../types';
 
-import { assert } from './assert';
-
-export type Debounced<T extends Fn> = ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) & {
+export type Debounced<T extends Fn> = ((...args: Parameters<T>) => void) & {
   cancel(): void;
   flush(): ReturnType<T> | undefined;
   pending(): boolean;
@@ -13,18 +11,8 @@ export type Debounced<T extends Fn> = ((this: ThisParameterType<T>, ...args: Par
  * `cancel` to clear, and `pending` to check if an invocation is scheduled.
  */
 export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
-  assert(typeof fn === 'function', 'First argument must be a function', {
-    args: { fn },
-    type: TypeError,
-  });
-  assert(typeof delay === 'number' && delay >= 0, 'Delay must be a non-negative number', {
-    args: { delay },
-    type: TypeError,
-  });
-
   let timerId: number | undefined;
   let lastArgs: Parameters<T> | undefined;
-  let lastThis: ThisParameterType<T> | undefined;
 
   const clearTimer = () => {
     if (timerId !== undefined) {
@@ -36,34 +24,28 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
   const invoke = () => {
     clearTimer();
 
-    if (!lastArgs) return undefined; // nothing to invoke
+    if (!lastArgs) return undefined;
 
     const args = lastArgs;
-    const ctx = lastThis as ThisParameterType<T>;
 
     lastArgs = undefined;
-    lastThis = undefined;
 
-    return fn.apply(ctx as any, args) as ReturnType<T>;
+    return fn(...args) as ReturnType<T>;
   };
 
-  const debounced = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-    lastArgs = args;
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    lastThis = this;
-    clearTimer();
-    timerId = setTimeout(invoke, delay) as unknown as number;
-  } as Debounced<T>;
-
-  debounced.cancel = () => {
-    clearTimer();
-    lastArgs = undefined;
-    lastThis = undefined;
-  };
-
-  debounced.flush = () => invoke() as ReturnType<T> | undefined;
-
-  debounced.pending = () => timerId !== undefined;
-
-  return debounced;
+  return Object.assign(
+    (...args: Parameters<T>): void => {
+      lastArgs = args;
+      clearTimer();
+      timerId = setTimeout(invoke, delay) as unknown as number;
+    },
+    {
+      cancel: () => {
+        clearTimer();
+        lastArgs = undefined;
+      },
+      flush: (): ReturnType<T> | undefined => invoke(),
+      pending: () => timerId !== undefined,
+    },
+  );
 }

@@ -1,3 +1,4 @@
+import { clamp } from '@vielzeug/arsenal';
 import { computed, define, defineField, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -85,7 +86,8 @@ export type BitNumberInputProps = {
  * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>
  * ```
  */
-export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents>('bit-number-input', {
+export const NUMBER_INPUT_TAG = 'bit-number-input' as const;
+define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -139,17 +141,6 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     const { abortSignal, aria, assistive, assistiveId, label, value: fieldValue } = tf;
 
-    function clamp(n: number): number {
-      const min = props.min.value;
-      const max = props.max.value;
-
-      if (min != null && n < Number(min)) return Number(min);
-
-      if (max != null && n > Number(max)) return Number(max);
-
-      return n;
-    }
-
     function parseValue(): number | null {
       const v = fieldValue.value.trim();
 
@@ -161,7 +152,9 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
     }
 
     function commit(val: number | null, originalEvent?: Event) {
-      const clamped = val != null ? clamp(val) : null;
+      const min = props.min.value != null ? Number(props.min.value) : undefined;
+      const max = props.max.value != null ? Number(props.max.value) : undefined;
+      const clamped = val != null ? clamp(val, min, max) : null;
       const nextValue = clamped != null ? String(clamped) : '';
 
       if (fieldValue.value !== nextValue) fieldValue.value = nextValue;

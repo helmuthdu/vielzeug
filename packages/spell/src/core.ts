@@ -1,198 +1,50 @@
+import { isPlainObject } from '@vielzeug/arsenal';
+
 import { _messages } from './messages';
+import {
+  ErrorCode,
+  type AnySchema,
+  type CheckContext,
+  type CheckFnResult,
+  type FlatError,
+  type FlatErrorFirst,
+  type FormattedErrors,
+  type Infer,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type JsonSchema,
+  type MessageFn,
+  type ParseResult,
+  type SchemaDescriptor,
+  type SchemaWalker,
+  type ValidateFn,
+  type WrapperMode,
+} from './types';
 
-/* -------------------- Error Codes -------------------- */
-
-export const ErrorCode = {
-  custom: 'custom',
-  invalid_base64: 'invalid_base64',
-  invalid_date: 'invalid_date',
-  invalid_duration: 'invalid_duration',
-  invalid_enum: 'invalid_enum',
-  invalid_finite: 'invalid_finite',
-  invalid_integer: 'invalid_integer',
-  invalid_keys: 'invalid_keys',
-  invalid_length: 'invalid_length',
-  invalid_literal: 'invalid_literal',
-  invalid_multiple_of: 'invalid_multiple_of',
-  invalid_safe: 'invalid_safe',
-  invalid_string: 'invalid_string',
-  invalid_type: 'invalid_type',
-  invalid_union: 'invalid_union',
-  invalid_unique: 'invalid_unique',
-  invalid_url: 'invalid_url',
-  invalid_variant: 'invalid_variant',
-  too_big: 'too_big',
-  too_small: 'too_small',
-} as const;
-
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
-
-/* -------------------- Core Types -------------------- */
-
-export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
-
-/** Plain JSON Schema object (targeting JSON Schema 2020-12). */
-export type JsonSchema = Record<string, unknown>;
-
-/**
- * A typed discriminated union of all issues emitted by built-in validators.
- *
- * Narrowing on `code` gives precise access to `params`:
- * ```ts
- * if (issue.code === 'too_small') {
- *   const min = issue.params.min; // number | bigint | Date
- * }
- * ```
- */
-export type Issue =
-  | { code: 'custom'; message: string; params?: Record<string, unknown>; path: (string | number)[] }
-  | { code: 'invalid_base64'; message: string; params: { format: string }; path: (string | number)[] }
-  | { code: 'invalid_date'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_duration'; message: string; params: { format: string }; path: (string | number)[] }
-  | { code: 'invalid_enum'; message: string; params: { values: readonly unknown[] }; path: (string | number)[] }
-  | { code: 'invalid_finite'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_integer'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_keys'; message: string; params: { keys: string[] }; path: (string | number)[] }
-  | { code: 'invalid_length'; message: string; params: { exact: number }; path: (string | number)[] }
-  | { code: 'invalid_literal'; message: string; params: { expected: unknown }; path: (string | number)[] }
-  | { code: 'invalid_multiple_of'; message: string; params: { step: number | bigint }; path: (string | number)[] }
-  | { code: 'invalid_safe'; message: string; params?: undefined; path: (string | number)[] }
-  | {
-      code: 'invalid_string';
-      message: string;
-      params: { format?: string; includes?: string; pattern?: string; prefix?: string; suffix?: string };
-      path: (string | number)[];
-    }
-  | { code: 'invalid_type'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_union'; message: string; params: { errors: Issue[][] }; path: (string | number)[] }
-  | { code: 'invalid_unique'; message: string; params: { unique: true }; path: (string | number)[] }
-  | { code: 'invalid_url'; message: string; params: { format: string }; path: (string | number)[] }
-  | {
-      code: 'invalid_variant';
-      message: string;
-      params: { discriminator: string; expected: string[] };
-      path: (string | number)[];
-    }
-  | {
-      code: 'too_big';
-      message: string;
-      params: { exclusive?: boolean; max: number | bigint | Date };
-      path: (string | number)[];
-    }
-  | {
-      code: 'too_small';
-      message: string;
-      params: { exclusive?: boolean; min: number | bigint | Date };
-      path: (string | number)[];
-    }
-  | { code: string & {}; message: string; params?: Record<string, unknown>; path: (string | number)[] };
-
-/**
- * Validator function. Receives the value after type-checking.
- * Returns an Issue array on failure, null on success, or a Promise for async validators.
- * Path prepending is the container schema's responsibility, not the validator's.
- */
-export type ValidateFn = (value: unknown) => Issue[] | null | Promise<Issue[] | null>;
-
-type Preprocessor = (value: unknown) => unknown;
-type Postprocessor = (value: unknown) => unknown;
-
-type PreparedInput = { skip: true; value: null | undefined } | { skip: false; value: unknown };
-
-export type CheckContext = {
-  addIssue: (issue: {
-    code: string;
-    message: string;
-    params?: Record<string, unknown>;
-    path?: (string | number)[];
-  }) => void;
+export {
+  ErrorCode,
+  type AnySchema,
+  type CheckContext,
+  type CheckFnResult,
+  type FlatError,
+  type FlatErrorFirst,
+  type FormattedErrors,
+  type Infer,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type JsonSchema,
+  type MessageFn,
+  type ParseResult,
+  type SchemaDescriptor,
+  type SchemaWalker,
+  type ValidateFn,
+  type WrapperMode,
 };
 
-export type CheckFnResult = void | null | undefined | boolean | string;
-
-export type FlatError = { messages: string[]; path: (string | number)[] };
-export type FlatErrorFirst = { message: string; path: (string | number)[] };
-
-/**
- * Visitor map for schema.walk(). Container handlers receive already-walked children (type R).
- * All handlers are optional — unmatched kinds fall through to the `unknown` fallback.
- * Throws if no handler matches and no `unknown` fallback is provided.
- */
-export type SchemaWalker<R> = {
-  array?: (schema: AnySchema, item: R) => R;
-  bigint?: (schema: AnySchema) => R;
-  boolean?: (schema: AnySchema) => R;
-  date?: (schema: AnySchema) => R;
-  enum?: (schema: AnySchema) => R;
-  instanceof?: (schema: AnySchema) => R;
-  intersect?: (schema: AnySchema, branches: R[]) => R;
-  lazy?: (schema: AnySchema) => R;
-  literal?: (schema: AnySchema) => R;
-  map?: (schema: AnySchema, key: R, value: R) => R;
-  never?: (schema: AnySchema) => R;
-  nullable?: (schema: AnySchema, inner: R) => R;
-  nullish?: (schema: AnySchema, inner: R) => R;
-  number?: (schema: AnySchema) => R;
-  object?: (schema: AnySchema, fields: Record<string, R>) => R;
-  optional?: (schema: AnySchema, inner: R) => R;
-  pipe?: (schema: AnySchema, from: R, to: R) => R;
-  record?: (schema: AnySchema, key: R, value: R) => R;
-  set?: (schema: AnySchema, item: R) => R;
-  string?: (schema: AnySchema) => R;
-  tuple?: (schema: AnySchema, items: R[], rest: R | null) => R;
-  union?: (schema: AnySchema, branches: R[]) => R;
-  unknown?: (schema: AnySchema) => R;
-  variant?: (schema: AnySchema, branches: Record<string, R>) => R;
-};
-
-/* -------------------- Schema Descriptor (typed introspection) -------------------- */
-
-type BaseDescriptor = {
-  description?: string;
-  isNullable?: boolean;
-  isOptional?: boolean;
-};
-
-export type SchemaDescriptor = BaseDescriptor &
-  (
-    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' | 'instanceof' }
-    | {
-        contentEncoding?: string;
-        format?: string;
-        kind: 'string';
-        maxLength?: number;
-        minLength?: number;
-        pattern?: string | null;
-      }
-    | {
-        exclusiveMaximum?: number;
-        exclusiveMinimum?: number;
-        kind: 'number';
-        maximum?: number;
-        minimum?: number;
-        multipleOf?: number;
-        typeHint?: 'integer';
-      }
-    | { kind: 'literal'; value: string | number | boolean | null | undefined }
-    | { kind: 'enum'; values: readonly (string | number)[] }
-    | { items: SchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number }
-    | { items: SchemaDescriptor[]; kind: 'tuple'; rest: SchemaDescriptor | null }
-    | { fields: Record<string, SchemaDescriptor>; kind: 'object'; strict: boolean }
-    | { key: SchemaDescriptor; kind: 'record'; value: SchemaDescriptor }
-    | { item: SchemaDescriptor; kind: 'set' }
-    | { key: SchemaDescriptor; kind: 'map'; value: SchemaDescriptor }
-    | { branches: SchemaDescriptor[]; kind: 'union' | 'intersect' }
-    | { branches: Record<string, SchemaDescriptor>; discriminator: string; kind: 'variant' }
-    | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
-  );
-
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value == null || typeof value !== 'object') return false;
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === Object.prototype || prototype === null;
-}
+export { ValidationError, errorsAt, fail, prependIssuePath, resolveMessage } from './errors';
+export { isPlainObject } from '@vielzeug/arsenal';
 
 function materializeValue<T>(value: T): T {
   if (value == null || typeof value !== 'object') return value;
@@ -222,25 +74,24 @@ function materializeValue<T>(value: T): T {
   return value;
 }
 
+/* -------------------- Schema State -------------------- */
+
+type Preprocessor = (value: unknown) => unknown;
+type Postprocessor = (value: unknown) => unknown;
+
 export interface SchemaState<Output = unknown> {
-  validators: ValidateFn[];
+  catch?: () => Output;
+  defaultValue?: () => Output;
+  description?: string;
+  isNullable: boolean;
+  isOptional: boolean;
   postprocessors: Postprocessor[];
   preprocessors: Preprocessor[];
-  isOptional: boolean;
-  isNullable: boolean;
-  description?: string;
-  defaultValue?: () => Output;
-  catch?: () => Output;
+  validators: ValidateFn[];
 }
 
 function defaultState<Output>(): SchemaState<Output> {
-  return {
-    isNullable: false,
-    isOptional: false,
-    postprocessors: [],
-    preprocessors: [],
-    validators: [],
-  };
+  return { isNullable: false, isOptional: false, postprocessors: [], preprocessors: [], validators: [] };
 }
 
 function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
@@ -256,32 +107,13 @@ function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
   };
 }
 
-/**
- * Creates a single-issue failure array. Use in validator functions instead of building the array manually.
- */
-export function fail(code: string, message: string, params?: Record<string, unknown>): Issue[] {
-  return [{ code, message, params, path: [] } as Issue];
-}
+/* -------------------- Internal parse-value return type -------------------- */
 
-export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
-  return typeof msg === 'function' ? msg(ctx) : msg;
-}
+/** @internal */
+export type ParseValue = { data: unknown; issues: Issue[]; typeOk: boolean };
 
-export function prependIssuePath(issues: Issue[], prefix: string | number): Issue[] {
-  return issues.map((issue) => ({ ...issue, path: [prefix, ...issue.path] }));
-}
+/* -------------------- Base Schema -------------------- */
 
-function formatIssues(issues: Issue[]): string {
-  return issues
-    .map(({ code, message, path }) => {
-      const pathStr = path.length ? path.join('.') : 'value';
-
-      return `${pathStr}: ${message} [${code}]`;
-    })
-    .join('\n');
-}
-
-/* R2: no path param — always uses path: [] */
 function normalizeCheckResult(result: CheckFnResult, ctxIssues: Issue[]): Issue[] | null {
   const issues = [...ctxIssues];
 
@@ -291,144 +123,28 @@ function normalizeCheckResult(result: CheckFnResult, ctxIssues: Issue[]): Issue[
   return issues.length ? issues : null;
 }
 
-export class ValidationError extends Error {
-  readonly issues: Issue[];
-
-  constructor(issues: Issue[], cause?: unknown) {
-    super(formatIssues(issues), { cause });
-    this.name = 'ValidationError';
-    this.issues = issues;
-  }
-
-  static is(value: unknown): value is ValidationError {
-    return value instanceof ValidationError;
-  }
-
-  /**
-   * Returns the union branch errors from the most-specific failing branch.
-   * When parsing against a union, this surfaces the branch with the fewest issues
-   * at the deepest path — the branch that "came closest" to matching.
-   */
-  bestMatch(): Issue[] | null {
-    const unionIssue = this.issues.find(
-      (i): i is Extract<Issue, { code: 'invalid_union' }> => i.code === ErrorCode.invalid_union,
-    );
-
-    if (!unionIssue) return null;
-
-    const branches = unionIssue.params.errors;
-
-    if (branches.length === 0) return null;
-
-    // Score: prefer branches with deeper errors (more fields parsed) and fewer issues
-    const scored = branches.map((branchIssues) => {
-      const maxDepth = branchIssues.reduce((d, i) => Math.max(d, i.path.length), 0);
-
-      return { issues: branchIssues, score: maxDepth * 1000 - branchIssues.length };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored[0]!.issues;
-  }
-
-  flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {
-    const fieldErrors: FlatError[] = [];
-    const formErrors: string[] = [];
-    const pathMap = new Map<string, number>();
-
-    for (const issue of this.issues) {
-      if (issue.path.length === 0) {
-        formErrors.push(issue.message);
-      } else {
-        const key = JSON.stringify(issue.path);
-        const existing = pathMap.get(key);
-
-        if (existing !== undefined) {
-          fieldErrors[existing].messages.push(issue.message);
-        } else {
-          pathMap.set(key, fieldErrors.length);
-          fieldErrors.push({ messages: [issue.message], path: [...issue.path] });
-        }
-      }
-    }
-
-    return { fieldErrors, formErrors };
-  }
-
-  flattenFirst(): { fieldErrors: FlatErrorFirst[]; formErrors: string[] } {
-    const { fieldErrors, formErrors } = this.flatten();
-
-    return {
-      fieldErrors: fieldErrors.map((fe) => ({ message: fe.messages[0]!, path: fe.path })),
-      formErrors,
-    };
-  }
-
-  format(): FormattedErrors {
-    const root: FormattedErrors = { _errors: [] };
-
-    for (const issue of this.issues) {
-      if (issue.path.length === 0) {
-        root._errors.push(issue.message);
-        continue;
-      }
-
-      let node = root;
-
-      for (const segment of issue.path) {
-        const key = String(segment);
-
-        if (!node[key]) node[key] = { _errors: [] };
-
-        node = node[key] as FormattedErrors;
-      }
-
-      node._errors.push(issue.message);
-    }
-
-    return root;
-  }
-}
-
-export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[] {
-  let node: FormattedErrors | string[] = formatted;
-
-  for (const key of path) {
-    if (Array.isArray(node)) return [];
-
-    node = (node as FormattedErrors)[String(key)] ?? { _errors: [] };
-  }
-
-  return Array.isArray(node) ? node : (node as FormattedErrors)._errors;
-}
-
-export type ParseResult<T> = { data: T; success: true } | { error: ValidationError; success: false };
-
-export type FormattedErrors = {
-  _errors: string[];
-  [key: string]: FormattedErrors | string[];
-};
-
-/* -------------------- Base Schema -------------------- */
-
-/** Module-level WeakMap for memoizing schema() JSON Schema output. */
-const _schemaCache = new WeakMap<object, JsonSchema>();
-
 export class Schema<Output = unknown, Input = Output> {
   protected state: SchemaState<Output>;
+
   /**
-   * JSON Schema annotation fields populated by constraint methods (min, max, pattern, etc.).
-   * Subclasses access this in `_toSchemaBase()` and `_describeImpl()` to build schema output.
-   * Use `_addConstraint()` to atomically add a validator and update annotations.
+   * JSON Schema annotation fields set by constraint methods (min, max, pattern, etc.).
+   * Subclasses narrow this type with `declare protected _annotations: XxxAnnotations`
+   * to get typed access in _toSchemaBase() and _toDescriptorImpl().
    */
   protected _annotations: Record<string, unknown> = {};
 
+  /**
+   * Primary type-check validator set via the constructor. Runs before constraint validators;
+   * if it returns issues, constraint validators are skipped entirely.
+   */
+  private _typeValidator: ValidateFn | null = null;
+
   constructor(typeValidator?: ValidateFn) {
     this.state = defaultState<Output>();
-
-    if (typeValidator) this.state.validators.push(typeValidator);
+    this._typeValidator = typeValidator ?? null;
   }
+
+  /* -------------------- Parse -------------------- */
 
   parse(value: unknown): Output {
     return this._withCatch(() => {
@@ -437,8 +153,7 @@ export class Schema<Output = unknown, Input = Output> {
       if (prepared.skip) return prepared.value as Output;
 
       const core = this._parseValueSync(prepared.value);
-      const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
-      const validationIssues = !hasInvalidType ? this._runSyncValidators(core.data) : [];
+      const validationIssues = core.typeOk ? this._runSyncValidators(core.data) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
       if (allIssues.length) throw new ValidationError(allIssues);
@@ -464,8 +179,7 @@ export class Schema<Output = unknown, Input = Output> {
       if (prepared.skip) return prepared.value as Output;
 
       const core = await this._parseValueAsync(prepared.value);
-      const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
-      const validationIssues = !hasInvalidType ? await this._runAllValidators(core.data) : [];
+      const validationIssues = core.typeOk ? await this._runAllValidators(core.data) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
       if (allIssues.length) throw new ValidationError(allIssues);
@@ -485,23 +199,53 @@ export class Schema<Output = unknown, Input = Output> {
   }
 
   /**
-   * Adds a synchronous validator. Two overload forms:
-   *
-   * **Predicate form** — pass a boolean-returning function and an optional error message.
-   * This replaces the old `refine()` method.
-   * ```ts
-   * s.string().check(v => v.includes('@'), 'Must contain @')
-   * ```
-   *
-   * **Context form** — full access to `ctx.addIssue()` for multi-issue, path-aware validation.
-   * ```ts
-   * s.object({ a: s.string(), b: s.string() }).check((d, ctx) => {
-   *   if (d.a === d.b) ctx.addIssue({ code: 'custom', message: 'Must differ', path: ['a'] });
-   * })
-   * ```
-   *
-   * For async validators, use `checkAsync()` instead.
+   * Internal full parse without throwing. Returns { data, issues }.
+   * Used by WrapperSchema, ArraySchema, ObjectSchema etc. to avoid
+   * the try/catch + object allocation overhead of safeParse().
+   * @internal
    */
+  _parseFullSync(value: unknown): { data: unknown; issues: Issue[] } {
+    const prepared = this._prepareInput(value);
+
+    if (prepared.skip) return { data: prepared.value, issues: [] };
+
+    const core = this._parseValueSync(prepared.value);
+    const validationIssues = core.typeOk ? this._runSyncValidators(core.data) : [];
+    const allIssues = [...core.issues, ...validationIssues];
+
+    if (allIssues.length > 0) {
+      if (this.state.catch) return { data: this.state.catch(), issues: [] };
+
+      return { data: core.data, issues: allIssues };
+    }
+
+    return { data: this._runPostprocessors(core.data), issues: [] };
+  }
+
+  /**
+   * Async version of _parseFullSync.
+   * @internal
+   */
+  async _parseFullAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+    const prepared = this._prepareInput(value);
+
+    if (prepared.skip) return { data: prepared.value, issues: [] };
+
+    const core = await this._parseValueAsync(prepared.value);
+    const validationIssues = core.typeOk ? await this._runAllValidators(core.data) : [];
+    const allIssues = [...core.issues, ...validationIssues];
+
+    if (allIssues.length > 0) {
+      if (this.state.catch) return { data: this.state.catch(), issues: [] };
+
+      return { data: core.data, issues: allIssues };
+    }
+
+    return { data: this._runPostprocessors(core.data), issues: [] };
+  }
+
+  /* -------------------- Validators -------------------- */
+
   check(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
   check(fn: (value: Output, ctx: CheckContext) => CheckFnResult): this;
   check(
@@ -509,7 +253,6 @@ export class Schema<Output = unknown, Input = Output> {
     message?: MessageFn<{ value: Output }>,
   ): this {
     if (message !== undefined) {
-      // Predicate form (replaces refine())
       const predicate = fn as (value: Output) => boolean;
 
       return this._addValidator((value) => {
@@ -523,9 +266,7 @@ export class Schema<Output = unknown, Input = Output> {
     const validator: ValidateFn = (value) => {
       const ctxIssues: Issue[] = [];
       const ctx: CheckContext = {
-        addIssue: (issue) => {
-          ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue);
-        },
+        addIssue: (issue) => ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue),
       };
       const result = checkFn(value as Output, ctx);
 
@@ -539,24 +280,11 @@ export class Schema<Output = unknown, Input = Output> {
     return this._addValidator(validator);
   }
 
-  /**
-   * Adds an async validator. The schema must be used with `parseAsync()` / `safeParseAsync()`.
-   *
-   * ```ts
-   * const schema = s.string().checkAsync(async (v) => {
-   *   const exists = await db.users.exists({ email: v });
-   *   return exists || 'Email already registered';
-   * });
-   * await schema.parseAsync('alice@example.com');
-   * ```
-   */
   checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this {
     const validator: ValidateFn = (value) => {
       const ctxIssues: Issue[] = [];
       const ctx: CheckContext = {
-        addIssue: (issue) => {
-          ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue);
-        },
+        addIssue: (issue) => ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue),
       };
 
       return fn(value as Output, ctx).then((r) => normalizeCheckResult(r, ctxIssues));
@@ -565,9 +293,8 @@ export class Schema<Output = unknown, Input = Output> {
     return this._addValidator(validator);
   }
 
-  /* optional/nullable/nullish return typed wrapper schemas preserving subtype.
-     If this schema is already a WrapperSchema, the modes are merged to avoid double-wrapping:
-       optional + nullable → nullish, optional + optional → optional, etc. */
+  /* -------------------- Nullability / Optionality -------------------- */
+
   optional(): WrapperSchema<this, 'optional'> {
     if (this instanceof WrapperSchema) {
       const merged = this.mode === 'nullable' || this.mode === 'nullish' ? 'nullish' : 'optional';
@@ -603,6 +330,8 @@ export class Schema<Output = unknown, Input = Output> {
 
     return cloned;
   }
+
+  /* -------------------- Transforms -------------------- */
 
   default(defaultValue: Output | (() => Output)): this {
     const cloned = this._clone();
@@ -641,44 +370,47 @@ export class Schema<Output = unknown, Input = Output> {
     return new PipeSchema<B, Input>(this, next);
   }
 
-  /** @overload Set a human-readable description on this schema (fluent setter). */
-  describe(description: string): this;
-  /** @overload Return a typed introspection descriptor for this schema. */
-  describe(): SchemaDescriptor;
-  describe(description?: string): this | SchemaDescriptor {
-    if (description !== undefined) {
-      const cloned = this._clone();
+  /* -------------------- Introspection -------------------- */
 
-      cloned.state.description = description;
+  /**
+   * Sets the human-readable description label for this schema (fluent, immutable).
+   *
+   * ```ts
+   * const Username = s.string().min(3).label('Username');
+   * Username.description; // 'Username'
+   * ```
+   */
+  label(description: string): this {
+    const cloned = this._clone();
 
-      return cloned;
-    }
+    cloned.state.description = description;
 
-    return this._describeImpl();
+    return cloned;
   }
 
-  /** Override in subclasses to customize introspection output. */
-  protected _describeImpl(): SchemaDescriptor {
-    return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      kind: 'any',
-    };
+  /**
+   * Returns the full structural descriptor for this schema.
+   * Useful for introspection, code generation, and documentation.
+   *
+   * ```ts
+   * s.string().min(3).email().toDescriptor();
+   * // { kind: 'string', minLength: 3, format: 'email' }
+   * ```
+   */
+  toDescriptor(): SchemaDescriptor {
+    return this._toDescriptorImpl();
   }
 
   get description(): string | undefined {
     return this.state.description;
   }
+
   get isOptional(): boolean {
     return this.state.isOptional;
   }
+
   get isNullable(): boolean {
     return this.state.isNullable;
-  }
-
-  brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input> {
-    return this as unknown as Schema<Output & { __brand: Brand }, Input>;
   }
 
   is(value: unknown): value is Output {
@@ -686,49 +418,24 @@ export class Schema<Output = unknown, Input = Output> {
   }
 
   /**
-   * Returns a JSON Schema (2020-12) representation of this schema.
-   * Unrepresentable schemas (Date, Map, Set, instanceof, lazy) emit `{ $comment: '...' }`.
-   * Result is memoized — each distinct schema instance caches its output.
+   * Serializes this schema to a JSON Schema object (draft 2020-12 compatible).
+   * Note: not all spell constraints map cleanly to JSON Schema.
    */
   toJsonSchema(): JsonSchema {
-    let cached = _schemaCache.get(this);
+    const base = this._toSchemaBase();
+    let result: JsonSchema = base;
 
-    if (cached === undefined) {
-      const base = this._toSchemaBase();
-      let result: JsonSchema = base;
+    if (this.state.isNullable) result = { anyOf: [base, { type: 'null' }] };
 
-      if (this.state.isNullable) result = { anyOf: [base, { type: 'null' }] };
+    if (this.state.description) result = { ...result, description: this.state.description };
 
-      if (this.state.description) result = { ...result, description: this.state.description };
-
-      _schemaCache.set(this, result);
-      cached = result;
-    }
-
-    return cached;
+    return result;
   }
 
-  /**
-   * Traverse this schema tree with a typed visitor.
-   * Container visitors receive already-walked children as the last argument(s).
-   * Throws only if no handler matches AND no `unknown` fallback is provided.
-   *
-   * @example
-   * ```ts
-   * const labels = v.object({ name: v.string() }).walk({
-   *   object: (_, fields) => Object.keys(fields),
-   *   unknown: () => [],
-   * });
-   * ```
-   */
   walk<R>(visitor: SchemaWalker<R>): R {
     return this._walk(visitor);
   }
 
-  /**
-   * Structural equality. True if both schemas have the same kind, constraints, and modifiers.
-   * Custom check() validators are NOT compared.
-   */
   equals(other: AnySchema): boolean {
     if (other === this) return true;
 
@@ -743,7 +450,104 @@ export class Schema<Output = unknown, Input = Output> {
     return this._equalsImpl(other);
   }
 
-  /* R5: private — not accessible from subclasses */
+  /* -------------------- Protected helpers -------------------- */
+
+  /**
+   * Returns the base descriptor fields shared by every schema (description, isNullable, isOptional).
+   * Use in _toDescriptorImpl overrides: `{ ...this._describeBase(), kind: 'string', ... }`
+   */
+  protected _describeBase(): { description?: string; isNullable?: true; isOptional?: true } {
+    return {
+      ...(this.state.description !== undefined ? { description: this.state.description } : {}),
+      ...(this.state.isNullable ? { isNullable: true as const } : {}),
+      ...(this.state.isOptional ? { isOptional: true as const } : {}),
+    };
+  }
+
+  /**
+   * Shallow-compares _annotations across two schema instances.
+   * Call from _equalsImpl in annotation-bearing schemas.
+   */
+  protected _annotationsEqual(other: AnySchema): boolean {
+    const a = this._annotations;
+    const b = (other as Schema)._annotations;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) return false;
+
+    return keysA.every((k) => a[k] === b[k]);
+  }
+
+  /**
+   * Adds a constraint validator and optionally updates _annotations atomically.
+   *
+   * The mergeAnnotations callback receives the current annotations as
+   * `Record<string, unknown>`. Cast to your annotation type inside the callback:
+   * ```ts
+   * (ann) => { const a = ann as StringAnnotations; return { ...a, minLength: n }; }
+   * ```
+   */
+  protected _addConstraint(
+    validator: ValidateFn,
+    mergeAnnotations?: (current: Record<string, unknown>) => Record<string, unknown>,
+  ): this {
+    const next = this._addValidator(validator);
+
+    if (mergeAnnotations) {
+      next._annotations = mergeAnnotations({ ...next._annotations });
+    }
+
+    return next;
+  }
+
+  protected _addValidator(validator: ValidateFn): this {
+    const cloned = this._clone();
+
+    cloned.state.validators.push(validator);
+
+    return cloned;
+  }
+
+  protected _construct(state: SchemaState<any>): this {
+    const next = Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
+
+    next._annotations = { ...this._annotations };
+
+    return next;
+  }
+
+  protected _clone(): this {
+    return this._construct(cloneState(this.state));
+  }
+
+  protected _copyStateTo<T extends Schema<any, any>>(target: T): T {
+    target.state = cloneState(this.state);
+
+    return target;
+  }
+
+  protected _toSchemaBase(): JsonSchema {
+    return {};
+  }
+
+  protected _walk<R>(visitor: SchemaWalker<R>): R {
+    if (visitor.unknown) return visitor.unknown(this);
+
+    throw new Error('[spell] walk(): no handler matched and no `unknown` fallback provided.');
+  }
+
+  /** Override in subclasses to return the full schema descriptor. */
+  protected _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this._describeBase(), kind: 'any' };
+  }
+
+  protected _equalsImpl(_other: AnySchema): boolean {
+    return true;
+  }
+
+  /* -------------------- Private -------------------- */
+
   private _withCatch<T>(fn: () => T): T {
     if (!this.state.catch) return fn();
 
@@ -768,7 +572,7 @@ export class Schema<Output = unknown, Input = Output> {
     }
   }
 
-  private _prepareInput(value: unknown): PreparedInput {
+  private _prepareInput(value: unknown): { skip: true; value: null | undefined } | { skip: false; value: unknown } {
     const processed = this._runPreprocessors(value);
     const withDefault = processed === undefined && this.state.defaultValue ? this.state.defaultValue() : processed;
 
@@ -795,8 +599,17 @@ export class Schema<Output = unknown, Input = Output> {
     return current;
   }
 
-  /* R2: validate(value) — single validator array, short-circuit on invalid_type */
   private _runSyncValidators(value: unknown): Issue[] {
+    if (this._typeValidator) {
+      const typeResult = this._typeValidator(value);
+
+      if (typeResult instanceof Promise) {
+        throw new Error('Type validator returned a Promise. Use checkAsync() for async validation.');
+      }
+
+      if (typeResult && typeResult.length > 0) return typeResult;
+    }
+
     const issues: Issue[] = [];
 
     for (const validate of this.state.validators) {
@@ -806,127 +619,50 @@ export class Schema<Output = unknown, Input = Output> {
         throw new Error('check() callback returned a Promise. Use checkAsync() for async validation.');
       }
 
-      if (result) {
-        issues.push(...result);
-
-        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
-      }
+      if (result) issues.push(...result);
     }
 
     return issues;
   }
 
   protected async _runAllValidators(value: unknown): Promise<Issue[]> {
+    if (this._typeValidator) {
+      const typeResult = await this._typeValidator(value);
+
+      if (typeResult && typeResult.length > 0) return typeResult;
+    }
+
     const issues: Issue[] = [];
 
     for (const validate of this.state.validators) {
       const result = await validate(value);
 
-      if (result) {
-        issues.push(...result);
-
-        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
-      }
+      if (result) issues.push(...result);
     }
 
     return issues;
   }
 
-  protected _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    return { data: value, issues: [] };
+  protected _parseValueSync(value: unknown): ParseValue {
+    return { data: value, issues: [], typeOk: true };
   }
 
-  protected async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+  protected async _parseValueAsync(value: unknown): Promise<ParseValue> {
     return this._parseValueSync(value);
-  }
-
-  protected _addValidator(validator: ValidateFn): this {
-    const cloned = this._clone();
-
-    cloned.state.validators.push(validator);
-
-    return cloned;
-  }
-
-  /**
-   * Adds a constraint validator and optionally merges JSON Schema annotation fields.
-   * Use in concrete schema methods (min, max, email, etc.) instead of manually calling
-   * `_addValidator()` + updating annotation fields separately.
-   *
-   * @example
-   * ```ts
-   * min(n: number): this {
-   *   return this._addConstraint(
-   *     (v) => (v as string).length >= n ? null : fail(ErrorCode.too_small, ..., { min: n }),
-   *     (ann) => ({ ...ann, minLength: ann.minLength === undefined ? n : Math.max(ann.minLength as number, n) })
-   *   );
-   * }
-   * ```
-   */
-  protected _addConstraint(
-    validator: ValidateFn,
-    mergeAnnotations?: (current: Record<string, unknown>) => Record<string, unknown>,
-  ): this {
-    const next = this._addValidator(validator);
-
-    if (mergeAnnotations) {
-      next._annotations = mergeAnnotations({ ...next._annotations });
-    }
-
-    return next;
-  }
-
-  protected _construct(state: SchemaState<any>): this {
-    const next = Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
-
-    next._annotations = { ...this._annotations };
-
-    return next;
-  }
-
-  protected _clone(): this {
-    return this._construct(cloneState(this.state));
-  }
-
-  /** Copy this schema's validators/processors/modifiers onto an already-created target instance. */
-  protected _copyStateTo<T extends Schema<any, any>>(target: T): T {
-    target.state = cloneState(this.state);
-
-    return target;
-  }
-
-  /** Override in concrete schemas to return kind-specific JSON Schema. */
-  protected _toSchemaBase(): JsonSchema {
-    return {};
-  }
-
-  /** Override in concrete schemas for walk() dispatch. */
-  protected _walk<R>(visitor: SchemaWalker<R>): R {
-    if (visitor.unknown) return visitor.unknown(this);
-
-    throw new Error('[sieve] walk(): no handler matched and no `unknown` fallback provided.');
-  }
-
-  /**
-   * Override in concrete schemas for structural equality beyond base checks.
-   * Returns true by default — subclasses with constraint fields override this.
-   * Custom check() validators are NOT compared.
-   */
-  protected _equalsImpl(_other: AnySchema): boolean {
-    return true;
   }
 }
 
-/* -------------------- Type Inference -------------------- */
+/* -------------------- Re-export for schema files -------------------- */
 
-export type AnySchema = Schema<unknown, unknown>;
-export type InferOutput<T> = T extends Schema<infer O> ? O : never;
-export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
-export type Infer<T> = InferOutput<T>;
+import { ValidationError, fail, resolveMessage } from './errors';
 
-/* -------------------- Wrapper Schemas (optional / nullable / nullish) -------------------- */
+/* -------------------- Type Aliases -------------------- */
 
-export type WrapperMode = 'nullable' | 'nullish' | 'optional';
+export type OptionalSchema<T extends AnySchema> = WrapperSchema<T, 'optional'>;
+export type NullableSchema<T extends AnySchema> = WrapperSchema<T, 'nullable'>;
+export type NullishSchema<T extends AnySchema> = WrapperSchema<T, 'nullish'>;
+
+/* -------------------- WrapperSchema -------------------- */
 
 type WrapperOutput<T extends AnySchema, Mode extends WrapperMode> = Mode extends 'optional'
   ? InferOutput<T> | undefined
@@ -940,18 +676,6 @@ type WrapperInput<T extends AnySchema, Mode extends WrapperMode> = Mode extends 
     ? InferInput<T> | null
     : InferInput<T> | null | undefined;
 
-/**
- * Single wrapper class replacing the three separate Optional/Nullable/NullishSchema classes.
- * The `mode` field declares which nullability the wrapper adds.
- *
- * @example
- * ```ts
- * const s = v.string().optional(); // WrapperSchema<StringSchema, 'optional'>
- * s.inner; // StringSchema
- * s.mode;  // 'optional'
- * s.required(); // StringSchema
- * ```
- */
 export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extends Schema<
   WrapperOutput<T, Mode>,
   WrapperInput<T, Mode>
@@ -968,22 +692,23 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
   }
 
   override required(): Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>> {
-    // T is the inner schema that already excludes the optional/nullable wrapper.
-    // The cast is safe: T extends Schema<InferOutput<T>, InferInput<T>>, and Exclude strips
-    // exactly the undefined/null that the WrapperSchema added.
     return this.inner as Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>>;
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const result = this.inner.safeParse(value);
+  protected override _parseValueSync(value: unknown): ParseValue {
+    const result = this.inner._parseFullSync(value);
 
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
+    return result.issues.length > 0
+      ? { data: value, issues: result.issues, typeOk: false }
+      : { data: result.data, issues: [], typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const result = await this.inner.safeParseAsync(value);
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
+    const result = await this.inner._parseFullAsync(value);
 
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
+    return result.issues.length > 0
+      ? { data: value, issues: result.issues, typeOk: false }
+      : { data: result.data, issues: [], typeOk: true };
   }
 
   protected override _toSchemaBase(): JsonSchema {
@@ -1002,15 +727,8 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
     return super._walk(visitor);
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
-    const inner = this.inner.describe();
-
-    return {
-      ...inner,
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-    };
+  protected override _toDescriptorImpl(): SchemaDescriptor {
+    return { ...this.inner.toDescriptor(), ...this._describeBase() };
   }
 
   protected override _equalsImpl(other: AnySchema): boolean {
@@ -1020,68 +738,61 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
   }
 }
 
-/** Type alias — no runtime cost. */
-export type OptionalSchema<T extends AnySchema> = WrapperSchema<T, 'optional'>;
-/** Type alias — no runtime cost. */
-export type NullableSchema<T extends AnySchema> = WrapperSchema<T, 'nullable'>;
-/** Type alias — no runtime cost. */
-export type NullishSchema<T extends AnySchema> = WrapperSchema<T, 'nullish'>;
+/* -------------------- PipeSchema -------------------- */
 
-/* -------------------- Pipe Schema -------------------- */
+export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
+  readonly from: Schema<any, Input>;
+  readonly to: Schema<Output, any>;
 
-/** Schema produced by `.pipe()`. Parses with `from`, then feeds the result into `to`. */
-export class PipeSchema<Output, Input> extends Schema<Output, Input> {
-  readonly from: AnySchema;
-  readonly to: AnySchema;
-
-  constructor(from: AnySchema, to: AnySchema) {
+  constructor(from: Schema<any, Input>, to: Schema<Output, any>) {
     super();
     this.from = from;
     this.to = to;
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const r1 = this.from.safeParse(value);
+  protected override _parseValueSync(value: unknown): ParseValue {
+    const r1 = this.from._parseFullSync(value);
 
-    if (!r1.success) return { data: value, issues: r1.error.issues };
+    if (r1.issues.length > 0) return { data: value, issues: r1.issues, typeOk: false };
 
-    const r2 = this.to.safeParse(r1.data as unknown);
+    const r2 = this.to._parseFullSync(r1.data);
 
-    if (!r2.success) return { data: value, issues: r2.error.issues };
-
-    return { data: r2.data, issues: [] };
+    return r2.issues.length > 0
+      ? { data: r1.data, issues: r2.issues, typeOk: false }
+      : { data: r2.data, issues: [], typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const r1 = await this.from.safeParseAsync(value);
+  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
+    const r1 = await this.from._parseFullAsync(value);
 
-    if (!r1.success) return { data: value, issues: r1.error.issues };
+    if (r1.issues.length > 0) return { data: value, issues: r1.issues, typeOk: false };
 
-    const r2 = await this.to.safeParseAsync(r1.data as unknown);
+    const r2 = await this.to._parseFullAsync(r1.data);
 
-    if (!r2.success) return { data: value, issues: r2.error.issues };
-
-    return { data: r2.data, issues: [] };
+    return r2.issues.length > 0
+      ? { data: r1.data, issues: r2.issues, typeOk: false }
+      : { data: r2.data, issues: [], typeOk: true };
   }
 
   protected override _toSchemaBase(): JsonSchema {
-    return { allOf: [this.from.toJsonSchema(), this.to.toJsonSchema()] };
+    return this.to.toJsonSchema();
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
-    if (visitor.pipe) return visitor.pipe(this, this.from.walk(visitor), this.to.walk(visitor));
+    const fromR = this.from.walk(visitor);
+    const toR = this.to.walk(visitor);
+
+    if (visitor.pipe) return visitor.pipe(this, fromR, toR);
 
     return super._walk(visitor);
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      from: this.from.describe(),
+      ...this._describeBase(),
+      from: this.from.toDescriptor(),
       kind: 'pipe',
-      to: this.to.describe(),
+      to: this.to.toDescriptor(),
     };
   }
 

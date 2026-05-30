@@ -2,7 +2,6 @@ import {
   batch,
   computed,
   effect as rawEffect,
-  isSignal,
   signal,
   untrack,
   type ReadonlySignal,
@@ -10,138 +9,228 @@ import {
 } from '@vielzeug/ripple';
 
 import { CRAFTIT_ERRORS } from '../errors';
-import {
-  applyBindingsWithTargets,
-  applyHtmlBinding,
-  indexBindingTargets,
-  parseHTML,
-  type RegisterCleanup,
-} from '../template-bindings';
-import {
-  createDirectiveResult,
-  htmlResult,
-  isHtmlResult,
-  type DirectiveResult,
-  type HtmlBinding,
-  type HTMLResult,
-} from '../types/bindings';
-import { escapeHtml, removeNodes, runAll } from '../utils/dom';
-import { createMarkerIdFactory, rekeyHtmlResult } from '../utils/id';
+import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
+import { removeNodes, runAll } from '../utils/dom';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-/** Signal, getter function, or plain array. */
 type MaybeReactiveArray<T> = ReadonlySignal<T[]> | (() => T[]) | T[];
 
 type ItemEntry<T> = {
   cleanups: (() => void)[];
   data: Signal<T>;
   index: Signal<number>;
+  /** The key used to identify this entry. */
+  key: string;
   nodes: Node[];
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── LIS (Longest Increasing Subsequence) ────────────────────────────────────
+// Used to identify the stable subset of existing items that don't need DOM movement.
+// O(n log n) patience-sort implementation with predecessor backtracking.
 
-const toHtmlResult = (value: string | HTMLResult): HTMLResult =>
-  isHtmlResult(value) ? value : htmlResult(escapeHtml(String(value)));
+const computeLISIndices = (arr: number[]): Set<number> => {
+  const n = arr.length;
 
-// ─── Keyed item lifecycle ─────────────────────────────────────────────────────
+  if (n === 0) return new Set();
 
-/**
- * Create a keyed item: mount its nodes and wire up bindings.
- * Returns an ItemEntry containing the reactive signals and cleanup list.
- * Cleanup runs via removeItem() — not via the outer registerCleanup.
- */
+  const tails: number[] = []; // smallest tail value of any IS of length i+1
+  const piles: number[] = []; // arr-index that produced tails[i]
+  const parent: number[] = new Array(n).fill(-1);
+
+  for (let i = 0; i < n; i++) {
+    const v = arr[i];
+    let lo = 0;
+    let hi = tails.length;
+
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+
+      if (tails[mid] < v) lo = mid + 1;
+      else hi = mid;
+    }
+
+    tails[lo] = v;
+    piles[lo] = i;
+
+    if (lo > 0) parent[i] = piles[lo - 1];
+  }
+
+  // Backtrack to collect LIS element indices (indices into arr, not arr values)
+  const result = new Set<number>();
+  let idx = piles[tails.length - 1];
+
+  while (idx !== -1) {
+    result.add(idx);
+    idx = parent[idx];
+  }
+
+  return result;
+};
+
+// ─── Item lifecycle ───────────────────────────────────────────────────────────
+
 const createItem = <T>(
   item: T,
   index: number,
-  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => string | HTMLResult,
-  getNextId: () => string,
+  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
   parent: ParentNode,
   insertBefore: Node,
 ): ItemEntry<T> => {
   const dataSignal: Signal<T> = signal(item);
   const indexSignal: Signal<number> = signal(index);
 
-  const raw = render(dataSignal, indexSignal);
-  const rekeyed = rekeyHtmlResult(isHtmlResult(raw) ? raw : htmlResult(escapeHtml(String(raw))), getNextId);
+  const result = render(dataSignal, indexSignal);
+  const nodes = Array.from(result.fragment.childNodes);
 
-  const fragment = parseHTML(rekeyed.html);
-  const itemNodes = Array.from(fragment.childNodes);
-
-  // Move nodes to real DOM first so DirectiveBindings get the correct parentNode
-  for (const node of itemNodes) {
-    parent.insertBefore(node, insertBefore);
-  }
+  parent.insertBefore(result.fragment, insertBefore);
 
   const cleanups: (() => void)[] = [];
-  const registerItemCleanup: RegisterCleanup = (fn) => cleanups.push(fn);
 
-  if (rekeyed.bindings.length > 0) {
-    const deferredHtmlBindings: HtmlBinding[] = [];
-    const targets = indexBindingTargets(itemNodes);
+  result.apply((fn) => cleanups.push(fn));
 
-    applyBindingsWithTargets(rekeyed.bindings, registerItemCleanup, targets, {
-      onHtml: (b) => deferredHtmlBindings.push(b),
-    });
+  return { cleanups, data: dataSignal, index: indexSignal, key: '', nodes };
+};
 
-    for (const b of deferredHtmlBindings) {
-      // Use the comment's own parentElement as search root to avoid a UID collision:
-      // the each() anchor comment in the parent has the same uid as the item's first binding.
-      const comment = targets.comments.get(b.uid);
-      const searchRoot = (comment?.parentElement ?? parent) as Node;
+const removeItem = <T>(entry: ItemEntry<T>): void => {
+  runAll(entry.cleanups);
+  removeNodes(entry.nodes);
+};
 
-      applyHtmlBinding(searchRoot, b, registerItemCleanup);
+// ─── Reconciler ───────────────────────────────────────────────────────────────
+
+const reconcileItems = <T>(
+  prevOrdered: ItemEntry<T>[],
+  prevMap: Map<string, ItemEntry<T>>,
+  next: T[],
+  keyFn: (item: T, index: number) => string | number,
+  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
+  parent: ParentNode,
+  endMarker: Node,
+): { map: Map<string, ItemEntry<T>>; ordered: ItemEntry<T>[] } => {
+  const nextKeys: string[] = next.map((item, i) => String(keyFn(item, i)));
+  const nextKeySet = new Set(nextKeys);
+
+  // Detect duplicate keys
+  const seen = new Set<string>();
+
+  for (let i = 0; i < nextKeys.length; i++) {
+    const key = nextKeys[i];
+
+    if (seen.has(key)) throw new Error(CRAFTIT_ERRORS.eachDuplicateKey(key, i));
+
+    seen.add(key);
+  }
+
+  // Build previous-order map: key → index in prevOrdered
+  const prevOrder = new Map<string, number>();
+
+  for (let i = 0; i < prevOrdered.length; i++) prevOrder.set(prevOrdered[i].key, i);
+
+  // Remove stale entries
+  for (const [key, entry] of prevMap) {
+    if (!nextKeySet.has(key)) {
+      removeItem(entry);
+      prevMap.delete(key);
     }
   }
 
-  return { cleanups, data: dataSignal, index: indexSignal, nodes: itemNodes };
+  // Build the next ordered list: update existing items, create new ones
+  const nextOrdered: ItemEntry<T>[] = [];
+
+  for (let i = 0; i < next.length; i++) {
+    const key = nextKeys[i];
+    const existing = prevMap.get(key);
+
+    if (existing) {
+      batch(() => {
+        existing.data.value = next[i];
+        existing.index.value = i;
+      });
+      nextOrdered.push(existing);
+    } else {
+      const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
+
+      entry.key = key;
+      prevMap.set(key, entry);
+      nextOrdered.push(entry);
+    }
+  }
+
+  // LIS-based DOM ordering: only move items not in the longest stable subsequence.
+  //
+  // For each position j in nextOrdered that reuses an existing item, record that
+  // item's old position (index in prevOrdered). Items whose old-positions form a
+  // strictly increasing sequence are already in the right relative order and need
+  // not be moved. We only move items outside this stable set.
+
+  const reusedOldPositions: number[] = []; // old-order positions (in new-list traversal order)
+  const reusedNewIndices: number[] = []; // their positions in nextOrdered
+
+  for (let j = 0; j < nextOrdered.length; j++) {
+    const oldPos = prevOrder.get(nextOrdered[j].key);
+
+    if (oldPos !== undefined) {
+      reusedOldPositions.push(oldPos);
+      reusedNewIndices.push(j);
+    }
+  }
+
+  // lisSet contains indices into reusedOldPositions/reusedNewIndices for stable items
+  const lisSet = computeLISIndices(reusedOldPositions);
+  const stayPut = new Set<number>(Array.from(lisSet).map((i) => reusedNewIndices[i]));
+
+  // Process items right-to-left. cursor points to the reference node that the
+  // current item should be inserted before. Items in stayPut update the cursor
+  // without moving; items not in stayPut are moved before the cursor.
+  let cursor: Node = endMarker;
+
+  for (let j = nextOrdered.length - 1; j >= 0; j--) {
+    const entry = nextOrdered[j];
+
+    if (stayPut.has(j)) {
+      // Item is stable — just update cursor to its first node
+      cursor = entry.nodes[0] ?? cursor;
+    } else {
+      // Move all of this item's nodes before cursor
+      for (const node of entry.nodes) parent.insertBefore(node, cursor);
+
+      cursor = entry.nodes[0] ?? cursor;
+    }
+  }
+
+  return { map: prevMap, ordered: nextOrdered };
 };
 
-// ─── API ─────────────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Renders a reactive list with keyed DOM diffing as a `DirectiveResult`.
+ * Renders a keyed list of items as a `DirectiveResult`.
  *
- * Performs minimal DOM mutations when the source changes: items are created, removed,
- * and reordered based on their stable keys. Use inside `html` tagged templates.
- *
- * Accepts a signal, getter function, or plain array as the source.
- *
- * @param source   - Signal, getter function, or plain array of items.
- * @param key      - Returns a stable unique key for each item.
- * @param render   - Called once per new key. Receives reactive signals so bindings
- *                   inside the template update in-place without DOM teardown.
- *                   Use `${item}` for primitive items (TextBinding), or
- *                   `${() => item.value.prop}` for object properties.
- *                   For structural changes within an item, use `when()` inside
- *                   the render function.
- * @param fallback - Optional: rendered when the list is empty.
+ * Each item is rendered by the provided render function.
+ * Items are reused by key when the list changes; only stale items are destroyed.
+ * DOM reordering uses an LIS-based algorithm to minimise moves (F2).
  *
  * @example
  * ```ts
- * html`${each(
- *   items,
- *   (item) => item.id,
- *   (item) => html`<li>${item} — ${() => item.value.label}</li>`,
- * )}`
+ * html`${each(items, (item) => item.id, (item) => html`<li>${item}</li>`)}`
  * ```
  */
 export function each<T>(
-  source: MaybeReactiveArray<T>,
-  key: (item: T, index: number) => string | number,
-  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => string | HTMLResult,
-  fallback?: () => string | HTMLResult,
+  list: MaybeReactiveArray<T>,
+  keyFn: (item: T, index: number) => string | number,
+  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
+  fallback?: () => HTMLResult,
 ): DirectiveResult {
-  const normalized: ReadonlySignal<T[]> = Array.isArray(source)
+  const listSignal = Array.isArray(list)
     ? ({
         get value() {
-          return source as T[];
+          return list as T[];
         },
       } as ReadonlySignal<T[]>)
-    : isSignal(source)
-      ? source
-      : computed(source as () => T[]);
+    : typeof list === 'function'
+      ? computed(list as () => T[])
+      : list;
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode!;
@@ -149,128 +238,57 @@ export function each<T>(
 
     parent.insertBefore(endMarker, anchor.nextSibling);
 
-    // Shared ID factory across all items to prevent UID collisions
-    const globalIdFactory = createMarkerIdFactory();
+    let itemsMap = new Map<string, ItemEntry<T>>();
+    let itemsOrdered: ItemEntry<T>[] = [];
+    let fallbackNodes: Node[] | null = null;
+    let fallbackCleanups: (() => void)[] = [];
 
-    let currentKeys: (string | number)[] = [];
-    const keyedItems = new Map<string | number, ItemEntry<T>>();
+    const mountFallback = (): void => {
+      if (!fallback) return;
 
-    // Fallback tracking: key sentinel for the fallback content
-    const FALLBACK_KEY = '__each_fallback__';
+      const result = fallback();
+      const nodes = Array.from(result.fragment.childNodes);
 
-    const removeItem = (k: string | number): void => {
-      const entry = keyedItems.get(k);
-
-      if (!entry) return;
-
-      runAll(entry.cleanups);
-      removeNodes(entry.nodes);
-      keyedItems.delete(k);
+      parent.insertBefore(result.fragment, endMarker);
+      result.apply((fn) => fallbackCleanups.push(fn));
+      fallbackNodes = nodes;
     };
 
-    const update = (newItems: T[]): void => {
-      batch(() => {
-        if (newItems.length === 0) {
-          // Remove all existing items
-          for (const k of currentKeys) {
-            removeItem(k);
-          }
-
-          currentKeys = [];
-
-          if (fallback) {
-            const entry = untrack(() =>
-              createItem(null as unknown as T, 0, () => toHtmlResult(fallback()), globalIdFactory, parent, endMarker),
-            );
-
-            keyedItems.set(FALLBACK_KEY, entry);
-            currentKeys = [FALLBACK_KEY];
-          }
-
-          return;
-        }
-
-        // Remove fallback if present
-        if (keyedItems.has(FALLBACK_KEY)) {
-          removeItem(FALLBACK_KEY);
-          currentKeys = currentKeys.filter((k) => k !== FALLBACK_KEY);
-        }
-
-        // Validate and collect new keys
-        const newKeys: (string | number)[] = [];
-        const seenKeys = new Set<string | number>();
-
-        for (let i = 0; i < newItems.length; i++) {
-          const k = key(newItems[i], i);
-
-          if (seenKeys.has(k)) {
-            throw new Error(CRAFTIT_ERRORS.eachDuplicateKey(String(k), i));
-          }
-
-          seenKeys.add(k);
-          newKeys.push(k);
-        }
-
-        // Remove items no longer in the list
-        for (const k of currentKeys) {
-          if (!seenKeys.has(k)) {
-            removeItem(k);
-          }
-        }
-
-        // Update existing or create new items
-        for (let i = 0; i < newItems.length; i++) {
-          const k = newKeys[i];
-
-          if (keyedItems.has(k)) {
-            // Existing key: update the reactive signals in-place.
-            // Bindings inside the render template react automatically — no DOM teardown.
-            const entry = keyedItems.get(k)!;
-
-            entry.data.value = newItems[i];
-            entry.index.value = i;
-          } else {
-            // New key: mount DOM nodes and set up bindings.
-            // untrack() prevents computed() signals created inside createItem (e.g. html_signal,
-            // attrSignal) from registering disposal cleanups on outerSub. Without this, outerSub's
-            // teardown would dispose those computeds on re-run, breaking the reactive chain.
-            const entry = untrack(() => createItem(newItems[i], i, render, globalIdFactory, parent, endMarker));
-
-            keyedItems.set(k, entry);
-          }
-        }
-
-        // Reorder: walk newKeys in order, move nodes if they are out of place
-        let refNode: Node = endMarker;
-
-        for (let i = newKeys.length - 1; i >= 0; i--) {
-          const entry = keyedItems.get(newKeys[i])!;
-          const lastNode = entry.nodes[entry.nodes.length - 1];
-
-          if (lastNode.nextSibling !== refNode) {
-            // Move all nodes of this item immediately before refNode
-            for (let j = entry.nodes.length - 1; j >= 0; j--) {
-              parent.insertBefore(entry.nodes[j], refNode);
-            }
-          }
-
-          refNode = entry.nodes[0];
-        }
-
-        currentKeys = newKeys;
-      });
+    const clearFallback = (): void => {
+      if (fallbackNodes) {
+        runAll(fallbackCleanups);
+        removeNodes(fallbackNodes);
+        fallbackNodes = null;
+        fallbackCleanups = [];
+      }
     };
 
-    const stop = rawEffect(() => update(normalized.value));
+    const sub = rawEffect(() => {
+      const nextList = listSignal.value ?? [];
 
-    registerCleanup(stop);
-    registerCleanup(() => {
-      for (const k of currentKeys) {
-        removeItem(k);
+      if (nextList.length === 0) {
+        for (const entry of untrack(() => itemsOrdered)) removeItem(entry);
+        itemsMap = new Map();
+        itemsOrdered = [];
+
+        if (!fallbackNodes) untrack(mountFallback);
+
+        return;
       }
 
+      clearFallback();
+
+      const result = untrack(() => reconcileItems(itemsOrdered, itemsMap, nextList, keyFn, render, parent, endMarker));
+
+      itemsMap = result.map;
+      itemsOrdered = result.ordered;
+    });
+
+    registerCleanup(() => sub.dispose());
+    registerCleanup(() => {
+      clearFallback();
+      for (const entry of itemsOrdered) removeItem(entry);
       endMarker.remove();
-      currentKeys = [];
     });
   });
 }

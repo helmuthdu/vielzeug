@@ -1,7 +1,18 @@
-import type { MessageFn, SchemaDescriptor } from '../core';
+import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, fail, resolveMessage } from '../core';
 import { _messages } from '../messages';
+
+/* -------------------- Typed annotations -------------------- */
+
+interface NumberAnnotations extends Record<string, unknown> {
+  exclusiveMaximum?: number;
+  exclusiveMinimum?: number;
+  maximum?: number;
+  minimum?: number;
+  multipleOf?: number;
+  typeHint?: 'integer';
+}
 
 export class NumberSchema<Input = number> extends Schema<number, Input> {
   constructor() {
@@ -26,7 +37,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
       },
       (ann) => ({
         ...ann,
-        minimum: ann['minimum'] === undefined ? minimum : Math.max(ann['minimum'] as number, minimum),
+        minimum: ann.minimum === undefined ? minimum : Math.max(ann.minimum, minimum),
       }),
     );
   }
@@ -45,7 +56,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
       },
       (ann) => ({
         ...ann,
-        maximum: ann['maximum'] === undefined ? maximum : Math.min(ann['maximum'] as number, maximum),
+        maximum: ann.maximum === undefined ? maximum : Math.min(ann.maximum, maximum),
       }),
     );
   }
@@ -57,7 +68,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
         return fail(ErrorCode.invalid_integer, resolveMessage(message, { value: value as number }));
       },
-      (ann) => ({ ...ann, typeHint: 'integer' }),
+      (ann) => ({ ...ann, typeHint: 'integer' as const }),
     );
   }
 
@@ -73,7 +84,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
       },
       (ann) => ({
         ...ann,
-        exclusiveMinimum: ann['exclusiveMinimum'] === undefined ? 0 : Math.max(ann['exclusiveMinimum'] as number, 0),
+        exclusiveMinimum: ann.exclusiveMinimum === undefined ? 0 : Math.max(ann.exclusiveMinimum, 0),
       }),
     );
   }
@@ -90,7 +101,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
       },
       (ann) => ({
         ...ann,
-        exclusiveMaximum: ann['exclusiveMaximum'] === undefined ? 0 : Math.min(ann['exclusiveMaximum'] as number, 0),
+        exclusiveMaximum: ann.exclusiveMaximum === undefined ? 0 : Math.min(ann.exclusiveMaximum, 0),
       }),
     );
   }
@@ -102,7 +113,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
         return fail(ErrorCode.too_small, resolveMessage(message, { value: value as number }), { min: 0 });
       },
-      (ann) => ({ ...ann, minimum: ann['minimum'] === undefined ? 0 : Math.max(ann['minimum'] as number, 0) }),
+      (ann) => ({ ...ann, minimum: ann.minimum === undefined ? 0 : Math.max(ann.minimum, 0) }),
     );
   }
 
@@ -113,7 +124,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
         return fail(ErrorCode.too_big, resolveMessage(message, { value: value as number }), { max: 0 });
       },
-      (ann) => ({ ...ann, maximum: ann['maximum'] === undefined ? 0 : Math.min(ann['maximum'] as number, 0) }),
+      (ann) => ({ ...ann, maximum: ann.maximum === undefined ? 0 : Math.min(ann.maximum, 0) }),
     );
   }
 
@@ -149,17 +160,17 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
   protected override _toSchemaBase(): Record<string, unknown> {
     const ann = this._annotations;
-    const base: Record<string, unknown> = { type: (ann['typeHint'] as string | undefined) ?? 'number' };
+    const base: Record<string, unknown> = { type: ann.typeHint ?? 'number' };
 
-    if (ann['minimum'] !== undefined) base['minimum'] = ann['minimum'];
+    if (ann.minimum !== undefined) base['minimum'] = ann.minimum;
 
-    if (ann['maximum'] !== undefined) base['maximum'] = ann['maximum'];
+    if (ann.maximum !== undefined) base['maximum'] = ann.maximum;
 
-    if (ann['exclusiveMinimum'] !== undefined) base['exclusiveMinimum'] = ann['exclusiveMinimum'];
+    if (ann.exclusiveMinimum !== undefined) base['exclusiveMinimum'] = ann.exclusiveMinimum;
 
-    if (ann['exclusiveMaximum'] !== undefined) base['exclusiveMaximum'] = ann['exclusiveMaximum'];
+    if (ann.exclusiveMaximum !== undefined) base['exclusiveMaximum'] = ann.exclusiveMaximum;
 
-    if (ann['multipleOf'] !== undefined) base['multipleOf'] = ann['multipleOf'];
+    if (ann.multipleOf !== undefined) base['multipleOf'] = ann.multipleOf;
 
     return base;
   }
@@ -170,40 +181,38 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     return super._walk(visitor);
   }
 
-  protected override _describeImpl(): SchemaDescriptor {
+  protected override _toDescriptorImpl(): SchemaDescriptor {
     const ann = this._annotations;
 
     return {
-      ...(this.state.description ? { description: this.state.description } : {}),
-      ...(this.state.isNullable ? { isNullable: true } : {}),
-      ...(this.state.isOptional ? { isOptional: true } : {}),
-      ...(ann['exclusiveMaximum'] !== undefined ? { exclusiveMaximum: ann['exclusiveMaximum'] as number } : {}),
-      ...(ann['exclusiveMinimum'] !== undefined ? { exclusiveMinimum: ann['exclusiveMinimum'] as number } : {}),
-      ...(ann['maximum'] !== undefined ? { maximum: ann['maximum'] as number } : {}),
-      ...(ann['minimum'] !== undefined ? { minimum: ann['minimum'] as number } : {}),
-      ...(ann['multipleOf'] !== undefined ? { multipleOf: ann['multipleOf'] as number } : {}),
-      ...(ann['typeHint'] !== undefined ? { typeHint: ann['typeHint'] as 'integer' } : {}),
+      ...this._describeBase(),
+      ...(ann.exclusiveMaximum !== undefined ? { exclusiveMaximum: ann.exclusiveMaximum } : {}),
+      ...(ann.exclusiveMinimum !== undefined ? { exclusiveMinimum: ann.exclusiveMinimum } : {}),
+      ...(ann.maximum !== undefined ? { maximum: ann.maximum } : {}),
+      ...(ann.minimum !== undefined ? { minimum: ann.minimum } : {}),
+      ...(ann.multipleOf !== undefined ? { multipleOf: ann.multipleOf } : {}),
+      ...(ann.typeHint !== undefined ? { typeHint: ann.typeHint } : {}),
       kind: 'number',
     };
   }
 
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+  protected override _equalsImpl(other: AnySchema): boolean {
     if (!(other instanceof NumberSchema)) return false;
 
-    const a = this._annotations;
-    const b = other._annotations;
-
-    return (
-      a['typeHint'] === b['typeHint'] &&
-      a['minimum'] === b['minimum'] &&
-      a['maximum'] === b['maximum'] &&
-      a['exclusiveMinimum'] === b['exclusiveMinimum'] &&
-      a['exclusiveMaximum'] === b['exclusiveMaximum'] &&
-      a['multipleOf'] === b['multipleOf']
-    );
+    return this._annotationsEqual(other);
   }
 
   static coerce(): NumberSchema<unknown> {
-    return new NumberSchema().preprocess((v: unknown) => (typeof v === 'number' ? v : Number(v)));
+    return new NumberSchema().preprocess((v: unknown) => {
+      if (typeof v === 'number') return v;
+
+      if (typeof v === 'string' || typeof v === 'boolean') {
+        const n = Number(v);
+
+        return Number.isNaN(n) ? v : n;
+      }
+
+      return v;
+    });
   }
 }

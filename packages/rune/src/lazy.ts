@@ -1,8 +1,12 @@
-import type { Bindings, LazyBinding } from './types';
+import type { Bindings } from './types';
 
-import { LAZY, isLazyBinding } from './types';
+export const LAZY = Symbol.for('rune.lazy');
 
-export { isLazyBinding };
+export type LazyBinding = { readonly fn: () => unknown; readonly [LAZY]: true };
+
+export function isLazyBinding(value: unknown): value is LazyBinding {
+  return typeof value === 'object' && value !== null && (value as Record<symbol, unknown>)[LAZY] === true;
+}
 
 /**
  * Defer evaluation of an expensive binding value until after the log level check passes.

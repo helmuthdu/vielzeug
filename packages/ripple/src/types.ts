@@ -5,22 +5,46 @@ export type EffectCallback = () => CleanupFn | void;
 export type AsyncEffectCallback = (signal: AbortSignal) => Promise<CleanupFn | void>;
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 export type EffectScheduler = 'microtask' | 'raf' | 'sync';
-export type ReactiveOptions<T> = { equals?: EqualityFn<T>; name?: string };
+
+export type ReactiveOptions<T> = {
+  equals?: EqualityFn<T>;
+  /**
+   * Called when the compute function throws during evaluation.
+   * Receives the thrown error and the last successfully computed value (or
+   * `undefined` on the first run). The return value is used as the node value,
+   * allowing graceful degradation instead of propagating the error (F4).
+   */
+  fallback?: (error: unknown, lastValue: T | undefined) => T;
+  name?: string;
+};
+
+/** Options accepted by `signal()` — extends ReactiveOptions with `batched`. */
+export type SignalOptions<T> = ReactiveOptions<T> & {
+  /**
+   * When `true`, multiple synchronous writes to this signal are coalesced into
+   * a single downstream notification dispatched in the next microtask.
+   * Useful for rapidly-updated values (scroll position, input events) without
+   * wrapping every write site in `batch()` (F3).
+   */
+  batched?: boolean;
+};
 
 export type EffectOptions = {
   maxIterations?: number;
   name?: string;
   scheduler?: EffectScheduler;
-  /** When true, logs which reactive sources changed before each re-run. */
-  trace?: boolean;
 };
 
 export type BatchOptions = {
   maxIterations?: number;
 };
 
+// ── Subscription (R9) ────────────────────────────────────────────────────────
+//
+// Subscription is now a plain object interface — no longer callable.
+// Use `sub.dispose()` or `using sub = ...` everywhere `sub()` was used.
+
 export interface Subscription {
-  (): void;
   dispose(): void;
   [Symbol.dispose](): void;
 }
@@ -28,6 +52,8 @@ export interface Subscription {
 export interface AsyncSubscription extends Subscription {
   disposeAsync(): Promise<void>;
 }
+
+// ── Core reactive interfaces ──────────────────────────────────────────────────
 
 export interface ReadonlySignal<T> {
   filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
@@ -39,9 +65,9 @@ export interface ReadonlySignal<T> {
 }
 
 export interface Signal<T> extends ReadonlySignal<T> {
+  dispose(): void;
   update(fn: (current: T) => T): void;
   value: T;
-  dispose(): void;
   [Symbol.dispose](): void;
 }
 
@@ -67,18 +93,24 @@ export type PathValue<T, P extends string> = P extends keyof T
       : never
     : never;
 
-export interface Store<T extends object> extends ReadonlySignal<T> {
+export interface Store<T extends object> extends ReadonlySignal<Readonly<T>> {
   /**
-   * Returns a writable `Signal` scoped to a single property or nested path of the store.
-   * Accepts dot-separated paths for nested access: `store.lens('user.address.city')`.
-   * Reads only the specific path — unrelated patches do not notify this signal.
-   * Writes reconstruct the object immutably up the path.
+   * Returns a writable `Signal` scoped to a single property or nested path.
+   * Reads register a fine-grained dependency on just that property's signal —
+   * unrelated patches do NOT re-run effects watching this lens.
    * Lenses are cached — `store.lens('x') === store.lens('x')`.
    */
   lens<P extends string>(path: P): Signal<PathValue<T, P>>;
   patch(partial: Partial<T>): void;
   reset(): void;
-  update(fn: (state: T) => T): void;
+  /**
+   * Replaces the entire store state by passing the current state to `fn` and
+   * applying the returned value. Only changed properties trigger downstream effects.
+   *
+   * Renamed from `update()` (F2) to avoid confusion with `signal.update(fn)` which
+   * performs an atomic read-modify-write on a single value.
+   */
+  replace(fn: (state: Readonly<T>) => T): void;
 }
 
 export interface Scope {
@@ -87,58 +119,13 @@ export interface Scope {
   readonly [Symbol.dispose]: () => void;
 }
 
-// === INTERNAL TYPES ===
+/**
+ * A Scope variant for async setup functions.
+ * Captures `onCleanup()` registrations from the synchronous preamble of `setup`
+ * (before the first `await`), awaits the rest of setup, then returns the scope.
+ */
+export type AsyncScopeSetup = () => Promise<void>;
 
+// Needed by reactive-base.ts (kept here to avoid the circular dep
+// reactive-base → types → reactive-base).
 export type Subscriber = () => void;
-
-/**
- * Interface implemented by ComputedImpl and exposed to `scheduling.ts` to break
- * the potential circular dependency: scheduling ↔ computed.
- */
-export interface DirtyComputed {
-  computedSubs(): ReadonlySet<DirtyComputed>;
-  hasSubscribers(): boolean;
-  markDirty(): boolean;
-  refreshIfDirty(): boolean;
-  removeComputedSub(c: DirtyComputed): void;
-  subscribers(): ReadonlySet<Subscriber>;
-  readonly version: number;
-}
-
-/**
- * A recorded dependency entry used for version-based cache invalidation.
- * Avoids cleanup-set allocation on every computed recompute.
- */
-export interface DepSource {
-  addComputedSub(c: DirtyComputed): void;
-  addEffectSub(subscriber: Subscriber): void;
-  removeComputedSub(c: DirtyComputed): void;
-  removeEffectSub(subscriber: Subscriber): void;
-  readonly name: string | undefined;
-  readonly version: number;
-}
-
-export type DepEntry = { source: DepSource; version: number };
-
-/** Minimal interface for nodes that can notify downstream subscribers. Used by scheduling. */
-export interface ReactiveNode {
-  computedSubs(): ReadonlySet<DirtyComputed>;
-  hasSubscribers(): boolean;
-  subscribers(): ReadonlySet<Subscriber>;
-}
-
-/**
- * Discriminated union tracking context — each variant contains only the fields valid for its
- * mode, making invalid combinations (e.g. a computed context with subscriptions) unrepresentable.
- */
-export type TrackingCtx =
-  | { readonly computed: DirtyComputed; readonly depCollector: DepEntry[]; readonly kind: 'computed' }
-  | {
-      cleanups: CleanupFn[];
-      /** Non-null only when effect trace mode is enabled. */
-      depCollector: DepEntry[] | null;
-      readonly effect: Subscriber;
-      readonly kind: 'effect';
-      readonly subscriptions: Set<CleanupFn>;
-    }
-  | { cleanups: CleanupFn[]; readonly kind: 'scope' };

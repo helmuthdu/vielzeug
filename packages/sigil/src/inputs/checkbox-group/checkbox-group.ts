@@ -109,7 +109,8 @@ export type BitCheckboxGroupEvents = {
  * <bit-checkbox-group></bit-checkbox-group>
  * ```
  */
-export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroupEvents>('bit-checkbox-group', {
+export const CHECKBOX_GROUP_TAG = 'bit-checkbox-group' as const;
+define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,

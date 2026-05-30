@@ -232,10 +232,18 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
-    it('rejects with timeout code when work exceeds timeout', async () => {
+    it('rejects with timeout code when work exceeds pool-level timeout', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 25 });
 
       await expectWorkerErrorCode(worker.run(undefined), 'timeout');
+      worker.dispose();
+    }, 1000);
+
+    it('per-run timeout overrides pool-level timeout', async () => {
+      // Pool has a 5-second timeout; the per-run override of 25ms fires first.
+      const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 5000 });
+
+      await expectWorkerErrorCode(worker.run(undefined, { timeout: 25 }), 'timeout');
       worker.dispose();
     }, 1000);
 
@@ -366,6 +374,15 @@ describe('createWorker', () => {
       expect(worker.status).toBe('terminated');
     });
 
+    it('close() rejects when timeoutMs elapses before idle', async () => {
+      const worker = createWorker<void, void>(() => new Promise(() => {})); // hangs forever
+      const running = worker.run(undefined);
+
+      await expect(worker.close(25)).rejects.toMatchObject({ code: 'timeout' });
+      worker.dispose();
+      await running.catch(() => {});
+    }, 1000);
+
     it('dispose() while close() is pending resolves the close promise', async () => {
       const worker = createWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 50)));
       const running = worker.run(undefined);
@@ -413,6 +430,39 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
+    it('tracks failed tasks (excludes aborts and terminations)', async () => {
+      const worker = createWorker<number, number>((n) => {
+        if (n < 0) throw new Error('bad');
+
+        return n;
+      });
+
+      expect(worker.failed).toBe(0);
+      await worker.run(1);
+      await worker.run(-1).catch(() => {});
+      await worker.run(-2).catch(() => {});
+      expect(worker.failed).toBe(2);
+      expect(worker.completed).toBe(1);
+      worker.dispose();
+    });
+
+    it('does not count aborts as failures', async () => {
+      const worker = createWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 25)), {
+        concurrency: 1,
+      });
+      const controller = new AbortController();
+
+      worker.run(undefined);
+
+      const abortable = worker.run(undefined, { signal: controller.signal });
+
+      controller.abort();
+      await abortable.catch(() => {});
+      await worker.close();
+
+      expect(worker.failed).toBe(0);
+    });
+
     it('reports active count while running', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}));
       const promise = worker.run(undefined);
@@ -448,11 +498,190 @@ describe('createWorker', () => {
       expect(worker.utilization).toBe(0);
     });
 
-    it('warmup() does not throw', () => {
+    it('prime() does not throw and pre-initializes slots', async () => {
       const worker = createWorker<number, number>((n) => n);
 
-      expect(() => worker.warmup()).not.toThrow();
+      await expect(worker.prime()).resolves.toBeUndefined();
       worker.dispose();
+    });
+  });
+
+  describe('batch()', () => {
+    it('yields results in submission order', async () => {
+      const worker = createWorker<number, number>((n) => n * 2);
+      const results: number[] = [];
+
+      for await (const r of worker.batch([1, 2, 3])) {
+        results.push(r);
+      }
+
+      expect(results).toEqual([2, 4, 6]);
+      worker.dispose();
+    });
+
+    it('yields nothing for an empty input array', async () => {
+      const worker = createWorker<number, number>((n) => n);
+      const results: number[] = [];
+
+      for await (const r of worker.batch([])) {
+        results.push(r);
+      }
+
+      expect(results).toEqual([]);
+      worker.dispose();
+    });
+
+    it('propagates task errors and cancels remaining tasks', async () => {
+      const worker = createWorker<number, number>((n) => {
+        if (n === 2) throw new Error('bad');
+
+        return n;
+      });
+
+      await expect(async () => {
+        for await (const _ of worker.batch([1, 2, 3])) {
+          // consume
+        }
+      }).rejects.toThrow('bad');
+
+      worker.dispose();
+    });
+
+    it('passes per-run timeout to each task', async () => {
+      const worker = createWorker<number, number>((n) => (n === 0 ? new Promise(() => {}) : n), { concurrency: 2 });
+
+      await expect(async () => {
+        for await (const _ of worker.batch([0, 1], { timeout: 25 })) {
+          // consume
+        }
+      }).rejects.toMatchObject({ code: 'timeout' });
+
+      worker.dispose();
+    }, 1000);
+
+    it('yields as-completed when ordered:false', async () => {
+      const worker = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+      const results: number[] = [];
+
+      for await (const r of worker.batch([1, 2, 3], { ordered: false })) {
+        results.push(r);
+      }
+
+      expect(results.sort((a, b) => a - b)).toEqual([2, 4, 6]);
+      worker.dispose();
+    });
+  });
+
+  describe('group()', () => {
+    it('runs tasks and drains them together', async () => {
+      const worker = createWorker<number, number>((n) => n * 2);
+      const g = worker.group();
+
+      const p1 = g.run(1);
+      const p2 = g.run(2);
+
+      await g.drain();
+
+      await expect(p1).resolves.toBe(2);
+      await expect(p2).resolves.toBe(4);
+      expect(g.size).toBe(2);
+      worker.dispose();
+    });
+
+    it('abort() cancels all pending group tasks', async () => {
+      const worker = createWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 50)), {
+        concurrency: 1,
+      });
+      const g = worker.group();
+      const running = g.run(undefined);
+      const queued = g.run(undefined);
+
+      g.abort();
+
+      await expect(queued).rejects.toThrow(/aborted/i);
+      // running task is in-flight and cannot be aborted
+      await running.catch(() => {});
+      worker.dispose();
+    });
+
+    it('size reflects submitted tasks', () => {
+      const worker = createWorker<number, number>((n) => n);
+      const g = worker.group();
+
+      expect(g.size).toBe(0);
+      g.run(1).catch(() => {});
+      g.run(2).catch(() => {});
+      expect(g.size).toBe(2);
+      worker.dispose();
+    });
+  });
+
+  describe('onFull="wait"', () => {
+    it('suspends caller when queue is full and resumes when slot opens', async () => {
+      const worker = createWorker<number, number>((n) => new Promise((resolve) => setTimeout(() => resolve(n), 20)), {
+        concurrency: 1,
+        maxQueue: 1,
+        onFull: 'wait',
+      });
+      const p1 = worker.run(1);
+      const p2 = worker.run(2); // fills queue slot
+      const p3 = worker.run(3); // would exceed maxQueue — suspends caller
+
+      await expect(Promise.all([p1, p2, p3])).resolves.toEqual([1, 2, 3]);
+      worker.dispose();
+    });
+
+    it('does not reject with queue_full when onFull="wait"', async () => {
+      const worker = createWorker<number, number>((n) => n, { concurrency: 1, maxQueue: 1, onFull: 'wait' });
+
+      const results = await Promise.all([worker.run(1), worker.run(2)]);
+
+      expect(results).toEqual([1, 2]);
+      worker.dispose();
+    });
+  });
+
+  describe('runStream()', () => {
+    it('yields chunks emitted by the worker', async () => {
+      // Stream-mode worker: fn returns an iterable; the pool protocol emits each item as a chunk.
+      const worker = createWorker<number, number[]>(
+        (n) =>
+          (async function* () {
+            for (let i = 0; i < n; i++) yield i;
+          })() as unknown as number[],
+      );
+      const chunks: number[] = [];
+
+      for await (const chunk of worker.runStream(3)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual([0, 1, 2]);
+      worker.dispose();
+    }, 2000);
+  });
+
+  describe('createModuleWorker', () => {
+    it('throws worker error when Worker API is unavailable', async () => {
+      const { createModuleWorker } = await import('../worker');
+      const previousWorker = globalThis.Worker;
+
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: undefined, writable: true });
+
+      const pool = createModuleWorker<number, number>(new URL('http://localhost/worker.js'));
+
+      await expect(pool.run(1)).rejects.toMatchObject({ code: 'worker' });
+
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: previousWorker, writable: true });
+
+      pool.dispose();
+    });
+
+    it('accepts string URL', async () => {
+      const { createModuleWorker } = await import('../worker');
+
+      // Just verify construction doesn't throw; actual execution needs a real module worker.
+      expect(() => createModuleWorker<number, number>('http://localhost/worker.js')).not.toThrow();
     });
   });
 });

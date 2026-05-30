@@ -69,7 +69,8 @@ export type BitProgressProps = {
  * <bit-progress indeterminate color="primary" label="Loading…"></bit-progress>
  * ```
  */
-export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
+export const PROGRESS_TAG = 'bit-progress' as const;
+define<BitProgressProps>(PROGRESS_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

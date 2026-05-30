@@ -112,8 +112,8 @@ describe('component slots and emit', () => {
     define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }>(tag, {
       props: toggleProps,
       setup: (props, { emit }) => {
-        expectType<import('/ripple').ReadonlySignal<boolean | undefined>>(props.checked);
-        expectType<import('/ripple').ReadonlySignal<string | undefined>>(props.label);
+        expectType<import('@vielzeug/ripple').ReadonlySignal<boolean | undefined>>(props.checked);
+        expectType<import('@vielzeug/ripple').ReadonlySignal<string | undefined>>(props.label);
 
         return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
       },

@@ -1,5 +1,4 @@
 import { assert } from '../function/assert';
-import { isArray } from '../typed/isArray';
 import { isString } from '../typed/isString';
 
 /**
@@ -22,7 +21,7 @@ import { isString } from '../typed/isString';
 export function chunk(input: string, size?: number): string[];
 export function chunk<T>(input: T[], size?: number): T[][];
 export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
-  assert(isArray(input as T[]) || isString(input), 'Argument must be an array or string.', {
+  assert(Array.isArray(input as T[]) || isString(input), 'Argument must be an array or string.', {
     args: { input },
     type: TypeError,
   });

@@ -97,7 +97,8 @@ export type BitTabsProps = {
  * </bit-tabs>
  * ```
  */
-export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
+export const TABS_TAG = 'bit-tabs' as const;
+define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
