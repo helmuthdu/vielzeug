@@ -3,7 +3,7 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
-related: [grip, craft, block]
+related: [grip, craft, sigil]
 exports: [createVirtualizer, createDomVirtualList, Virtualizer]
 ---
 
@@ -22,7 +22,7 @@ exports: [createVirtualizer, createDomVirtualList, Virtualizer]
 
 **When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
 
-**Related:** [@vielzeug/grip](https://vielzeug.dev/grip/) · [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/block](https://vielzeug.dev/block/)
+**Related:** [@vielzeug/grip](https://vielzeug.dev/grip/) · [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/)
 
 </details>
 

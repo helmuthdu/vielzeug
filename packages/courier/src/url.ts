@@ -31,7 +31,7 @@ export type CourierRequestConfig<P extends string = string> = PathConfig<P> & {
   responseType?: ResponseType;
   /**
    * Optional schema for response validation. Any object with a `parse(data)` method
-   * works — e.g. a `@vielzeug/sieve` schema or a plain validator function wrapper.
+   * works — e.g. a `@vielzeug/spell` schema or a plain validator function wrapper.
    * Called after the response body is parsed; throws if validation fails.
    */
   schema?: { parse(data: unknown): unknown };

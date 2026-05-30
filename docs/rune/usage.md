@@ -380,10 +380,10 @@ const api = createApi({
 });
 ```
 
-### With Relay
+### With Herald
 
 ```ts
-import { createBus } from '@vielzeug/relay';
+import { createBus } from '@vielzeug/herald';
 import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'bus' });

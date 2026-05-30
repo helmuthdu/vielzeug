@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**A collection of modern, type-safe utilities for JavaScript and TypeScript**
+**22 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -16,133 +16,308 @@
 
 ## What is Vielzeug?
 
-**Vielzeug** (German for "many tools") is a comprehensive ecosystem of modern, type-safe utilities designed to simplify common development tasks. Each package is:
+**Vielzeug** (German for "many tools") is a curated ecosystem of zero-dependency, tree-shakeable TypeScript packages. Each one solves a focused problem and ships as ESM + CJS with full type declarations.
 
-- ✅ **Type-Safe**: Built with TypeScript from the ground up
-- ✅ **Zero Dependencies**: No external dependencies for maximum security and minimal bundle size
-- ✅ **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Tree-Shakeable**: Import only what you need
-- ✅ **Well-Tested**: Comprehensive test coverage
-- ✅ **Production Ready**: Battle-tested in real-world applications
-
-## 📦 Packages
-
-### [@vielzeug/block](packages/block) – Web Component Library
-
-Accessible, customizable web components built on top of `/craft`. Works with React, Vue, Svelte, Angular, or vanilla HTML.
-
-```bash
-npm install /block
-```
-
-**Key Features:**
-
-- Drop-in accessible components (button, input, select, checkbox, accordion, tooltip, and more)
-- Framework agnostic — plain custom elements, no framework required
-- Full theming via CSS custom properties
-- Tree-shakeable per-component imports
-- Built on `/craft`
-
-[📖 Documentation](https://vielzeug.dev/block/) • [Examples](https://vielzeug.dev/block/examples)
+- ✅ **Type-Safe** — built with TypeScript from the ground up, strict mode throughout
+- ✅ **Zero Dependencies** — no external runtime deps; inter-package deps only
+- ✅ **Framework Agnostic** — works with React, Vue, Svelte, Angular, or vanilla JS
+- ✅ **Tree-Shakeable** — import only what you need, pay only for what you use
+- ✅ **Well-Tested** — comprehensive vitest coverage on every package
+- ✅ **Production Ready** — battle-tested in real-world applications
 
 ---
 
-### [@vielzeug/craft](packages/craft) – Web Components
+## 📦 Packages
 
-Lightweight, type-safe web component creation library with reactive state, typed props, directives, and automatic rendering.
+### [@vielzeug/ripple](packages/ripple) – Reactive Signals
+
+Fine-grained reactive state with signals, computed values, effects, and batch updates.
 
 ```bash
-npm install /craft
+pnpm add @vielzeug/ripple
 ```
 
 **Key Features:**
+- Fine-grained signals with `computed()`, `effect()`, `batch()`, `watch()`, and `scope()`
+- `store()` for reactive objects with deep update tracking
+- Zero dependencies (7.0 KB min / 2.4 KB gz)
 
+[📖 Documentation](https://vielzeug.dev/ripple/) • [Examples](https://vielzeug.dev/ripple/examples)
+
+---
+
+### [@vielzeug/craft](packages/craft) – Web Component Primitives
+
+Lightweight, type-safe web component authoring with reactive state, typed props, and automatic rendering.
+
+```bash
+pnpm add @vielzeug/craft
+```
+
+**Key Features:**
 - Reactive state management with automatic re-rendering
 - Type-safe component definitions and prop helpers
-- Shadow DOM with automatic styling
-- Form-associated custom elements
-- Event handling, lifecycle hooks, and helpers like `live`, `when`, `styleMap`, and `until` (5 KB gzipped)
+- Shadow DOM with automatic styling and form-associated elements
+- Event handling, lifecycle hooks, and helpers like `live`, `when`, `styleMap`, `until` (18 KB min / 5.0 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/craft/) • [Examples](https://vielzeug.dev/craft/examples)
 
 ---
 
-### [@vielzeug/relay](packages/relay) – Typed Event Bus
+### [@vielzeug/sigil](packages/sigil) – Accessible Web Components
 
-Lightweight, zero-dependency typed event bus with `on`, `once`, `emit`, `wait`, and `waitAny`.
+Accessible, themeable web components built on top of `@vielzeug/craft`. Works with any framework or vanilla HTML.
 
 ```bash
-npm install /relay
+pnpm add @vielzeug/sigil
 ```
 
 **Key Features:**
+- Drop-in accessible components — button, input, select, checkbox, accordion, tooltip, and more
+- Framework agnostic — plain custom elements, no framework required
+- Full theming via CSS custom properties
+- Tree-shakeable per-component imports (`@vielzeug/sigil/button`, `@vielzeug/sigil/input`, …)
 
-- Fully type-safe event maps — payload types inferred from the event key
-- `once()` for single-fire subscriptions
-- unsubscribe handles from `on()`/`once()`, plus `removeAllListeners()` and `eventNames()` for listener management
-- `onError` and `onDispatch` hooks for logging and error handling
-- `dispose()` for clean teardown; `createTestBus()` helper for testing
-- Zero dependencies
-
-[📖 Documentation](https://vielzeug.dev/relay/) • [Examples](https://vielzeug.dev/relay/examples)
-
-### [@vielzeug/deposit](packages/deposit) – Browser Storage
-
-Powerful, type-safe browser storage utility with unified API for IndexedDB and LocalStorage.
-
-```bash
-npm install @vielzeug/deposit
-```
-
-**Key Features:**
-
-- Unified API for IndexedDB and LocalStorage
-- Advanced querying and filtering
-- Schema migrations with versioning
-- TTL (Time-To-Live) support (4.5 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/deposit/) • [Examples](https://vielzeug.dev/deposit/examples)
+[📖 Documentation](https://vielzeug.dev/sigil/) • [Examples](https://vielzeug.dev/sigil/examples)
 
 ---
 
-### [@vielzeug/grip](packages/grip) – Drag-and-Drop Primitives
+### [@vielzeug/clockwork](packages/clockwork) – Finite State Machines
 
-Framework-agnostic drag-and-drop helpers for file drop zones and sortable lists.
+Typed finite state machine interpreter with guards, async invokes, context signals, and persistence.
 
 ```bash
-npm install /grip
+pnpm add @vielzeug/clockwork
 ```
 
 **Key Features:**
+- Fully typed states, events, and transitions
+- Guard conditions, entry/exit actions, and action arrays
+- Async `invoke` with `onDone`/`onError` callbacks
+- Reactive `state` and `context` signals via `@vielzeug/ripple`
+- Persistence adapters and transition tracing
 
-- `createDropZone()` with accept filtering for MIME types, wildcards, and file extensions
-- `onDropRejected` callback for invalid files and counter-based hover state
-- `createSortable()` for native sortable lists with `data-sort-id`
-- Drag handles, dynamic list refresh, and cleanup via `destroy()` / `using`
-- Zero dependencies
-
-[📖 Documentation](https://vielzeug.dev/grip/) • [Examples](https://vielzeug.dev/grip/examples)
+[📖 Documentation](https://vielzeug.dev/clockwork/) • [Examples](https://vielzeug.dev/clockwork/examples)
 
 ---
 
-### [@vielzeug/courier](packages/courier) – HTTP Client & Query Management
+### [@vielzeug/forge](packages/forge) – Form State Management
+
+Effortless, type-safe form state and validation for modern web applications.
+
+```bash
+pnpm add @vielzeug/forge
+```
+
+**Key Features:**
+- Type-safe form state with inferred types
+- Field-level and form-level validation
+- Reactive subscriptions
+- Works with `@vielzeug/spell`, Zod, Valibot, or any Standard Schema library (7.2 KB min / 3.0 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/forge/) • [Examples](https://vielzeug.dev/forge/examples)
+
+---
+
+### [@vielzeug/spell](packages/spell) – Schema Validation
+
+Lightweight, type-safe schema validation with async support and zero dependencies.
+
+```bash
+pnpm add @vielzeug/spell
+```
+
+**Key Features:**
+- Fluent schema API — `s.object()`, `s.string()`, `s.number()`, `s.array()`, and more
+- Precise input/output typing with `InferInput<T>` and `Infer<T>`
+- Async validation, custom refinements, and transforms
+- Comprehensive error handling with `errorsAt()` (14 KB min / 2.8 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/spell/) • [Examples](https://vielzeug.dev/spell/examples)
+
+---
+
+### [@vielzeug/courier](packages/courier) – HTTP Client
 
 Modern, type-safe HTTP client with query caching, subscriptions, and standalone mutations.
 
 ```bash
-npm install /courier
+pnpm add @vielzeug/courier
 ```
 
 **Key Features:**
-
 - Separate HTTP and Query clients for flexibility
-- Smart caching with stale-while-revalidate
-- Request deduplication
-- Conditional fetching, subscription selectors, and background revalidation
+- Smart caching with stale-while-revalidate and request deduplication
 - Standalone mutations with cancellation, retry, and lifecycle callbacks
-- Automatic retry with exponential backoff (3.4 KB gzipped)
+- Automatic retry with exponential backoff (10 KB min / 3.4 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/courier/) • [Examples](https://vielzeug.dev/courier/examples)
+
+---
+
+### [@vielzeug/vault](packages/vault) – Browser Storage
+
+Powerful, type-safe browser storage with a unified API for IndexedDB and LocalStorage.
+
+```bash
+pnpm add @vielzeug/vault
+```
+
+**Key Features:**
+- Unified API for IndexedDB, LocalStorage, SessionStorage, and in-memory stores
+- Advanced querying and filtering with `table()`
+- TTL (Time-To-Live) expiration and schema migrations (16 KB min / 4.5 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/vault/) • [Examples](https://vielzeug.dev/vault/examples)
+
+---
+
+### [@vielzeug/wayfinder](packages/wayfinder) – Client-Side Routing
+
+Lightweight, type-safe client-side router with middleware and guards.
+
+```bash
+pnpm add @vielzeug/wayfinder
+```
+
+**Key Features:**
+- Route parameters and query string parsing
+- Middleware system for auth, logging, and redirects
+- Hash and History mode with memory history for testing
+- Nested routes and layouts (9.0 KB min / 3.1 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/wayfinder/) • [Examples](https://vielzeug.dev/wayfinder/examples)
+
+---
+
+### [@vielzeug/ward](packages/ward) – RBAC & Permissions
+
+Flexible, type-safe role-based access control with wildcards and predicate rules.
+
+```bash
+pnpm add @vielzeug/ward
+```
+
+**Key Features:**
+- Role-based access control (RBAC) with wildcard support
+- Dynamic attribute-based rules (ABAC) with `owns()` helper
+- Multi-action checks (`canAll`, `canAny`) and `allowedActions()` listing
+- Explainable deny diagnostics, user-bound permits, and decision caching (5.9 KB min / 2.0 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/ward/) • [Examples](https://vielzeug.dev/ward/examples)
+
+---
+
+### [@vielzeug/conduit](packages/conduit) – Dependency Injection
+
+Compact, type-safe DI container built around typed tokens and explicit scopes.
+
+```bash
+pnpm add @vielzeug/conduit
+```
+
+**Key Features:**
+- Token-based typed dependency registration
+- Async factory support and child containers
+- Singleton, transient, and scoped lifetimes
+- `using` disposal (8.0 KB min / 2.1 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/conduit/) • [Examples](https://vielzeug.dev/conduit/examples)
+
+---
+
+### [@vielzeug/rune](packages/rune) – Structured Logging
+
+Structured, zero-dependency logging with scoped namespaces and non-blocking remote transport.
+
+```bash
+pnpm add @vielzeug/rune
+```
+
+**Key Features:**
+- Log levels (`debug` → `error`) with priority-based filtering
+- `scope(name)` and `child()` for isolated namespaced loggers
+- Browser CSS badge styling — `symbol`, `icon`, or `text` variants
+- Non-blocking remote handler (Sentry, Datadog, custom endpoint)
+- `time/timeEnd`, `table`, `group`, `assert` backed by native console APIs (6.8 KB min / 2.7 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/rune/) • [Examples](https://vielzeug.dev/rune/examples)
+
+---
+
+### [@vielzeug/lingua](packages/lingua) – Internationalization
+
+Lightweight, type-safe i18n with pluralization, interpolation, and async loading.
+
+```bash
+pnpm add @vielzeug/lingua
+```
+
+**Key Features:**
+- Type-safe translation keys with autocomplete
+- Pluralization rules and interpolation
+- Async translation loading and lazy namespaces
+- Framework agnostic (7.4 KB min / 1.6 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/lingua/) • [Examples](https://vielzeug.dev/lingua/examples)
+
+---
+
+### [@vielzeug/herald](packages/herald) – Typed Event Bus
+
+Lightweight typed event bus with `on`, `once`, `emit`, `wait`, `waitAny`, and async streams.
+
+```bash
+pnpm add @vielzeug/herald
+```
+
+**Key Features:**
+- Fully typed event maps — payload types inferred from the event key
+- `once()` for single-fire subscriptions
+- `onError` and `onDispatch` hooks for logging and error handling
+- `dispose()` for clean teardown; `createTestBus()` helper for testing
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/herald/) • [Examples](https://vielzeug.dev/herald/examples)
+
+---
+
+### [@vielzeug/familiar](packages/familiar) – Web Worker Pool
+
+Run CPU-intensive tasks off the main thread with a typed Web Worker pool and automatic fallback.
+
+```bash
+pnpm add @vielzeug/familiar
+```
+
+**Key Features:**
+- `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
+- `createWorker(fn, { size })` — concurrent worker pool with configurable size
+- Timeout support and task cancellation via `AbortSignal`
+- Graceful fallback to main-thread execution when Workers are unavailable
+- `createTestWorker()` helper for unit testing without Worker infrastructure
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/familiar/) • [Examples](https://vielzeug.dev/familiar/examples)
+
+---
+
+### [@vielzeug/grip](packages/grip) – Drag and Drop
+
+Framework-agnostic drag-and-drop helpers for file drop zones and sortable lists.
+
+```bash
+pnpm add @vielzeug/grip
+```
+
+**Key Features:**
+- `createDropZone()` with MIME type, wildcard, and file extension filtering
+- `onDropRejected` callback and counter-based hover state
+- `createSortable()` for native sortable lists with `data-sort-id`
+- Drag handles, dynamic list refresh, and `destroy()` / `using` cleanup
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/grip/) • [Examples](https://vielzeug.dev/grip/examples)
 
 ---
 
@@ -151,11 +326,10 @@ npm install /courier
 Lightweight floating-element positioning for tooltips, dropdowns, popovers, and menus.
 
 ```bash
-npm install /orbit
+pnpm add @vielzeug/orbit
 ```
 
 **Key Features:**
-
 - `positionFloat()` to compute and apply `left` / `top` in one call
 - `computePosition()` for low-level `{ x, y, placement }` control
 - Middleware pipeline: `offset`, `flip`, `shift`, and `size`
@@ -166,175 +340,33 @@ npm install /orbit
 
 ---
 
-### [@vielzeug/forge](packages/forge) – Form State Management
+### [@vielzeug/sourcerer](packages/sourcerer) – Reactive Data Sources
 
-Effortless, type-safe form state and validation for modern web applications.
+Reactive local and remote data sources with pagination, filtering, sorting, and search.
 
 ```bash
-npm install /forge
+pnpm add @vielzeug/sourcerer
 ```
 
 **Key Features:**
-
-- Type-safe form state with inferred types
-- Field-level and form-level validation
-- Reactive subscriptions
-- Framework agnostic (3 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/forge/) • [Examples](https://vielzeug.dev/forge/examples)
-
----
-
-### [@vielzeug/lingua](packages/lingua) – Internationalization
-
-Lightweight, type-safe internationalization with pluralization and async loading.
-
-```bash
-npm install /lingua
-```
-
-**Key Features:**
-
-- Type-safe translations with autocomplete
-- Pluralization and interpolation support
-- Async translation loading
-- Framework agnostic with React hooks (1.6 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/lingua/) • [Examples](https://vielzeug.dev/lingua/examples)
-
----
-
-### [@vielzeug/rune](packages/rune) – Logging Utility
-
-Structured, zero-dependency logging with log levels, scoped namespaces, styled output, and non-blocking remote transport. Works in browser and Node.js.
-
-```bash
-npm install /rune
-```
-
-**Key Features:**
-
-- Log levels (`debug` → `error`) with priority-based filtering
-- `scope(name)` and `child(overrides?)` for isolated namespaced loggers
-- `enabled(type)` to guard expensive argument construction
-- Browser CSS badge styling — `symbol`, `icon`, or `text` variants
-- Non-blocking remote handler (Sentry, Datadog, custom endpoint)
-- `time/timeEnd`, `table`, `group/groupCollapsed`, `assert` backed by native console APIs
+- `createLocalSource()` and `createRemoteSource()` with a unified query API
+- Reactive `items`, `total`, `loading`, and `error` signals
+- Built-in fuzzy search, multi-field sorting, and pagination
 - Zero dependencies
 
-[📖 Documentation](https://vielzeug.dev/rune/) • [Examples](https://vielzeug.dev/rune/examples)
-
----
-
-### [@vielzeug/permit](packages/permit) – Permission Management
-
-Flexible, type-safe permission and role management utility.
-
-```bash
-npm install @vielzeug/permit
-```
-
-**Key Features:**
-
-- Role-based access control (RBAC)
-- Dynamic rules with context and user attributes (ABAC)
-- Multi-action checks (`canAll`, `canAny`) and action filtering (`allowedActions`)
-- Explainable deny diagnostics (`no-matching-rule`, `explicit-deny`)
-- User-bound permit API with optional decision caching
-- Wildcard support and ownership helper (`owns`)
-- Type-safe permission checks (2.0 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/permit/) • [Examples](https://vielzeug.dev/permit/examples)
-
----
-
-### [@vielzeug/route](packages/route) – Client-Side Routing
-
-Lightweight, type-safe client-side routing for SPAs.
-
-```bash
-npm install /route
-```
-
-**Key Features:**
-
-- Route parameters and query string parsing
-- Middleware system for auth and logging
-- Hash and History mode support
-- Nested routes and layouts (3.1 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/route/) • [Examples](https://vielzeug.dev/route/examples)
-
----
-
-### [@vielzeug/ripple](packages/ripple) – Reactive State
-
-Fine-grained reactive state with signals, computed values, effects, and batch updates.
-
-```bash
-npm install /ripple
-```
-
-**Key Features:**
-
-- Fine-grained signals with `computed()`, `effect()`, `batch()`, `watch()`, and `scope()`
-- `store()` for reactive objects with deep update tracking; stores are branded signals and work anywhere `ReadonlySignal<T>` is accepted
-- Zero dependencies
-
-- [📖 Documentation](https://vielzeug.dev/ripple/) • [Examples](https://vielzeug.dev/ripple/examples)
-
----
-
-### [@vielzeug/toolkit](packages/toolkit) – Utility Library
-
-
-Comprehensive, type-safe utility library with 75+ helpers for modern JavaScript.
-
-```bash
-npm install @vielzeug/toolkit
-```
-
-**Key Features:**
-
-- 75+ utilities for arrays, objects, strings, dates, and more
-- Full TypeScript support with inference
-- Selector-based and multi-field sorting support (`sort`)
-- Tree-shakeable by design (0.1-0.5 KB per utility)
-- Zero dependencies
-
-[📖 Documentation](https://vielzeug.dev/toolkit/) • [Examples](https://vielzeug.dev/toolkit/examples)
-
----
-
-### [@vielzeug/sieve](packages/sieve) – Schema Validation
-
-Lightweight, type-safe schema validation with async support and zero dependencies.
-
-```bash
-npm install /sieve
-```
-
-**Key Features:**
-
-- Type-safe schema definitions with inference
-- Async validation support
-- Custom refinements and transforms
-- Comprehensive error handling (2.8 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/sieve/) • [Examples](https://vielzeug.dev/sieve/examples)
+[📖 Documentation](https://vielzeug.dev/sourcerer/) • [Examples](https://vielzeug.dev/sourcerer/examples)
 
 ---
 
 ### [@vielzeug/scroll](packages/scroll) – Virtual Lists
 
-Framework-agnostic virtual list engine that renders only visible rows with efficient scrolling and measurement.
+Framework-agnostic virtual list engine that renders only visible rows.
 
 ```bash
-npm install /scroll
+pnpm add @vielzeug/scroll
 ```
 
 **Key Features:**
-
 - Virtualized rendering with configurable overscan
 - Fixed and measured variable-height rows
 - Programmatic scrolling (`scrollToIndex`, `scrollToOffset`)
@@ -345,107 +377,128 @@ npm install /scroll
 
 ---
 
-### [@vielzeug/wired](packages/wired) – Dependency Injection
+### [@vielzeug/tempo](packages/tempo) – Date & Time
 
-Type-safe dependency injection container with async support and scoped lifetimes.
+Temporal-powered date and time utilities for modern TypeScript apps.
 
 ```bash
-npm install /wired
+pnpm add @vielzeug/tempo
 ```
 
 **Key Features:**
-
-- Type-safe container with token-based dependencies
-- Async factory support
-- Scoped lifetimes (singleton, transient, scoped)
-- Testing helpers (2.1 KB gzipped)
-
-[📖 Documentation](https://vielzeug.dev/wired/) • [Examples](https://vielzeug.dev/wired/examples)
-
-### [@vielzeug/worker](packages/worker) – Web Worker Pool
-
-Run CPU-intensive tasks off the main thread with a typed Web Worker pool and automatic fallback.
-
-```bash
-npm install /worker
-```
-
-**Key Features:**
-
-- `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
-- `createWorker(fn, { size })` — concurrent worker pool with configurable size
-- Timeout support and queued-task cancellation via `AbortSignal`
-- Graceful fallback to main-thread execution when Workers are unavailable
-- `createTestWorker()` helper for unit testing without Worker infrastructure
+- Built on the TC39 Temporal proposal
+- Timezone-aware date arithmetic, formatting, and parsing
+- Calendar system support and duration helpers
 - Zero dependencies
 
-[📖 Documentation](https://vielzeug.dev/worker/) • [Examples](https://vielzeug.dev/worker/examples)
+[📖 Documentation](https://vielzeug.dev/tempo/) • [Examples](https://vielzeug.dev/tempo/examples)
+
+---
+
+### [@vielzeug/arsenal](packages/arsenal) – Utility Library
+
+75+ tree-shakeable helpers for arrays, objects, strings, async, math, and more.
+
+```bash
+pnpm add @vielzeug/arsenal
+```
+
+**Key Features:**
+- 75+ utilities fully typed with TypeScript inference
+- Selector-based and multi-field sorting with `sort()`
+- Fuzzy search with `search()`, deep diff with `diff()`, deep merge, pruning, and more
+- Tree-shakeable by design — 0.1–0.5 KB per utility, zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/arsenal/) • [Examples](https://vielzeug.dev/arsenal/examples)
+
+---
+
+### [@vielzeug/codex](packages/codex) – AI / MCP Server
+
+MCP server exposing all Vielzeug documentation, package APIs, and component metadata to AI clients.
+
+```bash
+# Run without installing:
+npx -y @vielzeug/codex
+
+# Or add to your project:
+pnpm add @vielzeug/codex
+```
+
+**Key Features:**
+- Stdio and HTTP transport modes
+- Tools: `list-packages`, `search-packages`, `get-docs`, `get-package-api`, `list-components`, `get-component`, and more
+- Works with Claude Desktop, Copilot Chat, and any MCP-compatible client
+
+[📖 Documentation](https://vielzeug.dev/codex/) • [Examples](https://vielzeug.dev/codex/examples)
+
+---
 
 ## 🏁 Quick Start
-
-### Installation
 
 Install individual packages as needed:
 
 ```bash
 # Using pnpm (recommended)
-pnpm add /forge /courier
+pnpm add @vielzeug/forge @vielzeug/courier
 
 # Using npm
-npm install /forge /courier
+npm install @vielzeug/forge @vielzeug/courier
 
 # Using yarn
-yarn add /forge /courier
+yarn add @vielzeug/forge @vielzeug/courier
 ```
 
-### Example: Complete Form with API Integration
+### Example: Typed Form with API Integration
 
-```tsx
-import { createForm } from '/forge';
-import { createApi, createMutation } from '/courier';
-import { Rune } from '/rune';
+```typescript
+import { createForm } from '@vielzeug/forge';
+import { s, type Infer } from '@vielzeug/spell';
+import { createApi, createMutation } from '@vielzeug/courier';
+import { createLogger } from '@vielzeug/rune';
 
-// Setup API client
-const api = createApi({
-  baseUrl: 'https://api.example.com',
+const log = createLogger('auth');
+
+// Define and validate the shape
+const LoginSchema = s.object({
+  email: s.string().email(),
+  password: s.string().min(8),
 });
+type LoginInput = Infer<typeof LoginSchema>;
 
-// Create mutation for login
+// HTTP client
+const api = createApi({ baseUrl: 'https://api.example.com' });
+
 const loginMutation = createMutation(
-  ({ input, signal }: { input: { email: string; password: string }; signal: AbortSignal }) =>
+  ({ input, signal }: { input: LoginInput; signal: AbortSignal }) =>
     api.post('/auth/login', { body: input, signal }).then((r) => r.json()),
 );
 
-// Create form with validation
-const form = createForm({
+// Form wired to the schema
+const form = createForm<LoginInput>({
   defaultValues: { email: '', password: '' },
-  validators: {
-    email: (value) => {
-      if (!value.includes('@')) return 'Invalid email';
-    },
-    password: (value) => {
-      if (value.length < 8) return 'Password too short';
-    },
-  },
+  schema: LoginSchema,
 });
 
-// Submit
 form.submit(async (values) => {
   try {
     const user = await loginMutation.mutate(values);
-    Rune.success('Login successful!', user);
+    log.info('Login successful', { user });
   } catch (error) {
-    Rune.error('Login failed:', error);
+    log.error('Login failed', error);
   }
 });
 ```
+
+---
 
 ## 🏗️ Development
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- pnpm >= 8.0.0
+- Node.js >= 22.0.0 (see `.nvmrc`)
+- pnpm >= 10.0.0
+- Rush (`npm install -g @microsoft/rush`)
 
 ### Setup
 
@@ -454,13 +507,13 @@ form.submit(async (values) => {
 git clone https://github.com/helmuthdu/vielzeug.git
 cd vielzeug
 
-# Install dependencies
-pnpm install
+# Install all dependencies (via Rush)
+pnpm setup
 
 # Build all packages
 pnpm build
 
-# Run tests
+# Run all tests
 pnpm test
 
 # Start documentation site
@@ -472,68 +525,87 @@ pnpm docs:dev
 ```
 vielzeug/
 ├── packages/
-│   ├── block/       # Web component library (built on craft)
-│   ├── craft/       # Web component primitives
-│   ├── deposit/       # Browser storage (IndexedDB + LocalStorage)
-│   ├── grip/        # Drag-and-drop utilities
-│   ├── relay/       # Typed event bus
+│   ├── ripple/        # Reactive signals and state
+│   ├── craft/         # Web component primitives
+│   ├── sigil/         # Accessible web components (built on craft)
+│   ├── clockwork/     # Finite state machines
+│   ├── forge/         # Form state management
+│   ├── spell/         # Schema validation
 │   ├── courier/       # HTTP client & query management
-│   ├── orbit/       # Floating UI positioning utilities
-│   ├── forge/        # Form state management
+│   ├── vault/         # Browser storage (IndexedDB + LocalStorage)
+│   ├── wayfinder/     # Client-side routing
+│   ├── ward/          # RBAC & permission management
+│   ├── conduit/       # Dependency injection
+│   ├── rune/          # Structured logging
 │   ├── lingua/        # Internationalization
-│   ├── rune/         # Structured logging
-│   ├── permit/        # Permission & RBAC management
-│   ├── route/       # Client-side routing
-│   ├── ripple/       # Reactive state (signals)
-│   ├── toolkit/       # Utility functions
-│   ├── sieve/       # Schema validation
-│   ├── scroll/     # Virtual list engine
-│   ├── wired/        # Dependency injection
-│   └── worker/        # Web Worker pool
+│   ├── herald/        # Typed event bus
+│   ├── familiar/      # Web Worker pool
+│   ├── grip/          # Drag-and-drop utilities
+│   ├── orbit/         # Floating element positioning
+│   ├── sourcerer/     # Reactive data sources
+│   ├── scroll/        # Virtual list engine
+│   ├── tempo/         # Date & time utilities
+│   ├── arsenal/       # 75+ utility functions
+│   └── codex/         # AI / MCP server
 ├── docs/              # VitePress documentation
-└── common/            # Shared configuration
+└── common/            # Shared Rush configuration
 ```
 
 ### Scripts
 
 ```bash
-pnpm build          # Build all packages
-pnpm test           # Run tests
-pnpm lint           # Lint code
-pnpm fix            # Fix linting issues
-pnpm docs:dev       # Start docs dev server
+pnpm setup          # Rush install — install all dependencies
+pnpm build          # Rush build — build all packages
+pnpm test           # Run all tests (vitest)
+pnpm lint           # Lint code (ESLint + Stylelint)
+pnpm fix            # Auto-fix lint issues
+pnpm docs:dev       # Start docs dev server (VitePress)
 pnpm docs:build     # Build documentation
 ```
 
+---
+
 ## 📊 Bundle Sizes
 
-All sizes are measured as **minified + gzipped** production builds:
+All sizes are **minified + gzipped** production builds:
 
-| Package           | Minified Size              | Gzipped Size  | Dependencies |
-| ----------------- | -------------------------- | ------------- | ------------ |
-| /block | —                          | —             | 1\*          |
-| /craft | **18 KB**                  | **5.0 KB**    | 0            |
-| @vielzeug/deposit | **16 KB**                  | **4.5 KB**    | 2\*          |
-| /relay | —                          | —             | 0            |
-| /courier | **10 KB**                  | **3.4 KB**    | 1\*          |
-| /forge  | **7.2 KB**                 | **3.0 KB**    | 0            |
-| /lingua  | **7.4 KB**                 | **1.6 KB**    | 0            |
-| /rune   | **6.8 KB**                 | **2.7 KB**    | 0            |
-| @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
-| /route | **9.0 KB**                 | **3.1 KB**    | 0            |
-| /ripple | **7.0 KB**                 | **2.4 KB**    | 0            |
-| @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
-| /sieve | **14 KB**                  | **2.8 KB**    | 0            |
-| /wired  | **8.0 KB**                 | **2.1 KB**    | 0            |
-| /worker  | —                          | —             | 0            |
+| Package                  | Minified                   | Gzipped        | Dependencies |
+| ------------------------ | -------------------------- | -------------- | ------------ |
+| `@vielzeug/ripple`       | **7.0 KB**                 | **2.4 KB**     | 0            |
+| `@vielzeug/craft`        | **18 KB**                  | **5.0 KB**     | 1\*          |
+| `@vielzeug/sigil`        | —                          | —              | 3\*          |
+| `@vielzeug/clockwork`    | —                          | —              | 1\*          |
+| `@vielzeug/forge`        | **7.2 KB**                 | **3.0 KB**     | 0            |
+| `@vielzeug/spell`        | **14 KB**                  | **2.8 KB**     | 0            |
+| `@vielzeug/courier`      | **10 KB**                  | **3.4 KB**     | 1\*          |
+| `@vielzeug/vault`        | **16 KB**                  | **4.5 KB**     | 0            |
+| `@vielzeug/wayfinder`    | **9.0 KB**                 | **3.1 KB**     | 0            |
+| `@vielzeug/ward`         | **5.9 KB**                 | **2.0 KB**     | 0            |
+| `@vielzeug/conduit`      | **8.0 KB**                 | **2.1 KB**     | 0            |
+| `@vielzeug/rune`         | **6.8 KB**                 | **2.7 KB**     | 0            |
+| `@vielzeug/lingua`       | **7.4 KB**                 | **1.6 KB**     | 0            |
+| `@vielzeug/herald`       | —                          | —              | 0            |
+| `@vielzeug/familiar`     | —                          | —              | 0            |
+| `@vielzeug/grip`         | —                          | —              | 0            |
+| `@vielzeug/orbit`        | —                          | —              | 0            |
+| `@vielzeug/sourcerer`    | —                          | —              | 1\*          |
+| `@vielzeug/scroll`       | —                          | —              | 0            |
+| `@vielzeug/tempo`        | —                          | —              | 0            |
+| `@vielzeug/arsenal`      | **0.1–1.0 KB** per utility | **0.1–0.5 KB** | 0            |
+| `@vielzeug/codex`        | —                          | —              | 0            |
 
-\* Only depends on other @vielzeug packages (deposit depends on /rune and @vielzeug/toolkit; courier depends on @vielzeug/toolkit; permit depends on /rune; block depends on /craft; toolkit utilities may depend on other toolkit utilities). Packages marked — haven't published a final build size yet.
+\* Only depends on other `@vielzeug` packages. Packages marked — haven't published a final build size yet.
 
-## 🌐 Browser & Node.js Support
+---
 
-- **Browsers**: All modern browsers (Chrome, Firefox, Safari, Edge)
-- **Node.js**: v18.0.0 or higher
-- **TypeScript**: v5.0.0 or higher
+## 🌐 Browser & Runtime Support
+
+- **Browsers**: All modern browsers (Chrome, Firefox, Safari, Edge — Baseline 2023+)
+- **Node.js**: v22.0.0 or higher
+- **TypeScript**: v6.0.0 or higher
+- **Module formats**: ESM + CJS, with full `.d.ts` declarations
+
+---
 
 ## 🤝 Contributing
 
@@ -546,9 +618,9 @@ We welcome contributions! Here's how you can help:
 ### Contribution Guidelines
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feat/my-feature`)
+3. Commit using conventional commits (`git commit -m 'feat(arsenal): add lerp helper'`)
+4. Push to the branch (`git push origin feat/my-feature`)
 5. Open a Pull Request
 
 Please ensure:
@@ -557,11 +629,15 @@ Please ensure:
 - Code follows the style guide (`pnpm lint`)
 - Documentation is updated if needed
 
+---
+
 ## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-Each package is individually licensed under the MIT License. See the LICENSE file in each package directory for details.
+Each package is individually licensed under the MIT License. See the `LICENSE` file in each package directory for details.
+
+---
 
 ## 🔗 Links
 
@@ -570,35 +646,22 @@ Each package is individually licensed under the MIT License. See the LICENSE fil
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 - [Discussions](https://github.com/helmuthdu/vielzeug/discussions)
 - [NPM Organization](https://www.npmjs.com/org/vielzeug)
-- [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/CHANGELOG.md)
 
-## ⭐ Show Your Support
+---
 
-If you find Vielzeug useful, please consider:
-
-- Giving the project a ⭐ on [GitHub](https://github.com/helmuthdu/vielzeug)
-- Sharing it with your colleagues and friends
-- Contributing to the project
-- Reporting bugs or suggesting features
-
-## 📝 Frequently Asked Questions
+## 📝 FAQ
 
 ### Why Vielzeug instead of [other library]?
 
-Vielzeug focuses on:
-
-- **Type Safety**: First-class TypeScript support, not an afterthought
-- **Zero Dependencies**: Maximum security and minimal bundle size
-- **Framework Agnostic**: Works everywhere JavaScript runs
-- **Modern APIs**: Built for modern development workflows
+Vielzeug packages are designed to work together as a coherent system while remaining individually useful. The fantasy naming (`ripple`, `forge`, `spell`, `herald`…) reflects the same philosophy: each package is a distinct spell that, combined, gives you a complete grimoire.
 
 ### Can I use individual packages?
 
-Absolutely! Each package is independent and can be used standalone. Install only what you need.
+Yes — every package is independent. Install only what you need; there are no required peer dependencies outside the `@vielzeug` family.
 
 ### Is it production-ready?
 
-Yes! All packages are battle-tested in production applications with comprehensive test coverage.
+Yes. All packages ship strict TypeScript, zero external dependencies, and comprehensive test suites.
 
 ### Where can I get help?
 

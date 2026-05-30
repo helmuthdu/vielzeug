@@ -4,7 +4,7 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [craft, scroll, block]
+related: [craft, scroll, sigil]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 ---
 
@@ -25,7 +25,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 
 **When to use:** File drop zones with MIME filtering, or sortable lists with keyboard and mouse support. Zero dependencies.
 
-**Related:** [Craft](/craft/) · [Scroll](/scroll/) · [Block](/block/)
+**Related:** [Craft](/craft/) · [Scroll](/scroll/) · [Sigil](/sigil/)
 
 </details>
 
@@ -169,6 +169,6 @@ const zone = createDropZone({
 
 - [Orbit](/orbit/)
 - [Craft](/craft/)
-- [Block](/block/)
+- [Sigil](/sigil/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

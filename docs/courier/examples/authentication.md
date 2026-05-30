@@ -75,7 +75,7 @@ const stopRefreshing = api.use(async (ctx, next) => {
 
 ### Related
 - [Request Middleware Logging (Rune)](@vielzeug/rune/examples/request-middleware)
-- [RBAC Guards (Permit)](/permit/)
+- [RBAC Guards (Ward)](/ward/)
 
 - [CRUD Operations](./crud-operations.md)
 - [Disposal](./disposal.md)

@@ -4,7 +4,7 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
-related: [grip, craft, block]
+related: [grip, craft, sigil]
 exports: [createVirtualizer, createDomVirtualList, Virtualizer, DomVirtualListController]
 ---
 
@@ -25,7 +25,7 @@ exports: [createVirtualizer, createDomVirtualList, Virtualizer, DomVirtualListCo
 
 **When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
 
-**Related:** [Grip](/grip/) · [Craft](/craft/) · [Block](/block/)
+**Related:** [Grip](/grip/) · [Craft](/craft/) · [Sigil](/sigil/)
 
 </details>
 
@@ -179,7 +179,7 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 
 ## See Also
 
-- [Block](/block/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
+- [Sigil](/sigil/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
 - [Craft](/craft/) — web-component authoring layer; use with Scroll to build virtualizing custom elements
 - [Grip](/grip/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
 

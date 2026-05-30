@@ -67,6 +67,6 @@ define<{
 
 ### Related
 
-- [Sieve — Validation](/sieve/) for validating prop values beyond type constraints
+- [Spell — Validation](/spell/) for validating prop values beyond type constraints
 - [Typed props and emits](./typed-props-and-emits.md)
 - [Counter component](./counter-component.md)

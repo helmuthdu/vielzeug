@@ -85,6 +85,6 @@ function updateStepUI() {
 
 ### Related
 
-- [Routing Between Steps (Route)](/route/)
-- [Schema Validation with Sieve](/sieve/)
+- [Routing Between Steps (Wayfinder)](/wayfinder/)
+- [Schema Validation with Sieve](/spell/)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

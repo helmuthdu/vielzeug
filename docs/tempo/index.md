@@ -4,7 +4,7 @@ description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe
 package: tempo
 category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
-related: [toolkit]
+related: [arsenal]
 exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatRange, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, timeDiff, dateRange, clearCaches]
 ---
 
@@ -25,7 +25,7 @@ exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp,
 
 **When to use:** Temporal-powered date parsing, DST-safe arithmetic, timezone conversion, and Intl formatting.
 
-**Related:** [Toolkit](/toolkit/)
+**Related:** [Arsenal](/arsenal/)
 
 </details>
 
@@ -130,7 +130,7 @@ const reminder = shift(meeting, { minutes: -15 });
 
 ## See Also
 
-- [Sieve](/sieve/) — Schema validation (similar `v` namespace pattern)
+- [Spell](/spell/) — Schema validation (similar `v` namespace pattern)
 - [Rune](/rune/) — Structured logging
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

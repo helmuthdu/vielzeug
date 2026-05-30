@@ -1,11 +1,11 @@
 ---
 title: State and Routing
-description: Compose Ripple and Route for reactive, URL-driven application state.
+description: Compose Ripple and Wayfinder for reactive, URL-driven application state.
 ---
 
 # State and Routing
 
-This guide combines `@vielzeug/ripple` and `@vielzeug/route` so route changes and app state stay synchronized.
+This guide combines `@vielzeug/ripple` and `@vielzeug/wayfinder` so route changes and app state stay synchronized.
 Reactive state means derived values update automatically when source values change.
 
 ## Problem
@@ -17,14 +17,14 @@ You need to keep URL params, selected views, and reactive state consistent witho
 | Step           | Package             | Responsibility                                  |
 | -------------- | ------------------- | ----------------------------------------------- |
 | Reactive store | `@vielzeug/ripple` | Hold current route state and derived UI data    |
-| Navigation     | `@vielzeug/route` | Match paths and trigger handlers on URL changes |
+| Navigation     | `@vielzeug/wayfinder` | Match paths and trigger handlers on URL changes |
 | Sync layer     | Both                | Keep route params and store values in lockstep  |
 
 ## Runnable Example
 
 ```ts
 import { computed, signal } from '@vielzeug/ripple';
-import { createRouter } from '@vielzeug/route';
+import { createRouter } from '@vielzeug/wayfinder';
 
 const userId = signal<string | null>(null);
 const activeTab = signal<'overview' | 'settings'>('overview');
@@ -79,6 +79,6 @@ const router = createRouter({
 ## See Also
 
 - [Ripple](../ripple/)
-- [Route](../route/)
-- [Relay](../relay/)
+- [Wayfinder](../wayfinder/)
+- [Herald](../herald/)
 - [Building a Typed Form Flow](./building-a-typed-form-flow)

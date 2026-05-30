@@ -1,4 +1,4 @@
-import { Scheduler } from '@vielzeug/toolkit';
+import { Scheduler } from '@vielzeug/arsenal';
 
 globalThis.window.URL.createObjectURL = () => '';
 

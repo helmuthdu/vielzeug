@@ -78,7 +78,7 @@ async function handleSubmit() {
 
 ### Related
 - [File Uploads (Courier)](@vielzeug/courier/examples/file-uploads)
-- [Schema Validation with Sieve](/sieve/)
+- [Schema Validation with Sieve](/spell/)
 
 - [Best Practices](./best-practices.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

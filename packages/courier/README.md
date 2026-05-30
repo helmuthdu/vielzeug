@@ -3,7 +3,7 @@ description: Type-safe HTTP, query cache, mutations, SSE, and streaming built on
 package: courier
 category: http
 keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors]
-related: [sieve, ripple, deposit]
+related: [spell, ripple, vault]
 exports: [createApi, createCourier, createMutation, createQuery, createStream, createTransportCore, HttpError]
 ---
 
@@ -11,7 +11,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 
 > Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
 
-[![npm version](https://img.shields.io/npm/v//courier)](https://www.npmjs.com/package//courier) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/courier)](https://www.npmjs.com/package/@vielzeug/courier) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
@@ -22,7 +22,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
 
-**Related:** [@vielzeug/sieve](https://vielzeug.dev/sieve/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/deposit](https://vielzeug.dev/deposit/)
+**Related:** [@vielzeug/spell](https://vielzeug.dev/spell/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/vault](https://vielzeug.dev/vault/)
 
 </details>
 

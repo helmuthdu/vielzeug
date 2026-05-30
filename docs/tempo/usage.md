@@ -274,12 +274,12 @@ const log = createLogger({ namespace: 'app' });
 log.info({ timestamp: formatInstant(now('UTC')) }, 'server started');
 ```
 
-### With Deposit
+### With Vault
 
 Use TTL values derived from Tempo duration helpers.
 
 ```ts
-import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
+import { createLocalStorage, table, ttl } from '@vielzeug/vault';
 import { shift, now } from '@vielzeug/tempo';
 
 type Session = { id: string; token: string };

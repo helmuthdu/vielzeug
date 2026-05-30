@@ -7,16 +7,16 @@ import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
 
-// Import BuildIt styles - using direct paths for monorepo
-import '@vielzeug/block/styles/styles.css';
+// Import Sigil styles - using direct paths for monorepo
+import '@vielzeug/sigil/styles/styles.css';
 
 import './theme.css';
 
-// Register block custom elements as early as possible.
+// Register sigil custom elements as early as possible.
 // Dynamic import is required for SSR safety (no `window` on server).
 // Moving it to module-level means it starts loading before enhanceApp runs.
 if (typeof window !== 'undefined') {
-  import('@vielzeug/block');
+  import('@vielzeug/sigil');
 }
 
 export default {

@@ -60,7 +60,7 @@ type FormOptions<TValues> = {
 
   /**
    * Form-level validator. Accepts a FormValidator function or any safeParse-
-   * compatible schema (auto-detected — works with @vielzeug/sieve, Zod, Valibot).
+   * compatible schema (auto-detected — works with @vielzeug/spell, Zod, Valibot).
    */
   validator?: FormValidator<TValues> | SafeParseSchema;
 

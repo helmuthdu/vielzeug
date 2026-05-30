@@ -64,6 +64,6 @@ define<AlertBoxProps, AlertBoxEvents>('alert-box', {
 
 ### Related
 
-- [Block — Accessible components](/block/) built with typed props using these same patterns
+- [Sigil — Accessible components](/sigil/) built with typed props using these same patterns
 - [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter component](./counter-component.md)

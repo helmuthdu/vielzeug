@@ -48,6 +48,6 @@ define('theme-label', {
 
 ### Related
 
-- [Wired — DI Container](/wired/) for application-level dependency injection beyond component trees
+- [Conduit — DI Container](/conduit/) for application-level dependency injection beyond component trees
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)

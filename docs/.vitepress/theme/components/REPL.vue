@@ -46,7 +46,7 @@
     <REPLReference
       v-if="!isExpanded"
       :selected-library="selectedLibrary"
-      :toolkit-categories="TOOLKIT_CATEGORIES"
+      :arsenal-categories="ARSENAL_CATEGORIES"
       :library-exports="LIBRARY_EXPORTS"
       @insert-function="insertFunction" />
   </div>
@@ -58,7 +58,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import REPLEditor from './REPLEditor.vue';
 import REPLReference from './REPLReference.vue';
 import { examples } from './repl/examples';
-import { libraryTypes, toolkitTypes } from './repl/types';
+import { libraryTypes, arsenalTypes } from './repl/types';
 
 // ============================================================================
 // Constants
@@ -68,31 +68,31 @@ const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
 const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const LIBRARY_DESCRIPTIONS = {
-  deposit: 'Storage with schemas, TTL, and query building.',
+  vault: 'Storage with schemas, TTL, and query building.',
   grip: 'Framework-agnostic drag-and-drop primitives with file filtering and more.',
-  relay: 'Publish/Subscribe event bus with async support.',
+  herald: 'Publish/Subscribe event bus with async support.',
   courier: 'Advanced HTTP client with caching, retries, mutations, and more.',
   orbit: 'Lightweight floating-element positioning for elements.',
   forge: 'Form state management with reactive fields and async validation.',
   lingua: 'Internationalization library with TypeScript support.',
   rune: 'Structured logger with level filtering, scoped namespaces, lazy bindings, and pluggable transports.',
-  machine: 'Typed finite state machines with guards, async invokes, context signals, and persistence.',
-  permit: 'Role-based access control (RBAC) system for permissions.',
-  route: 'Client-side routing library with nested routes and middleware support.',
+  clockwork: 'Typed finite state machines with guards, async invokes, context signals, and persistence.',
+  ward: 'Role-based access control (RBAC) system for permissions.',
+  wayfinder: 'Client-side routing library with nested routes and middleware support.',
   sourcerer: 'Reactive local and remote query sources with pagination and URL state sync.',
   ripple: 'Reactive state based on signals, with stores, derived state, and more.',
-  tempo: 'Timezone-aware date/time toolkit built on Temporal.',
-  toolkit: 'Utility library with functions for arrays, objects, and more.',
-  sieve: 'Type-safe schema validation with advanced error handling.',
+  tempo: 'Timezone-aware date/time library built on Temporal.',
+  arsenal: 'Utility library with functions for arrays, objects, and more.',
+  spell: 'Type-safe schema validation with advanced error handling.',
   scroll: 'Virtual list engine for performant rendering of large datasets.',
-  wired: 'Lightweight dependency injection container with IoC principles.',
-  worker: 'Web Worker pool abstraction with queuing, timeout, and more.',
+  conduit: 'Lightweight dependency injection container with IoC principles.',
+  familiar: 'Web Worker pool abstraction with queuing, timeout, and more.',
 } as const;
 
 const LIBRARY_LOADERS = {
-  deposit: () => import('@vielzeug/deposit'),
+  vault: () => import('@vielzeug/vault'),
   grip: () => import('@vielzeug/grip'),
-  relay: () => import('@vielzeug/relay'),
+  herald: () => import('@vielzeug/herald'),
   courier: () => import('@vielzeug/courier'),
   orbit: async () => {
     const [main, presetsModule] = await Promise.all([
@@ -104,23 +104,23 @@ const LIBRARY_LOADERS = {
   forge: () => import('@vielzeug/forge'),
   lingua: () => import('@vielzeug/lingua'),
   rune: () => import('@vielzeug/rune'),
-  machine: () => import('@vielzeug/machine'),
-  permit: () => import('@vielzeug/permit'),
-  route: () => import('@vielzeug/route'),
+  clockwork: () => import('@vielzeug/clockwork'),
+  ward: () => import('@vielzeug/ward'),
+  wayfinder: () => import('@vielzeug/wayfinder'),
   sourcerer: () => import('@vielzeug/sourcerer'),
   ripple: () => import('@vielzeug/ripple'),
   tempo: () => import('@vielzeug/tempo'),
-  toolkit: () => import('@vielzeug/toolkit'),
-  sieve: () => import('@vielzeug/sieve'),
+  arsenal: () => import('@vielzeug/arsenal'),
+  spell: () => import('@vielzeug/spell'),
   scroll: () => import('@vielzeug/scroll'),
-  wired: () => import('@vielzeug/wired'),
-  worker: () => import('@vielzeug/worker'),
+  conduit: () => import('@vielzeug/conduit'),
+  familiar: () => import('@vielzeug/familiar'),
 } as const;
 
 const LIBRARY_EXPORTS = {
-  deposit: ['createLocalStorage', 'createIndexedDB', 'createMemory', 'createSessionStorage', 'table', 'ttl'],
+  vault: ['createLocalStorage', 'createIndexedDB', 'createMemory', 'createSessionStorage', 'table', 'ttl'],
   grip: ['createDropZone', 'createSortable', 'createSortableScope', 'applyReorder'],
-  relay: ['createBus', 'BusDisposedError'],
+  herald: ['createBus', 'BusDisposedError'],
   courier: ['createApi', 'createQuery', 'createMutation', 'createCourier', 'HttpError'],
   orbit: [
     'float',
@@ -142,9 +142,9 @@ const LIBRARY_EXPORTS = {
   forge: ['FORM_ERROR', 'createForm', 'schemaValidator', 'toFormData'],
   lingua: ['createI18n'],
   rune: ['Rune', 'createLogger', 'lazy', 'consoleTransport', 'remoteTransport', 'jsonTransport', 'batchTransport', 'sampleTransport', 'redactTransport'],
-  machine: ['defineMachine', 'interpret', 'resolveTransition', 'assign', 'MachineError'],
-  permit: ['createPermit', 'owns', 'WILDCARD', 'ANONYMOUS'],
-  route: ['createRouter', 'createBrowserHistory', 'createMemoryHistory', 'redirectTo', 'Router'],
+  clockwork: ['defineMachine', 'interpret', 'resolveTransition', 'assign', 'MachineError'],
+  ward: ['createWard', 'owns', 'WILDCARD', 'ANONYMOUS'],
+  wayfinder: ['createRouter', 'createBrowserHistory', 'createMemoryHistory', 'redirectTo', 'Router'],
   sourcerer: [
     'createLocalSource',
     'createRemoteSource',
@@ -202,7 +202,7 @@ const LIBRARY_EXPORTS = {
     'toZoned',
     'within',
   ],
-  toolkit: [
+  arsenal: [
     'chunk', 'compact', 'contains', 'countBy', 'difference', 'drop', 'dropLast', 'filterMap', 'first',
     'flatten', 'groupBy', 'indexBy', 'intersection', 'last', 'partition', 'replace', 'rotate', 'sample',
     'search', 'sort', 'take', 'takeLast', 'toggle', 'union', 'uniq', 'unzip', 'zip',
@@ -221,9 +221,9 @@ const LIBRARY_EXPORTS = {
     'isGreaterThan', 'isGreaterThanOrEqual', 'isLessThan', 'isLessThanOrEqual',
     'isMatch', 'isNil', 'isNumber', 'isObject', 'isPrimitive', 'isPromise', 'isRegex', 'isString', 'isWithin', 'typeOf',
   ],
-  sieve: ['s', 'ValidationError', 'ErrorCode', 'errorsAt', 'configure'],
+  spell: ['s', 'ValidationError', 'ErrorCode', 'errorsAt', 'configure'],
   scroll: ['createVirtualizer'],
-  wired: [
+  conduit: [
     'createContainer',
     'createToken',
     'createTestContainer',
@@ -234,10 +234,10 @@ const LIBRARY_EXPORTS = {
     'AliasCycleError',
     'ContainerDisposedError',
   ],
-  worker: ['createWorker', 'WorkerError'],
+  familiar: ['createWorker', 'WorkerError'],
 } as const;
 
-const TOOLKIT_CATEGORIES = [
+const ARSENAL_CATEGORIES = [
   {
     name: 'Array',
     functions: [
@@ -412,7 +412,7 @@ const TOOLKIT_CATEGORIES = [
 // ============================================================================
 
 const editorRef = ref<InstanceType<typeof REPLEditor> | null>(null);
-const selectedLibrary = ref('toolkit');
+const selectedLibrary = ref('arsenal');
 const selectedExample = ref('');
 const isExpanded = ref(false);
 const isDark = ref(true);
@@ -439,11 +439,11 @@ const updateMonacoTypes = (libName: string) => {
 
   monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    toolkitTypes,
-    'file:///node_modules/@vielzeug/toolkit/index.d.ts',
+    arsenalTypes,
+    'file:///node_modules/@vielzeug/arsenal/index.d.ts',
   );
 
-  if (libName !== 'toolkit' && libraryTypes[libName]) {
+  if (libName !== 'arsenal' && libraryTypes[libName]) {
     monaco.languages.typescript.typescriptDefaults.addExtraLib(
       libraryTypes[libName],
       `file:///node_modules/@vielzeug/${libName}/index.d.ts`,

@@ -3,7 +3,7 @@ description: Minimal i18n runtime with typed keys, deterministic locale fallback
 package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
-related: [ripple, route, courier]
+related: [ripple, wayfinder, courier]
 exports: [createI18n]
 ---
 
@@ -11,7 +11,7 @@ exports: [createI18n]
 
 > Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 
-[![npm version](https://img.shields.io/npm/v//lingua)](https://www.npmjs.com/package//lingua) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/lingua)](https://www.npmjs.com/package/@vielzeug/lingua) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
@@ -22,7 +22,7 @@ exports: [createI18n]
 
 **When to use:** Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 
-**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/route](https://vielzeug.dev/route/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
+**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/wayfinder](https://vielzeug.dev/wayfinder/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
 
 </details>
 

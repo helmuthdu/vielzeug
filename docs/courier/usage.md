@@ -886,13 +886,13 @@ export function userNameStore(id: number) {
 
 ## Working with Other Vielzeug Libraries
 
-### With Sieve
+### With Spell
 
 Validate response payloads at the API boundary before using them.
 
 ```ts
 import { createApi } from '@vielzeug/courier';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const api = createApi({ baseUrl: 'https://api.example.com' });
 

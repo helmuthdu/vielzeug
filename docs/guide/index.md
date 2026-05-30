@@ -15,9 +15,9 @@ The [REPL](/repl.html) lets you run any package in the browser without installin
 
 ## Integration Guides
 
-- [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Sieve + Forge + Courier
-- [State and Routing](./state-and-routing.md) - Ripple + Route
-- [State Machines in Practice](@vielzeug/machine/examples/) - Machine integration examples
+- [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Spell + Forge + Courier
+- [State and Routing](./state-and-routing.md) - Ripple + Wayfinder
+- [State Machines in Practice](@vielzeug/clockwork/examples/) - Clockwork integration examples
 
 ## Install a Package
 
@@ -78,7 +78,7 @@ define('my-counter', () => {
 
 ---
 
-### Component Library — [Block](/block/)
+### Component Library — [Sigil](/sigil/)
 
 A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craft. Drop them straight into your project.
 
@@ -96,7 +96,7 @@ Form state management with field validation, dirty tracking, submission handling
 
 ```typescript
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const form = createForm({
   defaultValues: { email: '', age: 0 },
@@ -121,12 +121,12 @@ await form.submit(async (values) => {
 
 ---
 
-### Validation — [Sieve](/sieve/)
+### Validation — [Spell](/spell/)
 
 Schema-based validation with a chainable builder, async validators, and detailed error messages. Pairs naturally with Forge.
 
 ```typescript
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const schema = s.object({
   name: s.string().min(2).max(50),
@@ -167,12 +167,12 @@ queryClient.invalidate(['user', id]);
 
 ---
 
-### Client Storage — [Deposit](/deposit/)
+### Client Storage — [Vault](/vault/)
 
 Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
 
 ```typescript
-import { createLocalStorage, table } from '@vielzeug/deposit';
+import { createLocalStorage, table } from '@vielzeug/vault';
 
 type User = { id: string; name: string; role: string };
 
@@ -187,12 +187,12 @@ const admins = await db.query('users').equals('role', 'admin').toArray();
 
 ---
 
-### Routing — [Route](/route/)
+### Routing — [Wayfinder](/wayfinder/)
 
 Hash and History router with type-safe params, middleware, async handlers, and View Transitions API support.
 
 ```typescript
-import { createRouter } from '@vielzeug/route';
+import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
@@ -212,14 +212,14 @@ const router = createRouter({
 
 ---
 
-### Permissions — [Permit](/permit/)
+### Permissions — [Ward](/ward/)
 
 Role-based access control with wildcard support, dynamic permission functions, and anonymous user handling.
 
 ```typescript
-import { createPermit, owns } from '@vielzeug/permit';
+import { createWard, owns } from '@vielzeug/ward';
 
-const permit = createPermit<'create' | 'update' | 'delete', { authorId: string }>([
+const ward = createWard<'create' | 'update' | 'delete', { authorId: string }>([
   { role: 'admin', resource: 'posts', action: 'create', effect: 'allow' },
   { role: 'admin', resource: 'posts', action: 'update', effect: 'allow' },
   { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
@@ -227,7 +227,7 @@ const permit = createPermit<'create' | 'update' | 'delete', { authorId: string }
   { role: 'user', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
 ]);
 
-if (!permit.can(currentUser, 'posts', 'delete')) {
+if (!ward.can(currentUser, 'posts', 'delete')) {
   throw new ForbiddenError();
 }
 ```
@@ -236,12 +236,12 @@ if (!permit.can(currentUser, 'posts', 'delete')) {
 
 ---
 
-### Dependency Injection — [Wired](/wired/)
+### Dependency Injection — [Conduit](/conduit/)
 
 Typed DI container with singleton and transient lifetimes, child scopes, and circular dependency detection.
 
 ```typescript
-import { createContainer, createToken } from '@vielzeug/wired';
+import { createContainer, createToken } from '@vielzeug/conduit';
 
 const LoggerToken = createToken<Logger>('Logger');
 const ApiToken = createToken<ApiService>('ApiService');
@@ -257,12 +257,12 @@ const api = await container.resolve(ApiToken);
 
 ---
 
-### Utilities — [Toolkit](/toolkit/)
+### Utilities — [Arsenal](/arsenal/)
 
 75+ tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
 
 ```typescript
-import { debounce, group, clamp, isEqual } from '@vielzeug/toolkit';
+import { debounce, group, clamp, isEqual } from '@vielzeug/arsenal';
 
 const search = debounce(fetchResults, 300);
 const byRole = group(users, (u) => u.role); // { admin: [...], user: [...] }
@@ -274,12 +274,12 @@ const unchanged = isEqual(prev, next);
 
 ---
 
-### State Machines — [Machine](/machine/)
+### State Machines — [Clockwork](/clockwork/)
 
 Typed finite state machines with discriminated event unions, guard conditions, async invokes with cancellation, and reactive state/context as Ripple signals.
 
 ```typescript
-import { defineMachine, interpret, assign } from '@vielzeug/machine';
+import { defineMachine, interpret, assign } from '@vielzeug/clockwork';
 
 type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
 
@@ -306,10 +306,10 @@ console.log(auth.state.value); // 'active'
 | Package                  | What it does                                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | **[Rune](/rune/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
-| **[Machine](/machine/)** | Typed finite state machines with guards, async invokes, context signals, and persistence        |
+| **[Clockwork](/clockwork/)** | Typed finite state machines with guards, async invokes, context signals, and persistence        |
 | **[lingua](/lingua/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
-| **[Relay](/relay/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
-| **[Worker](/worker/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
+| **[Herald](/herald/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
+| **[Familiar](/familiar/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
 | **[Grip](/grip/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
 | **[Orbit](/orbit/)**     | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
 | **[Sourcerer](/sourcerer/)**   | Typed local and remote data sources for pagination, filtering, sorting, and search              |
@@ -321,18 +321,18 @@ console.log(auth.state.value); // 'active'
 | Combination           | Why                                                                                       |
 | --------------------- | ----------------------------------------------------------------------------------------- |
 | **Ripple + Craft**       | Craft templates are powered by Ripple signals — same reactive primitives, zero glue                   |
-| **Sieve + Forge**        | Pass a Sieve schema directly as a field validator — one schema serves both form and API                |
+| **Spell + Forge**        | Pass a Spell schema directly as a field validator — one schema serves both form and API                |
 | **Courier + Ripple**       | Fetch remote data with caching, push results into a signal for reactive rendering                        |
-| **Deposit + Courier**       | Persist query results in IndexedDB for offline-capable apps                                              |
-| **Permit + Route**        | Check permissions in router middleware before the route handler ever runs                                |
-| **Wired + Rune**          | Register a scoped logger per service in your DI container                                                |
+| **Vault + Courier**       | Persist query results in IndexedDB for offline-capable apps                                              |
+| **Ward + Wayfinder**      | Check permissions in router middleware before the route handler ever runs                                |
+| **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                |
 | **Sourcerer + Courier**      | Use Courier as the HTTP transport inside a `createRemoteSource` for pagination and search with caching   |
 | **Scroll + Orbit**     | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
 | **Grip + Scroll**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
-| **Sourcerer + Route**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
-| **Machine + Ripple**      | Machine state and context are ReadonlySignals — bind them directly to effects or UI templates            |
-| **Machine + Permit**       | Call permit predicates inside machine guards to block unauthorized transitions                           |
-| **Machine + Relay**      | Publish state-change events to decouple multiple machines from each other                                |
+| **Sourcerer + Wayfinder**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
+| **Clockwork + Ripple**      | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates            |
+| **Clockwork + Ward**       | Call ward predicates inside clockwork guards to block unauthorized transitions                           |
+| **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                |
 
 ## Philosophy
 

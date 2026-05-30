@@ -1,41 +1,41 @@
+import { arsenalExamples } from './arsenal';
+import { clockworkExamples } from './clockwork';
+import { conduitExamples } from './conduit';
 import { courierExamples } from './courier';
-import { depositExamples } from './deposit';
+import { familiarExamples } from './familiar';
 import { forgeExamples } from './forge';
 import { gripExamples } from './grip';
+import { heraldExamples } from './herald';
 import { linguaExamples } from './lingua';
-import { machineExamples } from './machine';
 import { orbitExamples } from './orbit';
-import { permitExamples } from './permit';
-import { relayExamples } from './relay';
 import { rippleExamples } from './ripple';
-import { routeExamples } from './route';
 import { runeExamples } from './rune';
 import { scrollExamples } from './scroll';
-import { sieveExamples } from './sieve';
 import { sourcererExamples } from './sourcerer';
+import { spellExamples } from './spell';
 import { tempoExamples } from './tempo';
-import { toolkitExamples } from './toolkit';
-import { wiredExamples } from './wired';
-import { workerExamples } from './worker';
+import { vaultExamples } from './vault';
+import { wardExamples } from './ward';
+import { wayfinderExamples } from './wayfinder';
 
 export const examples = {
   courier: courierExamples,
-  deposit: depositExamples,
+  vault: vaultExamples,
   forge: forgeExamples,
   grip: gripExamples,
   lingua: linguaExamples,
-  machine: machineExamples,
+  clockwork: clockworkExamples,
   orbit: orbitExamples,
-  permit: permitExamples,
-  relay: relayExamples,
+  ward: wardExamples,
+  herald: heraldExamples,
   ripple: rippleExamples,
-  route: routeExamples,
+  wayfinder: wayfinderExamples,
   rune: runeExamples,
   scroll: scrollExamples,
-  sieve: sieveExamples,
+  spell: spellExamples,
   sourcerer: sourcererExamples,
   tempo: tempoExamples,
-  toolkit: toolkitExamples,
-  wired: wiredExamples,
-  worker: workerExamples,
+  arsenal: arsenalExamples,
+  conduit: conduitExamples,
+  familiar: familiarExamples,
 };

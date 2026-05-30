@@ -4,7 +4,7 @@ description: Browser/Node logger with levels, namespaces, pluggable transports, 
 package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
-related: [courier, relay, worker]
+related: [courier, herald, familiar]
 exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, lazy]
 ---
 
@@ -25,7 +25,7 @@ exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchT
 
 **When to use:** Structured browser/Node logging with log levels, namespaced scopes, timing helpers, and optional remote transport.
 
-**Related:** [Courier](/courier/) · [Relay](/relay/) · [Worker](/worker/)
+**Related:** [Courier](/courier/) · [Herald](/herald/) · [Familiar](/familiar/)
 
 </details>
 
@@ -165,7 +165,7 @@ api.info({ data }, 'GET /users');
 ## See Also
 
 - [Courier](/courier/)
-- [Relay](/relay/)
-- [Worker](/worker/)
+- [Herald](/herald/)
+- [Familiar](/familiar/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

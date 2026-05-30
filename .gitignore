@@ -128,5 +128,5 @@ docs/.vitepress/.temp/
 # Junie
 .junie
 
-# MCpit generated bundled data
-packages/mcpit/data/
+# Codex generated bundled data
+packages/codex/data/

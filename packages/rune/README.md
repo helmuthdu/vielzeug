@@ -3,7 +3,7 @@ description: Structured browser/Node logger with levels, namespaces, pluggable t
 package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
-related: [courier, relay, worker]
+related: [courier, herald, familiar]
 exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport]
 ---
 
@@ -22,7 +22,7 @@ exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTrans
 
 **When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and a pluggable transport pipeline.
 
-**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/relay](https://vielzeug.dev/relay/) · [@vielzeug/worker](https://vielzeug.dev/worker/)
+**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/herald](https://vielzeug.dev/herald/) · [@vielzeug/familiar](https://vielzeug.dev/familiar/)
 
 </details>
 

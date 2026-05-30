@@ -3,7 +3,7 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens]
-related: [craft, forge, relay]
+related: [craft, forge, herald]
 exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, scope, onCleanup, readonly, isSignal, isComputed, isStore]
 ---
 
@@ -22,7 +22,7 @@ exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, s
 
 **When to use:** Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/relay](https://vielzeug.dev/relay/)
+**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
 
 </details>
 

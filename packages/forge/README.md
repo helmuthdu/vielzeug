@@ -3,7 +3,7 @@ description: Framework-agnostic typed form state with path-safe fields, unified 
 package: forge
 category: forms
 keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
-related: [sieve, ripple, courier]
+related: [spell, ripple, courier]
 exports: [createForm]
 ---
 
@@ -22,7 +22,7 @@ exports: [createForm]
 
 **When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
 
-**Related:** [@vielzeug/sieve](https://vielzeug.dev/sieve/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
+**Related:** [@vielzeug/spell](https://vielzeug.dev/spell/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
 
 </details>
 

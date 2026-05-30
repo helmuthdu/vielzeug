@@ -4,7 +4,7 @@ description: Type-safe HTTP, query cache, mutations, SSE, and readable streaming
 package: courier
 category: http
 keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors, persist, batcher]
-related: [sieve, ripple, deposit]
+related: [spell, ripple, vault]
 exports: [createApi, createCourier, createMutation, createQuery, createStream, HttpError, bindRefetch, createBatcher, withBearerAuth, withRequestId, withLogging, persistQueryCache, hydrateQueryCache]
 ---
 
@@ -25,7 +25,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, H
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with one shared fetch-based transport.
 
-**Related:** [Sieve](/sieve/) · [Ripple](/ripple/) · [Deposit](/deposit/)
+**Related:** [Spell](/spell/) · [Ripple](/ripple/) · [Vault](/vault/)
 
 </details>
 
@@ -140,7 +140,7 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 
 ## See Also
 
-- [Sieve](/sieve/) — validate HTTP response payloads against typed schemas before they enter your cache
+- [Spell](/spell/) — validate HTTP response payloads against typed schemas before they enter your cache
 - [Forge](/forge/) — pair with Courier mutations to manage typed form state and submission
 - [Ripple](/ripple/) — use signal stores as a reactive layer on top of Courier's `SyncStore` API
 

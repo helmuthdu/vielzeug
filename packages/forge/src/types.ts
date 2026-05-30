@@ -101,7 +101,7 @@ export type ErrorKeyOf<TValues extends Record<string, unknown>> = FlatKeyOf<TVal
 
 /**
  * Structural interface for safeParse-compatible schemas.
- * Works with `@vielzeug/sieve`, Zod, Valibot, and any Standard Schema compliant library.
+ * Works with `@vielzeug/spell`, Zod, Valibot, and any Standard Schema compliant library.
  */
 export type SafeParseSchema = {
   safeParse(
@@ -180,7 +180,7 @@ export type FormOptions<TValues extends Record<string, unknown> = Record<string,
   /**
    * Form-level validator. Accepts either:
    * - A `FormValidator` function
-   * - Any `safeParse`-compatible schema (auto-detected, works with `@vielzeug/sieve`, Zod, Valibot)
+   * - Any `safeParse`-compatible schema (auto-detected, works with `@vielzeug/spell`, Zod, Valibot)
    *
    * Use `schemaValidator(schema)` explicitly when you need custom error mapping.
    */

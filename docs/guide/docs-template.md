@@ -199,7 +199,7 @@ description: <One sentence covering what this guide teaches.>
 - Sections should be ordered from simple to complex. The first code block in the page must be copy-paste runnable.
 - `## Framework Integration` placement: after all core concept sections, before Best Practices.
 - `## Working with Other Vielzeug Libraries` placement: after Framework Integration, before Best Practices.
-- If the library has no natural framework interop (e.g., a pure-utility library like `toolkit`), omit `## Framework Integration` — but document any utility functions that simplify framework usage in the relevant concept section.
+- If the library has no natural framework interop (e.g., a pure-utility library like `arsenal`), omit `## Framework Integration` — but document any utility functions that simplify framework usage in the relevant concept section.
 - Best Practices must be the last section.
 
 ### Framework Integration Pattern
@@ -239,13 +239,13 @@ Show the integration as a realistic code block, not a reference to "see the X do
 ````md
 ## Working with Other Vielzeug Libraries
 
-### With Sieve
+### With Spell
 
 <One sentence explaining why you'd combine these two.>
 
 \```ts
 import { createForm, schemaValidator } from '@vielzeug/forge';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const schema = s.object({ email: s.string().email() });
 const form = createForm({ validator: schemaValidator(schema), defaultValues: { email: '' } });
@@ -456,27 +456,27 @@ Use em-dash (—) as the separator in titles, except for individual example file
 
 ### AI-Agent Friendly Metadata (in `index.md` frontmatter)
 
-These fields enable AI agents (via the MCpit MCP server) to discover and understand packages programmatically:
+These fields enable AI agents (via the Codex MCP server) to discover and understand packages programmatically:
 
 - **`package`:** Package folder name without `@vielzeug/` prefix (e.g., `ripple`, `courier`). Always required.
 - **`category`:** One of the 12 canonical categories: `state`, `ui`, `forms`, `validation`, `http`, `storage`, `routing`, `auth`, `di`, `logging`, `i18n`, `events`, `workers`, `utilities`, `data`, `time`.
-- **`keywords`:** Searchable terms (e.g., `[signals, reactive, state-management]`). Used by MCpit's `search-packages` tool.
-- **`related`:** Related package slugs (e.g., `[sieve, ripple]`). Must exist as real packages. Used in Quick Reference links.
-- **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and MCpit metadata.
+- **`keywords`:** Searchable terms (e.g., `[signals, reactive, state-management]`). Used by Codex's `search-packages` tool.
+- **`related`:** Related package slugs (e.g., `[spell, ripple]`). Must exist as real packages. Used in Quick Reference links.
+- **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and Codex metadata.
 
 ---
 
-## AI-Agent Integration (MCpit)
+## AI-Agent Integration (Codex)
 
-The **MCpit** MCP (Model Context Protocol) server reads the metadata from `index.md` to expose Vielzeug packages and their documentation to AI assistants. This enables agents to:
+The **Codex** MCP (Model Context Protocol) server reads the metadata from `index.md` to expose Vielzeug packages and their documentation to AI assistants. This enables agents to:
 
 - **Discover packages** by category, keyword, or search query
 - **Get structured context** about each package (exports, related libraries, available doc pages, source availability)
 - **Read full documentation** (index, api, usage, examples pages)
 - **View source API** (`src/index.ts`)
-- **Find components** (Block only)
+- **Find components** (Sigil only)
 
-### MCpit Tools That Use Your Metadata
+### Codex Tools That Use Your Metadata
 
 | Tool | Frontmatter fields used |
 |------|-------------------------|
@@ -488,7 +488,7 @@ The **MCpit** MCP (Model Context Protocol) server reads the metadata from `index
 
 ### How to Publish Your Docs
 
-Every time you build or test the monorepo, the MCpit package regenerates its bundled snapshot (`data/vielzeug-data.json`). This snapshot is automatically included when the package is published to npm.
+Every time you build or test the monorepo, the Codex package regenerates its bundled snapshot (`data/vielzeug-data.json`). This snapshot is automatically included when the package is published to npm.
 
 When you publish `@vielzeug/<pkg>`, ensure:
 
@@ -496,7 +496,7 @@ When you publish `@vielzeug/<pkg>`, ensure:
 2. **All four doc pages exist** (or are intentionally omitted with reason): `index.md`, `api.md`, `usage.md`, `examples.md`
 3. **Quick Reference block is present** in `index.md` after the `#` heading
 
-Example: When an AI agent runs MCpit's `get-package` tool with `packageSlug: "ripple"`, MCpit returns:
+Example: When an AI agent runs Codex's `get-package` tool with `packageSlug: "ripple"`, Codex returns:
 
 ```json
 {

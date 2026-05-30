@@ -65,8 +65,8 @@ export function logout() {
 - Exporting individual writable signals directly allows external code to mutate internal state, breaking encapsulation. Export derived read-only values or explicit setter functions instead.
 
 ### Related
-- [Shared Bus (Relay)](@vielzeug/relay/examples/module-level-bus)
-- [DI Container (Wired)](/wired/)
+- [Shared Bus (Relay)](@vielzeug/herald/examples/module-level-bus)
+- [DI Container (Conduit)](/conduit/)
 
 - [Usage Guide](../usage.md#framework-integration)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)

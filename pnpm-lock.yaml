@@ -78,42 +78,61 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/block:
+  packages/arsenal:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/clockwork:
     dependencies:
-      /craft:
-        specifier: workspace:*
-        version: link:../craft
-      /grip:
-        specifier: workspace:*
-        version: link:../grip
-      /orbit:
-        specifier: workspace:*
-        version: link:../orbit
-      /ripple:
+      '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
-      /scroll:
-        specifier: workspace:*
-        version: link:../scroll
-      '@vielzeug/toolkit':
-        specifier: workspace:*
-        version: link:../toolkit
-      lucide:
-        specifier: ^1.16.0
-        version: 1.16.0
     devDependencies:
-      '@custom-elements-manifest/analyzer':
-        specifier: ^0.11.0
-        version: 0.11.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      axe-core:
-        specifier: ^4.11.4
-        version: 4.11.4
-      browserslist:
-        specifier: ^4.28.2
-        version: 4.28.2
-      lightningcss:
-        specifier: ^1.32.0
-        version: 1.32.0
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/codex:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/conduit:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -141,7 +160,7 @@ importers:
 
   packages/craft:
     dependencies:
-      /ripple:
+      '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
     devDependencies:
@@ -161,14 +180,11 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/deposit:
+  packages/familiar:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
         version: 25.8.0
-      fake-indexeddb:
-        specifier: ^6.2.5
-        version: 6.2.5
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -209,6 +225,21 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
+  packages/herald:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
   packages/lingua:
     devDependencies:
       '@types/node':
@@ -220,41 +251,6 @@ importers:
       vite:
         specifier: ^8.0.13
         version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
-  packages/machine:
-    dependencies:
-      /ripple:
-        specifier: workspace:*
-        version: link:../ripple
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
-  packages/mcp:
-    dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(zod@4.4.3)
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
       vitest:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
@@ -274,52 +270,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/permit:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
-  packages/relay:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
   packages/ripple:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
-  packages/route:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -364,7 +315,60 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/sieve:
+  packages/sigil:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+      '@vielzeug/craft':
+        specifier: workspace:*
+        version: link:../craft
+      '@vielzeug/grip':
+        specifier: workspace:*
+        version: link:../grip
+      '@vielzeug/orbit':
+        specifier: workspace:*
+        version: link:../orbit
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
+      '@vielzeug/scroll':
+        specifier: workspace:*
+        version: link:../scroll
+      lucide:
+        specifier: ^1.16.0
+        version: 1.16.0
+    devDependencies:
+      '@custom-elements-manifest/analyzer':
+        specifier: ^0.11.0
+        version: 0.11.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      axe-core:
+        specifier: ^4.11.4
+        version: 4.11.4
+      browserslist:
+        specifier: ^4.28.2
+        version: 4.28.2
+      lightningcss:
+        specifier: ^1.32.0
+        version: 1.32.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/sourcerer:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -379,7 +383,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/sourcerer:
+  packages/spell:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -413,7 +417,25 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/toolkit:
+  packages/vault:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.8.0
+        version: 25.8.0
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/ward:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -428,22 +450,7 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/wired:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.8.0
-        version: 25.8.0
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.13
-        version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: ^4.1.6
-        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-
-  packages/worker:
+  packages/wayfinder:
     devDependencies:
       '@types/node':
         specifier: ^25.8.0

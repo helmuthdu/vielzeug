@@ -13,8 +13,8 @@
   "pnpmVersion": "10.33.4",
   "projects": [
     {
-      "packageName": "@vielzeug/block",
-      "projectFolder": "packages/block",
+      "packageName": "@vielzeug/sigil",
+      "projectFolder": "packages/sigil",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -25,14 +25,14 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/deposit",
-      "projectFolder": "packages/deposit",
+      "packageName": "@vielzeug/vault",
+      "projectFolder": "packages/vault",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/relay",
-      "projectFolder": "packages/relay",
+      "packageName": "@vielzeug/herald",
+      "projectFolder": "packages/herald",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -67,14 +67,14 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/permit",
-      "projectFolder": "packages/permit",
+      "packageName": "@vielzeug/ward",
+      "projectFolder": "packages/ward",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/route",
-      "projectFolder": "packages/route",
+      "packageName": "@vielzeug/wayfinder",
+      "projectFolder": "packages/wayfinder",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -91,8 +91,8 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/toolkit",
-      "projectFolder": "packages/toolkit",
+      "packageName": "@vielzeug/arsenal",
+      "projectFolder": "packages/arsenal",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -103,20 +103,20 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/sieve",
-      "projectFolder": "packages/sieve",
+      "packageName": "@vielzeug/spell",
+      "projectFolder": "packages/spell",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/wired",
-      "projectFolder": "packages/wired",
+      "packageName": "@vielzeug/conduit",
+      "projectFolder": "packages/conduit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/worker",
-      "projectFolder": "packages/worker",
+      "packageName": "@vielzeug/familiar",
+      "projectFolder": "packages/familiar",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -133,14 +133,14 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/mcp",
-      "projectFolder": "packages/mcp",
+      "packageName": "@vielzeug/codex",
+      "projectFolder": "packages/codex",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/machine",
-      "projectFolder": "packages/machine",
+      "packageName": "@vielzeug/clockwork",
+      "projectFolder": "packages/clockwork",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

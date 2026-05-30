@@ -469,7 +469,7 @@ const handleRunCode = async () => {
     code = code.replace(/:\s*any\b/g, '');
 
     // Transform import statements to use global variables
-    // Example: import { Deposit } from '@vielzeug/deposit' -> const { Deposit } = window.deposit || {}
+    // Example: import { Vault } from '@vielzeug/vault' -> const { Vault } = window.vault || {}
     code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, imports, libName) => {
       // Keep only runtime imports (drop type-only specifiers) and map "a as b" to object destructuring alias "a: b".
       const runtimeImports = imports

@@ -2,7 +2,7 @@ import { FORM_ERROR, type FormValidator, type SafeParseSchema } from '../types';
 
 /**
  * Adapts a `safeParse`-compatible schema into a `FormValidator`.
- * Works with `@vielzeug/sieve`, Zod, Valibot, and Standard Schema compliant libraries.
+ * Works with `@vielzeug/spell`, Zod, Valibot, and Standard Schema compliant libraries.
  *
  * **Note:** When passing a schema directly to `createForm({ validator: mySchema })`, forge
  * auto-detects `safeParse`-compatible schemas and wraps them automatically. Use this explicit

@@ -44,4 +44,4 @@ export function UserProfile({ userId }: { userId: string }) {
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
-- [Dependency Injection (Wired)](/wired/)
+- [Dependency Injection (Conduit)](/conduit/)

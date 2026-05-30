@@ -4,7 +4,7 @@ description: Minimal i18n runtime with typed keys, deterministic locale fallback
 package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
-related: [ripple, route, courier]
+related: [ripple, wayfinder, courier]
 exports: [createI18n, createFormatter]
 ---
 
@@ -25,7 +25,7 @@ exports: [createI18n, createFormatter]
 
 **When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, partial catalog merging, and reactive subscriptions.
 
-**Related:** [Ripple](/ripple/) · [Route](/route/) · [Courier](/courier/)
+**Related:** [Ripple](/ripple/) · [Wayfinder](/wayfinder/) · [Courier](/courier/)
 
 </details>
 
@@ -170,7 +170,7 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 
 ## See Also
 
-- [Route](../route/index.md) for locale-aware routes and URL state.
+- [Wayfinder](../wayfinder/index.md) for locale-aware routes and URL state.
 - [Ripple](../ripple/index.md) for reactive locale and translation state.
 - [Courier](../courier/index.md) for lazy loading translation catalogs.
 

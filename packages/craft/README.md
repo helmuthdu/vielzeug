@@ -3,7 +3,7 @@ description: Functional custom-element authoring with typed props, reactive temp
 package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
-related: [ripple, block, orbit]
+related: [ripple, sigil, orbit]
 exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when]
 ---
 
@@ -22,7 +22,7 @@ exports: [define, html, css, signal, computed, effect, prop, ref, provide, injec
 
 **When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
-**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/block](https://vielzeug.dev/block/) · [@vielzeug/orbit](https://vielzeug.dev/orbit/)
+**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/orbit](https://vielzeug.dev/orbit/)
 
 </details>
 

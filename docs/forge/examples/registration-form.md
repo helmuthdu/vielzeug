@@ -80,7 +80,7 @@ async function handleRegistration() {
 - `form.state.isSubmitting` stays `true` until the submit handler resolves or rejects. Unhandled rejections inside the handler leave the form stuck in the submitting state.
 
 ### Related
-- [Schema Validation with Sieve](/sieve/)
+- [Schema Validation with Sieve](/spell/)
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

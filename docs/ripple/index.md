@@ -4,7 +4,7 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens]
-related: [craft, forge, relay]
+related: [craft, forge, herald]
 exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, scope, onCleanup, readonly, isSignal, isComputed, isStore]
 ---
 
@@ -25,7 +25,7 @@ exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, s
 
 **When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
-**Related:** [Craft](/craft/) · [Forge](/forge/) · [Relay](/relay/)
+**Related:** [Craft](/craft/) · [Forge](/forge/) · [Herald](/herald/)
 
 </details>
 
@@ -192,6 +192,6 @@ count.value = 1; // notifies automatically
 
 - [Craft](/craft/) — web-component authoring framework built on ripple; owns `memo` and `syncedSignal`
 - [Forge](/forge/) — typed form state that uses signals for field reactivity and submission tracking
-- [Relay](/relay/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
+- [Herald](/herald/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

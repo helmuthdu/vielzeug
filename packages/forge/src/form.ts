@@ -41,7 +41,7 @@ function composeSignal(...signals: Array<AbortSignal | undefined>): AbortSignal 
 /**
  * Resolves the `validator` option to a FormValidator.
  * Auto-detects SafeParseSchema objects (duck-typed via `safeParse`) and wraps them,
- * enabling direct use of @vielzeug/sieve, Zod, Valibot schemas without an explicit wrapper call.
+ * enabling direct use of @vielzeug/spell, Zod, Valibot schemas without an explicit wrapper call.
  */
 function resolveFormValidator<TValues extends Record<string, unknown>>(
   raw: FormValidator<TValues> | SafeParseSchema | undefined,

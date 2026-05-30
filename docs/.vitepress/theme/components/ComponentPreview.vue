@@ -582,7 +582,7 @@ const backgroundStyle = computed(() => {
   line-height: var(--leading-normal);
 }
 
-/* Ensure @vielzeug/block components render properly within preview */
+/* Ensure @vielzeug/sigil components render properly within preview */
 .preview-demo
   :where(
     bit-button,

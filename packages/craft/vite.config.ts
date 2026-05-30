@@ -19,7 +19,7 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
-          external: ['/ripple', '/orbit'],
+          external: ['@vielzeug/ripple', '@vielzeug/orbit'],
           output: {
             minify: true,
           },

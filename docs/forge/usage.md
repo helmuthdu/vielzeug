@@ -78,7 +78,7 @@ Schema integration — pass a `safeParse`-compatible schema directly to `validat
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const schema = s.object({
   age: s.number().min(18, 'Must be 18+'),
@@ -383,13 +383,13 @@ export default {
 
 ## Working with Other Vielzeug Libraries
 
-### With Sieve
+### With Spell
 
 Combine Sieve schemas with Forge to get typed validation rules without writing validator functions by hand.
 
 ```ts
 import { createForm, schemaValidator } from '@vielzeug/forge';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 
 const schema = s.object({
   email: s.string().email('Invalid email'),

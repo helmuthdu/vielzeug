@@ -1,0 +1,18 @@
+/* ========================================
+   CSS Cascade Layers
+
+   Define explicit layer order for predictable styling.
+   Layer order > Specificity
+
+   User styles (unlayered or custom layers) automatically
+   have higher priority than all Sigil layers.
+   ======================================== */
+
+@layer sigil.reset,
+  sigil.tokens,
+  sigil.themes,
+  sigil.base,
+  sigil.variants,
+  sigil.states,
+  sigil.utilities,
+  sigil.overrides;

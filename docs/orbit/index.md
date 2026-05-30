@@ -4,7 +4,7 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 package: orbit
 category: ui
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
-related: [craft, block, grip]
+related: [craft, sigil, grip]
 exports: [float, computePosition, autoUpdate, offset, flip]
 ---
 
@@ -25,7 +25,7 @@ exports: [float, computePosition, autoUpdate, offset, flip]
 
 **When to use:** Precise floating element positioning for tooltips, dropdowns, menus, and popovers with middleware pipeline.
 
-**Related:** [Craft](/craft/) · [Block](/block/) · [Grip](/grip/)
+**Related:** [Craft](/craft/) · [Sigil](/sigil/) · [Grip](/grip/)
 
 </details>
 
@@ -128,7 +128,7 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 
 ## See Also
 
-- [Block](/block/)
+- [Sigil](/sigil/)
 - [Grip](/grip/)
 - [Craft](/craft/)
 

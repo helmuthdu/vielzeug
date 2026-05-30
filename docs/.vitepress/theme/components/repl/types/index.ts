@@ -1,44 +1,44 @@
+import { arsenalTypes } from './arsenal';
+import { clockworkTypes } from './clockwork';
+import { conduitTypes } from './conduit';
 import { courierTypes } from './courier';
 import { craftTypes } from './craft';
-import { depositTypes } from './deposit';
+import { familiarTypes } from './familiar';
 import { forgeTypes } from './forge';
 import { gripTypes } from './grip';
+import { heraldTypes } from './herald';
 import { linguaTypes } from './lingua';
-import { machineTypes } from './machine';
 import { orbitTypes } from './orbit';
-import { permitTypes } from './permit';
-import { relayTypes } from './relay';
 import { rippleTypes } from './ripple';
-import { routeTypes } from './route';
 import { runeTypes } from './rune';
 import { scrollTypes } from './scroll';
-import { sieveTypes } from './sieve';
 import { sourcererTypes } from './sourcerer';
+import { spellTypes } from './spell';
 import { tempoTypes } from './tempo';
-import { toolkitTypes } from './toolkit';
-import { wiredTypes } from './wired';
-import { workerTypes } from './worker';
+import { vaultTypes } from './vault';
+import { wardTypes } from './ward';
+import { wayfinderTypes } from './wayfinder';
 
 export const libraryTypes = {
+  clockwork: clockworkTypes,
+  conduit: conduitTypes,
   courier: courierTypes,
   craft: craftTypes,
-  deposit: depositTypes,
+  familiar: familiarTypes,
   forge: forgeTypes,
   grip: gripTypes,
+  herald: heraldTypes,
   lingua: linguaTypes,
-  machine: machineTypes,
   orbit: orbitTypes,
-  permit: permitTypes,
-  relay: relayTypes,
   ripple: rippleTypes,
-  route: routeTypes,
   rune: runeTypes,
   scroll: scrollTypes,
-  sieve: sieveTypes,
   sourcerer: sourcererTypes,
+  spell: spellTypes,
   tempo: tempoTypes,
-  wired: wiredTypes,
-  worker: workerTypes,
+  vault: vaultTypes,
+  ward: wardTypes,
+  wayfinder: wayfinderTypes,
 };
 
-export { toolkitTypes };
+export { arsenalTypes };

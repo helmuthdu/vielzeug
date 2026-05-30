@@ -48,4 +48,4 @@ export function requestLogger(req, res, next) {
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
 - [Authentication (Courier)](/courier/examples/authentication)
-- [Event Bus (Relay)](/relay/)
+- [Event Bus (Relay)](/herald/)

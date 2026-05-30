@@ -3,7 +3,7 @@ description: Typed reactive data sources for pagination, filtering, sorting, sea
 package: sourcerer
 category: data
 keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
-related: [courier, ripple, route]
+related: [courier, ripple, wayfinder]
 exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals]
 ---
 
@@ -22,7 +22,7 @@ exports: [createLocalSource, createRemoteSource, createCursorSource, createInfin
 
 **When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
 
-**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/route](https://vielzeug.dev/route/)
+**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/wayfinder](https://vielzeug.dev/wayfinder/)
 
 </details>
 

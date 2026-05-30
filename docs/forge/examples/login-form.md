@@ -65,6 +65,6 @@ async function handleLogin() {
 
 ### Related
 
-- [Schema Validation with Sieve](/sieve/)
+- [Schema Validation with Sieve](/spell/)
 - [Registration Form](./registration-form.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

@@ -209,13 +209,13 @@ function useI18n() {
 
 ## Working with Other Vielzeug Libraries
 
-### With Route
+### With Wayfinder
 
-Use Route path params or query params as the source of truth for locale selection.
+Use Wayfinder path params or query params as the source of truth for locale selection.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
-import { createBrowserHistory, createRouter } from '@vielzeug/route';
+import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
 
 const i18n = createI18n({ locale: 'en', catalogs: { en: { title: 'Home' }, de: { title: 'Startseite' } } });
 const router = createRouter({ history: createBrowserHistory(), routes: [{ path: '/:locale/home', id: 'home' }] });

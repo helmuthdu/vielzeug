@@ -74,6 +74,6 @@ const query = decodeQuery(urlParams, { strict: true });
 
 ### Related
 
-- [URL-Synced List with Route](./sourceit-with-routeit.md)
-- [Remote Data with Courier](./sourceit-with-fetchit.md)
+- [URL-Synced List with Wayfinder](./sourcerer-with-wayfinder.md)
+- [Remote Data with Courier](./sourcerer-with-courier.md)
 - [Local Pagination and Filtering](./local-pagination-and-filtering.md)

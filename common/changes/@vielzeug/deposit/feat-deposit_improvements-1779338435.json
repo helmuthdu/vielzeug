@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/deposit",
-      "comment": "new plugin support, general improvements and bug fixes",
-      "type": "minor"
-    }
-  ]
-}

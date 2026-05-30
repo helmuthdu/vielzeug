@@ -4,7 +4,7 @@ description: Typed reactive data sources for pagination, filtering, sorting, sea
 package: sourcerer
 category: data
 keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
-related: [courier, ripple, route]
+related: [courier, ripple, wayfinder]
 exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals]
 ---
 
@@ -25,7 +25,7 @@ exports: [createLocalSource, createRemoteSource, createCursorSource, createInfin
 
 **When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
 
-**Related:** [Courier](/courier/) · [Ripple](/ripple/) · [Route](/route/)
+**Related:** [Courier](/courier/) · [Ripple](/ripple/) · [Wayfinder](/wayfinder/)
 
 </details>
 
@@ -156,7 +156,7 @@ await source.searchNow(search);
 ## See Also
 
 - [Ripple](/ripple/)
-- [Toolkit](/toolkit/)
-- [Route](/route/)
+- [Arsenal](/arsenal/)
+- [Wayfinder](/wayfinder/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

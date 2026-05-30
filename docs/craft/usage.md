@@ -395,7 +395,7 @@ Craft components are standard custom elements and work natively in any framework
 
 ```tsx [React]
 // React 19+ supports custom elements natively.
-import '@vielzeug/block';
+import '@vielzeug/sigil';
 
 function App() {
   return <x-toggle aria-label="Open menu" />;
@@ -404,7 +404,7 @@ function App() {
 
 ```ts [Vue 3]
 <script setup lang="ts">
-import '@vielzeug/block';
+import '@vielzeug/sigil';
 import { ref } from 'vue';
 
 const open = ref(false);
@@ -417,7 +417,7 @@ const open = ref(false);
 
 ```svelte [Svelte]
 <script>
-  import '@vielzeug/block';
+  import '@vielzeug/sigil';
 
   function handleClick() {
     console.log('toggled');
@@ -460,7 +460,7 @@ Use `@vielzeug/forge` for typed form state and validation alongside Craft's `def
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/sieve';
+import { s } from '@vielzeug/spell';
 import { define, html, provideFormContext } from '@vielzeug/craft';
 
 define('signup-form', {

@@ -3,7 +3,7 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 package: orbit
 category: ui-positioning
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
-related: [craft, block, grip]
+related: [craft, sigil, grip]
 exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 ---
 
@@ -11,7 +11,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 
 > Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
-[![npm version](https://img.shields.io/npm/v//orbit)](https://www.npmjs.com/package//orbit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/orbit)](https://www.npmjs.com/package/@vielzeug/orbit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
@@ -22,7 +22,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 
 **When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/block](https://vielzeug.dev/block/) · [@vielzeug/grip](https://vielzeug.dev/grip/)
+**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/grip](https://vielzeug.dev/grip/)
 
 </details>
 

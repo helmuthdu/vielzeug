@@ -1,4 +1,4 @@
-import { search as defaultSearch } from '@vielzeug/toolkit';
+import { search as defaultSearch } from '@vielzeug/arsenal';
 
 import type { LocalConfig, LocalSource, Predicate, Sorter, SourceMeta, SourceQuery } from './types';
 

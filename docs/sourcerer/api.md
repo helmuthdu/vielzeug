@@ -53,7 +53,7 @@ type LocalConfig<T> = {
 };
 ```
 
-The default `searchFn` uses fuzzy matching from `@vielzeug/toolkit`. Provide a custom `searchFn` to use exact substring matching or any other strategy.
+The default `searchFn` uses fuzzy matching from `@vielzeug/arsenal`. Provide a custom `searchFn` to use exact substring matching or any other strategy.
 
 **Returns:** `LocalSource<T>` — reactive in-memory source with pagination, filter, sort, and search.
 

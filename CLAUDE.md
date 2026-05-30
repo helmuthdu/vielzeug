@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Vielzeug** (German for "many tools") is a monorepo of 20 independent, zero-dependency, tree-shakeable TypeScript utility packages published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
+**Vielzeug** (German for "many tools") is a monorepo of 22 independent, zero-dependency, tree-shakeable TypeScript utility packages published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
 
 ## Commands
 
@@ -41,7 +41,7 @@ pnpm test src/__tests__/specific.test.ts
 
 ### Monorepo Structure
 
-- **`packages/`** — 20 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
+- **`packages/`** — 22 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
 - **`docs/`** — VitePress documentation site with one sub-directory per package
 - **`common/`** — Rush shared configs, git hooks, and scripts
 - **`rush.json`** — defines all packages and the `vielzeug-packages` version policy
@@ -54,9 +54,11 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 ### Package Dependency Graph (notable edges)
 
 ```
-block → craft → ripple, orbit
-courier → toolkit
-permit  → rune
+sigil    → craft → ripple, orbit
+sigil    → arsenal, grip, scroll
+courier  → arsenal
+sourcerer → arsenal
+clockwork → ripple
 ```
 
 All other packages are fully independent.
@@ -65,11 +67,11 @@ All other packages are fully independent.
 
 | Category | Packages |
 |---|---|
-| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation) |
-| HTTP & Storage | `courier` (HTTP client, caching, mutations), `deposit` (IndexedDB + LocalStorage unified API) |
-| UI Primitives | `block` (accessible web components built on craft), `orbit` (tooltip/popover positioning), `grip` (drag-and-drop), `scroll` (virtual list engine) |
-| Routing & i18n | `route` (client-side router + middleware), `lingua` (i18n + pluralization) |
-| Cross-cutting | `sieve` (schema validation), `permit` (RBAC), `relay` (typed event bus), `rune` (structured logging), `wired` (DI container), `toolkit` (75+ utility functions), `worker` (Web Worker pool), `tempo`, `sourcerer` |
+| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines) |
+| HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API) |
+| UI Primitives | `sigil` (accessible web components built on craft), `orbit` (tooltip/popover positioning), `grip` (drag-and-drop), `scroll` (virtual list engine) |
+| Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization) |
+| Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `codex` (AI/MCP server) |
 
 ### Standard Package Layout
 

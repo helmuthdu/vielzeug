@@ -10,7 +10,7 @@ export default defineConfig(
   mergeConfig(getConfig(__dirname, { name: 'courier' }), {
     build: {
       rolldownOptions: {
-        external: ['@vielzeug/toolkit'],
+        external: ['@vielzeug/arsenal'],
         output: {
           minify: true,
         },

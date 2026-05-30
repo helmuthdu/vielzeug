@@ -124,15 +124,28 @@
 
 <!-- Check all packages that are affected by this PR -->
 
-- [ ] @vielzeug/deposit
-- [ ] /courier
-- [ ] /forge
-- [ ] /lingua
-- [ ] /rune
-- [ ] @vielzeug/permit
-- [ ] @vielzeug/toolkit
-- [ ] /sieve
-- [ ] /wired
+- [ ] @vielzeug/arsenal
+- [ ] @vielzeug/clockwork
+- [ ] @vielzeug/codex
+- [ ] @vielzeug/conduit
+- [ ] @vielzeug/courier
+- [ ] @vielzeug/craft
+- [ ] @vielzeug/familiar
+- [ ] @vielzeug/forge
+- [ ] @vielzeug/grip
+- [ ] @vielzeug/herald
+- [ ] @vielzeug/lingua
+- [ ] @vielzeug/orbit
+- [ ] @vielzeug/ripple
+- [ ] @vielzeug/rune
+- [ ] @vielzeug/scroll
+- [ ] @vielzeug/sigil
+- [ ] @vielzeug/sourcerer
+- [ ] @vielzeug/spell
+- [ ] @vielzeug/tempo
+- [ ] @vielzeug/vault
+- [ ] @vielzeug/ward
+- [ ] @vielzeug/wayfinder
 - [ ] Documentation
 - [ ] Build/CI
 - [ ] Other: _____

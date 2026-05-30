@@ -3,7 +3,7 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [craft, scroll, block]
+related: [craft, scroll, sigil]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 ---
 
@@ -11,7 +11,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 
 > Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
 
-[![npm version](https://img.shields.io/npm/v//grip)](https://www.npmjs.com/package//grip) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/grip)](https://www.npmjs.com/package/@vielzeug/grip) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <details>
 <summary>Quick Reference</summary>
@@ -22,7 +22,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 
 **When to use:** Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/block](https://vielzeug.dev/block/)
+**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/)
 
 </details>
 

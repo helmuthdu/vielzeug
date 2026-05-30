@@ -85,4 +85,4 @@ it('writes error to console.error', () => {
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
-- [Testing Patterns (Sieve)](/sieve/examples/)
+- [Testing Patterns (Sieve)](/spell/examples/)

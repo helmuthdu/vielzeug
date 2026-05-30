@@ -3,7 +3,7 @@ description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe
 package: tempo
 category: date-time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
-related: [toolkit]
+related: [arsenal]
 exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatRange, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, timeDiff, dateRange, clearCaches]
 ---
 
@@ -22,7 +22,7 @@ exports: [now, parseLocal, toInstant, toZoned, shift, difference, within, clamp,
 
 **When to use:** Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 
-**Related:** [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
+**Related:** [@vielzeug/arsenal](https://vielzeug.dev/arsenal/)
 
 </details>
 

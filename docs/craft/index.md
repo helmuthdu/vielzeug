@@ -4,7 +4,7 @@ description: Functional custom-element authoring with typed props, reactive temp
 package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
-related: [ripple, block, orbit]
+related: [ripple, sigil, orbit]
 exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when]
 ---
 
@@ -25,7 +25,7 @@ exports: [define, html, css, signal, computed, effect, prop, ref, provide, injec
 
 **When to use:** Framework-agnostic UI components powered by reactive signals. Ideal when you need custom elements without a full UI framework.
 
-**Related:** [Ripple](/ripple/) · [Block](/block/) · [Orbit](/orbit/)
+**Related:** [Ripple](/ripple/) · [Sigil](/sigil/) · [Orbit](/orbit/)
 
 </details>
 
@@ -163,7 +163,7 @@ define('my-counter', {
 
 ## See Also
 
-- [Block](../block/index.md) for prebuilt accessible components powered by Craft.
+- [Sigil](../sigil/index.md) for prebuilt accessible components powered by Craft.
 - [Ripple](../ripple/index.md) for reactive state used inside Craft components.
 - [Forge](../forge/index.md) for typed form state that integrates with Craft.
 

@@ -4,7 +4,7 @@ description: Framework-agnostic typed form state with path-safe fields, unified 
 package: forge
 category: forms
 keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
-related: [sieve, ripple, courier]
+related: [spell, ripple, courier]
 exports: [createForm]
 ---
 
@@ -25,7 +25,7 @@ exports: [createForm]
 
 **When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
 
-**Related:** [Sieve](/sieve/) · [Ripple](/ripple/) · [Courier](/courier/)
+**Related:** [Spell](/spell/) · [Ripple](/ripple/) · [Courier](/courier/)
 
 </details>
 
@@ -151,7 +151,7 @@ await form.submit(submit);
 
 ## See Also
 
-- [Sieve](/sieve/)
+- [Spell](/spell/)
 - [Courier](/courier/)
 - [Ripple](/ripple/)
 

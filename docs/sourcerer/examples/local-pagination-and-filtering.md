@@ -75,5 +75,5 @@ await source.setFilter(
 
 ### Related
 
-- [Reactive Controls with Ripple](./sourceit-with-stateit.md)
+- [Reactive Controls with Ripple](./sourcerer-with-ripple.md)
 - [Remote Search with URL State](./remote-search-with-url-state.md)
