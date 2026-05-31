@@ -14,7 +14,7 @@ You need an authentication flow that limits brute-force attempts, performs an as
 Use guards to block the `LOGIN` transition after three failed attempts, and `invoke` in `loading` to perform the async login call. The attempt counter accumulates in context so the guard has access on every retry.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret, resolveTransition } from '@vielzeug/clockwork';
 
 type State = 'authenticated' | 'error' | 'loading' | 'unauthenticated';
 type Context = { attempts: number; token: string };
@@ -30,27 +30,27 @@ const auth = defineMachine<State, Context, Event>({
   states: {
     authenticated: {
       on: {
-        LOGOUT: { actions: [assign(() => ({ token: '' }))], target: 'unauthenticated' },
+        LOGOUT: { actions: [({ context }) => { context.token = ''; }], target: 'unauthenticated' },
       },
     },
     error: {
       on: {
         LOGIN: {
-          actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))],
-          guard:   ({ context }) => context.attempts < 3,
-          target:  'loading',
+          actions: [({ context }) => { context.attempts += 1; }],
+          guard: ({ context }) => context.attempts < 3,
+          target: 'loading',
         },
       },
     },
     loading: {
       invoke: [
         {
-          onDone:  (res) => ({ token: (res as { token: string }).token, type: 'AUTH_SUCCESS' }),
-          onError: ()    => ({ type: 'AUTH_FAILED' }),
-          src: async ({ event, signal }) => {
-            if (event.type !== 'LOGIN') throw new Error('unexpected');
+          onDone: (res) => ({ token: (res as { token: string }).token, type: 'AUTH_SUCCESS' }),
+          onError: () => ({ type: 'AUTH_FAILED' }),
+          src: async ({ entryEvent, signal }) => {
+            if (entryEvent.type !== 'LOGIN') throw new Error('unexpected');
             return fetch('/auth/login', {
-              body: JSON.stringify({ email: event.email, password: event.password }),
+              body: JSON.stringify({ email: entryEvent.email, password: entryEvent.password }),
               headers: { 'Content-Type': 'application/json' },
               method: 'POST',
               signal,
@@ -59,31 +59,42 @@ const auth = defineMachine<State, Context, Event>({
         },
       ],
       on: {
-        AUTH_FAILED:  { actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))], target: 'error' },
-        AUTH_SUCCESS: { actions: [assign(({ event }) => ({ attempts: 0, token: event.token }))], target: 'authenticated' },
+        AUTH_FAILED: { actions: [({ context }) => { context.attempts += 1; }], target: 'error' },
+        AUTH_SUCCESS: { actions: [({ context, event }) => { context.attempts = 0; context.token = event.token; }], target: 'authenticated' },
       },
     },
     unauthenticated: {
       on: {
         LOGIN: {
-          actions: [assign(({ context }) => ({ attempts: context.attempts + 1 }))],
-          guard:   ({ context }) => context.attempts < 3,
-          target:  'loading',
+          actions: [({ context }) => { context.attempts += 1; }],
+          guard: ({ context }) => context.attempts < 3,
+          target: 'loading',
         },
       },
     },
   },
 });
+```
 
-// Test guard behaviour with resolveTransition
-import { resolveTransition } from '@vielzeug/clockwork';
+### Testing guards with `resolveTransition`
+
+```ts
 import { expect, test } from 'vitest';
+
+test('allows login with fewer than 3 attempts', () => {
+  const result = resolveTransition(auth, {
+    context: { attempts: 2, token: '' },
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'unauthenticated',
+  });
+  expect(result?.target).toBe('loading');
+});
 
 test('blocks login after 3 attempts', () => {
   const result = resolveTransition(auth, {
     context: { attempts: 3, token: '' },
-    event:   { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state:   'unauthenticated',
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'unauthenticated',
   });
   expect(result).toBeUndefined();
 });
@@ -91,12 +102,12 @@ test('blocks login after 3 attempts', () => {
 
 ### Pitfalls
 
-- **Guard runs before `actions`.** The attempt counter in this example increments inside `actions`, which run only when the guard passes. If you want to count blocked attempts too, track them separately.
-- **`event.type` narrowing inside `src`.** The `event` received by `src` is the last event that triggered entry into `loading`. Narrow it explicitly (`if (event.type !== 'LOGIN') throw`) to avoid TypeScript errors and runtime surprises from synthetic `$init` events.
-- **Clearing attempts on logout.** The LOGOUT transition only clears `token`. Add `attempts: 0` to the `assign()` call if you want to reset the lockout on logout.
+- **Guard runs before actions.** The guard sees the context *before* actions mutate it — `attempts` is checked pre-increment.
+- **`entryEvent` in invoke `src`** gives access to the event that triggered entry. Cast or check its type since it may also be a lifecycle event.
+- **Always handle both `onDone` and `onError`.** If `onError` is omitted and the invoke rejects, the machine remains in the current state silently.
 
 ### Related
 
-- [Data Fetching with Error Recovery](./data-fetching.md) — Simpler async invoke pattern
-- [Permission-Based Access Control](./permission-based-access.md) — Role-based transition gating
+- [Data Fetching with Error Recovery](./data-fetching.md) — Simpler invoke pattern
+- [Unit Testing with `resolveTransition()`](./unit-testing.md) — Pure guard testing
 - [API Reference — `GuardFn`](/clockwork/api#guardfnctx-ev)

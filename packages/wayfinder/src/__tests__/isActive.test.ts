@@ -13,8 +13,8 @@ describe('isActive() — prefix matching (default)', () => {
       routes: {
         dashboard: {
           children: { settings: { path: 'settings' } },
-          // Parent must have a handler/lazy/redirect to be registered as a named route.
-          handler: vi.fn(),
+          // Parent must have data/lazy/redirect to be registered as a named route.
+          data: vi.fn(),
           path: '/dashboard',
         },
       },
@@ -84,7 +84,7 @@ describe('isActive() — exact matching', () => {
       routes: {
         dashboard: {
           children: { settings: { path: 'settings' } },
-          handler: vi.fn(),
+          data: vi.fn(),
           path: '/dashboard',
         },
       },
@@ -104,7 +104,7 @@ describe('isActive() — exact matching', () => {
       routes: {
         dashboard: {
           children: { settings: { path: 'settings' } },
-          handler: vi.fn(),
+          data: vi.fn(),
           path: '/dashboard',
         },
       },

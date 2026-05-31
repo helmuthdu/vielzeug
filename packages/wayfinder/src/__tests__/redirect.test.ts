@@ -3,36 +3,36 @@ import { settle } from './test-utils';
 
 describe('declarative redirect', () => {
   it('redirects to the target route on match', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/old');
     const router = createRouter({
       history,
       routes: {
-        new: { handler, path: '/new' },
+        new: { data, path: '/new' },
         old: { path: '/old', redirect: { path: '/new' } },
       },
     });
 
     await settle();
     expect(router.getSnapshot().location.pathname).toBe('/new');
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('redirects using a named route target', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/legacy');
     const router = createRouter({
       history,
       routes: {
-        current: { handler, path: '/current' },
+        current: { data, path: '/current' },
         legacy: { path: '/legacy', redirect: { name: 'current' } },
       },
     });
 
     await settle();
     expect(router.getSnapshot().location.pathname).toBe('/current');
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
@@ -49,7 +49,7 @@ describe('declarative redirect', () => {
     const router = createRouter({
       history,
       routes: {
-        new: { handler: vi.fn(), path: '/new' },
+        new: { data: vi.fn(), path: '/new' },
         old: { path: '/old', redirect: { path: '/new' } },
       },
     });
@@ -76,12 +76,12 @@ describe('declarative redirect', () => {
   });
 
   it('does not run beforeLeave blockers for declarative redirects', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/old');
     const router = createRouter({
       history,
       routes: {
-        new: { handler, path: '/new' },
+        new: { data, path: '/new' },
         old: { path: '/old', redirect: { path: '/new' } },
       },
     });
@@ -90,7 +90,7 @@ describe('declarative redirect', () => {
     await settle();
 
     expect(router.getSnapshot().location.pathname).toBe('/new');
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 });

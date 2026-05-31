@@ -243,6 +243,7 @@ export function generateBundledData(options = {}) {
 
   if (incremental) {
     if (cacheHits > 0) {
+      // eslint-disable-next-line no-undef
       process.stderr.write(`Incremental: reused ${cacheHits}/${packages.length} packages from cache.\n`);
     }
 
@@ -260,6 +261,7 @@ export function generateBundledData(options = {}) {
 // ---------------------------------------------------------------------------
 // CLI entrypoint — only runs when executed directly
 // ---------------------------------------------------------------------------
+// eslint-disable-next-line no-undef
 if (process.argv[1] === __filename) {
   const packageRoot = resolve(__dirname, '..');
   const outputFile = resolve(packageRoot, 'data/vielzeug-data.json');
@@ -267,6 +269,7 @@ if (process.argv[1] === __filename) {
 
   mkdirSync(dirname(outputFile), { recursive: true });
   writeFileSync(outputFile, `${JSON.stringify(bundledData, null, 2)}\n`, 'utf8');
+  // eslint-disable-next-line no-undef
   process.stderr.write(`Wrote bundled MCP data to ${outputFile}\n`);
 }
 //# sourceMappingURL=generate-bundled-data.js.map

@@ -11,7 +11,7 @@ A list page should be bookmarkable and shareable. Search query, active filters, 
 
 ### Solution
 
-Use `encodeQuery()` to serialize source state into URL-safe params after each interaction, and `decodeQuery()` + `restore()` to hydrate state from params on page load.
+Use `encodeQuery()` to serialize source state into URL-safe params after each interaction, and `decodeQuery()` + `hydrate()` to restore state from params on page load.
 
 ```ts
 import { createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
@@ -34,9 +34,9 @@ const source = createRemoteSource<Item, Filter, Sort>({
   // autoFetch: true (default) — initial data loads immediately
 });
 
-// On load: restore state from current URL
-const urlParams = Object.fromEntries(new URLSearchParams(location.search));
-await source.restore(decodeQuery<Filter, Sort>(urlParams, { defaultLimit: 20 }));
+// On load: hydrate state from current URL
+// decodeQuery accepts URLSearchParams directly
+await source.hydrate(decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 }));
 await source.ready();
 
 // User interaction: apply a search
@@ -68,7 +68,7 @@ const query = decodeQuery(urlParams, { strict: true });
 
 ### Pitfalls
 
-- `decodeQuery` returns a `Partial<RemoteSourceQuery>`. Pass it directly to `source.restore()` — no manual field mapping needed.
+- `decodeQuery` returns a `Partial<RemoteSourceQuery>`. Pass it directly to `source.hydrate()` — no manual field mapping needed.
 - Calling `history.pushState` (instead of `replaceState`) on every interaction floods the browser history. Always use `replaceState` when syncing list state to the URL.
 - Subscribe to source changes and compare the serialized params before writing to the URL to avoid redundant history pushes when only `isLoading` changed.
 

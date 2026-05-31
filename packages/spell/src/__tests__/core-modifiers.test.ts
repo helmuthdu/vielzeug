@@ -1,4 +1,4 @@
-import { type Infer, s } from '../index';
+import { type Infer, s, ValidationError } from '../index';
 
 describe('optional nullable nullish required', () => {
   it('optional() accepts undefined and still validates concrete values', () => {
@@ -160,5 +160,90 @@ describe('metadata and type-level helpers', () => {
 
     expect(schema.parse(a)).toBeNull();
     expect(schema.parse(b)).toBeUndefined();
+  });
+});
+
+describe('assert()', () => {
+  it('does not throw for valid values', () => {
+    expect(() => s.string().min(3).assert('hello')).not.toThrow();
+  });
+
+  it('throws ValidationError for invalid values', () => {
+    expect(() => s.string().assert(42)).toThrow(ValidationError);
+  });
+
+  it('narrows the type as an assertion', () => {
+    const value: unknown = 'hello';
+
+    s.string().assert(value);
+
+    expect(value.toUpperCase()).toBe('HELLO');
+  });
+
+  it('prepends label to root-level issue messages', () => {
+    try {
+      s.string().assert(42, 'userId');
+      expect.fail('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(ValidationError);
+      expect((e as ValidationError).issues[0].message).toMatch(/^userId:/);
+    }
+  });
+
+  it('does not prepend label to nested path issues', () => {
+    try {
+      s.object({ name: s.string() }).assert({ name: 42 }, 'payload');
+      expect.fail('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(ValidationError);
+
+      const issue = (e as ValidationError).issues[0];
+
+      expect(issue.path).toEqual(['name']);
+      expect(issue.message).not.toMatch(/^payload:/);
+    }
+  });
+
+  it('throws without label prefix when no label is given', () => {
+    try {
+      s.string().assert(42);
+      expect.fail('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(ValidationError);
+      expect((e as ValidationError).issues[0].message).not.toMatch(/^undefined:/);
+    }
+  });
+});
+
+describe('kind getter', () => {
+  it('returns the correct kind for primitive schemas', () => {
+    expect(s.string().kind).toBe('string');
+    expect(s.number().kind).toBe('number');
+    expect(s.boolean().kind).toBe('boolean');
+    expect(s.bigint().kind).toBe('bigint');
+    expect(s.date().kind).toBe('date');
+    expect(s.never().kind).toBe('never');
+    expect(s.unknown().kind).toBe('any');
+    expect(s.any().kind).toBe('any');
+  });
+
+  it('returns correct kind for composite schemas', () => {
+    expect(s.array(s.string()).kind).toBe('array');
+    expect(s.object({ a: s.string() }).kind).toBe('object');
+    expect(s.union([s.string(), s.number()]).kind).toBe('union');
+    expect(s.intersect([s.object({ a: s.string() }), s.object({ b: s.number() })]).kind).toBe('intersect');
+    expect(s.tuple([s.string(), s.number()]).kind).toBe('tuple');
+    expect(s.set(s.string()).kind).toBe('set');
+    expect(s.map(s.string(), s.number()).kind).toBe('map');
+    expect(s.record(s.string(), s.number()).kind).toBe('record');
+  });
+
+  it('wrapper kind reflects the inner schema kind', () => {
+    expect(s.string().optional().kind).toBe('string');
+    expect(s.number().nullable().kind).toBe('number');
+  });
+
+  it('returns pipe for piped schemas', () => {
+    expect(s.string().pipe(s.number()).kind).toBe('pipe');
   });
 });

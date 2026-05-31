@@ -1,9 +1,11 @@
 ---
 title: Coins — Examples
-description: Practical examples for @vielzeug/coins.
+description: Practical examples and recipes for coins.
 ---
 
-# Examples
+[[toc]]
 
-- [Formatting](./examples/formatting.md) — Locale-aware currency display
-- [Exchange](./examples/exchange.md) — Currency conversion patterns
+## Examples
+
+- [Formatting](./examples/formatting.md)
+- [Exchange Rate Conversion](./examples/exchange.md)

@@ -337,8 +337,8 @@ export function buildAdapterOps<S extends AnySchema>(
       : undefined,
   );
 
-  // F1: Per-table live-count cache. Populated lazily on first count() call.
-  // Invalidated on any mutation; precise decrements applied after delete/deleteMany/clear.
+  // Per-table live-count cache. Populated lazily on first count() call.
+  // Invalidated on every mutation via notifyMutation.
   const countCache = new Map<string, number>();
 
   const getCachedCount = async (table: keyof S & string): Promise<number> => {
@@ -366,13 +366,9 @@ export function buildAdapterOps<S extends AnySchema>(
   if (signals) {
     for (const [tableName, signal] of Object.entries(signals)) {
       if (signal) {
-        observers.observe(
-          tableName as keyof S & string,
-          (records) => {
-            signal.update(() => records as RecordOf<S, keyof S>[]);
-          },
-          { immediate: true },
-        );
+        observers.observe(tableName as keyof S & string, (records) => {
+          signal.update(() => records as RecordOf<S, keyof S>[]);
+        });
       }
     }
   }
@@ -382,7 +378,11 @@ export function buildAdapterOps<S extends AnySchema>(
 
     if (!validator) return value;
 
-    return validator.parse(value) as RecordOf<S, K>;
+    try {
+      return validator.parse(value) as RecordOf<S, K>;
+    } catch (err) {
+      throw new VaultError(`validation failed for table "${table}"`, { cause: err });
+    }
   };
 
   /* Timed wrapper — only wraps when onMetrics is present, otherwise zero overhead. */
@@ -413,7 +413,7 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const txCtx = buildTxContext<S, keyof S & string>(schema, core, notifyMutation, validate);
 
-  const observeMany = createObserveMany<S>(observers, (table) => core.getAll(table), logger);
+  const observeMany = createObserveMany<S>(observers);
 
   const adapter: Adapter<S> = {
     async batch<K extends keyof S & string, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
@@ -435,9 +435,11 @@ export function buildAdapterOps<S extends AnySchema>(
       const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const entries = await Promise.all(
         tableNames.map(async (name) => {
+          // getRawCount must be called before core.count() because count() has
+          // lazy-eviction side effects (deletes expired entries from the store).
           const raw = rawCountFn ? await rawCountFn(name) : undefined;
           const live = await core.count(name);
-          const expiredCount = raw !== undefined ? raw - live : 0;
+          const expiredCount = raw !== undefined ? Math.max(0, raw - live) : 0;
 
           return { expiredCount, name, recordCount: live };
         }),
@@ -447,27 +449,13 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async delete(table, key) {
-      const deleted = await timed(table, 'delete', () => txCtx.delete(table, key));
-
-      if (deleted) {
-        const cached = countCache.get(table);
-
-        if (cached !== undefined) countCache.set(table, Math.max(0, cached - 1));
-      }
-
-      return deleted;
+      return timed(table, 'delete', () => txCtx.delete(table, key));
+      // count cache invalidated by notifyMutation inside txCtx.delete
     },
 
     async deleteMany(table, keys) {
-      const deleted = await timed(table, 'deleteMany', () => txCtx.deleteMany(table, keys));
-
-      if (deleted > 0) {
-        const cached = countCache.get(table);
-
-        if (cached !== undefined) countCache.set(table, Math.max(0, cached - deleted));
-      }
-
-      return deleted;
+      return timed(table, 'deleteMany', () => txCtx.deleteMany(table, keys));
+      // count cache invalidated by notifyMutation inside txCtx.deleteMany
     },
 
     async dispose() {
@@ -492,6 +480,10 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(table, 'getMany', () => txCtx.getMany(table, keys));
     },
 
+    async getOrDefault(table, key, defaultFn, ttl) {
+      return timed(table, 'getOrDefault', () => txCtx.getOrDefault(table, key, defaultFn, ttl));
+    },
+
     async has(table, key) {
       return timed(table, 'has', () => txCtx.has(table, key));
     },
@@ -506,12 +498,13 @@ export function buildAdapterOps<S extends AnySchema>(
 
     observeMany,
 
-    async pruneExpired() {
-      if (pruneAll) {
+    async pruneExpired(tables?: readonly (keyof S & string)[]) {
+      const tableNames = tables ?? (Object.keys(schema) as Array<keyof S & string>);
+
+      if (!tables && pruneAll) {
         return pruneAll() as { [K in keyof S & string]: number };
       }
 
-      const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const pairs = await Promise.all(
         tableNames.map(async (name) => {
           const pruned = await core.pruneExpiredInTable(name);
@@ -559,8 +552,133 @@ export function buildAdapterOps<S extends AnySchema>(
 
     watch(table, options) {
       return createWatchIterable<RecordOf<S, typeof table>>(
-        (listener) => observers.observe(table, listener, { immediate: true }),
+        (listener) => observers.observe(table, listener),
         options?.mode ?? 'latest',
+        options?.signal,
+      );
+    },
+
+    watchStream(table, options) {
+      const mode = options?.mode ?? 'latest';
+      const signal = options?.signal;
+      let stopObserver: (() => void) | undefined;
+
+      if (mode === 'all') {
+        // Enqueue every snapshot directly — no dropping.
+        return new ReadableStream<RecordOf<S, typeof table>[]>({
+          cancel() {
+            stopObserver?.();
+            stopObserver = undefined;
+          },
+          start(controller) {
+            stopObserver = observers.observe(table, (records) => {
+              try {
+                controller.enqueue(records as RecordOf<S, typeof table>[]);
+              } catch {
+                /* controller already closed */
+              }
+            });
+
+            signal?.addEventListener(
+              'abort',
+              () => {
+                stopObserver?.();
+                stopObserver = undefined;
+                controller.close();
+              },
+              { once: true },
+            );
+          },
+        });
+      }
+
+      // mode: 'latest' — drop intermediate snapshots when the consumer lags.
+      //
+      // highWaterMark: 0 disables proactive prefetch: pull() is only invoked when the
+      // consumer calls reader.read() against an empty queue. This means mutations that
+      // arrive while the consumer is busy are accumulated in `latestSnapshot` (each
+      // overwriting the previous). When the consumer finally reads, pull() delivers
+      // only the most-recent state — all intermediate snapshots are silently dropped.
+      let latestSnapshot: RecordOf<S, typeof table>[] | null = null;
+      let pendingPull: (() => void) | null = null;
+
+      return new ReadableStream<RecordOf<S, typeof table>[]>(
+        {
+          cancel() {
+            stopObserver?.();
+            stopObserver = undefined;
+            latestSnapshot = null; // prevent pull() from enqueueing after cancel
+
+            if (pendingPull) {
+              const wake = pendingPull;
+
+              pendingPull = null;
+              wake(); // unblock any waiting pull()
+            }
+          },
+
+          async pull(controller) {
+            if (latestSnapshot !== null) {
+              controller.enqueue(latestSnapshot);
+              latestSnapshot = null;
+
+              return;
+            }
+
+            // No data yet — wait for the observer to signal.
+            await new Promise<void>((resolve) => {
+              pendingPull = resolve;
+            });
+
+            // Re-check after wake — stream may have been cancelled or aborted.
+            if (latestSnapshot !== null) {
+              try {
+                controller.enqueue(latestSnapshot);
+              } catch {
+                /* controller closed during wait */
+              }
+
+              latestSnapshot = null;
+            }
+          },
+
+          start(controller) {
+            stopObserver = observers.observe(table, (records) => {
+              // Always overwrite — only the latest state matters.
+              latestSnapshot = records as RecordOf<S, typeof table>[];
+
+              if (pendingPull) {
+                // pull() is waiting for data — wake it so it can deliver latestSnapshot.
+                // pull() reads latestSnapshot after the await, not here, so any further
+                // mutations that fire before the microtask runs will still be captured.
+                const wake = pendingPull;
+
+                pendingPull = null;
+                wake();
+              }
+            });
+
+            signal?.addEventListener(
+              'abort',
+              () => {
+                stopObserver?.();
+                stopObserver = undefined;
+                latestSnapshot = null;
+
+                if (pendingPull) {
+                  const wake = pendingPull;
+
+                  pendingPull = null;
+                  wake(); // unblock pull() so it can exit cleanly
+                }
+
+                controller.close();
+              },
+              { once: true },
+            );
+          },
+        },
+        new CountQueuingStrategy({ highWaterMark: 0 }),
       );
     },
   };

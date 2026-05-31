@@ -1,4 +1,4 @@
-import { define, html, computed, prop } from '@vielzeug/craft';
+import { computed, define, html, prop } from '@vielzeug/craft';
 
 import styles from './grid-item.css?inline';
 

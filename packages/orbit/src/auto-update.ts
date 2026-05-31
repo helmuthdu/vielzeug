@@ -8,8 +8,9 @@ export interface AutoUpdateOptions {
   /** Watch the floating element for size changes. Default: `true`. */
   observeFloating?: boolean;
   /**
-   * Listen to scroll events on ancestor scroll containers of the reference element,
-   * rather than on the window (capture-phase). More efficient in deeply nested DOMs.
+   * Listen to scroll events on ancestor scroll containers of the reference element
+   * in addition to the window. More efficient in deeply nested DOMs.
+   * Set to `false` to use only a capture-phase window listener.
    * Default: `true`.
    */
   observeAncestors?: boolean;
@@ -23,6 +24,13 @@ export interface AutoUpdateOptions {
    * Default: `0` (no throttling).
    */
   throttle?: number;
+  /**
+   * Pause position updates while the reference element is scrolled out of the viewport.
+   * Uses IntersectionObserver to detect visibility. When the reference becomes visible again,
+   * one position update is fired immediately.
+   * Default: `true`.
+   */
+  pauseWhenHidden?: boolean;
 }
 
 /**
@@ -52,9 +60,10 @@ function getScrollAncestors(el: Element): Element[] {
  * Calls `update` immediately and re-calls it whenever the reference or floating element
  * could have changed position: scroll, resize, ResizeObserver, or animation frames.
  *
- * By default, scroll listeners are attached to ancestor scroll containers of the reference
- * element rather than the window, reducing overhead in deeply nested DOMs.
- * Set `observeAncestors: false` to fall back to a window capture-phase scroll listener.
+ * By default, scroll listeners are attached to both ancestor scroll containers of the reference
+ * AND the window (for document scroll). The ancestor listeners fire for nested container scrolls;
+ * the window listener fires for page-level scroll. Set `observeAncestors: false` to use only a
+ * capture-phase window listener.
  *
  * Returns a cleanup function that removes all listeners.
  *
@@ -78,57 +87,76 @@ export function autoUpdate(
     observeAncestors = true,
     observeFloating = true,
     observeVisualViewport = true,
+    pauseWhenHidden = true,
     throttle: throttleMs = 0,
   }: AutoUpdateOptions = {},
 ): () => void {
   const throttled = throttleMs > 0 ? throttle(update, throttleMs, { leading: true, trailing: true }) : null;
   const notify = throttled ?? update;
 
+  // ── Visibility-aware wrapper (F2) ───────────────────────────────────────────
+  let referenceVisible = true;
+  const conditionalNotify = (): void => {
+    if (referenceVisible) notify();
+  };
+
+  // Initial call always runs regardless of visibility state.
   notify();
 
   const cleanups: Array<() => void> = [];
 
+  // IntersectionObserver: pause updates when reference is off-screen.
+  if (pauseWhenHidden && isElement(reference) && typeof IntersectionObserver !== 'undefined') {
+    const io = new IntersectionObserver((entries) => {
+      referenceVisible = entries[entries.length - 1]!.isIntersecting;
+
+      if (referenceVisible) notify(); // Re-position immediately when becoming visible.
+    });
+
+    io.observe(reference);
+    cleanups.push(() => io.disconnect());
+  }
+
+  // ── Scroll listeners ────────────────────────────────────────────────────────
   if (isElement(reference) && observeAncestors) {
-    // Targeted: listen on each ancestor scroll container.
+    // Targeted ancestor listeners for nested container scroll.
     const ancestors = getScrollAncestors(reference);
 
-    if (ancestors.length > 0) {
-      for (const ancestor of ancestors) {
-        ancestor.addEventListener('scroll', notify, { passive: true });
-        cleanups.push(() => ancestor.removeEventListener('scroll', notify));
-      }
-    } else {
-      // No scrollable ancestors (direct child of body) — fall back to window scroll.
-      window.addEventListener('scroll', notify, { passive: true });
-      cleanups.push(() => window.removeEventListener('scroll', notify));
+    for (const ancestor of ancestors) {
+      ancestor.addEventListener('scroll', conditionalNotify, { passive: true });
+      cleanups.push(() => ancestor.removeEventListener('scroll', conditionalNotify));
     }
+
+    // Always add window scroll for document-level scroll (non-capture, doesn't fire for nested containers).
+    window.addEventListener('scroll', conditionalNotify, { passive: true });
+    cleanups.push(() => window.removeEventListener('scroll', conditionalNotify));
   } else {
-    // VirtualReference or observeAncestors: false — capture-phase window listener.
+    // VirtualReference or observeAncestors: false — capture-phase window listener catches all scrolls.
     const scrollHandler = (e: Event): void => {
       if (e.composedPath().includes(floating)) return;
 
-      notify();
+      conditionalNotify();
     };
 
     window.addEventListener('scroll', scrollHandler, { capture: true, passive: true });
     cleanups.push(() => window.removeEventListener('scroll', scrollHandler, { capture: true }));
   }
 
-  window.addEventListener('resize', notify, { passive: true });
-  cleanups.push(() => window.removeEventListener('resize', notify));
+  window.addEventListener('resize', conditionalNotify, { passive: true });
+  cleanups.push(() => window.removeEventListener('resize', conditionalNotify));
 
   const vv = observeVisualViewport ? window.visualViewport : null;
 
   if (vv) {
-    vv.addEventListener('resize', notify, { passive: true });
-    vv.addEventListener('scroll', notify, { passive: true });
+    vv.addEventListener('resize', conditionalNotify, { passive: true });
+    vv.addEventListener('scroll', conditionalNotify, { passive: true });
     cleanups.push(() => {
-      vv.removeEventListener('resize', notify);
-      vv.removeEventListener('scroll', notify);
+      vv.removeEventListener('resize', conditionalNotify);
+      vv.removeEventListener('scroll', conditionalNotify);
     });
   }
 
-  const ro = new ResizeObserver(notify);
+  const ro = new ResizeObserver(conditionalNotify);
 
   if (isElement(reference)) ro.observe(reference);
 
@@ -140,7 +168,7 @@ export function autoUpdate(
 
   if (animationFrame) {
     const frameLoop = (): void => {
-      notify();
+      conditionalNotify();
       frameId = window.requestAnimationFrame(frameLoop);
     };
 

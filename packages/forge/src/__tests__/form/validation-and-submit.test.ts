@@ -339,4 +339,65 @@ describe('form submit', () => {
     expect(sawSubmitting).toBe(true);
     expect(form.state.isSubmitting).toBe(false);
   });
+
+  test('form.isSubmitting top-level getter reflects submit lifecycle', async () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+    const { promise, resolve } = deferred<void>();
+
+    expect(form.isSubmitting).toBe(false);
+
+    const p = form.submit(() => promise);
+
+    // submit() sets isSubmitting synchronously before its first await.
+    expect(form.isSubmitting).toBe(true);
+
+    resolve();
+    await p;
+
+    expect(form.isSubmitting).toBe(false);
+  });
+});
+
+describe('validateStream', () => {
+  test('yields one result per field without writing to fieldErrors', async () => {
+    const form = createForm({
+      defaultValues: { email: '', username: '' },
+      validators: {
+        email: (v: unknown) => (v ? undefined : 'Required'),
+        username: (v: unknown) => (v ? undefined : 'Required'),
+      },
+    });
+
+    const results: { error: string | undefined; field: string }[] = [];
+
+    for await (const r of form.validateStream()) {
+      results.push(r);
+    }
+
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.field).sort()).toEqual(['email', 'username']);
+    expect(results.every((r) => r.error === 'Required')).toBe(true);
+
+    // validateStream must NOT write to fieldErrors (read-only).
+    expect(form.field('email').error).toBeUndefined();
+    expect(form.field('username').error).toBeUndefined();
+  });
+
+  test('yields FORM_ERROR entry last when a form-level validator is set', async () => {
+    const form = createForm({
+      defaultValues: { x: '' },
+      validator: async (_values: { x: string }, _signal: AbortSignal) => ({ _form: 'Overall error' }),
+    });
+
+    const results: { error: string | undefined; field: string }[] = [];
+
+    for await (const r of form.validateStream()) {
+      results.push(r);
+    }
+
+    const formEntry = results.find((r) => r.field === '_form');
+
+    expect(formEntry).toBeDefined();
+    expect(formEntry!.error).toBe('Overall error');
+  });
 });

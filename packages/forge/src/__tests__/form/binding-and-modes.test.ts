@@ -5,7 +5,7 @@ import { createForm, ValidationModes } from '../../index';
 describe('form connect behavior', () => {
   test('connect() getters reflect live field value and meta state', () => {
     const form = createForm({ defaultValues: { name: '' } });
-    const binding = form.connect('name');
+    const binding = form.connect('name', { touchOnBlur: true });
 
     expect(binding.value).toBe('');
     expect(binding.touched).toBe(false);
@@ -190,6 +190,57 @@ describe('validate preset defaults', () => {
 
     expect(validatorCalls).toBe(0);
 
+    vi.useRealTimers();
+  });
+});
+
+describe('ValidationModes.onSubmit edge cases', () => {
+  test('onSubmit preset does not touch the field on blur', async () => {
+    const form = createForm({
+      connect: ValidationModes.onSubmit,
+      defaultValues: { name: '' },
+    });
+    const binding = form.connect('name');
+
+    binding.onBlur();
+
+    expect(form.field('name').touched).toBe(false);
+  });
+});
+
+describe('per-binding debounce isolation', () => {
+  test('two connect() calls for the same field have independent debounce timers', async () => {
+    vi.useFakeTimers();
+
+    let validatorCalls = 0;
+    const form = createForm({
+      connect: { debounce: 200, validateOnChange: true },
+      defaultValues: { name: '' },
+      validators: {
+        name: (_v: unknown) => {
+          validatorCalls++;
+
+          return undefined;
+        },
+      },
+    });
+
+    const b1 = form.connect('name');
+    const b2 = form.connect('name');
+
+    // Fire both bindings — each should have its own independent debounce clock.
+    b1.onChange('Alice');
+    await vi.advanceTimersByTimeAsync(100);
+    b2.onChange('Bob');
+
+    // b1's debounce (200ms) expired at t=200, b2's at t=300.
+    await vi.advanceTimersByTimeAsync(100); // t=200 — b1 fires
+    expect(validatorCalls).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(100); // t=300 — b2 fires
+    expect(validatorCalls).toBe(2);
+
+    form.dispose();
     vi.useRealTimers();
   });
 });

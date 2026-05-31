@@ -52,7 +52,7 @@ describe('error status', () => {
           },
           path: '/fail',
         },
-        ok: { handler: vi.fn(), path: '/ok' },
+        ok: { data: vi.fn(), path: '/ok' },
       },
     });
 
@@ -83,17 +83,17 @@ describe('historyState in location', () => {
   });
 
   it('historyState in ctx matches the location state', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler, path: '/page' } },
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
     await settle();
     await router.navigate({ path: '/page' }, { state: { extra: 42 } });
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ historyState: { extra: 42 } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ historyState: { extra: 42 } }));
     router.dispose();
   });
 });
@@ -117,7 +117,9 @@ describe('onError callback', () => {
 
     await settle();
 
-    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'initial-navigation' });
+    // R3: data-loader errors are reported with the enriched context immediately
+    // inside #runTerminal; the outer 'initial-navigation' wrapper is skipped.
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { routeName: 'fail', source: 'data-loader' });
     router.dispose();
   });
 
@@ -145,7 +147,9 @@ describe('onError callback', () => {
     history.back(); // triggers listener → navigates to /fail
     await settle();
 
-    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'history-listener' });
+    // R3: data-loader errors are reported with the enriched context immediately
+    // inside #runTerminal; the outer 'history-listener' wrapper is skipped.
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { routeName: 'fail', source: 'data-loader' });
     router.dispose();
   });
 

@@ -7,32 +7,31 @@ description: Complete API reference for @vielzeug/lingua.
 
 ## API At a Glance
 
-| Symbol              | Purpose                                       | Execution mode | Common gotcha                                                |
-| ------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------ |
-| Symbol                      | Purpose                                               | Execution mode | Common gotcha                                                  |
-| --------------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------- |
-| `createI18n()`              | Create an i18n instance with locale catalogs          | Sync           | Catalogs are lazy; call `preload()` before SSR render          |
-| `i18n.t()`                  | Translate a leaf key with optional vars               | Sync           | Missing keys use `onMissingKey` or return the key itself       |
-| `i18n.tp()`                 | Translate a plural branch key                         | Sync           | `count` is injected automatically — do not pass it in `vars`   |
-| `i18n.setLocale()`          | Switch the active locale                              | Async          | Await before rendering; throws if locale is not registered     |
-| `i18n.preload()`            | Pre-load a locale catalog without switching           | Async          | Locale must be registered first                                |
-| `i18n.register()`           | Replace a locale's full catalog at runtime            | Sync           | Replaces entirely — use `merge()` to add keys                  |
-| `i18n.merge()`              | Overlay additional keys onto a catalog                | Async          | Does not replace; a later `register()` discards merge deltas   |
-| `i18n.scope()`              | Return a prefix-bound `{ t, tp, has }` helper         | Sync           | Returns a new object on every call                             |
-| `i18n.watch()`              | Subscribe via AbortSignal lifecycle management        | Sync           | Preferred over `subscribe()` in modern code                    |
-| `i18n.getState()`           | Serialise loaded catalogs for SSR hydration           | Sync           | Only includes already-loaded catalogs, not pending loaders     |
-| `i18n.restoreState()`       | Hydrate a client instance from server state           | Sync           | Notifies subscribers once after restoring                      |
-| `i18n.registerNamespace()`  | Register a per-locale namespace source factory        | Sync           | Must be called before `loadNamespace()`                        |
-| `i18n.loadNamespace()`      | Load a namespace and merge into the catalog           | Async          | Deduplicates — source is loaded at most once per locale        |
-| `createFormatter()`         | Create a standalone Intl formatter                    | Sync           | Pass a getter `() => i18n.locale` to follow locale changes     |
-| `validateCatalog()`         | Check a catalog for missing CLDR plural forms         | Sync           | Import from `@vielzeug/lingua/validate` — not for production   |
+| Symbol                      | Purpose                                                | Execution mode | Common gotcha                                                        |
+| --------------------------- | ------------------------------------------------------ | -------------- | -------------------------------------------------------------------- |
+| `createI18n()`              | Create an i18n instance with locale catalogs           | Sync           | Catalogs are lazy; call `preload()` before SSR render                |
+| `i18n.t()`                  | Translate a leaf key with optional vars                | Sync           | Missing keys use `onMissingKey` or return the key itself             |
+| `i18n.tp()`                 | Translate a plural branch key                          | Sync           | `count` is injected automatically — do not pass it in `vars`         |
+| `i18n.bind()`               | Create a cached, re-usable translation function        | Sync           | Invalidates automatically on locale/catalog change                   |
+| `i18n.setLocale()`          | Switch the active locale                               | Async          | Await before rendering; throws if locale is not registered           |
+| `i18n.preload()`            | Pre-load a locale catalog without switching            | Async          | Locale must be registered first                                      |
+| `i18n.register()`           | Replace a locale's full catalog at runtime             | Sync           | Replaces entirely — use `merge()` to add keys                        |
+| `i18n.merge()`              | Overlay additional keys onto a catalog                 | Async          | Does not replace; a later `register()` discards merge deltas         |
+| `i18n.scope()`              | Return a prefix-bound `{ t, tp, has }` helper          | Sync           | Returns a new object on every call                                   |
+| `i18n.fork()`               | Create an isolated child instance from current state   | Sync           | Namespace registry is copied; post-fork registrations are not shared |
+| `i18n.getState()`           | Serialise loaded catalogs for SSR hydration            | Sync           | Only includes already-loaded catalogs, not pending loaders           |
+| `i18n.restoreState()`       | Hydrate a client instance from server state            | Sync           | Notifies subscribers once after restoring                            |
+| `i18n.registerNamespace()`  | Register a per-locale namespace source factory         | Sync           | Must be called before `loadNamespace()`                              |
+| `i18n.loadNamespace()`      | Load a namespace and merge into the catalog            | Async          | Deduplicates — source is loaded at most once per locale              |
+| `createFormatter()`         | Create a standalone Intl formatter                     | Sync           | Pass a getter `() => i18n.locale` to follow locale changes           |
+| `validateCatalog()`         | Check a catalog for missing CLDR plural forms          | Sync           | Import from `@vielzeug/lingua/validate` — not for production         |
 
-## Package Entry Point
+## Package Entry Points
 
-| Import                       | Purpose                                           |
-| ---------------------------- | ------------------------------------------------- |
-| `@vielzeug/lingua`           | Main exports and types                            |
-| `@vielzeug/lingua/format`    | `createFormatter` and related types               |
+| Import                       | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `@vielzeug/lingua`           | Main exports and types                             |
+| `@vielzeug/lingua/format`    | `createFormatter` and related types                |
 | `@vielzeug/lingua/validate`  | `validateCatalog` — dev/CI only, exclude from prod |
 
 ## createI18n
@@ -46,15 +45,15 @@ Creates an i18n instance. All locale strings must be valid BCP 47 tags. Invalid 
 
 **Parameters — `I18nOptions<M>`:**
 
-| Option              | Type                              | Default     | Description                                                             |
-| ------------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------- |
-| `locale`            | `Locale`                                                    | `'en'`          | Active locale at startup. Must be a valid BCP 47 tag.                                           |
-| `fallback`          | `Locale \| Locale[]`                                        | `undefined`     | Fallback locale chain searched when the active locale is missing a key.                         |
-| `catalogs`          | `Record<Locale, LocaleSource<M>>`                           | `{}`            | Locale source registry. Values are static objects or async loaders.                             |
-| `compile`           | `boolean`                                                   | `false`         | Pre-compile templates at registration time for high-frequency render paths.                     |
-| `onMissingKey`      | `(key: string, locale: string) => string`                   | returns `key`   | Called when a translation key is missing.                                                       |
-| `onMissingVar`      | `(varName: string, key: string, locale: string) => string`  | returns `{var}` | Called when an interpolation variable is absent.                                                |
-| `onSubscriberError` | `(error: unknown) => void`                                  | `console.error` | Called when a `subscribe` or `watch` callback throws.                                           |
+| Option              | Type                                                        | Default         | Description                                                                     |
+| ------------------- | ----------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------- |
+| `locale`            | `Locale`                                                    | `'en'`          | Active locale at startup. Must be a valid BCP 47 tag.                           |
+| `fallback`          | `Locale \| Locale[]`                                        | `undefined`     | Fallback locale chain searched when the active locale is missing a key.         |
+| `catalogs`          | `Record<Locale, LocaleSource<M>>`                           | `{}`            | Locale source registry. Values are static objects or async loaders.             |
+| `compile`           | `boolean`                                                   | `false`         | Pre-compile templates at registration time for high-frequency render paths.     |
+| `onMissingKey`      | `(key: string, locale: string) => string`                   | returns `key`   | Called when a translation key is missing.                                       |
+| `onMissingVar`      | `(varName: string, key: string, locale: string) => string`  | returns `{var}` | Called when an interpolation variable is absent.                                |
+| `onSubscriberError` | `(error: unknown) => void`                                  | `console.error` | Called when a `subscribe` callback throws.                                      |
 
 **Returns:** `I18n<M>`
 
@@ -83,33 +82,32 @@ Every `createI18n` call returns an `I18n<M>` instance.
 
 **Methods:**
 
-| Member                          | Signature                                                                                          | Description                                                        |
-| ------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `t(key, vars?)`                           | `(key: MessageLeafKeys<M> \| string, vars?: TranslateVars) => string`                                        | Translate a leaf key with optional variable interpolation.                          |
-| `tp(key, count, vars?, ordinal?)`         | `(key: MessageBranchKeys<M> \| string, count: number, vars?: TranslateVars, ordinal?: boolean) => string`   | Translate a plural branch key.                                                      |
-| `preload(locale)`                         | `(locale: Locale) => Promise<void>`                                                                          | Load a catalog without switching the active locale.                                 |
-| `setLocale(locale)`                       | `(locale: Locale) => Promise<void>`                                                                          | Load if needed, then switch and bump version.                                       |
-| `register(locale, source)`                | `(locale: Locale, source: LocaleSource<M>) => void`                                                          | Replace the full catalog for a locale. Clears namespace dedup markers.              |
-| `registerNamespace(ns, factory)`          | `(ns: string, factory: NamespaceFactory<M>) => void`                                                         | Register a per-locale namespace source factory.                                     |
-| `loadNamespace(ns, locale?)`              | `(ns: string, locale?: Locale) => Promise<void>`                                                             | Load a namespace for a locale (defaults to active locale).                          |
-| `getSupportedLocales(sorted?)`            | `(sorted?: boolean) => Locale[]`                                                                             | Return all registered locales. Pass `true` for code-point order.                   |
-| `getState()`                              | `() => I18nState`                                                                                            | Serialise loaded catalogs + active locale for SSR hydration.                        |
-| `restoreState(state)`                     | `(state: I18nState) => void`                                                                                 | Hydrate from serialised state. Notifies subscribers once.                           |
-| `watch(callback, options?)`               | `(callback: (snapshot: I18nSnapshot) => void, options?: WatchOptions) => void`                               | Subscribe via `AbortSignal`. Preferred over `subscribe()` in modern code.           |
-| `subscribe(callback, options?)`           | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe`                    | Subscribe to changes. Supports `{ immediate, signal }`. Returns unsubscribe fn.     |
-| `merge(locale, source)`         | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                                       | Overlay keys onto an existing catalog. See [`merge()`](#merge).    |
-| `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| AnyKey) => ScopedI18n`                                           | Return a prefix-bound helper. See [`scope()`](#scope).             |
-| `has(key)`                      | `(key: MessageLeafKeys<M> \| AnyKey) => boolean`                                                   | Check if a leaf key exists in the active fallback chain.           |
-| `getSupportedLocales(options?)` | `(options?: SupportedLocalesOptions) => Locale[]`                                                  | List registered locales. `{ sorted: true }` gives code-point order.|
-| `getSnapshot()`                 | `() => I18nSnapshot`                                                                               | Return the current `{ locale, version }` snapshot.                 |
-| `subscribe(callback, options?)` | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe`          | Subscribe to locale/content changes.                               |
+| Member                                    | Signature                                                                                                                             | Description                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `t(key, vars?)`                           | `(key: MessageLeafKeys<M> \| string, vars?: TranslateVars) => string`                                                                 | Translate a leaf key with optional variable interpolation.                      |
+| `tp(key, count, vars?, ordinal?)`         | `(key: MessageBranchKeys<M> \| string, count: number, vars?: TranslateVars, ordinal?: boolean) => string`                             | Translate a plural branch key.                                                  |
+| `bind(key)`                               | `(key: MessageLeafKeys<M> \| string) => (vars?: TranslateVars) => string`                                                             | Return a cached translation function for hot-path use.                          |
+| `preload(locale)`                         | `(locale: Locale) => Promise<void>`                                                                                                   | Load a catalog without switching the active locale.                             |
+| `setLocale(locale)`                       | `(locale: Locale) => Promise<void>`                                                                                                   | Load if needed, then switch and bump version.                                   |
+| `register(locale, source)`                | `(locale: Locale, source: LocaleSource<M>) => void`                                                                                   | Replace the full catalog for a locale. Clears namespace dedup markers.          |
+| `merge(locale, source)`                   | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                                                                          | Overlay keys onto an existing catalog.                                          |
+| `scope(prefix)`                           | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                                                              | Return a prefix-bound `{ t, tp, has }` helper.                                  |
+| `fork(overrides?)`                        | `(overrides?: Omit<I18nOptions<M>, 'catalogs' \| 'compile'>) => I18n<M>`                                                              | Create an isolated child instance from the current catalog snapshot.            |
+| `has(key)`                                | `(key: MessageLeafKeys<M> \| string) => boolean`                                                                                      | Check if a leaf key exists in the active fallback chain.                        |
+| `getSupportedLocales(sorted?)`            | `(sorted?: boolean) => Locale[]`                                                                                                      | Return all registered locales.                                                  |
+| `getSnapshot()`                           | `() => I18nSnapshot`                                                                                                                  | Return the current `{ locale, version }` snapshot.                              |
+| `getState()`                              | `() => I18nState`                                                                                                                     | Serialise loaded catalogs + active locale for SSR hydration.                   |
+| `restoreState(state)`                     | `(state: I18nState) => void`                                                                                                          | Hydrate from serialised state. Notifies subscribers once.                       |
+| `registerNamespace(ns, factory)`          | `(ns: string, factory: NamespaceFactory<M>) => void`                                                                                  | Register a per-locale namespace source factory.                                 |
+| `loadNamespace(ns, locale?)`              | `(ns: string, locale?: Locale) => Promise<void>`                                                                                      | Load a namespace for a locale (defaults to active locale).                      |
+| `subscribe(callback, options?)`           | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe`                                             | Subscribe to changes. Supports `{ immediate, signal }`. Returns unsubscribe fn. |
 
 **Properties:**
 
-| Member   | Type        | Description                                                                                          |
-| -------- | ----------- | ---------------------------------------------------------------------------------------------------- |
-| `locale` | `Locale`    | Readonly. Current active locale string.                                                              |
-| `fmt`    | `Formatter` | Lazy-initialised formatter tied to this instance. Invalidates cached `Intl` objects on locale change.|
+| Member   | Type        | Description                                                                                           |
+| -------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| `locale` | `Locale`    | Readonly. Current active locale string.                                                               |
+| `fmt`    | `Formatter` | Lazy-initialised formatter tied to this instance. Invalidates cached `Intl` objects on locale change. |
 
 ### `t()`
 
@@ -127,13 +125,44 @@ Unresolved variables call `onMissingVar(varName, key, locale)`. Without `onMissi
 Resolves a plural branch key using CLDR rules. For cardinal plurals, `count=0` checks `${key}.zero` before falling back to the CLDR-selected form. Ordinal plurals follow CLDR exclusively.
 
 ```ts
-i18n.tp('inbox', 0);              // => 'No messages'  (from inbox.zero)
-i18n.tp('inbox', 1);              // => 'One message'
-i18n.tp('inbox', 5);              // => '5 messages'
+i18n.tp('inbox', 0);                    // => 'No messages'  (from inbox.zero)
+i18n.tp('inbox', 1);                    // => 'One message'
+i18n.tp('inbox', 5);                    // => '5 messages'
 i18n.tp('position', 2, undefined, true); // => '2nd'  (ordinal)
 ```
 
 `count` is injected automatically. Do not include `count` in `vars`.
+
+**Pipe-delimited shorthand** — a leaf string containing `|` is expanded into a plural branch at registration time:
+
+```ts
+// Equivalent to { inbox: { one: 'One message', other: '{count} messages' } }
+const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
+```
+
+Supported part counts: `2` (one | other), `3` (zero | one | other), `6` (zero | one | two | few | many | other).
+Any other count, or any part that is empty, is treated as a plain string and not expanded.
+
+### `bind()`
+
+```ts
+bind(key: MessageLeafKeys<M> | string): (vars?: TranslateVars) => string
+```
+
+Returns a translation function bound to a specific key. The returned function caches the catalog lookup and
+invalidates automatically on any locale or catalog change (via snapshot comparison). Use it in hot-path
+render loops to avoid repeated key-string allocation.
+
+```ts
+const greet = i18n.bind('greeting');
+
+// Called many times — lookup cached between calls
+users.forEach((u) => greet({ name: u.name }));
+
+// Automatically re-resolves after a locale change
+await i18n.setLocale('fr');
+greet({ name: 'Alice' }); // => French greeting
+```
 
 ### `merge()`
 
@@ -172,6 +201,32 @@ nav.tp('items', 3); // equivalent to i18n.tp('nav.items', 3)
 
 `scope()` returns a new object on every call — do not compare references across calls.
 
+### `fork()`
+
+```ts
+fork(overrides?: Omit<I18nOptions<M>, 'catalogs' | 'compile'>): I18n<M>
+```
+
+Creates an isolated child instance from the current catalog snapshot and loader registry. The fork:
+
+- Inherits all resolved catalogs (as static snapshots) and all pending loaders.
+- Inherits the namespace registry as it exists at fork time.
+- Has its own locale, fallback chain, subscribers, and version counter.
+- Catalog and namespace mutations on the fork do not affect the parent, and vice versa.
+- Namespace registrations made **after** the fork are not propagated in either direction.
+
+This is the preferred pattern for SSR: fork the shared instance once per request rather than re-creating the full instance and re-registering all catalogs.
+
+```ts
+// SSR: one fork per request — clean locale isolation without re-registering catalogs
+const reqI18n = i18n.fork({ locale: req.locale });
+await reqI18n.setLocale(req.locale);
+const html = `<h1>${reqI18n.t('title')}</h1>`;
+
+// Tests: custom missing-key handler without polluting the shared instance
+const testI18n = i18n.fork({ onMissingKey: (k) => `MISSING:${k}` });
+```
+
 ### `subscribe()`
 
 ```ts
@@ -180,13 +235,20 @@ subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions
 
 Registers a callback that runs on locale or catalog changes. Returns an `Unsubscribe` function.
 Pass `{ immediate: true }` to call the callback immediately with the current snapshot.
+Pass `{ signal }` to unsubscribe automatically when an `AbortSignal` fires.
 
 ```ts
+// Manual unsubscribe
 const stop = i18n.subscribe(({ locale }) => {
   document.documentElement.lang = locale;
 }, { immediate: true });
 
 stop(); // unsubscribe
+
+// AbortSignal-based lifecycle management
+const controller = new AbortController();
+i18n.subscribe(({ locale }) => render(locale), { signal: controller.signal });
+// controller.abort() unsubscribes
 ```
 
 ### `getSupportedLocales()`
@@ -195,7 +257,7 @@ stop(); // unsubscribe
 getSupportedLocales(sorted?: boolean): Locale[]
 ```
 
-Returns all registered locales. Without arguments (or `false`), returns locales in registration order. Pass `true` for Unicode code-point sort order.
+Returns all registered locales. Without arguments, returns locales in registration order. Pass `true` for Unicode code-point sort order.
 
 ```ts
 i18n.getSupportedLocales();       // => ['en', 'de', 'fr']  (insertion order)
@@ -205,14 +267,14 @@ i18n.getSupportedLocales(true);   // => ['de', 'en', 'fr']  (sorted)
 ### `registerNamespace()`
 
 ```ts
-registerNamespace(ns: string, source: (locale: Locale) => LocaleSource<M>): void
+registerNamespace(ns: string, factory: NamespaceFactory<M>): void
 ```
 
 Registers a namespace source factory. The factory is called per locale when `loadNamespace()` runs. Namespaces allow lazy-loading partial catalogs (e.g. per-route translations) without polluting the main catalog.
 
 ```ts
 i18n.registerNamespace('settings', (locale) =>
-  () => import(`./locales/${locale}/settings.json`).then((m) => m.default),
+  import(`./locales/${locale}/settings.json`).then((m) => m.default),
 );
 ```
 
@@ -237,12 +299,12 @@ await i18n.loadNamespace('settings', 'de');
 ## validateCatalog
 
 ```ts
-import { validateCatalog } from '@vielzeug/lingua';
+import { validateCatalog } from '@vielzeug/lingua/validate';
 
 validateCatalog(messages: Messages, locale: Locale): ValidationWarning[]
 ```
 
-Checks a flat or nested message catalog against CLDR plural rules for `locale`. Returns an array of `ValidationWarning` objects for every plural branch that is missing one or more expected forms.
+Checks a flat or nested message catalog against CLDR plural rules for `locale`. Returns an array of `ValidationWarning` objects for every plural branch that is missing one or more expected forms. Import from the separate `@vielzeug/lingua/validate` entry — do not include it in your production bundle.
 
 Returns an empty array when there are no issues.
 
@@ -258,7 +320,7 @@ Returns an empty array when there are no issues.
 **Example:**
 
 ```ts
-import { validateCatalog } from '@vielzeug/lingua';
+import { validateCatalog } from '@vielzeug/lingua/validate';
 
 const warnings = validateCatalog(
   {
@@ -269,6 +331,8 @@ const warnings = validateCatalog(
 
 // Arabic requires: zero, one, two, few, many, other
 // => [{ key: 'inbox', locale: 'ar', form: 'zero' }, { key: 'inbox', locale: 'ar', form: 'two' }, ...]
+
+if (warnings.length > 0) throw new Error(`Missing plural forms:\n${JSON.stringify(warnings, null, 2)}`);
 ```
 
 ---
@@ -315,7 +379,7 @@ fmt.duration({ hours: 1, minutes: 30 });
 | `currency(value, currency, options?)` | `Intl.NumberFormat`       | Format a number as currency              |
 | `date(value, options?)`               | `Intl.DateTimeFormat`     | Format a `Date` or timestamp             |
 | `relative(value, unit, options?)`     | `Intl.RelativeTimeFormat` | Format a relative time value             |
-| `list(value, options?)`               | `Intl.ListFormat`         | Join an array into a locale-aware string |
+| `list(value, options?)`               | `Intl.ListFormat`         | Join an array of strings or numbers      |
 | `duration(value, options?)`           | `Intl.DurationFormat`     | Format a duration object                 |
 | `clear()`                             | —                         | Evict all cached `Intl` instances        |
 
@@ -372,16 +436,14 @@ type NamespaceFactory<M extends Messages = Messages> =
 
 Factory passed to `registerNamespace()`. May return a static catalog, a loader `() => Promise<M>`, or a `Promise<M>` directly (async factory pattern).
 
-### `WatchOptions`
+### `SubscribeOptions`
 
 ```ts
-type WatchOptions = {
+type SubscribeOptions = {
   immediate?: boolean;
   signal?: AbortSignal;
 };
 ```
-
-Options for `i18n.watch()`. `signal` unsubscribes automatically when the `AbortSignal` fires.
 
 ### `ValidationWarning`
 
@@ -429,20 +491,6 @@ type ScopedI18n = {
 
 Returned by `i18n.scope(prefix)`.
 
-### Removed in v4
-
-`MissingInfo`, `PluralTranslateOptions`, `SupportedLocalesOptions`, `AnyKey` — these types have been removed.
-See the migration notes for replacement APIs (`onMissingKey`, `onMissingVar`, plain `boolean` for `getSupportedLocales`, inline `string & {}` for open-ended key types).
-
-### `SubscribeOptions`
-
-```ts
-type SubscribeOptions = {
-  immediate?: boolean;
-  signal?: AbortSignal;
-};
-```
-
 ### `TranslateVars`
 
 ```ts
@@ -465,18 +513,18 @@ type Unsubscribe = () => void;
 
 ### `MessageLeafKeys<T>`
 
-Recursively infers all dot-separated paths to `string` leaf values in a `Messages` type. Constrains the `key` parameter of `t()` and `has()`.
+Recursively infers all dot-separated paths to `string` leaf values in a `Messages` type. Constrains the `key` parameter of `t()`, `has()`, and `bind()`. Recursion is capped at depth 4.
 
 ```ts
-type MessageLeafKeys<T, P extends string = '', D extends number = 7> = /* recursive conditional type */
+type MessageLeafKeys<T, P extends string = '', D extends number = 4> = /* recursive conditional type */
 ```
 
 ### `MessageBranchKeys<T>`
 
-Recursively infers all dot-separated paths to non-string (branch) values in a `Messages` type. Constrains the `key` parameter of `tp()` and `scope()`.
+Recursively infers all dot-separated paths to non-string (branch) values in a `Messages` type. Constrains the `key` parameter of `tp()` and `scope()`. Recursion is capped at depth 4.
 
 ```ts
-type MessageBranchKeys<T, P extends string = '', D extends number = 7> = /* recursive conditional type */
+type MessageBranchKeys<T, P extends string = '', D extends number = 4> = /* recursive conditional type */
 ```
 
 ### `Formatter`
@@ -487,7 +535,7 @@ type Formatter = {
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   duration(value: DurationValue, options?: DurationFormatOptions): string;
-  list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
+  list(value: Array<string | number>, options?: ListFormatOptions): string;
   number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
 };
@@ -528,7 +576,10 @@ type ListFormatOptions = {
 
 ## Errors
 
-| Error code      | When thrown                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------- |
-| `[lingua/E001]` | `setLocale()` is called with a locale that has no registered source.                                     |
-| `[lingua/E004]` | Any API receives a string that is not a valid BCP 47 tag (`createI18n`, `setLocale`, `register`, `merge`). |
+| Error code      | When thrown                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------- |
+| `[lingua/E001]` | `setLocale()` or `preload()` is called with a locale that has no registered source.                       |
+| `[lingua/E002]` | `tp()` receives a non-finite `count`.                                                                     |
+| `[lingua/E003]` | `tp()` receives `vars.count` (injected automatically).                                                    |
+| `[lingua/E004]` | Any API receives a string that is not a valid BCP 47 tag (`createI18n`, `setLocale`, `register`, `merge`).|
+| `[lingua/E005]` | `loadNamespace()` is called for a namespace that has not been registered.                                 |

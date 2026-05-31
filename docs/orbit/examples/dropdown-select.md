@@ -19,30 +19,33 @@ import { float, flip, shift, size } from '@vielzeug/orbit';
 const trigger = document.querySelector<HTMLElement>('#select-trigger')!;
 const dropdown = document.querySelector<HTMLElement>('#select-dropdown')!;
 
-let cleanup: (() => void) | null = null;
+let handle: ReturnType<typeof float> | null = null;
 
 function open() {
   dropdown.setAttribute('data-open', '');
-  cleanup = float(trigger, dropdown, {
+  handle = float(trigger, dropdown, {
     placement: 'bottom-start',
     middleware: [
       flip({ padding: 6 }),
       shift({ padding: 6 }),
-      size({
-        padding: 6,
-        apply({ elements }) {
-          const width = (elements.reference as HTMLElement).getBoundingClientRect().width;
-          elements.floating.style.width = `${width}px`;
-        },
-      }),
+      size({ padding: 6 }),
     ],
+    apply(result) {
+      // Match dropdown width to the trigger
+      dropdown.style.width = `${trigger.getBoundingClientRect().width}px`;
+      if (result.middlewareData.size) {
+        dropdown.style.maxHeight = `${result.middlewareData.size.availableHeight}px`;
+      }
+      dropdown.style.left = `${result.x}px`;
+      dropdown.style.top  = `${result.y}px`;
+    },
   });
 }
 
 function close() {
   dropdown.removeAttribute('data-open');
-  cleanup?.();
-  cleanup = null;
+  handle?.cleanup();
+  handle = null;
 }
 ```
 

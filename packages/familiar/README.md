@@ -1,15 +1,15 @@
 ---
-description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
+description: Typed Web Worker pools with queuing, priorities, streaming, heartbeat, and testing utilities.
 package: familiar
 category: workers
-keywords: [web-workers, pool, concurrency, offload, background, threading, timeout]
+keywords: [web-workers, pool, concurrency, offload, background, threading, timeout, streaming, priority]
 related: [arsenal, ripple, herald]
-exports: [createWorker, createTestWorker]
+exports: [createWorker, createModuleWorker, createTestWorker]
 ---
 
 # @vielzeug/familiar
 
-> Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
+> Typed Web Worker pools with queuing, priorities, streaming, heartbeat, and testing utilities.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/familiar)](https://www.npmjs.com/package/@vielzeug/familiar) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,9 +18,9 @@ exports: [createWorker, createTestWorker]
 
 **Package:** `@vielzeug/familiar` &nbsp;·&nbsp; **Category:** Workers
 
-**Key exports:** `createWorker`, `createTestWorker`
+**Key exports:** `createWorker`, `createModuleWorker`, `createTestWorker`
 
-**When to use:** Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
+**When to use:** Typed Web Worker pools with task queuing, priorities, per-task timeouts, AbortSignal cancellation, streaming, heartbeat monitoring, and in-process testing.
 
 **Related:** [@vielzeug/arsenal](https://vielzeug.dev/arsenal/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
 
@@ -41,13 +41,14 @@ yarn add @vielzeug/familiar
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
-const worker = createWorker<number[], number>((nums) => nums.reduce((sum, value) => sum + value, 0));
-
+// Single worker — runs one task at a time
+const worker = createWorker<number[], number>((nums) => nums.reduce((sum, n) => sum + n, 0));
 console.log(await worker.run([1, 2, 3, 4, 5])); // 15
 worker.dispose();
 
+// Worker pool — 4 concurrent slots with a 5 s timeout
 const pool = createWorker<number, number>(
-  function fib(n): number {
+  function fib(n) {
     return n <= 1 ? n : fib(n - 1) + fib(n - 2);
   },
   { concurrency: 4, timeout: 5000 },
@@ -55,6 +56,23 @@ const pool = createWorker<number, number>(
 
 const results = await Promise.all([35, 36, 37, 38].map((n) => pool.run(n)));
 pool.dispose();
+
+// Priority queue — higher values run first
+await pool.run(heavyTask, { priority: 10 }); // runs before default-priority tasks
+
+// Batch processing — yield results as they arrive
+for await (const result of pool.batch([1, 2, 3, 4])) {
+  console.log(result);
+}
+
+// Typed errors — instanceof checks for precise handling
+import { WorkerTimeoutError, WorkerQueueFullError } from '@vielzeug/familiar';
+try {
+  await pool.run(input, { timeout: 100 });
+} catch (err) {
+  if (err instanceof WorkerTimeoutError) console.error(`Timed out after ${err.timeoutMs}ms`);
+  if (err instanceof WorkerQueueFullError) console.error(`Queue full (max ${err.maxQueue})`);
+}
 ```
 
 ## Documentation

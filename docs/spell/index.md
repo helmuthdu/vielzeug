@@ -5,7 +5,7 @@ package: spell
 category: validation
 keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
 related: [forge, courier, vault]
-exports: [s, ValidationError, configure, ErrorCode, errorsAt]
+exports: [s, ValidationError, configure, ErrorCode, errorsAt, fromDescriptor, descriptorToJsonSchema]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [s, ValidationError, configure, ErrorCode, errorsAt]
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`
+**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`, `fromDescriptor`, `descriptorToJsonSchema`
 
 **When to use:** Zero-dep schema validation with strict-by-default objects, async refinements, coercion, JSON Schema output, and full TypeScript inference.
 
@@ -124,15 +124,16 @@ if (!result.success) {
 - **Schema factories**: primitives, collections, literals, unions, intersections, lazy schemas, discriminated variants, and enum helpers
 - **Input/output inference**: `InferInput<T>` for accepted inputs plus `Infer<T>` for parsed outputs
 - **Sync and async validation**: `.check()` for synchronous predicates, `.checkAsync()` for async validators; use `parseAsync()` / `safeParseAsync()` for async schemas
+- **Assertion helper**: `schema.assert(value, label?)` — type-narrowing assertion that throws `ValidationError` on failure
 - **Advanced validation hooks**: `ctx.addIssue()` for multi-issue/path-aware validation
 - **Preprocess and coerce**: `schema.preprocess(...)` plus `s.coerce.string()`, `number()`, `boolean()`, and `date()`
-- **Schema introspection**: `schema.describe()` as a getter returns a typed `SchemaDescriptor`; as a setter it attaches a human-readable description. `schema.toJsonSchema()` emits JSON Schema 2020-12 output. `schema.walk()` for custom tree traversal.
+- **Schema introspection**: `schema.label(description)` attaches a human-readable label. `schema.toDescriptor()` returns a typed `SchemaDescriptor`. `schema.kind` returns the schema kind string. `schema.toJsonSchema()` emits JSON Schema 2020-12 output. `schema.walk()` for custom tree traversal. `descriptorToJsonSchema(descriptor)` and `fromDescriptor(descriptor)` for round-tripping descriptors.
 - **Expanded schema coverage**: `s.bigint()`, `s.set()`, and `s.map()`
 - **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, `error.flattenFirst()`, `error.format()`, and `errorsAt()`
 - **Object and tuple composition**: object `.relaxed()` / `.strict()` modes, `.partial()`, `.pick()`, `.omit()`, `.extend()`, and tuple `.rest()`
 - **String and number format constraints**: validators like `.ulid()`, `.jwt()`, `.duration()`, and `.finite()`
+- **Locale-aware messages**: `configure()` for global overrides, `registerLocale()` / `useLocale()` for multi-locale support, `reset()` to restore defaults
 - **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used
-- **Nested global message customization**: `configure({ messages })` and `reset()`
 - **Flexible roots**: `s.any()` and `s.unknown()` when you want to start from an unconstrained schema
 - **Zero dependencies**: no runtime dependencies, no adapter layer required
 

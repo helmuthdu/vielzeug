@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/scroll",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

@@ -1,9 +1,10 @@
-import { anySignal, isAbortError, retry } from '@vielzeug/arsenal';
+import { isAbortError, retry } from '@vielzeug/arsenal';
 
 import type { RetryOptions } from './retry';
 import type { MutationState, SyncStore, Unsubscribe } from './types';
 
 import { resolveRetryDelay } from './retry';
+import { anySignal } from './transport';
 
 const IDLE_STATE: MutationState<unknown> = {
   data: undefined,

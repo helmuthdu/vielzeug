@@ -1,5 +1,4 @@
-import type { Issue, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -32,10 +31,10 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     const output: Record<string, unknown> = {};
 
     for (const key of Object.keys(obj)) {
-      const keyResult = this.keySchema.safeParse(key);
+      const keyResult = this.keySchema._parseFullSync(key);
 
-      if (!keyResult.success) {
-        issues.push(...prependIssuePath(keyResult.error.issues, key));
+      if (keyResult.issues.length > 0) {
+        issues.push(...prependIssuePath(keyResult.issues, key));
         continue;
       }
 
@@ -45,9 +44,9 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
       // prototype mutation on the output object.
       if (parsedKey === '__proto__' || parsedKey === 'constructor' || parsedKey === 'prototype') continue;
 
-      const valResult = this.valueSchema.safeParse(obj[key]);
+      const valResult = this.valueSchema._parseFullSync(obj[key]);
 
-      if (valResult.success) {
+      if (valResult.issues.length === 0) {
         Object.defineProperty(output, parsedKey, {
           configurable: true,
           enumerable: true,
@@ -55,7 +54,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
           writable: true,
         });
       } else {
-        issues.push(...prependIssuePath(valResult.error.issues, key));
+        issues.push(...prependIssuePath(valResult.issues, key));
       }
     }
 
@@ -115,10 +114,6 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     }
 
     return { data: output, issues, typeOk: true };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { additionalProperties: this.valueSchema.toJsonSchema(), type: 'object' };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

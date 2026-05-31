@@ -1,50 +1,18 @@
-import type { Obj } from '../types';
-
-type AssertOptions = { args?: Obj; type?: ErrorConstructor };
-
 /**
- * Asserts that a condition is true.
+ * Asserts that a condition is true. Throws with `message` if false.
  *
  * @example
  * ```ts
- * assert(Array.isArray([]));                      // ok
- * assert(x > 0, 'x must be positive');            // throws if false
- * assert(x > 0, 'x must be positive', { args: { x } });
- * assertAll([cond1, cond2], 'One failed');         // throws if any is false
+ * assert(Array.isArray(x));
+ * assert(x > 0, 'x must be positive');
+ * assert(n >= 1, 'must be at least 1', { type: RangeError });
  * ```
  *
  * @param condition - The boolean condition to assert.
  * @param [message] - Error message (default: `'Assertion failed'`).
  * @param [options.type] - Error class to throw (default: `Error`).
- * @param [options.args] - Debugging info appended to the message.
  * @throws {Error} If `condition` is false.
  */
-export function assert(
-  condition: boolean,
-  message = 'Assertion failed',
-  { args, type = Error }: AssertOptions = {},
-): void {
-  if (condition) return;
-
-  let errorDetails = '';
-
-  if (args) {
-    try {
-      errorDetails = `\nArguments: ${JSON.stringify(args, null, 2)}`;
-    } catch {
-      const parts = Object.entries(args)
-        .map(([k, v]) => {
-          try {
-            return `${k}: ${JSON.stringify(v)}`;
-          } catch {
-            return `${k}: [circular]`;
-          }
-        })
-        .join(', ');
-
-      errorDetails = `\nArguments: { ${parts} }`;
-    }
-  }
-
-  throw new type(`${message}${errorDetails}`);
+export function assert(condition: boolean, message = 'Assertion failed', options?: { type?: ErrorConstructor }): void {
+  if (!condition) throw new (options?.type ?? Error)(message);
 }

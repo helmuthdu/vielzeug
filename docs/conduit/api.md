@@ -15,20 +15,22 @@ description: Complete API reference for @vielzeug/conduit.
 | `container.value()`           | Register a static value                                         | Sync        | Throws `DuplicateRegistrationError` if token already used  |
 | `container.factory()`         | Register a lazy factory (sync or async)                         | Sync        | Factory does not run until first `resolve()`               |
 | `container.load()`            | Apply `ContainerModule` functions sequentially                  | **Async**   | Returns `Promise<this>`; modules may be async              |
-| `container.loadAll()`         | Apply `ContainerModule` functions in parallel                   | **Async**   | Use for independent modules that don't depend on each other|
 | `container.has()`             | Check if a token is registered (walks parent chain)             | Sync        | Does not execute the factory                               |
 | `container.resolve()`         | Resolve a single provider                                       | Async       | Throws `ProviderNotFoundError` if token not registered     |
 | `container.resolveSync()`     | Resolve synchronously from cache                                | Sync        | Throws for transient and not-yet-resolved factories        |
 | `container.resolveOptional()` | Resolve, returning `undefined` if missing                       | Async       | Still throws for disposed container and other errors       |
+| `container.tryResolve()`      | Resolve, returning a result object instead of throwing          | Async       | `{ ok: true, value }` or `{ ok: false, error }`            |
+| `container.resolveMany()`     | Resolve multiple tokens in parallel, returning a typed tuple    | Async       | Rejects if any token fails                                 |
 | `container.resolveAll()`      | Eagerly resolve all singleton factories (walks parent chain)    | Async       | Only singletons; scoped and transient are skipped          |
-| `container.deferred()`        | Return a proxy that defers resolution to first property access  | Sync        | Token must be resolvable via `resolveSync()` on access     |
 | `container.inspect()`         | Return a serializable graph of registered tokens                | Sync        | Defaults to deep traversal of the full parent chain        |
 | `container.validate()`        | Detect circular dependencies at registration time               | Sync        | Returns `this`; throws `CircularDependencyError` on cycle  |
+| `container.freeze()`          | Prevent new registrations after startup                         | Sync        | Returns `this`; throws if `value()` or `factory()` is called after |
 | `container.createChild()`     | Create a generic child container                                | Sync        | Child inherits parent registrations read-only              |
 | `container.createScope()`     | Create a named-scope child container                            | Sync        | Factories with a `ScopeToken` lifetime resolve here        |
-| `container.on()`              | Subscribe to container events (register / resolve / dispose)    | Sync        | Returns an unsubscribe function                            |
+| `container.on()`              | Subscribe to container events (register / resolve / dispose)    | Sync        | Events propagate to parent container listeners             |
 | `container.dispose()`         | Dispose container and run cleanup hooks                         | Async       | Hooks from both `value()` and `factory()` are called       |
 | `container.disposed`          | Whether the container has been disposed                         | Sync getter | —                                                          |
+| `container.name`              | Human-readable container identifier                             | Sync getter | Set via `createContainer({ name })` or `createChild({ name })` |
 
 ## Package Entry Point
 
@@ -98,10 +100,16 @@ const session = await requestContainer.resolve(Session);
 ### `createContainer()`
 
 ```ts
-function createContainer(): Container;
+function createContainer(opts?: { name?: string }): Container;
 ```
 
 Creates a new root container with an empty registry.
+
+**Parameters:**
+
+| Option | Type     | Default    | Description                                                    |
+| ------ | -------- | ---------- | -------------------------------------------------------------- |
+| `name` | `string` | `'root'`   | Human-readable identifier for the container (shown in errors)  |
 
 **Returns:** `Container`
 
@@ -110,7 +118,7 @@ Creates a new root container with an empty registry.
 ```ts
 import { createContainer } from '@vielzeug/conduit';
 
-const container = createContainer();
+const container = createContainer({ name: 'app' });
 ```
 
 ---
@@ -231,26 +239,6 @@ const container = await createContainer().load(loggingModule);
 
 ---
 
-### `container.loadAll()`
-
-```ts
-loadAll(...modules: ContainerModule[]): Promise<this>;
-```
-
-Applies all `ContainerModule` functions **in parallel** via `Promise.all`. Use for independent modules that register unrelated tokens. Order of registration is not guaranteed.
-
-**Throws:** `ContainerDisposedError` if called after disposal.
-
-**Returns:** `Promise<this>`
-
-**Example:**
-
-```ts
-const container = await createContainer().loadAll(authModule, dbModule, cacheModule);
-```
-
----
-
 ### `container.has()`
 
 ```ts
@@ -346,34 +334,47 @@ const config = container.resolveSync(Config);
 
 ---
 
-### `container.deferred()`
+### `container.tryResolve()`
 
 ```ts
-deferred<T extends object>(tok: Token<T>): T;
+tryResolve<T>(tok: Token<T>): Promise<ResolveResult<T>>;
 ```
 
-Returns a `Proxy` that defers resolution until the first property access. The token is resolved synchronously via `resolveSync()` on first access — so the token must be registered and already resolved (or a value) at access time.
+Resolves a token, returning a discriminated union result object instead of throwing. Useful when absence of a provider is expected and you want to avoid try/catch at the call site.
 
-Useful for optional dependencies that are used rarely and should not force async ceremony at the call site.
+```ts
+type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
+```
 
-**Returns:** `T` (deferred proxy)
-
-**Throws on first access:** `ProviderNotFoundError`, `SyncResolutionError`, `ContainerDisposedError`
+**Returns:** `Promise<ResolveResult<T>>`
 
 **Example:**
 
 ```ts
-const Telemetry = token<{ track(event: string): void }>('Telemetry');
+const result = await container.tryResolve(OptionalPlugin);
+if (result.ok) {
+  result.value.init();
+}
+```
 
-// Get the proxy early — no resolution yet
-const telemetry = container.deferred(Telemetry);
+---
 
-// Registration and resolution happen later
-container.value(Telemetry, analytics);
-await container.resolve(Telemetry); // warm the cache
+### `container.resolveMany()`
 
-// First property access triggers synchronous resolution
-telemetry.track('page_view');
+```ts
+resolveMany<const D extends Token<any>[]>(toks: D): Promise<InferTokenTypes<D>>;
+```
+
+Resolves multiple tokens in parallel and returns a typed tuple. Equivalent to `Promise.all(toks.map(t => container.resolve(t)))` but with full type inference.
+
+**Returns:** `Promise<InferTokenTypes<D>>` — a tuple typed to each token's `T`.
+
+**Throws:** `ProviderNotFoundError`, `CircularDependencyError`, `ContainerDisposedError` (first rejection wins).
+
+**Example:**
+
+```ts
+const [db, cache, logger] = await container.resolveMany([Db, Cache, Logger] as const);
 ```
 
 ---
@@ -445,10 +446,37 @@ container
 
 ---
 
+### `container.freeze()`
+
+```ts
+freeze(): this;
+```
+
+Prevents any further `value()` or `factory()` calls on this container. Useful to lock down registrations after startup to catch accidental late registrations.
+
+**Returns:** `this` (chainable)
+
+**Throws:** `Error` (containing the container name) if any registration is attempted after freeze.
+
+**Example:**
+
+```ts
+const container = createContainer({ name: 'app' });
+
+// ... register all providers ...
+
+container.freeze(); // seal the container
+
+// Later: this will throw
+container.value(SomeToken, value); // Error: Container 'app' is frozen ...
+```
+
+---
+
 ### `container.createChild()`
 
 ```ts
-createChild(): Container;
+createChild(opts?: { name?: string }): Container;
 ```
 
 Creates a generic child container that inherits the parent's registrations. Local registrations on the child shadow the parent for that token. The child maintains its own `scoped` cache — separate from the parent and all siblings.
@@ -461,7 +489,7 @@ Creates a generic child container that inherits the parent's registrations. Loca
 const Session = token<{ id: string }>('Session');
 container.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: 'scoped' });
 
-const requestContainer = container.createChild();
+const requestContainer = container.createChild({ name: 'request-1' });
 const session = await requestContainer.resolve(Session);
 
 await requestContainer.dispose();
@@ -472,7 +500,7 @@ await requestContainer.dispose();
 ### `container.createScope()`
 
 ```ts
-createScope(scopeToken: ScopeToken): Container;
+createScope(scopeToken: ScopeToken, opts?: { name?: string }): Container;
 ```
 
 Creates a named-scope child container tagged with `scopeToken`. Factories registered with this `ScopeToken` as their lifetime will be resolved and cached within this scope container.
@@ -487,12 +515,12 @@ Creates a named-scope child container tagged with `scopeToken`. Factories regist
 const RequestScope = scope('request');
 const Session = token<{ id: string }>('Session');
 
-const root = createContainer();
+const root = createContainer({ name: 'root' });
 root.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: RequestScope });
 
 // Each request gets its own scope container
-function handleRequest() {
-  const requestContainer = root.createScope(RequestScope);
+function handleRequest(id: string) {
+  const requestContainer = root.createScope(RequestScope, { name: `req-${id}` });
   return requestContainer.resolve(Session);
 }
 ```
@@ -505,7 +533,7 @@ function handleRequest() {
 on(listener: ContainerEventListener): () => void;
 ```
 
-Subscribes to container lifecycle events. The listener receives events synchronously when they occur. Errors thrown by listeners are silently swallowed to protect container operation.
+Subscribes to container lifecycle events. The listener receives events synchronously when they occur. Errors thrown by listeners are silently swallowed to protect container operation. Events **propagate up** to parent container listeners — a listener on the root container observes all events from children and scopes.
 
 **Returns:** An unsubscribe function — call it to stop receiving events.
 
@@ -605,6 +633,9 @@ type ContainerEvent =
 /** Listener function for container events. */
 type ContainerEventListener = (event: ContainerEvent) => void;
 
+/** Result type returned by tryResolve(). */
+type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
 /** Serializable node in the dependency graph returned by inspect(). */
 type ContainerNode = {
   description: string;
@@ -631,4 +662,5 @@ type ContainerGraph = {
 | `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                   |
 | `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory  |
 | `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token       |
-| `ContainerDisposedError`     | Any operation called after `dispose()`                                                   |
+| `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name             |
+| `ProviderNotFoundError`      | Token not registered — message includes the container name                               |

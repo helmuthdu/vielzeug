@@ -23,23 +23,20 @@ const router = createRouter({
     home: {
       path: '/',
       meta: { title: 'Home' } satisfies Meta,
-      handler: () => renderHome(),
     },
     users: {
       path: '/users',
       meta: { title: 'Users' } satisfies Meta,
-      handler: () => renderUsers(),
     },
     userDetail: {
       path: '/users/:id',
       meta: { title: 'User Detail' } satisfies Meta,
-      handler: ({ params }) => renderUser(params.id),
+      data: async ({ params }) => fetchUser(params.id),
     },
-    notFound: {
-      path: '*',
-      meta: { title: 'Not Found' } satisfies Meta,
-      handler: () => renderNotFound(),
-    },
+  },
+  notFound: {
+    meta: { title: 'Not Found' } satisfies Meta,
+    component: NotFoundPage,
   },
 });
 

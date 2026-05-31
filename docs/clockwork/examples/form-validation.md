@@ -11,10 +11,10 @@ Building a multi-step form where each step validates input before advancing, and
 
 ### Solution
 
-Use state nodes with guard conditions to validate input before advancing, and `assign()` to track progress and capture form data at each step.
+Use state nodes with guard conditions to validate input before advancing, and direct context mutation to track progress and capture form data at each step.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type FormContext = {
   step: number;
@@ -48,18 +48,18 @@ const formMachine = defineMachine<
           {
             guard: ({ context }) => context.data.email.includes('@'),
             target: 'step2',
-            actions: [assign(({ context }) => ({ step: 2 }))],
+            actions: [({ context }) => { context.step = 2; }],
           },
         ],
         RESET: [
           {
             target: 'step1',
             actions: [
-              assign(() => ({
-                step: 1,
-                data: { email: '', password: '', name: '' },
-                errors: {},
-              })),
+              ({ context }) => {
+                context.step = 1;
+                context.data = { email: '', password: '', name: '' };
+                context.errors = {};
+              },
             ],
           },
         ],
@@ -71,21 +71,21 @@ const formMachine = defineMachine<
           {
             guard: ({ context }) => context.data.password.length >= 8,
             target: 'step3',
-            actions: [assign(({ context }) => ({ step: 3 }))],
+            actions: [({ context }) => { context.step = 3; }],
           },
         ],
-        PREV: [{ target: 'step1', actions: [assign(({ context }) => ({ step: 1 }))] }],
+        PREV: [{ target: 'step1', actions: [({ context }) => { context.step = 1; }] }],
         RESET: [{ target: 'step1' }],
       },
     },
     step3: {
       on: {
-        PREV: [{ target: 'step2', actions: [assign(({ context }) => ({ step: 2 }))] }],
+        PREV: [{ target: 'step2', actions: [({ context }) => { context.step = 2; }] }],
         SUBMIT: [
           {
             guard: ({ context }) => context.data.name.length > 0,
             target: 'submitting',
-            actions: [assign(({ event }) => ({ data: event.data }))],
+            actions: [({ context, event }) => { context.data = event.data as any; }],
           },
         ],
         RESET: [{ target: 'step1' }],
@@ -111,7 +111,7 @@ const formMachine = defineMachine<
         SUBMIT_FAILURE: [
           {
             target: 'error',
-            actions: [assign(({ event }) => ({ errors: { submit: event.error } }))],
+            actions: [({ context, event }) => { context.errors = { submit: event.error }; }],
           },
         ],
       },
@@ -158,7 +158,7 @@ form.send({ type: 'RESET' }); // state: 'step1', all data cleared
 
 - **Guard conditions block transitions silently** — Sending NEXT without valid data won't throw; the state stays the same. Use context subscribers to detect stuck states.
 - **Context mutations don't trigger validation** — Modifying `form.context.value.data.email` directly doesn't validate. Always use `send()` to trigger guards; use reactive bindings to update context atomically.
-- **Forgetting to capture event data** — If you dispatch `{ type: 'SUBMIT', data: {...} }` but the action doesn't call `assign()` with `event.data`, the form data won't be saved. Always capture via `assign()`.
+- **Forgetting to capture event data** — If you dispatch `{ type: 'SUBMIT', data: {...} }` but the action doesn't mutate context with `event.data`, the form data won't be saved. Always capture event data in action functions.
 - **invoke onError receives Error, not string** — In the `onError` handler, the second argument is an Error object; convert to string with `String(error)` before storing in context.
 
 ### Related

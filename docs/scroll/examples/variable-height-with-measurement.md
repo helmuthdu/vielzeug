@@ -24,11 +24,11 @@ const messages: Message[] = [
 const virt = createVirtualizer(scrollEl, {
   count: messages.length,
   estimateSize: 64, // rough estimate — actual heights vary
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.dataset.index = String(item.index);
       el.className = 'message';
@@ -39,7 +39,7 @@ const virt = createVirtualizer(scrollEl, {
 
     // Measure after layout — batched into one rebuild
     requestAnimationFrame(() => {
-      for (const item of virtualItems) {
+      for (const item of items) {
         const el = listEl.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
         if (el) virt.measure(item.index, el.offsetHeight);
       }

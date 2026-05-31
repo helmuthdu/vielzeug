@@ -1,13 +1,13 @@
-import { computed, effect as rawEffect, isSignal, signal, untrack, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, type ReadonlySignal, signal, untrack } from '@vielzeug/ripple';
 
 import type { RegisterCleanup } from '../template-bindings';
 
-import { createDirectiveResult, isHtmlResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
+import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
 type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 
-type WhenRenderable = HTMLResult | string | null | undefined | false;
+type WhenRenderable = HTMLResult | null | undefined | false;
 
 const mountBranch = (
   result: HTMLResult,

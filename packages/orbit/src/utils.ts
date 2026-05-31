@@ -61,11 +61,18 @@ export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
 ];
 
 /**
- * Tags a middleware function with a `__name` string used for dev-mode ordering validation.
+ * Unique symbol used to tag middleware with a name for dev-mode ordering validation.
+ * Using a Symbol avoids collisions with any `__name` property set by transpilers or wrappers.
  * @internal
  */
-export function tagMiddleware<F extends Middleware>(fn: F, name: string): F & { __name: string } {
-  return Object.assign(fn, { __name: name });
+export const MIDDLEWARE_NAME = Symbol.for('@vielzeug/orbit/name');
+
+/**
+ * Tags a middleware function with a name used for dev-mode ordering validation.
+ * @internal
+ */
+export function tagMiddleware<F extends Middleware>(fn: F, name: string): F & { [MIDDLEWARE_NAME]: string } {
+  return Object.assign(fn, { [MIDDLEWARE_NAME]: name });
 }
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

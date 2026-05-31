@@ -1,18 +1,18 @@
-import { type Debounced, anySignal, debounce, isAbortError } from '@vielzeug/arsenal';
+import { isAbortError } from '@vielzeug/arsenal';
 import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
 
 import { createArrayField } from './internal/array';
-import { type ScopeContext, createScopedForm } from './internal/scope';
+import { createScopedForm, type ScopeContext } from './internal/scope';
 import {
-  FORM_ERROR,
   type ArrayField,
-  type ConnectOptions,
   type ConnectionResult,
+  type ConnectOptions,
   type ErrorKeyOf,
   type FieldState,
   type FieldValidator,
   type FlatKeyOf,
   type Form,
+  FORM_ERROR,
   type FormOptions,
   type FormSnapshot,
   type FormState,
@@ -28,9 +28,15 @@ import {
   type Unsubscribe,
   type ValidateResult,
 } from './types';
-import { flattenValues, isSafeKey, unflattenValues } from './utils';
+import { anySignal, flattenValues, isSafeKey, unflattenValues } from './utils';
 
 /* -------------------- Private helpers -------------------- */
+
+/** R2: Single assertion helper — replaces 5 copy-pasted guard blocks. */
+function assertSafeKey(key: string): void {
+  if (!isSafeKey(key))
+    throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+}
 
 /**
  * Resolves the `validator` option to a FormValidator.
@@ -44,7 +50,6 @@ function resolveFormValidator<TValues extends Record<string, unknown>>(
 
   if (typeof raw === 'function') return raw;
 
-  // Duck-type: object with a `safeParse` method -> wrap as a FormValidator
   const schema = raw as SafeParseSchema;
 
   return (values, signal) => {
@@ -76,12 +81,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const validators = new Map<string, FieldValidator<unknown>>();
 
   for (const [name, validator] of Object.entries(init.validators ?? {})) {
-    if (!isSafeKey(name)) {
-      throw new Error(
-        `[forge] Unsafe key '${name}' in validators: segments __proto__, constructor, and prototype are reserved.`,
-      );
-    }
-
+    assertSafeKey(name);
     validators.set(name, validator as FieldValidator<unknown>);
   }
 
@@ -101,7 +101,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* ---- Validation tracking ---- */
 
-  const validatingFieldCounts = new Map<string, number>();
+  /**
+   * Symbol-based ref-counting for concurrent validation runs per field.
+   * Each runValidationCore() call mints a unique symbol and adds it to the field's Set.
+   * The field leaves `validatingFields` only when its Set is empty — impossible to miscount.
+   */
+  const validatingRuns = new Map<string, Set<symbol>>();
   const runCtrls = new Set<AbortController>();
   const fieldCtrls = new Map<string, AbortController>();
   const disposeController = new AbortController();
@@ -112,13 +117,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   let cachedErrors: Readonly<Record<string, string>> | null = null;
   const fieldStateCache = new Map<string, FieldState<unknown>>();
   const arrayCache = new Map<string, ArrayField>();
-
-  /* ---- Debounced validators (one per field, lazily created) ---- */
-  const debouncedValidators = new Map<string, Debounced<() => void>>();
+  const scopeCache = new Map<string, Form<never>>();
 
   /* ---- Submission state ---- */
 
-  let isSubmitting = false;
+  let isSubmittingState = false;
   let submitCount = 0;
 
   /* ---- Lifecycle ---- */
@@ -179,17 +182,16 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       errors: computeErrors(),
       isDirty: dirty.size > 0,
       isLoading: loadingState,
-      isSubmitting,
+      isSubmitting: isSubmittingState,
       isTouched: touched.size > 0,
       isValid: fieldErrors.size === 0,
-      isValidating: validatingFieldCounts.size > 0,
+      isValidating: validatingRuns.size > 0,
       submitCount,
       touchedFields: Object.freeze([...touched]) as readonly string[],
-      validatingFields: Object.freeze([...validatingFieldCounts.keys()]) as readonly string[],
+      validatingFields: Object.freeze([...validatingRuns.keys()]) as readonly string[],
     }) as unknown as FormState;
   }
 
-  /* Initialised here; computeState() and buildFieldState() are function declarations, so they are hoisted. */
   const formStateSignal = signal<FormState>(computeState());
 
   function getStateSnapshot(): FormState {
@@ -210,69 +212,58 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     if (cached) return cached;
 
-    const snapshot = Object.freeze(buildFieldState(name)) as unknown as FieldState<unknown>;
+    const snap = Object.freeze(buildFieldState(name)) as unknown as FieldState<unknown>;
 
-    fieldStateCache.set(name, snapshot);
+    fieldStateCache.set(name, snap);
 
-    return snapshot;
+    return snap;
   }
 
   /**
-   * F2: Notify field listeners only when the field state has actually changed.
-   * Shallow-compares all four FieldState properties to skip spurious notifications
-   * that arise when only form-level state (isValidating, isSubmitting) changed but
-   * individual field values/errors/touched/dirty did not.
+   * R4: Unified notification — replaces requestNotify(field?) + requestNotifyFields(fields).
+   * - undefined  → full-form refresh (all field signals + form signal)
+   * - string     → single field + form signal
+   * - Iterable   → targeted set of fields + form signal
+   * rippleBatch deduplicates signal writes within the synchronous call stack.
    */
-  /**
-   * Push form-level and optionally field-level updates into the ripple signal graph.
-   * `rippleBatch` deduplicates signal writes within the synchronous call stack when
-   * `batch()` is active; outside a batch it flushes watchers immediately.
-   */
-  function requestNotify(field?: string): void {
+  function requestNotify(target?: string | Iterable<string>): void {
     if (disposed) return;
 
     invalidateValues();
     cachedErrors = null;
 
-    if (field === undefined) {
+    if (target === undefined) {
       fieldStateCache.clear();
       rippleBatch(() => {
         formStateSignal.value = computeState();
 
-        for (const [name, sig] of fieldSignals) {
-          sig.value = buildFieldState(name);
-        }
+        for (const [name, sig] of fieldSignals) sig.value = buildFieldState(name);
       });
-    } else {
-      fieldStateCache.delete(field);
+    } else if (typeof target === 'string') {
+      fieldStateCache.delete(target);
       rippleBatch(() => {
         formStateSignal.value = computeState();
 
-        const sig = fieldSignals.get(field);
+        const sig = fieldSignals.get(target);
 
-        if (sig) sig.value = buildFieldState(field);
+        if (sig) sig.value = buildFieldState(target);
+      });
+    } else {
+      // Materialize before rippleBatch so the iterable isn't consumed inside the callback.
+      const fields = [...target];
+
+      for (const field of fields) fieldStateCache.delete(field);
+
+      rippleBatch(() => {
+        formStateSignal.value = computeState();
+
+        for (const field of fields) {
+          const sig = fieldSignals.get(field);
+
+          if (sig) sig.value = buildFieldState(field);
+        }
       });
     }
-  }
-
-  /** Notify form listeners + a specific set of field listeners (partial validation results). */
-  function requestNotifyFields(fields: Iterable<string>): void {
-    if (disposed) return;
-
-    invalidateValues();
-    cachedErrors = null;
-
-    rippleBatch(() => {
-      formStateSignal.value = computeState();
-
-      for (const field of fields) {
-        fieldStateCache.delete(field);
-
-        const sig = fieldSignals.get(field);
-
-        if (sig) sig.value = buildFieldState(field);
-      }
-    });
   }
 
   /* ======== Lifecycle guards ======== */
@@ -285,8 +276,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function batch(fn: () => void): void {
     ensureNotDisposed();
-    // Always flush even when fn() throws: state may have been partially mutated
-    // before the exception and subscribers should see the current (post-mutation) state.
     rippleBatch(fn);
   }
 
@@ -300,7 +289,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return (cachedValues ??= unflattenValues(Object.fromEntries(store)) as TValues);
   }
 
-  /* ======== Dirty tracking — reference equality for all types ======== */
+  /* ======== Dirty tracking ======== */
 
   function trackDirty(name: string, value: unknown): void {
     if (baseline.get(name) === value) dirty.delete(name);
@@ -309,16 +298,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* ======== Field mutation ======== */
 
-  // R7: SetOptions.dirty removed — set() always tracks dirty via reference equality.
   function set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options: SetOptions = {}): void {
     ensureNotDisposed();
 
     const key = name as string;
 
-    if (!isSafeKey(key)) {
-      throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
-    }
-
+    assertSafeKey(key);
     store.set(key, value);
     trackDirty(key, value);
 
@@ -336,10 +321,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
-    if (!isSafeKey(key)) {
-      throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
-    }
-
+    assertSafeKey(key);
     fieldErrors.set(key, message);
     invalidateErrors();
     requestNotify(key);
@@ -372,16 +354,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
-    if (!isSafeKey(key)) {
-      throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
-    }
+    assertSafeKey(key);
 
     if (import.meta.env.DEV && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
       const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
 
       console.warn(
         `[forge] setValidator('${displayKey}'): path looks like an array item key. ` +
-          `Array items are stored as whole arrays - register the validator on the parent key instead.`,
+          `Array items are stored as whole arrays — register the validator on the parent key instead.`,
       );
     }
 
@@ -400,7 +380,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
   }
 
-  /* ======== F1: Dynamic field registration ======== */
+  /* ======== Dynamic field registration ======== */
 
   function registerField<K extends FlatKeyOf<TValues>>(
     name: K,
@@ -410,16 +390,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
-    if (!isSafeKey(key)) {
-      throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
-    }
+    assertSafeKey(key);
 
-    if (options.validator !== undefined) {
-      setValidator(name, options.validator as FieldValidator<unknown>);
-    }
+    if (options.validator !== undefined) setValidator(name, options.validator as FieldValidator<unknown>);
 
-    // Only set default value if the field doesn't exist yet.
-    // Write to both store and baseline so the field starts clean (not dirty).
     if (options.defaultValue !== undefined && !store.has(key)) {
       store.set(key, options.defaultValue);
       baseline.set(key, options.defaultValue);
@@ -526,7 +500,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       if (changedFields.size > 0) invalidateErrors();
 
-      requestNotifyFields(changedFields);
+      requestNotify(changedFields);
     }
   }
 
@@ -552,13 +526,21 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     runCtrls.add(runCtrl);
 
+    // Symbol-based ref-counting: each run gets a unique token per field.
+    // The field leaves validatingFields only when its Set empties — impossible to miscount.
+    const runId = Symbol();
+
     for (const name of fieldSet) {
-      validatingFieldCounts.set(name, (validatingFieldCounts.get(name) ?? 0) + 1);
+      let runs = validatingRuns.get(name);
+
+      if (!runs) {
+        runs = new Set<symbol>();
+        validatingRuns.set(name, runs);
+      }
+
+      runs.add(runId);
     }
 
-    // R5: requestNotify() replaces requestStateNotify(). F2 shallow equality gating ensures
-    // field listeners only fire when their FieldState actually changed, not just because
-    // isValidating toggled on the parent FormState.
     requestNotify();
 
     try {
@@ -586,7 +568,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       return { aborted: false, errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
     } catch (error) {
-      if (isAbortError(error) && (scope === 'partial' || runSignal.aborted)) {
+      if (isAbortError(error)) {
         return { aborted: true, errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
       }
 
@@ -595,10 +577,13 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       runCtrls.delete(runCtrl);
 
       for (const name of fieldSet) {
-        const n = validatingFieldCounts.get(name) ?? 0;
+        const runs = validatingRuns.get(name);
 
-        if (n <= 1) validatingFieldCounts.delete(name);
-        else validatingFieldCounts.set(name, n - 1);
+        if (runs) {
+          runs.delete(runId);
+
+          if (runs.size === 0) validatingRuns.delete(name);
+        }
       }
 
       requestNotify();
@@ -638,11 +623,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   ): Promise<SubmitResult<TResult>> {
     ensureNotDisposed();
 
-    if (isSubmitting) throw new Error('submit() called while a submission is already in progress');
+    if (isSubmittingState) throw new Error('submit() called while a submission is already in progress');
 
     batch(() => {
       submitCount++;
-      isSubmitting = true;
+      isSubmittingState = true;
       touchAll();
     });
 
@@ -657,9 +642,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       return { ok: true, value: await handler(values()) };
     } finally {
-      // Always reset isSubmitting even if the form was disposed mid-flight;
-      // otherwise state.isSubmitting stays true forever in any captured snapshot.
-      isSubmitting = false;
+      isSubmittingState = false;
 
       if (!disposed) requestNotify();
     }
@@ -670,7 +653,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
     if (disposed) return () => {};
 
-    const sub = watch(formStateSignal, listener);
+    // Wrap listener so it always returns void — ripple watch throws on non-function returns.
+    const sub = watch(formStateSignal, (state) => {
+      listener(state);
+    });
 
     rippleSubs.add(sub);
 
@@ -691,7 +677,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
     const sig = getOrCreateFieldSignal(key);
-    const sub = watch(sig, listener as (state: FieldState<unknown>) => void);
+    // Wrap listener so it always returns void — ripple watch throws on non-function returns.
+    const sub = watch(sig, (state) => {
+      (listener as (state: FieldState<unknown>) => void)(state);
+    });
 
     rippleSubs.add(sub);
 
@@ -703,7 +692,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  /* ======== Connect ======== */
+  /* ======== R5: Connect — per-binding debounce timer ======== */
 
   function connect<K extends FlatKeyOf<TValues>>(
     name: K,
@@ -712,31 +701,28 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     const key = name as string;
-    const touchOnBlur = config?.touchOnBlur ?? connectDefaults.touchOnBlur ?? true;
+    const touchOnBlur = config?.touchOnBlur ?? connectDefaults.touchOnBlur ?? false;
     const validateOnBlur = config?.validateOnBlur ?? connectDefaults.validateOnBlur ?? false;
     const validateOnChange = config?.validateOnChange ?? connectDefaults.validateOnChange ?? false;
     const validateOnTouch = config?.validateOnTouch ?? connectDefaults.validateOnTouch ?? false;
     const debounceMs = config?.debounce ?? connectDefaults.debounce ?? 0;
 
-    // Use arsenal.debounce so dispose()/reset()/resetField() can cancel pending
-    // validation via .cancel() without manual timer bookkeeping.
+    // R5: each connect() call owns its own timer — cancelling one binding never affects another.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     function scheduleValidation(): void {
       if (debounceMs > 0) {
-        let fn = debouncedValidators.get(key);
+        if (debounceTimer !== null) clearTimeout(debounceTimer);
 
-        if (!fn) {
-          fn = debounce(() => {
-            if (disposed) return;
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null;
 
-            void validateField(name).catch((err) => {
-              if (!isAbortError(err)) throw err;
-            });
-          }, debounceMs);
+          if (disposed) return;
 
-          debouncedValidators.set(key, fn);
-        }
-
-        fn();
+          void validateField(name).catch((err) => {
+            if (!isAbortError(err)) throw err;
+          });
+        }, debounceMs);
       } else {
         void validateField(name).catch((err) => {
           if (!isAbortError(err)) throw err;
@@ -748,14 +734,16 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       get dirty() {
         return dirty.has(key);
       },
-      /** R6: cancel any pending debounce timer for this field binding on unmount. */
+      /** Cancels this binding's own debounce timer. Does not affect other bindings for the same field. */
       disconnect() {
-        debouncedValidators.get(key)?.cancel();
+        if (debounceTimer !== null) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
       },
       get error() {
         return fieldErrors.get(key);
       },
-      // R1: silent no-op after dispose instead of throwing
       onBlur: () => {
         if (disposed) return;
 
@@ -763,7 +751,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
         if (validateOnBlur) scheduleValidation();
       },
-      // R1: silent no-op after dispose instead of throwing
       onChange: (value: TypeAtPath<TValues, K>) => {
         if (disposed) return;
 
@@ -806,13 +793,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
-    // cancel any pending debounced validation for this field
-    debouncedValidators.get(key)?.cancel();
-    debouncedValidators.delete(key);
-
     fieldCtrls.get(key)?.abort();
     fieldCtrls.delete(key);
-
     store.set(key, baseline.get(key));
     dirty.delete(key);
     touched.delete(key);
@@ -826,10 +808,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     const key = name as string;
-
-    // cancel any pending debounced validation for this field
-    debouncedValidators.get(key)?.cancel();
-    debouncedValidators.delete(key);
 
     store.delete(key);
     baseline.delete(key);
@@ -848,18 +826,17 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function reset(): void {
     ensureNotDisposed();
 
-    // cancel all pending debounced validations
-    for (const fn of debouncedValidators.values()) fn.cancel();
-    debouncedValidators.clear();
-
     for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
+    runCtrls.clear();
     fieldCtrls.clear();
+    validatingRuns.clear();
     store.clear();
     fieldErrors.clear();
     touched.clear();
     dirty.clear();
+    submitCount = 0;
     invalidateErrors();
 
     for (const [name, value] of baseline) store.set(name, value);
@@ -870,14 +847,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function replace(newValues: TValues): void {
     ensureNotDisposed();
 
-    // cancel all pending debounced validations
-    for (const fn of debouncedValidators.values()) fn.cancel();
-    debouncedValidators.clear();
-
     for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
+    runCtrls.clear();
     fieldCtrls.clear();
+    validatingRuns.clear();
 
     const flat = flattenValues(newValues as Record<string, unknown>);
 
@@ -901,29 +876,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const flat = flattenValues(partial);
 
-    batch(() => {
-      for (const [key, value] of Object.entries(flat)) {
-        baseline.set(key, value);
-        store.set(key, value);
-        dirty.delete(key);
-        requestNotify(key);
-      }
-    });
+    for (const [key, value] of Object.entries(flat)) {
+      baseline.set(key, value);
+      store.set(key, value);
+      dirty.delete(key);
+    }
+
+    requestNotify(Object.keys(flat));
   }
 
   function dispose(): void {
     disposed = true;
     disposeController.abort();
 
-    // cancel all pending debounced validations
-    for (const fn of debouncedValidators.values()) fn.cancel();
-    debouncedValidators.clear();
-
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
     fieldCtrls.clear();
     runCtrls.clear();
     arrayCache.clear();
+    scopeCache.clear();
 
     for (const sub of rippleSubs) sub.dispose();
 
@@ -931,31 +902,30 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     fieldSignals.clear();
   }
 
-  /* ======== F5: Snapshot / Restore ======== */
+  /* ======== Snapshot / Restore ======== */
 
   function snapshot(): FormSnapshot<TValues> {
     ensureNotDisposed();
 
-    return {
-      baseline: Object.fromEntries(baseline),
-      dirty: [...dirty],
-      errors: Object.fromEntries(fieldErrors),
-      store: Object.fromEntries(store),
+    return Object.freeze({
+      baseline: Object.freeze(Object.fromEntries(baseline)),
+      dirty: Object.freeze([...dirty]),
+      errors: Object.freeze(Object.fromEntries(fieldErrors)),
+      store: Object.freeze(Object.fromEntries(store)),
       submitCount,
-      touched: [...touched],
-    };
+      touched: Object.freeze([...touched]),
+    }) as unknown as FormSnapshot<TValues>;
   }
 
   function restore(snap: FormSnapshot<TValues>): void {
     ensureNotDisposed();
 
-    // cancel all in-flight validation
-    for (const fn of debouncedValidators.values()) fn.cancel();
-    debouncedValidators.clear();
     for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
-    fieldCtrls.clear();
 
+    runCtrls.clear();
+    fieldCtrls.clear();
+    validatingRuns.clear();
     store.clear();
     baseline.clear();
     fieldErrors.clear();
@@ -975,7 +945,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     requestNotify();
   }
 
-  /* ======== F4: validateStream ======== */
+  /* ======== validateStream ======== */
 
   function validateStream(signal?: AbortSignal): AsyncIterableIterator<{ error: string | undefined; field: string }> {
     ensureNotDisposed();
@@ -986,14 +956,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       ? anySignal(ctrl.signal, signal, disposeController.signal)!
       : anySignal(ctrl.signal, disposeController.signal)!;
 
+    type Item = { error: string | undefined; field: string };
+    type Resolver = (result: IteratorResult<Item, undefined>) => void;
+
+    const queue: Item[] = [];
+    let waitingResolve: Resolver | null = null;
     let done = false;
 
-    type Resolver = (result: IteratorResult<{ error: string | undefined; field: string }, undefined>) => void;
-
-    const queue: Array<{ error: string | undefined; field: string }> = [];
-    let waitingResolve: Resolver | null = null;
-
-    function enqueue(item: { error: string | undefined; field: string }): void {
+    function enqueue(item: Item): void {
       if (waitingResolve) {
         const resolve = waitingResolve;
 
@@ -1018,33 +988,48 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       }
     }
 
-    // run validators in parallel, streaming results as each settles
+    // Run validators read-only — does NOT write to fieldErrors or fire requestNotify.
+    // Each result is yielded as it settles; the form-level validator is yielded last.
     Promise.all(
-      fields.map(async (field) => {
+      fields.map(async (f) => {
         if (combined.aborted) return;
 
         try {
-          const error = await validateField(field as FlatKeyOf<TValues>, combined);
+          const error = await runFieldValidator(f, combined);
 
-          if (!combined.aborted) enqueue({ error, field });
+          if (!combined.aborted) enqueue({ error, field: f });
         } catch {
           // aborted or disposed — stop streaming
         }
       }),
-    ).finally(() => finish());
+    )
+      .then(async () => {
+        // Yield the form-level validator result last (F4: streams _form key too)
+        if (formValidator && !combined.aborted) {
+          try {
+            const formErrors = await runFormValidator(combined);
+            const formError = formErrors[FORM_ERROR];
+
+            if (!combined.aborted) enqueue({ error: formError, field: FORM_ERROR });
+          } catch {
+            // aborted
+          }
+        }
+      })
+      .finally(() => finish());
 
     return {
-      next(): Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>> {
+      next(): Promise<IteratorResult<Item, undefined>> {
         if (queue.length > 0) return Promise.resolve({ done: false, value: queue.shift()! });
 
         if (done) return Promise.resolve({ done: true, value: undefined });
 
-        return new Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>>((resolve) => {
+        return new Promise<IteratorResult<Item, undefined>>((resolve) => {
           waitingResolve = resolve;
         });
       },
 
-      return(): Promise<IteratorResult<{ error: string | undefined; field: string }, undefined>> {
+      return(): Promise<IteratorResult<Item, undefined>> {
         finish();
 
         return Promise.resolve({ done: true, value: undefined });
@@ -1056,12 +1041,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  /* ======== F4: Async iterator ======== */
+  /* ======== Async iterator (for await...of form) ======== */
 
   function createAsyncIterator(): AsyncIterableIterator<FormState> {
     type Resolver = (result: IteratorResult<FormState, undefined>) => void;
 
-    let pending: FormState[] = [getStateSnapshot()]; // yield the current state first
+    let pending: FormState[] = [getStateSnapshot()];
     let waitingResolve: Resolver | null = null;
     let done = false;
 
@@ -1078,7 +1063,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       }
     });
 
-    // Terminate any pending `for await` loop when the form is disposed.
     disposeController.signal.addEventListener(
       'abort',
       () => {
@@ -1099,13 +1083,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     return {
       next(): Promise<IteratorResult<FormState, undefined>> {
-        if (pending.length > 0) {
-          return Promise.resolve({ done: false, value: pending.shift()! });
-        }
+        if (pending.length > 0) return Promise.resolve({ done: false, value: pending.shift()! });
 
-        if (done) {
-          return Promise.resolve({ done: true, value: undefined });
-        }
+        if (done) return Promise.resolve({ done: true, value: undefined });
 
         return new Promise<IteratorResult<FormState, undefined>>((resolve) => {
           waitingResolve = resolve;
@@ -1134,78 +1114,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  /* ======== R1: Scoped sub-form ======== */
-
-  function scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>> {
-    // Build the ScopeContext, capturing this closure's mutable scalars via getter/setters.
-    // Maps and Sets are shared by reference — mutations are visible to both root and scope.
-    const ctx: ScopeContext = {
-      array: (name) => array(name as FlatKeyOf<TValues>),
-      asyncIterator: createAsyncIterator,
-      baseline,
-      batch,
-      clearError: (name) => clearError(name as ErrorKeyOf<TValues>),
-      connect: (name, config) => connect(name as FlatKeyOf<TValues>, config) as ConnectionResult<unknown>,
-      dirty,
-
-      ensureNotDisposed,
-      field: (name) => getFieldSnapshot(name) as FieldState<unknown>,
-      fieldCtrls,
-      fieldErrors,
-      getStateSnapshot,
-
-      incrementSubmitCount: () => {
-        submitCount++;
-      },
-      invalidateErrors,
-      isDisposed: () => disposed,
-      isLoading: () => loadingState,
-      isSubmitting: () => isSubmitting,
-      registerField: (name, options) =>
-        registerField(
-          name as FlatKeyOf<TValues>,
-          options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
-        ),
-
-      removeField: (name) => removeField(name as FlatKeyOf<TValues>),
-      requestNotify,
-      resetField: (name) => resetField(name as FlatKeyOf<TValues>),
-      restore,
-      runValidationCore,
-      set: (name, value, options) =>
-        set(name as FlatKeyOf<TValues>, value as TypeAtPath<TValues, FlatKeyOf<TValues>>, options),
-      setError: (name, message) => setError(name as ErrorKeyOf<TValues>, message),
-      setSubmitting: (v) => {
-        isSubmitting = v;
-      },
-      setValidator: (name, v) => setValidator(name as FlatKeyOf<TValues>, v),
-      snapshot,
-      store,
-      subscribe,
-      subscribeField: (name, listener, options) =>
-        subscribeField(
-          name as FlatKeyOf<TValues>,
-          listener as (state: FieldState<TypeAtPath<TValues, FlatKeyOf<TValues>>>) => void,
-          options,
-        ),
-
-      touch: (name) => touch(name as FlatKeyOf<TValues>),
-
-      touched,
-      untouch: (name) => untouch(name as FlatKeyOf<TValues>),
-
-      validateField: (name, signal) => validateField(name as FlatKeyOf<TValues>, signal),
-      validateFields: (names, signal) => validateFields(names as FlatKeyOf<TValues>[], signal),
-      validateStream,
-      validators,
-    };
-
-    return createScopedForm<TValues, P>(ctx, prefix as unknown as P) as Form<ScopedValues<TValues, P>>;
-  }
-
   /* ======== Public form object ======== */
 
-  return {
+  // `scope` is defined as a method on publicForm so that `const publicForm` can capture itself
+  // via closure without a forward-reference lint disable.
+  const publicForm: Form<TValues> = {
     array,
     batch,
     clearError,
@@ -1219,6 +1132,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     get isLoading() {
       return loadingState;
     },
+    get isSubmitting() {
+      return isSubmittingState;
+    },
     patch: patch as Form<TValues>['patch'],
     registerField,
     removeField,
@@ -1227,7 +1143,42 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     resetErrors,
     resetField,
     restore,
-    scope,
+    scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>> {
+      const key = prefix as string;
+      const cached = scopeCache.get(key);
+
+      if (cached) return cached as Form<ScopedValues<TValues, P>>;
+
+      const ctx: ScopeContext<TValues> = {
+        baseline,
+        dirty,
+        ensureNotDisposed,
+        fieldCtrls,
+        fieldErrors,
+        getStateSnapshot,
+        incrementSubmitCount: () => {
+          submitCount++;
+        },
+        invalidateErrors,
+        isDisposed: () => disposed,
+        isSubmitting: () => isSubmittingState,
+        requestNotify,
+        root: publicForm,
+        runValidationCore,
+        setSubmitting: (v) => {
+          isSubmittingState = v;
+        },
+        store,
+        touched,
+        validators,
+      };
+
+      const scoped = createScopedForm<TValues, P>(ctx, prefix as unknown as P) as Form<ScopedValues<TValues, P>>;
+
+      scopeCache.set(key, scoped as Form<never>);
+
+      return scoped;
+    },
     set,
     setError,
     setValidator,
@@ -1238,6 +1189,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     submit,
     subscribe,
     subscribeField,
+    // On a root form, subscribeScoped behaves identically to subscribe — no prefix filtering.
+    subscribeScoped: subscribe,
     [Symbol.asyncIterator]: createAsyncIterator,
     touch,
     touchAll,
@@ -1249,4 +1202,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     validateStream,
     values,
   };
+
+  return publicForm;
 }

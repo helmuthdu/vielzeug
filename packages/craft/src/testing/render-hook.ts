@@ -3,7 +3,7 @@
  * without rendering a full component template.
  */
 
-import { scope as _scope } from '@vielzeug/ripple';
+import { onCleanup as _onCleanup, scope as _scope } from '@vielzeug/ripple';
 
 import { withRuntimeContext } from '../runtime';
 import { flush } from './flush';
@@ -53,7 +53,7 @@ export async function renderHook<T>(setup: () => T): Promise<HookFixture<T>> {
         withRuntimeContext(ctx, () => {
           const cleanup = cb();
 
-          if (typeof cleanup === 'function') cb(); // register as scope cleanup
+          if (typeof cleanup === 'function') _onCleanup(cleanup);
         });
       });
     } catch {

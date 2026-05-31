@@ -11,9 +11,11 @@ You need UI components or effects to re-run whenever a table's contents change. 
 
 ### Solution
 
-Use `db.observe(table, fn)` for callback-based subscriptions, `db.watch(table)` for `for await` loops, and `db.observeMany(tables, fn)` for combined multi-table snapshots. For deep integration with a reactive library, pass a `signals` map at construction time.
+Use `db.observe(table, fn)` for callback-based subscriptions, `db.watch(table)` for `for await` loops, `db.watchStream(table)` for ReadableStream pipelines, and `db.observeMany(tables, fn)` for combined multi-table snapshots. For deep integration with a reactive library, pass a `signals` map at construction time.
 
 #### `observe` — callback subscription
+
+`observe` **always fires immediately** with the current table state on registration, then fires again on every mutation. There is no deferred-first-call mode.
 
 ```ts
 import { createMemory, table } from '@vielzeug/vault';
@@ -23,18 +25,25 @@ const schema = { users: table<User>('id') };
 
 const db = createMemory({ schema });
 
-// Fires only on future changes (default)
+// Fires immediately with current state, then on every change
 const stop = db.observe('users', (rows) => {
-  console.log('users changed:', rows.length);
+  console.log('users snapshot:', rows.length);
 });
 
-// Fires immediately with current state, then on every change
-const stopImmediate = db.observe('users', (rows) => renderList(rows), { immediate: true });
-
-await db.put('users', { id: 1, name: 'Alice' }); // triggers both callbacks
+await db.put('users', { id: 1, name: 'Alice' }); // triggers the callback again
 
 stop();
-stopImmediate();
+```
+
+Pass `{ signal }` to cancel via an `AbortController`:
+
+```ts
+const controller = new AbortController();
+
+db.observe('users', (rows) => render(rows), { signal: controller.signal });
+
+await db.put('users', { id: 1, name: 'Alice' }); // triggers callback
+controller.abort(); // stops the observer
 ```
 
 #### `watch` — async iterable stream
@@ -49,9 +58,51 @@ for await (const users of db.watch('users')) {
 }
 ```
 
+Stop the loop from outside using an `AbortSignal`:
+
+```ts
+const controller = new AbortController();
+
+for await (const users of db.watch('users', { signal: controller.signal })) {
+  renderList(users);
+}
+
+controller.abort(); // terminates the loop
+```
+
+By default (`mode: 'latest'`) intermediate snapshots are dropped if the consumer lags. Pass `mode: 'all'` to queue every snapshot:
+
+```ts
+for await (const users of db.watch('users', { mode: 'all' })) {
+  // receives every snapshot, even if mutations were rapid
+}
+```
+
+#### `watchStream` — ReadableStream
+
+`watchStream` returns a Web Standard `ReadableStream`. Use it with WHATWG stream pipelines or any consumer that accepts a `ReadableStream`.
+
+```ts
+db.watchStream('users')
+  .pipeTo(new WritableStream({ write: (users) => renderList(users) }));
+```
+
+Always cancel the stream when done to stop the underlying observer:
+
+```ts
+const reader = db.watchStream('users').getReader();
+
+const { value } = await reader.read(); // receives immediate snapshot
+renderList(value);
+
+await reader.cancel(); // unsubscribes the observer
+```
+
+The same `mode` and `signal` options as `watch()` apply.
+
 #### `observeMany` — combined multi-table snapshot
 
-`observeMany` fires a combined `{ [tableName]: records[] }` snapshot whenever **any** of the observed tables changes. Multiple tables changed inside a single `batch()` call coalesce into one callback.
+`observeMany` fires a combined `{ [tableName]: records[] }` snapshot whenever **any** of the observed tables changes. All per-table observers fire immediately on registration. Multiple tables changed inside a single `batch()` call coalesce into one callback.
 
 ```ts
 type Post = { id: number; title: string; userId: number };
@@ -64,7 +115,7 @@ const db = createMemory({ schema: dbSchema });
 
 const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
   console.log(`${users.length} users, ${posts.length} posts`);
-}, { immediate: true });
+});
 
 // Both tables change — the listener fires exactly once after the batch
 await db.batch(['users', 'posts'], async (tx) => {
@@ -102,9 +153,11 @@ await db.put('users', { id: 1, name: 'Alice' }); // → effect re-runs
 
 ### Pitfalls
 
-- `observe()` returns an unsubscribe function — forgetting to call it on teardown leaks listeners and keeps the table in memory. Use `watch()` for loops where cleanup needs to be automatic.
+- `observe()` always fires immediately on registration — there is no deferred-first-call mode. If you need to skip the initial state, check a flag in your callback on the first invocation.
+- `observe()` returns an unsubscribe function — forgetting to call it on teardown leaks listeners. Use `watch()` or `watchStream()` for loops where cleanup needs to be automatic.
 - `observeMany()` throws `VaultScopeError` when passed an empty `tables` array. Always provide at least one table name.
 - Writes to multiple tables inside a single `batch()` call trigger `observeMany` exactly once, not once per dirty table. Writes outside a `batch()` trigger separate callbacks per table.
+- For `watch()` and `watchStream()`, the default `mode: 'latest'` silently drops intermediate snapshots when the consumer lags. Use `mode: 'all'` if every intermediate state matters.
 - The `signals` plugin calls `signal.update(() => snapshot)` synchronously inside the observer. If the signal triggers further writes to the same table (e.g., via a computed effect), this can cause a cycle. Structure your data flow so signals are downstream-only from storage.
 
 ### Related
@@ -113,3 +166,4 @@ await db.put('users', { id: 1, name: 'Alice' }); // → effect re-runs
 - [CRUD](./crud.md)
 - [Ripple](/ripple/)
 - [Usage Guide — Reactive Reads](/vault/usage.md#reactive-reads)
+- [API Reference — Adapter Interface](/vault/api.md#adapter-interface)

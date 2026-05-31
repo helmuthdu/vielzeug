@@ -87,11 +87,13 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S & string>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { immediate = false }: { immediate?: boolean } = {},
+    { signal }: { signal?: AbortSignal } = {},
   ): (() => void) => {
     if (disposed) {
       throw new VaultDisposedError('observer hub is disposed');
     }
+
+    if (signal?.aborted) return () => {};
 
     const key = table;
     const wrapped = listener as ObserverListener<unknown>;
@@ -104,9 +106,10 @@ export function createObserverHub<S extends AnySchema>(
 
     listeners.add(wrapped);
 
-    if (immediate) notify(table);
+    // Always fire an initial snapshot so every subscriber sees current state immediately.
+    notify(table);
 
-    return () => {
+    const stop = (): void => {
       const current = observers.get(key);
 
       if (!current) return;
@@ -115,6 +118,10 @@ export function createObserverHub<S extends AnySchema>(
 
       if (current.size === 0) observers.delete(key);
     };
+
+    signal?.addEventListener('abort', stop, { once: true });
+
+    return stop;
   };
 
   const dispose = (): void => {
@@ -127,17 +134,25 @@ export function createObserverHub<S extends AnySchema>(
 
 /**
  * Creates an AsyncIterable that yields a snapshot on every mutation.
- * The first snapshot is emitted on the first `next()` call (lazy registration).
+ * The first snapshot is emitted immediately (on the first `next()` call).
  *
  * `mode` controls back-pressure:
  * - `'latest'` (default): if the consumer lags, only the most recent snapshot is retained.
  *   Intermediate states are discarded. Best for rendering/display use-cases.
  * - `'all'`: every snapshot is queued and delivered in order. Use when every intermediate
  *   state matters (audit trails, animation).
+ *
+ * Pass an `AbortSignal` to cancel the iteration externally:
+ * ```ts
+ * const controller = new AbortController();
+ * for await (const users of db.watch('users', { signal: controller.signal })) { ... }
+ * controller.abort(); // stops the loop
+ * ```
  */
 export function createWatchIterable<T>(
-  subscribe: (listener: (snapshot: T[]) => void) => () => void,
+  subscribe: (listener: (snapshot: T[]) => void, signal?: AbortSignal) => () => void,
   mode: 'all' | 'latest' = 'latest',
+  signal?: AbortSignal,
 ): AsyncIterable<T[]> {
   return {
     [Symbol.asyncIterator]() {
@@ -159,6 +174,8 @@ export function createWatchIterable<T>(
         }
       };
 
+      signal?.addEventListener('abort', finish, { once: true });
+
       const ensureSubscribed = (): void => {
         if (unsubscribe || done) return;
 
@@ -167,16 +184,13 @@ export function createWatchIterable<T>(
           if (done) return;
 
           if (waiting) {
-            // Consumer is actively waiting — deliver immediately.
             const resolve = waiting;
 
             waiting = null;
             resolve({ done: false, value: snapshot });
           } else if (mode === 'all') {
-            // Queue all snapshots — consumer will drain them in order.
             pending.push(snapshot);
           } else {
-            // 'latest' mode: discard any queued intermediate state.
             pending = [snapshot];
           }
         });
@@ -220,19 +234,14 @@ export function createWatchIterable<T>(
  * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
  * their first snapshot. Subsequent firings are coalesced per microtask.
  *
- * Race-free design: observers are registered BEFORE the prefetch starts. Any mutation
- * that arrives during the async prefetch is captured by the observer and its data takes
- * precedence over the (now-stale) prefetch result. This eliminates the window in which
- * a mutation could be missed when observers were registered only after prefetch completion.
+ * Since `observe()` always fires immediately, each per-table observer populates the
+ * snapshotMap on registration. No separate prefetch step is needed.
  */
-export function createObserveMany<S extends AnySchema>(
-  hub: ReturnType<typeof createObserverHub<S>>,
-  getAll: <K extends keyof S & string>(table: K) => Promise<RecordOf<S, K>[]>,
-  logger?: { error(msg: Error | string, context?: string): void },
-) {
+export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof createObserverHub<S>>) {
   return function observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+    { signal }: { signal?: AbortSignal } = {},
   ): () => void {
     const distinctTables = [...new Set(tables)] as K[];
 
@@ -256,56 +265,26 @@ export function createObserveMany<S extends AnySchema>(
       });
     };
 
-    // Step 1: Register observers BEFORE the prefetch so that mutations arriving during
-    // the async prefetch are captured. The snapshot they deliver takes precedence over
-    // the prefetch data for that table.
+    // Register observers — each fires an immediate snapshot that populates snapshotMap.
+    // Once all tables have delivered, scheduleFlush emits the first combined snapshot.
+    // Signal is NOT passed to inner hub.observe() calls — the outer stop() is the single
+    // cleanup path, avoiding O(tables) redundant abort listeners per signal.
     const stopFns = distinctTables.map((t) =>
-      hub.observe(
-        t,
-        (records) => {
-          snapshotMap.set(t, records as RecordOf<S, K>[]);
-          scheduleFlush();
-        },
-        { immediate: false },
-      ),
+      hub.observe(t, (records) => {
+        snapshotMap.set(t, records as RecordOf<S, K>[]);
+        scheduleFlush();
+      }),
     );
 
-    // Step 2: Prefetch initial state. Only writes to snapshotMap for tables that the
-    // observer has not already populated (i.e. no mutation arrived during the fetch).
-    // Always fires scheduleFlush after all prefetches complete — the listener will
-    // receive the initial snapshot regardless of whether any mutations have occurred.
-    void Promise.all(
-      distinctTables.map((t) =>
-        getAll(t)
-          .then((records) => {
-            if (stopped) return;
-
-            // Don't overwrite if a mutation already delivered fresher data for this table.
-            if (!snapshotMap.has(t)) {
-              snapshotMap.set(t, records as RecordOf<S, K>[]);
-              scheduleFlush();
-            }
-          })
-          .catch((err: unknown) => {
-            logger?.error(err instanceof Error ? err : new Error(String(err)), '[vault] observeMany prefetch failed');
-
-            if (stopped) return;
-
-            // Empty-array fallback ensures snapshotMap is complete even on error,
-            // so the size guard in scheduleFlush can eventually be satisfied.
-            if (!snapshotMap.has(t)) {
-              snapshotMap.set(t, []);
-              scheduleFlush();
-            }
-          }),
-      ),
-    );
-
-    return () => {
+    const stop = (): void => {
       stopped = true;
 
       for (const s of stopFns) s();
     };
+
+    signal?.addEventListener('abort', stop, { once: true });
+
+    return stop;
   };
 }
 

@@ -1,6 +1,7 @@
 import type { Bus, BusOptions, EventKey, EventMap } from '..';
 
 import { createBus } from '..';
+import { makeBusDelegate } from '../_delegate';
 
 /** A test bus is a regular bus with typed emission recording on top. */
 export type TestBus<T extends EventMap> = Bus<T> & {
@@ -35,29 +36,14 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     records.clear();
   }
 
-  // Explicit delegation — avoids object spread snapshotting getters at creation time.
-  // Any getter added to Bus<T> in the future will correctly delegate here without silent bugs.
-  return {
-    get disposalSignal() {
-      return bus.disposalSignal;
-    },
-    dispose,
-    get disposed() {
-      return bus.disposed;
-    },
-    emit: bus.emit,
-    emitted,
-    eventNames: bus.eventNames,
-    events: bus.events,
-    listenerCount: bus.listenerCount,
-    on: bus.on,
-    onAny: bus.onAny,
-    once: bus.once,
-    pipe: bus.pipe,
-    removeAllListeners: bus.removeAllListeners,
-    reset: () => records.clear(),
-    [Symbol.dispose]: dispose,
-    wait: bus.wait,
-    waitAny: bus.waitAny,
-  };
+  // R5: Use makeBusDelegate to eliminate the 14-line explicit delegation boilerplate.
+  // Override only dispose (also clears records) and add the test-specific methods.
+  const delegate = makeBusDelegate<T>(bus) as TestBus<T>;
+
+  delegate.dispose = dispose;
+  delegate.emitted = emitted;
+  delegate.reset = () => records.clear();
+  delegate[Symbol.dispose] = dispose;
+
+  return delegate;
 }

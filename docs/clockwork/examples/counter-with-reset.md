@@ -7,14 +7,14 @@ description: Counter with Reset example for @vielzeug/clockwork.
 
 ### Problem
 
-You need a counter that tracks a numeric value and can be incremented, decremented, or reset to zero. This is the simplest Machine pattern for context mutation via `assign()`.
+You need a counter that tracks a numeric value and can be incremented, decremented, or reset to zero. This is the simplest Machine pattern for context mutation via actions.
 
 ### Solution
 
-Use a single `idle` state with self-transitions that apply `assign()` to mutate context. Self-transitions re-enter the same state, fire actions, and update context atomically.
+Use a single `idle` state with self-transitions that apply actions to mutate context. Self-transitions re-enter the same state, fire actions, and update context atomically.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type Event = { type: 'DEC' } | { type: 'INC' } | { type: 'RESET' };
 
@@ -24,9 +24,9 @@ const counter = defineMachine<'idle', { count: number }, Event>({
   states: {
     idle: {
       on: {
-        DEC:   { actions: [assign(({ context }) => ({ count: context.count - 1 }))], target: 'idle' },
-        INC:   { actions: [assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' },
-        RESET: { actions: [assign(() => ({ count: 0 }))], target: 'idle' },
+        DEC:   { actions: [({ context }) => { context.count -= 1; }], target: 'idle' },
+        INC:   { actions: [({ context }) => { context.count += 1; }], target: 'idle' },
+        RESET: { actions: [({ context }) => { context.count = 0; }], target: 'idle' },
       },
     },
   },
@@ -42,12 +42,12 @@ console.log(m.context.value.count); // 0
 
 ### Pitfalls
 
-- **`assign()` is shallow.** If your context has nested objects, spread them explicitly: `assign(({ context }) => ({ nested: { ...context.nested, key: value } }))`. Returning `{ nested: { key: value } }` overwrites all other keys in `nested`.
+- **Actions receive a cloned draft.** Mutate `context` directly inside action functions — this is the intended pattern.
 - **Self-transitions run exit/entry actions.** If you add `entry` or `exit` to `idle`, they fire on every self-transition, not just on first entry. Use transition `actions` for per-event mutations.
-- **`context` in `assign()` is a draft, not the frozen signal value.** Mutating `args.context` directly instead of returning a partial works but is not the intended pattern.
+- **For nested objects, mutate in place or spread explicitly.** `context.nested.key = value` works. If replacing the whole nested object, assign it: `context.nested = { ...context.nested, key: value }`.
 
 ### Related
 
-- [Data Fetching with Error Recovery](./data-fetching.md) — Using `assign()` inside async invoke results
-- [Auth Flow with Guards](./auth-flow.md) — Combining `assign()` with guards
-- [API Reference — `assign()`](/clockwork/api#assign)
+- [Data Fetching with Error Recovery](./data-fetching.md) — Using actions inside async invoke results
+- [Auth Flow with Guards](./auth-flow.md) — Combining actions with guards
+- [API Reference — `ActionFn`](/clockwork/api#actionfnctx-ev)

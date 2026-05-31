@@ -155,4 +155,44 @@ describe('createCourier', () => {
 
     expect(log).toEqual(['intercepted', 'intercepted']);
   });
+
+  it('cancelAll() aborts both transport requests and in-flight query cache fetches', async () => {
+    const aborted: string[] = [];
+    const localFetch = vi.fn().mockImplementation(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            aborted.push('api');
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }),
+    );
+
+    const client = createCourier({ fetch: localFetch as typeof fetch });
+
+    // Start an api request
+    const apiPromise = client.api.get('/slow').catch(() => {});
+
+    // Start a query cache fetch (uses its own AbortController)
+    const queryPromise = client.query
+      .fetch({
+        fn: ({ signal }) =>
+          new Promise<unknown>((_, reject) => {
+            signal.addEventListener('abort', () => {
+              aborted.push('query');
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+        key: ['slow'],
+      })
+      .catch(() => {});
+
+    client.cancelAll();
+
+    await Promise.all([apiPromise, queryPromise]);
+
+    expect(aborted).toContain('api');
+    expect(aborted).toContain('query');
+    expect(client.disposed).toBe(false);
+  });
 });

@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { RecurrenceRule, TimeInput, TimeOptionsWithTz } from './types';
 
-import { resolveInstant, resolveZoned } from './internal';
+import { toInstant, toZoned } from './internal';
 
 /**
  * Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive),
@@ -25,8 +25,8 @@ import { resolveInstant, resolveZoned } from './internal';
  * ```
  */
 export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options: TimeOptionsWithTz) {
-  const startZoned = resolveZoned(start, options);
-  const endZoned = resolveZoned(end, options);
+  const startZoned = toZoned(start, options);
+  const endZoned = toZoned(end, options);
 
   if (Temporal.ZonedDateTime.compare(startZoned.add(step), startZoned) <= 0) {
     throw new RangeError('dateRange: step must advance the date forward');
@@ -59,8 +59,17 @@ export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.Dura
  * }
  * ```
  */
-export function* recurrence(start: TimeInput, rule: RecurrenceRule, options: TimeOptionsWithTz) {
+export function recurrence(
+  start: TimeInput,
+  rule: RecurrenceRule,
+  options: TimeOptionsWithTz,
+): Generator<Temporal.ZonedDateTime> {
   const { count, frequency, interval = 1, until } = rule;
+
+  // Eager validation — fires at call time, not on first iteration.
+  if (count === undefined && until === undefined) {
+    throw new RangeError('recurrence: either count or until must be specified to prevent unbounded generation');
+  }
 
   const step: Temporal.DurationLike =
     frequency === 'daily'
@@ -71,17 +80,20 @@ export function* recurrence(start: TimeInput, rule: RecurrenceRule, options: Tim
           ? { months: interval }
           : { years: interval };
 
-  const endInstant = until !== undefined ? resolveInstant(until, options) : undefined;
-  let current = resolveZoned(start, options);
-  let emitted = 0;
+  const endInstant = until !== undefined ? toInstant(until, options) : undefined;
 
-  while (true) {
-    if (count !== undefined && emitted >= count) break;
+  return (function* () {
+    let current = toZoned(start, options);
+    let emitted = 0;
 
-    if (endInstant !== undefined && Temporal.Instant.compare(current.toInstant(), endInstant) > 0) break;
+    while (true) {
+      if (count !== undefined && emitted >= count) break;
 
-    yield current;
-    emitted++;
-    current = current.add(step);
-  }
+      if (endInstant !== undefined && Temporal.Instant.compare(current.toInstant(), endInstant) > 0) break;
+
+      yield current;
+      emitted++;
+      current = current.add(step);
+    }
+  })();
 }

@@ -1,7 +1,7 @@
 import { filterMap } from '../array/filterMap';
 import { isEmpty } from '../typed/isEmpty';
 import { isNil } from '../typed/isNil';
-import { isObject } from '../typed/isObject';
+import { isPlainObject } from '../typed/isPlainObject';
 import { isString } from '../typed/isString';
 
 /**
@@ -42,7 +42,7 @@ export function prune<T>(value: T): T | undefined {
     return (cleaned.length === 0 ? undefined : cleaned) as T | undefined;
   }
 
-  if (isObject(value)) {
+  if (isPlainObject(value)) {
     const cleaned: Record<string, unknown> = {};
 
     for (const [key, val] of Object.entries(value)) {

@@ -43,8 +43,8 @@ function getDefaultPlacements(alignment?: Alignment | null): Placement[] {
  */
 export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
   return tagMiddleware(function autoPlacementMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
-    const padding = toSideObject(options.padding);
-    const boundary = getBoundaryRect(options.boundary);
+    const padding = toSideObject(options.padding ?? state.padding);
+    const boundary = getBoundaryRect(options.boundary ?? state.boundary);
     const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
     if (import.meta.env.DEV && placements.length === 0) {

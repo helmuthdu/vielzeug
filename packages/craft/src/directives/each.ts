@@ -2,10 +2,10 @@ import {
   batch,
   computed,
   effect as rawEffect,
-  signal,
-  untrack,
   type ReadonlySignal,
+  signal,
   type Signal,
+  untrack,
 } from '@vielzeug/ripple';
 
 import { CRAFTIT_ERRORS } from '../errors';
@@ -23,49 +23,6 @@ type ItemEntry<T> = {
   /** The key used to identify this entry. */
   key: string;
   nodes: Node[];
-};
-
-// ─── LIS (Longest Increasing Subsequence) ────────────────────────────────────
-// Used to identify the stable subset of existing items that don't need DOM movement.
-// O(n log n) patience-sort implementation with predecessor backtracking.
-
-const computeLISIndices = (arr: number[]): Set<number> => {
-  const n = arr.length;
-
-  if (n === 0) return new Set();
-
-  const tails: number[] = []; // smallest tail value of any IS of length i+1
-  const piles: number[] = []; // arr-index that produced tails[i]
-  const parent: number[] = new Array(n).fill(-1);
-
-  for (let i = 0; i < n; i++) {
-    const v = arr[i];
-    let lo = 0;
-    let hi = tails.length;
-
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-
-      if (tails[mid] < v) lo = mid + 1;
-      else hi = mid;
-    }
-
-    tails[lo] = v;
-    piles[lo] = i;
-
-    if (lo > 0) parent[i] = piles[lo - 1];
-  }
-
-  // Backtrack to collect LIS element indices (indices into arr, not arr values)
-  const result = new Set<number>();
-  let idx = piles[tails.length - 1];
-
-  while (idx !== -1) {
-    result.add(idx);
-    idx = parent[idx];
-  }
-
-  return result;
 };
 
 // ─── Item lifecycle ───────────────────────────────────────────────────────────
@@ -99,15 +56,20 @@ const removeItem = <T>(entry: ItemEntry<T>): void => {
 
 // ─── Reconciler ───────────────────────────────────────────────────────────────
 
+/**
+ * Reconciles the live item map (mutated in-place) against the next array.
+ * Stale entries are removed and destroyed; new entries are created and inserted.
+ * Existing entries are updated in-place via signal writes.
+ * Returns the ordered list of entries matching nextList.
+ */
 const reconcileItems = <T>(
-  prevOrdered: ItemEntry<T>[],
-  prevMap: Map<string, ItemEntry<T>>,
+  itemsMap: Map<string, ItemEntry<T>>,
   next: T[],
   keyFn: (item: T, index: number) => string | number,
   render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
   parent: ParentNode,
   endMarker: Node,
-): { map: Map<string, ItemEntry<T>>; ordered: ItemEntry<T>[] } => {
+): ItemEntry<T>[] => {
   const nextKeys: string[] = next.map((item, i) => String(keyFn(item, i)));
   const nextKeySet = new Set(nextKeys);
 
@@ -122,16 +84,11 @@ const reconcileItems = <T>(
     seen.add(key);
   }
 
-  // Build previous-order map: key → index in prevOrdered
-  const prevOrder = new Map<string, number>();
-
-  for (let i = 0; i < prevOrdered.length; i++) prevOrder.set(prevOrdered[i].key, i);
-
-  // Remove stale entries
-  for (const [key, entry] of prevMap) {
+  // Remove stale entries from the map
+  for (const [key, entry] of itemsMap) {
     if (!nextKeySet.has(key)) {
       removeItem(entry);
-      prevMap.delete(key);
+      itemsMap.delete(key);
     }
   }
 
@@ -140,7 +97,7 @@ const reconcileItems = <T>(
 
   for (let i = 0; i < next.length; i++) {
     const key = nextKeys[i];
-    const existing = prevMap.get(key);
+    const existing = itemsMap.get(key);
 
     if (existing) {
       batch(() => {
@@ -152,54 +109,28 @@ const reconcileItems = <T>(
       const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
 
       entry.key = key;
-      prevMap.set(key, entry);
+      itemsMap.set(key, entry);
       nextOrdered.push(entry);
     }
   }
 
-  // LIS-based DOM ordering: only move items not in the longest stable subsequence.
-  //
-  // For each position j in nextOrdered that reuses an existing item, record that
-  // item's old position (index in prevOrdered). Items whose old-positions form a
-  // strictly increasing sequence are already in the right relative order and need
-  // not be moved. We only move items outside this stable set.
-
-  const reusedOldPositions: number[] = []; // old-order positions (in new-list traversal order)
-  const reusedNewIndices: number[] = []; // their positions in nextOrdered
-
-  for (let j = 0; j < nextOrdered.length; j++) {
-    const oldPos = prevOrder.get(nextOrdered[j].key);
-
-    if (oldPos !== undefined) {
-      reusedOldPositions.push(oldPos);
-      reusedNewIndices.push(j);
-    }
-  }
-
-  // lisSet contains indices into reusedOldPositions/reusedNewIndices for stable items
-  const lisSet = computeLISIndices(reusedOldPositions);
-  const stayPut = new Set<number>(Array.from(lisSet).map((i) => reusedNewIndices[i]));
-
-  // Process items right-to-left. cursor points to the reference node that the
-  // current item should be inserted before. Items in stayPut update the cursor
-  // without moving; items not in stayPut are moved before the cursor.
+  // DOM ordering: right-to-left pass — move any item not already adjacent to cursor.
+  // O(n) DOM operations in the worst case; optimal for the typical small list sizes
+  // encountered in UI components (tabs, options, menu items).
   let cursor: Node = endMarker;
 
   for (let j = nextOrdered.length - 1; j >= 0; j--) {
     const entry = nextOrdered[j];
+    const firstNode = entry.nodes[0];
 
-    if (stayPut.has(j)) {
-      // Item is stable — just update cursor to its first node
-      cursor = entry.nodes[0] ?? cursor;
-    } else {
-      // Move all of this item's nodes before cursor
+    if (firstNode && firstNode !== cursor.previousSibling) {
       for (const node of entry.nodes) parent.insertBefore(node, cursor);
-
-      cursor = entry.nodes[0] ?? cursor;
     }
+
+    cursor = firstNode ?? cursor;
   }
 
-  return { map: prevMap, ordered: nextOrdered };
+  return nextOrdered;
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -209,7 +140,6 @@ const reconcileItems = <T>(
  *
  * Each item is rendered by the provided render function.
  * Items are reused by key when the list changes; only stale items are destroyed.
- * DOM reordering uses an LIS-based algorithm to minimise moves (F2).
  *
  * @example
  * ```ts
@@ -278,10 +208,7 @@ export function each<T>(
 
       clearFallback();
 
-      const result = untrack(() => reconcileItems(itemsOrdered, itemsMap, nextList, keyFn, render, parent, endMarker));
-
-      itemsMap = result.map;
-      itemsOrdered = result.ordered;
+      itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
     });
 
     registerCleanup(() => sub.dispose());

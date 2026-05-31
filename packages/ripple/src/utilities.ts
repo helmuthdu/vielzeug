@@ -1,26 +1,12 @@
-import type { ComputedSignal, ReadonlySignal, ReactiveOptions } from './types';
+import type { ComputedSignal, ReactiveOptions, ReadonlySignal } from './types';
 
 import { computed } from './computed';
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
-import { withTracking } from './tracking';
+import { untrack } from './tracking';
 
-// ── Tracking utilities ────────────────────────────────────────────────────────
+export { untrack };
 
-/**
- * Runs `fn` without recording any reactive reads as dependencies of the enclosing
- * effect or computed. Useful when you need to read reactive state "silently".
- *
- * @example
- * ```ts
- * effect(() => {
- *   const a = count.value;              // tracked
- *   const b = untrack(() => name.value); // NOT tracked — no re-run when name changes
- * });
- * ```
- */
-export const untrack = <T>(fn: () => T): T => withTracking(null, fn);
-
-// ── Readonly wrapper (R2) ─────────────────────────────────────────────────────
+// ── Readonly wrapper ──────────────────────────────────────────────────────────
 //
 // Returns a thin delegation object instead of a full ComputedImpl — zero graph
 // overhead. No disposal needed. All reads delegate to the source, registering
@@ -31,6 +17,9 @@ export const untrack = <T>(fn: () => T): T => withTracking(null, fn);
  * The `value` setter and `update`/`dispose` are hidden. Delegates reads directly
  * to the source — no extra graph node, no allocation beyond the wrapper object.
  *
+ * `dispose()` delegates to the source's own dispose method if present, so
+ * `readonly(computed(() => ...)).dispose()` correctly cleans up the underlying node.
+ *
  * @example
  * ```ts
  * const count = signal(0);
@@ -39,9 +28,11 @@ export const untrack = <T>(fn: () => T): T => withTracking(null, fn);
  * // readCount.value = 1; // TypeScript error — ComputedSignal has no setter
  * ```
  */
-export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> =>
-  ({
-    dispose: () => {},
+export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
+  const disposeSource = () => (source as Partial<{ dispose(): void }>).dispose?.();
+
+  return {
+    dispose: disposeSource,
     filter: (pred: (value: T) => boolean) =>
       computed(() => {
         const v = source.value;
@@ -53,11 +44,12 @@ export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> =>
     map: <U>(fn: (v: T) => U, opts?: ReactiveOptions<U>) => computed(() => fn(source.value), opts),
     peek: () => source.peek(),
     subscribe: (l: () => void) => source.subscribe(l),
-    [Symbol.dispose]: () => {},
+    [Symbol.dispose]: disposeSource,
     get value() {
       return source.value;
     },
-  }) as unknown as ComputedSignal<T>;
+  } as unknown as ComputedSignal<T>;
+};
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 

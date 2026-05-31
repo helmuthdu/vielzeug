@@ -88,7 +88,7 @@ const unpipe = pipeEvents(bus, auditBus, ['user:login', 'user:logout']);
 otherBus.on('count', handler, bus.disposalSignal);
 
 try {
-  await bus.wait('user:login', AbortSignal.timeout(500));
+  await bus.wait('user:login', { signal: AbortSignal.timeout(500) });
 } catch (err) {
   if (err instanceof BusDisposedError) {
     console.log('Bus was disposed');
@@ -147,8 +147,10 @@ for await (const event of bus.events('cart:updated')) {
 - **Listener management APIs** with unsubscribe handles, `removeAllListeners`, and `eventNames`
 - **Async event coordination** with `wait`
 - **First-event racing** with `waitAny`
-- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called
+- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called, with chainable `.filter()` and `.map()` operators
 - **Event piping** with `pipeEvents` — forward events across buses with optional renaming and automatic teardown
+- **Middleware pipeline** via `createBus({ middleware: [...] })` — intercept or block dispatches before listeners run
+- **Payload validation** via `createBus({ validatePayload: ... })` — schema-level guards applied before middleware
 - **Disposal signal** via `bus.disposalSignal` — use as an `AbortSignal` to tie external lifecycles to the bus
 - **Leak detection** via `maxListeners` — warn when a single event accumulates too many listeners
 - **Debug mode** via `createBus({ debug: true })` — logs subscribe/emit/dispose activity to `console.debug`

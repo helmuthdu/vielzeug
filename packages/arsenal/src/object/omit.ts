@@ -1,14 +1,9 @@
 import type { Obj } from '../types';
 
-import { assert } from '../function/assert';
-import { isObject } from '../typed/isObject';
-
 /**
  * Creates a new object without the selected keys.
  */
 export function omit<T extends Obj, K extends keyof T>(obj: T, omittedKeys: readonly K[]): Omit<T, K> {
-  assert(isObject(obj), 'Expected an object', { args: { obj }, type: TypeError });
-
   const blacklist = new Set<PropertyKey>(omittedKeys as readonly PropertyKey[]);
   const out = {} as Omit<T, K>;
 

@@ -1,13 +1,6 @@
 import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
 
-import {
-  createField,
-  type ErrorHelperState,
-  type FieldAriaState,
-  type FieldHandle,
-  type FieldBaseOptions,
-  type LabelState,
-} from './field-base';
+import { createField, type FieldHandle, type FieldOptions } from './field-base';
 
 // ── Choice change event payload ──────────────────────────────────────────────────────────────
 
@@ -19,7 +12,7 @@ export type ChoiceChangeDetail = {
 
 // ── Choice field ──────────────────────────────────────────────────────────────────────
 
-export type ChoiceFieldOptions = FieldBaseOptions & {
+export type ChoiceFieldOptions = FieldOptions & {
   multiple?: ReadonlySignal<boolean | undefined>;
   /**
    * Current selection value(s). Accepts a comma-separated string
@@ -30,14 +23,8 @@ export type ChoiceFieldOptions = FieldBaseOptions & {
 };
 
 export type ChoiceFieldHandle = FieldHandle & {
-  /** Reactive ARIA attribute getters for the trigger element. */
-  aria: FieldAriaState;
-  /** Reactive error + helper assistive text. */
-  assistive: ReadonlySignal<ErrorHelperState>;
   clear: () => void;
   formValue: ReadonlySignal<string>;
-  /** Grouped label IDs and visibility getters. */
-  label: LabelState;
   removeValue: (value: string) => void;
   selectedValue: ReadonlySignal<string | undefined>;
   selectedValues: ReadonlySignal<string[]>;

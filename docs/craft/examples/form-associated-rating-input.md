@@ -36,11 +36,11 @@ define('rating-input', {
 #### With custom serialisation
 
 ```ts
-import { define, defineField, html, signal } from '@vielzeug/craft';
+import { define, defineField, html, prop, signal } from '@vielzeug/craft';
 
 define<{ disabled?: boolean }>('rating-input-v2', {
   formAssociated: true,
-  props: { disabled: false },
+  props: { disabled: prop.bool(false) },
   setup(props) {
     const value = signal<number[]>([]);
 

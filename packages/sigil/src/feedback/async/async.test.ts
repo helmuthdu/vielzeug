@@ -1,4 +1,4 @@
-import { type Fixture, fire, mount } from '@vielzeug/craft/testing';
+import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
 describe('bit-async', () => {
   let fixture: Fixture<HTMLElement>;

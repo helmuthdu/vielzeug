@@ -4,7 +4,7 @@ package: spell
 category: validation
 keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
 related: [forge, courier, vault]
-exports: [s, ValidationError, configure, ErrorCode, errorsAt]
+exports: [s, ValidationError, configure, ErrorCode, errorsAt, fromDescriptor, descriptorToJsonSchema]
 ---
 
 # @vielzeug/spell
@@ -18,7 +18,7 @@ exports: [s, ValidationError, configure, ErrorCode, errorsAt]
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`
+**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`, `fromDescriptor`, `descriptorToJsonSchema`
 
 **When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 
@@ -56,6 +56,9 @@ const result = UserSchema.safeParse({ id: '42', name: 'Ada', email: 'ada@example
 if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
+
+  // Assertion form — narrows type, throws ValidationError on failure
+  UserSchema.assert(result.data, 'user');
 } else {
   const { fieldErrors, formErrors } = result.error.flattenFirst();
   console.log(fieldErrors, formErrors);

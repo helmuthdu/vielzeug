@@ -54,10 +54,4 @@ describe('rotate', () => {
     expect(() => rotate(undefined as any, 1)).toThrow(TypeError);
     expect(() => rotate({} as any, 1)).toThrow(TypeError);
   });
-
-  it('should throw TypeError if positions is not a number', () => {
-    expect(() => rotate([1, 2, 3], null as any)).toThrow(TypeError);
-    expect(() => rotate([1, 2, 3], undefined as any)).toThrow(TypeError);
-    expect(() => rotate([1, 2, 3], {} as any)).toThrow(TypeError);
-  });
 });

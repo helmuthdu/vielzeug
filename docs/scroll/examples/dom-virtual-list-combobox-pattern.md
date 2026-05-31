@@ -1,6 +1,6 @@
 ---
 title: 'Scroll Examples — DOM Virtual List Combobox Pattern'
-description: 'Use @vielzeug/scroll/dom to virtualize a combobox/listbox popup with a small controller API.'
+description: 'Use createDomVirtualList to virtualize a combobox/listbox popup with a small controller API.'
 ---
 
 ## DOM Virtual List Combobox Pattern
@@ -11,10 +11,10 @@ Virtualize a popup listbox (combobox/dropdown style) without hand-wiring `Virtua
 
 ### Solution
 
-Use `createDomVirtualList` so your component only needs to call `setItems(items)` and `setActive(isOpen)` with a DOM render callback.
+Use `createDomVirtualList` so your component only needs to call `setItems(options)` to open and `setItems([])` to close. The virtualizer is created lazily on the first non-empty `setItems()` call and destroyed automatically when `setItems([])` is called.
 
 ```ts
-import { createDomVirtualList, type DomVirtualListController } from '@vielzeug/scroll/dom';
+import { createDomVirtualList, type DomVirtualListController } from '@vielzeug/scroll';
 
 type Option = { disabled?: boolean; label: string; value: string };
 
@@ -23,7 +23,6 @@ const options: Option[] = Array.from({ length: 2_000 }, (_, i) => ({
   value: `opt-${i}`,
 }));
 
-let isOpen = false;
 let focusedIndex = 0;
 let controller: DomVirtualListController<Option> | null = null;
 
@@ -32,24 +31,22 @@ function ensureController() {
 
   controller = createDomVirtualList<Option>({
     estimateSize: 36,
+    getItemKey: (_, opt) => opt.value,
     listElement: document.querySelector<HTMLElement>('[role="listbox"]')!,
-    overscan: { start: 4, end: 4 },
-    render: ({ items, listEl, virtualItems }) => {
-      listEl.replaceChildren();
-
-      for (const item of virtualItems) {
-        const opt = items[item.index];
-        if (!opt) continue;
-
-        const row = document.createElement('button');
-        row.type = 'button';
-        row.className = 'option';
-        row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
-        row.textContent = opt.label;
-        row.disabled = !!opt.disabled;
-        row.addEventListener('click', () => {
-          console.log('selected', opt.value);
+    overscan: { end: 4, start: 4 },
+    render: ({ items, listEl, recycle }) => {
+      for (const item of items) {
+        const row = recycle(item.data.value, () => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'option';
+          btn.addEventListener('click', () => console.log('selected', btn.dataset.value));
+          return btn;
         });
+        row.dataset.value = item.data.value;
+        row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);height:${item.size}px;`;
+        row.textContent = item.data.label;
+        row.disabled = !!item.data.disabled;
         listEl.appendChild(row);
       }
     },
@@ -60,18 +57,21 @@ function ensureController() {
 }
 
 function openDropdown() {
-  isOpen = true;
-  ensureController().setActive(isOpen);
-  ensureController().setItems(options);
+  focusedIndex = 0;
+  ensureController().setItems(options); // spawns virtualizer, renders first window
 }
 
 function closeDropdown() {
-  isOpen = false;
-  ensureController().setActive(isOpen); // disables virtualization + resets list styles
+  ensureController().setItems([]); // destroys virtualizer, clears list styles
 }
 
 function onArrowDown() {
   focusedIndex = Math.min(focusedIndex + 1, options.length - 1);
+  ensureController().scrollToIndex(focusedIndex, { align: 'auto' });
+}
+
+function onArrowUp() {
+  focusedIndex = Math.max(focusedIndex - 1, 0);
   ensureController().scrollToIndex(focusedIndex, { align: 'auto' });
 }
 
@@ -85,9 +85,9 @@ function destroyCombobox() {
 
 ### Pitfalls
 
-- Calling `setActive(true)` before `setItems()` on an empty list is a no-op — the virtualizer only spawns when there are items. Always call `setItems` before opening the dropdown.
-- Holding a stale `controller` reference after `destroyCombobox()` and then calling `setItems()` or `setTarget()` on it is a no-op because the controller guards against post-destroy calls. Re-create the controller instead.
-- Lazy-initializing the controller inside `ensureController()` every time the dropdown opens means the reference held by click handlers can become stale if `destroy()` is called mid-session. Use a module-level variable and check for `null` before each call.
+- Calling `setItems([])` destroys the virtualizer and clears the `listElement` height style. Re-opening calls `setItems(options)` which spawns a fresh virtualizer.
+- Holding a stale `controller` reference after `destroyCombobox()` — all method calls are safe no-ops. Re-create the controller on next open instead.
+- When `getItemKey` is omitted, `setItems()` drops all cached measurements. Pass `getItemKey: (_, opt) => opt.value` to preserve measurements across open/close cycles.
 
 ### Related
 

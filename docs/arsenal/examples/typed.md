@@ -1,83 +1,97 @@
 ---
 title: Arsenal — Typed Examples
-description: Runtime type-checking examples for Arsenal's is namespace.
+description: Runtime type-checking examples for Arsenal's typed predicates.
 ---
 
 ## Typed Utilities
 
-Use the `is` namespace for runtime checks with TypeScript narrowing.
+Arsenal exports standalone typed predicates for runtime narrowing. There is no `is` namespace.
 
 ```ts
-import { is } from '@vielzeug/arsenal';
+import { isString, isNumber, isNil, ... } from '@vielzeug/arsenal';
 ```
 
-## Available Methods
+## Available Predicates
 
-- `is.array`
-- `is.boolean`
-- `is.date`
-- `is.defined`
-- `is.empty`
-- `is.equal`
-- `is.fn`
-- `is.greaterThan`
-- `is.greaterThanOrEqual`
-- `is.lessThan`
-- `is.lessThanOrEqual`
-- `is.match`
-- `is.nil`
-- `is.number`
-- `is.object`
-- `is.primitive`
-- `is.promise`
-- `is.regex`
-- `is.string`
-- `is.typeOf`
-- `is.within`
-
-Standalone numeric predicates:
-
-- `isGreaterThan`
-- `isGreaterThanOrEqual`
-- `isLessThan`
-- `isLessThanOrEqual`
-- `isWithin`
+- `isAbortError(value)` — `Error` with `name === 'AbortError'`
+- `isBoolean(value)`
+- `isDate(value)`
+- `isDefined(value)` — not `undefined`
+- `isEmpty(value)` — empty string, array, object, `Map`, or `Set`
+- `isEqual(a, b, options?)` — deep or shallow equality
+- `isError(value)`
+- `isFunction(value)`
+- `isMatch(object, source)` — partial structural match (plain objects and arrays only)
+- `isNil(value)` — `null` or `undefined`
+- `isNumber(value)`
+- `isPlainObject(value)` — `Object.prototype` or `null` prototype; excludes class instances and built-ins
+- `isPrimitive(value)` — `string`, `number`, or `boolean`
+- `isPromise(value)`
+- `isRegex(value)`
+- `isString(value)`
 
 ## Example
 
 ```ts
 import {
-  is,
-  isGreaterThan,
-  isGreaterThanOrEqual,
-  isLessThan,
-  isLessThanOrEqual,
+  isAbortError,
+  isBoolean,
+  isDate,
+  isDefined,
+  isEmpty,
+  isEqual,
+  isError,
+  isFunction,
+  isMatch,
+  isNil,
   isNumber,
-  isWithin,
+  isPlainObject,
+  isPrimitive,
+  isString,
 } from '@vielzeug/arsenal';
 
 function normalize(value: unknown) {
-  if (is.string(value)) return value.trim();
-  if (is.number(value)) return value.toFixed(2);
-  if (is.array(value)) return value.length;
-  if (is.nil(value)) return null;
+  if (isString(value)) return value.trim();
+  if (isNumber(value)) return value.toFixed(2);
+  if (Array.isArray(value)) return value.length;
+  if (isNil(value)) return null;
   return value;
 }
 
-const ok = is.equal({ a: 1 }, { a: 1 });
-const match = is.match({ a: 1, b: 2 }, { a: 1 });
-const tag = is.typeOf(new Date()); // 'date'
+// Deep equality — handles Date, Map, Set, circular references
+const ok = isEqual({ a: 1 }, { a: 1 }); // true
+const shallow = isEqual({ a: { x: 1 } }, { a: { x: 1 } }, { depth: 'shallow' }); // false
 
-const predicates = {
-  isNumber: isNumber(4),
-  isWithin: isWithin(5, 1, 10),
-  isGt: isGreaterThan(5, 4),
-  isGe: isGreaterThanOrEqual(5, 5),
-  isLt: isLessThan(4, 5),
-  isLe: isLessThanOrEqual(5, 5),
+// Partial structural match — plain objects and arrays only
+// Map/Set sources always return false
+const match = isMatch({ a: 1, b: 2 }, { a: 1 }); // true
+const mapSource = isMatch({ a: 1 }, new Map([['a', 1]])); // false
+
+// isPlainObject — true for plain objects; false for class instances, Map, Set, Array
+const plain = isPlainObject({ a: 1 }); // true
+const notPlain = isPlainObject(new Map()); // false
+
+// Check abort errors in fetch catch blocks
+try {
+  await fetch('/api/data', { signal: AbortSignal.timeout(5000) });
+} catch (err) {
+  if (isAbortError(err)) return; // timeout or abort — ignore
+  throw err;
+}
+
+const checks = {
+  isBoolean: isBoolean(true),
+  isDate: isDate(new Date()),
+  isDefined: isDefined(0),       // true — 0 is defined
+  isEmpty: isEmpty([]),           // true
+  isError: isError(new Error()), // true
+  isFunction: isFunction(() => {}),
+  isPrimitive: isPrimitive('x'), // true
 };
 
-console.log(normalize('  hi  '), ok, match, tag, predicates);
+console.log(normalize('  hi  '), ok, shallow, match, mapSource, plain, notPlain, checks);
+```
+
 ```
 
 ## Standalone Predicate Pages

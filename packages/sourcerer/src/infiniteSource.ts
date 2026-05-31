@@ -1,193 +1,223 @@
 import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery } from './types';
 
 import { createSourceCore } from './core';
+import { SourceError } from './types';
 import { defaultRetryDelay, extractError, retry } from './utils';
 
-const DEFAULTS = { debounceMs: 300, limit: 10 } as const;
-
-/**
- * Creates an append-mode (infinite scroll) data source.
- * Each `loadMore()` call fetches the next page and appends results to `current`.
- * Searching resets accumulated results and restarts from the first page.
- */
+/** Creates an infinite-scroll source that appends pages on `loadMore()`. */
 export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<T> {
   const core = createSourceCore();
-  const limitDefault = Math.max(1, cfg.limit ?? DEFAULTS.limit);
-  const debounceMs = cfg.debounceMs ?? DEFAULTS.debounceMs;
-  const autoFetch = cfg.autoFetch ?? true;
+
+  // ── Config defaults ─────────────────────────────────────────────────────────
+  const debounceMs = cfg.debounceMs ?? 300;
   const retryAttempts = cfg.retry?.attempts ?? 0;
   const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const refreshIntervalMs = cfg.refreshInterval ?? 0;
+  const autoFetch = cfg.autoFetch !== false;
 
-  let limit = limitDefault;
+  // ── Mutable state ───────────────────────────────────────────────────────────
+  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
   let search = '';
-  let page = 1;
-
-  let accumulated: readonly T[] = [];
+  let currentPage = 1;
+  let loadedPages = 0;
+  let items: readonly T[] = [];
   let total = 0;
-  let error: string | null = null;
-  let cachedMeta!: InfiniteMeta;
+  let error: SourceError | null = null;
   let isLoading = false;
-
+  let isLoadingMore = false;
+  let abortController: AbortController | null = null;
   let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  // Single in-flight controller — new fetches abort the previous one.
-  let currentController: AbortController | null = null;
+  // ── Cached meta ─────────────────────────────────────────────────────────────
+  let cachedMeta: InfiniteMeta = {
+    error: null,
+    hasMore: false,
+    isLoading: false,
+    isLoadingMore: false,
+    isSearchPending: false,
+    pageSize: limit,
+    totalItems: 0,
+  };
 
   const refreshMeta = () => {
     cachedMeta = {
-      errorMessage: error,
-      hasMore: accumulated.length < total,
+      error,
+      hasMore: items.length < total,
       isLoading,
+      isLoadingMore,
       isSearchPending: core.isScheduled,
       pageSize: limit,
       totalItems: total,
     };
   };
 
-  const notify = () => {
+  refreshMeta();
+
+  const commit = () => {
     refreshMeta();
     core.notify();
   };
 
+  // ── Core fetch (internal) ────────────────────────────────────────────────────
   const fetchPage = async (targetPage: number, append: boolean): Promise<void> => {
-    if (currentController) currentController.abort();
+    if (abortController) abortController.abort();
 
-    const controller = new AbortController();
+    abortController = new AbortController();
 
-    currentController = controller;
-    isLoading = true;
+    const signal = abortController.signal;
+
+    if (append) {
+      isLoadingMore = true;
+    } else {
+      isLoading = true;
+    }
+
     error = null;
-    notify();
+    commit();
+
+    const q: InfiniteSourceQuery = {
+      ...(search && { search }),
+      limit,
+      page: targetPage,
+    };
 
     const startTime = Date.now();
-    const q: InfiniteSourceQuery = { limit, page: targetPage, search: search || undefined };
 
     try {
-      const result = await retry(
-        (signal) => cfg.fetch({ limit, page: targetPage, search: search || undefined }, signal),
-        {
-          delay: retryDelay,
-          signal: controller.signal,
-          times: retryAttempts + 1,
-        },
-      );
+      const result = await retry((sig) => cfg.fetch(q, sig), {
+        delay: retryDelay,
+        signal,
+        times: retryAttempts + 1,
+      });
 
-      if (controller.signal.aborted) return;
+      if (signal.aborted) return;
 
-      total = result.total ?? 0;
-      accumulated = append ? [...accumulated, ...result.items] : result.items;
-      page = targetPage;
+      if (append) {
+        items = [...items, ...result.items];
+      } else {
+        items = result.items;
+      }
+
+      total = result.total;
+      currentPage = targetPage;
+      loadedPages = append ? loadedPages + 1 : 1;
       error = null;
       cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
     } catch (reason: unknown) {
-      if (controller.signal.aborted) return;
+      if (signal.aborted) return;
 
-      error = extractError(reason);
-      cfg.onFetch?.({ durationMs: Date.now() - startTime, error: error, query: q, status: 'error' });
+      if (!append) items = [];
+
+      total = append ? total : 0;
+      error = new SourceError(extractError(reason), { cause: reason, query: q });
+      cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
     } finally {
-      if (!controller.signal.aborted) {
-        currentController = null;
-        isLoading = false;
-        notify();
+      isLoading = false;
+      isLoadingMore = false;
+      abortController = null;
+
+      if (!signal.aborted) {
+        commit();
       }
     }
   };
 
-  const doInitialFetch = () => fetchPage(1, false);
+  const doFetch = () => fetchPage(1, false);
 
-  refreshMeta();
+  // ── Auto-fetch + refresh interval ───────────────────────────────────────────
+  if (autoFetch) void doFetch();
 
-  if (autoFetch) {
-    void doInitialFetch();
-  }
-
-  if (refreshIntervalMs > 0) {
+  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
     refreshTimer = setInterval(() => {
-      void doInitialFetch();
-    }, refreshIntervalMs);
+      if (!core.isDisposed) void doFetch();
+    }, cfg.refreshInterval);
   }
 
+  // ── Public API ──────────────────────────────────────────────────────────────
   return {
     get current() {
-      return accumulated;
+      return items;
     },
 
     dispose() {
-      if (refreshTimer) {
+      if (refreshTimer !== undefined) {
         clearInterval(refreshTimer);
         refreshTimer = undefined;
       }
 
-      if (currentController) {
-        currentController.abort();
-        currentController = null;
+      if (abortController) {
+        abortController.abort();
+        abortController = null;
       }
 
       core.dispose();
     },
 
-    flush(): Promise<void> {
-      return core.flush(() => doInitialFetch());
+    flush() {
+      return core.flush(() => doFetch());
     },
 
-    loadMore(): Promise<void> {
-      if (accumulated.length >= total) return Promise.resolve();
+    loadMore() {
+      if (!cachedMeta.hasMore || isLoading || isLoadingMore) return Promise.resolve();
 
-      return fetchPage(page + 1, true);
+      return fetchPage(currentPage + 1, true);
     },
 
     get meta() {
       return cachedMeta;
     },
 
-    ready(): Promise<void> {
-      return core.ready(() => !isLoading && !core.isScheduled);
+    ready(timeout) {
+      return core.ready(() => !isLoading && !isLoadingMore && !core.isScheduled, timeout);
     },
 
-    reset(): Promise<void> {
-      limit = limitDefault;
+    reset() {
+      currentPage = 1;
+      loadedPages = 0;
       search = '';
-      page = 1;
-      accumulated = [];
-      total = 0;
 
-      return doInitialFetch();
+      return doFetch();
     },
 
-    search(q: string) {
+    search(q) {
+      if (q === search) return;
+
       search = q;
-      page = 1;
-      accumulated = [];
       core.schedule(() => {
-        void doInitialFetch();
+        void doFetch();
       }, debounceMs);
-      notify();
+      refreshMeta();
+      core.notify();
     },
 
-    searchNow(q: string): Promise<void> {
+    searchNow(q) {
+      if (q === search) return Promise.resolve();
+
       core.cancelTimer();
       search = q;
-      page = 1;
-      accumulated = [];
 
-      return doInitialFetch();
+      return doFetch();
     },
 
-    setLimit(n: number): Promise<void> {
-      limit = Math.max(1, Math.trunc(n));
-      page = 1;
-      accumulated = [];
+    setLimit(n) {
+      const next = Math.max(1, Math.trunc(n));
 
-      return doInitialFetch();
+      if (next === limit) return Promise.resolve();
+
+      limit = next;
+
+      return doFetch();
     },
 
     subscribe(listener) {
       return core.subscribe(listener);
     },
 
-    toQuery(): InfiniteSourceQuery {
-      return { limit, page, search: search || undefined };
+    toQuery() {
+      return {
+        ...(search && { search }),
+        limit,
+        page: currentPage,
+      };
     },
   };
 }

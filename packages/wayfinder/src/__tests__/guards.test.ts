@@ -10,44 +10,44 @@ describe('beforeLeave', () => {
     resetMocks();
   });
   it('allows navigation when the blocker returns true', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler, path: '/page' } },
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
     await settle();
     router.beforeLeave(async () => true);
     await router.navigate({ path: '/page' });
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('blocks navigation when the blocker returns false', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler, path: '/page' } },
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
     await settle();
     router.beforeLeave(async () => false);
     await router.navigate({ path: '/page' });
 
-    expect(handler).not.toHaveBeenCalled();
+    expect(data).not.toHaveBeenCalled();
     expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
   });
 
   it('removing the guard re-allows navigation', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler, path: '/page' } },
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
     await settle();
@@ -55,12 +55,12 @@ describe('beforeLeave', () => {
     const remove = router.beforeLeave(async () => false);
 
     await router.navigate({ path: '/page' });
-    expect(handler).not.toHaveBeenCalled();
+    expect(data).not.toHaveBeenCalled();
 
     remove();
     await router.navigate({ path: '/page' });
 
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(data).toHaveBeenCalledTimes(1);
     router.dispose();
   });
 
@@ -88,13 +88,13 @@ describe('beforeLeave', () => {
   });
 
   it('runs all registered blockers and blocks if any return false', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const first = vi.fn(async () => true);
     const second = vi.fn(async () => false);
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler, path: '/page' } },
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
     await settle();
@@ -104,7 +104,7 @@ describe('beforeLeave', () => {
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(handler).not.toHaveBeenCalled();
+    expect(data).not.toHaveBeenCalled();
     router.dispose();
   });
 
@@ -113,7 +113,7 @@ describe('beforeLeave', () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      routes: { home: { path: '/' }, page: { handler: vi.fn(), path: '/page' } },
+      routes: { home: { path: '/' }, page: { data: vi.fn(), path: '/page' } },
     });
 
     await settle();
@@ -134,11 +134,10 @@ describe('beforeLeave', () => {
   });
 
   it('blocks popstate navigation and restores previous URL', async () => {
-    const handler = vi.fn();
     const router = createRouter({
       routes: {
         home: { path: '/' },
-        page: { handler, path: '/page' },
+        page: { path: '/page' },
       },
     });
 
@@ -153,7 +152,6 @@ describe('beforeLeave', () => {
     await settle();
 
     expect(router.getSnapshot().location.pathname).toBe('/');
-    expect(handler).not.toHaveBeenCalled();
     expect(mockHistory.replaceState).toHaveBeenCalledWith(null, '', '/');
     router.dispose();
   });
@@ -162,14 +160,14 @@ describe('beforeLeave', () => {
 describe('beforeLeave with route scope', () => {
   it('fires only when navigating away from the specified route', async () => {
     const blocker = vi.fn(async () => false);
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/home');
     const router = createRouter({
       history,
       routes: {
         home: { path: '/home' },
         other: { path: '/other' },
-        page: { handler, path: '/page' },
+        page: { data, path: '/page' },
       },
     });
 
@@ -180,21 +178,21 @@ describe('beforeLeave with route scope', () => {
     await router.navigate({ path: '/page' });
 
     expect(blocker).toHaveBeenCalledTimes(1);
-    expect(handler).not.toHaveBeenCalled();
+    expect(data).not.toHaveBeenCalled();
     expect(router.getSnapshot().location.pathname).toBe('/home');
     router.dispose();
   });
 
   it('does not fire when not on the specified route', async () => {
     const blocker = vi.fn(async () => false);
-    const handler = vi.fn();
+    const data = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: { path: '/' },
         other: { path: '/other' },
-        page: { handler, path: '/page' },
+        page: { data, path: '/page' },
       },
     });
 
@@ -205,7 +203,7 @@ describe('beforeLeave with route scope', () => {
     await router.navigate({ path: '/page' });
 
     expect(blocker).not.toHaveBeenCalled();
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(data).toHaveBeenCalledTimes(1);
     router.dispose();
   });
 

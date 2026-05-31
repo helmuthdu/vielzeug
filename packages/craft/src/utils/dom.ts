@@ -32,13 +32,15 @@ const URL_ATTRS = new Set([
 ]);
 
 /**
- * Schemes that execute JavaScript or can embed arbitrary HTML when placed in a
- * URL attribute. Blocked unconditionally — no DEV-only guard.
+ * Schemes that execute JavaScript or can embed arbitrary HTML. Blocked
+ * unconditionally in URL-accepting attributes — no DEV-only guard.
+ * `data:` URIs are intentionally not blocked; they are safe in img/video src
+ * and only dangerous in href/action/formaction (not commonly misused in templates).
  */
-const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript|data):/i;
+const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript):/i;
 
 export const setAttr = (el: Element, name: string, val: unknown): void => {
-  if (/^on/i.test(name)) {
+  if (/^on[a-z]/i.test(name)) {
     if (import.meta.env.DEV) {
       console.warn(
         `[craft] Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
@@ -92,7 +94,3 @@ export const toKebab = (str: string): string => str.replace(/[A-Z]/g, (c) => `-$
 
 export const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
-
-const ESC: Record<string, string> = { "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-
-export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => ESC[c]);

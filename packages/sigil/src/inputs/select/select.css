@@ -1,14 +1,14 @@
 @layer sigil.base {
   :host {
-    --_font-size: var(--select-font-size, var(--text-sm));
-    --_gap: var(--select-gap, var(--size-2));
-    --_field-height: var(--select-height, var(--size-10));
+    --_font-size: var(--bit-select-font-size, var(--text-sm));
+    --_gap: var(--bit-select-gap, var(--size-2));
+    --_field-height: var(--bit-select-height, var(--size-10));
     --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
-    --_padding: var(--select-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--select-radius, var(--rounded-lg));
-    --_placeholder: var(--select-placeholder-color, var(--color-contrast-500));
-    --_bg: var(--select-bg, var(--color-contrast-100));
-    --_border-color: var(--select-border-color, var(--color-contrast-300));
+    --_padding: var(--bit-select-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--bit-select-radius, var(--rounded-lg));
+    --_placeholder: var(--bit-select-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--bit-select-bg, var(--color-contrast-100));
+    --_border-color: var(--bit-select-border-color, var(--color-contrast-300));
 
     display: inline-flex;
     flex-direction: column;
@@ -69,13 +69,12 @@
     outline: none;
   }
 
-  /* Expand height for multi-select chips or inset label */
-  :host([multiple]) .field,
-  .field:has(.label-inset:not([hidden])) {
+  /* Expand height for multi-select chips */
+  :host([multiple]) .field {
     height: auto;
   }
 
-  .label-inset {
+  .label {
     margin-bottom: 2px;
     font-size: var(--text-xs);
     font-weight: var(--font-medium);
@@ -86,14 +85,29 @@
     transition: color var(--transition-fast);
   }
 
-  .label-outside {
+  /* Outside placement: label is above the field (natural flow in .select-wrapper flex column) */
+  :host([label-placement='outside']) .label {
+    margin-bottom: 0;
     font-size: var(--text-sm);
-    font-weight: var(--font-medium);
     line-height: var(--leading-none);
-    color: var(--color-contrast-500);
-    cursor: pointer;
-    user-select: none;
-    transition: color var(--transition-fast);
+  }
+
+  /* Inset placement (default): label floats over the top of the field using absolute positioning */
+  :host(:not([label-placement='outside'])) .select-wrapper {
+    position: relative;
+  }
+
+  :host(:not([label-placement='outside'])) .label {
+    position: absolute;
+    inset-block-start: var(--size-2);
+    inset-inline-start: var(--size-3);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  :host(:not([label-placement='outside'])) .select-wrapper:has(.label:not([hidden])) .field {
+    height: auto;
+    padding-block-start: calc(var(--size-2) + 1lh + 2px);
   }
 
   .trigger-row {
@@ -343,9 +357,8 @@
     transform: translateY(-1px);
   }
 
-  :host(:not([disabled])) .field:focus-within .label-inset,
-  :host(:not([disabled])) .field:focus-within .label-outside,
-  :host([open]:not([disabled])) .label-inset {
+  :host(:not([disabled])) .select-wrapper:has(.field:focus-within) .label,
+  :host([open]:not([disabled])) .label {
     color: var(--_theme-focus);
   }
 
@@ -362,8 +375,7 @@
     box-shadow: var(--color-error-focus-shadow);
   }
 
-  :host([has-error]) .label-inset,
-  :host([has-error]) .label-outside {
+  :host([has-error]) .label {
     color: var(--color-error);
   }
 }

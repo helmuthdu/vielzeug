@@ -25,9 +25,9 @@ export function range(start: number, stop: number, step: number) {
   assert(
     Number.isFinite(start) && Number.isFinite(stop) && Number.isFinite(step),
     'start, stop, and step must be finite numbers',
-    { args: { start, step, stop }, type: TypeError },
+    { type: TypeError },
   );
-  assert(step !== 0, 'Step cannot be 0', { args: { step }, type: Error });
+  assert(step !== 0, 'Step cannot be 0');
 
   if (start === stop) {
     return [];
@@ -35,10 +35,7 @@ export function range(start: number, stop: number, step: number) {
 
   const length = Math.max(0, Math.ceil((stop - start) / step + Number.EPSILON));
 
-  assert(length <= 10_000_000, 'Range exceeds maximum allowed size of 10,000,000', {
-    args: { length, start, step, stop },
-    type: Error,
-  });
+  assert(length <= 10_000_000, 'Range exceeds maximum allowed size of 10,000,000');
 
   return Array.from({ length }, (_, i) => start + i * step);
 }

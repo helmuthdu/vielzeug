@@ -1,11 +1,11 @@
 ---
 title: Scroll — Virtual list engine for TypeScript
-description: Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
+description: Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and zero dependencies.
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
 related: [grip, craft, sigil]
-exports: [createVirtualizer, createDomVirtualList, Virtualizer, DomVirtualListController]
+exports: [createVirtualizer, createDomVirtualList, createVirtualScroller, createGroupedVirtualizer, createGridVirtualizer, createReactiveVirtualizer]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,9 +21,9 @@ exports: [createVirtualizer, createDomVirtualList, Virtualizer, DomVirtualListCo
 
 **Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
 
-**Key exports:** `createVirtualizer`, `createDomVirtualList`, `Virtualizer`
+**Key exports:** `createVirtualizer`, `createDomVirtualList`, `createVirtualScroller`, `createGroupedVirtualizer`, `createGridVirtualizer`, `createReactiveVirtualizer`
 
-**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
+**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, sticky headers, grouped sections, grid virtualization, programmatic scrolling, and reactive signal integration.
 
 **Related:** [Grip](/grip/) · [Craft](/craft/) · [Sigil](/sigil/)
 
@@ -62,12 +62,12 @@ const list = document.querySelector<HTMLElement>('.list')!;
 const virt = createVirtualizer(scrollEl, {
   count: 10_000,
   estimateSize: 36,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     // Stretch the container so the scrollbar reflects the full list
     spacer.style.height = `${totalSize}px`;
     list.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
       el.textContent = `Row ${item.index}`;
@@ -82,8 +82,7 @@ virt.destroy();
 
 ### Entry Points
 
-- `@vielzeug/scroll` — core `createVirtualizer` controller.
-- `@vielzeug/scroll/dom` — `createDomVirtualList` helper for dropdown/listbox-style DOM integrations.
+All APIs export from a single entry: `@vielzeug/scroll`.
 
 ## Why Scroll?
 
@@ -103,10 +102,10 @@ import { createVirtualizer } from '@vielzeug/scroll';
 const virt = createVirtualizer(scrollEl, {
   count: items.length,
   estimateSize: 36,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     list.style.height = `${totalSize}px`;
     list.innerHTML = '';
-    for (const { index, start } of virtualItems) {
+    for (const { index, start } of items) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
       el.textContent = items[index].name;
@@ -134,17 +133,21 @@ const virt = createVirtualizer(scrollEl, {
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
 - **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
 - **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
-- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
+- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes; `redraw()` for O(1) re-emission when sizes are unchanged
+- **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
+- **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
+- **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
+- **Reactive integration** — `createReactiveVirtualizer` exposes state as a `Signal<VirtualizerState>` compatible with `@vielzeug/ripple`
+- **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
 - **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
-- **Keyed measurement stability** — use stable keys with `getItemKey` + `measure()`
 - **Asymmetric overscan + gap** — tune start/end overscan independently and add inter-item spacing
-- **Scroll-state hooks** — `onScrollingChange`, `onScrollEnd`, `isScrolling`, and configurable `scrollEndDelay`
-- **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and callback in one call
-- **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices rather than silently scrolling to the wrong position
+- **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and more in one call
+- **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices
+- **Prepend support** — `prepend()` adds items at the top while keeping the viewport visually stable
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
-- **Zero dependencies**
+- **Zero runtime dependencies** (ripple is a peer dependency used only by `createReactiveVirtualizer`)
 
 ## Compatibility
 

@@ -1,30 +1,24 @@
-import type { SourceState } from './types';
+import type { SourceError, SourceState } from './types';
 
 /**
- * Derives a discriminated union state from any reactive source.
- *
- * Eliminates manual branching on `meta.isLoading` + `meta.errorMessage` + empty `current`.
- * Works with all source types (`LocalSource`, `RemoteSource`, `CursorSource`, `InfiniteSource`,
- * `DerivedSource`) via duck-typing on the minimal observable interface.
+ * Derives a `SourceState<T>` discriminated union from a reactive source.
+ * Works with any object that exposes `current`, `meta.isLoading`, and `meta.error`.
  *
  * @example
  * ```ts
  * const state = sourceState(source);
- *
- * switch (state.status) {
- *   case 'loading': return renderSpinner();
- *   case 'error':   return renderError(state.message);
- *   case 'data':    return renderList(state.items);
- * }
+ * if (state.status === 'loading') return <Spinner />;
+ * if (state.status === 'error') return <p>{state.error.message}</p>;
+ * return <List items={state.items} />;
  * ```
  */
 export function sourceState<T>(source: {
   readonly current: readonly T[];
-  readonly meta: { readonly errorMessage: string | null; readonly isLoading: boolean };
+  readonly meta: { readonly error: SourceError | null; readonly isLoading: boolean };
 }): SourceState<T> {
   if (source.meta.isLoading) return { status: 'loading' };
 
-  if (source.meta.errorMessage) return { message: source.meta.errorMessage, status: 'error' };
+  if (source.meta.error) return { error: source.meta.error, status: 'error' };
 
   return { items: source.current, status: 'data' };
 }

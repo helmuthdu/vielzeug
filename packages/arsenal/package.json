@@ -28,12 +28,6 @@
       "import": "./dist/async/index.js",
       "require": "./dist/async/index.cjs"
     },
-    "./concurrency": {
-      "source": "./src/concurrency/index.ts",
-      "types": "./dist/concurrency/index.d.ts",
-      "import": "./dist/concurrency/index.js",
-      "require": "./dist/concurrency/index.cjs"
-    },
     "./function": {
       "source": "./src/function/index.ts",
       "types": "./dist/function/index.d.ts",
@@ -80,16 +74,16 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "pnpm run verify:exports && vitest",
-    "verify:exports": "node ./scripts/check-exports.mjs"
+    "verify:exports": "node ./scripts/generate-barrels.mjs --check"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "typescript": "~6.0.3",
-    "vite": "^8.0.13",
-    "vitest": "^4.1.6"
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
   }
 }

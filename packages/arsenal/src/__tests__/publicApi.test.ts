@@ -12,7 +12,6 @@ describe('public api', () => {
     expect(arsenal.sample).toBeTypeOf('function');
     expect(arsenal.partial).toBeTypeOf('function');
     expect(arsenal.allOf).toBeTypeOf('function');
-    expect(arsenal.isGreaterThan).toBeTypeOf('function');
     expect(arsenal.deepMerge).toBeTypeOf('function');
     expect(arsenal.deepMergeWith).toBeTypeOf('function');
     expect(arsenal.getPath).toBeTypeOf('function');
@@ -29,26 +28,33 @@ describe('public api', () => {
     expect('race' in arsenal).toBe(false);
     expect('batch' in arsenal).toBe(false);
     expect('predict' in arsenal).toBe(false);
-    // Removed in R6 (moved to @vielzeug/coins)
+    // Removed (moved to @vielzeug/coins)
     expect('currency' in arsenal).toBe(false);
     expect('exchange' in arsenal).toBe(false);
-    // Removed in R8-R12 (thin wrappers)
+    // Removed (thin wrappers)
     expect('defer' in arsenal).toBe(false);
     expect('Scheduler' in arsenal).toBe(false);
     expect('polyfillScheduler' in arsenal).toBe(false);
     expect('deepClone' in arsenal).toBe(false);
-    // Removed in R9, R5
+    // Removed in prior revisions
     expect('assertAll' in arsenal).toBe(false);
     expect('is' in arsenal).toBe(false);
-    // Removed in R13 (merged into retry)
     expect('attempt' in arsenal).toBe(false);
-    // get renamed to getPath in R16
     expect('get' in arsenal).toBe(false);
-    // Error constants not part of public API (R14)
+    // Error constants not part of public API
     expect('IS_ARRAY_ERROR_MSG' in arsenal).toBe(false);
     expect('IS_OBJECT_ERROR_MSG' in arsenal).toBe(false);
     expect('IS_STRING_ERROR_MSG' in arsenal).toBe(false);
     expect('IS_NUMBER_ERROR_MSG' in arsenal).toBe(false);
+    // Removed in new review (R1, R6, R8)
+    expect('isObject' in arsenal).toBe(false);
+    expect('isGreaterThan' in arsenal).toBe(false);
+    expect('isLessThan' in arsenal).toBe(false);
+    expect('isGreaterThanOrEqual' in arsenal).toBe(false);
+    expect('isLessThanOrEqual' in arsenal).toBe(false);
+    expect('isWithin' in arsenal).toBe(false);
+    expect('typeOf' in arsenal).toBe(false);
+    expect('anySignal' in arsenal).toBe(false);
   });
 
   it('keeps subpath barrels aligned with the current API', () => {
@@ -72,9 +78,10 @@ describe('public api', () => {
     expect('flip' in functionApi).toBe(false);
 
     expect('waitFor' in asyncApi).toBe(true);
-    expect('retry' in asyncApi).toBe(false); // moved to concurrency subpath
-    expect('parallel' in asyncApi).toBe(false); // moved to concurrency subpath
-    expect('queue' in asyncApi).toBe(false); // moved to concurrency subpath
+    expect('retry' in asyncApi).toBe(true); // now in async subpath
+    expect('parallel' in asyncApi).toBe(true); // now in async subpath
+    expect('queue' in asyncApi).toBe(true); // now in async subpath
+    expect('anySignal' in asyncApi).toBe(false); // removed
     expect('attempt' in asyncApi).toBe(false);
     expect('defer' in asyncApi).toBe(false);
     expect('Scheduler' in asyncApi).toBe(false);
@@ -85,8 +92,10 @@ describe('public api', () => {
 
     expect('proxy' in arsenal).toBe(false);
 
-    expect('isGreaterThan' in typedApi).toBe(true);
-    expect('isLessThanOrEqual' in typedApi).toBe(true);
+    expect('isGreaterThan' in typedApi).toBe(false); // removed in new review
+    expect('isLessThanOrEqual' in typedApi).toBe(false); // removed in new review
+    expect('isObject' in typedApi).toBe(false); // removed in new review
+    expect('typeOf' in typedApi).toBe(false); // removed in new review
     expect('is' in typedApi).toBe(false);
     expect('IS_ARRAY_ERROR_MSG' in typedApi).toBe(false);
     expect('isGt' in typedApi).toBe(false);

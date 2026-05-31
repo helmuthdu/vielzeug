@@ -8,10 +8,6 @@ export class NeverSchema extends Schema<never> {
     super((_value) => [{ code: ErrorCode.invalid_type, message: _messages().never.invalid(), path: [] }]);
   }
 
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { not: {} };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'never' };
   }

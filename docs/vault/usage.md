@@ -94,7 +94,7 @@ const all    = await db.getAll('users');          // User[]
 const total  = await db.count('users');           // number (live records only)
 const exists = await db.has('users', 1);          // boolean
 
-// update — merges fields, keeps the original key
+// update — merges fields, throws VaultError if key does not exist
 const updated = await db.update('users', 1, { age: 31 });
 
 // delete
@@ -104,7 +104,23 @@ await db.clear('users');
 void alice, all, total, exists, updated;
 ```
 
-`update` returns the merged record, or `undefined` when the key is not found.
+`update` returns the merged record or throws `VaultError` when the key is not found. Use `upsert` for insert-or-update semantics.
+
+## Key and Entry Reads
+
+`keys(table)` returns the primary key of every live record without fetching the full records. Useful for existence checks, diffing, and cache invalidation.
+
+```ts
+const ids = await db.keys('users'); // number[]
+```
+
+`entries(table)` returns all `[key, record]` pairs in a single call.
+
+```ts
+const pairs = await db.entries('users'); // [number, User][]
+```
+
+Both are also available inside `batch()` callbacks.
 
 ## Bulk Key Lookup
 
@@ -134,11 +150,16 @@ Expired records are evicted lazily on the next read. `count()` and `getAll()` ex
 
 ### Prune Expired Records
 
-For write-heavy tables that are rarely read, expired records accumulate without lazy eviction. `pruneExpired()` sweeps all tables explicitly and returns the count deleted per table.
+For write-heavy tables that are rarely read, expired records accumulate without lazy eviction. `pruneExpired()` sweeps tables explicitly and returns the count deleted per table.
 
 ```ts
+// Prune all tables
 const pruned = await db.pruneExpired();
 // { users: 42, sessions: 10 }
+
+// Prune only specific tables
+const partial = await db.pruneExpired(['sessions']);
+// { sessions: 10, users: 0 }
 ```
 
 Schedule periodic pruning with `scheduleExpiredPrune`:
@@ -148,9 +169,11 @@ import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
 
 const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
 
-// on teardown
+// on teardown (before dispose)
 stop();
 ```
+
+The schedule also stops automatically if the adapter is disposed before the timer fires — `VaultDisposedError` thrown by `pruneExpired()` is caught and the interval is cleared.
 
 On **IndexedDB**, pruning uses a cursor-based pass — expired records are deleted without loading them into memory. On **LocalStorage / SessionStorage** and **Memory**, expired records are detected and removed during the scan.
 
@@ -240,24 +263,31 @@ Expired records are skipped automatically. Each call opens a fresh readonly IDB 
 
 ### `observe`
 
-`observe(table, listener)` fires the listener whenever the table changes. By default it does **not** fire an initial snapshot — only future mutations trigger the callback. Pass `{ immediate: true }` to also receive the current table state immediately on registration.
+`observe(table, listener)` subscribes to table changes. **It always fires immediately with the current table state on registration**, then fires again on every mutation. There is no deferred-first-call mode.
 
 ```ts
-// future changes only (default)
+// Always fires immediately, then on every change
 const stop = db.observe('users', (rows) => {
-  console.log('users updated:', rows.length);
+  console.log('users snapshot:', rows.length);
 });
 
-// fire immediately with current state, then on every change
-const stopImmediate = db.observe('users', handleChange, { immediate: true });
-
-await db.put('users', { id: 1, name: 'Alice', age: 30 }); // triggers both listeners
+await db.put('users', { id: 1, name: 'Alice', age: 30 }); // triggers listener again
 
 stop();
-stopImmediate();
 ```
 
-Always call the returned unsubscribe function on teardown to prevent memory leaks.
+Pass `{ signal }` to cancel the observer via an `AbortController` — a clean alternative to storing and calling the returned stop function.
+
+```ts
+const controller = new AbortController();
+
+db.observe('users', (rows) => render(rows), { signal: controller.signal });
+
+// later:
+controller.abort(); // stops the observer
+```
+
+Always unsubscribe on teardown to prevent memory leaks.
 
 ### `watch` — AsyncIterable Stream
 
@@ -269,31 +299,72 @@ for await (const users of db.watch('users')) {
 }
 ```
 
-The observer is cleaned up automatically when the loop exits via `break`, `return`, or an unhandled error. No explicit unsubscribe is needed.
+The observer is cleaned up automatically when the loop exits via `break`, `return`, or an unhandled error.
+
+Stop the loop from outside using an `AbortSignal`:
+
+```ts
+const controller = new AbortController();
+
+for await (const users of db.watch('users', { signal: controller.signal })) {
+  renderTable(users);
+}
+
+controller.abort(); // terminates the loop
+```
+
+By default (`mode: 'latest'`) intermediate snapshots are dropped if the consumer lags. Pass `mode: 'all'` to queue every snapshot instead.
+
+### `watchStream` — ReadableStream
+
+`watchStream(table)` returns a Web Standard `ReadableStream` of snapshots. Use it with WHATWG stream pipelines or in environments that consume `ReadableStream` directly.
+
+```ts
+db.watchStream('users')
+  .pipeTo(new WritableStream({ write: (users) => render(users) }));
+```
+
+Always cancel the stream (or pass a `signal`) to stop the underlying observer:
+
+```ts
+const reader = db.watchStream('users').getReader();
+
+for (;;) {
+  const { value: users, done } = await reader.read();
+  if (done) break;
+  render(users);
+}
+
+await reader.cancel(); // unsubscribes the observer
+```
+
+The same `mode` and `signal` options as `watch()` apply.
 
 ### `observeMany` — Combined Multi-Table Snapshot
 
 `observeMany(tables, listener)` subscribes to multiple tables at once and delivers a single combined snapshot `{ [tableName]: RecordOf<S, T>[] }` whenever any observed table changes.
 
-The listener fires once after all tables have been prefetched, ensuring the snapshot is always complete regardless of which table triggers it.
+All per-table observers fire immediately on registration. The combined listener fires once all tables have reported their initial snapshot, ensuring the combined view is always complete.
 
 ```ts
 const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
   renderDashboard(users, posts);
 });
-
-// fire immediately with current state of all tables
-const stopImmediate = db.observeMany(
-  ['users', 'posts'],
-  ({ users, posts }) => renderDashboard(users, posts),
-  { immediate: true },
-);
-
-stop();
-stopImmediate();
 ```
 
-Writes to multiple tables inside a single `batch()` call coalesce into one callback — observers fire exactly once per microtask, not once per dirty table.
+Writes to multiple tables inside a single `batch()` call coalesce into one callback — the listener fires exactly once per microtask, not once per dirty table.
+
+Pass `{ signal }` to cancel all observers at once:
+
+```ts
+const controller = new AbortController();
+
+db.observeMany(['users', 'posts'], ({ users, posts }) => renderDashboard(users, posts), {
+  signal: controller.signal,
+});
+
+controller.abort();
+```
 
 > `tables` must be non-empty. Passing an empty array throws `VaultScopeError`.
 
@@ -320,7 +391,7 @@ await db.batch(['users', 'posts'], async (tx) => {
 
 ```ts
 await db.batch(['users'], async (tx) => {
-  const user = await tx.getOrDefault('users', 42, () => ({ id: 42, name: 'Guest' }));
+  const user = await tx.getOrDefault('users', 42, () => ({ id: 42, name: 'Guest', age: 0 }));
   // user is either the existing record or the newly inserted default
 });
 ```
@@ -431,7 +502,7 @@ const db = createMemory({
 });
 ```
 
-Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`.
+Tracked operations: `get`, `getAll`, `getMany`, `getOrDefault`, `keys`, `entries`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`.
 
 For `batch` operations, `event.table` is `'*'` because a batch may span multiple tables.
 
@@ -541,8 +612,8 @@ function useUsers(): User[] {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    // immediate: true delivers current state synchronously before the first render
-    return db.observe('users', setUsers, { immediate: true });
+    // observe always fires immediately — setUsers is called once on mount, then on each change
+    return db.observe('users', setUsers);
   }, []);
 
   return users;
@@ -561,11 +632,11 @@ const db = createMemory({ schema });
 export function useUsers(): { users: Ref<User[]> } {
   const users = ref<User[]>([]);
 
+  // observe always fires immediately — users.value is populated on composition
   const stop = db.observe('users', (rows) => {
     users.value = rows;
-  }, { immediate: true });
+  });
 
-  // onScopeDispose runs when the calling composable's scope is destroyed
   onScopeDispose(stop);
 
   return { users };
@@ -582,7 +653,7 @@ export function useUsers(): { users: Ref<User[]> } {
   const db = createMemory({ schema });
 
   let users: User[] = [];
-  const stop = db.observe('users', (rows) => { users = rows; }, { immediate: true });
+  const stop = db.observe('users', (rows) => { users = rows; });
 
   onDestroy(stop);
 </script>

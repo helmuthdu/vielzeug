@@ -1,4 +1,4 @@
-import { VaultError, createMemory, table, type Adapter } from '../index';
+import { type Adapter, createMemory, table, VaultError } from '../index';
 
 type Row = { age: number; city: string; id: number; name: string };
 

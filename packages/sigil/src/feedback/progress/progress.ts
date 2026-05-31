@@ -1,8 +1,8 @@
-import { define, prop, computed, effect, html, styleMap, when } from '@vielzeug/craft';
+import { computed, define, effect, html, prop, styleMap, when } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../shared/config';
+import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './progress.css?inline';
 

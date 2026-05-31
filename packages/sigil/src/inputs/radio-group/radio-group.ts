@@ -14,19 +14,18 @@ import {
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
+  type ChoiceChangeDetail,
   createChoiceField,
   createListControl,
   createStableId,
-  type ChoiceChangeDetail,
   getChoiceLabel,
   getLightChildrenByTag,
   setBooleanAttribute,
   setMaybeAttribute,
 } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { connectFormField } from '../shared/use-field';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
@@ -132,7 +131,9 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       value: props.value,
     });
 
-    connectFormField(choice, defineField, choice.formValue, (v) => v);
+    choice.bindFormField(
+      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
+    );
 
     const selectedValue = choice.selectedValue;
     const isDisabled = fCtxProps.disabled;

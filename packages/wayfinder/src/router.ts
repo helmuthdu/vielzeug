@@ -3,29 +3,29 @@ import type {
   BeforeLeaveOptions,
   DataContext,
   DataFn,
-  HandlerContext,
   HistoryDriver,
   IsActiveOptions,
+  MatchStatus,
   Middleware,
-  NavigateOptions,
   NamedNavigationTarget,
+  NavigateOptions,
+  NavigationDestination,
   PathParams,
   QueryParams,
   RawNavigationTarget,
   ResolvedQueryParams,
   RouteBranchDef,
   RouteContext,
-  RouteHandler,
   RouteLocation,
   RouteMatchBranch,
   RouteName,
   RouteParams,
   RoutePathByName,
   RouteRecord,
-  RouteState,
-  RouteTable,
   RouterErrorContext,
   RouterOptions,
+  RouteState,
+  RouteTable,
   Unsubscribe,
 } from './types';
 
@@ -40,8 +40,17 @@ import {
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
 import { createHydrationManager } from './hydration';
-import { buildPreloadKey, readLocation, stripBase } from './path';
-import { buildUrl, joinPaths, matchRouteFor, matchesPrefix, normalizePath, parseQuery } from './path';
+import {
+  buildPreloadKey,
+  buildUrl,
+  joinPaths,
+  matchesPrefix,
+  matchRouteFor,
+  normalizePath,
+  parseQuery,
+  readLocation,
+  stripBase,
+} from './path';
 import { createPreloadManager } from './preload';
 
 // ─── Module-level helpers (formerly in resolve.ts) ────────────────────────────
@@ -75,6 +84,24 @@ function resolveTarget<TMeta, TComponent>(
   return target.hash ? `${path}#${target.hash}` : path;
 }
 
+// ─── Internal helper ─────────────────────────────────────────────────────────
+
+const ERROR_CONTEXT = Symbol('wayfinder.errorContext');
+
+function attachErrorContext(error: unknown, context: RouterErrorContext): void {
+  if (error !== null && typeof error === 'object') {
+    (error as Record<symbol, RouterErrorContext>)[ERROR_CONTEXT] = context;
+  }
+}
+
+function getErrorContext(error: unknown): RouterErrorContext | undefined {
+  if (error !== null && typeof error === 'object') {
+    return (error as Record<symbol, RouterErrorContext | undefined>)[ERROR_CONTEXT];
+  }
+
+  return undefined;
+}
+
 // ─── Internal types ───────────────────────────────────────────────────────────
 
 type PreparedRoute<TMeta, TComponent> =
@@ -101,44 +128,16 @@ function isAsyncGenerator(value: unknown): value is AsyncGenerator<unknown, unkn
   );
 }
 
-/**
- * Drain an async generator to completion, returning the generator's `return` value
- * (or the last yielded value when `return` is `undefined`).
- * Cleans up the generator when the abort signal fires.
- */
-async function drainGenerator(gen: AsyncGenerator<unknown, unknown>, signal: AbortSignal): Promise<unknown> {
-  let lastYield: unknown;
-
-  while (true) {
-    if (signal.aborted) {
-      await gen.return(undefined as unknown).catch(() => undefined);
-
-      return lastYield;
-    }
-
-    const { done, value } = await gen.next();
-
-    if (done) return value ?? lastYield;
-
-    lastYield = value;
-  }
-}
-
 // ─── Router class ─────────────────────────────────────────────────────────────
 
-class Router<
-  TRoutes extends RouteTable,
-  TMeta = unknown,
-  TComponent = unknown,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> {
+class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> {
   readonly #base: string;
   readonly #history: HistoryDriver;
   readonly #records: readonly RouteRecord<TMeta, TComponent>[];
   readonly #routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
-  readonly #scroll?: RouterOptions<TRoutes, TMeta, TComponent, TLocals>['scroll'];
+  readonly #scroll?: RouterOptions<TRoutes, TMeta, TComponent>['scroll'];
   readonly #useViewTransition: boolean;
-  readonly #onError?: RouterOptions<TRoutes, TMeta, TComponent, TLocals>['onError'];
+  readonly #onError?: RouterOptions<TRoutes, TMeta, TComponent>['onError'];
 
   // Mutable navigation state
   #abortController: AbortController | null = null;
@@ -148,6 +147,10 @@ class Router<
   #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState<TMeta, TComponent>) => void>();
   #navigationId = 0;
+  // F2: waitFor pending subscribers
+  readonly #waiters = new Set<(state: RouteState<TMeta, TComponent>) => boolean>();
+  // F5: compiled notFound fallback record
+  readonly #notFoundRecord: RouteRecord<TMeta, TComponent> | null;
 
   // Sub-managers
   readonly #hydration: ReturnType<typeof createHydrationManager<TMeta, TComponent>>;
@@ -155,7 +158,7 @@ class Router<
 
   readonly #unlistenHistory: () => void;
 
-  constructor(options: RouterOptions<TRoutes, TMeta, TComponent, TLocals>) {
+  constructor(options: RouterOptions<TRoutes, TMeta, TComponent>) {
     const compiled = compileRoutes(options);
 
     this.#base = normalizePath(options.base ?? '/');
@@ -172,6 +175,31 @@ class Router<
       matches: [] as RouteMatchBranch<TMeta, TComponent>,
       status: 'idle',
     });
+
+    // F5: Build a synthetic RouteRecord for the notFound fallback.
+    if (options.notFound) {
+      const nf = options.notFound;
+      const leafDef: RouteBranchDef<TMeta, TComponent> = {
+        component: nf.component as TComponent | undefined,
+        dataFn: nf.data,
+        meta: nf.meta as TMeta | undefined,
+        name: '__notFound__',
+      };
+
+      this.#notFoundRecord = {
+        branchDefs: [leafDef],
+        leaf: leafDef,
+        matcher: { paramNames: [], pattern: /(?:)/, prefixPattern: /(?:)/ },
+        middleware: [
+          ...((options.middleware as unknown as Middleware[]) ?? []),
+          ...((nf.middleware ?? []) as unknown as Middleware[]),
+        ],
+        path: '/*',
+      };
+    } else {
+      this.#notFoundRecord = null;
+    }
+
     this.#unlistenHistory = this.#registerHistoryListener();
 
     const { hash, pathname, search } = this.#history.location;
@@ -274,9 +302,9 @@ class Router<
    * Note: lazy route modules are resolved as a side effect of this call.
    * Useful for SSR data pre-fetching.
    *
-   * @param signal - Optional abort signal to cancel in-flight data loaders.
+   * R5: Accepts an options object instead of a bare AbortSignal.
    */
-  async match(url: string, signal?: AbortSignal): Promise<RouteState<TMeta, TComponent> | null> {
+  async match(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
     const prepared = await this.#resolveUrl(url);
 
     if (prepared.type !== 'matched') return null;
@@ -289,12 +317,12 @@ class Router<
     let status: 'error' | 'idle' = 'idle';
 
     if (hasData) {
-      const effectiveSignal = signal ?? new AbortController().signal;
+      const effectiveSignal = options?.signal ?? new AbortController().signal;
       const branch = buildMatchBranch(defs, params, location.pathname, dataResults);
       const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
 
       try {
-        dataResults = await this.#runDataLoaders(defs, context, effectiveSignal);
+        dataResults = await this.#loadData(defs, context, effectiveSignal, 'drain');
       } catch (e) {
         error = e;
         status = 'error';
@@ -306,6 +334,47 @@ class Router<
       location,
       matches: buildMatchBranch(defs, params, location.pathname, dataResults),
       status,
+    });
+  }
+
+  /**
+   * F2: Returns a Promise that resolves the next time the router reaches `status: 'idle'`
+   * and the active matches include a route named `name`.
+   * Rejects immediately when the router is already in `status: 'error'`.
+   */
+  waitFor(name: RouteName<TRoutes>): Promise<RouteState<TMeta, TComponent>> {
+    this.#assertNotDisposed();
+
+    return new Promise((resolve, reject) => {
+      if (this.#currentState.status === 'error') {
+        reject(this.#currentState.error);
+
+        return;
+      }
+
+      if (this.#currentState.status === 'idle' && this.#currentState.matches.some((m) => m.name === name)) {
+        resolve(this.#currentState);
+
+        return;
+      }
+
+      const check = (state: RouteState<TMeta, TComponent>): boolean => {
+        if (state.status === 'error') {
+          reject(state.error);
+
+          return true;
+        }
+
+        if (state.status === 'idle' && state.matches.some((m) => m.name === name)) {
+          resolve(state);
+
+          return true;
+        }
+
+        return false;
+      };
+
+      this.#waiters.add(check);
     });
   }
 
@@ -379,6 +448,7 @@ class Router<
     this.#navigationId++;
     this.#beforeLeaveBlockers.clear();
     this.#listeners.clear();
+    this.#waiters.clear();
     this.#abortController?.abort();
     this.#abortController = null;
     this.#unlistenHistory();
@@ -410,7 +480,13 @@ class Router<
 
   async #handleHistoryNavigation(newHref: string, previousHref: string): Promise<void> {
     const activeMatchNames = this.#currentState.matches.map((m) => m.name);
-    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames);
+    const parsed = new URL(newHref, 'http://localhost');
+    const dest: NavigationDestination = {
+      params: {},
+      pathname: stripBase(parsed.pathname, this.#base),
+      query: parseQuery(parsed.search),
+    };
+    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
 
     if (!allowed) {
       this.#history.replace(previousHref, this.#currentState.location.historyState);
@@ -430,7 +506,7 @@ class Router<
 
   #runInBackground(promise: Promise<void>, context: RouterErrorContext): void {
     void promise.catch((error) => {
-      this.#reportError(error, context);
+      this.#reportError(error, getErrorContext(error) ?? context);
     });
   }
 
@@ -438,35 +514,161 @@ class Router<
 
   #notifyListeners(): void {
     this.#listeners.forEach((listener) => listener(this.#currentState));
+    // F2: notify waiters; remove those that are satisfied
+    for (const waiter of [...this.#waiters]) {
+      if (waiter(this.#currentState)) {
+        this.#waiters.delete(waiter);
+      }
+    }
   }
 
   // ─── Private: data loaders ────────────────────────────────────────────────
 
   /**
-   * Run all data loaders and return their results.
-   * Async generators are fully drained (consume-once for non-streaming contexts such as
-   * `match()` and `preload()`). The generator's return value (or last yielded value when
-   * no explicit return) is used as the settled data.
+   * R10: Drain an async generator to completion. Private class method replaces
+   * the module-level `drainGenerator` helper.
    */
-  async #runDataLoaders(
+  async #drainGenerator(gen: AsyncGenerator<unknown, unknown>, signal: AbortSignal): Promise<unknown> {
+    let lastYield: unknown;
+
+    while (true) {
+      if (signal.aborted) {
+        await gen.return(undefined as unknown).catch(() => undefined);
+
+        return lastYield;
+      }
+
+      const { done, value } = await gen.next();
+
+      if (done) return value ?? lastYield;
+
+      lastYield = value;
+    }
+  }
+
+  /**
+   * R1: Unified data loader executor.
+   *
+   * `mode: 'drain'` — fully drains async generators; used in `match()` and `preload()`.
+   * `mode: 'stream'` — emits partial state on each generator yield; used during live navigation.
+   *
+   * Per-def `onError` boundaries (R9) are applied regardless of mode.
+   */
+  async #loadData(
     defs: readonly RouteBranchDef<TMeta, TComponent>[],
     context: RouteContext<RouteParams, TRoutes>,
     signal: AbortSignal,
+    mode: 'drain',
+  ): Promise<unknown[]>;
+
+  async #loadData(
+    defs: readonly RouteBranchDef<TMeta, TComponent>[],
+    context: RouteContext<RouteParams, TRoutes>,
+    signal: AbortSignal,
+    mode: 'stream',
+    isCurrent: () => boolean,
+    location: RouteLocation,
+    params: RouteParams,
+  ): Promise<unknown[]>;
+
+  async #loadData(
+    defs: readonly RouteBranchDef<TMeta, TComponent>[],
+    context: RouteContext<RouteParams, TRoutes>,
+    signal: AbortSignal,
+    mode: 'drain' | 'stream',
+    isCurrent?: () => boolean,
+    location?: RouteLocation,
+    params?: RouteParams,
   ): Promise<unknown[]> {
-    return Promise.all(
-      defs.map(async (def) => {
-        if (!def.dataFn) return undefined;
+    // Invoke all data functions, separating generators from promises.
+    const rawResults: Array<AsyncGenerator<unknown, unknown> | unknown> = defs.map((def) => {
+      if (!def.dataFn) return undefined;
 
-        const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
-        const result = dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
+      const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
 
-        if (isAsyncGenerator(result)) {
-          return drainGenerator(result, signal);
+      return dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
+    });
+
+    const streamingIndices: number[] = [];
+
+    // Await non-streaming results with per-def error boundaries.
+    const settled: unknown[] = await Promise.all(
+      rawResults.map(async (raw, i) => {
+        if (isAsyncGenerator(raw)) {
+          if (mode === 'drain') {
+            // Drain mode: consume the generator immediately.
+            try {
+              return await this.#drainGenerator(raw, signal);
+            } catch (err) {
+              const def = defs[i]!;
+
+              if (def.onError) return def.onError(err, { ...context, signal } as unknown as DataContext);
+
+              throw err;
+            }
+          }
+
+          streamingIndices.push(i);
+
+          return undefined; // placeholder resolved in streaming phase
         }
 
-        return result as Promise<unknown>;
+        if (raw === undefined) return undefined;
+
+        try {
+          return await (raw as Promise<unknown>);
+        } catch (err) {
+          const def = defs[i]!;
+
+          if (def.onError) return def.onError(err, { ...context, signal } as unknown as DataContext);
+
+          throw err;
+        }
       }),
     );
+
+    if (mode === 'drain' || streamingIndices.length === 0) return settled;
+
+    // Streaming phase — emit partial state on each yield.
+    const streamingData: unknown[] = [...settled];
+    const loc = location!;
+    const par = params!;
+    const cur = isCurrent!;
+
+    const onPartial = (value: unknown, idx: number): void => {
+      if (!cur()) return;
+
+      streamingData[idx] = value;
+
+      const nodeStatuses: MatchStatus[] = defs.map((_, i) => (streamingIndices.includes(i) ? 'streaming' : 'idle'));
+
+      this.#currentState = createRouteState<TMeta, TComponent>({
+        location: loc,
+        matches: buildMatchBranch(defs, par, loc.pathname, streamingData, nodeStatuses),
+        status: 'streaming',
+      });
+      this.#notifyListeners();
+    };
+
+    await Promise.all(
+      streamingIndices.map(async (idx) => {
+        const gen = rawResults[idx] as AsyncGenerator<unknown, unknown>;
+
+        try {
+          streamingData[idx] = await this.#runStreamingLoader(gen, idx, signal, cur, onPartial);
+        } catch (err) {
+          const def = defs[idx]!;
+
+          if (def.onError) {
+            streamingData[idx] = await def.onError(err, { ...context, signal } as unknown as DataContext);
+          } else {
+            throw err;
+          }
+        }
+      }),
+    );
+
+    return streamingData;
   }
 
   // ─── Private: URL resolution ──────────────────────────────────────────────
@@ -515,7 +717,7 @@ class Router<
       defs.map(() => undefined),
     );
     const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
-    const results = await this.#runDataLoaders(defs, context, effectiveSignal);
+    const results = await this.#loadData(defs, context, effectiveSignal, 'drain');
 
     this.#preload.set(buildPreloadKey(this.#base, record.path, params), results);
   }
@@ -605,100 +807,14 @@ class Router<
     }
   }
 
-  // ─── Private: data loading ────────────────────────────────────────────────
-
-  /**
-   * R6: Extracted data loader executor. R9: per-def onError boundary — each
-   * dataFn error is caught and handed to that def's `onError` if present, before
-   * propagating up.
-   */
-  async #executeDataLoaders(
-    defs: readonly RouteBranchDef<TMeta, TComponent>[],
-    context: RouteContext<RouteParams, TRoutes>,
-    signal: AbortSignal,
-    isCurrent: () => boolean,
-    location: RouteLocation,
-    params: RouteParams,
-  ): Promise<unknown[]> {
-    // Single pass: invoke all dataFns, collect generators vs. promises.
-    const rawResults: Array<AsyncGenerator<unknown, unknown> | unknown> = defs.map((def) => {
-      if (!def.dataFn) return undefined;
-
-      const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
-
-      return dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
-    });
-
-    // Await non-streaming results, applying per-def onError (R9).
-    const streamingIndices: number[] = [];
-    const awaitableResults: unknown[] = await Promise.all(
-      rawResults.map(async (raw, i) => {
-        if (isAsyncGenerator(raw)) {
-          streamingIndices.push(i);
-
-          return undefined; // placeholder — resolved during streaming phase
-        }
-
-        if (raw === undefined) return undefined;
-
-        try {
-          return await (raw as Promise<unknown>);
-        } catch (err) {
-          const def = defs[i]!;
-
-          if (def.onError) return await def.onError(err, { ...context, signal } as unknown as DataContext);
-
-          throw err;
-        }
-      }),
-    );
-
-    if (streamingIndices.length === 0) return awaitableResults;
-
-    // Streaming phase: emit partial updates on each yield.
-    const streamingData: unknown[] = [...awaitableResults];
-
-    const onPartial = (value: unknown, idx: number): void => {
-      if (!isCurrent()) return;
-
-      streamingData[idx] = value;
-      this.#currentState = createRouteState<TMeta, TComponent>({
-        location,
-        matches: buildMatchBranch(defs, params, location.pathname, streamingData),
-        status: 'streaming',
-      });
-      this.#notifyListeners();
-    };
-
-    await Promise.all(
-      streamingIndices.map(async (idx) => {
-        const gen = rawResults[idx] as AsyncGenerator<unknown, unknown>;
-
-        try {
-          streamingData[idx] = await this.#runStreamingLoader(gen, idx, signal, isCurrent, onPartial);
-        } catch (err) {
-          const def = defs[idx]!;
-
-          if (def.onError) {
-            streamingData[idx] = await def.onError(err, { ...context, signal } as unknown as DataContext);
-          } else {
-            throw err;
-          }
-        }
-      }),
-    );
-
-    return streamingData;
-  }
-
-  // ─── Private: terminal (data + handler) ───────────────────────────────────
+  // ─── Private: terminal (data only — F4: handler removed) ─────────────────
 
   async #runTerminal(
     record: RouteRecord<TMeta, TComponent>,
     context: RouteContext<RouteParams, TRoutes>,
     location: RouteLocation,
     params: RouteParams,
-    initialBranch: RouteMatchBranch<TMeta, TComponent>,
+    _initialBranch: RouteMatchBranch<TMeta, TComponent>,
     signal: AbortSignal,
     isCurrent: () => boolean,
   ): Promise<void> {
@@ -715,16 +831,18 @@ class Router<
       if (cached) {
         dataResults = cached;
       } else {
-        // Emit loading state while data is in-flight.
+        // Emit per-node loading state (F1) while data is in-flight.
+        const loadingStatuses: MatchStatus[] = defs.map((d) => (d.dataFn ? 'loading' : 'idle'));
+
         this.#currentState = createRouteState<TMeta, TComponent>({
           location,
-          matches: initialBranch,
+          matches: buildMatchBranch(defs, params, location.pathname, dataResults, loadingStatuses),
           status: 'loading',
         });
         this.#notifyListeners();
 
         try {
-          dataResults = await this.#executeDataLoaders(defs, context, signal, isCurrent, location, params);
+          dataResults = await this.#loadData(defs, context, signal, 'stream', isCurrent, location, params);
         } catch (error) {
           this.#currentState = createRouteState<TMeta, TComponent>({
             error,
@@ -732,6 +850,8 @@ class Router<
             matches: buildMatchBranch(defs, params, location.pathname, dataResults),
             status: 'error',
           });
+          // R3: attach enriched context so the eventual reporter uses it.
+          attachErrorContext(error, { routeName: record.leaf.name, source: 'data-loader' });
           // Do not call #notifyListeners here — the finally block in #handleRoute does it once.
           throw error;
         }
@@ -740,22 +860,11 @@ class Router<
 
     if (!isCurrent()) return;
 
-    const finalBranch = buildMatchBranch(defs, params, location.pathname, dataResults);
-
-    this.#currentState = createRouteState<TMeta, TComponent>({ location, matches: finalBranch, status: 'idle' });
-
-    const leaf = defs[defs.length - 1]!;
-
-    if (leaf.handler) {
-      const handler = leaf.handler as unknown as RouteHandler<RouteParams, TRoutes>;
-      const handlerCtx: HandlerContext<RouteParams, TRoutes> = {
-        ...context,
-        data: dataResults[dataResults.length - 1],
-        matches: finalBranch,
-      };
-
-      await handler(handlerCtx);
-    }
+    this.#currentState = createRouteState<TMeta, TComponent>({
+      location,
+      matches: buildMatchBranch(defs, params, location.pathname, dataResults),
+      status: 'idle',
+    });
   }
 
   // ─── Private: view transitions ────────────────────────────────────────────
@@ -782,7 +891,13 @@ class Router<
 
   // ─── Private: main navigation orchestrator ────────────────────────────────
 
-  async #handleRoute(useTransition?: boolean, redirectDepth = 0): Promise<void> {
+  /**
+   * R8: Declarative redirect loops are detected by the `depth` counter passed through
+   * `#commitRedirect` (mirrors `#resolveUrl`'s 5-hop limit). Middleware redirects
+   * (via `ctx.navigate()`) are handled by `#navigateToPath`.
+   * R6: `internalNavigation` boolean is replaced by `#commitRedirect` for redirect paths.
+   */
+  async #handleRoute(useTransition?: boolean, depth = 0): Promise<void> {
     this.#abortController?.abort();
 
     const controller = new AbortController();
@@ -793,19 +908,66 @@ class Router<
     const prevState = this.#currentState;
     const isCurrent = (): boolean => this.#navigationId === navId;
 
-    const prepared = await this.#prepareRoute(readLocation(this.#base, this.#history));
+    const currentLocation = readLocation(this.#base, this.#history);
+    const prepared = await this.#prepareRoute(currentLocation);
 
     if (!isCurrent()) return;
 
     if (prepared.type === 'redirect') {
-      if (redirectDepth >= 5) throw new Error('[wayfinder] Redirect loop detected');
-
-      await this.#navigateToPath(prepared.redirectTo, { replace: true }, redirectDepth + 1, true);
+      // R8: follow declarative redirect internally without user-visible blockers.
+      await this.#commitRedirect(prepared.redirectTo, true, depth);
 
       return;
     }
 
     if (prepared.type === 'unmatched') {
+      // F5: fall back to notFound record when defined.
+      if (this.#notFoundRecord) {
+        const nfDefs = [this.#notFoundRecord.leaf];
+        const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
+        let committed = false;
+
+        const run = async (): Promise<void> => {
+          if (!isCurrent()) return;
+
+          const context = createRouteContext<TRoutes>(
+            currentLocation,
+            currentLocation.query as ResolvedQueryParams,
+            {},
+            nfBranch,
+            (target, options) => this.navigate(target, options),
+          );
+
+          await executeMiddlewarePipeline(
+            context,
+            this.#notFoundRecord!.middleware as unknown as Middleware<TRoutes>[],
+            async () => {
+              committed = true;
+              await this.#runTerminal(
+                this.#notFoundRecord!,
+                context,
+                currentLocation,
+                {},
+                nfBranch,
+                controller.signal,
+                isCurrent,
+              );
+            },
+          );
+        };
+
+        try {
+          await this.#runWithTransition(run, useTransition);
+        } finally {
+          if (isCurrent() && committed) {
+            this.#notifyListeners();
+            this.#applyScroll(this.#currentState, prevState);
+          }
+        }
+
+        return;
+      }
+
       this.#currentState = createRouteState<TMeta, TComponent>({
         location: prepared.location,
         matches: [] as RouteMatchBranch<TMeta, TComponent>,
@@ -870,12 +1032,32 @@ class Router<
     return `${joinPaths(this.#base, normalizedPath)}${parsed.search}${parsed.hash}`;
   }
 
-  async #navigateToPath(
-    path: string,
-    options: NavigateOptions = {},
-    redirectDepth = 0,
-    internalNavigation = false,
-  ): Promise<void> {
+  /**
+   * R6: Internal redirect path — pushes/replaces history and re-runs route handling
+   * without running leave blockers (user never initiated this navigation).
+   * R8: accepts `depth` to detect declarative redirect loops (mirrors #resolveUrl's 5-hop limit).
+   */
+  async #commitRedirect(path: string, replace = true, depth = 0): Promise<void> {
+    if (depth >= 5) throw new Error('[wayfinder] Redirect loop detected');
+
+    const destination = this.#resolveDestination(path);
+
+    this.#lastHref = destination;
+
+    if (replace) {
+      this.#history.replace(destination);
+    } else {
+      this.#history.push(destination);
+    }
+
+    await this.#handleRoute(undefined, depth + 1);
+  }
+
+  /**
+   * User-initiated navigation. Always runs leave blockers.
+   * R6: `internalNavigation` param is removed; use `#commitRedirect` for redirect paths.
+   */
+  async #navigateToPath(path: string, options: NavigateOptions = {}): Promise<void> {
     this.#assertNotDisposed();
 
     const destination = this.#resolveDestination(path);
@@ -883,13 +1065,16 @@ class Router<
     if (!options.force && destination === this.#lastHref) return;
 
     const prevLastHref = this.#lastHref;
+    const activeMatchNames = this.#currentState.matches.map((m) => m.name);
+    const parsed = new URL(destination, 'http://localhost');
+    const dest: NavigationDestination = {
+      params: {},
+      pathname: stripBase(parsed.pathname, this.#base),
+      query: parseQuery(parsed.search),
+    };
+    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
 
-    if (!internalNavigation) {
-      const activeMatchNames = this.#currentState.matches.map((m) => m.name);
-      const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames);
-
-      if (!allowed) return;
-    }
+    if (!allowed) return;
 
     this.#lastHref = destination;
 
@@ -900,11 +1085,10 @@ class Router<
     }
 
     try {
-      await this.#handleRoute(options.viewTransition, redirectDepth);
+      await this.#handleRoute(options.viewTransition);
     } catch (err) {
       // Restore #lastHref to the pre-navigation value so the same destination
-      // can be retried after a transient failure. The history entry that was
-      // pushed is left in place intentionally — back-button navigation still works.
+      // can be retried after a transient failure.
       this.#lastHref = prevLastHref;
       throw err;
     }
@@ -924,12 +1108,9 @@ class Router<
  *   },
  * });
  */
-export function createRouter<
-  const TRoutes extends RouteTable,
-  TMeta = unknown,
-  TComponent = unknown,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
->(options: RouterOptions<TRoutes, TMeta, TComponent, TLocals>): Router<TRoutes, TMeta, TComponent, TLocals> {
+export function createRouter<const TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown>(
+  options: RouterOptions<TRoutes, TMeta, TComponent>,
+): Router<TRoutes, TMeta, TComponent> {
   return new Router(options);
 }
 

@@ -134,7 +134,7 @@ export const wait = (ms = 0): Promise<void> =>
  * beforeEach(() => resetIdCounter());
  * ```
  */
-export { resetIdCounter } from '../headless/id';
+export { resetIdCounter } from '@vielzeug/craft';
 
 // ── ARIA snapshot helper ───────────────────────────────────────────────────────
 
@@ -173,36 +173,95 @@ export const getAriaState = (
   role: el.getAttribute('role'),
 });
 
-// ── Component setup helper ────────────────────────────────────────────────────
+// ── Typed component mount wrappers (F3) ───────────────────────────────────────
+
+import type { Fixture } from '@vielzeug/craft/testing';
+
+import { mount } from '@vielzeug/craft/testing';
+
+import type { BitCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
+import type { BitCheckboxProps } from '../inputs/checkbox/checkbox';
+import type { BitComboboxProps } from '../inputs/combobox/combobox.types';
+import type { BitInputProps } from '../inputs/input/input';
+import type { BitRadioGroupProps } from '../inputs/radio-group/radio-group';
+import type { BitRadioProps } from '../inputs/radio/radio';
+import type { BitSelectProps } from '../inputs/select/select';
+import type { BitSwitchProps } from '../inputs/switch/switch';
+import type { BitTextareaProps } from '../inputs/textarea/textarea';
 
 /**
- * Registers a component for testing by wrapping the dynamic import in a
- * `beforeAll`. The imported module is side-effectful (calls `define()`), so a
- * single import per test file is enough.
- *
- * Reduces boilerplate from:
- * ```ts
- * beforeAll(async () => { await import('./my-component'); });
- * ```
- * to:
- * ```ts
- * setupComponent(() => import('./my-component'));
- * ```
- *
- * @example
- * ```ts
- * import { setupComponent } from '@vielzeug/sigil/testing';
- *
- * setupComponent(() => import('../input'));
- *
- * it('renders the input', async () => {
- *   const fixture = mount('<bit-input></bit-input>');
- *   // ...
- * });
- * ```
+ * Serializes an attribute map to an HTML attribute string fragment.
+ * Values are HTML-escaped to prevent attribute injection.
  */
-export const setupComponent = (importFn: () => Promise<unknown>): void => {
-  beforeAll(async () => {
-    await importFn();
-  });
+const attrsToHtml = (attrs: Record<string, string>): string =>
+  Object.entries(attrs)
+    .map(([key, value]) => (value === '' ? key : `${key}="${value.replace(/"/g, '&quot;')}"`))
+    .join(' ');
+
+/**
+ * Converts a props object into an HTML attribute record.
+ * - `true` → empty boolean attribute (e.g., `disabled`)
+ * - `false` / `null` / `undefined` → attribute omitted
+ * - Array of objects → **omitted** (cannot be serialized as an HTML attribute;
+ *   use `opts.innerHTML` with slotted elements instead)
+ * - Array of primitives → comma-joined string
+ * - everything else → stringified
+ */
+const propsToAttrs = (props: Record<string, unknown> = {}): Record<string, string> => {
+  const attrs: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(props)) {
+    if (value === false || value == null) continue;
+
+    if (value === true) {
+      attrs[key] = '';
+    } else if (Array.isArray(value)) {
+      // Object arrays cannot be represented as HTML attributes — skip silently.
+      if (value.length > 0 && typeof value[0] === 'object') continue;
+
+      attrs[key] = (value as string[]).join(',');
+    } else {
+      attrs[key] = String(value);
+    }
+  }
+
+  return attrs;
 };
+
+type MountOptions = { innerHTML?: string };
+
+/** Typed mount wrapper for `<bit-input>`. Catch prop name typos at compile time. */
+export const mountBitInput = (props?: Partial<BitInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-input>`);
+
+/** Typed mount wrapper for `<bit-textarea>`. */
+export const mountBitTextarea = (props?: Partial<BitTextareaProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-textarea ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-textarea>`);
+
+/** Typed mount wrapper for `<bit-select>`. */
+export const mountBitSelect = (props?: Partial<BitSelectProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-select ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-select>`);
+
+/** Typed mount wrapper for `<bit-combobox>`. */
+export const mountBitCombobox = (props?: Partial<BitComboboxProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-combobox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-combobox>`);
+
+/** Typed mount wrapper for `<bit-checkbox>`. */
+export const mountBitCheckbox = (props?: Partial<BitCheckboxProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-checkbox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-checkbox>`);
+
+/** Typed mount wrapper for `<bit-checkbox-group>`. */
+export const mountBitCheckboxGroup = (props?: Partial<BitCheckboxGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-checkbox-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-checkbox-group>`);
+
+/** Typed mount wrapper for `<bit-radio>`. */
+export const mountBitRadio = (props?: Partial<BitRadioProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-radio ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-radio>`);
+
+/** Typed mount wrapper for `<bit-radio-group>`. */
+export const mountBitRadioGroup = (props?: Partial<BitRadioGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-radio-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-radio-group>`);
+
+/** Typed mount wrapper for `<bit-switch>`. */
+export const mountBitSwitch = (props?: Partial<BitSwitchProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-switch ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-switch>`);

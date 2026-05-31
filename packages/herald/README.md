@@ -4,7 +4,7 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, pipeEvents, createTestBus]
+exports: [createBus, createBehaviorBus, pipeEvents, createTestBus]
 ---
 
 # @vielzeug/herald
@@ -77,11 +77,11 @@ const unpipe = pipeEvents(bus, auditBus, ['user:login', 'user:logout']);
 // unpipe() — stop forwarding; also stops automatically when either bus disposes
 
 // Disposal signal — fire external cleanup when the bus is torn down
-otherBus.on('count', handler, bus.disposalSignal);
+otherBus.on('count', handler, { signal: bus.disposalSignal });
 
 // Handle disposal in async code
 try {
-  await bus.wait('user:login', AbortSignal.timeout(1_000));
+  await bus.wait('user:login', { signal: AbortSignal.timeout(1_000) });
 } catch (err) {
   if (err instanceof BusDisposedError) {
     console.log('Bus was disposed');

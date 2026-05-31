@@ -14,7 +14,7 @@ A popover needs a visible arrow element pointing back to its trigger. The arrow 
 Use `arrow()` after `flip()` and `shift()` to place the arrow against the final computed position, and `hide()` to track reference visibility.
 
 ```ts
-import { arrow, autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/orbit';
+import { arrow, autoUpdate, computePosition, flip, hide, offset, shift } from '@vielzeug/orbit';
 import type { ArrowData, HideData } from '@vielzeug/orbit';
 
 const trigger = document.querySelector<HTMLElement>('#btn')!;
@@ -33,9 +33,12 @@ function update() {
   popover.style.top = `${y}px`;
   popover.dataset.placement = placement;
 
-  const { x: ax, y: ay } = middlewareData.arrow as ArrowData;
+  const { centerOffset, constrained, x: ax, y: ay } = middlewareData.arrow as ArrowData;
   arrowEl.style.left = ax != null ? `${ax}px` : '';
   arrowEl.style.top = ay != null ? `${ay}px` : '';
+  // When constrained, the arrow is clamped; use centerOffset for a visual nudge if needed.
+  void centerOffset;
+  void constrained;
 
   const { referenceHidden } = middlewareData.hide as HideData;
   popover.style.visibility = referenceHidden ? 'hidden' : 'visible';
@@ -80,7 +83,7 @@ trigger.addEventListener('click', () => {
 
 - `arrow()` must come after `flip()` and `shift()` in the pipeline. Placing it earlier means the arrow is positioned relative to the initial placement, not the final one.
 - `middlewareData.arrow` is `undefined` before the first `computePosition` call. Destructure with a fallback when applying styles imperatively before the first update.
-- The `centerOffset` field of `ArrowData` is non-zero when the popover is too small to center the arrow on the reference. Use it to nudge the arrow visually toward the correct edge.
+- Use `ArrowData.constrained` (a `boolean`) to detect when the arrow was clamped away from its ideal position. Use `centerOffset` (a signed pixel offset) for a visual correction nudge.
 
 ### Related
 

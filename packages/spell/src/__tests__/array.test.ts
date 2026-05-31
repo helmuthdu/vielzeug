@@ -1,4 +1,4 @@
-import { ValidationError, s } from '../index';
+import { s, ValidationError } from '../index';
 
 describe('s.array()', () => {
   it('accepts arrays, rejects non-arrays', () => {

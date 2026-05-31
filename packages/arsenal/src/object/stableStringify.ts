@@ -5,8 +5,8 @@
  *
  * Useful for generating stable cache keys from arbitrary query parameters or options objects.
  *
- * @throws `TypeError` for class instances (objects whose prototype is neither `Object.prototype`
- * nor `null`) — use plain objects or `JSON.stringify` with a replacer for those cases.
+ * Class instances (objects whose prototype is neither `Object.prototype` nor `null`) fall back
+ * to `String(value)` by default. Pass `{ strict: true }` to throw a `TypeError` instead.
  *
  * @example
  * ```ts
@@ -14,9 +14,10 @@
  * stableStringify([3, 1, 2])      // '[3,1,2]'
  * stableStringify(new Date('2024-01-01T00:00:00Z')) // '[Date:2024-01-01T00:00:00.000Z]'
  * stableStringify(new Set([3, 1, 2])) // '[Set:1,2,3]'
+ * stableStringify(new MyClass(), { strict: true }) // throws TypeError
  * ```
  */
-export function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown, options?: { strict?: boolean }): string {
   if (value === undefined) return 'undefined';
 
   if (value === null) return 'null';
@@ -29,11 +30,15 @@ export function stableStringify(value: unknown): string {
 
   if (value instanceof RegExp) return `[RegExp:${value.source}/${value.flags}]`;
 
-  if (value instanceof Set) return `[Set:${[...value].map(stableStringify).sort().join(',')}]`;
+  if (value instanceof Set)
+    return `[Set:${[...value]
+      .map((v) => stableStringify(v, options))
+      .sort()
+      .join(',')}]`;
 
   if (value instanceof Map) {
     const entries = [...value.entries()]
-      .map(([key, entryValue]) => [stableStringify(key), stableStringify(entryValue)] as const)
+      .map(([key, entryValue]) => [stableStringify(key, options), stableStringify(entryValue, options)] as const)
       .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
         leftKey === rightKey ? leftValue.localeCompare(rightValue) : leftKey.localeCompare(rightKey),
       );
@@ -41,16 +46,20 @@ export function stableStringify(value: unknown): string {
     return `[Map:${entries.map(([key, entryValue]) => `${key}=>${entryValue}`).join(',')}]`;
   }
 
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (Array.isArray(value)) return `[${value.map((v) => stableStringify(v, options)).join(',')}]`;
 
   const proto = Object.getPrototypeOf(value) as unknown;
 
   if (proto !== Object.prototype && proto !== null) {
-    throw new TypeError(
-      `stableStringify: unsupported type ${
-        (value as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'
-      }`,
-    );
+    if (options?.strict) {
+      throw new TypeError(
+        `stableStringify: unsupported type ${
+          (value as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'
+        }`,
+      );
+    }
+
+    return String(value);
   }
 
   const rec = value as Record<string, unknown>;
@@ -58,5 +67,5 @@ export function stableStringify(value: unknown): string {
     .filter((k) => rec[k] !== undefined)
     .sort();
 
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k])}`).join(',')}}`;
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k], options)}`).join(',')}}`;
 }

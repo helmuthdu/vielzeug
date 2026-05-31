@@ -1,5 +1,5 @@
 import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail } from '../../headless';
-import type { SelectableFieldProps } from '../../shared/config';
+import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
 export type BitComboboxEvents = {

@@ -1,4 +1,4 @@
-import { type HostBindFn, createContext, type ReadonlySignal } from '@vielzeug/craft';
+import { createContext, type HostBindFn, type ReadonlySignal } from '@vielzeug/craft';
 import { computed } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
@@ -18,7 +18,7 @@ export type FormContext = {
    */
   validateOn: ReadonlySignal<ValidationTrigger>;
   /** Default variant propagated to all child form fields */
-  variant: ReadonlySignal<Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined>;
+  variant: ReadonlySignal<VisualVariant | undefined>;
 };
 
 export const FORM_CTX = createContext<FormContext>('FormContext');

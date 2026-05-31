@@ -21,22 +21,26 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `createSessionStorage(opts)` | SessionStorage adapter | Sync | Data is lost when the tab closes |
 | `createIndexedDB(opts)` | IndexedDB adapter with iterate and atomic batch | Sync (lazy open) | First operation opens the DB; call `dispose()` to close it |
 | `createMemory(opts)` | In-memory adapter for tests and SSR | Sync | Data is not persisted across reloads |
-| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning | Sync | Returns a stop function — call it on teardown to cancel the timer |
+| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning | Sync | Auto-stops on `VaultDisposedError`; returns a `stop` function for earlier cancellation |
 | `db.put / putAll` | Write one or many records | Async | Validators run on every write — a failed `parse()` throws before touching storage |
 | `db.get / getAll / getMany` | Read records | Async | Expired records are never returned — check `db.debug()` for expired count |
+| `db.keys(table)` | Return all primary keys (no record fetch) | Async | Skips expired records |
+| `db.entries(table)` | Return all `[key, record]` pairs | Async | Skips expired records |
+| `db.getOrDefault(table, key, fn)` | Read-or-insert at the adapter level | Async | Not atomic on memory/WebStorage; wrap in `batch()` on IDB for atomicity |
 | `db.query(table)` | Start a lazy query pipeline | Sync (lazy) | `count()` respects `limit`/`offset`; use `totalCount()` for the full set size |
 | `db.batch(tables, fn)` | Multi-table write with deferred notifications | Async | On IDB, the callback throwing aborts the whole transaction |
-| `db.observe(table, fn)` | Subscribe to table changes | Sync | Returns an unsubscribe function — forgetting to call it leaks listeners |
-| `db.watch(table)` | Async iterable of table snapshots | Async | Always yields an initial snapshot before waiting for changes |
+| `db.observe(table, fn)` | Subscribe to table changes — fires immediately on registration | Sync | Returns an unsubscribe function — forgetting to call it leaks listeners |
+| `db.watch(table, opts?)` | Async iterable of table snapshots | Async | Always yields an initial snapshot; use `signal` to stop externally |
+| `db.watchStream(table, opts?)` | `ReadableStream` of table snapshots | Sync | `cancel()` stops the observer — always cancel the stream when done |
 | `db.iterate(table)` | Cursor-based async iteration — IDB only | Async | Not available on memory or web storage adapters |
 | `db.upsert(table, key, fn)` | Read-modify-write | Async | `fn` always receives the current record; never the stale previous value |
-| `db.dispose()` | Release all resources | Sync | All subsequent operations throw `VaultDisposedError` |
+| `db.dispose()` | Release all resources | Async | All subsequent operations throw `VaultDisposedError` |
 
 ## Exports
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
 
-**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `DebugInfo`, `DebugStats`, `VaultLogger`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `ReadQuery`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`
+**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `VaultCodec`, `VaultLogger`
 
 ---
 
@@ -101,14 +105,16 @@ function scheduleExpiredPrune<S extends AnySchema>(
 ): () => void
 ```
 
-Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` function that cancels the schedule.
+Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` function.
+
+The schedule also stops automatically if `pruneExpired()` throws `VaultDisposedError` — no cleanup needed after `dispose()` if the adapter is disposed before the timer fires.
 
 ```ts
 import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
 
 const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
 
-// cancel on teardown
+// cancel on teardown (before dispose)
 stop();
 ```
 
@@ -248,7 +254,10 @@ interface Adapter<S extends AnySchema> {
   clear<K extends keyof S>(table: K): Promise<void>;
 
   /** Release all resources (observers, signal subscriptions, channel, DB connection). */
-  dispose(): void;
+  dispose(): Promise<void>;
+
+  /** Return all `[key, record]` pairs in the table. Expired records are excluded. */
+  entries<K extends keyof S>(table: K): Promise<Array<[KeyOf<S, K>, RecordOf<S, K>]>>;
 
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
@@ -259,49 +268,74 @@ interface Adapter<S extends AnySchema> {
    */
   getMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
 
+  /**
+   * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
+   * writes the result, and returns it.
+   *
+   * **Not atomic on memory and WebStorage adapters.** For guaranteed atomicity, wrap in
+   * `batch(['table'], tx => tx.getOrDefault(...))` with the IndexedDB adapter.
+   */
+  getOrDefault<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    defaultFn: () => RecordOf<S, K>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K>>;
+
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
+  /** Return all primary key values in the table without fetching records. Expired records are excluded. */
+  keys<K extends keyof S>(table: K): Promise<KeyOf<S, K>[]>;
+
   /**
-   * Subscribe to table changes. Does **not** fire an initial snapshot by default.
-   * Pass `{ immediate: true }` to also receive the current table state on registration.
+   * Subscribe to table changes. **Always fires immediately** with the current table state on
+   * registration, then fires again on every subsequent mutation.
    * Returns an unsubscribe function — call it on teardown.
+   *
+   * Pass `{ signal }` to unsubscribe via an `AbortController` instead of — or in addition to —
+   * calling the returned function.
    */
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { immediate?: boolean },
+    options?: { signal?: AbortSignal },
   ): () => void;
 
   /**
    * Subscribe to multiple tables at once. Fires a combined snapshot `{ [tableName]: records[] }`
-   * whenever any observed table changes. All tables are eagerly prefetched on registration.
+   * once all tables have delivered their initial state, then fires again whenever any observed
+   * table changes. Multiple tables mutated inside a single `batch()` coalesce into one callback.
    * Throws `VaultScopeError` when `tables` is empty.
    * Returns an unsubscribe function — call it on teardown.
    */
-  observeMany<K extends keyof S>(
+  observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    options?: { immediate?: boolean },
+    options?: { signal?: AbortSignal },
   ): () => void;
 
   /**
-   * Explicitly delete all TTL-expired records from every table.
-   * Returns the number of records pruned per table.
+   * Explicitly delete TTL-expired records from the specified tables (or all tables when
+   * no filter is provided). Returns the count of records pruned per table.
    */
-  pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
+  pruneExpired(tables?: readonly (keyof S & string)[]): Promise<{ [K in keyof S & string]: number }>;
 
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
   query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
 
+  /**
+   * Merge `changes` into the existing record. Returns the merged record.
+   * Throws `VaultError` if the key does not exist — use `upsert` for insert-or-update semantics.
+   */
   update<K extends keyof S>(
     table: K,
     key: KeyOf<S, K>,
     changes: Partial<RecordOf<S, K>>,
     ttl?: TtlMs,
-  ): Promise<RecordOf<S, K> | undefined>;
+  ): Promise<RecordOf<S, K>>;
 
-  /** Read-modify-write. `fn` receives the current record (or undefined) and returns the new record. */
+  /** Read-modify-write. `fn` receives the current record (or `undefined`) and returns the new record. */
   upsert<K extends keyof S>(
     table: K,
     key: KeyOf<S, K>,
@@ -310,76 +344,85 @@ interface Adapter<S extends AnySchema> {
   ): Promise<RecordOf<S, K>>;
 
   /**
-   * Async iterator that yields a fresh snapshot on every table change,
-   * starting with an immediate snapshot. Auto-cleans up its observer on exit.
+   * Async iterable that yields a fresh snapshot on every table change, starting immediately.
+   * The observer is cleaned up automatically when the loop exits.
+   *
+   * @param options.mode - `'latest'` (default) drops intermediate snapshots when the consumer
+   *   lags. `'all'` queues every snapshot.
+   * @param options.signal - An `AbortSignal` that stops the iteration from outside the loop.
    */
-  watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
+  watch<K extends keyof S>(
+    table: K,
+    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
+  ): AsyncIterable<RecordOf<S, K>[]>;
+
+  /**
+   * Web Standard `ReadableStream` that emits a fresh snapshot on every table change,
+   * starting immediately. Always cancel the stream (or pass a `signal`) to stop the
+   * underlying observer.
+   *
+   * @param options.mode - `'latest'` (default) drops intermediate snapshots when the consumer
+   *   lags. `'all'` queues every snapshot in order.
+   * @param options.signal - An `AbortSignal` that closes the stream.
+   */
+  watchStream<K extends keyof S>(
+    table: K,
+    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
+  ): ReadableStream<RecordOf<S, K>[]>;
 }
 ```
 
-### `observe` options
+### `observe` behavior
+
+`observe` **always fires immediately** with the current table state on registration — there is no deferred-first-call mode. Subsequent calls fire whenever the table is mutated.
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener |
+
+Returns an unsubscribe function. Calling it and aborting the signal both cancel the observer — either approach works.
+
+### `observeMany` behavior
+
+`observeMany` always populates the snapshot map immediately on registration (once per-table snapshot is delivered). The combined listener fires as soon as all tables have reported their initial state.
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `signal` | `AbortSignal` | When aborted, unsubscribes all underlying observers |
+
+### `watch` options
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `immediate` | `boolean` | `false` | Fire the listener immediately with the current table contents |
+| `mode` | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags |
+| `signal` | `AbortSignal` | — | When aborted, terminates the iteration |
 
-Returns an unsubscribe function. Call it on teardown to prevent memory leaks.
-
-### `observeMany` options
+### `watchStream` options
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `immediate` | `boolean` | `false` | Fire the listener once all tables have been prefetched (current state) |
+| `mode` | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags |
+| `signal` | `AbortSignal` | — | When aborted, closes the stream |
 
 ---
 
 ## TransactionContext
 
-Available inside `batch()` callbacks.
+Available inside `batch()` callbacks. `TransactionContext<S, K>` is a stable public alias for the same `SharedMethods` set that appears on `Adapter` — use it to type the `tx` parameter of a batch callback.
 
 ```ts
-type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
-  clear<T extends K>(table: T): Promise<void>;
-  count<T extends K>(table: T): Promise<number>;
-  delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  /** Delete multiple records by key. Returns the count of deleted records. */
-  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
-  get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
-  getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-  /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
-  getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
-  /**
-   * Return the existing record if found, otherwise call `defaultFn()`, write it, and return it.
-   * On IndexedDB the check and insert are atomic (same IDB transaction).
-   */
-  getOrDefault<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    defaultFn: () => RecordOf<S, T>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T>>;
-  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
-  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
-  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
-  update<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    changes: Partial<RecordOf<S, T>>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T> | undefined>;
-  upsert<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T>>;
-};
+type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> =
+  SharedMethods<S, K>; // same CRUD surface as Adapter, scoped to K
 ```
 
-`batch()` is scoped to the tables listed in the first argument. The table list must not be empty, and operations on unlisted tables are rejected at both type level and runtime.
+The full method set (for reference):
 
-> `getOrDefault` is only available inside `batch()` callbacks — it is not on the top-level `Adapter`.
+```ts
+// clear, count, delete, deleteMany, entries, get, getAll, getMany,
+// getOrDefault, has, keys, put, putAll, query, update, upsert
+```
+
+`batch()` scopes all operations to the tables declared in its first argument. Accessing any other table at runtime throws `VaultScopeError`. The first argument must not be empty.
 
 ---
 
@@ -387,19 +430,40 @@ type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
 
 Queries are lazy pipelines. Operations accumulate until a terminal method is called.
 
+`QueryBuilder<T, N>` carries two type parameters: `T` is the base record type, `N` is the progressively-narrowed type built up by `equals()` calls. The narrowed type flows through to `toArray()`, `first()`, `count()`, `totalCount()`, and `delete()`.
+
 ```ts
-interface QueryBuilder<T extends Record<string, unknown>> {
+interface QueryBuilder<T extends Record<string, unknown>, N extends T = T> {
   // filter operators (chainable)
-  filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
-  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
-  between<K extends ComparableFieldKeys<T>>(field: K, lower: T[K], upper: T[K]): QueryBuilder<T>;
-  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
-  limit(n: number): QueryBuilder<T>;
-  offset(n: number): QueryBuilder<T>;
+  filter(fn: (value: N) => boolean): QueryBuilder<T, N>;
+
+  /**
+   * Narrows the result type: `equals('role', 'admin')` returns
+   * `QueryBuilder<T, N & { role: 'admin' }>`. Subsequent operators
+   * and terminal calls reflect this constraint.
+   */
+  equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T & Record<K, V>>;
+
+  /** Inclusive range filter. Preserves existing `N` narrowing. */
+  between<K extends ComparableFieldKeys<T>>(
+    field: K,
+    lower: Extract<NonNullable<T[K]>, number | string>,
+    upper: Extract<NonNullable<T[K]>, number | string>,
+  ): QueryBuilder<T, N>;
+
+  /** Prefix filter. Preserves existing `N` narrowing. */
+  startsWith<K extends keyof T>(
+    field: K,
+    prefix: string,
+    options?: { ignoreCase?: boolean },
+  ): QueryBuilder<T, N>;
+
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T, N>;
+  limit(n: number): QueryBuilder<T, N>;
+  offset(n: number): QueryBuilder<T, N>;
 
   // terminal methods
-  toArray(): Promise<T[]>;
+  toArray(): Promise<N[]>;
   /**
    * Number of matching records after all operations, including `limit` and `offset`.
    * Use `totalCount()` to get the full filtered set size ignoring pagination.
@@ -411,14 +475,12 @@ interface QueryBuilder<T extends Record<string, unknown>> {
    * Use this for "page X of N" UIs where you need the total alongside a paginated slice.
    */
   totalCount(): Promise<number>;
-  first(): Promise<T | undefined>;
+  first(): Promise<N | undefined>;
   delete(): Promise<number>;
 }
 ```
 
 `delete()` returns the number of records removed. `between` and `orderBy` accept `number | string` fields.
-
-`ReadQuery<T>` is the same interface without `delete()`. Both are exported.
 
 ---
 
@@ -580,34 +642,17 @@ Passed to `onMetrics` after every operation.
 type MetricsEvent = {
   duration: number;
   operation:
-    | 'batch' | 'count' | 'delete' | 'deleteMany' | 'clear' | 'get' | 'getAll' | 'getMany'
-    | 'has' | 'put' | 'putAll' | 'query' | 'queryDelete'
-    | 'update' | 'upsert';
+    | 'batch' | 'clear' | 'count' | 'delete' | 'deleteMany' | 'entries'
+    | 'get' | 'getAll' | 'getMany' | 'getOrDefault' | 'has' | 'keys'
+    | 'put' | 'putAll' | 'query' | 'queryDelete' | 'update' | 'upsert';
   /** Table name. For `batch` operations this is `'*'` because a batch may span multiple tables. */
   table: string;
 };
 ```
 
-### `QueryBuilder` / `ReadQuery`
+### `QueryBuilder`
 
-`QueryBuilder<T>` is the full pipeline type. `ReadQuery<T>` is the same interface without `delete()`. Both are exported.
-
-```ts
-interface QueryBuilder<T extends Record<string, unknown>> {
-  filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
-  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
-  between<K extends ComparableFieldKeys<T>>(field: K, lower: T[K], upper: T[K]): QueryBuilder<T>;
-  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
-  limit(n: number): QueryBuilder<T>;
-  offset(n: number): QueryBuilder<T>;
-  toArray(): Promise<T[]>;
-  count(): Promise<number>;
-  totalCount(): Promise<number>;
-  first(): Promise<T | undefined>;
-  delete(): Promise<number>;
-}
-```
+See the full signature in the [QueryBuilder section](#querybuilder) above.
 
 ---
 

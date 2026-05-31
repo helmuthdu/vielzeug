@@ -7,29 +7,17 @@ import type {
   ConsoleTransportOptions,
   JsonTransportOptions,
   LogEntry,
-  LogLevel,
   LogType,
+  PipeOptions,
   RedactTransportOptions,
   RemoteLogData,
   RemoteTransportOptions,
+  ResolvedTheme,
   SampleTransportOptions,
   Transport,
 } from './types';
 
-/* ─── Shared level priority ─── */
-
-export const PRIORITY: Record<LogLevel, number> = {
-  debug: 0,
-  error: 3,
-  fatal: 4,
-  info: 1,
-  off: 5,
-  warn: 2,
-};
-
-export function passes(threshold: LogLevel, level: LogType): boolean {
-  return PRIORITY[threshold] <= PRIORITY[level];
-}
+import { isLevelEnabled } from './types';
 
 /* ─── Context merge ─── */
 
@@ -41,10 +29,16 @@ function mergeContext(bindings: Readonly<Bindings>, context: Bindings | undefine
   return { ...bindings, ...context };
 }
 
-function buildPayload(ctx: Bindings | undefined, message: string | undefined): unknown[] {
-  if (ctx && message !== undefined) return [ctx, message];
+function buildPayload(
+  ctx: Bindings | undefined,
+  message: string | undefined,
+  inspectFn: ((v: unknown) => string) | undefined,
+): unknown[] {
+  const formatted: unknown = inspectFn && ctx ? inspectFn(ctx) : ctx;
 
-  if (ctx) return [ctx];
+  if (formatted !== undefined && message !== undefined) return [formatted, message];
+
+  if (formatted !== undefined) return [formatted];
 
   if (message !== undefined) return [message];
 
@@ -66,16 +60,14 @@ export function detectEnv(): 'development' | 'production' {
 
 /* ─── Console transport internals ─── */
 
-type ResolvedTheme = Record<LogType | 'group' | 'ns', ConsoleThemeEntry>;
-
 export const DEFAULT_THEME: ResolvedTheme = {
-  debug: { badge: '🅳', bg: '#616161', border: '#424242', color: '#fff' },
+  debug: { badge: '🅳', bg: '#616161', border: '#424242', color: '#e0e0e0' },
   error: { badge: '🅴', bg: '#d32f2f', border: '#c62828', color: '#fff' },
   fatal: { badge: '🅵', bg: '#4a148c', border: '#38006b', color: '#fff' },
   group: { badge: '🅶', bg: '#546e7a', border: '#455a64', color: '#fff' },
   info: { badge: '🅸', bg: '#1976d2', border: '#1565c0', color: '#fff' },
   ns: { badge: '', bg: '#424242', border: '#212121', color: '#fff' },
-  warn: { badge: '🆆', bg: '#ffb300', border: '#ffa000', color: '#fff' },
+  warn: { badge: '🆆', bg: '#ffb300', border: '#ffa000', color: '#212121' },
 };
 
 const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
@@ -89,7 +81,7 @@ const LOG_METHOD: Record<LogType, 'error' | 'info' | 'log' | 'warn'> = {
 };
 
 /** Deep-merges per-level overrides onto the default theme. Only specified fields within each level entry are replaced. */
-function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme {
+export function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme {
   if (!override) return DEFAULT_THEME;
 
   const result: ResolvedTheme = { ...DEFAULT_THEME };
@@ -129,7 +121,7 @@ function supportsAnsi(): boolean {
 }
 
 function badgeStyle(entry: ConsoleThemeEntry, extra = ''): string {
-  return `color: ${entry.bg}; border: 1px solid ${entry.border}; border-radius: 4px; padding: 0 1px${extra}`;
+  return `background: ${entry.bg}; color: ${entry.color}; border: 1px solid ${entry.border}; border-radius: 4px; padding: 0 1px${extra}`;
 }
 
 function buildNodePrefix(
@@ -172,14 +164,6 @@ function buildBrowserPrefix(
   return { fmt, parts };
 }
 
-/* ─── consoleTransport marker and theme key ─── */
-
-/** Runtime symbol used to identify consoleTransport instances for group() gating. */
-export const CONSOLE_TRANSPORT_MARKER = Symbol.for('rune.consoleTransport');
-
-/** Runtime symbol used to read the resolved theme from a consoleTransport instance. */
-export const CONSOLE_THEME_KEY = Symbol.for('rune.consoleTheme');
-
 /* ─── consoleTransport ─── */
 
 /**
@@ -191,40 +175,67 @@ export const CONSOLE_THEME_KEY = Symbol.for('rune.consoleTheme');
  * @example
  * consoleTransport()
  * consoleTransport({ level: 'warn', timestamp: false })
- * consoleTransport({
- *   theme: {
- *     error: { bg: '#ff1744', border: '#d50000', color: '#fff', badge: '✖' },
- *   },
- * })
+ * consoleTransport({ theme: { error: { badge: '✖' } } })
+ * consoleTransport({ inspectFn: (v) => require('util').inspect(v, { colors: true, depth: 4 }) })
  */
 export function consoleTransport(options: ConsoleTransportOptions = {}): Transport {
   const level = options.level ?? 'debug';
   const showTimestamp = options.timestamp ?? true;
-  const theme = resolveTheme(options.theme);
+  const format = options.format ?? 'raw';
   const isNode = typeof window === 'undefined';
   const useAnsi = options.ansi ?? (isNode ? supportsAnsi() : false);
+  // Resolve theme once at factory time — it never changes per transport instance
+  const resolved = resolveTheme(options.theme);
+  // json format: wrap ctx through JSON.stringify; inspectFn: use the provided function
+  const inspectFn: ((v: unknown) => string) | undefined =
+    format === 'json' ? (v) => JSON.stringify(v) : options.inspectFn;
 
-  function transport(entry: LogEntry): void {
-    if (!passes(level, entry.level)) return;
+  return (entry: LogEntry): void => {
+    if (!isLevelEnabled(level, entry.level)) return;
 
     const timestamp = showTimestamp ? entry.timestamp.toISOString().slice(11, 23) : '';
     const merged = mergeContext(entry.bindings, entry.context);
-    const payload = buildPayload(merged, entry.message);
+    const payload = buildPayload(merged, entry.message, inspectFn);
     const method = console[LOG_METHOD[entry.level]] as (...args: unknown[]) => void;
 
     if (isNode) {
-      method(buildNodePrefix(theme, entry.level, entry.namespace, timestamp, useAnsi), ...payload);
+      method(buildNodePrefix(resolved, entry.level, entry.namespace, timestamp, useAnsi), ...payload);
     } else {
-      const { fmt, parts } = buildBrowserPrefix(theme, entry.level, entry.namespace, timestamp);
+      const { fmt, parts } = buildBrowserPrefix(resolved, entry.level, entry.namespace, timestamp);
 
       method(fmt, ...parts, ...payload);
     }
+  };
+}
+
+/** Module-level default transport singleton — avoids repeated ANSI detection on every createLogger() call. */
+export const DEFAULT_TRANSPORT: Transport = consoleTransport();
+
+/* ─── Group rendering (exported for logger.ts wrapGroup) ─── */
+
+export function renderGroup(collapsed: boolean, label: string, namespace: string, theme: ResolvedTheme): void {
+  const fn = collapsed ? console.groupCollapsed : console.group;
+  const isNode = typeof window === 'undefined';
+
+  if (isNode) {
+    const meta = [theme.group.badge, label];
+
+    if (namespace) meta.push(`[${namespace}]`);
+
+    fn(meta.join(' | '));
+
+    return;
   }
 
-  (transport as unknown as Record<symbol, unknown>)[CONSOLE_TRANSPORT_MARKER] = true;
-  (transport as unknown as Record<symbol, unknown>)[CONSOLE_THEME_KEY] = theme;
+  let fmt = `${theme.group.badge} %c${label}%c`;
+  const parts: string[] = [badgeStyle(theme.group, '; margin-right: 6px; padding: 1px 3px 0'), ''];
 
-  return transport;
+  if (namespace) {
+    fmt += ` %c${namespace}%c`;
+    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}; margin-right: 6px`), '');
+  }
+
+  fn(fmt, ...parts);
 }
 
 /* ─── remoteTransport ─── */
@@ -233,7 +244,7 @@ export type { RemoteLogData };
 
 /**
  * Forwards log entries asynchronously to a remote handler.
- * The handler is fire-and-forget: errors are swallowed to console.warn.
+ * The handler is fire-and-forget. Use onError to observe delivery failures.
  * Console and remote thresholds are fully independent.
  *
  * @example
@@ -251,7 +262,7 @@ export function remoteTransport(options: RemoteTransportOptions): Transport {
   const onError = options.onError ?? ((err: unknown) => console.warn('[rune] remote transport error:', err));
 
   return (entry: LogEntry): void => {
-    if (!passes(level, entry.level)) return;
+    if (!isLevelEnabled(level, entry.level)) return;
 
     const merged = mergeContext(entry.bindings, entry.context);
     const data: RemoteLogData = {
@@ -295,7 +306,7 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
     });
 
   return (entry: LogEntry): void => {
-    if (!passes(level, entry.level)) return;
+    if (!isLevelEnabled(level, entry.level)) return;
 
     const merged = mergeContext(entry.bindings, entry.context);
     const record: Record<string, unknown> = {
@@ -320,15 +331,16 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
  * - `.flush()` — immediately send buffered entries without stopping the timer
  * - `.dispose()` — stop the interval and flush remaining entries (call on shutdown)
  *
+ * Use `onFlushError` to observe or retry failed flushes (e.g. dead-letter queue).
+ *
  * @example
  * const batch = batchTransport({
  *   onFlush: (entries) => sendToCollector(entries),
+ *   onFlushError: (entries, err) => deadLetter.push(entries),
  *   interval: 10_000,
- *   level: 'warn',
  *   maxSize: 100,
  * });
- * // on app shutdown:
- * batch.dispose();
+ * batch.dispose(); // call on app shutdown
  */
 export function batchTransport(options: BatchTransportOptions): BatchTransport {
   const level = options.level ?? 'debug';
@@ -344,12 +356,15 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
     const entries = buffer;
 
     buffer = [];
-    options.onFlush(entries);
+
+    Promise.resolve()
+      .then(() => options.onFlush(entries))
+      .catch((err: unknown) => options.onFlushError?.(entries, err));
   }
 
   const transport = Object.assign(
     (entry: LogEntry): void => {
-      if (!passes(level, entry.level)) return;
+      if (!isLevelEnabled(level, entry.level)) return;
 
       if (!timer) timer = setInterval(flush, interval);
 
@@ -379,16 +394,18 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
  * Probabilistically forwards entries to a downstream transport.
  * Useful for reducing volume of high-frequency debug logs in production.
  *
+ * For sampling at the emit level (skipping middleware + all transports),
+ * use the `sample` option on `createLogger` instead — it's more efficient.
+ *
  * @example
  * sampleTransport({ rate: 0.1, transport: remoteTransport({ handler }) })
- * // forwards ~10% of entries at or above 'warn'
  */
 export function sampleTransport(options: SampleTransportOptions): Transport {
   const { rate, transport } = options;
   const level = options.level ?? 'debug';
 
   return (entry: LogEntry): void => {
-    if (!passes(level, entry.level)) return;
+    if (!isLevelEnabled(level, entry.level)) return;
 
     if (Math.random() < rate) transport(entry);
   };
@@ -440,46 +457,40 @@ export function redactTransport(options: RedactTransportOptions): Transport {
   };
 }
 
-/* ─── Group rendering (exported for logger.ts wrapGroup) ─── */
-
-export function renderGroup(collapsed: boolean, label: string, namespace: string, theme: ResolvedTheme): void {
-  const fn = collapsed ? console.groupCollapsed : console.group;
-  const isNode = typeof window === 'undefined';
-
-  if (isNode) {
-    const meta = [theme.group.badge, label];
-
-    if (namespace) meta.push(`[${namespace}]`);
-
-    fn(meta.join(' | '));
-
-    return;
-  }
-
-  let fmt = `${theme.group.badge} %c${label}%c`;
-  const parts: string[] = [badgeStyle(theme.group, '; margin-right: 6px; padding: 1px 3px 0'), ''];
-
-  if (namespace) {
-    fmt += ` %c${namespace}%c`;
-    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}; margin-right: 6px`), '');
-  }
-
-  fn(fmt, ...parts);
-}
-
-/* ─── pipe — fan-out to multiple transports ─── */
+/* ─── pipe — fault-tolerant fan-out ─── */
 
 /**
  * Fan-out: dispatches each entry to all provided transports independently.
- * Useful for sending entries to multiple destinations simultaneously.
+ * A throw in one transport does not prevent others from receiving the entry.
+ * Pass `onError` to observe individual transport failures; without it, errors are silently swallowed.
  *
  * @example
  * createLogger({
  *   transports: [pipe(consoleTransport(), remoteTransport({ handler }))],
  * })
+ *
+ * // With error observer:
+ * pipe({ onError: (err) => console.error('[pipe]', err) }, consoleTransport(), remoteTransport({ handler }))
  */
-export function pipe(...transports: Transport[]): Transport {
+export function pipe(optionsOrTransport: PipeOptions | Transport, ...rest: Transport[]): Transport {
+  let opts: PipeOptions;
+  let transports: Transport[];
+
+  if (typeof optionsOrTransport === 'function') {
+    opts = {};
+    transports = [optionsOrTransport, ...rest];
+  } else {
+    opts = optionsOrTransport;
+    transports = rest;
+  }
+
   return (entry: LogEntry): void => {
-    for (const t of transports) t(entry);
+    for (const t of transports) {
+      try {
+        t(entry);
+      } catch (err) {
+        opts.onError?.(err, entry);
+      }
+    }
   };
 }

@@ -1,7 +1,7 @@
 import type { Obj } from '../types';
 
 import { isEqual } from '../typed/isEqual';
-import { isObject } from '../typed/isObject';
+import { isPlainObject } from '../typed/isPlainObject';
 
 /** Sentinel value returned by `diff` when a key exists in `prev` but not in `curr`. */
 export const DELETED: unique symbol = Symbol('deleted');
@@ -39,7 +39,7 @@ export function diff<T extends Obj>(
     const _after = after?.[key];
     const _before = before?.[key];
 
-    if (isObject(_after) && isObject(_before)) {
+    if (isPlainObject(_after) && isPlainObject(_before)) {
       const nestedDiff = diff(_before as Obj, _after as Obj, compareFn);
 
       if (Object.keys(nestedDiff).length > 0) {

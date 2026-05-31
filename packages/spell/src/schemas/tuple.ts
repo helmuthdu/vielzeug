@@ -1,5 +1,4 @@
-import type { AnySchema, Issue, ParseResult, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { AnySchema, Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -18,21 +17,6 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     super();
     this.items = items;
     this.restSchema = restSchema;
-  }
-
-  private _pushTupleItemResult(
-    output: unknown[],
-    issues: Issue[],
-    index: number,
-    source: unknown,
-    result: ParseResult<unknown>,
-  ): void {
-    if (result.success) {
-      output.push(result.data);
-    } else {
-      issues.push(...prependIssuePath(result.error.issues, index));
-      output.push(source);
-    }
   }
 
   rest<U>(schema: Schema<U>): TupleSchema<T, Schema<U>> {
@@ -96,16 +80,26 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     const tupleValue = guarded.value;
 
     for (let i = 0; i < this.items.length; i++) {
-      const result = this.items[i].safeParse(tupleValue[i]);
+      const result = this.items[i]._parseFullSync(tupleValue[i]);
 
-      this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
+      if (result.issues.length === 0) {
+        output.push(result.data);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+        output.push(tupleValue[i]);
+      }
     }
 
     if (this.restSchema !== null) {
       for (let i = this.items.length; i < tupleValue.length; i++) {
-        const result = this.restSchema.safeParse(tupleValue[i]);
+        const result = this.restSchema._parseFullSync(tupleValue[i]);
 
-        this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
+        if (result.issues.length === 0) {
+          output.push(result.data);
+        } else {
+          issues.push(...prependIssuePath(result.issues, i));
+          output.push(tupleValue[i]);
+        }
       }
     }
 
@@ -126,43 +120,34 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const tupleValue = guarded.value;
-
-    const itemResults = await Promise.all(
-      this.items.map((schema, i) =>
-        schema.safeParseAsync(tupleValue[i]).then((result) => ({
-          index: i,
-          result,
-          source: tupleValue[i],
-        })),
-      ),
-    );
-
     const output: unknown[] = [];
     const issues: Issue[] = [];
 
-    for (const itemResult of itemResults) {
-      this._pushTupleItemResult(output, issues, itemResult.index, itemResult.source, itemResult.result);
+    for (let i = 0; i < this.items.length; i++) {
+      const result = await this.items[i]._parseFullAsync(tupleValue[i]);
+
+      if (result.issues.length === 0) {
+        output.push(result.data);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+        output.push(tupleValue[i]);
+      }
     }
 
     if (this.restSchema !== null) {
       for (let i = this.items.length; i < tupleValue.length; i++) {
-        const result = await this.restSchema.safeParseAsync(tupleValue[i]);
+        const result = await this.restSchema._parseFullAsync(tupleValue[i]);
 
-        this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
+        if (result.issues.length === 0) {
+          output.push(result.data);
+        } else {
+          issues.push(...prependIssuePath(result.issues, i));
+          output.push(tupleValue[i]);
+        }
       }
     }
 
     return { data: output, issues, typeOk: true };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const prefixItems = this.items.map((s) => s.toJsonSchema());
-    const base: Record<string, unknown> = { prefixItems, type: 'array' };
-
-    if (this.restSchema !== null) base['items'] = this.restSchema.toJsonSchema();
-    else base['items'] = false;
-
-    return base;
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

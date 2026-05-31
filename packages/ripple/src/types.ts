@@ -32,7 +32,21 @@ export type SignalOptions<T> = ReactiveOptions<T> & {
 export type EffectOptions = {
   maxIterations?: number;
   name?: string;
-  scheduler?: EffectScheduler;
+  /**
+   * Controls when the effect re-runs after a dependency changes.
+   * - `'sync'` (default): runs immediately in the same flush.
+   * - `'microtask'`: deferred to the next microtask.
+   * - `'raf'`: deferred to the next animation frame.
+   * - function: custom scheduler — receives the `run` callback and is responsible
+   *   for calling it (once) at the appropriate time. This enables integration with
+   *   React's scheduler, priority queues, or other custom timing strategies.
+   *
+   * @example Custom scheduler:
+   * ```ts
+   * effect(fn, { scheduler: (run) => setTimeout(run, 100) });
+   * ```
+   */
+  scheduler?: EffectScheduler | ((run: () => void) => void);
 };
 
 export type BatchOptions = {
@@ -51,6 +65,42 @@ export interface Subscription {
 
 export interface AsyncSubscription extends Subscription {
   disposeAsync(): Promise<void>;
+}
+
+// ── AsyncComputed (F2) ────────────────────────────────────────────────────────
+
+/**
+ * The reactive state exposed by `asyncComputed()`.
+ * Tracks the lifecycle of an async factory as a discriminated union.
+ */
+export type AsyncComputedState<T> =
+  | { error: undefined; status: 'idle'; value: undefined }
+  | { error: undefined; status: 'pending'; value: T | undefined }
+  | { error: undefined; status: 'fulfilled'; value: T }
+  | { error: unknown; status: 'error'; value: T | undefined };
+
+export type AsyncComputedOptions<T> = ReactiveOptions<AsyncComputedState<T>> & {
+  /** Initial value shown while the first async run is pending. */
+  initialValue?: T;
+};
+
+/** A computed signal backed by an async factory. */
+export interface AsyncComputedSignal<T> extends ComputedSignal<AsyncComputedState<T>> {
+  /** Dispose the underlying effect and computed. Cancels any in-flight run. */
+  dispose(): void;
+}
+
+// ── Store history / time-travel (F5) ─────────────────────────────────────────
+
+export interface StoreWithHistory<T extends object> extends Store<T> {
+  /** Returns a snapshot of state at the given index (0 = oldest, history.length-1 = current). */
+  historyAt(index: number): Readonly<T> | undefined;
+  /** Returns the full snapshot history. */
+  readonly historyLength: number;
+  /** Jumps to the previous snapshot. No-op if already at the oldest entry. */
+  undo(): void;
+  /** Jumps to the next snapshot (after undo). No-op if at the newest entry. */
+  redo(): void;
 }
 
 // ── Core reactive interfaces ──────────────────────────────────────────────────

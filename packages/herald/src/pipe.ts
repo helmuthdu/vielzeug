@@ -1,6 +1,4 @@
-import { anySignal } from '@vielzeug/arsenal';
-
-import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey } from './types';
+import type { Bus, EventMap, PipeEntry } from './types';
 
 /**
  * Forward selected events from `source` to `target`.
@@ -14,30 +12,15 @@ import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey } from './types';
  * The pipe tears down automatically when either bus is disposed, or when the provided `signal`
  * aborts. Call the returned function to stop piping manually at any time.
  *
+ * This is a standalone convenience function. For piping from a bus you own, the instance method
+ * `source.pipe(target, entries, signal)` is equivalent and requires no import.
+ *
  * @example
- * // Forward same-named events between buses with different (but overlapping) event maps
  * const unpipe = pipeEvents(featureBus, auditBus, ['user:login', 'user:logout']);
  * unpipe(); // stop piping
  *
  * @example
- * // Rename events during forwarding
- * pipeEvents(authBus, appBus, [
- *   { from: 'auth:login', to: 'user:authenticated' },
- *   { from: 'auth:logout', to: 'user:signed-out' },
- * ]);
- *
- * @example
- * // Mix same-name and renamed entries
- * pipeEvents(sourceBus, targetBus, [
- *   'config:updated',
- *   { from: 'auth:login', to: 'user:authenticated' },
- * ]);
- *
- * @example
- * // Scoped to a request lifetime
- * const controller = new AbortController();
- * pipeEvents(appBus, requestBus, ['config'], controller.signal);
- * controller.abort(); // stop when request ends
+ * pipeEvents(authBus, appBus, [{ from: 'auth:login', to: 'user:authenticated' }]);
  */
 export function pipeEvents<S extends EventMap, T extends EventMap>(
   source: Bus<S>,
@@ -45,27 +28,6 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
   entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
   signal?: AbortSignal,
 ): () => void {
-  // The pipe stops when the target bus is disposed, or when the external signal fires.
-  // Source bus disposal is handled by source.on()'s internal merge with the source disposal signal.
-  const pipeSignal = anySignal(target.disposalSignal, signal) ?? target.disposalSignal;
-
-  // Cast needed: emit's conditional rest args (void vs payload) cannot be resolved in a generic
-  // context. At runtime, passing undefined for void events is safe — the bus ignores it.
-  const emitTarget = target.emit as (event: EventKey<T>, payload?: unknown) => void;
-
-  const unsubs = entries.map((entry) => {
-    if (typeof entry === 'string') {
-      const key = entry as PipeableKey<S, T>;
-
-      return source.on(key as EventKey<S>, (payload) => emitTarget(key as unknown as EventKey<T>, payload), {
-        signal: pipeSignal,
-      });
-    }
-
-    const { from, to } = entry as { from: EventKey<S>; to: EventKey<T> };
-
-    return source.on(from, (payload) => emitTarget(to, payload), { signal: pipeSignal });
-  });
-
-  return () => unsubs.forEach((u) => u());
+  // R1: Delegate to source.pipe() — eliminates the duplicate pipe logic that lived here before.
+  return source.pipe(target, entries, signal);
 }

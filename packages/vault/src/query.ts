@@ -43,27 +43,48 @@ export type QueryContext<T extends Record<string, unknown>> = {
 
 /* -------------------- Public interfaces -------------------- */
 
-/** Shared query methods. `Self` is the concrete return type for chaining methods. */
-type ChainedQuery<T extends Record<string, unknown>, Self> = {
+/**
+ * Shared query methods. `T` is the base record type; `N` is the progressively-narrowed type
+ * accumulated by `equals()` calls.
+ */
+type ChainedQuery<T extends Record<string, unknown>, N extends T, Self extends ChainedQuery<T, N, Self>> = {
+  /**
+   * Filter records where `field` is between `lower` and `upper` (inclusive).
+   * Preserves any type narrowing already accumulated by prior `equals()` calls.
+   */
   between<K extends ComparableFieldKeys<T>>(
     field: K,
     lower: Extract<NonNullable<T[K]>, number | string>,
     upper: Extract<NonNullable<T[K]>, number | string>,
-  ): Self;
+  ): QueryBuilder<T, N>;
   /**
    * Returns the number of records matching all applied operations, including `limit` and `offset`.
    * To get the full filtered set size regardless of pagination (e.g. for "page X of N" UIs),
    * use `totalCount()` instead.
    */
   count(): Promise<number>;
-  equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): Self;
-  filter(fn: Predicate<T>): Self;
-  first(): Promise<T | undefined>;
+  /**
+   * Filter records where `field` exactly equals `value`.
+   * The return type is narrowed to `QueryBuilder<T & Record<K, V>>` so that subsequent
+   * `.toArray()`, `.first()`, etc. reflect the equality constraint in their result type.
+   *
+   * ```ts
+   * // result: (User & { role: 'admin' })[]
+   * const admins = await db.query('users').equals('role', 'admin').toArray();
+   * ```
+   */
+  equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T & Record<K, V>>;
+  filter(fn: Predicate<N>): Self;
+  first(): Promise<N | undefined>;
   limit(n: number): Self;
   offset(n: number): Self;
   orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): Self;
-  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): Self;
-  toArray(): Promise<T[]>;
+  /**
+   * Filter records where `field` starts with `prefix`.
+   * Preserves any type narrowing already accumulated by prior `equals()` calls.
+   */
+  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T, N>;
+  toArray(): Promise<N[]>;
   /**
    * Returns the number of records matching the applied filter predicates.
    * Presentation-only ops (`limit`, `offset`, `orderBy`) are intentionally ignored — this
@@ -74,7 +95,11 @@ type ChainedQuery<T extends Record<string, unknown>, Self> = {
 };
 
 /** Extends the shared query API with `delete()`. Available on both `Adapter.query()` and inside `batch()` callbacks. */
-export interface QueryBuilder<T extends Record<string, unknown>> extends ChainedQuery<T, QueryBuilder<T>> {
+export interface QueryBuilder<T extends Record<string, unknown>, N extends T = T> extends ChainedQuery<
+  T,
+  N,
+  QueryBuilder<T, N>
+> {
   delete(): Promise<number>;
 }
 
@@ -91,32 +116,6 @@ async function applyOps<T extends Record<string, unknown>>(
   }
 
   return data;
-}
-
-/**
- * Fast path for `first()` when there are no presentation ops (orderBy/offset).
- * Iterates source records one-by-one and returns as soon as one passes all filter ops,
- * without keeping the rest in memory.
- */
-async function findFirst<T extends Record<string, unknown>>(
-  ctx: QueryContext<T>,
-  filterOps: readonly QueryOp<T>[],
-): Promise<T | undefined> {
-  const data = await ctx.source();
-
-  outer: for (const record of data) {
-    let current: T[] = [record];
-
-    for (const op of filterOps) {
-      current = op.apply(current);
-
-      if (current.length === 0) continue outer;
-    }
-
-    return current[0];
-  }
-
-  return undefined;
 }
 
 function assertNonNegativeInteger(value: number, name: string): number {
@@ -139,22 +138,17 @@ function pushDownContext<T extends Record<string, unknown>>(
 
 /* -------------------- Factory -------------------- */
 
-export function createQueryBuilder<T extends Record<string, unknown>>(
+export function createQueryBuilder<T extends Record<string, unknown>, N extends T = T>(
   ctx: QueryContext<T>,
   ops: readonly QueryOp<T>[] = [],
-): QueryBuilder<T> {
-  function rebuild(newOps: readonly QueryOp<T>[]): QueryBuilder<T> {
-    return createQueryBuilder(ctx, newOps);
-  }
-
-  const append = (op: QueryOp<T>): QueryBuilder<T> => rebuild([...ops, op]);
+): QueryBuilder<T, N> {
+  const append = (op: QueryOp<T>): QueryBuilder<T, N> => createQueryBuilder<T, N>(ctx, [...ops, op]);
 
   return {
     between(field, lower, upper) {
       const fieldStr = String(field);
 
       if (ops.length === 0) {
-        // Primary key push-down
         if (ctx.getRange && ctx.keyField === fieldStr) {
           return createQueryBuilder(
             pushDownContext(ctx, () => ctx.getRange!({ lower, type: 'between', upper })),
@@ -162,7 +156,6 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
           );
         }
 
-        // Secondary index push-down
         if (ctx.getIndexRange && ctx.indexedFields?.has(fieldStr)) {
           return createQueryBuilder(
             pushDownContext(ctx, () => ctx.getIndexRange!(fieldStr, { lower, type: 'between', upper })),
@@ -178,7 +171,7 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
 
             return v >= lower && v <= upper;
           }),
-      });
+      }) as unknown as QueryBuilder<T, N>;
     },
     count(): Promise<number> {
       return applyOps(ctx, ops).then((r) => r.length);
@@ -192,47 +185,41 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
 
       return ctx.deleteMany(records);
     },
-    equals<K extends keyof T & string, V extends T[K]>(field: K, value: V) {
+    equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T & Record<K, V>> {
       const fieldStr = String(field);
 
       if (ops.length === 0) {
-        // Primary key push-down
         if (ctx.getRange && ctx.keyField === fieldStr) {
-          return createQueryBuilder(
-            pushDownContext(ctx, () => ctx.getRange!({ type: 'eq', value })),
-            ops,
-          );
+          return createQueryBuilder<T & Record<K, V>>(
+            pushDownContext(
+              ctx as unknown as QueryContext<T & Record<K, V>>,
+              () => ctx.getRange!({ type: 'eq', value }) as Promise<(T & Record<K, V>)[]>,
+            ),
+          ) as QueryBuilder<T & Record<K, V>>;
         }
 
-        // Secondary index push-down
         if (ctx.getIndexRange && ctx.indexedFields?.has(fieldStr)) {
-          return createQueryBuilder(
-            pushDownContext(ctx, () => ctx.getIndexRange!(fieldStr, { type: 'eq', value })),
-            ops,
-          );
+          return createQueryBuilder<T & Record<K, V>>(
+            pushDownContext(
+              ctx as unknown as QueryContext<T & Record<K, V>>,
+              () => ctx.getIndexRange!(fieldStr, { type: 'eq', value }) as Promise<(T & Record<K, V>)[]>,
+            ),
+          ) as QueryBuilder<T & Record<K, V>>;
         }
       }
 
-      return append({ apply: (data) => data.filter((r) => r[field] === value) });
+      return createQueryBuilder<T & Record<K, V>>(ctx as unknown as QueryContext<T & Record<K, V>>, [
+        { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
+        ...(ops as unknown as QueryOp<T & Record<K, V>>[]),
+      ]);
     },
     filter(fn) {
-      return append({ apply: (data) => data.filter(fn) });
+      return append({ apply: (data) => data.filter(fn as Predicate<T>) });
     },
-    first(): Promise<T | undefined> {
-      // Zero-ops fast path: no filtering or presentation ops — fetch source and return first.
-      if (ops.length === 0) {
-        return ctx.source().then((r) => r[0]);
-      }
+    first(): Promise<N | undefined> {
+      if (ops.length === 0) return ctx.source().then((r) => r[0] as N | undefined);
 
-      // Fast path: when there are no presentation ops (orderBy/offset), find the first
-      // matching record without materialising the full result set.
-      const hasNonFilter = ops.some((op) => op.isNonFilter);
-
-      if (!hasNonFilter) {
-        return findFirst(ctx, ops);
-      }
-
-      return applyOps(ctx, ops).then((r) => r[0]);
+      return applyOps(ctx, ops).then((r) => r[0] as N | undefined);
     },
     limit(n) {
       const safeN = assertNonNegativeInteger(n, 'query.limit');
@@ -264,10 +251,7 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
     startsWith(field, prefix, { ignoreCase = false } = {}) {
       const fieldStr = String(field);
 
-      // Range push-down: only for case-sensitive, non-empty prefix.
-      // An empty prefix matches everything — fall through to in-memory.
       if (!ignoreCase && prefix.length > 0 && ops.length === 0) {
-        // Primary key push-down
         if (ctx.getRange && ctx.keyField === fieldStr) {
           return createQueryBuilder(
             pushDownContext(ctx, () => ctx.getRange!({ prefix, type: 'starts' })),
@@ -275,7 +259,6 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
           );
         }
 
-        // Secondary index push-down
         if (ctx.getIndexRange && ctx.indexedFields?.has(fieldStr)) {
           return createQueryBuilder(
             pushDownContext(ctx, () => ctx.getIndexRange!(fieldStr, { prefix, type: 'starts' })),
@@ -297,14 +280,12 @@ export function createQueryBuilder<T extends Record<string, unknown>>(
 
             return haystack.startsWith(needle);
           }),
-      });
+      }) as unknown as QueryBuilder<T, N>;
     },
-    toArray(): Promise<T[]> {
-      return applyOps(ctx, ops);
+    toArray(): Promise<N[]> {
+      return applyOps(ctx, ops) as Promise<N[]>;
     },
     totalCount(): Promise<number> {
-      // Presentation-only ops (limit, offset, orderBy) are excluded — totalCount reflects
-      // the full filtered set regardless of how results are paginated or sorted.
       const filterOps = ops.filter((op) => !op.isNonFilter);
 
       return applyOps(ctx, filterOps).then((r) => r.length);

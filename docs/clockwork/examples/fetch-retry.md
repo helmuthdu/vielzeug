@@ -14,7 +14,7 @@ Network requests fail unpredictably. Retrying manually in every component leads 
 Track retry count in context, use guard conditions to allow retries only if count < limit, and transition to error state when retries are exhausted.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type FetchContext = {
   data: string;
@@ -42,7 +42,7 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [assign(() => ({ retries: 0, error: '' }))],
+            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
           },
         ],
       },
@@ -64,17 +64,17 @@ const fetchMachine = defineMachine<
         SUCCESS: [
           {
             target: 'success',
-            actions: [assign(({ event }) => ({ data: event.data }))],
+            actions: [({ context, event }) => { context.data = event.data; }],
           },
         ],
         FAILURE: [
           {
             target: 'failed',
             actions: [
-              assign(({ event, context }) => ({
-                error: event.error,
-                retries: context.retries + 1,
-              })),
+              ({ context, event }) => {
+                context.error = event.error;
+                context.retries += 1;
+              },
             ],
           },
         ],
@@ -85,7 +85,7 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [assign(() => ({ retries: 0, error: '' }))],
+            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
           },
         ],
       },
@@ -106,7 +106,7 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [assign(() => ({ retries: 0, error: '' }))],
+            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
           },
         ],
       },
@@ -154,7 +154,7 @@ fetcher.send({ type: 'FETCH' }); // state: 'loading', retries reset to 0
 ### Pitfalls
 
 - **Guard condition doesn't retry automatically** — Reaching the failed state doesn't automatically retry. UI must detect `state.value === 'failed'` and call `send({ type: 'RETRY' })`, or use a timer to auto-retry.
-- **Retry count increments but isn't reset on success** — If a retry succeeds, make sure to reset retries to 0 when restarting a fetch. The example above does this in the FETCH action with `assign(() => ({ retries: 0 }))`.
+- **Retry count increments but isn't reset on success** — If a retry succeeds, make sure to reset retries to 0 when restarting a fetch. The example above does this in the FETCH action.
 - **AbortSignal.timeout doesn't exist in older Node versions** — Use AbortSignal.timeout() only in Node 18+ or modern browsers. For older environments, wrap fetch in a Promise.race() with a manual timeout.
 - **Silent guard failure blocks retry indefinitely** — If the guard fails (retries >= 3), sending RETRY does nothing. No error is thrown. Always provide a GIVE_UP action or automatic transition to error state.
 

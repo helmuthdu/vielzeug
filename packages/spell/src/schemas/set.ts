@@ -1,7 +1,6 @@
-import type { Issue, MessageFn, ParseResult, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { Issue, MessageFn, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
@@ -20,14 +19,6 @@ export class SetSchema<T> extends Schema<Set<T>> {
     };
   }
 
-  private _mergeItemResult(parsed: Set<T>, issues: Issue[], index: number, result: ParseResult<T>): void {
-    if (result.success) {
-      parsed.add(result.data);
-    } else {
-      issues.push(...prependIssuePath(result.error.issues, index));
-    }
-  }
-
   protected override _parseValueSync(value: unknown): ParseValue {
     if (!(value instanceof Set)) {
       return this._invalidSet(value);
@@ -38,9 +29,13 @@ export class SetSchema<T> extends Schema<Set<T>> {
     let i = 0;
 
     for (const item of value) {
-      const result = this.itemSchema.safeParse(item);
+      const result = this.itemSchema._parseFullSync(item);
 
-      this._mergeItemResult(parsed, issues, i, result);
+      if (result.issues.length === 0) {
+        parsed.add(result.data as T);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+      }
 
       i += 1;
     }
@@ -54,12 +49,19 @@ export class SetSchema<T> extends Schema<Set<T>> {
     }
 
     const parsed = new Set<T>();
-    const items = [...value.values()];
-    const itemResults = await Promise.all(items.map((item) => this.itemSchema.safeParseAsync(item)));
     const issues: Issue[] = [];
+    let i = 0;
 
-    for (let i = 0; i < itemResults.length; i++) {
-      this._mergeItemResult(parsed, issues, i, itemResults[i]);
+    for (const item of value) {
+      const result = await this.itemSchema._parseFullAsync(item);
+
+      if (result.issues.length === 0) {
+        parsed.add(result.data as T);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+      }
+
+      i += 1;
     }
 
     return { data: parsed, issues, typeOk: true };
@@ -114,12 +116,8 @@ export class SetSchema<T> extends Schema<Set<T>> {
     });
   }
 
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { $comment: 'Set<T> — no JSON Schema equivalent' };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), item: this.itemSchema.toDescriptor(), kind: 'set' };
+    return { ...this._describeBase(), items: this.itemSchema.toDescriptor(), kind: 'set' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

@@ -7,43 +7,47 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 
 ## API At a Glance
 
-| Symbol                                 | Purpose                                           | Execution mode | Common gotcha                                                  |
-| -------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------- |
-| `now(tz)`                              | Current zoned date/time                           | Sync           | Requires a valid IANA timezone string                          |
-| `parseLocal(input)`                    | Parse a wall-clock string                         | Sync           | Returns `PlainDateTime` — no timezone attached                 |
-| `toInstant(input, options?)`           | Normalize any input to a UTC instant              | Sync           | Plain inputs require `options.tz`                              |
-| `toZoned(input, options)`              | Project a time into a specific timezone           | Sync           | `options.tz` is required                                       |
-| `shift(input, duration, options?)`     | DST-safe add/subtract                             | Sync           | `options.tz` required for plain/instant inputs                 |
-| `difference(start, end, options?)`     | Duration between two values                       | Sync           | Requires `tz` only for calendar units or plain inputs          |
-| `within(value, start, end, options?)`  | Inclusive range check                             | Sync           | Bounds auto-normalized; use `unit` for calendar checks         |
-| `clamp(value, start, end, options?)`   | Clamp to range; returns `Temporal.Instant`        | Sync           | With `unit`, returns unit-aligned instant, not original value  |
-| `isBefore(a, b, options?)`             | Returns `true` when `a` is earlier than `b`       | Sync           | Omit `unit` for raw timeline comparison                        |
-| `isAfter(a, b, options?)`              | Returns `true` when `a` is later than `b`         | Sync           | Omit `unit` for raw timeline comparison                        |
-| `isSame(a, b, options?)`               | Returns `true` when `a` and `b` are equal         | Sync           | Set `unit` for calendar-unit equality                          |
-| `startOf(input, unit, options?)`       | Snap to start of a calendar unit                  | Sync           | Week boundaries depend on `weekStartsOn` (default Monday)      |
-| `endOf(input, unit, options?)`         | Snap to end of a calendar unit                    | Sync           | Returns 1 nanosecond before the next unit starts               |
-| `format(input, options?)`              | Localized display formatting with presets         | Sync           | `intl` takes precedence over `pattern` when both are set       |
-| `formatInstant(input, options?)`       | UTC ISO-8601 instant string                       | Sync           | Always UTC regardless of input zone                            |
-| `formatZoned(input, options?)`         | Zoned ISO-8601 string                             | Sync           | `options.tz` required for non-zoned inputs                     |
-| `formatRange(start, end, options?)`    | Localized time-span string                        | Sync           | Throws when zoned inputs are in different zones without `tz`   |
-| `formatRelative(input, options?)`      | UX relative text ("in 2 hours", "3 days ago")     | Sync           | Input restricted to `Instant` or `ZonedDateTime`               |
-| `parseDuration(input)`                 | Parse ISO 8601 duration or `DurationLike` object  | Sync           | Throws `TypeError` for invalid strings                         |
-| `formatDuration(input, options?)`      | Format a duration for display                     | Sync           | Falls back to ISO string if `Intl.DurationFormat` unavailable  |
-| `expires(date, days?, options?)`       | Classify date as EXPIRED / SOON / LATER / NEVER   | Sync           | Plain inputs default to UTC; pass `options.tz` to override     |
-| `timeDiff(a, b?, options?)`            | Largest-unit difference as `{ unit, value }`      | Sync           | Month/year use 30-day/365-day approximations                   |
-| `dateRange(start, end, step, options)` | Generate array of `ZonedDateTime` values          | Sync           | `step` must advance time forward; `options.tz` required        |
-| `clearCaches()`                        | Release internal `Intl` formatter caches          | Sync           | Useful in tests or memory-constrained environments             |
+| Symbol                                    | Purpose                                              | Common gotcha                                                 |
+| ----------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------- |
+| `now(tz)`                                 | Current zoned date/time                              | Requires a valid IANA timezone string                         |
+| `parseLocal(input)`                       | Parse a wall-clock string to `PlainDateTime`         | No timezone attached — use `toInstant()` to pin it            |
+| `parseInstant(input)`                     | Parse a UTC ISO string to `Instant`                  | Input must end in `Z` or include an offset                    |
+| `parseAny(input)`                         | Parse any ISO 8601 string to the most specific type  | Tries ZonedDateTime → Instant → PlainDateTime → PlainDate     |
+| `isValid(value)`                          | Type guard for any `TimeInput`                       | Returns `false` for strings, numbers, and `null`              |
+| `toInstant(input, options?)`              | Normalize any input to a UTC instant                 | Plain inputs require `options.tz`                             |
+| `toZoned(input, options)`                 | Project a time into a specific timezone              | `options.tz` is required                                      |
+| `shift(input, duration, options?)`        | DST-safe add/subtract                                | `options.tz` required for plain/instant inputs                |
+| `difference(start, end, options?)`        | Duration between two values                          | Requires `tz` only for calendar units or plain inputs         |
+| `within(value, start, end, options?)`     | Inclusive range check                                | Bounds auto-normalized; use `unit` for calendar checks        |
+| `clamp(value, start, end, options?)`      | Clamp to range; returns `Temporal.Instant`           | With `unit`, returns unit-aligned instant, not original value |
+| `isBefore(a, b, options?)`                | Returns `true` when `a` is earlier than `b`          | Omit `unit` for raw timeline comparison                       |
+| `isAfter(a, b, options?)`                 | Returns `true` when `a` is later than `b`            | Omit `unit` for raw timeline comparison                       |
+| `isSame(a, b, options?)`                  | Returns `true` when `a` and `b` are equal            | Set `unit` for calendar-unit equality                         |
+| `startOf(input, unit, options?)`          | Snap to start of a calendar unit                     | Week boundaries depend on `weekStartsOn` (default Monday)     |
+| `endOf(input, unit, options?)`            | Snap to end of a calendar unit                       | Returns 1 nanosecond before the next unit starts              |
+| `format(input, options?)`                 | Localized display formatting with presets            | `intl` and `pattern` are mutually exclusive                   |
+| `formatParts(input, options?)`            | Raw `Intl.DateTimeFormatPart[]` for custom rendering | Same options as `format()`                                    |
+| `formatInstant(input, options?)`          | UTC ISO-8601 instant string                          | Always UTC regardless of input zone                           |
+| `formatZoned(input, options?)`            | Zoned ISO-8601 string                                | `options.tz` required for non-zoned inputs                    |
+| `formatRange(start, end, options?)`       | Localized time-span string                           | Throws when zoned inputs are in different zones without `tz`  |
+| `formatRangeParts(start, end, options?)`  | Raw `Intl.DateTimeRangeFormatPart[]` array           | Same zone-mismatch rules as `formatRange()`                   |
+| `formatRelative(input, options?)`         | UX relative text ("in 2 hours", "3 days ago")        | Input restricted to `Instant` or `ZonedDateTime`              |
+| `parseDuration(input)`                    | Parse ISO 8601 duration or `DurationLike` object     | Throws `TypeError` for invalid strings                        |
+| `formatDuration(input, options?)`         | Format a duration for display                        | Falls back to plain English if `Intl.DurationFormat` absent   |
+| `expires(date, thresholds, options?)`     | Classify a date against named threshold buckets      | Returns `null` when no threshold matches                      |
+| `classify(date, thresholds, options?)`    | `expires` + `timeDiff` in one call                   | Returns `{ key, diff }` — `key` is `null` when no match      |
+| `timeDiff(a, b?, options?)`               | Largest-unit difference as `{ unit, value }`         | No `tz` needed when both inputs are `Instant`                 |
+| `humanize(diff)`                          | `TimeDiffResult` → human-readable string             | Singular/plural handled automatically                         |
+| `dateRange(start, end, step, options)`    | Lazy generator of `ZonedDateTime` values             | `step` must advance time forward; `options.tz` required       |
+| `recurrence(start, rule, options)`        | Lazy generator for repeating dates                   | `count` or `until` required (enforced at compile time)        |
 
 ## Package Entry Point
 
-| Import            | Purpose                |
-| ----------------- | ---------------------- |
-| `@vielzeug/tempo` | Main exports and types |
-
 ```ts
 import {
+  Temporal,
+  classify,
   clamp,
-  clearCaches,
   dateRange,
   difference,
   endOf,
@@ -51,15 +55,22 @@ import {
   format,
   formatDuration,
   formatInstant,
+  formatParts,
   formatRange,
+  formatRangeParts,
   formatRelative,
   formatZoned,
+  humanize,
   isAfter,
   isBefore,
   isSame,
+  isValid,
   now,
+  parseAny,
   parseDuration,
+  parseInstant,
   parseLocal,
+  recurrence,
   shift,
   startOf,
   timeDiff,
@@ -68,6 +79,8 @@ import {
   within,
 } from '@vielzeug/tempo';
 ```
+
+`Temporal` is re-exported directly — consumers never need to import `@js-temporal/polyfill` themselves.
 
 ## Core Functions
 
@@ -104,8 +117,68 @@ Parses an ISO 8601 date or date-time string into a timezone-free `PlainDateTime`
 ```ts
 import { parseLocal } from '@vielzeug/tempo';
 
-parseLocal('2026-03-21');           // 2026-03-21T00:00:00
-parseLocal('2026-03-21T10:15:30'); // 2026-03-21T10:15:30
+parseLocal('2026-03-21');             // 2026-03-21T00:00:00
+parseLocal('2026-03-21T10:15:30');   // 2026-03-21T10:15:30
+```
+
+---
+
+### `parseInstant(input): Temporal.Instant`
+
+```ts
+parseInstant(input: string): Temporal.Instant;
+```
+
+Parses a UTC ISO 8601 string into a `Temporal.Instant`. The input must include an offset or end in `Z`. Throws a descriptive `TypeError` on invalid input.
+
+**Example:**
+
+```ts
+import { parseInstant } from '@vielzeug/tempo';
+
+parseInstant('2026-03-21T10:15:30Z');
+parseInstant('2026-03-21T11:15:30+01:00');
+```
+
+---
+
+### `parseAny(input): TimeInput`
+
+```ts
+parseAny(input: string): TimeInput;
+```
+
+Parses any ISO 8601 string into the most specific `TimeInput` type, trying in order: `ZonedDateTime` → `Instant` → `PlainDateTime` → `PlainDate`. Throws a descriptive `TypeError` if none match.
+
+**Example:**
+
+```ts
+import { parseAny } from '@vielzeug/tempo';
+
+parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
+parseAny('2026-03-21T10:00:00Z');                     // Instant
+parseAny('2026-03-21T10:00:00');                      // PlainDateTime
+parseAny('2026-03-21');                               // PlainDate
+```
+
+---
+
+### `isValid(value): value is TimeInput`
+
+```ts
+isValid(value: unknown): value is TimeInput;
+```
+
+Type guard that returns `true` when `value` is a valid `Temporal.Instant`, `ZonedDateTime`, `PlainDateTime`, or `PlainDate`.
+
+**Example:**
+
+```ts
+import { isValid } from '@vielzeug/tempo';
+
+isValid(Temporal.Instant.from('2026-03-21T10:00:00Z')); // true
+isValid('2026-03-21');                                   // false
+isValid(null);                                           // false
 ```
 
 ---
@@ -120,10 +193,10 @@ Normalizes any `TimeInput` to an absolute `Temporal.Instant`.
 
 **Parameters — `TimeOptions`:**
 
-| Option | Type                     | Default        | Description                                        |
-| ------ | ------------------------ | -------------- | -------------------------------------------------- |
-| `tz`   | `string`                 | —              | Required when input is `PlainDate`/`PlainDateTime` |
-| `when` | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation for ambiguous local times       |
+| Option   | Type                     | Default        | Description                                        |
+| -------- | ------------------------ | -------------- | -------------------------------------------------- |
+| `tz`     | `string`                 | —              | Required when input is `PlainDate`/`PlainDateTime` |
+| `prefer` | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation for ambiguous local times       |
 
 **Example:**
 
@@ -132,7 +205,8 @@ import { parseLocal, toInstant } from '@vielzeug/tempo';
 
 toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
 toInstant(parseLocal('2026-03-21T10:15:30'), { tz: 'America/New_York' });
-toInstant(parseLocal('2026-11-01T01:30:00'), { tz: 'America/New_York', when: 'earlier' });
+// DST fall-back: pick the earlier occurrence of the ambiguous hour
+toInstant(parseLocal('2026-11-01T01:30:00'), { tz: 'America/New_York', prefer: 'earlier' });
 ```
 
 ---
@@ -151,6 +225,7 @@ Projects any `TimeInput` into `options.tz`.
 import { toZoned } from '@vielzeug/tempo';
 
 toZoned(Temporal.Instant.from('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' });
+// → 2026-03-21T11:15:30+01:00[Europe/Berlin]
 ```
 
 ---
@@ -165,10 +240,10 @@ Adds `duration` to `input` using DST-aware calendar arithmetic. Negative values 
 
 **Parameters — `TimeOptions`:**
 
-| Option | Type                     | Default        | Description                                           |
-| ------ | ------------------------ | -------------- | ----------------------------------------------------- |
-| `tz`   | `string`                 | —              | Required for plain/instant inputs; inferred for zoned |
-| `when` | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation                                    |
+| Option   | Type                     | Default        | Description                                           |
+| -------- | ------------------------ | -------------- | ----------------------------------------------------- |
+| `tz`     | `string`                 | —              | Required for plain/instant inputs; inferred for zoned |
+| `prefer` | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation                                    |
 
 **Example:**
 
@@ -202,7 +277,7 @@ Returns the signed duration from `start` to `end`. When `start > end` the result
 | `smallestUnit`      | `Temporal.DateTimeUnit`  | `'second'`     | Smallest unit; excess is rounded                   |
 | `roundingMode`      | `Temporal.RoundingMode`  | `'trunc'`      | Rounding direction for `smallestUnit`              |
 | `roundingIncrement` | `number`                 | `1`            | Rounding granularity for `smallestUnit`            |
-| `when`              | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation                                 |
+| `prefer`            | `DateTimeDisambiguation` | `'compatible'` | DST disambiguation                                 |
 
 Two `Temporal.Instant` inputs with sub-day `largestUnit`/`smallestUnit` do not need `tz`. Calendar units (`day`, `week`, `month`, `year`) always require `tz`.
 
@@ -218,12 +293,12 @@ difference(
   { largestUnit: 'hour', smallestUnit: 'minute' },
 ); // PT2H30M
 
-// Calendar units always require tz
+// DST-correct day count across spring-forward
 difference(
-  Temporal.Instant.from('2026-03-21T00:00:00Z'),
-  Temporal.Instant.from('2026-03-28T00:00:00Z'),
-  { largestUnit: 'day', tz: 'UTC' },
-);
+  Temporal.ZonedDateTime.from('2026-03-08T00:00:00-05:00[America/New_York]'),
+  Temporal.ZonedDateTime.from('2026-03-09T00:00:00-04:00[America/New_York]'),
+  { largestUnit: 'hour' },
+).hours; // 23 (one hour shorter due to DST)
 ```
 
 ## Query and Comparison
@@ -401,16 +476,16 @@ endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
 format(input: TimeInput, options?: FormatOptions): string;
 ```
 
-Formats `input` for display using `Intl.DateTimeFormat`. Use `pattern` for common presets or `intl` for a custom `Intl.DateTimeFormatOptions`. When both are present, `intl` takes precedence and `pattern` is ignored.
+Formats `input` for display using `Intl.DateTimeFormat`. Use `pattern` for common presets or `intl` for a custom `Intl.DateTimeFormatOptions` object. `intl` and `pattern` are **mutually exclusive** — enforced at the type level.
 
-**Parameters — `FormatOptions`:**
+**Parameters — `FormatOptions` (discriminated union):**
 
-| Option    | Type                         | Default       | Description                                               |
-| --------- | ---------------------------- | ------------- | --------------------------------------------------------- |
-| `pattern` | `FormatPattern`              | `'medium'`    | Preset shorthand                                          |
-| `intl`    | `Intl.DateTimeFormatOptions` | —             | Full `Intl` spec; overrides `pattern` when present        |
-| `locale`  | `Intl.LocalesArgument`       | system locale | BCP 47 locale tag                                         |
-| `tz`      | `string`                     | —             | Inferred from `ZonedDateTime` inputs; required otherwise  |
+| Variant          | Option    | Type                         | Default       | Description                                              |
+| ---------------- | --------- | ---------------------------- | ------------- | -------------------------------------------------------- |
+| `pattern` branch | `pattern` | `FormatPattern`              | `'medium'`    | Preset shorthand                                         |
+| `intl` branch    | `intl`    | `Intl.DateTimeFormatOptions` | —             | Full `Intl` spec; mutually exclusive with `pattern`      |
+| Both variants    | `locale`  | `Intl.LocalesArgument`       | system locale | BCP 47 locale tag                                        |
+| Both variants    | `tz`      | `string`                     | —             | Inferred from `ZonedDateTime` inputs; required otherwise |
 
 **Patterns:**
 
@@ -437,6 +512,25 @@ format(Temporal.Instant.from('2026-03-21T10:15:30Z'), {
   tz: 'UTC',
 });
 // → '10:15'
+```
+
+---
+
+### `formatParts(input, options?): Intl.DateTimeFormatPart[]`
+
+```ts
+formatParts(input: TimeInput, options?: FormatOptions): Intl.DateTimeFormatPart[];
+```
+
+Returns the raw `Intl.DateTimeFormatPart[]` array for `input`, enabling custom rendering where individual parts (year, month, day, etc.) need to be styled or composed differently. Accepts the same options as `format()`.
+
+**Example:**
+
+```ts
+import { formatParts } from '@vielzeug/tempo';
+
+const parts = formatParts(Temporal.Instant.from('2026-03-21T10:15:30Z'), { pattern: 'date-only', tz: 'UTC' });
+// [{ type: 'month', value: '3' }, { type: 'literal', value: '/' }, ...]
 ```
 
 ---
@@ -505,6 +599,36 @@ formatRange(
 
 ---
 
+### `formatRangeParts(start, end, options?): Intl.DateTimeRangeFormatPart[]`
+
+```ts
+formatRangeParts(
+  start: TimeInput,
+  end: TimeInput,
+  options?: FormatOptions,
+): ReturnType<Intl.DateTimeFormat['formatRangeToParts']>;
+```
+
+Returns the raw `Intl.DateTimeRangeFormatPart[]` array for a time span, enabling fine-grained rendering of range start, end, and shared parts separately. Applies the same timezone-inference and mismatch-detection rules as `formatRange()`.
+
+**Example:**
+
+```ts
+import { formatRangeParts } from '@vielzeug/tempo';
+
+const parts = formatRangeParts(
+  Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  { pattern: 'short', locale: 'en-US', tz: 'UTC' },
+);
+// [{ type: 'month', value: '3', source: 'shared' }, ...]
+
+// Render only the start part
+const startParts = parts.filter(p => p.source === 'startRange' || p.source === 'shared');
+```
+
+---
+
 ### `formatRelative(input, options?): string`
 
 ```ts
@@ -564,7 +688,7 @@ parseDuration('-PT1H'); // negative duration
 formatDuration(input: string | Temporal.DurationLike, options?: DurationFormatOptions): string;
 ```
 
-Formats a duration for display. Uses `Intl.DurationFormat` when available; falls back to the ISO string representation.
+Formats a duration for display. Uses `Intl.DurationFormat` when available; falls back to a plain English representation ("2 hours, 30 minutes").
 
 **Parameters — `DurationFormatOptions`:**
 
@@ -582,34 +706,77 @@ formatDuration('PT2H30M', { locale: 'en-US', style: 'short' });
 formatDuration({ hours: 1, minutes: 30 }, { locale: 'de-DE' });
 ```
 
-## Expiry and Time-Difference Utilities
+## Expiry and Classification
 
-### `expires(date, days?, options?): ExpiryStatus`
+### `expires(date, thresholds, options?, now?): K | null`
 
 ```ts
-expires(date: TimeInput, days?: number, options?: TimeOptions): ExpiryStatus;
+expires<K extends string>(
+  date: TimeInput,
+  thresholds: Record<K, Temporal.DurationLike>,
+  options?: TimeOptions,
+  now?: Temporal.Instant,
+): K | null;
 ```
 
-Classifies `date` relative to now:
+Classifies `date` into a named bucket by computing `diff = date − now` and returning the key of the first threshold where `diff ≤ threshold`. Thresholds are sorted ascending before comparison.
 
-| Result      | Condition                              |
-| ----------- | -------------------------------------- |
-| `'NEVER'`   | Date is on or after year 9999          |
-| `'EXPIRED'` | Date is in the past                    |
-| `'SOON'`    | Date is within the next `days` days    |
-| `'LATER'`   | Date is further in the future          |
-
-`days` defaults to `7`. Plain inputs default to UTC; pass `options.tz` to override.
+- Negative threshold values classify **past** dates (e.g., `{ days: -30 }` matches dates more than 30 days ago).
+- Returns `null` when no threshold matches.
+- Requires `options.tz` when input is `PlainDate` or `PlainDateTime`.
+- Pass `now` to fix the reference point (useful in tests).
 
 **Example:**
 
 ```ts
 import { expires } from '@vielzeug/tempo';
 
-expires(Temporal.Now.instant());                        // 'EXPIRED'
-expires(Temporal.Instant.from('9999-12-31T00:00:00Z')); // 'NEVER'
-expires(Temporal.Now.instant().add({ hours: 48 }));     // 'SOON'
-expires(Temporal.Now.instant().add({ hours: 48 }), 1); // 'LATER' (window is 1 day only)
+const THRESHOLDS = {
+  longExpired: { days: -30 }, // more than 30 days past
+  expired:     { days: 0 },   // any past date
+  critical:    { days: 3 },   // within 3 days
+  warning:     { days: 14 },  // within 14 days
+  safe:        { years: 100 }, // catch-all far future
+} as const;
+
+expires(Temporal.Now.instant().subtract({ days: 60 }), THRESHOLDS); // 'longExpired'
+expires(Temporal.Now.instant().subtract({ hours: 6 }), THRESHOLDS); // 'expired'
+expires(Temporal.Now.instant().add({ hours: 48 }), THRESHOLDS);     // 'critical'
+expires(Temporal.Now.instant().add({ days: 10 }), THRESHOLDS);      // 'warning'
+expires(Temporal.Now.instant().add({ years: 1 }), THRESHOLDS);      // 'safe'
+
+// No threshold matches — returns null
+expires(Temporal.Now.instant().add({ years: 200 }), { soon: { days: 3 } }); // null
+```
+
+---
+
+### `classify(date, thresholds, options?): { key: K | null; diff: TimeDiffResult }`
+
+```ts
+classify<K extends string>(
+  date: TimeInput,
+  thresholds: Record<K, Temporal.DurationLike>,
+  options?: TimeOptions,
+): { diff: TimeDiffResult; key: K | null };
+```
+
+Combines `expires()` and `timeDiff()` in a single call, sharing the same `now` reference. Returns both the matching threshold key and the structured time difference.
+
+**Example:**
+
+```ts
+import { classify } from '@vielzeug/tempo';
+
+const { key, diff } = classify(expiresAt, {
+  expired:  { days: 0 },
+  critical: { days: 3 },
+  warning:  { days: 14 },
+  safe:     { years: 100 },
+});
+
+// key: 'critical' | 'expired' | 'warning' | 'safe' | null
+// diff: { unit: 'hour' | 'day' | ..., value: number }
 ```
 
 ---
@@ -620,24 +787,62 @@ expires(Temporal.Now.instant().add({ hours: 48 }), 1); // 'LATER' (window is 1 d
 timeDiff(a: TimeInput, b?: TimeInput, options?: TimeOptions): TimeDiffResult;
 ```
 
-Returns the absolute difference between `a` and `b` as `{ unit, value }` in the largest meaningful unit. When `b` is omitted, the current instant is used. Sub-second differences return `{ unit: 'millisecond', value: <ms> }`.
+Returns the absolute difference between `a` and `b` as `{ unit, value }` in the largest meaningful unit. When `b` is omitted, the current instant is used.
+
+**Timezone requirement:**
+- When both inputs are `Temporal.Instant`: no `tz` needed — uses millisecond arithmetic (1 day = 86 400 s).
+- When either input is `PlainDate`, `PlainDateTime`, or `ZonedDateTime`: `tz` is required (inferred from `ZonedDateTime` inputs).
+
+Sub-second differences return `{ unit: 'millisecond', value: <ms> }`. Zero difference returns `{ unit: 'millisecond', value: 0 }`.
 
 **Example:**
 
 ```ts
 import { timeDiff } from '@vielzeug/tempo';
 
+// No tz needed for two Instants
 timeDiff(
-  Temporal.Instant.from('2027-06-01T00:00:00Z'),
   Temporal.Instant.from('2026-01-01T00:00:00Z'),
+  Temporal.Instant.from('2027-06-01T00:00:00Z'),
 ); // { unit: 'year', value: 1 }
 
-timeDiff(Temporal.Now.instant().subtract({ hours: 2 })); // { unit: 'hour', value: 2 }
+// b defaults to now
+timeDiff(Temporal.Now.instant().subtract({ hours: 3 })); // { unit: 'hour', value: 3 }
+
+// Calendar-accurate with tz
+timeDiff(
+  Temporal.Instant.from('2026-01-01T00:00:00Z'),
+  Temporal.ZonedDateTime.from('2026-06-15T00:00:00[UTC]'),
+  { tz: 'UTC' },
+); // { unit: 'month', value: 5 }
 ```
 
 ---
 
-### `dateRange(start, end, step, options): Temporal.ZonedDateTime[]`
+### `humanize(diff): string`
+
+```ts
+humanize(diff: TimeDiffResult): string;
+```
+
+Converts a `TimeDiffResult` to a human-readable English string. Uses the singular form when `value === 1`, plural otherwise.
+
+**Example:**
+
+```ts
+import { humanize, timeDiff } from '@vielzeug/tempo';
+
+humanize({ unit: 'day', value: 1 });          // '1 day'
+humanize({ unit: 'hour', value: 7 });         // '7 hours'
+humanize({ unit: 'millisecond', value: 0 });  // '0 milliseconds'
+
+// Typical combined usage
+humanize(timeDiff(publishedAt)); // '3 days'
+```
+
+## Range and Recurrence
+
+### `dateRange(start, end, step, options): Generator<Temporal.ZonedDateTime>`
 
 ```ts
 dateRange(
@@ -645,41 +850,73 @@ dateRange(
   end: TimeInput,
   step: Temporal.DurationLike,
   options: TimeOptionsWithTz,
-): Temporal.ZonedDateTime[];
+): Generator<Temporal.ZonedDateTime>;
 ```
 
-Generates an inclusive array of `ZonedDateTime` values advancing by `step`. Returns an empty array when `start > end`. Throws `RangeError` if `step` does not advance the date forward.
+Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive), advancing by `step`. Returns a generator — use `for...of` for lazy consumption or spread (`[...dateRange(...)]`) to collect into an array. Returns nothing when `start > end`. Throws `RangeError` if `step` does not advance the date forward.
 
 **Example:**
 
 ```ts
 import { dateRange } from '@vielzeug/tempo';
 
-dateRange(
-  Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]'),
-  Temporal.ZonedDateTime.from('2026-03-05T00:00:00[UTC]'),
-  { days: 1 },
-  { tz: 'UTC' },
-);
-// [Mar 1, Mar 2, Mar 3, Mar 4, Mar 5]
+const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
+const end   = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
+
+// Lazy — safe for large ranges
+for (const day of dateRange(start, end, { days: 1 }, { tz: 'UTC' })) {
+  render(day);
+  if (someCondition) break; // safe to break early
+}
+
+// Collect to array
+const days = [...dateRange(start, end, { days: 1 }, { tz: 'UTC' })];
+// [Mar 1, Mar 2, ..., Mar 31]
 ```
 
-## Cache Management
+---
 
-### `clearCaches(): void`
+### `recurrence(start, rule, options): Generator<Temporal.ZonedDateTime>`
 
 ```ts
-clearCaches(): void;
+recurrence(
+  start: TimeInput,
+  rule: RecurrenceRule,
+  options: TimeOptionsWithTz,
+): Generator<Temporal.ZonedDateTime>;
 ```
 
-Releases the internal `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.DurationFormat` caches. Call this in tests that need formatter isolation, or in long-running processes where locale data may have changed.
+Lazily generates `ZonedDateTime` occurrences according to a recurrence rule. Supports `daily`, `weekly`, `monthly`, and `yearly` frequencies.
+
+Either `count` or `until` (or both) **must** be provided — this is enforced at compile time by the `RecurrenceRule` type and validated eagerly at call time for JavaScript callers.
+
+**Parameters — `RecurrenceRule`:**
+
+| Field       | Type                                            | Required         | Description                           |
+| ----------- | ----------------------------------------------- | ---------------- | ------------------------------------- |
+| `frequency` | `'daily' \| 'weekly' \| 'monthly' \| 'yearly'` | ✅               | Recurrence frequency                  |
+| `interval`  | `number`                                        | —                | Step multiplier (default `1`)         |
+| `count`     | `number`                                        | One of these two | Maximum number of occurrences to emit |
+| `until`     | `TimeInput`                                     | One of these two | Inclusive end boundary                |
 
 **Example:**
 
 ```ts
-import { clearCaches } from '@vielzeug/tempo';
+import { recurrence } from '@vielzeug/tempo';
 
-clearCaches();
+const start = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
+
+// Every Monday for 4 weeks
+const mondays = [...recurrence(start, { frequency: 'weekly', count: 4 }, { tz: 'Europe/Berlin' })];
+
+// Bi-weekly meetings until a deadline
+const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
+for (const meeting of recurrence(start, { frequency: 'weekly', interval: 2, until: deadline }, { tz: 'Europe/Berlin' })) {
+  schedule(meeting);
+}
+
+// Every 3 months, 6 times
+const quarters = [...recurrence(start, { frequency: 'monthly', interval: 3, count: 6 }, { tz: 'UTC' })];
 ```
 
 ## Types
@@ -695,21 +932,30 @@ type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
 
 type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
 
-type FormatPattern = 'short' | 'medium' | 'long' | 'date-only' | 'time-only';
+type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
 
-type BoundaryUnit = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
+// Discriminated union — intl and pattern are mutually exclusive
+type FormatOptions =
+  | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; tz?: string }
+  | { locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
+
+type BoundaryUnit = 'day' | 'hour' | 'minute' | 'month' | 'week' | 'year';
 
 type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-type ExpiryStatus = 'EXPIRED' | 'LATER' | 'NEVER' | 'SOON';
-
-type TimeDiffUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
+type TimeDiffUnit = 'day' | 'hour' | 'millisecond' | 'minute' | 'month' | 'second' | 'week' | 'year';
 
 type TimeDiffResult = { unit: TimeDiffUnit; value: number };
 
+// Either count or until (or both) must be provided
+type RecurrenceRule = {
+  frequency: 'daily' | 'monthly' | 'weekly' | 'yearly';
+  interval?: number;
+} & ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });
+
 interface TimeOptions {
+  prefer?: DateTimeDisambiguation;
   tz?: string;
-  when?: DateTimeDisambiguation;
 }
 
 type TimeOptionsWithTz = TimeOptions & { tz: string };
@@ -719,14 +965,6 @@ interface DifferenceOptions extends TimeOptions {
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
   smallestUnit?: Temporal.DateTimeUnit;
-}
-
-/** `intl` and `pattern` are mutually exclusive — when `intl` is provided it takes full precedence. */
-interface FormatOptions {
-  intl?: Intl.DateTimeFormatOptions;
-  locale?: Intl.LocalesArgument;
-  pattern?: FormatPattern;
-  tz?: string;
 }
 
 interface RelativeFormatOptions {
@@ -744,8 +982,6 @@ interface CompareOptions extends TimeOptions {
   unit?: BoundaryUnit;
   weekStartsOn?: WeekStartDay;
 }
-
-type IsSameOptions = CompareOptions;
 
 interface DurationFormatOptions {
   locale?: Intl.LocalesArgument;

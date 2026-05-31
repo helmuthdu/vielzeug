@@ -8,13 +8,25 @@ export function fail(message: string): never {
   throw new TypeError(`[tempo] ${message}`);
 }
 
+export function validateTz(tz: string): string {
+  try {
+    Temporal.Instant.fromEpochMilliseconds(0).toZonedDateTimeISO(tz);
+  } catch {
+    fail(
+      `Unknown or invalid timezone: "${tz}". Expected an IANA timezone name (e.g. "America/New_York") or UTC offset (e.g. "+05:30").`,
+    );
+  }
+
+  return tz;
+}
+
 // ─── Direct resolution (no intermediate ParsedTimeInput) ──────────────────────
 
 /**
  * Converts any {@link TimeInput} to an absolute `Instant`.
  * Requires `options.tz` when input is a `PlainDate` or `PlainDateTime`.
  */
-export function resolveInstant(input: TimeInput, options: TimeOptions): Temporal.Instant {
+export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
   if (input instanceof Temporal.Instant) return input;
 
   if (input instanceof Temporal.ZonedDateTime) return input.toInstant();
@@ -37,7 +49,7 @@ export function resolveInstant(input: TimeInput, options: TimeOptions): Temporal
 /**
  * Projects any {@link TimeInput} into a specific timezone as a `ZonedDateTime`.
  */
-export function resolveZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime {
+export function toZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime {
   if (input instanceof Temporal.ZonedDateTime) return input.withTimeZone(options.tz);
 
   if (input instanceof Temporal.PlainDateTime) {
@@ -48,8 +60,9 @@ export function resolveZoned(input: TimeInput, options: TimeOptionsWithTz): Temp
     return input.toZonedDateTime({ timeZone: options.tz });
   }
 
-  // Instant
-  return (input as Temporal.Instant).toZonedDateTimeISO(options.tz);
+  if (input instanceof Temporal.Instant) return input.toZonedDateTimeISO(options.tz);
+
+  fail(`Unsupported time input type: ${String(input)}`);
 }
 
 // ─── Timezone inference ───────────────────────────────────────────────────────
@@ -59,11 +72,11 @@ export function inferTimeZone(input: TimeInput, options: TimeOptions): string {
 
   if (!tz) fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.');
 
-  return tz;
+  return validateTz(tz);
 }
 
 export function inferSharedTimeZone(inputs: TimeInput[], options: TimeOptions): string {
-  if (options.tz) return options.tz;
+  if (options.tz) return validateTz(options.tz);
 
   let inferred: string | undefined;
 
@@ -87,25 +100,6 @@ export function inferSharedTimeZone(inputs: TimeInput[], options: TimeOptions): 
   return inferred;
 }
 
-// ─── Display timezone resolution ──────────────────────────────────────────────
-
-export function displayTz(input: TimeInput, tz?: string): string | undefined {
-  return tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
-}
-
-export function displayRangeTz(start: TimeInput, end: TimeInput, tz?: string): string | undefined {
-  if (tz) return tz;
-
-  const startTz = start instanceof Temporal.ZonedDateTime ? start.timeZoneId : undefined;
-  const endTz = end instanceof Temporal.ZonedDateTime ? end.timeZoneId : undefined;
-
-  if (startTz && endTz && startTz !== endTz) {
-    fail('formatRange received ZonedDateTime inputs with different time zones. Pass options.tz explicitly.');
-  }
-
-  return startTz ?? endTz;
-}
-
 // ─── Shared utilities ─────────────────────────────────────────────────────────
 
 export function normalizeRange(start: Temporal.Instant, end: Temporal.Instant): [Temporal.Instant, Temporal.Instant] {
@@ -114,3 +108,6 @@ export function normalizeRange(start: Temporal.Instant, end: Temporal.Instant): 
 
 // Units that require timezone-aware context for calendar-accurate operations.
 export const CALENDAR_UNITS = new Set<Temporal.DateTimeUnit>(['day', 'week', 'month', 'year']);
+
+// Shared approximate millisecond constants for threshold arithmetic.
+export const MS_PER_MONTH = 30.4375 * 86_400_000; // 365.25 / 12 days × 86400 s × 1000

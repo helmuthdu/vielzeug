@@ -17,7 +17,7 @@ Create the logger outside the component body or inside a stable initializer, and
 import { Rune } from '@vielzeug/rune';
 import { useEffect } from 'react';
 
-const log = Rune.scope('UserProfile');
+const log = Rune.child({ namespace: 'UserProfile' });
 
 export function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {

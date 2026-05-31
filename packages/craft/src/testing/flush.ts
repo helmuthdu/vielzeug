@@ -39,9 +39,9 @@ export const FLUSH_DEEP: FlushOptions = { maxTurns: 12 };
  * Drains several microtask turns, then yields one animation frame and
  * one final microtask pass for rAF-scheduled work.
  *
- * The default drain count (12) covers the worst-case reactive propagation depth in
+ * The default drain count (5) covers typical reactive propagation depth in
  * craft components: effect → queueMicrotask (onMounted) → nested reactive
- * updates, with buffer for computed chains and batched writes.
+ * updates. For deeper async chains, use `FLUSH_DEEP`.
  *
  * @example
  * ```ts

@@ -1,26 +1,26 @@
-import { anySignal } from '@vielzeug/arsenal';
-
 import type { HttpRequestConfig, Params } from './url';
 
 import { HttpError } from './errors';
 import { parseResponse } from './response';
 import { buildRequestInit, stableStringify } from './serialize';
 import {
+  anySignal,
   buildTimeoutSignal,
   createTransportCore,
-  validateTimeout,
   type FetchContext,
   type Interceptor,
   type TransportCore,
   type TransportOptions,
+  validateTimeout,
 } from './transport';
 import { buildUrl } from './url';
 
 export type { FetchContext, Interceptor };
 
-// DELETE is HTTP-idempotent (repeating it produces the same server state), so it
-// is included in auto-dedup by default.
-const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
+// Only safe + idempotent methods are auto-deduplicated. DELETE is idempotent but
+// not safe (it produces a side-effect), so it must opt-in via explicit dedupeKey
+// to avoid silently coalescing concurrent destructive requests.
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 function getDedupeKey(
   method: string,

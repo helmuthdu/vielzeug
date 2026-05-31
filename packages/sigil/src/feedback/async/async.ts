@@ -1,4 +1,4 @@
-import { define, prop, html, type ReadonlySignal, onMounted, signal, when } from '@vielzeug/craft';
+import { define, html, onMounted, prop, type ReadonlySignal, signal, when } from '@vielzeug/craft';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';

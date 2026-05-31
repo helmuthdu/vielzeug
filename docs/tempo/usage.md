@@ -25,16 +25,29 @@ format(instant, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
 
 ## Parsing and Conversion
 
-Use `parseLocal()` for wall-clock strings.
-Use `toInstant()` for timeline-safe values.
-Use `toZoned()` for display in a specific timezone.
+Use `parseLocal()` for wall-clock strings, `parseInstant()` for UTC ISO strings, and `parseAny()` when the input format varies. Use `toInstant()` and `toZoned()` to project values across timezones.
 
 ```ts
-import { parseLocal, toInstant, toZoned } from '@vielzeug/tempo';
+import { isValid, parseAny, parseInstant, parseLocal, toInstant, toZoned } from '@vielzeug/tempo';
 
+// Wall-clock string from user input or database
 const local = parseLocal('2026-03-21T10:15:30');
 const instant = toInstant(local, { tz: 'Europe/Berlin' });
 const tokyo = toZoned(instant, { tz: 'Asia/Tokyo' });
+
+// UTC ISO string from an API response
+const ts = parseInstant('2026-03-21T10:15:30Z');
+
+// Unknown ISO format — picks the most specific type automatically
+parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
+parseAny('2026-03-21T10:00:00Z');                     // Instant
+parseAny('2026-03-21T10:00:00');                      // PlainDateTime
+parseAny('2026-03-21');                               // PlainDate
+
+// Type guard — validate before passing to Tempo functions
+if (isValid(externalValue)) {
+  format(externalValue, { pattern: 'short', tz: 'UTC' });
+}
 ```
 
 ## DST-Safe Arithmetic
@@ -133,7 +146,7 @@ const weekStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week',
 Use `format()` for UI, `formatInstant()`/`formatZoned()` for machine output, `formatRelative()` for UX copy.
 
 ```ts
-import { format, formatInstant, formatRange, formatRelative, formatZoned } from '@vielzeug/tempo';
+import { format, formatInstant, formatParts, formatRange, formatRangeParts, formatRelative, formatZoned } from '@vielzeug/tempo';
 
 const instant = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
@@ -152,6 +165,17 @@ formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
   locale: 'en-US',
   numeric: 'always',
 });
+
+// formatParts / formatRangeParts — raw Intl parts for custom rendering
+const parts = formatParts(instant, { pattern: 'date-only', tz: 'UTC' });
+// [{ type: 'month', value: '3' }, { type: 'literal', value: '/' }, ...]
+
+const rangeParts = formatRangeParts(
+  Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  { pattern: 'short', locale: 'en-US', tz: 'UTC' },
+);
+const startOnly = rangeParts.filter(p => p.source === 'startRange' || p.source === 'shared');
 ```
 
 ## Duration Helpers
@@ -163,48 +187,80 @@ const duration = parseDuration('PT2H30M');
 const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 ```
 
-## Expiry and Time-Difference Utilities
+## Expiry and Classification
 
-Use `expires()` to classify whether a date has passed, is approaching, or is far away.
+Use `expires()` to classify a date into a named threshold bucket of your choosing.
 
 ```ts
-import { expires, timeDiff } from '@vielzeug/tempo';
+import { classify, expires, humanize, timeDiff } from '@vielzeug/tempo';
 
-// Classify a date against a look-ahead window (default: 7 days)
-expires(Temporal.Now.instant());                        // 'EXPIRED'
-expires(Temporal.Now.instant().add({ hours: 48 }));     // 'SOON'
-expires(Temporal.Now.instant().add({ hours: 48 }), 1); // 'LATER'
-expires(Temporal.Instant.from('9999-12-31T00:00:00Z')); // 'NEVER'
+const THRESHOLDS = {
+  longExpired: { days: -30 }, // more than 30 days past
+  expired:     { days: 0 },   // any past date
+  critical:    { days: 3 },   // within 3 days
+  warning:     { days: 14 },  // within 14 days
+  safe:        { years: 100 },
+} as const;
 
-// Largest-unit human-readable time difference
+// Classify — returns the key of the first matching threshold, or null
+expires(Temporal.Now.instant().subtract({ days: 60 }), THRESHOLDS); // 'longExpired'
+expires(Temporal.Now.instant().add({ hours: 48 }), THRESHOLDS);     // 'critical'
+expires(Temporal.Now.instant().add({ years: 200 }), THRESHOLDS);    // null (no match)
+
+// classify() = expires() + timeDiff() in one call
+const { key, diff } = classify(certificateExpiry, THRESHOLDS);
+// key: 'critical' | 'expired' | 'warning' | 'safe' | 'longExpired' | null
+// diff: { unit: 'hour' | 'day' | ..., value: number }
+
+// timeDiff — largest-unit human-readable time difference
+// No tz needed when both are Instants
 timeDiff(
   Temporal.Instant.from('2026-01-01T00:00:00Z'),
   Temporal.Instant.from('2027-06-01T00:00:00Z'),
 ); // { unit: 'year', value: 1 }
+
+// humanize converts a TimeDiffResult to a readable string
+humanize(timeDiff(expiresAt)); // '3 days', '1 hour', etc.
 ```
 
-## Date Ranges
+## Date Ranges and Recurrence
 
-Use `dateRange()` to generate sequences of `ZonedDateTime` values for calendars, reports, or iteration.
+Use `dateRange()` to lazily generate sequences of `ZonedDateTime` values for calendars, reports, or iteration.
 
 ```ts
-import { dateRange } from '@vielzeug/tempo';
+import { dateRange, recurrence } from '@vielzeug/tempo';
 
-// Every day in March 2026
-const days = dateRange(
-  Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]'),
-  Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]'),
-  { days: 1 },
-  { tz: 'UTC' },
-);
+// dateRange returns a Generator — use for...of or spread to collect
+const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
+const end   = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
+
+// Lazy iteration — break early without computing all values
+for (const day of dateRange(start, end, { days: 1 }, { tz: 'UTC' })) {
+  render(day);
+}
+
+// Collect to array
+const days = [...dateRange(start, end, { days: 1 }, { tz: 'UTC' })];
 
 // Every Monday in a date range
-const mondays = dateRange(
+const mondays = [...dateRange(
   Temporal.ZonedDateTime.from('2026-03-02T00:00:00[UTC]'),
   Temporal.ZonedDateTime.from('2026-03-30T00:00:00[UTC]'),
   { weeks: 1 },
   { tz: 'UTC' },
-);
+)];
+
+// recurrence — repeating dates with count or until
+const meetingStart = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
+const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
+
+// Weekly meetings until a deadline (count OR until required at compile time)
+for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: deadline }, { tz: 'Europe/Berlin' })) {
+  schedule(meeting);
+}
+
+// Every 3 months for 6 occurrences
+const quarters = [...recurrence(meetingStart, { frequency: 'monthly', interval: 3, count: 6 }, { tz: 'UTC' })];
 ```
 
 ## Framework Integration
@@ -294,10 +350,11 @@ await db.put('sessions', { id: '1', token: 'abc' }, ttl.ms(expiresIn));
 ## Best Practices
 
 - Store `Temporal.Instant` values in databases and APIs — never store offset-aware strings.
-- Use `parseLocal()` at the system boundary when receiving wall-clock strings from external sources.
+- Use `parseLocal()` at the system boundary when receiving wall-clock strings from external sources; use `parseInstant()` for UTC ISO strings; use `parseAny()` when the format is unknown.
+- Use `isValid()` as a type guard when accepting `TimeInput` from external data.
 - Convert to `ZonedDateTime` only when rendering to users; keep instants everywhere else.
 - Always pass `tz` when calling `toInstant()`, `shift()`, or `difference()` with plain inputs.
 - Use `format()` for UI labels, `formatInstant()` for transport/logging, and `formatZoned()` for zoned ISO strings.
+- Use `formatParts()` / `formatRangeParts()` when individual date parts need separate styling.
 - Use `formatRelative()` for UX copy ("3 hours ago") rather than computing the difference manually.
-- Call `clearCaches()` in test `afterEach` hooks when tests depend on specific `Intl` formatter behavior.
 - Prefer `dateRange()` over manual `while` loops when generating sequences of dates.

@@ -1,22 +1,44 @@
-// Signals are intentionally excluded from the main entry point to avoid
-// forcing @vielzeug/ripple as a dependency for all consumers.
-// Import them via the separate subpath: import { toSignals } from '@vielzeug/sourcerer/signals'
-
-export * from './codecs';
-export * from './cursorSource';
-export * from './derive';
-export * from './infiniteSource';
-export * from './localSource';
-export * from './merge';
-export * from './middleware';
-export * from './prefetch';
-export * from './presets';
-export * from './remoteSource';
-export * from './state';
-export * from './types';
-
-// Selective re-exports from utils — defaultKeyOf is internal only.
-export { defaultRetryDelay, extractError, retry } from './utils';
-
-// Filter predicate helpers re-exported for convenience.
-export { allOf, anyOf, noneOf, not } from '@vielzeug/arsenal';
+export { decodeQuery, encodeQuery } from './codecs';
+export type { DecodeQueryOptions } from './codecs';
+export { createSourceCore } from './core';
+export type { SourceCore } from './core';
+export { createCursorSource } from './cursorSource';
+export { createInfiniteSource } from './infiniteSource';
+export { createLocalSource } from './localSource';
+export { composeFetch } from './middleware';
+export type { FetchMiddleware } from './middleware';
+export { clampPage, itemRange, pageCount } from './pagination';
+export { prefetchSource, prefetchSourceWithSource } from './prefetch';
+export { createRemoteSource } from './remoteSource';
+export { toSignals } from './signals';
+export { sourceState } from './state';
+export type {
+  CursorConfig,
+  CursorMeta,
+  CursorSource,
+  CursorSourceQuery,
+  DerivedSource,
+  FetchEvent,
+  InfiniteConfig,
+  InfiniteMeta,
+  InfiniteSource,
+  InfiniteSourceQuery,
+  LocalConfig,
+  LocalSource,
+  PageNavigator,
+  Predicate,
+  QueryParams,
+  QueryParamsInput,
+  ReactiveSource,
+  RemoteConfig,
+  RemoteSource,
+  RemoteSourceQuery,
+  RetryConfig,
+  Sorter,
+  Source,
+  SourceMeta,
+  SourceQuery,
+  SourceSnapshot,
+  SourceState,
+} from './types';
+export { SourceError } from './types';

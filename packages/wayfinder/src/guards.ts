@@ -1,4 +1,4 @@
-import type { BeforeLeaveBlocker } from './types';
+import type { BeforeLeaveBlocker, NavigationDestination } from './types';
 
 /**
  * A registered leave guard. `routes` scopes the guard to navigations that depart from
@@ -17,10 +17,13 @@ export type RegisteredBlocker = {
  *
  * A snapshot of the blocker set is taken before iteration so that guards added or removed
  * during execution do not affect the current run.
+ *
+ * R4: `destination` is passed to each blocker so guards can make context-aware decisions.
  */
 export async function runLeaveBlockers(
   blockers: ReadonlySet<RegisteredBlocker>,
   activeMatchNames: readonly string[],
+  destination: NavigationDestination,
 ): Promise<boolean> {
   const activeNames = new Set(activeMatchNames);
   // Snapshot so that removals during iteration don't skip entries.
@@ -29,7 +32,7 @@ export async function runLeaveBlockers(
   for (const { handler, routes } of snapshot) {
     if (routes !== undefined && !routes.some((name) => activeNames.has(name))) continue;
 
-    const allowed = await handler();
+    const allowed = await handler(destination);
 
     if (!allowed) return false;
   }

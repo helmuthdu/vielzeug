@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { getCurrentElement, effect } from './runtime';
+import { effect, getCurrentElement } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
 export type PropsDef<T extends Record<string, unknown>> = {
@@ -225,10 +225,10 @@ export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals
   const props = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
-    const normalized = normalizePropDefinition(def, name);
+    // defs passed here are already normalized by define(); skip re-normalization.
     const attrName = toKebab(name);
 
-    props[name] = registerProp(name, attrName, normalized);
+    props[name] = registerProp(name, attrName, def as PropDef<unknown>);
   }
 
   return props as unknown as InferPropsSignals<InferPropsFromDefs<D>>;

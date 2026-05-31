@@ -7,12 +7,6 @@
 
 The `typeOf` utility returns a lowercase string representing the precise type of a value. It provides more detailed and accurate results than the native `typeof` operator, correctly identifying arrays, `null`, and other built-in objects.
 
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/typeOf.ts
-:::
-
 ## Features
 
 - **Isomorphic**: Works in both Browser and Node.js.

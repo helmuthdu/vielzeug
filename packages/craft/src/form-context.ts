@@ -1,4 +1,4 @@
-import { computed, signal, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 import { createContext, inject, provide } from './context';
 
@@ -7,8 +7,13 @@ import { createContext, inject, provide } from './context';
  * and injected by child field components.
  */
 export type FormContextValue = {
-  /** Whether any field has been touched (interacted with). */
+  /** Whether any field has been touched (interacted with). Set via markDirty(). */
   readonly dirty: ReadonlySignal<boolean>;
+  /**
+   * Mark the form as dirty (e.g. call from a field's input/change handler).
+   * Reset to false via reset().
+   */
+  markDirty(): void;
   /**
    * Register a field's validity signal with the form context.
    * Returns a cleanup function.
@@ -72,6 +77,10 @@ export function createFormContext(
     options.onReset?.();
   };
 
+  const markDirty = (): void => {
+    dirty.value = true;
+  };
+
   const registerField = (validity: ReadonlySignal<boolean>): (() => void) => {
     fieldValiditySignals.value = [...fieldValiditySignals.value, validity];
 
@@ -80,7 +89,7 @@ export function createFormContext(
     };
   };
 
-  return { dirty, registerField, reset, submit, submitting, valid };
+  return { dirty, markDirty, registerField, reset, submit, submitting, valid };
 }
 
 /**

@@ -18,7 +18,7 @@ import { BusDisposedError } from '@vielzeug/herald';
 
 async function waitForLogin(bus: Bus<AppEvents>) {
   try {
-    const { userId } = await bus.wait('user:login', AbortSignal.timeout(10_000));
+    const { userId } = await bus.wait('user:login', { signal: AbortSignal.timeout(10_000) });
     return userId;
   } catch (err) {
     if (err instanceof BusDisposedError) return null; // bus torn down — graceful exit

@@ -7,7 +7,6 @@ import type { RouteBranchDef, RouteRecord } from './types';
 type HydrationOverride<TMeta, TComponent> = {
   component?: TComponent;
   dataFn?: RouteBranchDef['dataFn'];
-  handler?: RouteBranchDef['handler'];
   meta?: TMeta;
 };
 
@@ -79,8 +78,6 @@ export function createHydrationManager<TMeta = unknown, TComponent = unknown>() 
 
       for (const { index, mod } of resolved) {
         const override: HydrationOverride<TMeta, TComponent> = {};
-
-        if (mod.handler !== undefined) override.handler = mod.handler;
 
         if (mod.data !== undefined) override.dataFn = mod.data;
 

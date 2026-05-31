@@ -1,5 +1,4 @@
-import type { RouteBranchDef, RouteRecord } from './types';
-import type { Middleware, RouteDefinition, RouteTable, RouterOptions } from './types';
+import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 
@@ -8,12 +7,9 @@ export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
   routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
 };
 
-export function compileRoutes<
-  TRoutes extends RouteTable,
-  TMeta,
-  TComponent,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
->(options: RouterOptions<TRoutes, TMeta, TComponent, TLocals>): CompiledRoutes<TMeta, TComponent> {
+export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
+  options: RouterOptions<TRoutes, TMeta, TComponent>,
+): CompiledRoutes<TMeta, TComponent> {
   const globalMiddleware: Middleware[] = [...(options.middleware ?? [])] as unknown as Middleware[];
   const records: RouteRecord<TMeta, TComponent>[] = [];
 
@@ -41,7 +37,6 @@ export function compileRoutes<
       {
         component: route.component as TComponent | undefined,
         dataFn: route.data,
-        handler: route.handler,
         lazy: route.lazy as RouteBranchDef<TMeta, TComponent>['lazy'],
         meta: route.meta as TMeta | undefined,
         name,
@@ -60,7 +55,9 @@ export function compileRoutes<
       }
     }
 
-    if (route.handler !== undefined || route.lazy !== undefined || route.redirect !== undefined || !route.children) {
+    // R9: emit a record for leaf routes (no children), redirects, lazy routes, and routes with data.
+    // A bare parent-only route (children but no data/lazy/redirect) is not emitted as a leaf.
+    if (route.lazy !== undefined || route.redirect !== undefined || !route.children || route.data !== undefined) {
       const leaf = branchDefs[branchDefs.length - 1]!;
 
       records.push({

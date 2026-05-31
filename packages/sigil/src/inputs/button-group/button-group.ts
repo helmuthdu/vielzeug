@@ -1,6 +1,6 @@
-import { define, createContext, html, provide, type ReadonlySignal, prop } from '@vielzeug/craft';
+import { createContext, define, html, prop, provide, type ReadonlySignal } from '@vielzeug/craft';
 
-import { sizableBundle, themableBundle } from '../../shared/config';
+import { sizableBundle, themableBundle } from '../../shared';
 import styles from './button-group.css?inline';
 
 /** Button group properties */

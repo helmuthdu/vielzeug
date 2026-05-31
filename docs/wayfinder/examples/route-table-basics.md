@@ -19,35 +19,36 @@ import { createRouter } from '@vielzeug/wayfinder';
 const routes = {
   home: {
     path: '/',
-    handler: () => renderHome(),
   },
   dashboard: {
     path: '/dashboard',
     children: {
       index: {
         index: true,
-        handler: () => renderDashboardHome(),
       },
       settings: {
         path: 'settings',
         data: async () => fetchSettings(),
-        handler: ({ data }) => renderSettings(data),
       },
     },
   },
   userDetail: {
     path: '/users/:id',
     data: async ({ params }) => fetchUser(params.id),
-    handler: ({ data }) => renderUser(data),
     meta: { title: 'User' },
-  },
-  notFound: {
-    path: '*',
-    handler: () => renderNotFound(),
   },
 };
 
-const router = createRouter({ routes });
+const router = createRouter({
+  routes,
+  notFound: { component: NotFoundPage },
+});
+
+// React to navigation:
+router.subscribe((state) => {
+  const leaf = state.matches.at(-1);
+  render(leaf?.component, leaf?.data);
+});
 
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
 await router.navigate({ name: 'dashboard.settings' });
@@ -56,7 +57,7 @@ const href = router.url('userDetail', { id: '42' }, { tab: 'profile' });
 
 ### Pitfalls
 
-- Object key order controls match precedence. Place `notFound: { path: '*' }` last, or it will match every route.
+- Object key order controls match precedence. Use the `notFound` option in `createRouter` for the not-found page; `path: '*'` routes still work but are matched in key order.
 - Child route `path` values are relative to the parent. Omit the leading slash: `path: 'settings'`, not `path: '/settings'`.
 - A route key that contains a dot (e.g., `'user.detail'`) will clash with nested compound names. Avoid dots in top-level keys.
 

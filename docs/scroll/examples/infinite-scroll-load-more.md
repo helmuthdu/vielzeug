@@ -33,11 +33,11 @@ async function loadMore() {
 const virt = createVirtualizer(scrollEl, {
   count: items.length,
   estimateSize: 40,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:40px;line-height:40px;padding:0 12px;`;
       el.textContent = items[item.index] ?? 'Loading…';
@@ -45,7 +45,7 @@ const virt = createVirtualizer(scrollEl, {
     }
 
     // Trigger next page load when the last item is in view
-    const lastRendered = virtualItems.at(-1);
+    const lastRendered = items.at(-1);
     if (lastRendered && lastRendered.index >= items.length - 10) {
       loadMore();
     }

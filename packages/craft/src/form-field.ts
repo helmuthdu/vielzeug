@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { getCurrentElement, effect } from './runtime';
+import { effect, getCurrentElement } from './runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();

@@ -1,23 +1,26 @@
 import type {
   BoundWard,
+  Principal,
+  UserPrincipal,
   Ward,
   WardCheck,
   WardConflict,
   WardDecision,
   WardOptions,
   WardRule,
-  Principal,
-  UserPrincipal,
+  WardRuleInput,
+  WardTrace,
+  WardTraceCandidate,
 } from './types';
 
 import { ANONYMOUS, WILDCARD } from './constants';
-import { matchesPattern } from './resource';
+import { matchesPattern, patternCovers } from './resource';
 
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
 
-/** A compiled entry stores the authored rule plus pre-computed lookup values. */
+/** A compiled entry stores the normalized rule plus pre-computed lookup values. */
 type CompiledEntry<TAction extends string, TData> = {
   /** Deny bonus (1 for deny, 0 for allow): tiebreaker when priority and score match. */
   denyBonus: 0 | 1;
@@ -25,10 +28,10 @@ type CompiledEntry<TAction extends string, TData> = {
   index: number;
   /** Resolved priority (defaults to 0 when not authored). */
   priority: number;
-  /** Normalized roles array (always an array internally). */
+  /** Normalized roles array (always an array). */
   roles: readonly string[];
-  /** The authored rule, frozen so it can be returned directly without cloning. */
-  rule: Readonly<WardRule<TAction, TData>>;
+  /** The normalized, frozen rule — role is always readonly string[]. */
+  rule: WardRule<TAction, TData>;
   /** Specificity score (0–5): roleScore(0|1) + resourceScore(0|1|2) + actionScore(0|1|2). */
   score: number;
 };
@@ -37,7 +40,7 @@ type CompiledEntry<TAction extends string, TData> = {
 // Validation (module-scope pure functions)
 // ---------------------------------------------------------------------------
 
-function validateRule<TAction extends string, TData>(rule: WardRule<TAction, TData>, index: number): void {
+function validateRuleInput<TAction extends string, TData>(rule: WardRuleInput<TAction, TData>, index: number): void {
   const at = `Rule[${index}]`;
 
   const roles = Array.isArray(rule.role) ? rule.role : [rule.role];
@@ -124,39 +127,35 @@ function patternScore(pattern: string): number {
  * Specificity: role(0|1) + resource(0|1|2) + action(0|1|2) = max 5.
  * Higher score = more specific = wins ties in priority.
  */
-function specificity<TAction extends string, TData>(rule: WardRule<TAction, TData>, roles: readonly string[]): number {
-  const roleScore = roles.includes(WILDCARD) ? 0 : 1;
+function specificity<TAction extends string, TData>(rule: WardRule<TAction, TData>): number {
+  const roleScore = rule.role.includes(WILDCARD) ? 0 : 1;
 
   return roleScore + patternScore(rule.resource as string) + patternScore(rule.action as string);
 }
 
 function compileEntry<TAction extends string, TData>(
-  rule: WardRule<TAction, TData>,
+  input: WardRuleInput<TAction, TData>,
   index: number,
 ): CompiledEntry<TAction, TData> {
-  validateRule(rule, index);
+  validateRuleInput(input, index);
 
-  // Freeze the role array and rule so they can be returned directly without
-  // defensive cloning on every decision call.
-  const frozenRole = Array.isArray(rule.role) ? Object.freeze([...rule.role]) : rule.role;
+  // Normalize role to readonly string[] and freeze the whole rule.
+  const roles: readonly string[] = Object.freeze(Array.isArray(input.role) ? [...input.role] : [input.role]);
 
-  const snapshot = Object.freeze({ ...rule, role: frozenRole }) as Readonly<WardRule<TAction, TData>>;
+  const rule = Object.freeze({
+    action: input.action,
+    effect: input.effect,
+    resource: input.resource,
+    role: roles,
+    ...(input.priority !== undefined ? { priority: input.priority } : {}),
+    ...(input.when !== undefined ? { when: input.when } : {}),
+  }) as WardRule<TAction, TData>;
 
-  const roles: readonly string[] = Array.isArray(frozenRole)
-    ? (frozenRole as readonly string[])
-    : [frozenRole as string];
-  const score = specificity(snapshot, roles);
-  const priority = snapshot.priority ?? 0;
-  const denyBonus = snapshot.effect === 'deny' ? 1 : 0;
+  const score = specificity(rule);
+  const priority = rule.priority ?? 0;
+  const denyBonus: 0 | 1 = rule.effect === 'deny' ? 1 : 0;
 
-  return {
-    denyBonus,
-    index,
-    priority,
-    roles,
-    rule: snapshot,
-    score,
-  };
+  return { denyBonus, index, priority, roles, rule, score };
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +218,23 @@ function matchesRule<TAction extends string, TData>(
 // Decision resolution (module-scope pure functions)
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns true if `challenger` would displace `current` as the pickWinner result.
+ * Used both in winner selection and conflict detection.
+ */
+function isOverriddenBy<TAction extends string, TData>(
+  current: CompiledEntry<TAction, TData>,
+  challenger: CompiledEntry<TAction, TData>,
+): boolean {
+  return (
+    challenger.priority > current.priority ||
+    (challenger.priority === current.priority && challenger.score > current.score) ||
+    (challenger.priority === current.priority &&
+      challenger.score === current.score &&
+      challenger.denyBonus > current.denyBonus)
+  );
+}
+
 function pickWinner<TAction extends string, TData>(
   entries: CompiledEntry<TAction, TData>[],
   principal: Principal,
@@ -256,23 +272,6 @@ function toDecision<TAction extends string, TData>(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns true if `challenger` would displace `current` as the pickWinner result.
- * Used both in pickWinner and conflict detection.
- */
-function isOverriddenBy<TAction extends string, TData>(
-  current: CompiledEntry<TAction, TData>,
-  challenger: CompiledEntry<TAction, TData>,
-): boolean {
-  return (
-    challenger.priority > current.priority ||
-    (challenger.priority === current.priority && challenger.score > current.score) ||
-    (challenger.priority === current.priority &&
-      challenger.score === current.score &&
-      challenger.denyBonus > current.denyBonus)
-  );
-}
-
-/**
  * Returns true if every principal that satisfies `narrowRoles` also satisfies `broadRoles`.
  * ANONYMOUS and WILDCARD are handled as distinct tokens.
  */
@@ -280,30 +279,15 @@ function roleCoversRoles(broadRoles: readonly string[], narrowRoles: readonly st
   const narrowHasAnonymous = narrowRoles.includes(ANONYMOUS);
   const narrowHasAuthenticated = narrowRoles.some((r) => r !== ANONYMOUS);
 
-  // broad must cover the anonymous case if narrow can fire for null principals
   if (narrowHasAnonymous && !broadRoles.includes(ANONYMOUS)) return false;
 
   if (narrowHasAuthenticated) {
-    // WILDCARD covers all authenticated principals
     if (broadRoles.includes(WILDCARD)) return true;
 
-    // Every non-anonymous role in narrow must be present in broad
     return narrowRoles.filter((r) => r !== ANONYMOUS).every((r) => broadRoles.includes(r));
   }
 
   return true;
-}
-
-/** Returns true if every request that triggers `narrow` would also trigger `broad`. */
-function ruleCovers<TAction extends string, TData>(
-  broad: CompiledEntry<TAction, TData>,
-  narrow: CompiledEntry<TAction, TData>,
-): boolean {
-  return (
-    roleCoversRoles(broad.roles, narrow.roles) &&
-    matchesPattern(broad.rule.resource as string, narrow.rule.resource as string) &&
-    matchesPattern(broad.rule.action as string, narrow.rule.action as string)
-  );
 }
 
 function rolesSetsEqual(a: readonly string[], b: readonly string[]): boolean {
@@ -314,25 +298,50 @@ function rolesSetsEqual(a: readonly string[], b: readonly string[]): boolean {
   return b.every((r) => setA.has(r));
 }
 
+/** Returns true if every request that triggers `narrow` would also trigger `broad`. */
+function ruleCovers<TAction extends string, TData>(
+  broad: CompiledEntry<TAction, TData>,
+  narrow: CompiledEntry<TAction, TData>,
+): boolean {
+  return (
+    roleCoversRoles(broad.roles, narrow.roles) &&
+    patternCovers(broad.rule.resource as string, narrow.rule.resource as string) &&
+    patternCovers(broad.rule.action as string, narrow.rule.action as string)
+  );
+}
+
 /**
  * Detects conflicts between compiled entries.
  *
- * For entries at positions i < j (a before b in the scan order):
- * - `'duplicate'`: identical (role set, resource, action) — b can never fire.
- * - `'shadowed'`:  broad covers narrow AND the broad entry always wins rank comparison.
+ * @complexity O(n²) in the number of rules. Scales to hundreds of rules
+ * with negligible overhead; for very large auto-generated policies, use `maxConflicts`.
+ *
+ * - `'duplicate'`:  identical (role set, resource, action) AND neither rule has a predicate.
+ * - `'shadowed'`:   broad covers narrow AND the broad entry always wins rank comparison
+ *                   AND the broad entry has no `when` predicate (a predicate could fail
+ *                   at runtime, giving the covered rule a chance to fire).
  */
 function computeConflicts<TAction extends string, TData>(
   entries: CompiledEntry<TAction, TData>[],
+  maxConflicts: number,
 ): WardConflict<TAction, TData>[] {
   const conflicts: WardConflict<TAction, TData>[] = [];
 
-  for (let i = 0; i < entries.length; i++) {
-    for (let j = i + 1; j < entries.length; j++) {
-      const a = entries[i]; // earlier in scan order
+  for (let i = 0; i < entries.length && conflicts.length < maxConflicts; i++) {
+    for (let j = i + 1; j < entries.length && conflicts.length < maxConflicts; j++) {
+      const a = entries[i];
       const b = entries[j];
 
-      // Exact duplicate: identical normalized (roles, resource, action) — b can never win
-      if (rolesSetsEqual(a.roles, b.roles) && a.rule.resource === b.rule.resource && a.rule.action === b.rule.action) {
+      // Only flag as duplicate when neither rule has a predicate — predicate-gated rules
+      // with identical (role, resource, action) apply to disjoint runtime request sets
+      // and their overlap can only be determined at runtime, not statically.
+      if (
+        !a.rule.when &&
+        !b.rule.when &&
+        rolesSetsEqual(a.roles, b.roles) &&
+        a.rule.resource === b.rule.resource &&
+        a.rule.action === b.rule.action
+      ) {
         conflicts.push({
           kind: 'duplicate',
           rule: b.rule,
@@ -345,8 +354,10 @@ function computeConflicts<TAction extends string, TData>(
 
       const bCanOverrideA = isOverriddenBy(a, b);
 
-      // a always wins over b AND a's scope covers b's scope → a shadows b
-      if (!bCanOverrideA && ruleCovers(a, b)) {
+      // A rule can only permanently shadow another when it has NO predicate —
+      // if the shadowing rule has a `when` clause it may fail at runtime, allowing
+      // the covered rule to fire.
+      if (!bCanOverrideA && !a.rule.when && ruleCovers(a, b)) {
         conflicts.push({
           kind: 'shadowed',
           rule: b.rule,
@@ -354,8 +365,7 @@ function computeConflicts<TAction extends string, TData>(
           shadowedBy: a.rule,
           shadowedByIndex: a.index,
         });
-      } else if (bCanOverrideA && ruleCovers(b, a)) {
-        // b always wins over a AND b's scope covers a's scope → b shadows a
+      } else if (bCanOverrideA && !b.rule.when && ruleCovers(b, a)) {
         conflicts.push({
           kind: 'shadowed',
           rule: a.rule,
@@ -371,14 +381,70 @@ function computeConflicts<TAction extends string, TData>(
 }
 
 // ---------------------------------------------------------------------------
+// Shared loop cores (validation-free; used by both public API and forUser)
+// ---------------------------------------------------------------------------
+
+function coreAllowedActions<TAction extends string, TData>(
+  entries: CompiledEntry<TAction, TData>[],
+  principal: Principal,
+  resource: string,
+  knownActions: readonly TAction[],
+  data: TData | undefined,
+): TAction[] {
+  const seen = new Set<TAction>();
+  const result: TAction[] = [];
+
+  for (const action of knownActions) {
+    if (seen.has(action)) continue;
+
+    seen.add(action);
+
+    const winner = pickWinner(entries, principal, resource, action, data);
+
+    if (winner?.rule.effect === 'allow') result.push(action);
+  }
+
+  return result;
+}
+
+function coreRulesInScope<TAction extends string, TData>(
+  entries: CompiledEntry<TAction, TData>[],
+  principal: Principal,
+  resource: string,
+  data: TData | undefined,
+): WardRule<TAction, TData>[] {
+  const skipPredicate = data === undefined;
+  const result: WardRule<TAction, TData>[] = [];
+
+  for (const entry of entries) {
+    if (!matchesRule(entry, principal, resource, undefined, data, skipPredicate)) continue;
+
+    result.push(entry.rule);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
+/**
+ * Creates an authorization ward from a set of rules.
+ *
+ * **Winner selection** when multiple rules match a request:
+ * 1. Higher `priority` wins.
+ * 2. On priority tie, higher specificity score wins (exact > namespace-wildcard > global-wildcard,
+ *    applied independently to role, resource, and action).
+ * 3. On specificity tie, `deny` beats `allow` (denyBonus tiebreaker).
+ * 4. On absolute tie (identical priority, specificity, and effect), the rule declared
+ *    **first in the input array** wins.
+ */
 export function createWard<TAction extends string = string, TData = unknown>(
-  rules: readonly WardRule<TAction, TData>[] = [],
+  rules: readonly WardRuleInput<TAction, TData>[] = [],
   options: WardOptions<TAction, TData> = {},
 ): Ward<TAction, TData> {
-  const { logger } = options;
+  const { logger, maxConflicts = Infinity } = options;
   const entries = rules.map((rule, i) => compileEntry(rule, i));
 
   // -------------------------------------------------------------------------
@@ -395,14 +461,13 @@ export function createWard<TAction extends string = string, TData = unknown>(
     const decision = toDecision(winner);
 
     if (logger) {
-      logger({
-        action,
-        data,
-        decision: decision.allowed ? 'allow' : decision.reason,
-        principal,
-        resource,
-        rule: 'rule' in decision ? decision.rule : undefined,
-      });
+      if (decision.allowed) {
+        logger({ action, data, decision: 'allow', principal, resource, rule: decision.rule });
+      } else if (decision.reason === 'explicit-deny') {
+        logger({ action, data, decision: 'explicit-deny', principal, resource, rule: decision.rule });
+      } else {
+        logger({ action, data, decision: 'no-matching-rule', principal, resource });
+      }
     }
 
     return decision;
@@ -464,69 +529,69 @@ export function createWard<TAction extends string = string, TData = unknown>(
   ): TAction[] {
     validatePrincipal(principal);
 
-    const seen = new Set<TAction>();
-    const result: TAction[] = [];
-
-    for (const action of knownActions) {
-      if (seen.has(action)) continue;
-
-      seen.add(action);
-
-      const winner = pickWinner(entries, principal, resource, action, data);
-
-      if (winner?.rule.effect === 'allow') result.push(action);
-    }
-
-    return result;
+    return coreAllowedActions(entries, principal, resource, knownActions, data);
   }
 
   function rulesInScope(principal: Principal, resource: string, data?: TData): WardRule<TAction, TData>[] {
     validatePrincipal(principal);
 
-    // When no data is provided we still want predicate-gated rules to appear
-    // in the scope list (the predicate isn't evaluated; the rule is shown as-is).
-    const skipPredicate = data === undefined;
-    const result: WardRule<TAction, TData>[] = [];
+    return coreRulesInScope(entries, principal, resource, data);
+  }
+
+  function trace(principal: Principal, resource: string, action: TAction, data?: TData): WardTrace<TAction, TData> {
+    validatePrincipal(principal);
+
+    // Collect all matching entries without short-circuiting
+    const matching: CompiledEntry<TAction, TData>[] = [];
 
     for (const entry of entries) {
-      if (!matchesRule(entry, principal, resource, undefined, data, skipPredicate)) continue;
-
-      result.push(entry.rule);
+      if (matchesRule(entry, principal, resource, action, data)) {
+        matching.push(entry);
+      }
     }
 
-    return result;
+    // Determine winner among matching entries
+    let winner: CompiledEntry<TAction, TData> | undefined;
+
+    for (const entry of matching) {
+      if (!winner || isOverriddenBy(winner, entry)) winner = entry;
+    }
+
+    const decision = toDecision(winner);
+
+    if (logger) {
+      if (decision.allowed) {
+        logger({ action, data, decision: 'allow', principal, resource, rule: decision.rule });
+      } else if (decision.reason === 'explicit-deny') {
+        logger({ action, data, decision: 'explicit-deny', principal, resource, rule: decision.rule });
+      } else {
+        logger({ action, data, decision: 'no-matching-rule', principal, resource });
+      }
+    }
+
+    const candidates: WardTraceCandidate<TAction, TData>[] = matching.map((entry) => ({
+      denyBonus: entry.denyBonus,
+      priority: entry.priority,
+      rule: entry.rule,
+      score: entry.score,
+      won: entry === winner,
+    }));
+
+    return { candidates, decision };
   }
 
   function forUser(principal: UserPrincipal): BoundWard<TAction, TData> {
     assertUserPrincipal(principal);
 
-    // Snapshot the principal at bind time — mutations to the caller's object
-    // must not affect decisions made through the bound view.
     const snap: UserPrincipal = {
       attributes: principal.attributes ? structuredClone(principal.attributes) : undefined,
       id: principal.id,
       roles: [...principal.roles],
     };
 
-    // Delegate directly to internal functions, bypassing repeated principal
-    // validation since the snapshot is already validated and immutable in practice.
     return {
-      allowedActions: (resource, knownActions, data?) => {
-        const seen = new Set<TAction>();
-        const result: TAction[] = [];
-
-        for (const action of knownActions) {
-          if (seen.has(action)) continue;
-
-          seen.add(action);
-
-          const winner = pickWinner(entries, snap, resource, action, data);
-
-          if (winner?.rule.effect === 'allow') result.push(action);
-        }
-
-        return result;
-      },
+      allowedActions: (resource, knownActions, data?) =>
+        coreAllowedActions(entries, snap, resource, knownActions, data),
       can: (resource, action, data?) => evaluateAndLog(snap, resource, action, data).allowed,
       canAll: (resource, actions, data?) => {
         if (actions.length === 0) return true;
@@ -543,20 +608,9 @@ export function createWard<TAction extends string = string, TData = unknown>(
 
         return checks.map((check) => evaluateAndLog(snap, check.resource, check.action, check.data));
       },
-      detectConflicts,
       explain: (resource, action, data?) => evaluateAndLog(snap, resource, action, data),
-      rulesInScope: (resource, data?) => {
-        const skipPredicate = data === undefined;
-        const result: WardRule<TAction, TData>[] = [];
-
-        for (const entry of entries) {
-          if (!matchesRule(entry, snap, resource, undefined, data, skipPredicate)) continue;
-
-          result.push(entry.rule);
-        }
-
-        return result;
-      },
+      rulesInScope: (resource, data?) => coreRulesInScope(entries, snap, resource, data),
+      trace: (resource, action, data?) => trace(snap, resource, action, data),
     };
   }
 
@@ -567,10 +621,9 @@ export function createWard<TAction extends string = string, TData = unknown>(
   let conflictsCache: WardConflict<TAction, TData>[] | undefined;
 
   function detectConflicts(): WardConflict<TAction, TData>[] {
-    return (conflictsCache ??= computeConflicts(entries));
+    return (conflictsCache ??= computeConflicts(entries, maxConflicts));
   }
 
-  // Eager conflict check when strict mode or onConflict callback is requested
   if (options.strict || options.onConflict) {
     const conflicts = detectConflicts();
 
@@ -585,5 +638,5 @@ export function createWard<TAction extends string = string, TData = unknown>(
     }
   }
 
-  return { allowedActions, can, canAll, canAny, checkAll, detectConflicts, explain, forUser, rulesInScope };
+  return { allowedActions, can, canAll, canAny, checkAll, detectConflicts, explain, forUser, rulesInScope, trace };
 }

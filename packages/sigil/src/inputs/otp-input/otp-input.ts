@@ -1,9 +1,9 @@
-import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craft';
+import { computed, define, html, inject, onMounted, prop, signal, watch } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createListControl } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './otp-input.css?inline';

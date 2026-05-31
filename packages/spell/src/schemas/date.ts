@@ -1,6 +1,6 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, resolveMessage } from '../core';
+import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class DateSchema<Input = Date> extends Schema<Date, Input> {
@@ -30,13 +30,6 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
         ? null
         : fail(ErrorCode.too_big, resolveMessage(message, { max: date, value: typed }), { max: date });
     });
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return {
-      $comment:
-        'Date objects are not representable in JSON Schema. Validate as a string with a date format in JSON contexts.',
-    };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

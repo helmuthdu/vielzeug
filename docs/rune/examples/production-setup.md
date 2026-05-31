@@ -26,12 +26,15 @@ export const appLog = Rune.child({
         // NDJSON to stdout for log aggregation (ELK, Datadog, CloudWatch)
         jsonTransport({ level: 'warn' }),
         // Forward errors to a remote endpoint
-        remoteTransport(async (type, data) => {
-          await fetch('/api/logs', {
-            body: JSON.stringify(data),
-            method: 'POST',
-          });
-        }, { level: 'error' }),
+        remoteTransport({
+          handler: async (type, data) => {
+            await fetch('/api/logs', {
+              body: JSON.stringify(data),
+              method: 'POST',
+            });
+          },
+          level: 'error',
+        }),
       ]
     : [consoleTransport()],
 }).withBindings({

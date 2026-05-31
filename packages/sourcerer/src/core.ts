@@ -30,8 +30,9 @@ export type SourceCore = {
   /**
    * Returns a Promise that resolves when `isIdle()` returns true.
    * Resolves synchronously if already idle.
+   * Rejects with a `TimeoutError` after `timeoutMs` ms if still not idle.
    */
-  ready(isIdle: () => boolean): Promise<void>;
+  ready(isIdle: () => boolean, timeoutMs?: number): Promise<void>;
 
   /**
    * Schedules a debounced callback, replacing any pending timer.
@@ -91,16 +92,29 @@ export function createSourceCore(): SourceCore {
       }
     },
 
-    ready(isIdle) {
+    ready(isIdle, timeoutMs) {
       if (isIdle()) return Promise.resolve();
 
-      return new Promise<void>((resolve) => {
+      return new Promise<void>((resolve, reject) => {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
         const check = () => {
           if (isIdle()) {
+            if (timeoutId !== undefined) {
+              clearTimeout(timeoutId);
+            }
+
             listeners.delete(check);
             resolve();
           }
         };
+
+        if (timeoutMs !== undefined) {
+          timeoutId = setTimeout(() => {
+            listeners.delete(check);
+            reject(new Error(`Source.ready() timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }
 
         listeners.add(check);
       });

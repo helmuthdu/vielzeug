@@ -24,11 +24,11 @@ const listEl = document.getElementById('list')!;
 const virt = createVirtualizer(scrollEl, {
   count: data.length,
   estimateSize: 40,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.className = 'row';
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:40px;line-height:40px;padding:0 12px;`;

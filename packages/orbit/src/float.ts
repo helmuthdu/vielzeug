@@ -1,18 +1,19 @@
-import type { ComputePositionResult, FloatHandle, Middleware, Placement, ReferenceElement } from './types';
+import type {
+  ComputePositionOptions,
+  ComputePositionResult,
+  FloatHandle,
+  Middleware,
+  Placement,
+  ReferenceElement,
+} from './types';
 
-import { type AutoUpdateOptions, autoUpdate } from './auto-update';
+import { autoUpdate, type AutoUpdateOptions } from './auto-update';
 import { computePosition } from './core';
 
 // ── CSS Anchor Positioning (progressive enhancement) ─────────────────────────────────────────
 
-let _cssAnchorSupported: boolean | undefined;
-
 function isCssAnchorPositioningSupported(): boolean {
-  if (_cssAnchorSupported !== undefined) return _cssAnchorSupported;
-
-  _cssAnchorSupported = typeof CSS !== 'undefined' && CSS.supports('anchor-name', '--orbit');
-
-  return _cssAnchorSupported;
+  return typeof CSS !== 'undefined' && CSS.supports('anchor-name', '--orbit');
 }
 
 let anchorCounter = 0;
@@ -87,7 +88,7 @@ export interface FloatOptions {
    * Called once per position update with the full `ComputePositionResult`.
    * Defaults to writing `left` / `top` on the floating element (requires `position: fixed`).
    */
-  apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;
+  apply?: (result: ComputePositionResult) => void;
   /**
    * Options for the auto-update loop. Omit to use defaults.
    * Pass `false` to disable auto-updating (position is computed once on call).
@@ -103,11 +104,27 @@ export interface FloatOptions {
    * @experimental CSS Anchor Positioning support varies by browser.
    */
   preferCssAnchor?: boolean;
+  /**
+   * The containing block element for `position: absolute` floating elements.
+   * Provide the floating element's `offsetParent` to convert viewport-relative
+   * coordinates to containing-block-relative coordinates.
+   */
+  containingBlock?: Element | null;
+  /**
+   * Default boundary for all overflow-aware middleware. Per-middleware `boundary` takes precedence.
+   * Defaults to the visual viewport.
+   */
+  boundary?: ComputePositionOptions['boundary'];
+  /**
+   * Default padding for all overflow-aware middleware. Per-middleware `padding` takes precedence.
+   * Defaults to `0`.
+   */
+  padding?: ComputePositionOptions['padding'];
 }
 
-function applyDefault(result: ComputePositionResult, elements: { floating: HTMLElement }): void {
-  elements.floating.style.left = `${result.x}px`;
-  elements.floating.style.top = `${result.y}px`;
+function applyDefault(result: ComputePositionResult, floating: HTMLElement): void {
+  floating.style.left = `${result.x}px`;
+  floating.style.top = `${result.y}px`;
 }
 
 /**
@@ -130,9 +147,12 @@ export function float(
   reference: ReferenceElement,
   floating: HTMLElement,
   {
-    apply = applyDefault,
+    apply,
     autoUpdate: autoUpdateOptions = {},
+    boundary,
+    containingBlock,
     middleware,
+    padding,
     placement = 'bottom',
     preferCssAnchor = false,
   }: FloatOptions = {},
@@ -140,7 +160,7 @@ export function float(
   const hasMiddleware = middleware && middleware.some(Boolean);
   const useCssAnchor =
     preferCssAnchor &&
-    apply === applyDefault &&
+    apply == null &&
     !hasMiddleware &&
     reference instanceof HTMLElement &&
     isCssAnchorPositioningSupported();
@@ -152,12 +172,13 @@ export function float(
   }
 
   let lastPosition: ComputePositionResult | null = null;
+  const applyFn = apply ?? ((result) => applyDefault(result, floating));
 
   function update(): void {
-    const result = computePosition(reference, floating, { middleware, placement });
+    const result = computePosition(reference, floating, { boundary, containingBlock, middleware, padding, placement });
 
     lastPosition = result;
-    apply(result, { floating, reference });
+    applyFn(result);
   }
 
   if (autoUpdateOptions === false) {

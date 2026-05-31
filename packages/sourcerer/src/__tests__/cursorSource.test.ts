@@ -164,7 +164,7 @@ describe('createCursorSource', () => {
 
       await source.refresh();
 
-      expect(source.meta.errorMessage).toBe('cursor-fail');
+      expect(source.meta.error?.message).toBe('cursor-fail');
       expect(source.current).toEqual([]);
     });
   });
@@ -208,7 +208,7 @@ describe('createCursorSource', () => {
 
       expect(fetch).toHaveBeenCalledTimes(2);
       expect(source.current).toEqual(['retried']);
-      expect(source.meta.errorMessage).toBeNull();
+      expect(source.meta.error).toBeNull();
     });
   });
 

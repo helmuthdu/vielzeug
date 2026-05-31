@@ -20,6 +20,11 @@ export interface PersistOptions {
    */
   include?: (key: QueryKey) => boolean;
   /**
+   * The query keys to persist or hydrate. Only these keys are observed /
+   * read from storage; use `include` to further filter them.
+   */
+  keys: QueryKey[];
+  /**
    * Maximum age in ms for a persisted entry to be eligible for hydration.
    * Entries whose `updatedAt` timestamp is older than `Date.now() - maxAge` are
    * skipped during hydration and left for a fresh network fetch.
@@ -71,7 +76,7 @@ export function persistQueryCache(
       listener: (state: { data: unknown; status: string; updatedAt?: number }) => void,
     ): () => void;
   },
-  opts: PersistOptions & { keys: QueryKey[] },
+  opts: PersistOptions,
 ): () => void {
   const { include, keys, onError, prefix = 'courier:', storage } = opts;
   const unsubs: Array<() => void> = [];
@@ -130,7 +135,7 @@ export function persistQueryCache(
  */
 export async function hydrateQueryCache(
   qc: { set(key: QueryKey, data: unknown, opts?: { updatedAt?: number }): void },
-  opts: PersistOptions & { keys: QueryKey[] },
+  opts: PersistOptions,
 ): Promise<void> {
   const { include, keys, maxAge, onError, prefix = 'courier:', storage } = opts;
 
@@ -144,7 +149,21 @@ export async function hydrateQueryCache(
 
       // Use the caller's key — not any key embedded in stored JSON — so the correct
       // cache entry is populated regardless of JSON serialisation edge cases.
-      const entry = JSON.parse(raw) as SerializedEntry;
+      const parsed: unknown = JSON.parse(raw);
+
+      // Validate structure before use to guard against schema migrations,
+      // corrupt storage, or entries written by older versions of the app.
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        !('data' in parsed) ||
+        typeof (parsed as { updatedAt?: unknown }).updatedAt !== 'number'
+      ) {
+        onError?.(new Error('[courier] Malformed persisted entry'), key);
+        continue;
+      }
+
+      const entry = parsed as SerializedEntry;
 
       // Skip entries that exceed the caller's maximum age threshold.
       if (maxAge !== undefined && Date.now() - entry.updatedAt > maxAge) continue;

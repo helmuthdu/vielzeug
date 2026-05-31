@@ -33,17 +33,37 @@ export type MaybePromise<T> = T | Promise<T>;
  */
 export type DataStream<T = unknown> = AsyncGenerator<T, T>;
 
+/** Navigation status for the whole router. */
 export type NavigationStatus = 'error' | 'idle' | 'loading' | 'streaming';
+
+/** Per-route match status (F1). Reflects whether this specific branch node is still loading. */
+export type MatchStatus = 'error' | 'idle' | 'loading' | 'streaming';
+
 export type IsActiveOptions = {
   /** Require an exact pathname match. Defaults to prefix matching. */
   exact?: boolean;
 };
 export type ScrollPosition = { x: number; y: number };
 export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
-export type RouterErrorSource = 'coerce-search' | 'history-listener' | 'initial-navigation' | 'preload';
-export type RouterErrorContext = {
-  readonly source: RouterErrorSource;
-};
+
+/**
+ * Discriminated error context passed to `onError` (R3).
+ * Each variant carries enough information to distinguish where the error originated.
+ */
+export type RouterErrorContext =
+  | {
+      /** Route name where the data loader failed. */
+      routeName: string;
+      source: 'data-loader';
+    }
+  | {
+      /** Route name where middleware threw. */
+      routeName: string;
+      source: 'middleware';
+    }
+  | { source: 'coerce-search' | 'history-listener' | 'initial-navigation' | 'preload' };
+
+export type RouterErrorSource = RouterErrorContext['source'];
 
 /**
  * Per-route search-param coercion function.
@@ -52,8 +72,19 @@ export type RouterErrorContext = {
  */
 export type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (raw: QueryParams) => Q;
 
+/**
+ * Destination info passed to `beforeLeave` blockers (R4).
+ * Gives guards enough context to make an informed allow/block decision.
+ */
+export type NavigationDestination = {
+  readonly name?: string;
+  readonly params: RouteParams;
+  readonly pathname: string;
+  readonly query: QueryParams;
+};
+
 /** Blocker callback passed to `router.beforeLeave()`. Return `true` to allow navigation, `false` to cancel. */
-export type BeforeLeaveBlocker = () => MaybePromise<boolean>;
+export type BeforeLeaveBlocker = (destination: NavigationDestination) => MaybePromise<boolean>;
 
 /**
  * Options for `router.beforeLeave()`.
@@ -95,19 +126,15 @@ export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarge
 /**
  * Context available in middleware and data loaders.
  *
- * `TLocals` types the `locals` bag passed between middleware functions.
- * `query` reflects the coerced output of `coerceSearch` when defined, otherwise raw URL strings.
+ * R7: `TLocals` has been removed. Use `locals: Record<string, unknown>` and cast
+ * inside your middleware when you need typed access (e.g. `ctx.locals as AuthCtx`).
  */
-export type RouteContext<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
   readonly hash: string;
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
-  /** Typed mutable bag for passing values between middleware functions in a navigation. */
-  locals: TLocals;
+  /** Mutable bag for passing values between middleware functions in a navigation. */
+  locals: Record<string, unknown>;
   /** Matched branch for the current navigation. Leaf node is the active route. */
   readonly matches: RouteMatchBranch;
   readonly navigate: (
@@ -126,53 +153,22 @@ export type RouteContext<
 export type DataContext<
   Params extends RouteParams = RouteParams,
   TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = RouteContext<Params, TRoutes, TLocals> & {
+> = RouteContext<Params, TRoutes> & {
   readonly signal: AbortSignal;
 };
 
-/**
- * Context passed to route `handler` functions. Extends RouteContext with the resolved
- * data loader result. Available only inside handlers; not present during middleware.
- */
-export type HandlerContext<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = RouteContext<Params, TRoutes, TLocals> & {
-  readonly data: unknown;
-};
-
-/** Handler may be sync or async. Async return values are awaited by the router. */
-export type RouteHandler<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = (context: HandlerContext<Params, TRoutes, TLocals>) => MaybePromise<void>;
-
-/**
- * Data loader for a route. Runs after all middleware allows navigation.
- * Cannot redirect — use middleware for auth/guard logic.
- * Receives an AbortSignal that cancels when a newer navigation starts.
- *
- * May return a plain value/Promise **or** an `AsyncGenerator` for streaming.
- * When a generator is returned each `yield` emits a partial state with `status: 'streaming'`;
- * the generator's `return` value (or last yielded value) becomes the final settled data.
- */
-export type DataFn<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = (context: DataContext<Params, TRoutes, TLocals>) => DataStream | MaybePromise<unknown>;
+/** Data loader function. May return a plain value/Promise or an AsyncGenerator for streaming. */
+export type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: DataContext<Params, TRoutes>,
+) => DataStream | MaybePromise<unknown>;
 
 /**
  * Global middleware function. Call `next()` to continue the chain; return without calling it to block navigation.
- * `TLocals` types the `ctx.locals` bag; use `RouteMiddleware<Path>` for per-route typed params instead.
  */
-export type Middleware<
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = (context: RouteContext<RouteParams, TRoutes, TLocals>, next: () => Promise<void>) => void | Promise<void>;
+export type Middleware<TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<RouteParams, TRoutes>,
+  next: () => Promise<void>,
+) => void | Promise<void>;
 
 /**
  * Per-route middleware with typed path params.
@@ -184,11 +180,10 @@ export type Middleware<
  *   return next();
  * };
  */
-export type RouteMiddleware<
-  Path extends string = string,
-  TRoutes extends RouteTable = RouteTable,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = (context: RouteContext<PathParams<Path>, TRoutes, TLocals>, next: () => Promise<void>) => void | Promise<void>;
+export type RouteMiddleware<Path extends string = string, TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<PathParams<Path>, TRoutes>,
+  next: () => Promise<void>,
+) => void | Promise<void>;
 
 // ─── Route Definition Types ───────────────────────────────────────────────────
 
@@ -218,19 +213,22 @@ type ContentRouteDefinition<Path extends string = string> = RouteCommon &
   RoutePathShape<Path> & {
     /** Normalize/coerce raw search params for this route. Throwing falls back to raw strings and is reported via `onError`. */
     coerceSearch?: CoerceSearchFn;
-    /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. Supports streaming via AsyncGenerator. */
+    /**
+     * Data loader. Runs after middleware; result is available as `match.data` in the matched branch.
+     * Supports streaming via AsyncGenerator. May also perform side effects directly
+     * (rendering, state hydration) — replaces the former `handler` concept (F4).
+     */
     data?: DataFn<PathParams<Path>>;
-    handler?: RouteHandler<PathParams<Path>>;
-    /** Lazy-load the route module. The resolved export replaces handler/data/component/meta. */
-    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'component' | 'data' | 'handler' | 'meta'>>;
+    /** Lazy-load the route module. The resolved export replaces data/component/meta. */
+    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'component' | 'data' | 'meta'>>;
     /**
      * Per-route middleware with typed params. Use `RouteMiddleware<Path>` for inline type safety.
-     * Runs after parent middleware, before this route's data loader and handler.
+     * Runs after parent middleware, before this route's data loader.
      */
     middleware?: Array<Middleware | RouteMiddleware<Path>>;
     /**
      * Route-level error boundary for data loader failures.
-     * Called when this route's `data()` throws. The returned value becomes `ctx.data`
+     * Called when this route's `data()` throws. The returned value becomes `match.data`
      * so the route can render a degraded state. If `onError` itself throws, the router
      * falls through to `status: 'error'` as usual.
      */
@@ -242,7 +240,6 @@ type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
   RoutePathShape<Path> & {
     coerceSearch?: never;
     data?: never;
-    handler?: never;
     lazy?: never;
     middleware?: never;
     onError?: never;
@@ -315,7 +312,9 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
 
 /**
  * A single node in the matched route branch (root → leaf).
- * `TMeta` and `TComponent` are router-level type parameters set at `createRouter` call.
+ *
+ * F1: Each match node carries its own `status` so nested layouts can reflect
+ * per-slot loading/streaming state without polling the router-level status.
  */
 export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
   /** Optional view payload copied from route `component` or lazy module output. */
@@ -326,6 +325,8 @@ export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
   readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
+  /** F1: Per-node loading status. Reflects individual loader state in nested layouts. */
+  readonly status: MatchStatus;
 };
 
 /** Ordered array of matched route nodes from the root layout down to the active leaf. */
@@ -338,7 +339,7 @@ export type RouteLocation = {
   readonly pathname: string;
   /**
    * Raw parsed query params — always string values from URL parsing.
-   * For coerced values (numbers, booleans), access `ctx.query` inside middleware or handlers.
+   * For coerced values (numbers, booleans), access `ctx.query` inside middleware or data loaders.
    */
   readonly query: QueryParams;
 };
@@ -360,25 +361,26 @@ export type RouteState<TMeta = unknown, TComponent = unknown> = {
 
 // ─── Router configuration ──────────────────────────────────────────────────────
 
-export type RouterOptions<
-  TRoutes extends RouteTable = RouteTable,
-  TMeta = unknown,
-  TComponent = unknown,
-  TLocals extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown> = {
   /** Base path for all routes (default: '/'). */
   base?: string;
   /** Custom history driver. Defaults to `createBrowserHistory()`. */
   history?: HistoryDriver;
-  /** Global middleware applied to every route. Use for authentication, analytics, and error boundaries. */
-  middleware?: Middleware<TRoutes, TLocals>[];
-  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload, coerce-search). */
+  /** Global middleware applied to every route. */
+  middleware?: Middleware<TRoutes>[];
+  /**
+   * F5: Fallback route rendered when no route matches.
+   * Declared explicitly and matched last after all routes.
+   * The `data` function receives the unmatched pathname via `ctx.pathname`.
+   */
+  notFound?: Pick<ContentRouteDefinition, 'component' | 'data' | 'meta' | 'middleware'>;
+  /** Optional sink for non-awaited/background router errors. */
   onError?: (error: unknown, context: RouterErrorContext) => void;
-  /** Declarative route table. Object key order determines match precedence — place specific routes before wildcards. */
+  /** Declarative route table. Object key order determines match precedence. */
   routes: TRoutes;
   /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
   scroll?: (to: RouteState<TMeta, TComponent>, from: RouteState<TMeta, TComponent>) => ScrollDecision;
-  /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
+  /** Wrap navigation in the View Transition API when available. */
   viewTransition?: boolean;
 };
 
@@ -407,7 +409,7 @@ export interface HistoryDriver {
 
 export type Unsubscribe = () => void;
 
-// ─── Internal compiled route types (not exported from index.ts) ───────────────
+// ─── Internal compiled route types ───────────────────────────────────────────
 
 /** @internal Regex-based matcher produced by compilePathMatcher. */
 export type RouteMatcher = {
@@ -420,35 +422,27 @@ export type RouteMatcher = {
 export type RouteBranchDef<TMeta = unknown, TComponent = unknown> = {
   readonly component?: TComponent;
   readonly dataFn?: DataFn;
-  readonly handler?: RouteHandler;
   readonly lazy?: () => Promise<
     Pick<
       {
         component?: TComponent;
         data?: DataFn;
-        handler?: RouteHandler;
         meta?: TMeta;
       },
-      'component' | 'data' | 'handler' | 'meta'
+      'component' | 'data' | 'meta'
     >
   >;
   readonly meta?: TMeta;
   readonly name: string;
   /**
    * Route-level error boundary for data loader failures.
-   * Called when this route's `data()` throws. The returned value becomes `ctx.data`
-   * so the route can render a degraded state.
+   * Called when this route's `data()` throws. The returned value becomes `match.data`.
    */
   readonly onError?: (error: unknown, context: DataContext) => MaybePromise<unknown>;
 };
 
 /**
  * @internal Compiled route record. Produced by `compileRoutes`.
- *
- * `TRoutes` has been intentionally dropped from this type — middleware types are
- * erased at compile time and enforced at the `createRouter` call site via `RouterOptions`.
- * This eliminates the contravariance problem that required `as unknown as` casts throughout
- * the router implementation.
  */
 export type RouteRecord<TMeta = unknown, TComponent = unknown> = {
   readonly branchDefs: readonly RouteBranchDef<TMeta, TComponent>[];

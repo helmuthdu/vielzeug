@@ -3,14 +3,13 @@ import {
   effect,
   html,
   inject,
+  type InjectionKey,
   injectStrict,
   onMounted,
   provide,
-  signal,
-  type InjectionKey,
   type ReadonlySignal,
+  signal,
 } from '../index';
-import {} from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 

@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/herald",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

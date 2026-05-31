@@ -47,7 +47,9 @@ s.tuple([s.string(), s.number()]);
 s.record(s.string(), s.number());
 s.union(s.string(), s.number());
 s.union('admin', 'editor', 'viewer');
+s.or(s.string(), s.null());   // alias for two-branch union
 s.intersect(s.object({ id: s.number() }), s.object({ createdAt: s.date() }));
+s.and(s.object({ id: s.number() }), s.object({ createdAt: s.date() }));  // alias for intersect
 s.variant('type', {
   ok: s.object({ data: s.string() }),
   error: s.object({ message: s.string() }),
@@ -59,7 +61,7 @@ s.null();
 s.undefined();
 ```
 
-Use `s.any()` when you want an unconstrained schema that only adds preprocess, check, transform, or branding behavior. Use `s.unknown()` when you want the same runtime behavior but keep the output type as `unknown` until later transforms or checks narrow it.
+Use `s.any()` when you want an unconstrained schema that only adds preprocess, check, or transform behavior. Use `s.unknown()` when you want the same runtime behavior but keep the output type as `unknown` until later transforms or checks narrow it.
 
 ## Primitive Schemas
 
@@ -300,25 +302,40 @@ const PaginationSchema = s
   });
 ```
 
-### `brand()` and `describe()`
+### `label()`, `toDescriptor()`, and `toJsonSchema()`
 
 ```ts
-// Setter: attach a human-readable description (returns same schema type)
-const UserId = s.number().int().positive().brand<'UserId'>().describe('Positive numeric user identifier');
+// label() attaches a human-readable description (immutable — returns new schema)
+const UserId = s.number().int().positive().label('Positive numeric user identifier');
+UserId.description; // 'Positive numeric user identifier'
 
-// Getter: return a typed SchemaDescriptor for introspection
-const descriptor = s.string().min(3).email().describe();
+// toDescriptor() returns a typed structural descriptor for introspection
+const descriptor = s.string().min(3).email().toDescriptor();
 // => { kind: 'string', minLength: 3, format: 'email' }
+
+// JSON Schema 2020-12 output — derived from toDescriptor()
+const jsonSchema = s.object({ name: s.string().min(1), age: s.number().int().min(0) }).toJsonSchema();
 ```
 
-`brand()` is compile-time only. `describe(string)` stores a description on the schema instance and returns the same schema type. `describe()` with no arguments returns a `SchemaDescriptor` with the kind, constraints, and nested descriptors for this schema.
-
-### `toJsonSchema()` and `walk()`
+### `fromDescriptor()` and `descriptorToJsonSchema()`
 
 ```ts
-// JSON Schema 2020-12 output (memoized per schema instance)
-const jsonSchema = s.object({ name: s.string().min(1), age: s.number().int().min(0) }).toJsonSchema();
+import { fromDescriptor, descriptorToJsonSchema } from '@vielzeug/spell';
 
+// Round-trip: schema → descriptor → schema
+const schema = s.object({ name: s.string(), age: s.number().int() });
+const reconstructed = fromDescriptor(schema.toDescriptor());
+reconstructed.parse({ name: 'Ada', age: 30 });
+
+// Descriptor → JSON Schema (without a full schema instance)
+const jsonSchema = descriptorToJsonSchema(schema.toDescriptor());
+```
+
+`fromDescriptor` throws for kinds that cannot round-trip: `lazy`, `pipe`, `instanceof`, and `variant`.
+
+### `walk()`
+
+```ts
 // Walk the schema tree with a typed visitor
 const fieldNames = s.object({ id: s.number(), name: s.string() }).walk({
   object: (_, fields) => Object.keys(fields),
@@ -326,9 +343,26 @@ const fieldNames = s.object({ id: s.number(), name: s.string() }).walk({
 });
 ```
 
-## Async Validation
+### `assert()`
 
-### `check()` — sync validation
+`assert()` validates a value and narrows its type as a TypeScript assertion. It throws `ValidationError` on failure. Use it when you want the type narrowing of a checked cast without the verbosity of `safeParse()`.
+
+```ts
+function processUser(raw: unknown) {
+  UserSchema.assert(raw, 'user');
+  // raw is now typed as User — continues below, or throws
+  console.log(raw.email);
+}
+```
+
+The optional `label` is prepended to root-level issue messages:
+```ts
+UserSchema.assert(raw, 'payload');
+// throws: "payload: Expected string" (root-level issues only)
+// Nested path issues (e.g. field errors inside an object) are not prefixed.
+```
+
+`assert()` is synchronous only. For schemas with `checkAsync()` validators, use `parseAsync()` and handle the result manually.
 
 `check()` has two forms:
 
@@ -350,9 +384,9 @@ const Password = s
   .check((v) => /\d/.test(v) || 'Must include a number');
 ```
 
-`check()` is **synchronous only**. Returning a `Promise` from `check()` throws at runtime. Use `checkAsync()` for async validators.
+### `check()` — sync validation
 
-### `checkAsync()` — async validation
+`check()` is **synchronous only**. Returning a `Promise` from `check()` throws at runtime. Use `checkAsync()` for async validators.
 
 ```ts
 const Username = s
@@ -365,10 +399,10 @@ const Username = s
   });
 ```
 
+### `checkAsync()` — async validation
+
 Async validators receive the parsed value after preprocessors, defaults, and core schema validation.
 Schemas with `checkAsync()` **must** be used with `parseAsync()` / `safeParseAsync()`.
-
-### `ctx.addIssue()` for multi-issue validation
 
 Use the context form with `ctx.addIssue()` when you need multiple issues or explicit path control:
 
@@ -389,7 +423,7 @@ const PasswordSchema = s
   });
 ```
 
-## Error Handling
+### `ctx.addIssue()` for multi-issue validation
 
 ```ts
 const RegistrationSchema = s
@@ -427,13 +461,15 @@ if (!result.success) {
 }
 ```
 
-Cross-field object refinements usually land in `formErrors` because their issue path is empty.
+## Error Handling
 
 For machine handling, prefer checking `issue.code` and `issue.params` over matching human-readable messages.
 
 - `array.unique()` uses `invalid_unique`
 - `number.safe()` uses `invalid_safe`
 - `number.finite()` uses `invalid_finite`
+
+Cross-field object refinements usually land in `formErrors` because their issue path is empty.
 
 ## Message Customization
 
@@ -460,7 +496,23 @@ reset();
 
 `configure()` deep-merges the provided message groups with the defaults. `reset()` restores the built-in defaults.
 
-## Type Inference
+### Locale Management
+
+Register locale bundles and switch between them at runtime:
+
+```ts
+import { registerLocale, useLocale, currentLocale } from '@vielzeug/spell';
+
+registerLocale('de', {
+  string: { email: () => 'Bitte eine gültige E-Mail-Adresse eingeben' },
+  number: { min: ({ min }) => `Mindestens ${min}` },
+});
+
+useLocale('de');        // activates the 'de' locale
+currentLocale();        // => 'de'
+```
+
+Each locale bundle is a deep-partial of the full `Messages` type — override only the keys you need. `useLocale()` throws if the locale hasn't been registered first.
 
 ```ts
 import { s, type Infer, type InferInput } from '@vielzeug/spell';

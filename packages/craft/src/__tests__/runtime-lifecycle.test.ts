@@ -2,7 +2,7 @@
  * Runtime lifecycle tests
  */
 
-import { onEvent, html, onCleanup, onMounted, signal } from '../index';
+import { html, onCleanup, onEvent, onMounted, signal } from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {

@@ -19,11 +19,11 @@ import { float, flip, offset, shift } from '@vielzeug/orbit';
 const trigger = document.querySelector<HTMLElement>('#trigger')!;
 const tooltip = document.querySelector<HTMLElement>('#tooltip')!;
 
-let cleanup: (() => void) | null = null;
+let handle: ReturnType<typeof float> | null = null;
 
 function show() {
   tooltip.showPopover();
-  cleanup = float(trigger, tooltip, {
+  handle = float(trigger, tooltip, {
     placement: 'top',
     middleware: [offset(8), flip(), shift({ padding: 6 })],
   });
@@ -31,8 +31,8 @@ function show() {
 
 function hide() {
   tooltip.hidePopover();
-  cleanup?.();
-  cleanup = null;
+  handle?.cleanup();
+  handle = null;
 }
 
 trigger.addEventListener('mouseenter', show);

@@ -35,7 +35,7 @@ const form = createForm({
   },
 });
 
-// Store scoped sub-forms once — each call creates a new object
+// scope() is memoized — repeated calls with the same prefix return the same object
 const steps = [
   { title: 'Personal Info', scope: form.scope('personal') },
   { title: 'Address',       scope: form.scope('address') },
@@ -78,7 +78,7 @@ function updateStepUI() {
 
 ### Pitfalls
 
-- **Call `scope()` once and store the result.** Calling `form.scope('personal')` inside a render function creates a new object each time, breaking subscription closures.
+- **`scope()` is memoized** — repeated calls with the same prefix return the same cached object. However, calling it during a render or inside a tight loop is still wasteful; store the result for clarity.
 - `scope.state` reflects the **full** form — `state.isValid` is `false` if any step has an error. Use `scope.validate()` for per-step validity, not `state.isValid`.
 - Navigating backward does not re-run validation. If you want to re-surface errors on return, call `scope.validate()` when the user navigates to a step.
 - `form.submit()` validates all fields across all steps — this is correct for final submission. Use `scope.validate()` for per-step validation when advancing.

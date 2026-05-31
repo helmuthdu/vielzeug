@@ -1,4 +1,5 @@
 import { decodeQuery, encodeQuery } from '../codecs';
+import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
 
 describe('createRemoteSource', () => {
@@ -58,7 +59,8 @@ describe('createRemoteSource', () => {
 
       await source.refresh();
 
-      expect(source.meta.errorMessage).toBe('boom');
+      expect(source.meta.error?.message).toBe('boom');
+      expect(source.meta.error?.name).toBe('SourceError');
       expect(source.current).toEqual([]);
     });
 
@@ -70,10 +72,10 @@ describe('createRemoteSource', () => {
       const source = createRemoteSource({ autoFetch: false, fetch });
 
       await source.refresh();
-      expect(source.meta.errorMessage).toBe('boom');
+      expect(source.meta.error?.message).toBe('boom');
 
       await source.refresh();
-      expect(source.meta.errorMessage).toBeNull();
+      expect(source.meta.error).toBeNull();
       expect(source.current).toEqual(['ok']);
     });
 
@@ -117,8 +119,6 @@ describe('createRemoteSource', () => {
       await source.goTo(3);
       await source.hydrate({ limit: 10 });
 
-      // hydrate does not reset to page 1; page is clamped to last valid page.
-      // With 20 items at limit 10 there are 2 pages, so page 3 is clamped to 2.
       expect(source.toQuery().page).toBe(2);
     });
 
@@ -130,6 +130,7 @@ describe('createRemoteSource', () => {
 
       const callsBefore = fetch.mock.calls.length;
 
+      // Empty search and current page — should be a no-op.
       await source.hydrate({ limit: 10, page: 1, search: '' });
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
@@ -196,7 +197,6 @@ describe('createRemoteSource', () => {
       expect(source.current).toEqual(['a', 'b', 'c', 'd']);
       expect(source.meta.totalItems).toBe(4);
 
-      // Manual rollback clears optimistic state.
       rollback();
 
       expect(source.current).toEqual(['a', 'b', 'c']);
@@ -214,7 +214,6 @@ describe('createRemoteSource', () => {
 
       await source.refresh();
 
-      // Optimistic cleared after real fetch settles.
       expect(source.current).toEqual(['a', 'b']);
     });
 
@@ -227,13 +226,24 @@ describe('createRemoteSource', () => {
 
       const rollback = source.optimisticUpdate(() => ['optimistic'], { total: 1 });
 
-      // Fetch settles — overwrites optimistic with real server data, deactivates rollback.
       await source.refresh();
       expect(source.current).toEqual(['server-a']);
 
-      // Calling rollback after fetch must not corrupt state.
       rollback();
       expect(source.current).toEqual(['server-a']);
+    });
+
+    it('throws when a concurrent optimistic update is already active', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      await source.refresh();
+
+      source.optimisticUpdate((items) => [...items, 'b']);
+
+      expect(() => source.optimisticUpdate((items) => [...items, 'c'])).toThrow(
+        'An optimistic update is already active',
+      );
     });
 
     it('restores pre-optimistic state (not empty) when fetch fails', async () => {
@@ -249,10 +259,9 @@ describe('createRemoteSource', () => {
       source.optimisticUpdate((current) => [...current, 'c'], { total: 3 });
       expect(source.current).toEqual(['a', 'b', 'c']);
 
-      // Fetch fails — should restore to ['a', 'b'], not []
       await source.refresh();
 
-      expect(source.meta.errorMessage).toBe('network error');
+      expect(source.meta.error?.message).toBe('network error');
       expect(source.current).toEqual(['a', 'b']);
     });
   });
@@ -303,7 +312,6 @@ describe('createRemoteSource', () => {
         filter: { active: true },
         limit: 2,
         page: 2,
-        search: '',
         sort: { by: 'name' },
       });
     });
@@ -323,7 +331,6 @@ describe('createRemoteSource', () => {
       const snapshot = { items: ['prefetched'], total: 1 };
       const source = createRemoteSource({ autoFetch: false, fetch, snapshot });
 
-      // Before first refresh, snapshot data is present immediately.
       expect(source.current).toEqual(['prefetched']);
       expect(source.meta.totalItems).toBe(1);
       expect(fetch).not.toHaveBeenCalled();
@@ -458,7 +465,6 @@ describe('createRemoteSource', () => {
       source.goTo(2);
       source.goTo(2);
 
-      // queryKey called twice, but fetch only once (deduplication still works).
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(keyCallCount).toBeGreaterThan(0);
     });
@@ -476,6 +482,22 @@ describe('createRemoteSource', () => {
       expect('hasNoItems' in meta).toBe(false);
       expect('isFirstPage' in meta).toBe(false);
       expect('isLastPage' in meta).toBe(false);
+      expect('itemStart' in meta).toBe(false);
+      expect('itemEnd' in meta).toBe(false);
+      expect('errorMessage' in meta).toBe(false);
+    });
+
+    it('itemRange computes correct display range', async () => {
+      const fetch = vi.fn(async () => ({ items: Array.from({ length: 5 }, (_, i) => i + 1), total: 5 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 3 });
+
+      await source.refresh();
+
+      const range = itemRange(source.meta);
+
+      expect(range.start).toBe(1);
+      expect(range.end).toBe(3);
+      expect(source.meta.totalItems).toBe(5);
     });
   });
 
@@ -498,7 +520,7 @@ describe('createRemoteSource', () => {
 
       expect(fetch).toHaveBeenCalledTimes(2);
       expect(source.current).toEqual(['retried']);
-      expect(source.meta.errorMessage).toBeNull();
+      expect(source.meta.error).toBeNull();
     });
 
     it('reports error after all retries exhausted', async () => {
@@ -515,7 +537,101 @@ describe('createRemoteSource', () => {
       await p;
 
       expect(fetch).toHaveBeenCalledTimes(3);
-      expect(source.meta.errorMessage).toBe('permanent failure');
+      expect(source.meta.error?.message).toBe('permanent failure');
+    });
+  });
+
+  describe('staleTime', () => {
+    it('skips fetch when data is within staleTime', async () => {
+      const fetch = vi.fn(async () => ({ items: ['fresh'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, staleTime: 5000 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1); // skipped — still fresh
+
+      expect(source.current).toEqual(['fresh']);
+    });
+
+    it('re-fetches after staleTime expires', async () => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce({ items: ['v1'], total: 1 })
+        .mockResolvedValueOnce({ items: ['v2'], total: 1 });
+      const source = createRemoteSource({ autoFetch: false, fetch, staleTime: 1000 });
+
+      await source.refresh();
+      expect(source.current).toEqual(['v1']);
+
+      vi.advanceTimersByTime(1001);
+
+      await source.refresh();
+      expect(source.current).toEqual(['v2']);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('always fetches when staleTime is 0 (default)', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      await source.refresh();
+      await source.refresh();
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('always fetches when the query key changes, even within staleTime', async () => {
+      const fetch = vi.fn(async ({ page }: { page: number }) => ({
+        items: [`page-${page}`],
+        total: 20,
+      }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 5, staleTime: 60_000 });
+
+      await source.refresh(); // page 1 — fetches and caches key
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await source.goTo(2); // different query key — must fetch despite fresh cache
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['page-2']);
+
+      await source.refresh(); // same query key (page 2) within staleTime — skipped
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('ready with timeout', () => {
+    it('resolves when source becomes idle within timeout', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      const p = source.ready(5000);
+
+      void source.refresh();
+
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBeUndefined();
+    });
+
+    it('rejects when timeout expires before idle', async () => {
+      let resolveHang!: () => void;
+      const fetch = vi.fn(
+        () =>
+          new Promise<{ items: string[]; total: number }>((resolve) => {
+            resolveHang = () => resolve({ items: [], total: 0 });
+          }),
+      );
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      void source.refresh();
+
+      const p = source.ready(100);
+
+      vi.advanceTimersByTime(101);
+      await expect(p).rejects.toThrow('timed out');
+
+      resolveHang();
     });
   });
 
@@ -535,13 +651,13 @@ describe('createRemoteSource', () => {
       source.refresh();
 
       source.dispose();
-      listener.mockClear(); // clear any pre-dispose calls (e.g. isLoading notification)
+      listener.mockClear();
 
       expect(capturedSignal?.aborted).toBe(true);
 
       await vi.runAllTimersAsync();
 
-      expect(listener).not.toHaveBeenCalled(); // no calls after dispose
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 });

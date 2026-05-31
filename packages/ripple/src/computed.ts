@@ -1,13 +1,12 @@
 import type { DepEntry } from './tracking';
 import type { ComputedSignal, ReactiveOptions, ReadonlySignal, Subscription } from './types';
 
-import { StateError } from './error';
-import { ensureError } from './errors';
+import { getDevToolsHook } from './devtools';
+import { ensureError, StateError } from './error';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';
-import { getRevision, getTracking, trackSource, withTracking } from './tracking';
-import { untrack } from './utilities';
+import { getRevision, getTracking, trackSource, untrack, withTracking } from './tracking';
 
 export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T> {
   private value_: T | typeof UNINITIALIZED;
@@ -61,11 +60,31 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     }
 
     // Per-dep scan: if all dep versions still match, value cannot have changed.
-    if (this.deps_.length > 0 && this.deps_.every((d) => d.source.version === d.version)) {
-      this.dirty_ = false;
-      this.maxRevision_ = getRevision();
+    // For computed deps, we must refresh them first — their version only updates
+    // after recompute, so a stale-version check would incorrectly short-circuit.
+    if (this.deps_.length > 0) {
+      let allSame = true;
 
-      return false;
+      for (const d of this.deps_) {
+        const src = d.source;
+
+        // Flush dirty computed deps before comparing versions (lazy pull chain).
+        if ('refreshIfDirty' in src) {
+          (src as import('./reactive-base').ComputedBase<unknown>).refreshIfDirty();
+        }
+
+        if (src.version !== d.version) {
+          allSame = false;
+          break;
+        }
+      }
+
+      if (allSame) {
+        this.dirty_ = false;
+        this.maxRevision_ = getRevision();
+
+        return false;
+      }
     }
 
     return this.recompute();
@@ -84,6 +103,8 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
       const newDeps: DepEntry[] = [];
 
       let next: T;
+
+      getDevToolsHook()?.onComputedRecompute?.(this.name);
 
       try {
         next = withTracking({ computed: this, depCollector: newDeps, kind: 'computed' }, this.compute_);

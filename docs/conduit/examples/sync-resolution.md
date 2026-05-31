@@ -14,13 +14,13 @@ Hot code paths — render loops, event handlers, request routers — cannot awai
 Use `container.resolveSync()` after warming up the container asynchronously. `resolveSync()` returns a cached value or instance immediately for value registrations and resolved singleton/scoped factories.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Config { apiUrl: string; timeout: number }
 interface Logger { log(msg: string): void }
 
-const Config = createToken<Config>('Config');
-const Logger = createToken<Logger>('Logger');
+const Config = token<Config>('Config');
+const Logger = token<Logger>('Logger');
 
 const container = createContainer();
 
@@ -44,11 +44,11 @@ logger.log(`connecting to ${config.apiUrl}`);
 Combine `has()` with `resolveSync()` when an integration is optional.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Telemetry { track(event: string, data?: Record<string, unknown>): void }
 
-const Telemetry = createToken<Telemetry>('Telemetry');
+const Telemetry = token<Telemetry>('Telemetry');
 const container = createContainer();
 
 // Telemetry registered only in production builds
@@ -68,14 +68,14 @@ if (container.has(Telemetry)) {
 ```ts
 import {
   createContainer,
-  createToken,
+  token,
   ScopedResolutionError,
   SyncResolutionError,
 } from '@vielzeug/conduit';
 
-const Heavy = createToken<object>('Heavy');
-const Id = createToken<string>('Id');
-const Session = createToken<object>('Session');
+const Heavy = token<object>('Heavy');
+const Id = token<string>('Id');
+const Session = token<object>('Session');
 const container = createContainer();
 
 container.factory(Heavy, async () => loadHeavyModule());

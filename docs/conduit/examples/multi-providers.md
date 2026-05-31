@@ -1,63 +1,94 @@
 ---
-title: 'Conduit Examples — Multi Providers'
-description: 'Multi providers example for @vielzeug/conduit.'
+title: 'Conduit Examples — Named Scopes'
+description: 'Named scopes example for @vielzeug/conduit.'
 ---
 
-## Multi Providers
+## Named Scopes
 
 ### Problem
 
-Multiple implementations need to be registered under the same token — for a plugin system, a collection of middleware, or a set of event handlers — and all of them must be retrieved together.
+Some dependencies need a distinct instance per logical scope (e.g., per HTTP request, per WebSocket session) — but `'scoped'` lifetime ties instances to the physical child container object. You want to be explicit about *which kind* of scope owns a lifetime, not just *any* child container.
 
 ### Solution
 
-Pass `{ multi: true }` when registering each provider and use `container.resolveMany()` to retrieve the full list.
+Create a `ScopeToken` with `scope()`, register factories with that token as their `lifetime`, then create scope containers with `container.createScope(scopeToken)`. Only containers created with the matching `ScopeToken` will resolve those factories.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, scope, token } from '@vielzeug/conduit';
 
-interface Plugin {
-  name: string;
-  activate(): void;
+// Define the scope
+const RequestScope = scope('request');
+
+// Tokens that belong to a request scope
+const RequestId = token<string>('RequestId');
+const RequestLogger = token<{ log(msg: string): void }>('RequestLogger');
+
+const root = createContainer({ name: 'app' });
+
+// Register with the named scope as lifetime
+root.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
+root.factory(
+  RequestLogger,
+  (id) => ({ log: (msg) => console.log(`[${id}] ${msg}`) }),
+  { deps: [RequestId], lifetime: RequestScope },
+);
+
+// Each request gets its own isolated scope container
+async function handleRequest(path: string) {
+  const requestContainer = root.createScope(RequestScope, { name: `req-${path}` });
+
+  const [id, logger] = await requestContainer.resolveMany([RequestId, RequestLogger] as const);
+  logger.log(`handling ${path}`);
+
+  await requestContainer.dispose(); // runs RequestLogger and RequestId dispose hooks
+  return id;
 }
 
-const Plugin = createToken<Plugin>('Plugin');
-const container = createContainer();
-
-container.value(Plugin, { name: 'analytics', activate() { console.log('analytics on'); } }, { multi: true });
-container.value(Plugin, { name: 'devtools',  activate() { console.log('devtools on');  } }, { multi: true });
-container.value(Plugin, { name: 'logger',    activate() { console.log('logger on');    } }, { multi: true });
-
-const plugins = await container.resolveMany(Plugin);
-plugins.forEach((p) => p.activate());
-// logs: "analytics on", "devtools on", "logger on"
+// Two concurrent requests — each gets independent instances
+const [idA, idB] = await Promise.all([handleRequest('/a'), handleRequest('/b')]);
+console.log(idA === idB); // false — isolated scope caches
 ```
 
-#### Multi providers with factories
+#### Multiple named scopes in one container
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, scope, token } from '@vielzeug/conduit';
 
-interface Middleware { handle(req: Request): Request }
+const RequestScope = scope('request');
+const UserScope = scope('user');
 
-const Middleware = createToken<Middleware>('Middleware');
-const container = createContainer();
+const RequestId = token<string>('RequestId');
+const UserId = token<string>('UserId');
+const AuditLog = token<{ write(msg: string): void }>('AuditLog');
 
-container.factory(Middleware, () => ({ handle: (req) => { /* add auth header */ return req; } }), { multi: true });
-container.factory(Middleware, () => ({ handle: (req) => { /* add trace id  */ return req; } }), { multi: true });
+const root = createContainer();
 
-const middlewares = await container.resolveMany(Middleware);
-const processed = middlewares.reduce((req, mw) => mw.handle(req), new Request('/'));
+root.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
+root.factory(UserId, () => 'user-42', { lifetime: UserScope });
+root.factory(
+  AuditLog,
+  (reqId, userId) => ({ write: (msg) => console.log(`[${reqId}][${userId}] ${msg}`) }),
+  { deps: [RequestId, UserId], lifetime: RequestScope },
+);
+
+// Create nested scope containers
+const requestContainer = root.createScope(RequestScope);
+const userContainer = requestContainer.createScope(UserScope);
+
+// AuditLog resolves from requestContainer (RequestScope) using RequestId and UserId
+// UserId resolves from userContainer (UserScope)
+const log = await requestContainer.resolve(AuditLog);
+log.write('payment processed');
 ```
 
 ### Pitfalls
 
-- Calling `container.resolve()` on a multi token throws `MultipleProvidersError`. Use `resolveMany()` for tokens registered with `{ multi: true }`.
-- `resolveMany()` returns `[]` when no providers are registered for the token — it does not throw. Guard on an empty array if at least one provider is required.
-- Registering a provider without `{ multi: true }` after already registering one for the same token with `{ multi: true }` will add to the multi list. There is no distinction between multi and non-multi after the fact — use consistent options for a given token.
+- Resolving a named-scope factory from a container that has no matching scope in its ancestor chain throws `ScopedResolutionError`, including the required scope name in the message.
+- Unlike `'scoped'` lifetime, named scopes require a **specific** container created via `createScope(scopeToken)`. An ordinary `createChild()` container will not satisfy a named-scope factory.
+- A single `createScope()` call creates one scope container. To run concurrent isolated scopes (e.g., per-request), call `createScope()` once per scope and dispose each when done.
 
 ### Related
 
-- [Batch Resolution](./batch-resolution.md)
-- [Basic Setup](./basic-setup.md)
-- [Async Providers](./async-providers.md)
+- [Child Containers](./child-containers.md)
+- [Lifetimes](./lifetimes.md)
+- [Dispose Lifecycle](./dispose-lifecycle.md)

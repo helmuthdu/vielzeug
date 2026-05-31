@@ -2,7 +2,7 @@ import { html } from '@vielzeug/craft';
 import { mount } from '@vielzeug/craft/testing';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type OptionListOptions, createOptionList } from '../option-list';
+import { createOptionList, type OptionListOptions } from '../option-list';
 
 type Item = { label: string; value: string };
 
@@ -27,10 +27,8 @@ function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
     document.body.appendChild(reference);
 
     handle = createOptionList<Item>({
-      getBoundary: () => boundary,
-      getItems: () => ITEMS,
-      getPanel: () => panel,
-      getReference: () => reference,
+      dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
+      items: { getItems: () => ITEMS },
       ...overrides,
     });
   };
@@ -113,7 +111,7 @@ describe('createOptionList()', () => {
     });
 
     it('open() is a no-op when disabled', async () => {
-      const { get, setup } = makeHandle({ isDisabled: () => true });
+      const { get, setup } = makeHandle({ behavior: { isDisabled: () => true } });
 
       await mount(() => {
         setup();
@@ -126,7 +124,7 @@ describe('createOptionList()', () => {
     });
 
     it('toggle() is a no-op when disabled', async () => {
-      const { get, setup } = makeHandle({ isDisabled: () => true });
+      const { get, setup } = makeHandle({ behavior: { isDisabled: () => true } });
 
       await mount(() => {
         setup();
@@ -140,7 +138,7 @@ describe('createOptionList()', () => {
 
     it('invokes onOpen callback', async () => {
       const onOpen = vi.fn();
-      const { get, setup } = makeHandle({ onOpen });
+      const { get, setup } = makeHandle({ on: { onOpen } });
 
       await mount(() => {
         setup();
@@ -154,7 +152,7 @@ describe('createOptionList()', () => {
 
     it('invokes onClose callback', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ onClose });
+      const { get, setup } = makeHandle({ on: { onClose } });
 
       await mount(() => {
         setup();
@@ -308,7 +306,7 @@ describe('createOptionList()', () => {
     it('toggle uses click open and trigger close by default', async () => {
       const onOpen = vi.fn();
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ onClose, onOpen });
+      const { get, setup } = makeHandle({ on: { onClose, onOpen } });
 
       await mount(() => {
         setup();
@@ -326,7 +324,7 @@ describe('createOptionList()', () => {
     it('toggle forwards explicit open and close reasons', async () => {
       const onOpen = vi.fn();
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ onClose, onOpen });
+      const { get, setup } = makeHandle({ on: { onClose, onOpen } });
 
       await mount(() => {
         setup();
@@ -345,7 +343,7 @@ describe('createOptionList()', () => {
   describe('Escape key handling', () => {
     it('handleKeydown intercepts Escape and closes with reason "escape"', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ onClose });
+      const { get, setup } = makeHandle({ on: { onClose } });
 
       await mount(() => {
         setup();
@@ -367,7 +365,7 @@ describe('createOptionList()', () => {
 
     it('handleKeydown ignores Escape when closed', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ onClose });
+      const { get, setup } = makeHandle({ on: { onClose } });
 
       await mount(() => {
         setup();
@@ -438,11 +436,13 @@ describe('createOptionList()', () => {
         document.body.appendChild(reference);
 
         handle = createOptionList<Item>({
-          getBoundary: () => boundary,
-          getItems: () => ITEMS,
-          getPanel: () => panel,
-          getReference: () => reference,
-          getTrigger: () => trigger,
+          dom: {
+            getBoundary: () => boundary,
+            getPanel: () => panel,
+            getReference: () => reference,
+            getTrigger: () => trigger,
+          },
+          items: { getItems: () => ITEMS },
         });
 
         return html`<div></div>`;
@@ -475,12 +475,14 @@ describe('createOptionList()', () => {
         document.body.appendChild(reference);
 
         handle = createOptionList<Item>({
-          getBoundary: () => boundary,
-          getItems: () => ITEMS,
-          getPanel: () => panel,
-          getReference: () => reference,
-          getTrigger: () => trigger,
-          manageAriaExpanded: false,
+          behavior: { manageAriaExpanded: false },
+          dom: {
+            getBoundary: () => boundary,
+            getPanel: () => panel,
+            getReference: () => reference,
+            getTrigger: () => trigger,
+          },
+          items: { getItems: () => ITEMS },
         });
 
         return html`<div></div>`;
@@ -509,13 +511,14 @@ describe('createOptionList()', () => {
         document.body.appendChild(reference);
 
         handle = createOptionList<Item>({
-          getBoundary: () => boundary,
-          getItems: () => ITEMS,
-          getOptionId: (index) => `opt-${index}`,
-          getPanel: () => panel,
-          getReference: () => reference,
-          getTrigger: () => trigger,
-          manageAriaExpanded: false,
+          behavior: { manageAriaExpanded: false },
+          dom: {
+            getBoundary: () => boundary,
+            getPanel: () => panel,
+            getReference: () => reference,
+            getTrigger: () => trigger,
+          },
+          items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
         });
 
         return html`<div></div>`;
@@ -532,6 +535,162 @@ describe('createOptionList()', () => {
       expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
 
       trigger.remove();
+    });
+
+    it('cleanup() removes aria-expanded from trigger element', async () => {
+      let trigger!: HTMLElement;
+      let handle!: ReturnType<typeof createOptionList<Item>>;
+
+      await mount(() => {
+        trigger = document.createElement('button');
+        document.body.appendChild(trigger);
+
+        const boundary = document.createElement('div');
+        const panel = document.createElement('ul');
+        const reference = document.createElement('button');
+
+        document.body.appendChild(boundary);
+        document.body.appendChild(panel);
+        document.body.appendChild(reference);
+
+        handle = createOptionList<Item>({
+          dom: {
+            getBoundary: () => boundary,
+            getPanel: () => panel,
+            getReference: () => reference,
+            getTrigger: () => trigger,
+          },
+          items: { getItems: () => ITEMS },
+        });
+
+        return html`<div></div>`;
+      }, {});
+
+      handle.open();
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+
+      handle.cleanup();
+      expect(trigger.hasAttribute('aria-expanded')).toBe(false);
+
+      trigger.remove();
+    });
+
+    it('cleanup() removes aria-activedescendant from trigger element', async () => {
+      let trigger!: HTMLElement;
+      let handle!: ReturnType<typeof createOptionList<Item>>;
+
+      await mount(() => {
+        trigger = document.createElement('button');
+        document.body.appendChild(trigger);
+
+        const boundary = document.createElement('div');
+        const panel = document.createElement('ul');
+        const reference = document.createElement('button');
+
+        document.body.appendChild(boundary);
+        document.body.appendChild(panel);
+        document.body.appendChild(reference);
+
+        handle = createOptionList<Item>({
+          behavior: { manageAriaExpanded: false },
+          dom: {
+            getBoundary: () => boundary,
+            getPanel: () => panel,
+            getReference: () => reference,
+            getTrigger: () => trigger,
+          },
+          items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
+        });
+
+        return html`<div></div>`;
+      }, {});
+
+      handle.open();
+      handle.set(0);
+      expect(trigger.getAttribute('aria-activedescendant')).toBe('opt-0');
+
+      handle.cleanup();
+      expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
+
+      trigger.remove();
+    });
+  });
+
+  describe('cleanup() idempotency', () => {
+    it('calling cleanup() multiple times does not throw', async () => {
+      const { get, setup } = makeHandle();
+
+      await mount(() => {
+        setup();
+
+        return html`<div></div>`;
+      }, {});
+
+      expect(() => {
+        get().cleanup();
+        get().cleanup();
+        get().cleanup();
+      }).not.toThrow();
+    });
+
+    it('AbortSignal teardown + manual cleanup() does not double-dispose', async () => {
+      const controller = new AbortController();
+      let handle!: ReturnType<typeof createOptionList<Item>>;
+
+      await mount(() => {
+        const boundary = document.createElement('div');
+        const panel = document.createElement('ul');
+        const reference = document.createElement('button');
+
+        document.body.appendChild(boundary);
+        document.body.appendChild(panel);
+        document.body.appendChild(reference);
+
+        handle = createOptionList<Item>({
+          dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
+          items: { getItems: () => ITEMS },
+          signal: controller.signal,
+        });
+
+        return html`<div></div>`;
+      }, {});
+
+      controller.abort();
+
+      expect(() => handle.cleanup()).not.toThrow();
+    });
+  });
+
+  describe('signal lifecycle teardown', () => {
+    it('AbortSignal abort() closes the list and disposes effects', async () => {
+      const controller = new AbortController();
+      let handle!: ReturnType<typeof createOptionList<Item>>;
+
+      await mount(() => {
+        const boundary = document.createElement('div');
+        const panel = document.createElement('ul');
+        const reference = document.createElement('button');
+
+        document.body.appendChild(boundary);
+        document.body.appendChild(panel);
+        document.body.appendChild(reference);
+
+        handle = createOptionList<Item>({
+          dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
+          items: { getItems: () => ITEMS },
+          signal: controller.signal,
+        });
+
+        return html`<div></div>`;
+      }, {});
+
+      handle.open();
+      expect(handle.isOpen.value).toBe(true);
+
+      controller.abort();
+
+      // After abort the list should be closed
+      expect(handle.isOpen.value).toBe(false);
     });
   });
 });

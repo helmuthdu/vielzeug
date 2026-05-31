@@ -1,8 +1,8 @@
 import {
-  effect as _effect,
-  onCleanup as _onCleanup,
   type CleanupFn,
+  effect as _effect,
   type EffectCallback,
+  onCleanup as _onCleanup,
   type ReadonlySignal,
 } from '@vielzeug/ripple';
 

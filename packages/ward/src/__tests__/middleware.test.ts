@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { createWard, createExpressGuard, createHonoGuard, guardRequest } from '../index';
+import { createExpressGuard, createHonoGuard, createWard, guardRequest } from '../index';
 
 // ---------------------------------------------------------------------------
 // guardRequest — framework-agnostic guard
@@ -175,5 +175,122 @@ describe('ward: createHonoGuard', () => {
     const body = await response.json();
 
     expect(body).toEqual({ reason: 'explicit-deny' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// guardRequest — simple principal overload
+// ---------------------------------------------------------------------------
+
+describe('guardRequest: simple principal overload', () => {
+  const ward = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'editor' }]);
+  const principal = { id: 'u1', roles: ['editor'] };
+
+  it('returns granted=true when principal can perform action', async () => {
+    const result = await guardRequest(ward, principal, 'posts', 'read');
+
+    expect(result.granted).toBe(true);
+    expect(result.principal).toBe(principal);
+  });
+
+  it('returns granted=false with reason when denied', async () => {
+    const result = await guardRequest(ward, { id: 'u2', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(result.granted).toBe(false);
+
+    if (!result.granted) {
+      expect(result.reason).toBe('no-matching-rule');
+    }
+  });
+
+  it('accepts null principal for anonymous checks', async () => {
+    const result = await guardRequest(ward, null, 'posts', 'read');
+
+    expect(result.granted).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Static data via options.data
+// ---------------------------------------------------------------------------
+
+describe('ward: static data in guard options', () => {
+  const ward = createWard<'update', { authorId: string }>([
+    {
+      action: 'update',
+      effect: 'allow',
+      resource: 'posts',
+      role: 'editor',
+      when: ({ data, principal }) => data?.authorId === principal.id,
+    },
+  ]);
+
+  it('createExpressGuard forwards options.data to when predicate', async () => {
+    const guard = createExpressGuard(ward, () => ({ id: 'u1', roles: ['editor'] }), 'posts', 'update', {
+      data: { authorId: 'u1' },
+    });
+
+    const next = vi.fn();
+    const res = {
+      body: undefined as unknown,
+      end() {},
+      json(body: unknown) {
+        this.body = body;
+      },
+      status(code: number) {
+        (this as any).statusCode = code;
+
+        return this;
+      },
+      statusCode: 0,
+    };
+
+    await guard({} as any, res as any, next);
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it('createExpressGuard denies when options.data fails the predicate', async () => {
+    const guard = createExpressGuard(ward, () => ({ id: 'u1', roles: ['editor'] }), 'posts', 'update', {
+      data: { authorId: 'u2' },
+    });
+
+    const next = vi.fn();
+    const res = {
+      body: undefined as unknown,
+      end() {},
+      json(body: unknown) {
+        this.body = body;
+      },
+      status(code: number) {
+        (this as any).statusCode = code;
+
+        return this;
+      },
+      statusCode: 0,
+    };
+
+    await guard({} as any, res as any, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect((res as any).statusCode).toBe(403);
+  });
+
+  it('createHonoGuard forwards options.data to when predicate', async () => {
+    const guard = createHonoGuard(ward, () => ({ id: 'u1', roles: ['editor'] }), 'posts', 'update', {
+      data: { authorId: 'u1' },
+    });
+
+    const ctx = {
+      json(body: unknown, status?: number) {
+        return new Response(JSON.stringify(body), { status: status ?? 200 });
+      },
+      req: { raw: {} },
+    };
+    const next = vi.fn(async () => new Response('ok'));
+
+    await guard(ctx as any, next);
+
+    expect(next).toHaveBeenCalled();
   });
 });

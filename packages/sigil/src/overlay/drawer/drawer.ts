@@ -1,4 +1,4 @@
-import { define, onEvent, html, prop, ref, onMounted } from '@vielzeug/craft';
+import { define, html, onEvent, onMounted, prop, ref } from '@vielzeug/craft';
 
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 

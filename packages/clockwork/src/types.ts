@@ -10,8 +10,9 @@ export type EventByType<Ev extends MachineEvent, Type extends EventType<Ev>> = E
 
 type InitEvent = { readonly type: '$init' };
 type HydrateEvent = { readonly type: '$hydrate' };
+type AfterEvent = { readonly delay: number; readonly type: '$after' };
 
-export type LifecycleEvent = HydrateEvent | InitEvent;
+export type LifecycleEvent = AfterEvent | HydrateEvent | InitEvent;
 
 // ── Actions & guards ─────────────────────────────────────────────────────────
 
@@ -43,16 +44,25 @@ export type TransitionDef<
 > = {
   actions?: Array<ActionFn<Ctx, EventByType<Ev, Type>>>;
   guard?: GuardFn<Ctx, EventByType<Ev, Type>>;
-  target: State;
+  target: NoInfer<State>;
 };
 
-/** Internal: a single transition object or an array of alternatives. */
-export type TransitionInput<
+/** @internal Single transition or array of conditional alternatives. */
+type TransitionInput<
   State extends string,
   Ctx extends object,
   Ev extends MachineEvent,
   Type extends EventType<Ev> = EventType<Ev>,
 > = Array<TransitionDef<State, Ctx, Ev, Type>> | TransitionDef<State, Ctx, Ev, Type>;
+
+// ── After (delayed transitions — F4) ────────────────────────────────────────
+
+export type AfterDef<State extends string, Ctx extends object> = {
+  actions?: Array<(args: { context: Ctx; readonly event: AfterEvent }) => void>;
+  delay: number;
+  guard?: (args: { readonly context: Readonly<Ctx> }) => boolean;
+  target: NoInfer<State>;
+};
 
 // ── Invokes ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +86,7 @@ export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
 // ── State nodes ──────────────────────────────────────────────────────────────
 
 export type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
+  after?: Array<AfterDef<State, Ctx>>;
   entry?: LifecycleFn<Ctx, Ev>;
   exit?: LifecycleFn<Ctx, Ev>;
   /** Initial substate for compound states. */
@@ -93,8 +104,8 @@ export type ContextValidator<Ctx extends object> = (context: Ctx) => boolean;
 type ContextField<Ctx extends object> = Record<string, never> extends Ctx ? { context?: Ctx } : { context: Ctx };
 
 export type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = ContextField<Ctx> & {
-  initial: State;
-  states: { [S in State]: StateNode<State, Ctx, Ev> };
+  initial: NoInfer<State>;
+  states: Record<State, StateNode<NoInfer<State>, Ctx, Ev>>;
   validateContext?: ContextValidator<Ctx>;
 };
 
@@ -111,7 +122,7 @@ export type PersistenceAdapter<State extends string, Ctx extends object> = {
   save: (snapshot: MachineSnapshot<State, Ctx>) => void;
 };
 
-// ── Debug (single discriminated union) ───────────────────────────────────────
+// ── Debug (discriminated union) ──────────────────────────────────────────────
 
 export type DebugEvent<State extends string, Ctx extends object, Ev extends MachineEvent> =
   | { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State; type: 'guard' }
@@ -135,7 +146,7 @@ export type DebugEvent<State extends string, Ctx extends object, Ev extends Mach
     }
   | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-abort' };
 
-// ── Middleware (F3) ──────────────────────────────────────────────────────────
+// ── Middleware ────────────────────────────────────────────────────────────────
 
 export type MiddlewareFn<State extends string, Ctx extends object, Ev extends MachineEvent> = (
   event: Ev,
@@ -146,30 +157,27 @@ export type MiddlewareFn<State extends string, Ctx extends object, Ev extends Ma
 // ── Tracing ──────────────────────────────────────────────────────────────────
 
 export type TransitionTraceEntry<State extends string, Ev extends MachineEvent> = {
-  readonly event: Ev;
+  readonly event: Ev | LifecycleEvent;
   readonly from: State;
-  readonly invokeId?: number;
   readonly timestamp: number;
   readonly to: State;
 };
 
-// ── Interpret options ────────────────────────────────────────────────────────
+// ── Interpret options (R12: grouped by concern) ──────────────────────────────
+
+export type DebugOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
+  onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
+  onTransition?: (info: { event: Ev | LifecycleEvent; from: State; to: State }) => void;
+  traceLimit?: number;
+};
 
 export type InterpretOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  /**
-   * Custom clone function for context. Defaults to structuredClone.
-   * Use `(ctx) => Object.assign({}, ctx)` for shallow contexts to improve performance.
-   */
   clone?: <T>(value: T) => T;
+  debug?: DebugOptions<State, Ctx, Ev>;
   maxTransitionsPerFlush?: number;
   middleware?: Array<MiddlewareFn<State, Ctx, Ev>>;
-  onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
-  /** Called after every successful transition. */
-  onTransition?: (info: { event: Ev; from: State; to: State }) => void;
   persistence?: PersistenceAdapter<State, Ctx>;
   snapshot?: MachineSnapshot<State, Ctx>;
-  traceLimit?: number;
-  validateSnapshot?: ContextValidator<Ctx>;
 };
 
 // ── Instance ─────────────────────────────────────────────────────────────────
@@ -177,16 +185,11 @@ export type InterpretOptions<State extends string, Ctx extends object, Ev extend
 export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
   readonly context: ReadonlySignal<Ctx>;
   readonly state: ReadonlySignal<State>;
-  /** Returns true if a valid transition exists for the given event in the current state. */
   can(event: Ev): boolean;
-  /** Clears persisted state via the persistence adapter. Does NOT dispose the instance. */
-  clearPersistence(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-  /** Returns true if the machine is currently in one of the given states (prefix match for hierarchical). */
-  matches(...states: string[]): boolean;
+  matches(...states: NoInfer<State>[]): boolean;
   send(event: Ev): boolean;
-  /** Subscribe to state/context changes. Returns unsubscribe function. */
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;
 }

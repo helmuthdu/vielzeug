@@ -22,26 +22,18 @@ export function lazy(fn: () => unknown): LazyBinding {
 
 /**
  * Resolve any lazy bindings in the given object, returning a plain Bindings object.
- * Non-lazy values are passed through unchanged. Called after the level check, so
- * expensive computations are skipped entirely when the level is suppressed.
+ * Non-lazy values are passed through unchanged. Single-pass: allocates only when a lazy
+ * binding is actually present (copy-on-first-lazy).
  */
 export function resolveBindings(bindings: Bindings): Bindings {
-  let hasLazy = false;
+  let resolved: Bindings | undefined;
 
-  for (const v of Object.values(bindings)) {
+  for (const [k, v] of Object.entries(bindings)) {
     if (isLazyBinding(v)) {
-      hasLazy = true;
-      break;
+      resolved ??= { ...bindings };
+      resolved[k] = v.fn();
     }
   }
 
-  if (!hasLazy) return bindings;
-
-  const resolved: Bindings = {};
-
-  for (const [k, v] of Object.entries(bindings)) {
-    resolved[k] = isLazyBinding(v) ? v.fn() : v;
-  }
-
-  return resolved;
+  return resolved ?? bindings;
 }

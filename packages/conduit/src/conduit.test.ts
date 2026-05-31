@@ -37,6 +37,54 @@ describe('token', () => {
 });
 
 // ---------------------------------------------------------------------------
+// createContainer() — named containers
+// ---------------------------------------------------------------------------
+
+describe('createContainer()', () => {
+  it('defaults name to "root"', () => {
+    expect(createContainer().name).toBe('root');
+  });
+
+  it('accepts a custom name', () => {
+    expect(createContainer({ name: 'app' }).name).toBe('app');
+  });
+
+  it('createChild() defaults child name to "root:child"', () => {
+    expect(createContainer().createChild().name).toBe('root:child');
+  });
+
+  it('createChild() accepts a custom name', () => {
+    expect(createContainer().createChild({ name: 'request' }).name).toBe('request');
+  });
+
+  it('ProviderNotFoundError includes container name', async () => {
+    const T = token<string>('Svc');
+    const c = createContainer({ name: 'myapp' });
+
+    const err = (await c.resolve(T).catch((e) => e)) as ProviderNotFoundError;
+
+    expect(err.message).toContain('myapp');
+  });
+
+  it('ContainerDisposedError includes container name', async () => {
+    const T = token<string>('T');
+    const c = createContainer({ name: 'myapp' });
+
+    await c.dispose();
+
+    const err = (() => {
+      try {
+        c.has(T);
+      } catch (e) {
+        return e as ContainerDisposedError;
+      }
+    })();
+
+    expect(err?.message).toContain('myapp');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
 
@@ -86,6 +134,49 @@ describe('Container — registration', () => {
     c.factory(T, () => 'x');
 
     expect(() => c.factory(T, () => 'y')).toThrow(DuplicateRegistrationError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// freeze()
+// ---------------------------------------------------------------------------
+
+describe('Container — freeze()', () => {
+  it('returns this for chaining', () => {
+    const c = createContainer();
+
+    expect(c.freeze()).toBe(c);
+  });
+
+  it('prevents further value() registrations', () => {
+    const T = token<string>('T');
+    const c = createContainer().freeze();
+
+    expect(() => c.value(T, 'x')).toThrow(/frozen/);
+  });
+
+  it('prevents further factory() registrations', () => {
+    const T = token<string>('T');
+    const c = createContainer().freeze();
+
+    expect(() => c.factory(T, () => 'x')).toThrow(/frozen/);
+  });
+
+  it('still allows resolve() on a frozen container', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'v');
+    c.freeze();
+
+    await expect(c.resolve(T)).resolves.toBe('v');
+  });
+
+  it('freeze() error includes container name', () => {
+    const T = token<string>('T');
+    const c = createContainer({ name: 'sealed' }).freeze();
+
+    expect(() => c.value(T, 'x')).toThrow('sealed');
   });
 });
 
@@ -165,6 +256,92 @@ describe('Container — resolveOptional', () => {
     });
 
     await expect(c.resolveOptional(T)).rejects.toThrow(TypeError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryResolve
+// ---------------------------------------------------------------------------
+
+describe('Container — tryResolve()', () => {
+  it('returns { ok: true, value } on success', async () => {
+    const T = token<number>('T');
+    const c = createContainer();
+
+    c.value(T, 42);
+
+    const result = await c.tryResolve(T);
+
+    expect(result).toEqual({ ok: true, value: 42 });
+  });
+
+  it('returns { ok: false, error } when not registered', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    const result = await c.tryResolve(T);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+  });
+
+  it('returns { ok: false, error } when factory throws', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, () => {
+      throw new Error('boom');
+    });
+
+    const result = await c.tryResolve(T);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect((result.error as Error).message).toBe('boom');
+  });
+
+  it('returns { ok: false, error } when container is disposed', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    await c.dispose();
+
+    const result = await c.tryResolve(T);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect(result.error).toBeInstanceOf(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveMany
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveMany()', () => {
+  it('resolves multiple tokens in parallel and returns a tuple', async () => {
+    const A = token<string>('A');
+    const B = token<number>('B');
+    const c = createContainer();
+
+    c.value(A, 'hello');
+    c.value(B, 42);
+
+    const [a, b] = await c.resolveMany([A, B] as const);
+
+    expect(a).toBe('hello');
+    expect(b).toBe(42);
+  });
+
+  it('rejects if any token is missing', async () => {
+    const A = token<string>('A');
+    const Missing = token<string>('Missing');
+    const c = createContainer();
+
+    c.value(A, 'a');
+
+    await expect(c.resolveMany([A, Missing] as const)).rejects.toThrow(ProviderNotFoundError);
   });
 });
 
@@ -255,7 +432,7 @@ describe('Container — resolveAll', () => {
     expect(child.resolveSync(T)).toBe('v');
   });
 
-  it('does not double-resolve a singleton present in both parent and child hierarchies', async () => {
+  it('does not double-resolve a singleton across parent and child resolveAll calls', async () => {
     let calls = 0;
     const T = token<string>('T');
     const root = createContainer();
@@ -644,108 +821,6 @@ describe('Container — load()', () => {
 });
 
 // ---------------------------------------------------------------------------
-// loadAll()
-// ---------------------------------------------------------------------------
-
-describe('Container — loadAll()', () => {
-  it('applies all modules in parallel and registers all tokens', async () => {
-    const A = token<string>('A');
-    const B = token<string>('B');
-    const c = createContainer();
-
-    await c.loadAll(
-      (container) => void container.value(A, 'a'),
-      (container) => void container.value(B, 'b'),
-    );
-
-    await expect(c.resolve(A)).resolves.toBe('a');
-    await expect(c.resolve(B)).resolves.toBe('b');
-  });
-
-  it('resolves async modules concurrently (finish order may differ from input order)', async () => {
-    const finishOrder: string[] = [];
-    const A = token<string>('A');
-    const B = token<string>('B');
-    const c = createContainer();
-
-    await c.loadAll(
-      async (container) => {
-        await new Promise((r) => setTimeout(r, 20));
-
-        finishOrder.push('A');
-        container.value(A, 'a');
-      },
-      async (container) => {
-        await new Promise((r) => setTimeout(r, 5));
-
-        finishOrder.push('B');
-        container.value(B, 'b');
-      },
-    );
-
-    // B finishes before A (faster timeout)
-    expect(finishOrder).toEqual(['B', 'A']);
-    await expect(c.resolve(A)).resolves.toBe('a');
-    await expect(c.resolve(B)).resolves.toBe('b');
-  });
-
-  it('throws ContainerDisposedError when called on a disposed container', async () => {
-    const c = createContainer();
-
-    await c.dispose();
-
-    await expect(c.loadAll(() => {})).rejects.toThrow(ContainerDisposedError);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// deferred()
-// ---------------------------------------------------------------------------
-
-describe('Container — deferred()', () => {
-  it('defers resolution until first property access', async () => {
-    let calls = 0;
-    const T = token<{ greet(): string }>('T');
-    const c = createContainer();
-
-    c.factory(T, () => {
-      calls++;
-
-      return { greet: () => 'hello' };
-    });
-
-    const proxy = c.deferred(T);
-
-    expect(calls).toBe(0);
-
-    // Must pre-warm to use deferred (resolveSync requirement)
-    await c.resolve(T);
-
-    expect(proxy.greet()).toBe('hello');
-    expect(calls).toBe(1);
-  });
-
-  it('throws ProviderNotFoundError on first access if token not registered', () => {
-    const T = token<{ x: number }>('T');
-    const c = createContainer();
-    const proxy = c.deferred(T);
-
-    expect(() => proxy.x).toThrow(ProviderNotFoundError);
-  });
-
-  it('resolves value tokens without pre-warming', () => {
-    const T = token<{ val: number }>('T');
-    const c = createContainer();
-
-    c.value(T, { val: 42 });
-
-    const proxy = c.deferred(T);
-
-    expect(proxy.val).toBe(42);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // inspect()
 // ---------------------------------------------------------------------------
 
@@ -878,7 +953,20 @@ describe('Container — validate()', () => {
     expect(() => c.validate()).toThrow(CircularDependencyError);
   });
 
-  it('supports method chaining: container.factory(...).validate()', () => {
+  it('detects cycles in parent registrations when called on a child', () => {
+    const A = token('A');
+    const B = token('B');
+    const root = createContainer();
+
+    root.factory(A, (b) => b, { deps: [B] });
+    root.factory(B, (a) => a, { deps: [A] });
+
+    const child = root.createChild();
+
+    expect(() => child.validate()).toThrow(CircularDependencyError);
+  });
+
+  it('supports method chaining', () => {
     const A = token<string>('A');
     const c = createContainer();
 
@@ -906,7 +994,7 @@ describe('Container — createScope() / named scopes', () => {
     const a = await scopeContainer.resolve(T);
     const b = await scopeContainer.resolve(T);
 
-    expect(a).toBe(b); // same scope instance
+    expect(a).toBe(b);
     expect(n).toBe(1);
   });
 
@@ -935,7 +1023,6 @@ describe('Container — createScope() / named scopes', () => {
 
     root.factory(T, () => 'v', { lifetime: RequestScope });
 
-    // Resolved from root directly — no matching scope in chain
     await expect(root.resolve(T)).rejects.toThrow(ScopedResolutionError);
   });
 
@@ -976,6 +1063,18 @@ describe('Container — createScope() / named scopes', () => {
     expect(() => scopeContainer.resolveSync(T)).toThrow(SyncResolutionError);
   });
 
+  it('SyncResolutionError for named scope includes scope name in message', () => {
+    const RequestScope = scope('my-request-scope');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'v', { lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    expect(() => scopeContainer.resolveSync(T)).toThrow('my-request-scope');
+  });
+
   it('resolveSync works after the named-scope instance is pre-warmed', async () => {
     const RequestScope = scope('request');
     const T = token<string>('T');
@@ -988,6 +1087,13 @@ describe('Container — createScope() / named scopes', () => {
     await scopeContainer.resolve(T);
 
     expect(scopeContainer.resolveSync(T)).toBe('warmed');
+  });
+
+  it('createScope() accepts a custom name', () => {
+    const RequestScope = scope('request');
+    const root = createContainer({ name: 'root' });
+
+    expect(root.createScope(RequestScope, { name: 'req-1' }).name).toBe('req-1');
   });
 });
 
@@ -1066,7 +1172,6 @@ describe('Container — on()', () => {
       throw new Error('listener boom');
     });
 
-    // Registration and resolution should still work
     expect(() => c.value(T, 'v')).not.toThrow();
     await expect(c.resolve(T)).resolves.toBe('v');
   });
@@ -1083,6 +1188,37 @@ describe('Container — on()', () => {
 
     expect(calls1).toHaveLength(1);
     expect(calls2).toHaveLength(1);
+  });
+
+  it('events from child container propagate to parent listeners', () => {
+    const events: ContainerEvent[] = [];
+    const T = token<string>('T');
+    const root = createContainer();
+    const child = root.createChild();
+
+    root.on((e) => events.push(e));
+    child.value(T, 'v');
+
+    expect(events.some((e) => e.type === 'register' && 'description' in e && e.description === 'T')).toBe(true);
+  });
+
+  it('events from scope container propagate to parent listeners', async () => {
+    const resolveEvents: ContainerEvent[] = [];
+    const RequestScope = scope('request');
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'v', { lifetime: RequestScope });
+
+    root.on((e) => {
+      if (e.type === 'resolve') resolveEvents.push(e);
+    });
+
+    const sc = root.createScope(RequestScope);
+
+    await sc.resolve(T);
+
+    expect(resolveEvents.some((e) => 'description' in e && e.description === 'T')).toBe(true);
   });
 });
 

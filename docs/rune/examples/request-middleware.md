@@ -16,7 +16,7 @@ Use `withBindings({ requestId, ip })` inside the middleware to create a request-
 ```ts
 import { Rune } from '@vielzeug/rune';
 
-const httpLog = Rune.scope('http');
+const httpLog = Rune.child({ namespace: 'http' });
 
 export function requestLogger(req, res, next) {
   // pin request-scoped fields to every log call in this handler

@@ -10,8 +10,8 @@ import type {
   Subscription,
 } from './types';
 
-import { StateError } from './error';
-import { collectErrors, rethrowWith, runAll } from './errors';
+import { getDevToolsHook } from './devtools';
+import { collectErrors, rethrowWith, runAll, StateError } from './error';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
 import { getTracking, withSourceObserver, withTracking } from './tracking';
@@ -21,12 +21,30 @@ import { getTracking, withSourceObserver, withTracking } from './tracking';
  * The `subscriber` returned here is what gets registered in signal subscriber sets —
  * so notifications call the deferred wrapper, not `run` directly.
  *
- * NOTE (R7): The scheduler wrapper identity is stable for the lifetime of the effect.
+ * The scheduler identity is stable for the lifetime of the effect.
  * Never replace `subscriber` with a new function after creation — doing so would break
  * the removeEffectSub calls that rely on reference identity.
+ *
+ * F4: Supports custom scheduler function in addition to built-in string variants.
  */
 const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): Subscriber => {
   if (scheduler === 'sync' || scheduler === undefined) return run;
+
+  // F4: custom scheduler function — caller is responsible for calling run exactly once.
+  if (typeof scheduler === 'function') {
+    const customScheduler = scheduler;
+    let scheduled = false;
+
+    return (): void => {
+      if (scheduled) return;
+
+      scheduled = true;
+      customScheduler(() => {
+        scheduled = false;
+        run();
+      });
+    };
+  }
 
   let scheduled = false;
 
@@ -104,9 +122,8 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
         isDirty = false;
         teardown();
 
-        // R2: effect() no longer checks for/applies a source observer.
-        // traceEffect wraps fn with withSourceObserver before passing it here,
-        // so the observer is already active inside fn() when trackSource fires.
+        getDevToolsHook()?.onEffectRun?.(effectName);
+
         let returnedCleanup: CleanupFn | void = undefined;
 
         try {
@@ -150,6 +167,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
 
     isDisposed = true;
     teardown();
+    getDevToolsHook()?.onEffectDispose?.(effectName);
   });
 };
 
@@ -317,15 +335,17 @@ export const scope = (setup?: () => void): Scope => {
  * during the setup function's preamble (before the first `await`), then
  * awaits the rest of setup and returns the ready scope.
  *
- * Any `onCleanup()` calls that happen asynchronously (after the first `await`)
- * will NOT be captured, as reactive tracking cannot cross `await` boundaries.
+ * **Important:** `onCleanup()` can only be called synchronously — before the
+ * first `await` in the setup function. Reactive tracking does not survive
+ * `await` boundaries; any `onCleanup()` calls after an `await` will throw
+ * `INVALID_CLEANUP`.
  *
  * @example
  * ```ts
  * const s = await asyncScope(async () => {
- *   onCleanup(() => closeDB());
- *   const db = await openDB();
- *   onCleanup(() => db.close());
+ *   onCleanup(() => resourceA.close()); // ✓ before any await — captured
+ *   const db = await openDB();          // context is gone after this point
+ *   // do NOT call onCleanup() here — it will throw
  * });
  * // later:
  * s.dispose();

@@ -190,21 +190,50 @@ container.factory(Config, async () => {
 });
 ```
 
-## Deferred Resolution
+## Resolving Without Throwing
 
-`container.deferred()` returns a proxy that defers resolution until the first property access. The token must be resolvable synchronously at access time (i.e., a value or already-warmed singleton).
-
-Useful for optional dependencies that may or may not be used.
+Use `tryResolve()` to resolve a token as a discriminated union instead of throwing:
 
 ```ts
-const Telemetry = token<{ track(event: string): void }>('Telemetry');
+const result = await container.tryResolve(OptionalPlugin);
+if (result.ok) {
+  result.value.init();
+} else {
+  console.warn('OptionalPlugin not available:', result.error);
+}
+```
 
-// Proxy created early — no resolution yet
-const telemetry = container.deferred(Telemetry);
+Use `resolveMany()` to resolve multiple tokens in parallel with a typed tuple result:
 
-// ...later, after the token is registered and warmed...
+```ts
+const [db, cache, logger] = await container.resolveMany([Db, Cache, Logger] as const);
+```
 
-telemetry.track('page_view'); // resolves on first access
+## Freezing Containers
+
+Call `freeze()` after all registrations are complete to prevent accidental late registrations:
+
+```ts
+const container = createContainer({ name: 'app' });
+
+await container.load(dbModule, authModule, serviceModule);
+container.freeze(); // seal — no further registrations allowed
+
+// Later in application code:
+container.value(SomeToken, x); // throws: Container 'app' is frozen ...
+```
+
+## Named Containers
+
+Assign names to containers for clearer error messages:
+
+```ts
+const root = createContainer({ name: 'root' });
+const request = root.createChild({ name: 'request-42' });
+const scope = root.createScope(RequestScope, { name: 'scope-42' });
+
+// Error messages will include the container name:
+// ProviderNotFoundError: No provider registered for token: MyToken (in container 'request-42')
 ```
 
 ## Cycle Detection
@@ -388,10 +417,12 @@ Listener errors are silently swallowed — a failing listener never disrupts con
 ## Best Practices
 
 - Register all providers at startup before any resolution begins.
-- Group registrations into `ContainerModule` functions to keep them organized. Use `load()` for sequential async setup, `loadAll()` for independent modules.
+- Group registrations into `ContainerModule` functions to keep them organized. Use `load()` for sequential async setup.
 - Call `validate()` after bulk registration to catch cycles early.
+- Call `freeze()` after all registrations are done to prevent accidental late additions.
 - Use `resolveAll()` once at startup, then `resolveSync()` in hot paths.
-- Use `has()` to guard optional integrations instead of `resolveOptional()` when you don't need the instance.
+- Use `tryResolve()` when optional providers are expected to be absent; use `resolveOptional()` for one-off nullable checks.
+- Use `resolveMany()` to resolve multiple well-known providers at startup in parallel.
 - Scope child containers (or named-scope containers) to request or component lifetimes — dispose them with the scope.
 - Attach `dispose` hooks to both factory and value registrations for external resources that need cleanup.
 - Call `container.dispose()` during app teardown to invoke all registered cleanup hooks.

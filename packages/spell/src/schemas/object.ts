@@ -1,5 +1,4 @@
-import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -92,14 +91,14 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     for (const key of Object.keys(this.shape)) {
       const fieldSchema = this.shape[key];
-      const result = fieldSchema.safeParse(obj[key]);
+      const result = fieldSchema._parseFullSync(obj[key]);
 
-      if (result.success) {
+      if (result.issues.length === 0) {
         output[key] = result.data;
       } else {
         // Failed field keys are intentionally omitted from parsed output so
         // object-level checks can branch on key presence.
-        issues.push(...prependIssuePath(result.error.issues, key));
+        issues.push(...prependIssuePath(result.issues, key));
       }
     }
 
@@ -202,25 +201,6 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     }
 
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-
-    for (const [key, schema] of Object.entries(this.shape)) {
-      properties[key] = schema.toJsonSchema();
-
-      if (!schema.isOptional) required.push(key);
-    }
-
-    const base: Record<string, unknown> = { properties, type: 'object' };
-
-    if (required.length > 0) base['required'] = required;
-
-    if (!this._isRelaxed) base['additionalProperties'] = false;
-
-    return base;
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

@@ -14,14 +14,14 @@ A dependency requires asynchronous initialization — fetching remote configurat
 Return a `Promise` from the `factory()` callback. Conduit awaits it automatically. Concurrent callers for singleton and scoped lifetimes share the same in-flight promise, so the work runs exactly once.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Config {
   baseUrl: string;
   timeout: number;
 }
 
-const Config = createToken<Config>('Config');
+const Config = token<Config>('Config');
 
 const container = createContainer();
 
@@ -38,13 +38,13 @@ const [a, b] = await Promise.all([container.resolve(Config), container.resolve(C
 #### Async factory with a dependency
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Logger { log(msg: string): void }
 interface DbPool { query(sql: string): Promise<unknown[]> }
 
-const Logger = createToken<Logger>('Logger');
-const Db = createToken<DbPool>('Db');
+const Logger = token<Logger>('Logger');
+const Db = token<DbPool>('Db');
 
 const container = createContainer();
 
@@ -66,8 +66,8 @@ const db = await container.resolve(Db);
 
 ### Pitfalls
 
-- Async factories whose promise rejects will cause `resolve()` to reject with the factory's error. The singleton promise is not cached when it rejects — a subsequent `resolve()` call will retry the factory.
-- Calling `resolveSync()` on an async factory before it has been resolved at least once throws `SyncResolutionError`. Warm up the factory with `await container.resolve()` first.
+- When a singleton factory rejects, the rejection is **cached** and rethrown on every subsequent `resolve()` call — the factory is **not** retried. To retry, create a new container and re-register.
+- Calling `resolveSync()` on an async factory before it has been resolved at least once throws `SyncResolutionError`. Warm up the factory with `await container.resolve()` first, or call `await container.resolveAll()` at startup.
 
 ### Related
 

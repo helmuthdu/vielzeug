@@ -407,3 +407,55 @@ describe('form.scope()', () => {
     expect(form.field('address.city').error).toBeUndefined();
   });
 });
+
+describe('subscribeScoped — change filtering', () => {
+  test('non-scoped field changes do NOT fire the scoped listener', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    const calls: unknown[] = [];
+
+    address.subscribeScoped((s) => calls.push(s), { sync: true });
+    calls.length = 0; // ignore the initial sync emission
+
+    // Mutate a field outside the 'address' scope.
+    form.set('name', 'Alice');
+
+    // The scoped listener must not have been notified.
+    expect(calls).toHaveLength(0);
+  });
+
+  test('scoped field changes DO fire the scoped listener', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    const calls: unknown[] = [];
+
+    address.subscribeScoped((s) => calls.push(s), { sync: true });
+    calls.length = 0; // ignore the initial sync emission
+
+    form.set('address.city', 'London');
+
+    expect(calls).toHaveLength(1);
+  });
+
+  test('subscribeScoped sync:true option delivers state synchronously', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    let captured: unknown;
+
+    address.subscribeScoped(
+      (s) => {
+        captured = s;
+      },
+      { sync: true },
+    );
+    captured = undefined; // ignore initial sync emission
+
+    form.touch('address.city');
+
+    expect(captured).toBeDefined();
+    expect((captured as { touchedFields: string[] }).touchedFields).toContain('city');
+  });
+});

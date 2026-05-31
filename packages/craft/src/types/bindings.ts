@@ -6,7 +6,7 @@
  * that the previous design required.
  */
 
-import { signal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { type ReadonlySignal, signal, type Signal } from '@vielzeug/ripple';
 
 // ─── REF TYPES ───────────────────────────────────────────────────────────────
 
@@ -27,6 +27,17 @@ export type TextBinding = {
   type: 'text';
 };
 
+/**
+ * Minimal prop metadata needed by the attr binding layer.
+ * Populated at binding creation time from propRegistry, so template-bindings.ts
+ * has no direct dependency on props.ts.
+ */
+export type AttrPropMeta = {
+  parse: (v: string | null) => unknown;
+  reflect: boolean;
+  signal: { value: unknown };
+};
+
 type AttrBaseFields = {
   el: HTMLElement;
   /**
@@ -36,6 +47,8 @@ type AttrBaseFields = {
   live?: true;
   mode: 'attr' | 'bool';
   name: string;
+  /** Pre-resolved prop metadata (if the target element is a craft component). */
+  propMeta?: AttrPropMeta;
   type: 'attr';
 };
 

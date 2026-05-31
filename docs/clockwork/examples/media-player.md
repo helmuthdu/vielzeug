@@ -14,7 +14,7 @@ A media player needs to handle loading audio, playing, pausing, seeking, and vol
 Use entry/exit actions for side effects (log playback state), `invoke` for async loading with onDone/onError handlers, and guard-free transitions for simple control changes like seeking.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type PlayerContext = {
   url: string;
@@ -45,7 +45,7 @@ const playerMachine = defineMachine<
         LOAD: [
           {
             target: 'loading',
-            actions: [assign(({ event }) => ({ url: event.url }))],
+            actions: [({ context, event }) => { context.url = event.url; }],
           },
         ],
       },
@@ -66,13 +66,13 @@ const playerMachine = defineMachine<
         LOADED: [
           {
             target: 'paused',
-            actions: [assign(({ event }) => ({ duration: event.duration }))],
+            actions: [({ context, event }) => { context.duration = event.duration; }],
           },
         ],
         ERROR: [
           {
             target: 'error',
-            actions: [assign(({ event }) => ({ url: '' }))],
+            actions: [({ context }) => { context.url = ''; }],
           },
         ],
       },
@@ -84,13 +84,13 @@ const playerMachine = defineMachine<
         PAUSE: [{ target: 'paused' }],
         SEEK: [
           {
-            actions: [assign(({ event }) => ({ currentTime: event.time }))],
+            actions: [({ context, event }) => { context.currentTime = event.time; }],
             target: 'playing',
           },
         ],
         VOLUME: [
           {
-            actions: [assign(({ event }) => ({ volume: event.level }))],
+            actions: [({ context, event }) => { context.volume = event.level; }],
             target: 'playing',
           },
         ],
@@ -101,13 +101,13 @@ const playerMachine = defineMachine<
         PLAY: [{ target: 'playing' }],
         SEEK: [
           {
-            actions: [assign(({ event }) => ({ currentTime: event.time }))],
+            actions: [({ context, event }) => { context.currentTime = event.time; }],
             target: 'paused',
           },
         ],
         VOLUME: [
           {
-            actions: [assign(({ event }) => ({ volume: event.level }))],
+            actions: [({ context, event }) => { context.volume = event.level; }],
             target: 'paused',
           },
         ],
@@ -118,7 +118,7 @@ const playerMachine = defineMachine<
         LOAD: [
           {
             target: 'loading',
-            actions: [assign(({ event }) => ({ url: event.url }))],
+            actions: [({ context, event }) => { context.url = event.url; }],
           },
         ],
       },

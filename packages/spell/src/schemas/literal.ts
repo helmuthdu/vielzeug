@@ -22,14 +22,6 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
     this.value = value;
   }
 
-  protected override _toSchemaBase(): Record<string, unknown> {
-    if (this.value === null) return { type: 'null' };
-
-    if (this.value === undefined) return {};
-
-    return { const: this.value };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'literal', value: this.value };
   }

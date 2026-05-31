@@ -2,7 +2,7 @@ import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../shared/config';
+import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 

@@ -108,14 +108,14 @@ describe('vielzeug MCP server', () => {
   it('list-packages with packageSlug returns a single-item array', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
-      arguments: { packageSlug: 'sieve' },
+      arguments: { packageSlug: 'spell' },
       name: 'list-packages',
     })) as ToolCallResult;
     const parsed = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
 
     expect(Array.isArray(parsed)).toBe(true);
     expect(parsed).toHaveLength(1);
-    expect(parsed[0]?.['slug']).toBe('sieve');
+    expect(parsed[0]?.['slug']).toBe('spell');
     expect(parsed[0]).not.toHaveProperty('docs');
   });
 
@@ -132,7 +132,7 @@ describe('vielzeug MCP server', () => {
   it('get-docs reads a doc page', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
-      arguments: { packageSlug: 'sieve', page: 'api' },
+      arguments: { packageSlug: 'spell', page: 'api' },
       name: 'get-docs',
     })) as ToolCallResult;
 
@@ -143,7 +143,7 @@ describe('vielzeug MCP server', () => {
   it('get-source returns the src/index.ts content', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
-      arguments: { packageSlug: 'sieve' },
+      arguments: { packageSlug: 'spell' },
       name: 'get-source',
     })) as ToolCallResult;
 
@@ -154,7 +154,7 @@ describe('vielzeug MCP server', () => {
   it('get-docs rejects source as a page value', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
-      arguments: { packageSlug: 'sieve', page: 'source' },
+      arguments: { packageSlug: 'spell', page: 'source' },
       name: 'get-docs',
     })) as ToolCallResult;
 
@@ -219,11 +219,11 @@ describe('vielzeug MCP server', () => {
   it('get-docs defaults to index page when page is omitted', async () => {
     const { client } = await createTestPair();
     const withPage = (await client.callTool({
-      arguments: { packageSlug: 'sieve', page: 'index' },
+      arguments: { packageSlug: 'spell', page: 'index' },
       name: 'get-docs',
     })) as ToolCallResult;
     const withoutPage = (await client.callTool({
-      arguments: { packageSlug: 'sieve' },
+      arguments: { packageSlug: 'spell' },
       name: 'get-docs',
     })) as ToolCallResult;
 
@@ -236,7 +236,7 @@ describe('vielzeug MCP server', () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       // 'source' is not a valid page enum value — triggers the enum-validation error
-      arguments: { packageSlug: 'sieve', page: 'source' },
+      arguments: { packageSlug: 'spell', page: 'source' },
       name: 'get-docs',
     })) as ToolCallResult;
 

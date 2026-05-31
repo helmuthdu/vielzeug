@@ -4,7 +4,7 @@ package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [craft, scroll, sigil]
-exports: [createDropZone, createSortable, createSortableScope, applyReorder]
+exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 ---
 
 # /grip
@@ -18,9 +18,9 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 
 **Package:** `/grip` &nbsp;·&nbsp; **Category:** Ui-interaction
 
-**Key exports:** `createDropZone`, `createSortable`
+**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`, `matchesAccept`
 
-**When to use:** Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
+**When to use:** File drop zones with MIME filtering and async validation, or sortable lists with keyboard, FLIP animation, and optimistic-update support — zero dependencies.
 
 **Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/)
 
@@ -41,30 +41,33 @@ yarn add /grip
 ```ts
 import { createDropZone, createSortable } from '/grip';
 
-// Drop zone — file drag-and-drop with accept filtering
+// Drop zone — with async validation and clipboard paste support
 using zone = createDropZone({
   element: document.getElementById('dropzone')!,
   accept: ['image/*', '.pdf'],
-  onDrop: (files) => {
-    console.log('Accepted:', files);
-  },
+  paste: true,
+  onValidate: async (files) => checkServerQuota(files),
+  onDrop: (files) => uploadFiles(files),
   onDropRejected: (files) => {
-    console.log('Rejected:', files);
+    showError(`${files.length} file(s) not accepted`);
   },
   onHoverChange: (hovered) => {
     document.getElementById('dropzone')!.classList.toggle('drag-over', hovered);
   },
 });
 
-// Sortable list — reorder items via drag
+// Sortable list — with FLIP hook and revert support
 using sortable = createSortable({
   element: document.getElementById('list')!,
   keyboard: true,
   autoScroll: { edgeThreshold: 40, speed: 24 },
-  dragImage: (id, item) => item,
-  dragImageOffset: [8, 8],
+  onBeforeReorder: (from, to) => {
+    // snapshot element positions here for FLIP animations
+  },
   onReorder: (ids) => {
-    saveOrder(ids);
+    const prev = currentOrder;
+    setOrder(ids);
+    return () => setOrder(prev); // enable sortable.revert() on server error
   },
 });
 ```

@@ -51,6 +51,14 @@ const ward = createWard<'read' | 'update' | 'delete', { authorId: string }>([
 
 Each `.to()` call produces one rule per action. Spread `build()` into the outer array.
 
+Chain `.priority(n)` before or after `.when()` to set the rule priority:
+
+```ts
+rule().deny('blocked').on('posts').to(WILDCARD).priority(100).build();
+// or after .when():
+rule().allow('editor').on('posts').to('update').when(owns('authorId')).priority(5).build();
+```
+
 ## Hierarchical Resources
 
 Use colon-namespaced patterns to scope rules to resource instances:
@@ -68,7 +76,20 @@ ward.can(viewer, 'posts:123', 'read');   // true  — exact match
 ward.can(viewer, 'posts:456', 'read');   // false — no matching rule
 ```
 
-`matchesResource(pattern, resource)` is also exported for custom integration code.
+The same namespace-wildcard syntax works for actions (action hierarchy):
+
+```ts
+// 'read:*' matches 'read:own', 'read:all', 'read:draft:1', etc.
+const ward = createWard([
+  { role: 'viewer', resource: 'posts', action: 'read:*', effect: 'allow' },
+]);
+
+ward.can(viewer, 'posts', 'read:own'); // true
+ward.can(viewer, 'posts', 'read:all'); // true
+ward.can(viewer, 'posts', 'write');    // false
+```
+
+`matchesPattern(pattern, value)` is exported for custom integration code. `patternCovers(broad, narrow)` is exported to test whether one pattern statically covers another (used by `detectConflicts`).
 
 ## Check Permissions
 
@@ -169,10 +190,94 @@ const decision = ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'delete'
 
 if (!decision.allowed) {
   console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+  // decision.rule is only present for 'explicit-deny', not 'no-matching-rule'
+  if (decision.reason === 'explicit-deny') {
+    console.log(decision.rule.effect); // 'deny'
+  }
 }
 ```
 
-`explain()` returns a discriminated union that includes the winning rule for allow decisions and explicit deny decisions.
+`explain()` returns a **3-variant discriminated union**:
+
+| Variant | `allowed` | `reason` | `rule` |
+|---|---|---|---|
+| Allow | `true` | — | The winning rule |
+| Explicit deny | `false` | `'explicit-deny'` | The winning deny rule |
+| No match | `false` | `'no-matching-rule'` | Not present |
+
+Use `'rule' in decision` to safely access the rule across all variants.
+
+## Trace Decisions
+
+`trace()` returns the complete decision trace: every rule that matched the request before the winner was selected, with per-candidate scoring details.
+
+```ts
+const { decision, candidates } = ward.trace(
+  { id: 'u1', roles: ['editor'] },
+  'posts',
+  'read',
+);
+
+candidates.forEach(({ rule, priority, score, denyBonus, won }) => {
+  console.log(rule.effect, priority, score, denyBonus, won ? '← winner' : '');
+});
+```
+
+`trace()` fires the logger with the same context as `explain()` — audit records are preserved when you switch from `explain` to `trace` for richer diagnostics.
+
+`trace()` is also available on `BoundWard`: `bound.trace(resource, action, data?)`.
+
+## Detect Policy Conflicts
+
+`detectConflicts()` performs a static O(n²) analysis of your rule set and returns all detected conflicts. The result is lazily computed and cached after the first call.
+
+```ts
+const conflicts = ward.detectConflicts();
+
+conflicts.forEach(({ kind, rule, ruleIndex, shadowedBy, shadowedByIndex }) => {
+  console.warn(`Rule[${ruleIndex}] is ${kind} by Rule[${shadowedByIndex}]`);
+});
+```
+
+Two conflict kinds:
+
+- **`'duplicate'`** — two predicate-free rules have the same (role set, resource, action). The second can never fire because the first always wins.
+- **`'shadowed'`** — a higher-ranked predicate-free rule covers the other's patterns entirely. The lower-ranked rule can never win.
+
+Rules with a `when` predicate are excluded from both checks because their applicability is determined at runtime, not statically.
+
+To surface conflicts eagerly at startup:
+
+```ts
+// Warn on conflicts
+const ward = createWard(rules, {
+  onConflict: (c) => console.warn(`[ward] ${c.kind}: Rule[${c.ruleIndex}] shadowed by Rule[${c.shadowedByIndex}]`),
+});
+
+// Throw on first conflict (strict mode)
+const ward = createWard(rules, { strict: true });
+
+// Cap O(n²) cost for large auto-generated policies
+const ward = createWard(rules, { maxConflicts: 20 });
+```
+
+## Typed Rule Slices with `defineRules`
+
+Use `defineRules` to define typed rule slices that can be spread into `createWard`. The value is entirely in generic type inference — the function returns the array unchanged.
+
+```ts
+import { defineRules, rule, owns } from '@vielzeug/ward';
+
+type PostAction = 'read' | 'update' | 'delete';
+type Post = { authorId: string };
+
+const postsRules = defineRules<PostAction, Post>([
+  ...rule<PostAction, Post>().allow(['viewer', 'editor']).on('posts:*').to('read').build(),
+  ...rule<PostAction, Post>().allow('editor').on('posts:*').to('update').when(owns('authorId')).build(),
+]);
+
+const ward = createWard([...postsRules, ...commentsRules]);
+```
 
 ## Use Dynamic Conditions with `when`
 
@@ -188,7 +293,7 @@ const ward = createWard<'update', { authorId: string }>([
 ]);
 ```
 
-`when` only runs for authenticated principals. For anonymous (`null`) checks, `when` rules do not match.
+`when` only runs for authenticated principals. For anonymous (`null`) checks, predicates are skipped and the rule does not match. Do not pair `owns()` or any `when` predicate with an `ANONYMOUS`-role rule — it can never match.
 
 ### Ownership Checks with `owns`
 
@@ -276,23 +381,31 @@ Use `ANONYMOUS` for anonymous-only rules and `WILDCARD` for any role/resource/ac
 
 ```ts
 const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }], {
-  logger: ({ action, decision, principal, resource, rule }) => {
+  logger: ({ action, decision, principal, resource }) => {
     const subject = principal === null ? 'anonymous' : principal.id;
-    console.log(subject, resource, action, decision, rule?.effect);
+    console.log(subject, resource, action, decision);
   },
 });
 ```
 
-The logger runs after decision methods like `can()`, `canAll()`, `canAny()`, `checkAll()`, and `explain()`.
-Enumeration and introspection helpers like `allowedActions()` and `rulesInScope()` stay side-effect free.
+The logger runs after `can()`, `canAll()`, `canAny()`, `checkAll()`, `explain()`, and `trace()`.
+Enumeration and introspection helpers (`allowedActions()`, `rulesInScope()`) stay side-effect free.
 
-The `decision` field in `WardLoggerContext` is one of three values — not just `'deny'`:
+The `WardLoggerContext` type is a **discriminated union** on `decision` — `rule` is only present on `'allow'` and `'explicit-deny'`:
+
+```ts
+logger: (ctx) => {
+  if (ctx.decision !== 'no-matching-rule') {
+    console.log(ctx.rule.role); // no ?. needed — rule is present
+  }
+},
+```
 
 - `'allow'` — a matching allow rule won
 - `'explicit-deny'` — a matching deny rule won
 - `'no-matching-rule'` — no rule matched at all (default deny)
 
-This lets you distinguish explicit blocks from gaps in your policy in audit logs and metrics without inspecting the `rule` field.
+This lets you distinguish explicit blocks from gaps in your policy in audit logs and metrics.
 
 ## Decision Precedence
 
@@ -300,8 +413,9 @@ Ward uses one deterministic model:
 
 1. If no rule matches, decision is deny.
 2. Higher `priority` wins.
-3. For equal `priority`, higher specificity wins (non-wildcards are more specific).
+3. For equal `priority`, higher specificity wins — `exact > namespace-wildcard (ns:*) > global-wildcard (*)`, applied independently to role, resource, and action.
 4. For equal `priority` and specificity, deny overrides allow.
+5. On absolute tie (identical priority, specificity, and effect), the rule declared **first in the array** wins.
 
 ## Exact Matching
 
@@ -403,12 +517,20 @@ const ward = createWard([
   { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
 ]);
 
-// Extract principal from your auth system
 const requireEdit = createExpressGuard(
   ward,
-  (req) => req.user ?? null,   // your principal extractor (sync or async)
+  (req) => req.user ?? null,
   'posts:*',
   'update',
+);
+
+// With static data forwarded to when predicates:
+const requireEditOwn = createExpressGuard(
+  ward,
+  (req) => req.user ?? null,
+  'posts:*',
+  'update',
+  { data: resolvePostData() },
 );
 
 app.put('/posts/:id', requireEdit, handler);
@@ -432,20 +554,33 @@ const requireEdit = createHonoGuard(
   'update',
 );
 
+// With static data:
+const requireEditOwn = createHonoGuard(
+  ward,
+  (c) => c.get('user') ?? null,
+  'posts:*',
+  'update',
+  { data: resolvePostData() },
+);
+
 app.put('/posts/:id', requireEdit, handler);
 ```
 
+Errors from the principal extractor propagate to Hono's `app.onError` handler. Wrap your extractor if finer control is needed.
+
 ### Framework-agnostic guard
 
-Use `guardRequest` to wire Ward into any async middleware pattern:
+Use `guardRequest` to wire Ward into any async middleware pattern. It has two overloads:
 
 ```ts
-import { createWard, guardRequest } from '@vielzeug/ward';
+// Overload 1: provide principal directly
+const result = await guardRequest(ward, principal, 'posts', 'update');
 
+// Overload 2: provide a request object and extractor
 const result = await guardRequest(ward, req, getPrincipal, 'posts', 'update');
 
 if (!result.granted) {
-  return new Response(JSON.stringify({ reason: result.decision.reason }), { status: 403 });
+  return new Response(JSON.stringify({ reason: result.reason }), { status: 403 });
 }
 ```
 

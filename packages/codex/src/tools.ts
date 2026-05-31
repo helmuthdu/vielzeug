@@ -5,7 +5,7 @@ import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } fr
 
 import { packageMeta } from './data.js';
 import { scorePackage } from './search.js';
-import { DOC_PAGES, type BundledData, type BundledPackage, type CemDeclaration } from './types.js';
+import { type BundledData, type BundledPackage, type CemDeclaration, DOC_PAGES } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Result helpers

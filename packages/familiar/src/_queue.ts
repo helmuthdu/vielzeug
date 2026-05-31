@@ -1,17 +1,25 @@
 /**
- * Internal queue primitives shared between the real worker implementation and the test double.
+ * Internal priority-queue for @vielzeug/familiar.
  * Not part of the public API surface.
  *
- * Uses a ring-buffer for O(1) enqueue and dequeue.
- * remove() marks items as cancelled (lazy deletion, O(n) scan) — the cancelled slot is
- * reclaimed by the next shift(). This avoids complex in-place compaction with modular arithmetic.
+ * Uses a binary max-heap ordered by priority (higher value = runs first), with
+ * insertion-sequence tiebreaking to ensure FIFO ordering within the same priority.
+ * Cancelled items are marked lazily and silently skipped by shift().
+ *
+ * Complexity:
+ *   enqueue  O(log n)
+ *   shift    O(log n) amortised (lazy cancellation may scan multiple cancelled tops)
+ *   remove   O(n) scan + O(1) mark — adequate for typical queue depths
  */
 
 export type QueueItem<TInput, TOutput> = {
-  /** Set by remove() — the item is skipped and discarded by the next shift(). */
+  /** Marked true by remove(); the next shift() discards the item silently. */
   cancelled?: boolean;
   cleanupAbort?: () => void;
+  heartbeatTimeout?: number;
   input: TInput;
+  /** Scheduling priority. Higher value = runs first. Default: 0. */
+  priority: number;
   reject: (reason: unknown) => void;
   resolve: (value: TOutput) => void;
   signal?: AbortSignal;
@@ -19,60 +27,66 @@ export type QueueItem<TInput, TOutput> = {
   transferables: Transferable[];
 };
 
+/**
+ * Internal heap node: wraps a QueueItem with an insertion sequence for FIFO tiebreaking.
+ * Using a wrapper instead of mutating QueueItem keeps queue items free of internal
+ * scheduling metadata (_seq).
+ */
+type HeapEntry<TInput, TOutput> = { readonly _seq: number; readonly item: QueueItem<TInput, TOutput> };
+
 export class TaskQueue<TInput, TOutput> {
-  private buf: (QueueItem<TInput, TOutput> | undefined)[];
-  private head = 0;
-  /** Total slots occupied (including cancelled items not yet reclaimed by shift). */
-  private length = 0;
-  private tail = 0;
+  private readonly heap: HeapEntry<TInput, TOutput>[] = [];
+  /** Accurate count of live (non-cancelled) items. */
+  private liveCount = 0;
+  private seq = 0;
 
-  constructor(initialCapacity = 16) {
-    this.buf = new Array<QueueItem<TInput, TOutput> | undefined>(initialCapacity).fill(undefined);
-  }
-
+  /** Number of live (non-cancelled) items. Always accurate. */
   get size(): number {
-    return this.length;
+    return this.liveCount;
   }
 
+  /**
+   * Enqueue item. Returns false (without modifying state) when maxQueue is set and
+   * liveCount has already reached it; returns true on success.
+   */
   enqueue(item: QueueItem<TInput, TOutput>, maxQueue: number | undefined): boolean {
-    if (maxQueue !== undefined && this.length >= maxQueue) return false;
+    if (maxQueue !== undefined && this.liveCount >= maxQueue) return false;
 
-    if (this.length === this.buf.length) this.grow();
-
-    this.buf[this.tail] = item;
-    this.tail = (this.tail + 1) % this.buf.length;
-    this.length += 1;
+    this.heap.push({ _seq: this.seq++, item });
+    this.siftUp(this.heap.length - 1);
+    this.liveCount++;
 
     return true;
   }
 
   /**
-   * Dequeues the next non-cancelled item. Silently discards cancelled slots.
-   * Returns undefined if the queue contains only cancelled items (logically empty).
-   * Throws only if called on a queue with size === 0.
+   * Dequeue the highest-priority live item. Silently discards cancelled tombstones.
+   * Returns undefined only when there are no live items left.
    */
   shift(): QueueItem<TInput, TOutput> | undefined {
-    while (this.length > 0) {
-      const item = this.buf[this.head]!;
+    while (this.heap.length > 0) {
+      const { item } = this.extractTop();
 
-      this.buf[this.head] = undefined;
-      this.head = (this.head + 1) % this.buf.length;
-      this.length -= 1;
+      if (!item.cancelled) {
+        this.liveCount--;
 
-      if (!item.cancelled) return item;
+        return item;
+      }
+      // Cancelled: liveCount was already decremented in remove(). Just discard and continue.
     }
 
     return undefined;
   }
 
   /**
-   * Marks an item as cancelled (O(n) scan to locate it). The slot is reclaimed lazily by shift().
-   * Returns true if found and marked, false if the item was not in the queue.
+   * Mark item as cancelled (O(n) scan). The heap slot is reclaimed lazily by the next shift().
+   * Returns true when found and marked, false when the item is not in the queue.
    */
   remove(item: QueueItem<TInput, TOutput>): boolean {
-    for (let i = 0; i < this.length; i++) {
-      if (this.buf[(this.head + i) % this.buf.length] === item) {
+    for (let i = 0; i < this.heap.length; i++) {
+      if (this.heap[i]!.item === item) {
         item.cancelled = true;
+        this.liveCount--;
 
         return true;
       }
@@ -81,17 +95,56 @@ export class TaskQueue<TInput, TOutput> {
     return false;
   }
 
-  private grow(): void {
-    const oldLen = this.buf.length;
-    const newLen = oldLen * 2;
-    const newBuf = new Array<QueueItem<TInput, TOutput> | undefined>(newLen).fill(undefined);
+  // ─── Heap internals ────────────────────────────────────────────────────────
 
-    for (let i = 0; i < this.length; i++) {
-      newBuf[i] = this.buf[(this.head + i) % oldLen];
+  private extractTop(): HeapEntry<TInput, TOutput> {
+    const top = this.heap[0]!;
+    const last = this.heap.pop()!;
+
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this.siftDown(0);
     }
 
-    this.buf = newBuf;
-    this.head = 0;
-    this.tail = this.length;
+    return top;
+  }
+
+  /** Returns true when entry a should be dispatched before entry b. */
+  private higher(a: HeapEntry<TInput, TOutput>, b: HeapEntry<TInput, TOutput>): boolean {
+    if (a.item.priority !== b.item.priority) return a.item.priority > b.item.priority;
+
+    return a._seq < b._seq; // earlier insertion wins for equal priority (FIFO)
+  }
+
+  private siftUp(i: number): void {
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+
+      if (this.higher(this.heap[i]!, this.heap[parent]!)) {
+        [this.heap[i], this.heap[parent]] = [this.heap[parent]!, this.heap[i]!];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  private siftDown(i: number): void {
+    const n = this.heap.length;
+
+    for (;;) {
+      let top = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+
+      if (left < n && this.higher(this.heap[left]!, this.heap[top]!)) top = left;
+
+      if (right < n && this.higher(this.heap[right]!, this.heap[top]!)) top = right;
+
+      if (top === i) break;
+
+      [this.heap[i], this.heap[top]] = [this.heap[top]!, this.heap[i]!];
+      i = top;
+    }
   }
 }

@@ -1,6 +1,6 @@
 import type { Obj } from '../types';
 
-import { isObject } from '../typed/isObject';
+import { isPlainObject } from '../typed/isPlainObject';
 
 export type DeepMergeOptions = {
   /** How to handle arrays when both source and target contain one. Default: `'replace'`. */
@@ -30,7 +30,7 @@ type Merge<T extends Obj[]> = T extends [infer First, ...infer Rest]
   : Obj;
 
 function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, options: DeepMergeOptions): DeepMerge<T, U> {
-  if (!isObject(source)) return source as DeepMerge<T, U>;
+  if (!isPlainObject(source)) return source as DeepMerge<T, U>;
 
   const result = { ...target } as DeepMerge<T, U>;
 
@@ -48,7 +48,7 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, option
         ? options.arrayStrategy === 'concat'
           ? [...targetValue, ...sourceValue]
           : sourceValue
-        : isObject(sourceValue) && isObject(targetValue)
+        : isPlainObject(sourceValue) && isPlainObject(targetValue)
           ? mergeObjects(targetValue as Obj, sourceValue as Obj, options)
           : sourceValue;
   }

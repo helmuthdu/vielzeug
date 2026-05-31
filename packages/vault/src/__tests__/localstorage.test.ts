@@ -1,4 +1,4 @@
-import { createLocalStorage, table, ttl, type Adapter } from '../index';
+import { type Adapter, createLocalStorage, table, ttl } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -79,14 +79,16 @@ describe('LocalStorage adapter', () => {
       snapshots.push(rows);
     });
 
+    await Promise.resolve(); // consume initial snapshot (has 'Alice' — put above)
+
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent('storage', { key: null }));
     await Promise.resolve();
     stop();
 
-    // observe() defaults to immediate:false — only the clear event notification fires
-    expect(snapshots).toHaveLength(1);
-    expect(snapshots[0]).toEqual([]);
+    // Initial snapshot (Alice) + clear event snapshot (empty)
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[1]).toEqual([]);
   });
 
   test('corrupted entries are removed lazily on read', async () => {

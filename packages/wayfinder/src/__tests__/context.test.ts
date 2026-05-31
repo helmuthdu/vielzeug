@@ -8,16 +8,16 @@ import { settle } from './test-utils';
 
 describe('route context', () => {
   it('exposes params, query, pathname, hash, historyState, locals, and navigate', async () => {
-    const handler = vi.fn();
+    const dataFn = vi.fn();
     const history = createMemoryHistory('/users/42?tab=info#hash');
     const router = createRouter({
       history,
-      routes: { user: { handler, path: '/users/:id' } },
+      routes: { user: { data: dataFn, path: '/users/:id' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(
+    expect(dataFn).toHaveBeenCalledWith(
       expect.objectContaining({
         hash: 'hash',
         historyState: null,
@@ -26,13 +26,13 @@ describe('route context', () => {
         params: { id: '42' },
         pathname: '/users/42',
         query: { tab: 'info' },
+        signal: expect.any(AbortSignal),
       }),
     );
     router.dispose();
   });
 
-  it('handler receives data; middleware does not have a data property', async () => {
-    const handler = vi.fn();
+  it('data fn result is stored in matches; middleware does not have a data property', async () => {
     let middlewareHasData = false;
     const history = createMemoryHistory('/');
     const router = createRouter({
@@ -40,7 +40,6 @@ describe('route context', () => {
       routes: {
         home: {
           data: async () => ({ value: 42 }),
-          handler,
           middleware: [
             async (ctx, next) => {
               // ctx is RouteContext — data is not present (TypeScript prevents access)
@@ -56,18 +55,20 @@ describe('route context', () => {
     await settle();
 
     expect(middlewareHasData).toBe(false);
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: { value: 42 } }));
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ value: 42 });
     router.dispose();
   });
 
-  it('locals object is shared across middleware and handler', async () => {
-    const handler = vi.fn();
+  it('locals object is shared across middleware functions', async () => {
+    let localsAtEnd: Record<string, unknown> = {};
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: {
-          handler,
+          data: (ctx) => {
+            localsAtEnd = { ...ctx.locals };
+          },
           middleware: [
             async (ctx: RouteContext, next) => {
               ctx.locals.user = 'alice';
@@ -81,7 +82,7 @@ describe('route context', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ locals: { user: 'alice' } }));
+    expect(localsAtEnd).toEqual({ user: 'alice' });
     router.dispose();
   });
 });
@@ -100,7 +101,7 @@ describe('middleware pipeline', () => {
       ],
       routes: {
         home: {
-          handler: () => {
+          data: () => {
             calls.push('handler');
           },
           middleware: [
@@ -196,7 +197,7 @@ describe('middleware pipeline', () => {
       ],
       routes: {
         home: {
-          handler: () => {
+          data: () => {
             throw new Error('boom');
           },
           path: '/',
@@ -244,7 +245,7 @@ describe('navigation from context', () => {
       history,
       routes: {
         from: {
-          handler: source,
+          data: source,
           middleware: [
             async (ctx: RouteContext) => {
               await ctx.navigate({ name: 'target' });
@@ -252,7 +253,7 @@ describe('navigation from context', () => {
           ],
           path: '/from',
         },
-        target: { handler: target, path: '/target' },
+        target: { data: target, path: '/target' },
       },
     });
 
@@ -277,7 +278,7 @@ describe('navigation from context', () => {
           ],
           path: '/from',
         },
-        target: { handler: target, path: '/target' },
+        target: { data: target, path: '/target' },
       },
     });
 

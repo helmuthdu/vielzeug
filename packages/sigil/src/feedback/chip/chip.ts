@@ -1,4 +1,4 @@
-import { define, prop, computed, html, signal, watch } from '@vielzeug/craft';
+import { computed, define, html, prop, signal, watch } from '@vielzeug/craft';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 

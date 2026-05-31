@@ -7,62 +7,81 @@ description: 'Grouped List (Headers + Rows) examples for scroll.'
 
 ### Problem
 
-Your data is organized into named groups, each with a header row followed by its items. The list must render headers and rows in a single virtualized pass, with different heights for each type.
+Your data is organized into named groups, each with a header row followed by its items. The list must render headers and rows in a single virtualized pass, with sticky section headers that stay pinned while the section is in view.
 
 ### Solution
 
-Flatten groups into a linear renderable list, then pass a per-index estimator to predict header vs. row heights.
+Use `createGroupedVirtualizer`, which manages the flat index mapping internally and provides sticky header state via `stickyHeader` in `onChange`.
 
 ```ts
-import { createVirtualizer } from '@vielzeug/scroll';
+import { createGroupedVirtualizer } from '@vielzeug/scroll';
 
-type FlatRow = { type: 'header'; label: string } | { type: 'row'; data: { id: number; name: string } };
+type Contact = { id: number; name: string };
 
-const flatList: FlatRow[] = [
-  { type: 'header', label: 'A' },
-  { type: 'row', data: { id: 1, name: 'Alice' } },
-  { type: 'row', data: { id: 2, name: 'Adam' } },
-  { type: 'header', label: 'B' },
-  { type: 'row', data: { id: 3, name: 'Bob' } },
+const sections = [
+  { label: 'A', items: [{ id: 1, name: 'Alice' }, { id: 2, name: 'Adam' }] },
+  { label: 'B', items: [{ id: 3, name: 'Bob' }] },
+  { label: 'C', items: [{ id: 4, name: 'Carol' }, { id: 5, name: 'Chris' }] },
 ];
 
-const virt = createVirtualizer(scrollEl, {
-  count: flatList.length,
-  estimateSize: (i) => (flatList[i].type === 'header' ? 32 : 44),
-  onChange: (virtualItems, totalSize) => {
+const virt = createGroupedVirtualizer<Contact>({
+  estimateHeaderSize: 32,
+  estimateItemSize: 44,
+  sections,
+  target: scrollEl,
+  onChange: ({ headers, items, stickyHeader, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
-    for (const item of virtualItems) {
-      const row = flatList[item.index];
+    // Sticky header overlay (pinned at top while section is in view)
+    if (stickyHeader) {
       const el = document.createElement('div');
+      el.className = 'group-header sticky';
+      el.style.cssText = 'position:sticky;top:0;z-index:1;height:32px;';
+      el.textContent = stickyHeader.label;
+      listEl.appendChild(el);
+    }
 
-      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
+    // Regular headers (positioned absolutely in the scroll flow)
+    for (const header of headers) {
+      const el = document.createElement('div');
+      el.className = 'group-header';
+      el.style.cssText = `position:absolute;top:${header.start}px;left:0;right:0;height:${header.size}px;`;
+      el.textContent = header.label;
+      listEl.appendChild(el);
+    }
 
-      if (row.type === 'header') {
-        el.className = 'group-header';
-        el.style.height = '32px';
-        el.textContent = row.label;
-      } else {
-        el.className = 'row';
-        el.style.height = '44px';
-        el.textContent = row.data.name;
-      }
-
+    // Items
+    for (const item of items) {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:${item.size}px;`;
+      el.textContent = item.data.name;
       listEl.appendChild(el);
     }
   },
 });
+
+// Update sections (e.g., after filtering)
+virt.update(nextSections);
+
+// Jump to a section by index
+virt.scrollToSection(2, { align: 'start' });
+
+// Jump to item 1 in section 0
+virt.scrollToItem(0, 1, { align: 'auto' });
+
+// Cleanup
+virt.destroy();
 ```
 
 ---
 
-
 ### Pitfalls
 
-- The `estimateSize` function is called during layout. Avoid expensive per-index lookups inside it — pre-compute header vs. row type into the flat index array during data preparation.
-- If a header renders at the same DOM height as rows but `estimateSize` returns a different value, the layout desynchronizes and rows drift from their expected positions.
-- Mutating the groups array in place without calling `update({ count })` leaves the virtualizer showing the previous item count. Always call `update` after data changes.
+- `update(sections)` rebuilds the flat index from scratch. Pass the full sections array — not a partial diff.
+- `stickyHeader` is `null` when the scroll position is at the very top of the list (before any section header has scrolled out of view). Render it conditionally.
+- `scrollToSection` and `scrollToItem` are silent no-ops for out-of-range indices.
 
 ### Related
 

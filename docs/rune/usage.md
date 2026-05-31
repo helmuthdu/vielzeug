@@ -29,17 +29,20 @@ Transports are the delivery layer. Every `LogEntry` that passes the logger's lev
 
 ```ts
 import { createLogger } from '@vielzeug/rune';
-import { consoleTransport, remoteTransport, jsonTransport } from '@vielzeug/rune';
+import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   logLevel: 'debug',
   transports: [
     // Console output with CSS badges (browser) or plain text (Node)
-    consoleTransport({ variant: 'symbol', timestamp: true }),
+    consoleTransport({ timestamp: true }),
     // Remote delivery — only errors and above
-    remoteTransport(async (type, data) => {
-      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-    }, { level: 'error' }),
+    remoteTransport({
+      handler: async (type, data) => {
+        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+      },
+      level: 'error',
+    }),
   ],
 });
 ```
@@ -56,18 +59,21 @@ When `transports` is omitted, `consoleTransport()` is used automatically.
 | `batchTransport()`   | Buffered delivery to reduce I/O overhead    |
 | `sampleTransport()`  | Probabilistic volume reduction              |
 | `redactTransport()`  | Sensitive field stripping before forwarding |
+| `pipe()`             | Fan-out dispatcher to multiple transports   |
 
 ### Composing Transports
 
-Transport factories are composable wrappers. Chain them to build a pipeline:
+Transport factories are composable wrappers. Chain them to build a pipeline.
+
+`pipe()` dispatches a single entry to multiple transports independently — an error in one transport does not prevent the others from running:
 
 ```ts
-import { batchTransport, redactTransport, remoteTransport, sampleTransport } from '@vielzeug/rune';
+import { batchTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   transports: [
     consoleTransport({ level: 'debug' }),
-    // redact sensitive fields, sample at 10%, batch + flush every 30s
+    // redact sensitive fields, sample at 10 %, batch + flush every 30 s
     redactTransport({
       keys: ['password', 'token'],
       transport: sampleTransport({
@@ -80,6 +86,20 @@ const log = createLogger({
     }),
   ],
 });
+```
+
+Use `pipe()` when you want all transports to receive every entry regardless of per-transport failures:
+
+```ts
+import { pipe } from '@vielzeug/rune';
+
+const fanout = pipe(
+  { onError: (err) => console.warn('transport error', err) },
+  consoleTransport(),
+  remoteTransport({ handler, level: 'error' }),
+);
+
+const log = createLogger({ transports: [fanout] });
 ```
 
 ### Batch Transport Lifecycle
@@ -176,7 +196,7 @@ reqLog.debug('diagnostics'); // buildLargePayload() only called when debug is en
 `withBindings(fields)` returns a child logger where the given fields are merged into every log call. This is the idiomatic way to attach per-request or per-user context.
 
 ```ts
-const api = Rune.scope('api');
+const api = Rune.child({ namespace: 'api' });
 
 const reqLog = api.withBindings({ requestId: 'abc-123', userId: 42 });
 reqLog.info('GET /users'); // always includes requestId and userId
@@ -225,19 +245,17 @@ log.info('a'); // tick: 1
 log.info('b'); // tick: 2
 ```
 
-## Scoped Loggers
+## Child Loggers
 
-`scope(name)` appends namespace segments without mutating the parent logger.
+`child(overrides?)` creates a new logger scoped to a namespace, level, or transport set. Use it to create module-level or service-level loggers.
 
 ```ts
-const api = Rune.scope('api');
-const auth = api.scope('auth');
+const api = Rune.child({ namespace: 'api' });
+const auth = api.child({ namespace: 'api.auth' });
 
 api.info('GET /users');
 auth.warn('token expiring');
 ```
-
-## Child Loggers
 
 `child(overrides?)` clones current config and applies overrides. Transports are inherited by default.
 
@@ -261,7 +279,7 @@ Child and parent configs remain independent after creation.
 ```ts
 // Sync
 const result = log.time('parse', () => parseDocument(input));
-// Emits: { level: 'debug', message: 'timer: parse', context: { duration_ms: 2.4 } }
+// Emits: { level: 'debug', message: 'parse', context: { duration_ms: 2.4 } }
 
 // Async
 const users = await log.time('db.users', () => db.query('SELECT * FROM users'));
@@ -450,7 +468,7 @@ it('writes error to console.error', () => {
 
 ## Best Practices
 
-- Create one scoped logger per module boundary using `Rune.scope('module.name')`.
+- Create one child logger per module boundary using `Rune.child({ namespace: 'module.name' })` or `createLogger('module.name')`.
 - Use `withBindings()` to pin request/session context instead of repeating fields on each call.
 - Use `lazy()` for expensive diagnostics bindings only needed at `debug` level.
 - Set `logLevel` from environment (`'debug'` in dev, `'warn'` or `'error'` in prod).

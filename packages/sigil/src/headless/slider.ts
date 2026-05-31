@@ -1,6 +1,8 @@
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
-import { clamp as clampRange, toFiniteNumberOr, toPositiveStep } from './numbers';
+import { clamp as clampRange } from '@vielzeug/arsenal';
+
+import { toFiniteNumberOr, toPositiveStep } from './numbers';
 
 /** Returns `value` if finite, otherwise `fallback`. Slider-local utility. */
 const normalizeFinite = (value: number, fallback: number): number => (Number.isFinite(value) ? value : fallback);

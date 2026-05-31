@@ -75,7 +75,7 @@ pipeEvents(parentBus, childBus, ['user:login'], parentBus.disposalSignal);
 
 ### Pitfalls
 
-- Both buses must use the same event map type `T`. TypeScript enforces this, so mismatched types are a compile error.
+- Source and target buses may have **different event map types** — TypeScript enforces that the listed keys exist in both with compatible payload types, but the buses themselves do not need to share the same type.
 - `pipeEvents` only forwards events listed in the third argument. Events not listed on the source are not forwarded, even if the target has listeners for them.
 - The returned `unpipe()` function is idempotent — calling it after the target has already disposed is safe and does nothing.
 - A pipe does not buffer events. If the target bus processes events slower than the source emits, consider using `bus.events()` with a `maxBuffer` option instead.

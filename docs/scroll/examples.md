@@ -15,5 +15,7 @@ description: Practical examples and recipes for scroll.
 - [Restore Scroll Position](./examples/restore-scroll-position.md)
 - [Density Toggle Compact Comfortable](./examples/density-toggle-compact-comfortable.md)
 - [DOM Virtual List Combobox Pattern](./examples/dom-virtual-list-combobox-pattern.md)
+- [Grid Virtualizer](./examples/grid-virtualizer.md)
+- [Reactive Virtualizer](./examples/reactive-virtualizer.md)
 - [Recreate on Remount](./examples/using-virtualizer-directly-without-createvirtualizer.md)
 - [Explicit Resource Management (`using`)](./examples/explicit-resource-management-using.md)

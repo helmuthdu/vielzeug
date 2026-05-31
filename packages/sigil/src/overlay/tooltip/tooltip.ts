@@ -5,7 +5,7 @@ import { computed, define, html, onMounted, prop, signal, syncAria } from '@viel
 import type { ComponentSize } from '../../types';
 
 import { createStableId, parseStringTriggers } from '../../headless';
-import { disablableBundle, sizableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './tooltip.css?inline';

@@ -19,11 +19,11 @@ import { createRouter } from '@vielzeug/wayfinder';
 const router = createRouter({
   base: '/my-app',
   routes: {
-    home: { path: '/', handler: () => renderHome() },
-    about: { path: '/about', handler: () => renderAbout() },
-    userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
-    notFound: { path: '*', handler: () => renderNotFound() },
+    home: { path: '/' },
+    about: { path: '/about' },
+    userDetail: { path: '/users/:id', data: async ({ params }) => fetchUser(params.id) },
   },
+  notFound: { component: NotFoundPage },
 });
 
 await router.navigate({ name: 'about' });           // pushes /my-app/about

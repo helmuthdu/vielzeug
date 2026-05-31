@@ -1,6 +1,6 @@
 import type { Obj } from '../types';
 
-import { isObject } from '../typed/isObject';
+import { isPlainObject } from '../typed/isPlainObject';
 
 /**
  * Applies default values for missing or undefined keys.
@@ -9,7 +9,7 @@ export function defaults<T extends Obj>(target: T, ...sources: Array<Partial<T>>
   const out = { ...target };
 
   for (const source of sources) {
-    if (!isObject(source)) continue;
+    if (!isPlainObject(source)) continue;
 
     for (const key of Object.keys(source) as Array<keyof T>) {
       if (out[key] === undefined) {

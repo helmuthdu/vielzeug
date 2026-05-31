@@ -1,15 +1,9 @@
 import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
 
-import type { TextFieldProps } from '../../shared/config';
+import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import {
-  TEXTAREA_SIZE_PRESET,
-  disablableBundle,
-  roundableBundle,
-  sizableBundle,
-  themableBundle,
-} from '../../shared/config';
+import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -139,10 +133,10 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
         labelPlacement: props['label-placement'],
         maxLength: props.maxlength,
         onBeforeInput: autoGrow,
-        onChange: (event, value) => {
+        onChange: (event: Event, value: string) => {
           emit('change', { originalEvent: event, value });
         },
-        onInput: (event, value) => {
+        onInput: (event: Event, value: string) => {
           emit('input', { originalEvent: event, value });
         },
         prefix: 'textarea',
@@ -152,11 +146,11 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
       defineField,
       onCleanup,
     );
-    const { assistive, assistiveId, fieldId: textareaId } = tf;
+    const { assistive, assistiveId, counter, fieldId: textareaId } = tf;
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
-      const layoutEffect = effect(() => {
+      const stopLayoutEffect = effect(() => {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
 
@@ -167,7 +161,7 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
 
       return () => {
         unwireEl();
-        layoutEffect.dispose();
+        stopLayoutEffect();
       };
     });
 
@@ -181,33 +175,22 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
 
     const { aria, label } = tf;
     const counterClass = () =>
-      assistive.value.counterAtLimit
+      counter?.value.counterAtLimit
         ? 'counter at-limit'
-        : assistive.value.counterNearLimit
+        : counter?.value.counterNearLimit
           ? 'counter near-limit'
           : 'counter';
-    const counterHidden = () => !assistive.value.hasCounter;
-    const counterText = () => assistive.value.counterText.replace(' / ', '/');
+    const counterHidden = () => !counter;
+    const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
     const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
     const helperText = () => assistive.value.errorText || assistive.value.helperText;
 
     return html`
       <div class="textarea-wrapper">
-        <label
-          class="label-outside"
-          for="${textareaId}"
-          id="${label.outside.id}"
-          ?hidden="${() => !label.outside.show.value}"
+        <label class="label" for="${textareaId}" id="${label.id}" ?hidden="${() => !label.show.value}"
           >${props.label}</label
         >
         <div class="field">
-          <label
-            class="label-inset"
-            for="${textareaId}"
-            id="${label.inset.id}"
-            ?hidden="${() => !label.inset.show.value}"
-            >${props.label}</label
-          >
           <textarea
             ref="${textareaRef}"
             id="${textareaId}"

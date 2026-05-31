@@ -1,8 +1,8 @@
-import { define, prop, computed, defineField, html, inject } from '@vielzeug/craft';
+import { computed, define, defineField, html, inject, prop } from '@vielzeug/craft';
 
 import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,

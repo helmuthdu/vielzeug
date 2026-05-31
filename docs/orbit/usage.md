@@ -7,7 +7,7 @@ description: Placement, middleware composition, overflow handling, and lifecycle
 
 ## Basic Usage
 
-Use `float()` for the common case — it positions the floating element and keeps it in sync.
+Use `float()` for the common case — it positions the floating element and keeps it in sync. It returns a `FloatHandle`; call `handle.cleanup()` on teardown.
 
 ```ts
 import { float, flip, offset, shift } from '@vielzeug/orbit';
@@ -15,14 +15,13 @@ import { float, flip, offset, shift } from '@vielzeug/orbit';
 const trigger = document.querySelector<HTMLElement>('#trigger')!;
 const tooltip = document.querySelector<HTMLElement>('#tooltip')!;
 
-// float() calls autoUpdate internally and returns a cleanup function
-const cleanup = float(trigger, tooltip, {
+const handle = float(trigger, tooltip, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
 
 // Call on teardown
-cleanup();
+handle.cleanup();
 ```
 
 ### `computePosition`
@@ -43,22 +42,22 @@ floating.style.top = `${y}px`;
 
 ### `float` with Custom Apply
 
-Pass `apply` for custom rendering or to use CSS transforms instead of `left`/`top`.
+Pass `apply` for custom rendering or to use CSS transforms instead of `left`/`top`. The callback receives the full `ComputePositionResult`; DOM references are available by closure.
 
 ```ts
 import { float, flip, offset, shift } from '@vielzeug/orbit';
 
-const cleanup = float(reference, floating, {
+const handle = float(reference, floating, {
   placement: 'bottom-start',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
-  apply(result, { floating }) {
+  apply(result) {
     floating.style.transform = `translate(${result.x}px, ${result.y}px)`;
     floating.dataset.placement = result.placement;
   },
 });
 
 // on teardown:
-cleanup();
+handle.cleanup();
 ```
 
 ### Presets
@@ -67,14 +66,14 @@ cleanup();
 
 ```ts
 import { float } from '@vielzeug/orbit';
-import { presets } from '@vielzeug/orbit/presets';
+import { dropdown, tooltip } from '@vielzeug/orbit/presets';
 
 // One-liner for a tooltip:
-const cleanup = float(trigger, tooltip, presets.tooltip());
+const handle = float(trigger, tooltip, tooltip());
 
 // Customize a dropdown:
-const cleanup2 = float(trigger, menu, {
-  ...presets.dropdown({ placement: 'top-start', offset: 4 }),
+const handle2 = float(trigger, menu, {
+  ...dropdown({ placement: 'top-start', offset: 4 }),
   autoUpdate: { throttle: 16 },
 });
 ```
@@ -154,22 +153,20 @@ middleware: [shift({ mainAxis: true, padding: 8 })];
 
 ### `size`
 
-Reports available space so the floating element can be constrained.
+Reports available space so the floating element can be constrained. Read `middlewareData.size` in the `apply` callback or a subsequent `computePosition` call.
 
 ```ts
-middleware: [
-  size({
-    padding: 8,
-    apply({ availableHeight, elements }) {
-      elements.floating.style.maxHeight = `${availableHeight}px`;
-    },
-  }),
-];
-```
+const handle = float(ref, el, {
+  middleware: [flip(), shift(), size()],
+  apply(result) {
+    const { size } = result.middlewareData;
+    if (size) el.style.maxHeight = `${size.availableHeight}px`;
+    el.style.left = `${result.x}px`;
+    el.style.top  = `${result.y}px`;
+  },
+});
 
-Or read the data from the result directly:
-
-```ts
+// Or with computePosition:
 const { middlewareData } = computePosition(ref, el, { middleware: [flip(), size()] });
 el.style.maxHeight = `${middlewareData.size!.availableHeight}px`;
 ```
@@ -237,9 +234,7 @@ middleware: [
   inline({ x: pointerX, y: pointerY }), // only for multi-line inline refs
   flip(),                                // or autoPlacement() — not both
   shift({ padding: 6 }),
-  size({ apply: ({ availableHeight, elements }) => {
-    elements.floating.style.maxHeight = `${availableHeight}px`;
-  }}),
+  size(),
   arrow({ element: arrowEl, padding: 6 }),
   hide(),
 ];
@@ -250,6 +245,24 @@ Rules:
 - `inline` before `flip` — corrects the reference rect before overflow detection
 - `flip` XOR `autoPlacement` — combining them has no effect and adds overhead
 - `arrow` after `flip`/`shift` — arrow is positioned against the final coordinates
+
+### `compose()` for ordered validation
+
+`compose()` is a drop-in replacement for an inline array literal. It filters falsy entries and throws at call time if middleware are in a known-bad order.
+
+```ts
+import { arrow, compose, flip, offset, shift, size } from '@vielzeug/orbit';
+
+const middleware = compose(
+  offset(8),
+  flip(),
+  shift({ padding: 6 }),
+  size(),
+  arrow({ element: arrowEl }),
+);
+
+const handle = float(trigger, floating, { middleware });
+```
 
 ---
 
@@ -277,10 +290,10 @@ document.addEventListener('contextmenu', (e) => {
 Or use the preset, which sets the correct defaults:
 
 ```ts
-import { float } from '@vielzeug/orbit';
-import { presets } from '@vielzeug/orbit/presets';
+import { computePosition } from '@vielzeug/orbit';
+import { contextMenu } from '@vielzeug/orbit/presets';
 
-const { x, y } = computePosition(virtualRef, menu, presets.contextMenu());
+const { x, y } = computePosition(virtualRef, menu, contextMenu());
 ```
 
 ---
@@ -290,7 +303,7 @@ const { x, y } = computePosition(virtualRef, menu, presets.contextMenu());
 `autoUpdate` is the lower-level primitive behind `float`.
 
 ```ts
-import { autoUpdate, computePosition, offset, flip, shift, arrow } from '@vielzeug/orbit';
+import { autoUpdate, computePosition, arrow, flip, offset, shift } from '@vielzeug/orbit';
 
 const cleanup = autoUpdate(
   reference,
@@ -311,6 +324,60 @@ const cleanup = autoUpdate(
 Use `animationFrame: true` only when the reference itself animates between frames.
 Use `throttle: N` to rate-limit updates in busy scroll containers.
 
+### `pauseWhenHidden`
+
+Set `pauseWhenHidden: true` (default) to suspend updates while the reference element is scrolled out of the viewport. Uses `IntersectionObserver` internally. A single update fires when the reference becomes visible again.
+
+```ts
+const cleanup = autoUpdate(reference, floating, update, {
+  pauseWhenHidden: true, // default
+});
+```
+
+Pass `pauseWhenHidden: false` to keep updating unconditionally (e.g. for pinned headers that are always in view).
+
+### `observeAncestors`
+
+By default (`observeAncestors: true`), Orbit attaches scroll listeners to ancestor scroll containers of the reference element in addition to `window`. This fires more reliably in nested scroll contexts. Pass `false` to use only a capture-phase window listener.
+
+```ts
+const cleanup = autoUpdate(reference, floating, update, {
+  observeAncestors: false, // single window capture listener
+});
+```
+
+## Global Boundary and Padding
+
+Pass `boundary` and `padding` on `computePosition()` or `float()` to set defaults for all overflow-aware middleware. Per-middleware options take precedence.
+
+```ts
+import { flip, float, shift, size } from '@vielzeug/orbit';
+
+const container = document.querySelector<HTMLElement>('#scroll-container')!;
+
+const handle = float(trigger, floating, {
+  // All middleware will clip to #scroll-container instead of the viewport
+  boundary: container,
+  // 8px inset on all sides
+  padding: 8,
+  middleware: [flip(), shift(), size()],
+});
+```
+
+## Containing Block
+
+For floating elements with `position: absolute`, provide `containingBlock` (the `offsetParent`) so Orbit subtracts its offset and returns coordinates relative to the containing block.
+
+```ts
+const handle = float(trigger, floating, {
+  containingBlock: floating.offsetParent as Element,
+  placement: 'bottom',
+  middleware: [flip(), shift()],
+});
+```
+
+Without `containingBlock`, coordinates are viewport-relative (correct for `position: fixed`).
+
 ---
 
 ## CSS Anchor Positioning
@@ -318,7 +385,7 @@ Use `throttle: N` to rate-limit updates in busy scroll containers.
 Pass `preferCssAnchor: true` to `float()` to use native CSS Anchor Positioning in supporting browsers. The browser handles repositioning with no JS overhead and no event listeners.
 
 ```ts
-const cleanup = float(trigger, tooltip, {
+const handle = float(trigger, tooltip, {
   placement: 'top',
   preferCssAnchor: true,
 });
@@ -330,6 +397,7 @@ Requirements and fallback behaviour:
 - Falls back when `middleware` is non-empty (middleware requires JS coordinates)
 - Falls back when a custom `apply` callback is provided
 - `position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline` is applied automatically
+- `handle.cssAnchor` is `true` when the CSS anchor path is active; `handle.getPosition()` returns `null` in this mode
 
 ---
 
@@ -346,10 +414,11 @@ function Tooltip({ anchor, children }: { anchor: HTMLElement | null; children: R
 
   useEffect(() => {
     if (!anchor || !tooltipRef.current) return;
-    return float(anchor, tooltipRef.current, {
+    const handle = float(anchor, tooltipRef.current, {
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
+    return () => handle.cleanup();
   }, [anchor]);
 
   return <div ref={tooltipRef} role="tooltip" style={{ position: 'fixed' }}>{children}</div>;
@@ -366,11 +435,11 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
     const floating = floatingRef.value;
     if (!reference || !floating) return;
 
-    const cleanup = float(reference, floating, {
+    const handle = float(reference, floating, {
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
-    onCleanup(() => cleanup());
+    onCleanup(() => handle.cleanup());
   });
 }
 ```
@@ -384,10 +453,11 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
   let tooltipEl: HTMLDivElement;
 
   onMount(() => {
-    return float(anchor, tooltipEl, {
+    const handle = float(anchor, tooltipEl, {
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
+    return () => handle.cleanup();
   });
 </script>
 
@@ -418,18 +488,18 @@ import { float, offset, flip, shift } from '@vielzeug/orbit';
 
 define('x-tooltip', {
   setup({ host }) {
-    let cleanup: (() => void) | undefined;
+    let handle: ReturnType<typeof float> | undefined;
 
     onMounted(() => {
       const tooltipEl = host.el.querySelector<HTMLElement>('[role=tooltip]')!;
 
-      cleanup = float(host.el, tooltipEl, {
+      handle = float(host.el, tooltipEl, {
         placement: 'bottom',
         middleware: [offset(6), flip(), shift({ padding: 8 })],
       });
 
       // Returned from onMounted — Craft calls this on disconnect
-      return () => cleanup?.();
+      return () => handle?.cleanup();
     });
   },
 });
@@ -437,13 +507,69 @@ define('x-tooltip', {
 
 ---
 
+## Reactive Adapter
+
+Import from `@vielzeug/orbit/reactive` to get a `@vielzeug/ripple` signal that updates on every position change. DOM styles are **not** automatically applied — use a ripple `effect` to consume `position` and write to the DOM.
+
+```ts
+import { effect } from '@vielzeug/ripple';
+import { createFloatState } from '@vielzeug/orbit/reactive';
+import { flip, offset, shift } from '@vielzeug/orbit';
+
+const { position, cleanup } = createFloatState(trigger, tooltip, {
+  placement: 'top',
+  middleware: [offset(8), flip(), shift({ padding: 6 })],
+});
+
+effect(() => {
+  const pos = position.value;
+  if (!pos) return;
+  tooltip.style.left = `${pos.x}px`;
+  tooltip.style.top  = `${pos.y}px`;
+});
+
+// on teardown:
+cleanup();
+```
+
+`createFloatState` accepts all `FloatOptions` except `apply` (which is used internally to update the signal).
+
+---
+
+## SSR
+
+For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All three exports are no-ops that return zero-coordinate results and safe cleanup functions.
+
+```ts
+// vite.config.ts
+resolve: {
+  alias: {
+    '@vielzeug/orbit': process.env.SSR
+      ? '@vielzeug/orbit/ssr'
+      : '@vielzeug/orbit',
+  },
+}
+```
+
+Or import directly when you know you are in an SSR context:
+
+```ts
+import { computePosition } from '@vielzeug/orbit/ssr';
+
+// Returns { x: 0, y: 0, placement: 'bottom', middlewareData: {} }
+const result = computePosition(reference, floating, { placement: 'bottom' });
+```
+
+---
+
 ## Best Practices
 
 - Use `float()` for the common tooltip/popover case; use `computePosition()` when you need raw coordinates or custom rendering.
-- Always call the cleanup function returned by `float()` and `autoUpdate()` when the floating element is removed from the DOM.
+- Always call `handle.cleanup()` when the floating element is removed from the DOM.
 - Use either `flip()` or `autoPlacement()` — not both.
 - Apply `offset()` before `flip()` or `autoPlacement()` so overflow detection accounts for the gap.
 - Use `shift({ padding })` to keep the floating element away from viewport edges.
+- Use `compose()` in development to catch middleware order bugs at call time.
 - Use virtual references for context menus and cursor-anchored popovers.
 - Set `animationFrame: true` only when the reference itself animates between frames.
-- Use `presets.*()` for common patterns to avoid repeating the same middleware stacks across your codebase.
+- Use preset factories for common patterns to avoid repeating the same middleware stacks across your codebase.

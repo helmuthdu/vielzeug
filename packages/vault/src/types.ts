@@ -215,6 +215,7 @@ export type MetricsEvent = {
     | 'get'
     | 'getAll'
     | 'getMany'
+    | 'getOrDefault'
     | 'has'
     | 'keys'
     | 'put'
@@ -265,6 +266,20 @@ type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & s
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
   getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  /**
+   * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
+   * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
+   *
+   * **Not atomic for memory and WebStorage adapters.** Two concurrent calls may both observe
+   * a missing record and both invoke `defaultFn()`, writing twice. For guaranteed atomicity,
+   * wrap in `batch(['table'], tx => tx.getOrDefault(...))` with the IndexedDB adapter.
+   */
+  getOrDefault<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    defaultFn: () => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   /**
    * Returns the primary key of every live record in the table without fetching the full records.
@@ -294,34 +309,24 @@ type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & s
 
 /* -------------------- Transaction context -------------------- */
 
-/** Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction. */
+/**
+ * Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction.
+ * Extends `SharedMethods` (which already includes `getOrDefault`). The batch scope restricts
+ * accessed tables to those declared in `batch(tables, fn)` — accessing others throws `VaultScopeError`.
+ *
+ * This is a stable public alias for `SharedMethods` retained so batch callback parameters can be
+ * typed as `TransactionContext<S, K>` without depending on an internal type name.
+ */
 export type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = SharedMethods<
   S,
   K
-> & {
-  /**
-   * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
-   * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
-   *
-   * **Not atomic for memory and WebStorage adapters.** Two concurrent calls may both observe
-   * a missing record and both invoke `defaultFn()`, writing twice. If `defaultFn` has side
-   * effects (API calls, counters), wrap in `batch(['table'], fn)` — for the IndexedDB adapter
-   * this executes inside a real atomic IDB transaction.
-   */
-  getOrDefault<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    defaultFn: () => RecordOf<S, T>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T>>;
-};
+>;
 
 /* -------------------- Adapter interface -------------------- */
 
 /**
  * Full client API. Shares all CRUD methods with `TransactionContext` and adds
  * batch, observe/watch, disposal, debug tooling, and explicit TTL pruning.
- * `getOrDefault` is only available inside `batch()` callbacks.
  */
 export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
   /**
@@ -345,7 +350,20 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
   observe<K extends keyof S & string>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { immediate?: boolean },
+    options?: {
+      /**
+       * An `AbortSignal` that, when aborted, automatically unsubscribes this observer.
+       * Aligns with the platform pattern used by `fetch`, `addEventListener`, etc.
+       *
+       * ```ts
+       * const controller = new AbortController();
+       * db.observe('users', (users) => render(users), { signal: controller.signal });
+       * // later:
+       * controller.abort(); // stops the observer
+       * ```
+       */
+      signal?: AbortSignal;
+    },
   ): () => void;
   /**
    * Observe multiple tables simultaneously. The listener receives a combined snapshot
@@ -355,27 +373,36 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
    *
    * @param tables - The tables to observe. Must be non-empty.
    * @param listener - Called with a snapshot map keyed by table name.
+   * @param options.signal - An `AbortSignal` that automatically unsubscribes all observers.
    * @returns An unsubscribe function that stops all underlying observers.
    */
   observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+    options?: { signal?: AbortSignal },
   ): () => void;
   /**
-   * Explicitly delete all TTL-expired records from every table.
-   * Returns the number of records pruned per table.
+   * Explicitly delete all TTL-expired records from the specified tables (or all tables when
+   * no filter is provided). Returns the number of records pruned per table.
    *
    * Useful as a scheduled maintenance task for write-heavy tables that are rarely
    * read (lazy eviction would not reclaim storage otherwise).
    *
+   * ```ts
+   * // Prune all tables
+   * await db.pruneExpired();
+   *
+   * // Prune only TTL-bearing tables
+   * await db.pruneExpired(['sessions', 'tokens']);
+   * ```
+   *
    * **Does not trigger observer callbacks.** TTL-expired records are already logically
-   * absent, so their physical removal does not change observable state. If you need
-   * observers to reflect post-prune counts, call `getAll` and update manually.
+   * absent, so their physical removal does not change observable state.
    */
-  pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
+  pruneExpired(tables?: readonly (keyof S & string)[]): Promise<{ [K in keyof S & string]: number }>;
   /**
    * An AsyncIterable that yields a fresh snapshot of the table on every change.
-   * The first value is emitted immediately (equivalent to `{ immediate: true }`).
+   * The first value is emitted immediately.
    *
    * ```ts
    * for await (const users of db.watch('users')) {
@@ -383,14 +410,41 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
    * }
    * ```
    *
-   * The iteration auto-cleans up its observer when the `for await` loop exits
-   * (via `return()` or `break`).
+   * Pass an `AbortSignal` to stop iteration from outside the loop:
+   * ```ts
+   * const controller = new AbortController();
+   * for await (const users of db.watch('users', { signal: controller.signal })) {
+   *   render(users);
+   * }
+   * controller.abort(); // stops the iteration
+   * ```
    *
    * @param options.mode
    *   - `'latest'` (default): if the consumer lags, intermediate snapshots are dropped and
    *     only the most recent one is retained. Best for rendering/display use-cases.
    *   - `'all'`: every snapshot is queued and delivered in order. Use when every intermediate
    *     state matters (audit trails, animation frames).
+   * @param options.signal - An `AbortSignal` that stops the iteration.
    */
-  watch<K extends keyof S & string>(table: K, options?: { mode?: 'all' | 'latest' }): AsyncIterable<RecordOf<S, K>[]>;
+  watch<K extends keyof S & string>(
+    table: K,
+    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
+  ): AsyncIterable<RecordOf<S, K>[]>;
+  /**
+   * Returns a Web Standard `ReadableStream` that emits a fresh snapshot of the table on every change.
+   * The first chunk is emitted immediately (current table state).
+   *
+   * ```ts
+   * db.watchStream('users').pipeTo(new WritableStream({ write: (users) => render(users) }));
+   * ```
+   *
+   * @param options.mode
+   *   - `'latest'` (default): if the consumer lags, intermediate snapshots are dropped.
+   *   - `'all'`: every snapshot is enqueued in order.
+   * @param options.signal - An `AbortSignal` that cancels the stream.
+   */
+  watchStream<K extends keyof S & string>(
+    table: K,
+    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
+  ): ReadableStream<RecordOf<S, K>[]>;
 }

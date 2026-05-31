@@ -1,30 +1,29 @@
+import { createAxis1D, type VirtualItem } from './axis1d';
 import {
   createScrollAdapter,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   normalizeOverscan,
+  type Overscan,
   resolveEstimateFn,
+  type ScrollTarget,
   toNonNegativeInt,
   toPositiveNumber,
-  type Overscan,
-  type ScrollTarget,
 } from './utils';
+
+export { type VirtualItem };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface VirtualCell {
-  colEnd: number;
-  colIndex: number;
-  colSize: number;
-  colStart: number;
-  rowEnd: number;
-  rowIndex: number;
-  rowSize: number;
-  rowStart: number;
-}
-
 export interface GridVirtualizerState {
-  readonly cells: VirtualCell[];
+  /**
+   * Visible column descriptors.
+   * Callers form the cross-product `rows × cols` as needed — no O(r×c) Cell
+   * allocation per scroll tick (R8).
+   */
+  readonly cols: VirtualItem[];
+  /** Visible row descriptors. */
+  readonly rows: VirtualItem[];
   readonly totalHeight: number;
   readonly totalWidth: number;
 }
@@ -62,28 +61,31 @@ export interface GridVirtualizerOptions {
   rowGap?: number;
 }
 
-/** Options accepted by `update()`. Callbacks and boot-time options are excluded. */
-export type GridVirtualizerUpdateOptions = Partial<
-  Omit<
-    GridVirtualizerOptions,
-    | 'colMeasurementCache'
-    | 'initialScrollLeft'
-    | 'initialScrollTop'
-    | 'onChange'
-    | 'onRangeChange'
-    | 'rowMeasurementCache'
-  >
->;
+/**
+ * Options accepted by `update()`. Explicit interface instead of
+ * `Partial<Omit<...>>` for better IDE hover (R7).
+ */
+export interface GridVirtualizerUpdateOptions {
+  colCount?: number;
+  colGap?: number;
+  estimateColSize?: number | ((col: number) => number);
+  estimateRowSize?: number | ((row: number) => number);
+  overscanX?: Overscan;
+  overscanY?: Overscan;
+  rowCount?: number;
+  rowGap?: number;
+}
 
 export interface GridVirtualizer {
-  readonly cells: VirtualCell[];
+  readonly cols: VirtualItem[];
+  readonly rows: VirtualItem[];
   readonly scrollLeft: number;
   readonly scrollTop: number;
   readonly totalHeight: number;
   readonly totalWidth: number;
   destroy: () => void;
   invalidate: () => void;
-  /** Batch-measure rows and columns in a single rebuild pass. */
+  /** Measure rows and columns in a single coordinated rebuild pass (R4). */
   measureBatch: (rows: Array<{ index: number; size: number }>, cols: Array<{ index: number; size: number }>) => void;
   /** Attach a ResizeObserver to `el` to auto-measure the column width on resize. Returns disconnect fn. */
   measureColEl: (col: number, el: HTMLElement) => () => void;
@@ -126,187 +128,57 @@ function alignOffset(
 export function createGridVirtualizer(target: ScrollTarget, options: GridVirtualizerOptions): GridVirtualizer {
   let rowCount = toNonNegativeInt(options.rowCount);
   let colCount = toNonNegativeInt(options.colCount);
-  let rowGap = toNonNegativeInt(options.rowGap ?? 0);
-  let colGap = toNonNegativeInt(options.colGap ?? 0);
   let estimateRowFn = resolveEstimateFn(options.estimateRowSize, DEFAULT_ESTIMATE_SIZE);
   let estimateColFn = resolveEstimateFn(options.estimateColSize, DEFAULT_ESTIMATE_SIZE);
   let overscanY = normalizeOverscan(options.overscanY, DEFAULT_OVERSCAN);
   let overscanX = normalizeOverscan(options.overscanX, DEFAULT_OVERSCAN);
 
-  // Callbacks fixed at construction — not swappable via update() (R7).
+  // Callbacks fixed at construction.
   const onChange = options.onChange;
   const onRangeChange = options.onRangeChange;
 
-  // External or internal measurement caches.
+  // External or internal measurement caches (numeric row/col index keys).
   const measuredRows: Map<number, number> = options.rowMeasurementCache ?? new Map();
   const measuredCols: Map<number, number> = options.colMeasurementCache ?? new Map();
 
-  let rowOffsets: number[] = [];
-  let colOffsets: number[] = [];
-  let totalHeight = 0;
-  let totalWidth = 0;
   let scrollTop = 0;
   let scrollLeft = 0;
   let viewportHeight = 0;
   let viewportWidth = 0;
-  let cells: VirtualCell[] = [];
-
-  // Dedup guards
-  let prevFirstRow = -1;
-  let prevLastRow = -1;
-  let prevFirstCol = -1;
-  let prevLastCol = -1;
-  let prevTotalHeight = -1;
-  let prevTotalWidth = -1;
-
-  // Pending incremental rebuilds
-  let pendingRowBuild = false;
-  let pendingColBuild = false;
-  let minChangedRow = Infinity;
-  let minChangedCol = Infinity;
-
+  let rows: VirtualItem[] = [];
+  let cols: VirtualItem[] = [];
   let destroyed = false;
 
-  // ─── Offset helpers ────────────────────────────────────────────────────────
+  // ─── Axis1D instances (R1) ─────────────────────────────────────────────────
+  // sizeAt closures capture live `measuredRows/Cols` and `estimateFn` vars.
 
-  function rowSizeAt(row: number): number {
-    return measuredRows.get(row) ?? estimateRowFn(row);
-  }
+  const rowAx = createAxis1D(
+    rowCount,
+    (r) => measuredRows.get(r) ?? estimateRowFn(r),
+    toNonNegativeInt(options.rowGap ?? 0),
+  );
 
-  function colSizeAt(col: number): number {
-    return measuredCols.get(col) ?? estimateColFn(col);
-  }
+  const colAx = createAxis1D(
+    colCount,
+    (c) => measuredCols.get(c) ?? estimateColFn(c),
+    toNonNegativeInt(options.colGap ?? 0),
+  );
 
-  function rowStartAt(row: number): number {
-    return rowOffsets[row] ?? 0;
-  }
+  // R4: Single coordinated flush flag — prevents two separate microtasks.
+  let pendingBatchBuild = false;
 
-  function colStartAt(col: number): number {
-    return colOffsets[col] ?? 0;
-  }
+  // ─── Clamping ──────────────────────────────────────────────────────────────
 
   function clampTop(offset: number): number {
     const safe = Number.isFinite(offset) ? offset : 0;
 
-    return Math.min(Math.max(0, totalHeight - viewportHeight), Math.max(0, safe));
+    return Math.min(Math.max(0, rowAx.totalSize - viewportHeight), Math.max(0, safe));
   }
 
   function clampLeft(offset: number): number {
     const safe = Number.isFinite(offset) ? offset : 0;
 
-    return Math.min(Math.max(0, totalWidth - viewportWidth), Math.max(0, safe));
-  }
-
-  // ─── Offset tables ─────────────────────────────────────────────────────────
-
-  /**
-   * Full O(n) row rebuild. Pass `forceEmit: true` to reset dedup guards (R10).
-   * Does NOT reset guards when called for refresh() — computeVisible() detects
-   * layout changes via totalHeight comparison.
-   */
-  function buildRowOffsets(forceEmit = false): void {
-    if (forceEmit) {
-      prevFirstRow = -1;
-      prevLastRow = -1;
-      prevTotalHeight = -1;
-    }
-
-    const next: number[] = [0];
-    let pos = 0;
-
-    for (let r = 0; r < rowCount; r++) {
-      pos += rowSizeAt(r) + (r < rowCount - 1 ? rowGap : 0);
-      next.push(pos);
-    }
-
-    rowOffsets = next;
-    totalHeight = pos;
-  }
-
-  function buildColOffsets(forceEmit = false): void {
-    if (forceEmit) {
-      prevFirstCol = -1;
-      prevLastCol = -1;
-      prevTotalWidth = -1;
-    }
-
-    const next: number[] = [0];
-    let pos = 0;
-
-    for (let c = 0; c < colCount; c++) {
-      pos += colSizeAt(c) + (c < colCount - 1 ? colGap : 0);
-      next.push(pos);
-    }
-
-    colOffsets = next;
-    totalWidth = pos;
-  }
-
-  /** Incremental row rebuild from `fromRow` forward. Always forces re-emit. */
-  function buildRowOffsetsFrom(fromRow: number): void {
-    if (!Number.isFinite(fromRow) || fromRow >= rowCount) return;
-
-    prevFirstRow = -1;
-    prevLastRow = -1;
-    prevTotalHeight = -1;
-
-    let pos = rowOffsets[fromRow] ?? 0;
-
-    for (let r = fromRow; r < rowCount; r++) {
-      rowOffsets[r] = pos;
-      pos += rowSizeAt(r) + (r < rowCount - 1 ? rowGap : 0);
-    }
-
-    rowOffsets[rowCount] = pos;
-    totalHeight = pos;
-  }
-
-  function buildColOffsetsFrom(fromCol: number): void {
-    if (!Number.isFinite(fromCol) || fromCol >= colCount) return;
-
-    prevFirstCol = -1;
-    prevLastCol = -1;
-    prevTotalWidth = -1;
-
-    let pos = colOffsets[fromCol] ?? 0;
-
-    for (let c = fromCol; c < colCount; c++) {
-      colOffsets[c] = pos;
-      pos += colSizeAt(c) + (c < colCount - 1 ? colGap : 0);
-    }
-
-    colOffsets[colCount] = pos;
-    totalWidth = pos;
-  }
-
-  // ─── Visible range ─────────────────────────────────────────────────────────
-
-  function findFirst(offsets: number[], sizes: (i: number) => number, count: number, viewportStart: number): number {
-    let lo = 0;
-    let hi = count - 1;
-
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-
-      if ((offsets[mid] ?? 0) + sizes(mid) <= viewportStart) lo = mid + 1;
-      else hi = mid;
-    }
-
-    return lo;
-  }
-
-  function findLast(offsets: number[], count: number, from: number, viewportEnd: number): number {
-    let lo = from;
-    let hi = count - 1;
-
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-
-      if ((offsets[mid] ?? 0) < viewportEnd) lo = mid;
-      else hi = mid - 1;
-    }
-
-    return lo;
+    return Math.min(Math.max(0, colAx.totalSize - viewportWidth), Math.max(0, safe));
   }
 
   // ─── Compute and emit ──────────────────────────────────────────────────────
@@ -314,46 +186,49 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   function computeVisible(): void {
     if (destroyed) return;
 
+    const totalHeight = rowAx.totalSize;
+    const totalWidth = colAx.totalSize;
+
     if (rowCount === 0 || colCount === 0 || viewportHeight <= 0 || viewportWidth <= 0) {
-      if (prevFirstRow !== -1 || prevTotalHeight !== totalHeight || prevTotalWidth !== totalWidth) {
-        prevFirstRow = -1;
-        prevLastRow = -1;
-        prevFirstCol = -1;
-        prevLastCol = -1;
-        prevTotalHeight = totalHeight;
-        prevTotalWidth = totalWidth;
-        cells = [];
-        onChange?.({ cells: [], totalHeight, totalWidth });
+      const wasEmpty =
+        rowAx.prevStart === -1 && rowAx.prevTotalSize === totalHeight && colAx.prevTotalSize === totalWidth;
+
+      if (!wasEmpty) {
+        // commitDedup(-1, -1) captures the current totalSize so the guard doesn't
+        // fire on every subsequent event while the empty state persists (Bug 2).
+        rowAx.commitDedup(-1, -1);
+        colAx.commitDedup(-1, -1);
+        rows = [];
+        cols = [];
+        onChange?.({ cols: [], rows: [], totalHeight, totalWidth });
       }
 
       return;
     }
 
-    const firstRow = findFirst(rowOffsets, rowSizeAt, rowCount, scrollTop);
-    const lastRow = findLast(rowOffsets, rowCount, firstRow, scrollTop + viewportHeight);
-    const firstCol = findFirst(colOffsets, colSizeAt, colCount, scrollLeft);
-    const lastCol = findLast(colOffsets, colCount, firstCol, scrollLeft + viewportWidth);
+    const { renderEnd: renderLastRow, renderStart: renderFirstRow } = rowAx.computeRange(
+      scrollTop,
+      scrollTop + viewportHeight,
+      overscanY.start,
+      overscanY.end,
+    );
 
-    const renderFirstRow = Math.max(0, firstRow - overscanY.start);
-    const renderLastRow = Math.min(rowCount - 1, lastRow + overscanY.end);
-    const renderFirstCol = Math.max(0, firstCol - overscanX.start);
-    const renderLastCol = Math.min(colCount - 1, lastCol + overscanX.end);
+    const { renderEnd: renderLastCol, renderStart: renderFirstCol } = colAx.computeRange(
+      scrollLeft,
+      scrollLeft + viewportWidth,
+      overscanX.start,
+      overscanX.end,
+    );
 
-    const rangeChanged =
-      renderFirstRow !== prevFirstRow ||
-      renderLastRow !== prevLastRow ||
-      renderFirstCol !== prevFirstCol ||
-      renderLastCol !== prevLastCol;
-    const sizeChanged = totalHeight !== prevTotalHeight || totalWidth !== prevTotalWidth;
+    const rowSame = rowAx.isDedupSame(renderFirstRow, renderLastRow);
+    const colSame = colAx.isDedupSame(renderFirstCol, renderLastCol);
 
-    if (!rangeChanged && !sizeChanged) return;
+    if (rowSame && colSame) return;
 
-    prevFirstRow = renderFirstRow;
-    prevLastRow = renderLastRow;
-    prevFirstCol = renderFirstCol;
-    prevLastCol = renderLastCol;
-    prevTotalHeight = totalHeight;
-    prevTotalWidth = totalWidth;
+    rowAx.commitDedup(renderFirstRow, renderLastRow);
+    colAx.commitDedup(renderFirstCol, renderLastCol);
+
+    const rangeChanged = !rowSame || !colSame;
 
     if (rangeChanged && onRangeChange) {
       onRangeChange({
@@ -364,34 +239,26 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       });
     }
 
-    const nextCells: VirtualCell[] = [];
+    // R8: Build rows[] and cols[] separately — no cross-product VirtualCell[].
+    const nextRows: VirtualItem[] = [];
 
     for (let r = renderFirstRow; r <= renderLastRow; r++) {
-      const rowStart = rowStartAt(r);
-      const rowSize = rowSizeAt(r);
-
-      for (let c = renderFirstCol; c <= renderLastCol; c++) {
-        const colStart = colStartAt(c);
-        const colSize = colSizeAt(c);
-
-        nextCells.push({
-          colEnd: colStart + colSize,
-          colIndex: c,
-          colSize,
-          colStart,
-          rowEnd: rowStart + rowSize,
-          rowIndex: r,
-          rowSize,
-          rowStart,
-        });
-      }
+      nextRows.push(rowAx.itemAt(r));
     }
 
-    cells = nextCells;
-    onChange?.({ cells: nextCells, totalHeight, totalWidth });
+    const nextCols: VirtualItem[] = [];
+
+    for (let c = renderFirstCol; c <= renderLastCol; c++) {
+      nextCols.push(colAx.itemAt(c));
+    }
+
+    rows = nextRows;
+    cols = nextCols;
+
+    onChange?.({ cols, rows, totalHeight, totalWidth });
   }
 
-  // ─── Measurement helpers (R2) ──────────────────────────────────────────────
+  // ─── Measurement helpers ───────────────────────────────────────────────────
 
   function recordRowMeasurement(row: number, size: number): boolean {
     if (!Number.isFinite(row)) return false;
@@ -407,8 +274,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (measuredRows.get(r) === s) return false;
 
     measuredRows.set(r, s);
-
-    if (r < minChangedRow) minChangedRow = r;
+    rowAx.markChanged(r);
 
     return true;
   }
@@ -427,79 +293,69 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (measuredCols.get(c) === s) return false;
 
     measuredCols.set(c, s);
-
-    if (c < minChangedCol) minChangedCol = c;
+    colAx.markChanged(c);
 
     return true;
   }
 
-  function flushRowBuild(): void {
-    pendingRowBuild = false;
+  /**
+   * R4: Single coordinated flush for both axes.
+   * Replaces the previous two independent microtask schedules.
+   */
+  function scheduleFlush(): void {
+    if (pendingBatchBuild) return;
 
-    const fromRow = minChangedRow;
+    pendingBatchBuild = true;
+    queueMicrotask(() => {
+      pendingBatchBuild = false;
 
-    minChangedRow = Infinity;
-    buildRowOffsetsFrom(fromRow);
-    computeVisible();
+      // consumeMinChangedIndex() atomically reads and resets minChangedIndex.
+      // Without the reset, every subsequent flush would rebuild from index 0
+      // instead of the actual earliest changed index (Bug 3).
+      const fromRow = rowAx.consumeMinChangedIndex();
+
+      if (fromRow !== Infinity) rowAx.rebuildFrom(fromRow);
+
+      const fromCol = colAx.consumeMinChangedIndex();
+
+      if (fromCol !== Infinity) colAx.rebuildFrom(fromCol);
+
+      computeVisible();
+    });
   }
 
-  function flushColBuild(): void {
-    pendingColBuild = false;
-
-    const fromCol = minChangedCol;
-
-    minChangedCol = Infinity;
-    buildColOffsetsFrom(fromCol);
-    computeVisible();
-  }
-
-  // ─── Public API ─────────────────────────────────────────────────────────────
+  // ─── Public measurement API ────────────────────────────────────────────────
 
   function measureRow(row: number, size: number): void {
     if (destroyed) return;
 
-    if (recordRowMeasurement(row, size) && !pendingRowBuild) {
-      pendingRowBuild = true;
-      queueMicrotask(flushRowBuild);
-    }
+    if (recordRowMeasurement(row, size)) scheduleFlush();
   }
 
   function measureColumn(col: number, size: number): void {
     if (destroyed) return;
 
-    if (recordColMeasurement(col, size) && !pendingColBuild) {
-      pendingColBuild = true;
-      queueMicrotask(flushColBuild);
-    }
+    if (recordColMeasurement(col, size)) scheduleFlush();
   }
 
-  /** Measure multiple rows and columns in a single rebuild pass (R11). */
+  /** Measure rows and columns in a single coordinated rebuild pass (R4). */
   function measureBatch(
-    rows: Array<{ index: number; size: number }>,
-    cols: Array<{ index: number; size: number }>,
+    rowEntries: Array<{ index: number; size: number }>,
+    colEntries: Array<{ index: number; size: number }>,
   ): void {
     if (destroyed) return;
 
-    let rowChanged = false;
-    let colChanged = false;
+    let changed = false;
 
-    for (const { index, size } of rows) {
-      if (recordRowMeasurement(index, size)) rowChanged = true;
+    for (const { index, size } of rowEntries) {
+      if (recordRowMeasurement(index, size)) changed = true;
     }
 
-    for (const { index, size } of cols) {
-      if (recordColMeasurement(index, size)) colChanged = true;
+    for (const { index, size } of colEntries) {
+      if (recordColMeasurement(index, size)) changed = true;
     }
 
-    if (rowChanged && !pendingRowBuild) {
-      pendingRowBuild = true;
-      queueMicrotask(flushRowBuild);
-    }
-
-    if (colChanged && !pendingColBuild) {
-      pendingColBuild = true;
-      queueMicrotask(flushColBuild);
-    }
+    if (changed) scheduleFlush();
   }
 
   function measureRowEl(row: number, el: HTMLElement): () => void {
@@ -535,25 +391,19 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
     measuredRows.clear();
     measuredCols.clear();
-    minChangedRow = Infinity;
-    minChangedCol = Infinity;
-    buildRowOffsets(true);
-    buildColOffsets(true);
+    rowAx.rebuild(true);
+    colAx.rebuild(true);
     computeVisible();
   }
 
   function refresh(): void {
     if (destroyed) return;
 
-    buildRowOffsets(true); // force re-emit — caller knows content changed
-    buildColOffsets(true);
+    rowAx.rebuild(true);
+    colAx.rebuild(true);
     computeVisible();
   }
 
-  /**
-   * Prepend rows at the top while keeping the viewport visually stable.
-   * Adjusts scrollTop by the exact height of the prepended rows.
-   */
   function prependRows(additionalRowCount: number): void {
     if (destroyed) return;
 
@@ -562,9 +412,10 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (n === 0) return;
 
     rowCount += n;
-    buildRowOffsets(true);
+    rowAx.setCount(rowCount);
+    rowAx.rebuild(true);
 
-    const prependedHeight = rowOffsets[n] ?? 0;
+    const prependedHeight = rowAx.startAt(n);
     const newScrollTop = clampTop(scrollTop + prependedHeight);
 
     adapter.scrollTo(scrollLeft, newScrollTop, 'auto');
@@ -580,10 +431,10 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     const safeCol = Math.max(0, Math.min(Math.floor(Number.isFinite(col) ? col : 0), colCount - 1));
     const behavior = opts.behavior ?? 'auto';
 
-    const rowStart = rowStartAt(safeRow);
-    const rowSize = rowSizeAt(safeRow);
-    const colStart = colStartAt(safeCol);
-    const colSize = colSizeAt(safeCol);
+    const rowStart = rowAx.startAt(safeRow);
+    const rowSize = rowAx.sizeAt(safeRow);
+    const colStart = colAx.startAt(safeCol);
+    const colSize = colAx.sizeAt(safeCol);
 
     const targetTop = alignOffset(
       rowStart,
@@ -623,6 +474,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
       if (n !== rowCount) {
         rowCount = n;
+        rowAx.setCount(rowCount);
         rebuildRows = true;
       }
     }
@@ -632,6 +484,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
       if (n !== colCount) {
         colCount = n;
+        colAx.setCount(colCount);
         rebuildCols = true;
       }
     }
@@ -639,8 +492,8 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (next.rowGap !== undefined) {
       const n = toNonNegativeInt(next.rowGap);
 
-      if (n !== rowGap) {
-        rowGap = n;
+      if (n !== rowAx.gap) {
+        rowAx.setGap(n);
         rebuildRows = true;
       }
     }
@@ -648,8 +501,8 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (next.colGap !== undefined) {
       const n = toNonNegativeInt(next.colGap);
 
-      if (n !== colGap) {
-        colGap = n;
+      if (n !== colAx.gap) {
+        colAx.setGap(n);
         rebuildCols = true;
       }
     }
@@ -684,9 +537,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       }
     }
 
-    if (rebuildRows) buildRowOffsets(true);
+    if (rebuildRows) rowAx.rebuild(true);
 
-    if (rebuildCols) buildColOffsets(true);
+    if (rebuildCols) colAx.rebuild(true);
 
     if (rebuildRows || rebuildCols || needsCompute) computeVisible();
   }
@@ -698,7 +551,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     adapter.detach();
   }
 
-  // ─── Bootstrap ─────────────────────────────────────────────────────────────
+  // ─── Bootstrap (R9: read viewport BEFORE writing initial scroll) ───────────
 
   function handleScroll(): void {
     scrollTop = clampTop(adapter.y.readOffset());
@@ -714,8 +567,13 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
   const adapter = createScrollAdapter(target, handleScroll, handleResize);
 
-  buildRowOffsets(true);
-  buildColOffsets(true);
+  rowAx.rebuild(true);
+  colAx.rebuild(true);
+
+  // R9: Read viewport dimensions BEFORE writing initial scroll positions so that
+  // computeVisible() sees a valid viewport on the very first call.
+  viewportHeight = adapter.y.readViewportSize();
+  viewportWidth = adapter.x.readViewportSize();
 
   if (options.initialScrollTop !== undefined) {
     adapter.scrollTo(options.initialScrollLeft ?? 0, clampTop(options.initialScrollTop), 'auto');
@@ -725,14 +583,12 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
   scrollTop = clampTop(adapter.y.readOffset());
   scrollLeft = clampLeft(adapter.x.readOffset());
-  viewportHeight = adapter.y.readViewportSize();
-  viewportWidth = adapter.x.readViewportSize();
 
   computeVisible();
 
   return {
-    get cells() {
-      return cells;
+    get cols() {
+      return cols;
     },
     destroy,
     invalidate,
@@ -743,6 +599,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     measureRowEl,
     prependRows,
     refresh,
+    get rows() {
+      return rows;
+    },
     get scrollLeft() {
       return scrollLeft;
     },
@@ -754,10 +613,10 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       destroy();
     },
     get totalHeight() {
-      return totalHeight;
+      return rowAx.totalSize;
     },
     get totalWidth() {
-      return totalWidth;
+      return colAx.totalSize;
     },
     update,
   };

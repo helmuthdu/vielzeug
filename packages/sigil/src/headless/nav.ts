@@ -43,6 +43,44 @@ const DEFAULT_KEYS: Record<'both' | 'horizontal' | 'vertical', Record<ListNaviga
   vertical: { first: ['Home'], last: ['End'], next: ['ArrowDown'], prev: ['ArrowUp'] },
 };
 
+// ── Keymap builder ────────────────────────────────────────────────────────────
+
+/**
+ * A named keymap object mapping navigation actions to key arrays.
+ * Pass as `keys` in `ListNavigationOptions` to override default bindings.
+ */
+export type Keymap = Partial<Record<ListNavigationAction, string[]>>;
+
+/**
+ * Built-in keymap presets. Use `keymap()` to compose or customise them.
+ */
+export const keymapPresets = {
+  /** Horizontal grid / tab-strip: Left/Right + Home/End. */
+  horizontal: DEFAULT_KEYS.horizontal,
+  /** Four-directional navigation: all arrow keys + Home/End. */
+  omni: DEFAULT_KEYS.both,
+  /** Standard vertical list: Up/Down + Home/End (default). */
+  vertical: DEFAULT_KEYS.vertical,
+} as const;
+
+/**
+ * Compose a custom keymap from a preset plus per-action overrides.
+ *
+ * @example
+ * ```ts
+ * // Add Enter/Space as aliases for "next" in a vertical list:
+ * const keys = keymap('vertical', { next: ['ArrowDown', 'Enter'] });
+ * createListControl({ ..., keys });
+ * ```
+ */
+export const keymap = (
+  preset: keyof typeof keymapPresets,
+  overrides?: Keymap,
+): Record<ListNavigationAction, string[]> => ({
+  ...keymapPresets[preset],
+  ...overrides,
+});
+
 export type ListNavigationOptions<T> = {
   disabled?: () => boolean;
   getIndex: () => number;

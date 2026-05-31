@@ -2,21 +2,21 @@ import {
   computed,
   define,
   defineField,
-  onEvent,
   html,
   inject,
+  onEvent,
+  onMounted,
+  prop,
   ref,
   signal,
   syncAria,
   watch,
-  onMounted,
-  prop,
 } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { createSliderControl, createStableId } from '../../headless';
-import { SLIDER_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, SLIDER_SIZE_PRESET, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './slider.css?inline';

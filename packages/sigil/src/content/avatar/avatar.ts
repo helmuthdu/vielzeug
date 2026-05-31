@@ -1,9 +1,9 @@
-import { define, prop, computed, effect, html, signal, watch } from '@vielzeug/craft';
+import { computed, define, effect, html, prop, signal, watch } from '@vielzeug/craft';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../icon/icon';
-import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';

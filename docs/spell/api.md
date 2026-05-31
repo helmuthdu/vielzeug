@@ -47,14 +47,20 @@ import {
   sLiteral, sMap, sNever, sNull, sNumber, sObject,
   sRecord, sSet, sString, sTuple, sUndefined,
   sUnion, sUnknown, sVariant,
+  // Convenience aliases
+  sAnd, sOr,
+  // Descriptor utilities
+  fromDescriptor, descriptorToJsonSchema,
   // Error handling
   ErrorCode,
   ValidationError,
   errorsAt,
-  // Messages
+  // Messages and locale
   configure,
   reset,
-  withMessages,
+  registerLocale,
+  useLocale,
+  currentLocale,
   // Low-level utilities
   fail,
   prependIssuePath,
@@ -118,7 +124,8 @@ import {
 - `s.tuple(items)`
 - `s.record(keySchema, valueSchema)`
 - `s.union(a, b, ...rest)` — at least two branches
-- `s.intersect(a, b, ...rest)` — at least two branches
+- `s.intersect(a, b, ...rest)` — at least two branches; alias `s.and(a, b)`
+- `s.or(a, b)` — alias for two-branch `s.union(a, b)`
 - `s.variant(discriminator, map)` — discriminated union
 - `s.lazy(getter)` — for recursive schemas
 - `s.instanceof(Ctor)` — class instance check
@@ -182,7 +189,21 @@ checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): th
 
 `check()` throws a runtime error if the callback returns a `Promise`. Always use `checkAsync()` for async validators.
 
-### Transform and Preprocessing
+### Assertion
+
+```ts
+assert(value: unknown, label?: string): asserts value is Output
+```
+
+Throws `ValidationError` if `value` fails validation, narrowing its type on success. When `label` is provided, it is prepended to root-level (path-less) issue messages for clearer error context.
+
+```ts
+schema.assert(value, 'userId');
+// throws: "userId: Expected number" if value is not a number
+// Nested path issues (e.g. object fields) are NOT prefixed with the label.
+```
+
+`assert()` uses the internal `_parseFullSync` path — it does not accept async schemas. Use `parseAsync()` and check the result manually for schemas with `checkAsync()` validators.
 
 ```ts
 transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input>
@@ -192,22 +213,21 @@ preprocess(fn: (value: unknown) => unknown): this
 `preprocess()` steps run in declaration order before type validation.
 `transform()` creates a new `Schema<NewOutput>` — apply type-specific constraints before calling it.
 
-### Schema Metadata
-
 ```ts
-describe(description: string): this       // setter — immutable, attaches a description
-describe(): SchemaDescriptor              // getter — returns typed introspection descriptor
-readonly description: string | undefined  // read the stored description
-toJsonSchema(): JsonSchema                // JSON Schema 2020-12 output (memoized per instance)
-walk<R>(visitor: SchemaWalker<R>): R      // typed schema tree traversal
-equals(other: AnySchema): boolean         // structural equality (ignores check() validators)
-is(value: unknown): value is Output       // type guard based on safeParse
-brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>
+label(description: string): this          // immutable — returns new schema with description attached
+readonly description: string | undefined   // read the stored description
+readonly kind: string                      // returns the schema kind (e.g. 'string', 'object', 'array')
+toDescriptor(): SchemaDescriptor           // returns typed structural descriptor
+toJsonSchema(): JsonSchema                 // JSON Schema 2020-12 output (derived from toDescriptor())
+walk<R>(visitor: SchemaWalker<R>): R       // typed schema tree traversal
+equals(other: AnySchema): boolean          // structural equality (ignores check() validators)
+is(value: unknown): value is Output        // type guard based on safeParse
 pipe<B>(next: Schema<B, NoInfer<Output>>): Schema<B, Input>
 ```
 
-`describe()` as a setter is **immutable** — returns a new schema instance with the description attached.
-`describe()` with no arguments returns a `SchemaDescriptor` with `kind`, constraints, and nested descriptors.
+`label()` is **immutable** — it returns a new schema instance with the description attached. The original is unchanged.
+`kind` reads the descriptor kind without allocating a full descriptor object when already cached.
+`toDescriptor()` returns the full `SchemaDescriptor` for this schema — kind, constraints, and nested descriptors.
 
 ## StringSchema
 
@@ -413,14 +433,18 @@ s.enum(Object.values(MyEnum) as [string, ...string[]])
 
 ## Schema Introspection
 
-### `describe()` — setter and getter
+### `label()` — attach a description
 
 ```ts
-// Setter — immutable, returns new schema with description
-const Schema = s.string().min(3).describe('Full name');
+// Immutable setter — returns a new schema with the description attached
+const Schema = s.string().min(3).label('Full name');
+Schema.description; // 'Full name'
+```
 
-// Getter — returns typed SchemaDescriptor
-const d = s.string().min(3).email().describe();
+### `toDescriptor()` — structural descriptor
+
+```ts
+const d = s.string().min(3).email().toDescriptor();
 // => { kind: 'string', minLength: 3, format: 'email' }
 ```
 
@@ -439,7 +463,7 @@ type SchemaDescriptor =
   | { kind: 'tuple'; items: SchemaDescriptor[]; rest: SchemaDescriptor | null }
   | { kind: 'object'; fields: Record<string, SchemaDescriptor>; strict: boolean }
   | { kind: 'record'; key: SchemaDescriptor; value: SchemaDescriptor }
-  | { kind: 'set'; item: SchemaDescriptor }
+  | { kind: 'set'; items: SchemaDescriptor }
   | { kind: 'map'; key: SchemaDescriptor; value: SchemaDescriptor }
   | { kind: 'union' | 'intersect'; branches: SchemaDescriptor[] }
   | { kind: 'variant'; discriminator: string; branches: Record<string, SchemaDescriptor> }
@@ -450,8 +474,33 @@ All variants may also include `description?: string`, `isOptional?: boolean`, an
 
 ### `toJsonSchema()`
 
-Emits JSON Schema 2020-12. Memoized per schema instance.
+Emits JSON Schema 2020-12. Derived from `toDescriptor()` — no separate serialization path per schema.
 Schemas without JSON Schema equivalents emit `{ $comment: '...' }`.
+
+### `fromDescriptor(descriptor)`
+
+Reconstructs a `Schema` instance from a `SchemaDescriptor`. Useful for persistence, code generation, or round-tripping descriptors.
+
+```ts
+import { fromDescriptor } from '@vielzeug/spell';
+
+const schema = s.object({ name: s.string().min(1), age: s.number().int() });
+const reconstructed = fromDescriptor(schema.toDescriptor());
+reconstructed.parse({ name: 'Ada', age: 30 }); // works
+```
+
+`fromDescriptor` throws for schema kinds that cannot be serialized to a plain descriptor: `lazy`, `pipe`, `instanceof`, and `variant`.
+
+### `descriptorToJsonSchema(descriptor)`
+
+Converts a `SchemaDescriptor` directly to JSON Schema. Same output as `schema.toJsonSchema()` but accepts a pre-built descriptor.
+
+```ts
+import { descriptorToJsonSchema } from '@vielzeug/spell';
+
+const jsonSchema = descriptorToJsonSchema(s.string().email().toDescriptor());
+// => { type: 'string', format: 'email' }
+```
 
 ### `walk()`
 
@@ -484,9 +533,24 @@ configure({
 
 Restores all message defaults.
 
-### `withMessages(messages)`
+### Locale Management
 
-Creates a scoped configuration with overridden messages. Useful in tests or multi-tenant contexts.
+Register named locale bundles and switch between them at runtime:
+
+```ts
+import { registerLocale, useLocale, currentLocale } from '@vielzeug/spell';
+
+registerLocale('de', {
+  string: { email: () => 'Bitte eine gültige E-Mail-Adresse eingeben' },
+  number: { min: ({ min }) => `Mindestens ${min}` },
+});
+
+useLocale('de');      // activates 'de' locale
+currentLocale();      // => 'de'
+```
+
+`registerLocale(locale, messages)` accepts a deep-partial message map — override only what you need.
+`useLocale(locale)` throws if the locale has not been registered first.
 
 ### `Messages`
 

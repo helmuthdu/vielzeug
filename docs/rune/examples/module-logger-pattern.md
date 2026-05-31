@@ -11,15 +11,15 @@ Log entries from different modules are mixed in the output, making it hard to fi
 
 ### Solution
 
-Use `Rune.scope(name)` to create a fixed-namespace logger for each module and export it as a named constant.
+Use `createLogger(name)` to create a fixed-namespace logger for each module and export it as a named constant.
 
 ```ts
-import { Rune } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
 
 export const log = {
-  api: Rune.scope('api'),
-  auth: Rune.scope('auth'),
-  db: Rune.scope('db'),
+  api: createLogger('api'),
+  auth: createLogger('auth'),
+  db: createLogger('db'),
 };
 
 log.api.info('GET /users');

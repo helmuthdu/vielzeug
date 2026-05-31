@@ -3,11 +3,11 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { CompareOptions, TimeInput } from './types';
 
 import { resolveUnitPair, resolveUnitRange } from './boundary';
-import { normalizeRange, resolveInstant } from './internal';
+import { normalizeRange, toInstant } from './internal';
 
 function compareByUnit(a: TimeInput, b: TimeInput, options: CompareOptions): number {
   if (!options.unit) {
-    return Temporal.Instant.compare(resolveInstant(a, options), resolveInstant(b, options));
+    return Temporal.Instant.compare(toInstant(a, options), toInstant(b, options));
   }
 
   const { left, right } = resolveUnitPair(
@@ -75,8 +75,8 @@ export function isSame(a: TimeInput, b: TimeInput, options: CompareOptions = {})
  */
 export function within(value: TimeInput, start: TimeInput, end: TimeInput, options: CompareOptions = {}): boolean {
   if (!options.unit) {
-    const target = resolveInstant(value, options);
-    const [lower, upper] = normalizeRange(resolveInstant(start, options), resolveInstant(end, options));
+    const target = toInstant(value, options);
+    const [lower, upper] = normalizeRange(toInstant(start, options), toInstant(end, options));
 
     return Temporal.Instant.compare(lower, target) <= 0 && Temporal.Instant.compare(target, upper) <= 0;
   }
@@ -111,8 +111,8 @@ export function clamp(
   options: CompareOptions = {},
 ): Temporal.Instant {
   if (!options.unit) {
-    const target = resolveInstant(value, options);
-    const [lower, upper] = normalizeRange(resolveInstant(start, options), resolveInstant(end, options));
+    const target = toInstant(value, options);
+    const [lower, upper] = normalizeRange(toInstant(start, options), toInstant(end, options));
 
     if (Temporal.Instant.compare(target, lower) < 0) return lower;
 

@@ -122,19 +122,24 @@ await form.submit(submit);
 - Typed field paths with compile-time value inference
 - Explicit validation API: `validate()` and `validateFields(fields)`
 - Single-field validation with `validateField(name)`
+- Streaming validation with `validateStream()` — yields each field result as it resolves, read-only
 - Per-connection validation triggers via `connect()` with `ValidationModes` presets
+- `connect()` bindings own independent debounce timers; call `disconnect()` on unmount
 - `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`
 - Schema integration: pass any `safeParse`-compatible schema directly to `validator`
-- `scope(prefix)` — scoped sub-forms that share parent state with relative field paths
+- `scope(prefix)` — memoized scoped sub-forms that share parent state with relative field paths
+- `subscribeScoped()` — filtered subscription that only fires on changes within the scope's prefix
+- `snapshot()` / `restore()` — capture and replay complete form state
 - `removeField(name)` — clean conditional field lifecycle
 - Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit synchronous subscriptions: `subscribe` and `subscribeField`
+- Explicit synchronous subscriptions: `subscribe`, `subscribeField`, and `subscribeScoped`
 - Stable frozen snapshots for `form.state` and `form.field(name)` (external-store friendly)
 - Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `resetErrors`
 - Mutation batching with `batch(fn)` and dynamic field validators via `setValidator`
 - Baseline-safe `reset`/`replace`/`patch` model
 - Browser-first utility: `toFormData`
 - Ready-made adapters for React, Vue, and Svelte
+- `@vielzeug/forge/validators` adapter: `fieldValidator` and `composeValidators`
 
 ## Compatibility
 

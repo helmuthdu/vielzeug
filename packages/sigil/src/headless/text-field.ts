@@ -1,19 +1,18 @@
-import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { type ReadonlySignal, type Signal, signal, untrack, watch } from '@vielzeug/ripple';
 
 import {
-  createAssistiveState,
+  type CounterState,
+  createCounterState,
   createField,
-  type AssistiveState,
-  type FieldBaseOptions,
+  type ErrorHelperState,
   type FieldHandle,
+  type FieldOptions,
   type ValidationTrigger,
 } from './field-base';
-import { syncedSignal } from './synced-signal';
 
-// Re-export AssistiveState types from field-base for consumers that need them
-// directly (e.g. components building custom counter UIs).
-export type { AssistiveOptions, AssistiveState, CounterState } from './field-base';
-export { createAssistiveState } from './field-base';
+// Re-export types from field-base for consumers that need them directly.
+export type { CounterOptions, CounterState, ErrorHelperOptions, ErrorHelperState } from './field-base';
+export { createCounterState, createErrorHelperState } from './field-base';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -76,7 +75,7 @@ const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => voi
 /** Detach function returned by `wire()`. Call to remove element listeners. */
 export type TextFieldDetach = () => void;
 
-export type TextFieldOptions = FieldBaseOptions & {
+export type TextFieldOptions = FieldOptions & {
   maxLength?: ReadonlySignal<number | undefined>;
   /**
    * Called synchronously before value extraction on every input event.
@@ -88,23 +87,25 @@ export type TextFieldOptions = FieldBaseOptions & {
   onChange?: (event: Event, value: string) => void;
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
+  /**
+   * Optional `AbortSignal` tied to the component lifecycle.
+   * When provided, the internal value-sync watcher is disposed automatically
+   * on abort — no need to call `cleanup()` manually.
+   *
+   * Obtain via `componentSignal(onCleanup)` inside a craft `setup()` function.
+   */
+  signal?: AbortSignal;
   value: ReadonlySignal<string | undefined>;
 };
 
 export type TextFieldHandle = FieldHandle & {
-  /**
-   * Narrows `FieldHandle.assistive` to the richer `AssistiveState` (which
-   * extends `ErrorHelperState` with `counter` and `maxLength` fields).
-   */
-  assistive: ReadonlySignal<AssistiveState>;
-  /**
-   * Stops the internal watcher that keeps the local value in sync with the
-   * external source signal. Call this when the field is destroyed to prevent
-   * the watcher from running after its lifetime.
-   */
-  cleanup: () => void;
   /** Clears the field value and fires synthetic input/change events. */
   clear: (event?: Event) => void;
+  /**
+   * Reactive counter state. Non-null when `maxLength` was provided; `null` otherwise.
+   * Components should only render a counter element when this is non-null.
+   */
+  counter: ReadonlySignal<CounterState> | null;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
   value: Signal<string>;
   /**
@@ -122,18 +123,17 @@ export type TextFieldHandle = FieldHandle & {
 };
 
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
-  const [value, stopValueSync] = syncedSignal(options.value, (next) => String(next ?? ''));
-
-  // Use the richer AssistiveState (with counter) and pass it into createField
-  // so all aria getters reference the same reactive assistive instance.
-  const assistive = createAssistiveState({
-    error: options.error,
-    helper: options.helper,
-    maxLength: options.maxLength,
-    value,
+  // Inline synced signal: local writable value kept in sync with external prop.
+  const value = signal<string>(untrack(() => String(options.value.value ?? '')));
+  const valueSub = watch(options.value, (next) => {
+    value.value = String(next ?? '');
   });
 
-  const field = createField(options, assistive);
+  // Wire cleanup to component lifecycle signal if provided.
+  options.signal?.addEventListener('abort', () => valueSub.dispose(), { once: true });
+
+  const field = createField(options);
+  const counter = options.maxLength ? createCounterState({ maxLength: options.maxLength, value }) : null;
 
   const clear = (event?: Event): void => {
     event?.preventDefault?.();
@@ -176,5 +176,5 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     return detach;
   };
 
-  return { ...field, assistive, cleanup: stopValueSync, clear, value, wire };
+  return { ...field, clear, counter, value, wire };
 };

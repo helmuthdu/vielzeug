@@ -1,4 +1,4 @@
-import type { VaultLogger, RecordValidator } from '../index';
+import type { RecordValidator, VaultLogger } from '../index';
 
 import { createMemory, table } from '../index';
 
@@ -16,13 +16,12 @@ describe('VaultLogger plugin', () => {
     const db = createMemory({ logger, schema });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    db.observe(
-      'users',
-      () => {
-        throw new Error('observer boom');
-      },
-      { immediate: false },
-    );
+    db.observe('users', () => {
+      throw new Error('observer boom');
+    });
+
+    await Promise.resolve(); // consume initial empty snapshot (throws, logs once)
+    errorCalls.length = 0; // reset — only care about mutation-triggered errors
 
     await db.put('users', { id: 1, name: 'Alice' });
     await Promise.resolve();
@@ -39,13 +38,12 @@ describe('VaultLogger plugin', () => {
     const db = createMemory({ schema });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    db.observe(
-      'users',
-      () => {
-        throw new Error('observer boom');
-      },
-      { immediate: false },
-    );
+    db.observe('users', () => {
+      throw new Error('observer boom');
+    });
+
+    await Promise.resolve(); // consume initial empty snapshot (throws, logs once via console)
+    consoleSpy.mockClear(); // reset — only care about mutation-triggered errors
 
     await db.put('users', { id: 1, name: 'Alice' });
     await Promise.resolve();
@@ -91,7 +89,7 @@ describe('RecordValidator (validators) plugin', () => {
     const db = createMemory({ schema, validators: { users: strictValidator } });
 
     await expect(db.put('users', { id: 'bad' as unknown as number, name: 'Alice' })).rejects.toThrow(
-      'id must be a number',
+      'validation failed for table "users"',
     );
     expect(await db.count('users')).toBe(0);
     db.dispose();

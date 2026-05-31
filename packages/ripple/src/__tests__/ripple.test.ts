@@ -1,10 +1,12 @@
 import {
-  StateError,
+  asyncComputed,
   asyncScope,
   batch,
   computed,
   effect,
   effectAsync,
+  getDevToolsHook,
+  installDevTools,
   isComputed,
   isSignal,
   isStore,
@@ -12,7 +14,9 @@ import {
   readonly,
   scope,
   signal,
+  StateError,
   store,
+  storeWithHistory,
   traceEffect,
   untrack,
   watch,
@@ -65,18 +69,21 @@ describe('ripple', () => {
       expect(n.peek()).toBe(42);
     });
 
-    it('dispose stops new subscriptions from receiving notifications', () => {
+    it('dispose throws when subscribing after dispose', () => {
       const n = signal(1);
-      const listener = vi.fn();
 
       n.dispose();
 
-      const unsub = n.subscribe(listener);
+      let caught: unknown;
 
-      n.value = 2; // no-op
-      expect(listener).not.toHaveBeenCalled();
+      try {
+        n.subscribe(() => {});
+      } catch (e) {
+        caught = e;
+      }
 
-      unsub.dispose();
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('DISPOSED_READ');
     });
 
     it('dispose drops existing subscribers', () => {
@@ -2151,6 +2158,271 @@ describe('ripple', () => {
       expect((caught as Error).message).toBe('too big');
 
       risky.dispose();
+    });
+  });
+
+  describe('R5 — signal.subscribe throws on disposed signal', () => {
+    it('throws StateError with DISPOSED_READ when subscribing after dispose', () => {
+      const n = signal(1);
+
+      n.dispose();
+
+      expect(() => n.subscribe(() => {})).toThrow(StateError);
+    });
+  });
+
+  describe('R6 — watch() throws when callback returns non-function', () => {
+    it('throws StateError with INVALID_CLEANUP when returning a number', () => {
+      const n = signal(1);
+      let caught: unknown;
+
+      // @ts-expect-error intentional — testing runtime guard
+      watch(n, () => 42);
+
+      // The guard fires on the next change (callback is not called on first run).
+      try {
+        n.value = 2;
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+
+      n.dispose();
+    });
+
+    it('does not throw when callback returns a function', () => {
+      const n = signal(1);
+      const stop = watch(n, () => () => {});
+
+      expect(() => stop.dispose()).not.toThrow();
+    });
+
+    it('does not throw when callback returns undefined', () => {
+      const n = signal(1);
+      const stop = watch(n, () => undefined);
+
+      expect(() => stop.dispose()).not.toThrow();
+    });
+  });
+
+  describe('R11 — readonly().dispose() delegates to source', () => {
+    it('disposes the underlying computed when readonly is disposed', () => {
+      const n = signal(1);
+      const doubled = computed(() => n.value * 2);
+      const r = readonly(doubled);
+
+      expect(r.value).toBe(2);
+      r.dispose();
+
+      // doubled should be disposed too
+      expect(() => {
+        void doubled.value;
+      }).toThrow(StateError);
+    });
+  });
+
+  describe('F2 — asyncComputed', () => {
+    it('starts in pending state', () => {
+      let resolvePromise!: () => void;
+      const ac = asyncComputed(
+        () =>
+          new Promise<string>((resolve) => {
+            resolvePromise = () => resolve('done');
+          }),
+      );
+
+      // The effect runs synchronously (before the async factory resolves),
+      // so the state is 'pending' right away.
+      expect(ac.value.status).toBe('pending');
+
+      resolvePromise();
+      ac.dispose();
+    });
+
+    it('transitions to resolved after promise resolves', async () => {
+      const s = signal('hi');
+      const ac = asyncComputed(() => Promise.resolve(s.value.toUpperCase()));
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(ac.value.status).toBe('fulfilled');
+      expect(ac.value.value).toBe('HI');
+
+      ac.dispose();
+    });
+
+    it('transitions to rejected on error', async () => {
+      const ac = asyncComputed(() => Promise.reject(new Error('oops')));
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(ac.value.status).toBe('error');
+      expect((ac.value as { error: Error; status: 'error' }).error.message).toBe('oops');
+
+      ac.dispose();
+    });
+
+    it('re-runs when reactive dependency changes', async () => {
+      const n = signal(1);
+      const calls: number[] = [];
+      const ac = asyncComputed(async () => {
+        const v = n.value;
+
+        calls.push(v);
+
+        return v * 2;
+      });
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      n.value = 2;
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(calls).toContain(1);
+      expect(calls).toContain(2);
+      expect(ac.value.value).toBe(4);
+
+      ac.dispose();
+    });
+  });
+
+  describe('F3 — DevTools hook', () => {
+    it('installDevTools sets a global hook', () => {
+      const calls: string[] = [];
+
+      installDevTools({ onSignalWrite: (_, name) => calls.push(name ?? '?') });
+
+      const n = signal(0, { name: 'devtest' });
+
+      n.value = 1;
+      n.dispose();
+
+      installDevTools(null);
+
+      expect(calls).toContain('devtest');
+    });
+
+    it('getDevToolsHook returns null when not installed', () => {
+      installDevTools(null);
+
+      expect(getDevToolsHook()).toBeNull();
+    });
+
+    it('onEffectRun is called when effect runs', () => {
+      const runNames: Array<string | undefined> = [];
+
+      installDevTools({ onEffectRun: (name) => runNames.push(name) });
+
+      const stop = effect(() => {}, { name: 'myEffect' });
+
+      stop.dispose();
+      installDevTools(null);
+
+      expect(runNames).toContain('myEffect');
+    });
+
+    it('onEffectDispose is called when effect is disposed', () => {
+      const disposeNames: Array<string | undefined> = [];
+
+      installDevTools({ onEffectDispose: (name) => disposeNames.push(name) });
+
+      const stop = effect(() => {}, { name: 'myEffect' });
+
+      stop.dispose();
+      installDevTools(null);
+
+      expect(disposeNames).toContain('myEffect');
+    });
+  });
+
+  describe('F4 — custom scheduler function', () => {
+    it('defers effects via custom scheduler', () => {
+      const n = signal(0);
+      const runs: number[] = [];
+      const scheduled: Array<() => void> = [];
+
+      const stop = effect(
+        () => {
+          runs.push(n.value);
+        },
+        { scheduler: (run) => scheduled.push(run) },
+      );
+
+      expect(runs).toEqual([0]); // initial eager run
+
+      n.value = 1;
+      n.value = 2;
+
+      // Effects deferred — scheduled array has pending runs
+      expect(runs).toEqual([0]);
+      expect(scheduled.length).toBeGreaterThan(0);
+
+      // Drain the scheduler
+      scheduled.forEach((r) => r());
+
+      expect(runs[runs.length - 1]).toBe(2);
+
+      stop.dispose();
+    });
+  });
+
+  describe('F5 — storeWithHistory', () => {
+    it('records and replays history via undo/redo', () => {
+      const h = storeWithHistory({ count: 0 });
+
+      h.patch({ count: 1 });
+      h.patch({ count: 2 });
+
+      expect(h.value.count).toBe(2);
+      expect(h.historyLength).toBe(3); // initial + 2 patches
+
+      h.undo();
+
+      expect(h.value.count).toBe(1);
+
+      h.redo();
+
+      expect(h.value.count).toBe(2);
+    });
+
+    it('historyAt returns snapshot at index', () => {
+      const h = storeWithHistory({ x: 'a' });
+
+      h.patch({ x: 'b' });
+
+      expect(h.historyAt(0)!.x).toBe('a');
+      expect(h.historyAt(1)!.x).toBe('b');
+    });
+
+    it('undo does nothing at oldest state', () => {
+      const h = storeWithHistory({ n: 0 });
+
+      h.undo(); // no-op
+
+      expect(h.value.n).toBe(0);
+    });
+
+    it('redo does nothing at newest state', () => {
+      const h = storeWithHistory({ n: 0 });
+
+      h.patch({ n: 1 });
+      h.redo(); // no-op — already at newest
+
+      expect(h.value.n).toBe(1);
+    });
+
+    it('caps history at maxHistory', () => {
+      const h = storeWithHistory({ n: 0 }, { maxHistory: 3 });
+
+      h.patch({ n: 1 });
+      h.patch({ n: 2 });
+      h.patch({ n: 3 });
+      h.patch({ n: 4 }); // oldest entry evicted
+
+      expect(h.historyLength).toBe(3);
     });
   });
 });

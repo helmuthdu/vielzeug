@@ -17,11 +17,9 @@ import { createRouter, redirectTo } from '@vielzeug/wayfinder';
 const routes = {
   home: {
     path: '/',
-    handler: () => renderHome(),
   },
   login: {
     path: '/login',
-    handler: () => renderLogin(),
   },
   dashboard: {
     path: '/dashboard',
@@ -29,31 +27,27 @@ const routes = {
     children: {
       index: {
         index: true,
-        handler: () => renderDashboard(),
       },
       settings: {
         path: 'settings',
         data: async () => fetchSettings(),
-        handler: ({ data }) => renderSettings(data),
       },
     },
   },
   userDetail: {
     path: '/users/:id',
     data: async ({ params }) => fetchUser(params.id),
-    handler: ({ data }) => renderUser(data),
     meta: { title: 'User' },
-  },
-  notFound: {
-    path: '*',
-    handler: () => renderNotFound(),
   },
 };
 
 const router = createRouter({
   base: '/app',
   middleware: [logger],
-  onError: (error, context) => reportError(error, context.source),
+  notFound: {
+    component: NotFoundPage,
+  },
+  onError: (error, context) => reportError(error, context),
   routes,
   viewTransition: true,
 });
@@ -61,7 +55,7 @@ const router = createRouter({
 
 `routes` is required. Wayfinder names come from the object keys, and object key order controls match precedence.
 
-## Define Routes Once
+## Define Routes
 
 Each route can provide these fields:
 
@@ -70,13 +64,12 @@ Each route can provide these fields:
 | `path`         | Match pattern                                                              |
 | `children`     | Nested child routes                                                        |
 | `index`        | Default child route that inherits the parent path                          |
-| `component`    | Optional view payload exposed on `router.getSnapshot().matches.at(-1)?.component`  |
-| `data`         | Abortable route data function that runs after middleware                   |
-| `handler`      | Final route handler                                                        |
-| `lazy`         | Lazy-load the module. Called once; result fills `handler`, `data`, `component`, `meta`. |
-| `meta`         | Static data exposed on `router.getSnapshot().matches.at(-1)?.meta`                 |
+| `component`    | Optional view payload exposed on `match.component`                         |
+| `data`         | Abortable route data function. Result available as `match.data`. Supports streaming via `AsyncGenerator`. |
+| `lazy`         | Lazy-load the module. Called once; result fills `data`, `component`, and `meta`. |
+| `meta`         | Static metadata exposed on `match.meta`                                    |
 | `middleware`   | Route-specific middleware                                                  |
-| `onLeave`      | Per-route leave guard. Return `false` to block navigation away from this route. |
+| `onError`      | Per-route error boundary. Called when this route's `data()` throws; its return value becomes `match.data`. |
 | `redirect`     | Declarative permanent redirect. Resolved before middleware runs.           |
 | `coerceSearch` | Coerce raw URL search strings into typed values. Return value replaces `ctx.query`. Throw to leave the raw query unchanged. |
 
@@ -84,10 +77,23 @@ Use wildcard routes for fallback behavior:
 
 ```ts
 const routes = {
-  docs: { path: '/docs/*', handler: () => renderDocs() },
-  notFound: { path: '*', handler: () => renderNotFound() },
+  docs: { path: '/docs/*' },
 };
 ```
+
+For a catch-all not-found page, use the `notFound` option in router options instead of a `path: '*'` route:
+
+```ts
+const router = createRouter({
+  routes,
+  notFound: {
+    component: NotFoundPage,
+    data: async ({ pathname }) => ({ requestedPath: pathname }),
+  },
+});
+```
+
+Alternatively, `path: '*'` still works as a named route when you need to navigate to it explicitly.
 
 Nested routes compose naturally and create compound route names:
 
@@ -96,8 +102,8 @@ const routes = {
   dashboard: {
     path: '/dashboard',
     children: {
-      index: { index: true, handler: () => renderDashboardHome() },
-      settings: { path: 'settings', handler: () => renderSettings() },
+      index: { index: true },
+      settings: { path: 'settings' },
     },
   },
 };
@@ -107,31 +113,35 @@ await router.navigate({ name: 'dashboard.settings' });
 
 ## Route Context
 
-Handlers and middleware receive a `RouteContext`:
+Middleware and data loaders receive a `RouteContext`:
 
 ```ts
 userDetail: {
   path: '/users/:id',
-  handler: (ctx) => {
-    ctx.data;         // result of this route's data()
-    ctx.params.id;
-    ctx.query.tab;
-    ctx.pathname;
-    ctx.hash;
-    ctx.historyState; // value from navigate({ ... }, { state: ... })
-    ctx.locals;
-    ctx.navigate;
+  middleware: [
+    (ctx, next) => {
+      ctx.params.id;    // typed to path params
+      ctx.query.tab;    // resolved query (after coerceSearch)
+      ctx.pathname;
+      ctx.hash;
+      ctx.historyState; // value from navigate({ ... }, { state: ... })
+      ctx.locals;       // mutable bag shared across the middleware chain
+      ctx.navigate;     // programmatic navigation
+      return next();
+    },
+  ],
+  data: async (ctx) => {
+    ctx.signal; // AbortSignal — cancelled when navigation is superseded
+    return fetchUser(ctx.params.id, { signal: ctx.signal });
   },
 }
 ```
 
-`ctx.locals` is mutable and shared through the active middleware chain.
-
-`ctx.data` is only populated for the final handler. Middleware always runs before `data()`.
+`ctx.locals` is mutable and shared through the entire middleware chain for one navigation. Use it to pass values from middleware to data loaders.
 
 ## Middleware
 
-Middleware wraps the handler using the familiar `async (ctx, next) => { ... }` shape.
+Middleware wraps the navigation using the familiar `async (ctx, next) => { ... }` shape.
 
 ```ts
 const requireAuth = redirectTo({ name: 'login' }, { replace: true });
@@ -149,9 +159,7 @@ global middleware
   ↓
 route middleware
   ↓
-data
-  ↓
-handler
+data()
 ```
 
 ### Guards
@@ -159,6 +167,21 @@ handler
 Use middleware for auth checks, redirects, analytics, and boundaries.
 
 ```ts
+const requireAuth = async (ctx, next) => {
+  if (!session.currentUser) {
+    await ctx.navigate({ name: 'login' }, { replace: true });
+    return; // do not call next()
+  }
+  ctx.locals.user = session.currentUser;
+  await next();
+};
+```
+
+For unconditional redirects, use the `redirectTo()` helper:
+
+```ts
+import { redirectTo } from '@vielzeug/wayfinder';
+
 const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 ```
 
@@ -167,41 +190,34 @@ For permanent URL aliases, use the declarative `redirect` field instead of middl
 ```ts
 const routes = {
   profile: { path: '/profile', redirect: { name: 'userDetail' } },
-  userDetail: { path: '/users/:id', handler: renderUser },
+  userDetail: { path: '/users/:id' },
 };
 ```
 
 ### Leave Guards
 
-Guard navigation away from a specific route with the per-route `onLeave` field, or register a global guard with `router.beforeLeave()`.
+Register a global leave guard with `router.beforeLeave()`. Return `false` to cancel navigation.
 
 ```ts
-const routes = {
-  editor: {
-    path: '/editor',
-    onLeave: async () => {
-      if (!form.isDirty) return true;
-      return confirm('Discard changes?');
-    },
-    handler: () => renderEditor(),
-  },
-};
-```
-
-Global guards are registered after the router is created:
-
-```ts
-const removeGuard = router.beforeLeave(async () => {
-  if (!analytics.pendingFlush) return true;
-  await analytics.flush();
-  return true;
+const removeGuard = router.beforeLeave(async (destination) => {
+  if (!form.isDirty) return true;
+  return confirm(`Discard changes? (navigating to ${destination.pathname})`);
 });
 
 // Remove when no longer needed:
 removeGuard();
 ```
 
-When both are present, the per-route `onLeave` fires first (leaf → root), then the global `beforeLeave` guards in registration order.
+Scope a guard to fire only when leaving specific routes:
+
+```ts
+router.beforeLeave(
+  async () => confirm('Discard changes?'),
+  { routes: ['editor'] },
+);
+```
+
+Declarative `redirect` routes bypass all leave guards.
 
 ### Data Loading
 
@@ -212,10 +228,56 @@ const routes = {
   userDetail: {
     path: '/users/:id',
     data: async ({ params, signal }) => fetchUser(params.id, { signal }),
-    handler: ({ data }) => renderUser(data),
   },
 };
 ```
+
+Access the result via the matched branch:
+
+```ts
+router.subscribe((state) => {
+  const user = state.matches.at(-1)?.data;
+  renderUser(user);
+});
+```
+
+#### Per-route Error Boundaries
+
+Use `onError` to handle data loader failures per-route. The returned value becomes `match.data`, allowing the route to render a degraded state:
+
+```ts
+const routes = {
+  userDetail: {
+    path: '/users/:id',
+    data: async ({ params, signal }) => fetchUser(params.id, { signal }),
+    onError: (error) => ({ error, user: null }),
+  },
+};
+```
+
+If `onError` itself throws, the router falls through to `status: 'error'` as usual.
+
+#### Streaming Data Loaders
+
+Return an `AsyncGenerator` from `data()` to stream partial results. Each `yield` updates `match.status` to `'streaming'` and `match.data` to the yielded value. The `return` value is the final settled data.
+
+```ts
+const routes = {
+  feed: {
+    path: '/feed',
+    data: async function* ({ signal }) {
+      const items: FeedItem[] = [];
+      for await (const batch of streamFeedBatches({ signal })) {
+        items.push(...batch);
+        yield items; // stream partial results
+      }
+      return items;  // final settled value
+    },
+  },
+};
+```
+
+During streaming, `state.status` is `'streaming'` and each `match.status` reflects the loading state of that individual branch node.
 
 ### Lazy Routes
 
@@ -230,7 +292,7 @@ const routes = {
 };
 ```
 
-The resolved object may contain `handler`, `data`, `component`, and/or `meta`. Any present field overwrites the static definition.
+The resolved object may contain `data`, `component`, and/or `meta`. Any present field overwrites the static definition.
 
 ### Search Param Validation
 
@@ -244,14 +306,14 @@ const routes = {
       q: String(raw.q ?? ''),
       page: Math.max(1, Number(raw.page ?? 1)),
     }),
-    handler: ({ query }) => renderSearch(query.q, query.page),
+    data: async ({ query }) => searchPosts(query.q, query.page),
   },
 };
 ```
 
 ### Error Boundaries
 
-Wrap `await next()` in middleware. The thrown error is also stored on `router.getSnapshot().error`.
+Wrap `await next()` in middleware for route-wide error handling. The thrown error is also stored on `router.getSnapshot().error`.
 
 ```ts
 const boundary = async (ctx, next) => {
@@ -302,10 +364,11 @@ Attach arbitrary state to a history entry and read it back via `ctx.historyState
 ```ts
 await router.navigate({ name: 'userDetail', params: { id: '42' } }, { state: { from: 'search' } });
 
-// In the handler:
-handler: (ctx) => {
+// In data():
+data: async (ctx) => {
   console.log(ctx.historyState); // { from: 'search' }
-};
+  return fetchUser(ctx.params.id);
+},
 ```
 
 ### Same-URL Deduplication
@@ -326,14 +389,14 @@ anchor.addEventListener('mouseenter', () => {
 });
 ```
 
-Concurrent calls for the same route+params are deduplicated. Results are discarded after the next navigation; the loaders will run again with a fresh `AbortSignal` on the actual visit.
+Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route; subsequent navigations run the loaders fresh.
 
 ### Leave Guards
 
 Guard navigation until the user confirms — useful for unsaved-changes forms:
 
 ```ts
-const removeGuard = router.beforeLeave(async () => {
+const removeGuard = router.beforeLeave(async (destination) => {
   if (!form.isDirty) return true;
   return confirm('Discard changes?');
 });
@@ -342,7 +405,14 @@ const removeGuard = router.beforeLeave(async () => {
 removeGuard();
 ```
 
-For guards that belong to a specific route, use `onLeave` in the route definition instead (see [Define Routes Once](#define-routes-once)).
+Scope a guard to a specific route so it only fires when leaving that route:
+
+```ts
+router.beforeLeave(
+  async () => confirm('Discard changes?'),
+  { routes: ['editor'] },
+);
+```
 
 ## URLs and Active State
 
@@ -371,7 +441,7 @@ if (branch?.at(-1)?.name === 'dashboard.settings') {
 
 ## SSR Data Prefetch
 
-Use `router.match(url, signal?)` to resolve a full route state including data loader results without modifying router state or history. Ideal for server-side data prefetching.
+Use `router.match(url)` to resolve a full route state including data loader results without modifying router state or history. Ideal for server-side data prefetching.
 
 ```ts
 const state = await router.match('/users/42');
@@ -382,11 +452,11 @@ if (state) {
 }
 ```
 
-Pass an `AbortSignal` to cancel in-flight loaders:
+Pass an `AbortSignal` via the options object to cancel in-flight loaders:
 
 ```ts
 const controller = new AbortController();
-const state = await router.match('/users/42', controller.signal);
+const state = await router.match('/users/42', { signal: controller.signal });
 ```
 
 `match()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
@@ -411,13 +481,32 @@ location.hash;
 location.historyState; // state from the current history entry
 
 matches;               // matched branch from root to leaf
-status;                // 'idle' | 'loading' | 'error'
+status;                // 'idle' | 'loading' | 'streaming' | 'error'
 error;                 // only set when status === 'error'
 ```
 
+Each match node also carries its own `status`:
+
+```ts
+matches.at(-1)?.status; // 'idle' | 'loading' | 'streaming' | 'error'
+```
+
+This lets nested layouts show per-slot loading indicators without polling the top-level status.
+
 The state object is immutable. A successful navigation replaces it with a new snapshot.
 
-`matches` contains the matched branch from root to leaf. Access route metadata via the leaf match: `matches.at(-1)?.meta`. Note that `location.query` always contains raw string values from URL parsing. For coerced values, read `ctx.query` inside middleware or handlers.
+### `waitFor(name)`
+
+Wait for the router to reach `status: 'idle'` with a specific route active. Useful in tests and lifecycle coordination:
+
+```ts
+// Navigate and wait for data to settle
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+const state = await router.waitFor('userDetail');
+const user = state.matches.at(-1)?.data;
+```
+
+`waitFor` rejects immediately if the router is already in `status: 'error'`. Resolves immediately if the named route is already active and idle.
 
 ## Scroll Restoration
 
@@ -460,8 +549,9 @@ import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
 const history = createMemoryHistory('/dashboard');
 const router = createRouter({ history, routes });
 
-await new Promise((r) => setTimeout(r, 0));
-assert(router.getSnapshot().location.pathname === '/dashboard');
+// Use waitFor to avoid manual timing:
+const state = await router.waitFor('dashboard');
+assert(state.location.pathname === '/dashboard');
 
 router.dispose();
 ```
@@ -488,8 +578,8 @@ const router = createRouter({
   routes: {
     home: { component: HomePage, path: '/' },
     settings: { component: SettingsPage, path: '/settings' },
-    notFound: { component: NotFoundPage, path: '*' },
   },
+  notFound: { component: NotFoundPage },
 });
 
 // Stable references outside the hook — do not recreate on every render.
@@ -520,8 +610,8 @@ const router = createRouter({
   routes: {
     home: { component: HomePage, path: '/' },
     settings: { component: SettingsPage, path: '/settings' },
-    notFound: { component: NotFoundPage, path: '*' },
   },
+  notFound: { component: NotFoundPage },
 });
 
 // shallowRef — no need to deep-track immutable route state.
@@ -548,8 +638,8 @@ export function useRouter() {
     routes: {
       home: { component: HomePage, path: '/' },
       settings: { component: SettingsPage, path: '/settings' },
-      notFound: { component: NotFoundPage, path: '*' },
     },
+    notFound: { component: NotFoundPage },
   });
 
   // readable injects the initial value; subscribe() drives updates.
@@ -587,14 +677,14 @@ const router = createRouter({
     },
   ],
   routes: {
-    settings: { handler: () => renderSettings(), path: '/settings' },
+    settings: { path: '/settings' },
   },
 });
 ```
 
 ### With Ripple
 
-Sync router state to a Ripple signal for reactive UI outside route handlers.
+Sync router state to a Ripple signal for reactive UI.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -612,8 +702,10 @@ router.subscribe((state) => {
 
 - Define the route table once at app startup and import it where needed.
 - Prefer named navigation (`router.navigate({ name: 'settings' })`) over raw paths.
-- Put auth and permission checks in middleware, not in route handlers.
+- Put auth and permission checks in middleware, not in data loaders.
 - Use `data()` loaders for route data and honor the provided `AbortSignal`.
+- Use `onError` on a route for degraded-state rendering rather than a full redirect to an error page.
+- Use `notFound` in router options for the not-found page rather than `path: '*'` in the route table.
 - Call `router.dispose()` when tearing down apps/tests to release listeners.
 - Use `createMemoryHistory()` for tests and non-browser runtimes; avoid touching `window.history` directly.
 - Use `router.preload()` on hover for routes likely to be visited next.

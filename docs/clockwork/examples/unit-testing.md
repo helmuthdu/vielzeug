@@ -77,14 +77,34 @@ test('returns undefined for undefined event in state', () => {
 });
 ```
 
+### Using the `onGuard` callback
+
+`resolveTransition` accepts an optional third argument to observe each guard evaluation:
+
+```ts
+test('reports guard evaluation', () => {
+  const evaluations: Array<{ passed: boolean; target: string }> = [];
+
+  resolveTransition(auth, {
+    context: { attempts: 5, token: '' },
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'unauthenticated',
+  }, (info) => {
+    evaluations.push({ passed: info.passed, target: info.target });
+  });
+
+  expect(evaluations[0]).toEqual({ passed: false, target: 'loading' });
+});
+```
+
 ### Pitfalls
 
-- **`resolveTransition()` does not fire debug hooks.** `onEvaluateGuard` and `onTransitionSkipped` only fire during `send()`. Guards are still evaluated, but silently.
-- **Guards must be pure.** `resolveTransition()` evaluates the guard synchronously and synchronously. Guards that read from signals or perform async work will not behave correctly here.
-- **Test the definition, not the instance.** Pass the `MachineDefinition` returned by `defineMachine()`, not a live `MachineInstance`. The instance's current state and context are not relevant to pure guard tests.
+- **`resolveTransition()` does not fire `onDebug` events.** Debug events only fire during `send()`. Guards are still evaluated, but silently.
+- **Guards must be pure.** `resolveTransition()` evaluates the guard synchronously. Guards that read from signals or perform async work will not behave correctly.
+- **Test the definition, not the instance.** Pass the definition returned by `defineMachine()`, not a live `MachineInstance`.
 
 ### Related
 
 - [Auth Flow with Guards](./auth-flow.md) — The full machine this example tests
-- [Debugging Transitions](./debugging-transitions.md) — Runtime observability with debug hooks
+- [Debugging Transitions](./debugging-transitions.md) — Runtime observability with debug events
 - [API Reference — `resolveTransition()`](/clockwork/api#resolvetransition)

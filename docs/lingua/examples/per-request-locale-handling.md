@@ -11,42 +11,39 @@ In an SSR context, a shared mutable `i18n` singleton causes locale state to leak
 
 ### Solution
 
-Create a new `i18n` instance per request. Each instance is an isolated plain object with no global side effects.
+Maintain a shared `i18n` instance at module scope and call `fork()` per request. The fork inherits the parent's catalog snapshots and loaders so nothing is re-registered. Each fork has its own locale, version counter, and subscriber set.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
 
-export async function createRequestI18n(locale: string) {
-  const i18n = createI18n({
-    fallback: 'en',
-    locale: 'en', // start with default; switch below
-    catalogs: {
-      en: { title: 'Home' },
-      fr: () => import('./locales/fr.json').then((m) => m.default),
-      de: () => import('./locales/de.json').then((m) => m.default),
-    },
-  });
-
-  // setLocale loads the catalog and switches atomically
-  if (locale !== 'en') {
-    await i18n.setLocale(locale);
-  }
-
-  return i18n;
-}
+// Shared instance — set up once at server startup
+export const sharedI18n = createI18n({
+  fallback: 'en',
+  locale: 'en',
+  catalogs: {
+    en: { title: 'Home' },
+    fr: () => import('./locales/fr.json').then((m) => m.default),
+    de: () => import('./locales/de.json').then((m) => m.default),
+  },
+});
 
 // In your request handler
 const requestLocale = req.headers['accept-language']?.split(',')[0] ?? 'en';
-const i18n = await createRequestI18n(requestLocale);
+const reqI18n = sharedI18n.fork({ locale: 'en' });
 
-const html = `<h1>${i18n.t('title')}</h1>`;
+// setLocale() loads if needed and switches atomically
+if (requestLocale !== 'en') {
+  await reqI18n.setLocale(requestLocale);
+}
+
+const html = `<h1>${reqI18n.t('title')}</h1>`;
 ```
 
 ### Pitfalls
 
-- Creating a new instance per request has a small overhead. Prefer caching a pre-loaded instance per locale when the locale set is small and catalogs are stable.
-- `setLocale()` throws `[lingua/E001]` if the locale is not registered. Validate the request locale against `i18n.getSupportedLocales()` before switching to avoid a 500 error from an unexpected locale header.
-- Do not share the per-request instance across async boundaries (e.g. via a module-level variable) — pass it explicitly to rendering functions.
+- `fork()` copies the catalog snapshot at call time. If the shared instance loads a new locale after a fork is created, the fork does not automatically gain access to it. For preloaded locales this is fine — the fork inherits loaders and will load on demand via `setLocale()`.
+- `setLocale()` throws `[lingua/E001]` if the locale is not registered. Validate the request locale against `sharedI18n.getSupportedLocales()` before switching to avoid a 500 error from an unexpected locale header.
+- Do not share the per-request fork across async boundaries (e.g. via a module-level variable) — pass it explicitly to rendering functions.
 
 ### Related
 

@@ -1,16 +1,18 @@
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
 import { isLiveSignal } from './directives/live';
+import { propRegistry } from './props';
 import { applyBinding } from './template-bindings';
 import {
+  type AttrBinding,
+  type AttrPropMeta,
+  type Binding,
   createHtmlResult,
+  type HtmlBindingValue,
+  type HTMLResult,
   isDirectiveResult,
   isHtmlResult,
   isSpreadObject,
-  type AttrBinding,
-  type Binding,
-  type HtmlBindingValue,
-  type HTMLResult,
   type Ref,
   type RefCallback,
 } from './types/bindings';
@@ -40,7 +42,6 @@ type DetectedSlot = {
   modifiers?: string[];
   name?: string;
   prefix: string;
-  raw: string;
 };
 
 const detectSlot = (str: string): DetectedSlot => {
@@ -49,38 +50,38 @@ const detectSlot = (str: string): DetectedSlot => {
 
   // Dynamic closing tag: interpolation is the closing tag name, e.g. strings[i] = "</"
   if (trimmed.endsWith('</')) {
-    return { kind: 'closeTag', prefix: str, raw: str };
+    return { kind: 'closeTag', prefix: str };
   }
 
   // Dynamic opening tag name: interpolation is the tag name itself, e.g. strings[i] = "<"
   if (trimmed.endsWith('<')) {
-    return { kind: 'tagname', prefix: str, raw: str };
+    return { kind: 'tagname', prefix: str };
   }
 
   if ((m = EVENT_RE.exec(str))) {
     const prefix = str.slice(0, -m[0].length);
     const parts = m[1].split('.');
 
-    return { kind: 'event', modifiers: parts.slice(1), name: parts[0], prefix, raw: str };
+    return { kind: 'event', modifiers: parts.slice(1), name: parts[0], prefix };
   }
 
   if ((m = REF_RE.exec(str))) {
-    return { kind: 'ref', prefix: str.slice(0, -m[0].length), raw: str };
+    return { kind: 'ref', prefix: str.slice(0, -m[0].length) };
   }
 
   if ((m = BOOL_ATTR_RE.exec(str))) {
-    return { kind: 'boolAttr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+    return { kind: 'boolAttr', name: m[1], prefix: str.slice(0, -m[0].length) };
   }
 
   if ((m = ATTR_RE.exec(str))) {
-    return { kind: 'attr', name: m[1], prefix: str.slice(0, -m[0].length), raw: str };
+    return { kind: 'attr', name: m[1], prefix: str.slice(0, -m[0].length) };
   }
 
   if (isInsideStartTag(str)) {
-    return { kind: 'spread', prefix: str.trimEnd(), raw: str };
+    return { kind: 'spread', prefix: str.trimEnd() };
   }
 
-  return { kind: 'node', prefix: str, raw: str };
+  return { kind: 'node', prefix: str };
 };
 
 // ─── Static template cache ───────────────────────────────────────────────────
@@ -267,19 +268,21 @@ const createAttrBindingFromValue = (
   name: string,
   value: unknown,
 ): AttrBinding => {
+  const propMeta = propRegistry.get(el)?.get(name) as AttrPropMeta | undefined;
+
   if (isLiveSignal(value)) {
-    return { el, live: true, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+    return { el, live: true, mode, name, propMeta, signal: value as ReadonlySignal<unknown>, type: 'attr' };
   }
 
   if (typeof value === 'function') {
-    return { el, mode, name, signal: computed(value as () => unknown), type: 'attr' };
+    return { el, mode, name, propMeta, signal: computed(value as () => unknown), type: 'attr' };
   }
 
   if (isSignal(value)) {
-    return { el, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+    return { el, mode, name, propMeta, signal: value as ReadonlySignal<unknown>, type: 'attr' };
   }
 
-  return { el, mode, name, type: 'attr', value };
+  return { el, mode, name, propMeta, type: 'attr', value };
 };
 
 const resolveStaticText = (value: unknown): string => {
@@ -378,33 +381,10 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       }
 
       if (isSignal(value)) {
-        const sig = value as ReadonlySignal<unknown>;
-
-        // For HTMLResult signals, use the html binding path.
-        // Peek at value without tracking to detect initial type; for uninitialized
-        // computeds (globalRevision=0 edge case) we fall back to the html binding
-        // which uses an effect and will render correctly on first effect run.
-        let initial: unknown;
-
-        try {
-          initial = sig.value;
-
-          // If initial is still the ripple uninitialized sentinel (Symbol), treat as unknown
-          if (typeof initial === 'symbol') initial = undefined;
-        } catch {
-          initial = undefined;
-        }
-
-        if (isHtmlResult(initial)) {
-          bindings.push({ anchor, signal: sig as ReadonlySignal<HtmlBindingValue>, type: 'html' });
-          continue;
-        }
-
-        // Text signal: replace comment with text node
-        const textNode = document.createTextNode(initial == null ? '' : String(initial));
-
-        anchor.replaceWith(textNode);
-        bindings.push({ node: textNode, signal: sig, type: 'text' });
+        // Always use the html binding for signals — it handles both text values and
+        // HTMLResult values, preventing silent "[object Object]" corruption when a
+        // signal's runtime type changes from null/string to HTMLResult.
+        bindings.push({ anchor, signal: value as ReadonlySignal<HtmlBindingValue>, type: 'html' });
         continue;
       }
 

@@ -5,7 +5,7 @@ package: sourcerer
 category: data
 keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
 related: [courier, ripple, wayfinder]
-exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals]
+exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals, SourceError, itemRange, sourceState, prefetchSource, prefetchSourceWithSource, composeFetch]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createLocalSource, createRemoteSource, createCursorSource, createInfin
 
 **Package:** `@vielzeug/sourcerer` &nbsp;·&nbsp; **Category:** Data
 
-**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`
+**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`, `SourceError`, `itemRange`, `sourceState`
 
 **When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
 
@@ -31,13 +31,16 @@ exports: [createLocalSource, createRemoteSource, createCursorSource, createInfin
 
 `@vielzeug/sourcerer` provides typed, reactive source models for list-based UIs:
 
-- `createLocalSource()` — in-memory collections with synchronous filter/sort/search
+- `createLocalSource()` — in-memory collections with synchronous filter/sort/search (optional async filter/sort via `filterAsync`/`sortAsync`)
 - `createRemoteSource()` — async server-backed collections with page-number navigation
 - `createCursorSource()` — async collections navigated by cursor tokens (opaque next/prev pointers)
 - `createInfiniteSource()` — append-mode (infinite scroll) collections
-- `toSignals()` / `toCursorSignals()` / `toInfiniteSignals()` — Ripple signal adapters
+- `toSignals()` — universal Ripple signal adapter for all source types
+- `SourceError` — structured error class with `message`, `cause`, `query`, and `attempt`
+- `sourceState()` — derive a discriminated union (`loading` / `error` / `data`) from any source
+- `itemRange()` — compute 1-based display range from `SourceMeta`
 
-All sources expose a consistent read model (`current` or `all`, `meta`, `subscribe`) so UI code remains the same regardless of the underlying data strategy.
+All sources expose `current`, `meta`, and `subscribe` — UI code is identical regardless of the underlying data strategy.
 
 ## Installation
 
@@ -133,10 +136,10 @@ await source.searchNow(search);
 
 | Factory | Data model | Navigation | Key extras |
 |---|---|---|---|
-| `createLocalSource()` | In-memory array | Page number | Filter function, sort function, custom `searchFn` |
-| `createRemoteSource()` | Server fetch | Page number | `autoFetch`, `optimisticUpdate`, `queryKey` |
+| `createLocalSource()` | In-memory array | Page number | `filterAsync`, `sortAsync`, custom `searchFn` |
+| `createRemoteSource()` | Server fetch | Page number | `staleTime`, `optimisticUpdate`, `hydrate`, `queryKey` |
 | `createCursorSource()` | Server fetch | Cursor tokens | `autoFetch`, `queryKey` |
-| `createInfiniteSource()` | Server fetch | Append (`loadMore`) | `autoFetch` |
+| `createInfiniteSource()` | Server fetch | Append (`loadMore`) | `autoFetch`, `isLoadingMore` |
 
 ## Compatibility
 

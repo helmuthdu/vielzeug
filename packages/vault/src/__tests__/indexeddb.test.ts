@@ -1,13 +1,13 @@
 import type { IndexedDbAdapter } from '../adapters/indexeddb';
 
 import {
-  VaultDisposedError,
-  VaultScopeError,
+  type Adapter,
   createIndexedDB,
+  type MetricsEvent,
   table,
   ttl,
-  type Adapter,
-  type MetricsEvent,
+  VaultDisposedError,
+  VaultScopeError,
 } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
@@ -147,25 +147,22 @@ describe('IndexedDB adapter', () => {
   test('observe receives updates after mutations', async () => {
     const snapshots: User[][] = [];
     const done = new Promise<void>((resolve) => {
-      const stop = db.observe(
-        'users',
-        (rows) => {
-          snapshots.push(rows);
+      const stop = db.observe('users', (rows) => {
+        snapshots.push(rows);
 
-          if (snapshots.length === 2) {
-            stop();
-            resolve();
-          }
-        },
-        { immediate: false },
-      );
+        if (snapshots.length === 3) {
+          stop();
+          resolve();
+        }
+      });
     });
 
     await db.put('users', { id: 1, name: 'Alice' });
     await db.update('users', 1, { city: 'Paris' });
     await done;
 
-    expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }], [{ city: 'Paris', id: 1, name: 'Alice' }]]);
+    expect(snapshots[1]).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(snapshots[2]).toEqual([{ city: 'Paris', id: 1, name: 'Alice' }]);
   });
 
   test('upsert inserts when record does not exist', async () => {

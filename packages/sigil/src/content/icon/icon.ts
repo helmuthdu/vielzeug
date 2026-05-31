@@ -1,4 +1,4 @@
-import { define, prop, computed, html, raw } from '@vielzeug/craft';
+import { computed, define, html, prop, raw } from '@vielzeug/craft';
 import * as lucideModule from 'lucide';
 
 import styles from './icon.css?inline';

@@ -97,14 +97,58 @@ bus.on('cart:updated', handler, { once: true, signal: controller.signal });
 
 ## Emitting Events
 
-`emit()` calls all registered listeners synchronously.
+`emit()` calls all registered listeners synchronously and returns the number of listeners that were invoked.
 
 ```ts
-bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
+const count = bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
 bus.emit('user:logout'); // void event — no second argument
+console.log(count); // number of listeners fired
 ```
 
+`emit()` returns `0` when the bus is disposed, when middleware blocks dispatch, or when `validatePayload` rejects the payload with `onError` configured.
+
 If a listener throws and no `onError` is configured, the error propagates to the `emit()` caller. With `onError`, the error is captured and remaining listeners still run.
+
+### Middleware
+
+Pass `middleware` to `createBus()` to intercept every `emit()` before listeners run. Middleware functions receive `(event, payload, next)` — call `next()` to continue, or omit it to block dispatch:
+
+```ts
+const bus = createBus<AppEvents>({
+  middleware: [
+    (event, payload, next) => {
+      console.debug('[dispatch]', event, payload);
+      next();
+    },
+    // Rate limit: block dispatch if quota is exceeded
+    (event, _payload, next) => {
+      if (rateLimiter.allow(event)) next();
+    },
+  ],
+});
+```
+
+Multiple middleware run in array order. If any omits `next()`, subsequent middleware and all listeners are skipped and `emit()` returns `0`.
+
+### `validatePayload`
+
+Use `validatePayload` for schema-level guards that run **before** middleware. Throw to reject the emit:
+
+```ts
+const bus = createBus<AppEvents>({
+  validatePayload: (event, payload) => {
+    if (event === 'count' && typeof payload !== 'number') {
+      throw new TypeError('count must be a number');
+    }
+  },
+  onError: ({ err, event }) => logger.warn('rejected', event, err),
+});
+
+bus.emit('count', 'oops'); // → onError called, listeners skipped, returns 0
+bus.emit('count', 42);     // → listeners run, returns listener count
+```
+
+Without `onError`, a `validatePayload` throw propagates directly to the `emit()` caller.
 
 ## Awaiting Events
 
@@ -122,8 +166,7 @@ const { userId } = await bus.wait('user:login');
 
 ```ts
 // Reject if login hasn't happened within 5 seconds
-const signal = AbortSignal.timeout(5_000);
-const { userId } = await bus.wait('user:login', signal);
+const { userId } = await bus.wait('user:login', { signal: AbortSignal.timeout(5_000) });
 ```
 
 ### `waitAny()`
@@ -138,7 +181,11 @@ if (result.event === 'user:login') {
 }
 ```
 
-Like `wait()`, it rejects when the bus is disposed or when the provided signal aborts.
+Like `wait()`, it rejects when the bus is disposed or when the provided signal aborts:
+
+```ts
+const result = await bus.waitAny(['user:login', 'user:logout'], { signal: AbortSignal.timeout(10_000) });
+```
 
 ## Async Iteration
 
@@ -172,6 +219,31 @@ for await (const { userId } of stream) {
   if (userId === targetId) break; // stream subscription is torn down automatically
 }
 ```
+
+### `events().filter()` and `events().map()` operators
+
+`events()` returns an `EventStream<T>` with chainable `.filter()` and `.map()` operators for in-place transforms:
+
+```ts
+// Only yield positive counts
+for await (const n of bus.events('count').filter((n) => n > 0)) {
+  console.log(n);
+}
+
+// Transform each value
+for await (const label of bus.events('count').map((n) => `count: ${n}`)) {
+  console.log(label);
+}
+
+// Chain filter and map
+for await (const s of bus.events('count').filter((n) => n % 2 === 0).map((n) => n * 2)) {
+  console.log(s);
+}
+```
+
+::: warning Sibling streams
+Calling `.filter()` or `.map()` on the **same base stream** object twice creates two sibling streams sharing one subscription. Disposing one sibling closes both. For independent lifecycles, call `bus.events()` separately for each consumer.
+:::
 
 ## Error Handling
 
@@ -271,12 +343,15 @@ const unsub = bus.onAny((event, payload) => {
 unsub(); // remove the wildcard listener when done
 ```
 
-Like `on()`, `onAny()` accepts an optional `AbortSignal`:
+Like `on()`, `onAny()` accepts an optional `SubscribeOptions` object:
 
 ```ts
 const controller = new AbortController();
-bus.onAny(logger, controller.signal);
+bus.onAny(logger, { signal: controller.signal });
 controller.abort(); // removes the wildcard listener
+
+// Once-only wildcard
+bus.onAny(logFirstEvent, { once: true });
 ```
 
 `onAny` listeners are removed by `removeAllListeners()` (no argument), but not by `removeAllListeners('event')`.
@@ -448,9 +523,10 @@ The warning fires for both event-specific listeners (`on`, `once`) and wildcard 
 bus.on('user:login', handler1);
 bus.on('user:login', handler2);
 bus.on('user:logout', handler3);
+bus.onAny(wildcardHandler);
 
-bus.listenerCount('user:login'); // 2
-bus.listenerCount(); // 3 — total across all events (including onAny wildcards)
+bus.listenerCount('user:login'); // 3 — 2 specific + 1 wildcard
+bus.listenerCount(); // 4 — 3 specific + 1 wildcard (wildcards counted once)
 ```
 
 This is useful for debugging, assertions in tests, or conditional emit optimizations.

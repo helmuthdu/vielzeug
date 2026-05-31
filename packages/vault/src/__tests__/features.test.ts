@@ -462,3 +462,307 @@ describe('entries()', () => {
     expect(result).toEqual([[7, user]]);
   });
 });
+
+/* -------------------- watchStream() -------------------- */
+
+describe('watchStream()', () => {
+  test('emits initial snapshot immediately', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const stream = db.watchStream('users');
+    const reader = stream.getReader();
+    const { value } = await reader.read();
+
+    expect(value).toEqual([{ id: 1, name: 'Alice' }]);
+
+    await reader.cancel();
+  });
+
+  test('emits subsequent mutations', async () => {
+    const db = createMemory({ schema });
+    const stream = db.watchStream('users');
+    const reader = stream.getReader();
+
+    // consume initial empty snapshot
+    await reader.read();
+
+    const nextP = reader.read();
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await flushMicrotasks();
+
+    const { value } = await nextP;
+
+    expect(value).toEqual([{ id: 1, name: 'Alice' }]);
+
+    await reader.cancel();
+  });
+
+  test('cancel() stops the observer — no more chunks enqueued', async () => {
+    const db = createMemory({ schema });
+    const stream = db.watchStream('users');
+    const reader = stream.getReader();
+
+    // consume initial snapshot
+    await reader.read();
+    // cancel the stream — observer should be stopped
+    await reader.cancel();
+
+    // A mutation after cancel should not be reachable through this stream.
+    // We verify by ensuring the stream is done (read returns done).
+    const { done } = await reader.read().catch(() => ({ done: true, value: undefined }));
+
+    expect(done).toBe(true);
+  });
+
+  test('AbortSignal cancels the stream', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+    const stream = db.watchStream('users', { signal: controller.signal });
+    const reader = stream.getReader();
+
+    // consume initial snapshot
+    await reader.read();
+
+    // abort the signal — stream should close
+    controller.abort();
+
+    // next read should return done (stream closed by signal handler)
+    const result = await reader.read();
+
+    expect(result.done).toBe(true);
+  });
+
+  test('mode: latest — holds only most recent snapshot when consumer lags', async () => {
+    const db = createMemory({ schema });
+    const stream = db.watchStream('users', { mode: 'latest' });
+    const reader = stream.getReader();
+
+    // consume initial empty snapshot to start
+    await reader.read();
+
+    // fire two mutations without consuming
+    await db.put('users', { id: 1, name: 'First' });
+    await flushMicrotasks();
+    await db.put('users', { id: 2, name: 'Second' });
+    await flushMicrotasks();
+
+    // consumer reads: should get the latest (both users) snapshot
+    const { value } = await reader.read();
+
+    expect(value).toHaveLength(2);
+
+    await reader.cancel();
+  });
+
+  test('mode: all — queues every snapshot', async () => {
+    const db = createMemory({ schema });
+    const stream = db.watchStream('users', { mode: 'all' });
+    const reader = stream.getReader();
+
+    // initial snapshot
+    await reader.read();
+
+    // two mutations
+    await db.put('users', { id: 1, name: 'First' });
+    await flushMicrotasks();
+    await db.put('users', { id: 2, name: 'Second' });
+    await flushMicrotasks();
+
+    // Both snapshots should be in the stream's queue
+    const snap1 = await reader.read();
+    const snap2 = await reader.read();
+
+    expect(snap1.value).toHaveLength(1); // only First
+    expect(snap2.value).toHaveLength(2); // First + Second
+
+    await reader.cancel();
+  });
+});
+
+/* -------------------- AbortSignal on observe / observeMany / watch -------------------- */
+
+describe('AbortSignal cancellation', () => {
+  test('observe() — signal abort unsubscribes listener', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+    const calls: User[][] = [];
+
+    db.observe('users', (records) => calls.push(records), { signal: controller.signal });
+    await flushMicrotasks(); // initial snapshot
+
+    calls.length = 0; // reset
+
+    controller.abort(); // unsubscribe
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(0); // no further calls after abort
+  });
+
+  test('observeMany() — signal abort unsubscribes all listeners', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps), {
+      signal: controller.signal,
+    });
+    await flushMicrotasks(); // initial combined snapshot
+
+    calls.length = 0; // reset
+
+    controller.abort(); // unsubscribe all
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(0); // no further calls
+  });
+
+  test('watch() — signal abort terminates the async iterator', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+    const iter = db.watch('users', { signal: controller.signal })[Symbol.asyncIterator]();
+
+    // consume initial snapshot
+    await iter.next();
+
+    // abort from outside
+    controller.abort();
+
+    // the iterator should now be done
+    const result = await iter.next();
+
+    expect(result.done).toBe(true);
+  });
+});
+
+/* -------------------- pruneExpired() with table filter -------------------- */
+
+describe('pruneExpired() with table filter', () => {
+  test('only prunes the specified table', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('posts', { id: 1, title: 'Hello' }, ttl.ms(1000));
+
+    vi.advanceTimersByTime(2000);
+
+    // Prune only users
+    const result = await db.pruneExpired(['users']);
+
+    expect(result.users).toBe(1);
+
+    // posts should not have been pruned by this call — but memory adapter
+    // performs lazy eviction on get, so check raw count via debug()
+    // We can verify by calling pruneExpired() for posts separately:
+    const result2 = await db.pruneExpired(['posts']);
+
+    expect(result2.posts).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  test('pruneExpired() with no filter prunes all tables', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('posts', { id: 1, title: 'Hello' }, ttl.ms(1000));
+
+    vi.advanceTimersByTime(2000);
+
+    const result = await db.pruneExpired();
+
+    expect(result.users).toBe(1);
+    expect(result.posts).toBe(1);
+
+    vi.useRealTimers();
+  });
+});
+
+/* -------------------- top-level getOrDefault() -------------------- */
+
+describe('top-level getOrDefault()', () => {
+  test('returns existing record without calling defaultFn', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    let called = false;
+    const result = await db.getOrDefault('users', 1, () => {
+      called = true;
+
+      return { id: 1, name: 'Fallback' };
+    });
+
+    expect(result).toEqual({ id: 1, name: 'Alice' });
+    expect(called).toBe(false);
+  });
+
+  test('inserts and returns defaultFn result when key is absent', async () => {
+    const db = createMemory({ schema });
+
+    const result = await db.getOrDefault('users', 42, () => ({ id: 42, name: 'Default' }));
+
+    expect(result).toEqual({ id: 42, name: 'Default' });
+
+    // Should now be persisted
+    expect(await db.get('users', 42)).toEqual({ id: 42, name: 'Default' });
+  });
+
+  test('can be called outside batch() — works at the adapter level', async () => {
+    const db = createMemory({ schema });
+
+    // Calling directly on db (not inside batch) must not throw
+    await expect(db.getOrDefault('users', 1, () => ({ id: 1, name: 'Direct' }))).resolves.toEqual({
+      id: 1,
+      name: 'Direct',
+    });
+  });
+});
+
+/* -------------------- scheduleExpiredPrune auto-stop on dispose -------------------- */
+
+describe('scheduleExpiredPrune — auto-stop on VaultDisposedError', () => {
+  test('stops the interval automatically when pruneExpired throws VaultDisposedError', async () => {
+    vi.useFakeTimers();
+
+    const { VaultDisposedError } = await import('../index');
+
+    let callCount = 0;
+
+    const fakeAdapter = {
+      pruneExpired: async () => {
+        callCount += 1;
+
+        if (callCount >= 2) throw new VaultDisposedError();
+
+        return { posts: 0, users: 0 };
+      },
+    };
+
+    scheduleExpiredPrune(fakeAdapter, { interval: 1000 });
+
+    vi.advanceTimersByTime(1000);
+    await Promise.resolve();
+    expect(callCount).toBe(1); // first tick: succeeds
+
+    vi.advanceTimersByTime(1000);
+    await Promise.resolve();
+    expect(callCount).toBe(2); // second tick: throws VaultDisposedError → interval cleared
+
+    vi.advanceTimersByTime(5000);
+    await Promise.resolve();
+    expect(callCount).toBe(2); // no more ticks — auto-stopped
+
+    vi.useRealTimers();
+  });
+});

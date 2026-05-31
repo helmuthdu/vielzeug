@@ -1,4 +1,4 @@
-import { ValidationError, s } from '../index';
+import { s, ValidationError } from '../index';
 
 describe('s.string()', () => {
   it('accepts strings including empty string', () => {

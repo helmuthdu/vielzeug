@@ -5,7 +5,7 @@ package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, herald, familiar]
-exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, lazy]
+exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, pipe, lazy, isLevelEnabled]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -54,15 +54,15 @@ yarn add @vielzeug/rune
 
 ```ts
 import { Rune, createLogger, lazy } from '@vielzeug/rune';
-import { consoleTransport, remoteTransport, jsonTransport } from '@vielzeug/rune';
+import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeug/rune';
 
 // Default logger — uses consoleTransport() automatically
 Rune.info('Boot complete');
 Rune.warn('Cache stale');
 Rune.fatal(new Error('unrecoverable')); // Error auto-serialized
 
-// Namespaced scopes
-const api = Rune.scope('api');
+// Namespaced child loggers
+const api = createLogger('api');
 api.info({ method: 'GET', path: '/users' }, 'request');
 
 // Pinned bindings — lazy() only evaluates when the level passes
@@ -72,7 +72,7 @@ const reqLog = api.withBindings({
 });
 reqLog.debug('processing'); // diagnostics() called only here
 
-// Structured timing — emits a debug entry with { duration_ms }
+// Structured timing — label is the message; emits { duration_ms } in context
 await reqLog.time('db.query', () => runQuery());
 
 // Custom transport pipeline
@@ -80,10 +80,13 @@ const serverLog = createLogger({
   logLevel: 'info',
   namespace: 'server',
   transports: [
-    consoleTransport({ variant: 'text', timestamp: true }),
-    remoteTransport(async (type, data) => {
-      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-    }, { level: 'error' }),
+    consoleTransport({ timestamp: true }),
+    remoteTransport({
+      handler: async (type, data) => {
+        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+      },
+      level: 'error',
+    }),
   ],
 });
 
@@ -105,14 +108,15 @@ if (process.env.NODE_ENV !== 'production') {
 fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg }) });
 
 // After — Rune
-import { Rune } from '@vielzeug/rune';
-import { consoleTransport, remoteTransport } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
+import { consoleTransport, pipe, remoteTransport } from '@vielzeug/rune';
 
-const api = Rune.scope('api').child({
-  transports: [
+const api = createLogger({
+  namespace: 'api',
+  transports: [pipe(
     consoleTransport({ level: 'debug' }),
-    remoteTransport(sendToCollector, { level: 'error' }),
-  ],
+    remoteTransport({ handler: sendToCollector, level: 'error' }),
+  )],
 });
 api.info({ data }, 'GET /users');
 ```
@@ -139,10 +143,12 @@ api.info({ data }, 'GET /users');
 - Auto-serializes `Error` objects into `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line
 - Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
-- Namespace composition (`scope`) and isolated clones (`child`)
+- Namespaced child loggers via `createLogger('name')` or `logger.child({ namespace })`
+- Middleware pipeline via `use(fn)` — transform or filter entries before transport dispatch
+- Logger-level sampling via `sample: 0.1` — drop entries before any transport runs
 - Pluggable transport pipeline: `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
-- Styled browser output (`symbol`, `icon`, `text`) via `consoleTransport`
-- Structured `time()` wrapper: emits `{ duration_ms }` as a debug entry through all transports
+- Fan-out via `pipe()` — dispatch to multiple transports independently, fault-tolerant
+- Structured `time()` wrapper: emits the label as message with `{ duration_ms }` in context
 - `group()` and `groupCollapsed()` wrappers that auto-close on throw/reject
 - `LogEntry` type — the shared contract between logger and transports
 - Zero dependencies — <PackageInfo package="rune" type="size" /> gzipped

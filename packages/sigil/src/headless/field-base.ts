@@ -1,7 +1,5 @@
+import { createStableId } from '@vielzeug/craft';
 import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
-
-import { createReactiveBindings } from './a11y-host';
-import { createStableId } from './id';
 
 // ── Validation / context types ────────────────────────────────────────────────
 
@@ -56,31 +54,31 @@ export const createErrorHelperState = (options: ErrorHelperOptions): ReadonlySig
     helperText: options.helper?.value ?? '',
   }));
 
-// ── Counter + full assistive state ────────────────────────────────────────────
+// ── Counter state (opt-in) ─────────────────────────────────────────────────────
 
-/** Counter state. Used only by text fields with maxLength. */
+/** Counter state for text fields with `maxLength`. */
 export type CounterState = {
   counterAtLimit: boolean;
   counterNearLimit: boolean;
   counterText: string;
-  hasCounter: boolean;
 };
 
-/** Full assistive state for text fields (error + helper + counter). */
-export type AssistiveState = CounterState & {
-  errorText: string;
-  helperText: string;
-};
-
-export type AssistiveOptions = ErrorHelperOptions & {
+export type CounterOptions = {
   maxLength?: ReadonlySignal<number | undefined>;
-  value?: ReadonlySignal<string | undefined>;
+  value: ReadonlySignal<string | undefined>;
 };
 
-export const createAssistiveState = (options: AssistiveOptions): ReadonlySignal<AssistiveState> =>
-  computed<AssistiveState>(() => {
-    const errorText = options.error?.value ?? '';
-    const helperText = options.helper?.value ?? '';
+/**
+ * Creates a reactive counter state signal for text fields with `maxLength`.
+ * Only call this when `maxLength` may be set — the state is genuinely opt-in.
+ *
+ * @example
+ * ```ts
+ * const counter = createCounterState({ value: tf.value, maxLength: props.maxlength });
+ * ```
+ */
+export const createCounterState = (options: CounterOptions): ReadonlySignal<CounterState> =>
+  computed<CounterState>(() => {
     const value = options.value?.value ?? '';
     const maxLength = options.maxLength?.value;
     const parsedMaxLength = Number(maxLength);
@@ -93,9 +91,6 @@ export const createAssistiveState = (options: AssistiveOptions): ReadonlySignal<
       counterAtLimit: hasCounter ? ratio >= 1 : false,
       counterNearLimit: hasCounter ? ratio >= 0.9 && ratio < 1 : false,
       counterText,
-      errorText,
-      hasCounter,
-      helperText,
     };
   });
 
@@ -104,19 +99,18 @@ export const createAssistiveState = (options: AssistiveOptions): ReadonlySignal<
 export type LabelPlacement = 'inset' | 'outside' | undefined;
 
 /**
- * Nested label state returned on every field handle as `field.label`.
- * Groups the inset and outside label into separate sub-objects, each with a
- * stable `id` and a reactive `show` signal.
+ * Label state returned on every field handle as `field.label`.
+ * A single label element is used for both inset and outside placements.
+ * CSS on `:host([label-placement="outside"])` controls the visual positioning.
  *
  * @example
  * ```html
- * <label id="${label.outside.id}" ?hidden="${() => !label.outside.show.value}">...</label>
- * <label id="${label.inset.id}"   ?hidden="${() => !label.inset.show.value}">...</label>
+ * <label id="${label.id}" ?hidden="${() => !label.show.value}">...</label>
  * ```
  */
 export type LabelState = {
-  inset: { id: string; show: ReadonlySignal<boolean> };
-  outside: { id: string; show: ReadonlySignal<boolean> };
+  id: string;
+  show: ReadonlySignal<boolean>;
 };
 
 // ── Field ARIA state ──────────────────────────────────────────────────────────
@@ -144,11 +138,6 @@ export type FieldAriaState = {
   labelledBy: ReadonlySignal<string | null>;
 };
 
-// ── Field base options ────────────────────────────────────────────────────────
-
-/** Options shared by both `createTextField` and `createChoiceField`. */
-export type FieldBaseOptions = FieldOptions;
-
 // ── Field handle ──────────────────────────────────────────────────────────────
 
 /**
@@ -156,21 +145,6 @@ export type FieldBaseOptions = FieldOptions;
  * and `ChoiceFieldHandle`.
  */
 export type FieldHandle = {
-  /**
-   * Applies reactive ARIA bindings from `field.aria` to `element` in a single
-   * `createReactiveBindings` effect. Wires `aria-labelledby`, `aria-describedby`,
-   * `aria-errormessage`, and `aria-invalid`.
-   *
-   * Pass `signal` for automatic teardown, or call the returned stop function
-   * manually.
-   *
-   * @example
-   * ```ts
-   * // Inside onElement:
-   * onElement(inputRef, (el) => field.applyAria(el, signal));
-   * ```
-   */
-  applyAria: (element: Element, signal?: AbortSignal) => () => void;
   /** Reactive ARIA attribute signals for the underlying input element. */
   aria: FieldAriaState;
   /** Reactive error + helper assistive text. */
@@ -194,13 +168,8 @@ export type FieldHandle = {
  * Composes the field triad — IDs, assistive state, and label state — into a
  * single `FieldHandle`. Both `createTextField` and `createChoiceField` build
  * on top of this.
- *
- * @param customAssistive - Optional override for the assistive-text signal.
- *   Pass `createAssistiveState(...)` to use the richer counter-aware state
- *   (as `createTextField` does), or any other `ReadonlySignal<ErrorHelperState>`
- *   for fully custom assistive content. Defaults to a plain `ErrorHelperState`.
  */
-export const createField = (options: FieldOptions, customAssistive?: ReadonlySignal<ErrorHelperState>): FieldHandle => {
+export const createField = (options: FieldOptions): FieldHandle => {
   // ── Core (formerly createFieldCore) ──────────────────────────────────────
   const disabled = computed(() => Boolean(options.disabled?.value));
   const validateOn = options.validateOn;
@@ -218,12 +187,10 @@ export const createField = (options: FieldOptions, customAssistive?: ReadonlySig
   };
 
   // ── Label + ARIA state ────────────────────────────────────────────────────
-  const insetId = createStableId('label');
-  const outsideId = `${insetId}-outside`;
+  const labelId = createStableId('label');
   const errorId = createStableId('error');
 
   const label$ = options.label ?? computed(() => undefined);
-  const placement$ = options.labelPlacement ?? computed(() => 'inset' as LabelPlacement);
 
   // Slot-first composition: if the caller provides `hasLabel`, use it instead
   // of deriving visibility purely from the label text signal. This allows
@@ -231,17 +198,11 @@ export const createField = (options: FieldOptions, customAssistive?: ReadonlySig
   // `label` prop is empty but a slotted label element is present.
   const labelVisible$ = options.hasLabel ?? computed(() => Boolean(label$.value));
 
-  const resolvedAssistive = customAssistive ?? createErrorHelperState({ error: options.error, helper: options.helper });
+  const resolvedAssistive = createErrorHelperState({ error: options.error, helper: options.helper });
 
   const label: LabelState = {
-    inset: {
-      id: insetId,
-      show: computed(() => labelVisible$.value && placement$.value !== 'outside'),
-    },
-    outside: {
-      id: outsideId,
-      show: computed(() => labelVisible$.value && placement$.value === 'outside'),
-    },
+    id: labelId,
+    show: computed(() => labelVisible$.value),
   };
 
   const aria: FieldAriaState = {
@@ -250,26 +211,10 @@ export const createField = (options: FieldOptions, customAssistive?: ReadonlySig
     ),
     errorMessage: computed(() => (resolvedAssistive.value.errorText ? errorId : null)),
     invalid: computed(() => (resolvedAssistive.value.errorText ? ('true' as const) : null)),
-    labelledBy: computed(() => {
-      if (!labelVisible$.value) return null;
-
-      return placement$.value === 'outside' ? outsideId : insetId;
-    }),
+    labelledBy: computed(() => (labelVisible$.value ? labelId : null)),
   };
 
-  const applyAria = (element: Element, signal?: AbortSignal): (() => void) =>
-    createReactiveBindings(element, {
-      aria: {
-        'aria-describedby': () => aria.describedBy.value,
-        'aria-errormessage': () => aria.errorMessage.value,
-        'aria-invalid': () => aria.invalid.value,
-        'aria-labelledby': () => aria.labelledBy.value,
-      },
-      signal,
-    }).stop;
-
   return {
-    applyAria,
     aria,
     assistive: resolvedAssistive,
     assistiveId,

@@ -121,8 +121,6 @@ export function shift(options: ShiftOptions = {}): Middleware {
       dy = isVertical ? limited.mainAxis : limited.crossAxis;
     }
 
-    if (dx === 0 && dy === 0) return;
-
-    return { x: state.x + dx, y: state.y + dy };
+    return { data: { shift: { x: dx, y: dy } }, x: state.x + dx, y: state.y + dy };
   }, 'shift');
 }

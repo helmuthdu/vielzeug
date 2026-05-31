@@ -21,15 +21,8 @@ import { isString } from '../typed/isString';
 export function chunk(input: string, size?: number): string[];
 export function chunk<T>(input: T[], size?: number): T[][];
 export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
-  assert(Array.isArray(input as T[]) || isString(input), 'Argument must be an array or string.', {
-    args: { input },
-    type: TypeError,
-  });
-
-  assert(size >= 1, 'Chunk size must be at least 1.', {
-    args: { size },
-    type: RangeError,
-  });
+  assert(Array.isArray(input as T[]) || isString(input), 'Argument must be an array or string.', { type: TypeError });
+  assert(size >= 1, 'Chunk size must be at least 1.', { type: RangeError });
 
   return Array.from({ length: Math.ceil(input.length / size) }, (_, i) => input.slice(i * size, i * size + size)) as
     | string[]

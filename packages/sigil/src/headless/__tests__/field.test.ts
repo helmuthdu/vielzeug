@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
-import { createAssistiveState } from '../text-field';
+import { createCounterState, createErrorHelperState } from '../field-base';
 import { createTextField } from '../text-field';
 
 describe('field controls', () => {
@@ -29,8 +29,7 @@ describe('field controls', () => {
       expect(handle.fieldId).toMatch(/^field-/);
       expect(handle.errorId).toMatch(/^error-/);
       expect(handle.assistiveId).toMatch(/^helper-/);
-      expect(handle.label.inset.id).toMatch(/^label-/);
-      expect(handle.label.outside.id).toMatch(/^label-.*-outside$/);
+      expect(handle.label.id).toMatch(/^label-/);
     });
 
     it('syncs its local value from the source signal', async () => {
@@ -250,40 +249,44 @@ describe('field controls', () => {
     });
   });
 
-  describe('createAssistiveState()', () => {
-    it('derives helper/error visibility and counter thresholds', () => {
-      const value = signal('123456789');
+  describe('createErrorHelperState()', () => {
+    it('derives helper/error text', () => {
       const error = signal<string | undefined>(undefined);
       const helper = signal<string | undefined>('Helper text');
-      const maxLength = signal<number | undefined>(10);
-      const state = createAssistiveState({ error, helper, maxLength, value });
+      const state = createErrorHelperState({ error, helper });
 
       expect(state.value.helperText).toBe('Helper text');
       expect(state.value.errorText).toBe('');
-      expect(state.value.counterNearLimit).toBe(true);
-      expect(state.value.counterAtLimit).toBe(false);
 
       error.value = 'Error text';
       expect(state.value.errorText).toBe('Error text');
       expect(state.value.helperText).toBe('Helper text');
     });
+  });
 
-    it('accepts numeric maxlength values coming through attribute-style strings', () => {
-      const value = signal('12345');
-      const maxLength = signal<unknown>('10');
-      const state = createAssistiveState({
-        maxLength: maxLength as never,
-        value,
-      });
+  describe('createCounterState()', () => {
+    it('derives counter thresholds from value and maxLength', () => {
+      const value = signal('123456789');
+      const maxLength = signal<number | undefined>(10);
+      const counter = createCounterState({ maxLength, value });
 
-      expect(state.value.hasCounter).toBe(true);
-      expect(state.value.counterText).toBe('5 / 10');
+      expect(counter.value.counterNearLimit).toBe(true);
+      expect(counter.value.counterAtLimit).toBe(false);
+      expect(counter.value.counterText).toBe('9 / 10');
+    });
+
+    it('reports at-limit when value length equals maxLength', () => {
+      const value = signal('1234567890');
+      const maxLength = signal<number | undefined>(10);
+      const counter = createCounterState({ maxLength, value });
+
+      expect(counter.value.counterAtLimit).toBe(true);
     });
   });
 
-  describe('createAssistiveState() text mode', () => {
+  describe('createErrorHelperState() text mode', () => {
     it('prefers error text when error exists', () => {
-      const state = createAssistiveState({
+      const state = createErrorHelperState({
         error: signal('Required'),
         helper: signal('Hint'),
       });
@@ -293,7 +296,7 @@ describe('field controls', () => {
     });
 
     it('provides helper text when no error exists', () => {
-      const state = createAssistiveState({
+      const state = createErrorHelperState({
         error: signal(''),
         helper: signal('Hint'),
       });
@@ -512,6 +515,130 @@ describe('field controls', () => {
         originalEvent: event,
         value: 'val',
       });
+    });
+  });
+
+  describe('createField() — hasLabel override', () => {
+    it('uses hasLabel signal to override label visibility when provided', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const hasLabel = signal(true);
+
+      await mount(
+        () => {
+          handle = createTextField({
+            hasLabel,
+            prefix: 'field',
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      // hasLabel=true → label visible, aria.labelledBy non-null
+      expect(handle.label.show.value).toBe(true);
+      expect(handle.aria.labelledBy.value).not.toBeNull();
+
+      hasLabel.value = false;
+
+      // hasLabel=false → label hidden, aria.labelledBy null
+      expect(handle.label.show.value).toBe(false);
+      expect(handle.aria.labelledBy.value).toBeNull();
+    });
+
+    it('hasLabel takes precedence over the label text signal', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const hasLabel = signal(true);
+      const label = signal<string | undefined>(undefined);
+
+      await mount(
+        () => {
+          handle = createTextField({
+            hasLabel,
+            label,
+            prefix: 'field',
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      // label prop is empty, but hasLabel override forces it visible
+      expect(handle.label.show.value).toBe(true);
+
+      hasLabel.value = false;
+      expect(handle.label.show.value).toBe(false);
+    });
+  });
+
+  describe('createTextField() wire() — double-detach guard', () => {
+    it('calling the returned detach function more than once is a no-op', async () => {
+      const changeSpy = vi.fn();
+
+      const fixture = await mount(() => {
+        const tf = createTextField({
+          onChange: changeSpy,
+          prefix: 'test',
+          value: signal(''),
+        });
+
+        return html`<input
+          ref=${(el: HTMLInputElement | null) => {
+            if (el) {
+              const detach = tf.wire(el);
+
+              // Call detach twice immediately to exercise the guard
+              detach();
+              detach();
+            }
+          }} />`;
+      });
+
+      const input = fixture.query('input') as HTMLInputElement;
+
+      input.value = 'hi';
+      input.dispatchEvent(new Event('change'));
+
+      // After detach, no further change events should fire
+      expect(changeSpy).not.toHaveBeenCalled();
+    });
+
+    it('AbortSignal detach + manual detach() does not double-remove listeners', async () => {
+      const controller = new AbortController();
+      const changeSpy = vi.fn();
+      let detach!: () => void;
+
+      const fixture = await mount(() => {
+        const tf = createTextField({
+          onChange: changeSpy,
+          prefix: 'test',
+          value: signal(''),
+        });
+
+        return html`<input
+          ref=${(el: HTMLInputElement | null) => {
+            if (el) {
+              detach = tf.wire(el, controller.signal);
+            }
+          }} />`;
+      });
+
+      const input = fixture.query('input') as HTMLInputElement;
+
+      // Abort cleans up via signal
+      controller.abort();
+
+      // Manual call should be a no-op (guarded)
+      expect(() => detach()).not.toThrow();
+
+      input.value = 'world';
+      input.dispatchEvent(new Event('change'));
+
+      // Listener was removed — no call
+      expect(changeSpy).not.toHaveBeenCalled();
     });
   });
 });

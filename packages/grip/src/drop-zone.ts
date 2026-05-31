@@ -48,8 +48,31 @@ export interface DropZoneOptions {
    */
   maxFiles?: number;
   /**
+   * Optional async file gating. Called after type/extension filtering, before `onDrop`.
+   * Return (or resolve) `false` to move all type-accepted files to `onDropRejected`.
+   *
+   * Only receives type-accepted files (after `accept` and `maxFiles` filtering).
+   * Files already rejected by the `accept` filter are forwarded to `onDropRejected`
+   * unconditionally and are not passed to this function.
+   *
+   * While validation is in progress `zone.validating` is `true`.
+   *
+   * @example
+   * ```ts
+   * onValidate: async (files) => {
+   *   const ok = await checkServerQuota(files);
+   *   return ok;
+   * }
+   * ```
+   */
+  onValidate?: (files: File[]) => boolean | Promise<boolean>;
+  /**
    * When truthy, all drag events are ignored and hover state does not change.
    * Accepts a function for reactive framework integration.
+   *
+   * Note: a disabled zone does not call `preventDefault` on drag or paste events,
+   * so underlying elements (such as text editors) will still receive them.
+   *
    * @example disabled={() => isReadOnly.value}
    */
   disabled?: boolean | (() => boolean);
@@ -60,22 +83,38 @@ export interface DropZoneOptions {
   dropEffect?: DataTransfer['dropEffect'];
   /** Called when files are dropped. Receives accepted files only. */
   onDrop?: (files: File[], event: DragEvent) => void;
-  /** Called when dropped files are rejected by the `accept` filter or `maxFiles` limit. */
-  onDropRejected?: (files: File[], event: DragEvent) => void;
+  /**
+   * Called when dropped or pasted files are rejected by the `accept` filter, `maxFiles` limit, or `onValidate`.
+   * When files are rejected via paste the event will be a `ClipboardEvent`, not a `DragEvent`.
+   */
+  onDropRejected?: (files: File[], event: DragEvent | ClipboardEvent) => void;
   /**
    * Called whenever hover state toggles.
    * Use this for drag-over styling.
    */
   onHoverChange?: (hovered: boolean) => void;
+  /**
+   * When `true`, a `paste` event listener is added to `window`. Pasted files run
+   * through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.
+   * @default false
+   */
+  paste?: boolean;
+  /**
+   * Called when files are pasted via the clipboard. Falls back to `onDrop` when omitted.
+   * Only active when `paste: true`.
+   */
+  onPaste?: (files: File[], event: ClipboardEvent) => void;
 }
 
 export interface DropZone extends Disposable {
   /** Whether the pointer is currently dragging over the zone. */
   readonly hovered: boolean;
-  /** Accepted files from the last drop. */
+  /** Accepted files from the last drop or paste. */
   readonly files: readonly File[];
-  /** Rejected files from the last drop. */
+  /** Rejected files from the last drop or paste. */
   readonly rejected: readonly File[];
+  /** `true` while an `onValidate` promise is pending. */
+  readonly validating: boolean;
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -101,6 +140,29 @@ function itemsMatchAccept(items: DataTransferItemList, accept: string[]): boolea
         return item.type === p;
       }),
   );
+}
+
+/**
+ * Filter `files` through `accept` patterns and `maxFiles` limit.
+ * Returns accepted and rejected arrays.
+ */
+function applyFileFilters(
+  files: File[],
+  accept: string[],
+  maxFiles: number | undefined,
+): { accepted: File[]; rejected: File[] } {
+  const accepted: File[] = [];
+  const rejected: File[] = [];
+
+  for (const f of files) {
+    (matchesAccept(f, accept) ? accepted : rejected).push(f);
+  }
+
+  if (maxFiles !== undefined && accepted.length > maxFiles) {
+    rejected.push(...accepted.splice(maxFiles));
+  }
+
+  return { accepted, rejected };
 }
 
 // ─── createDropZone ───────────────────────────────────────────────────────────
@@ -137,6 +199,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   let dragAccepted = false;
   let files: File[] = [];
   let rejected: File[] = [];
+  let validating = false;
 
   const updateCounter = (next: number): void => {
     const wasHovered = dragCounter > 0 && dragAccepted;
@@ -153,6 +216,71 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
   const resetCounter = (): void => {
     updateCounter(0);
+  };
+
+  // Settle the final accepted/rejected split into state and fire callbacks.
+  // Generic over event type so the rejection callback receives the correct concrete type
+  // (DragEvent for drops, ClipboardEvent for pastes) without internal casts.
+  const settle = <E extends DragEvent | ClipboardEvent>(
+    acceptedFiles: File[],
+    rejectedFiles: File[],
+    fireAccepted: ((f: File[], ev: E) => void) | undefined,
+    fireRejected: ((f: File[], ev: E) => void) | undefined,
+    event: E,
+  ): void => {
+    files = acceptedFiles;
+    rejected = rejectedFiles;
+
+    if (acceptedFiles.length > 0) fireAccepted?.(acceptedFiles, event);
+
+    if (rejectedFiles.length > 0) fireRejected?.(rejectedFiles, event);
+  };
+
+  // Run accept/maxFiles filter, then optionally run async onValidate, then settle.
+  const dispatchWithValidation = <E extends DragEvent | ClipboardEvent>(
+    rawFiles: File[],
+    event: E,
+    fireAccepted: ((f: File[], ev: E) => void) | undefined,
+    fireRejected: ((f: File[], ev: E) => void) | undefined,
+  ): void => {
+    const { accepted, rejected: rej } = applyFileFilters(rawFiles, getAccept(), maxFiles);
+
+    if (!options.onValidate || accepted.length === 0) {
+      settle(accepted, rej, fireAccepted, fireRejected, event);
+
+      return;
+    }
+
+    const result = options.onValidate(accepted);
+
+    // Synchronous boolean: skip the microtask queue entirely for instant feedback.
+    if (typeof result === 'boolean') {
+      if (result) {
+        settle(accepted, rej, fireAccepted, fireRejected, event);
+      } else {
+        settle([], [...rej, ...accepted], undefined, fireRejected, event);
+      }
+
+      return;
+    }
+
+    validating = true;
+
+    void Promise.resolve(result)
+      .then((valid) => {
+        validating = false;
+
+        if (valid) {
+          settle(accepted, rej, fireAccepted, fireRejected, event);
+        } else {
+          // validation failed — all type-accepted files become rejected
+          settle([], [...rej, ...accepted], undefined, fireRejected, event);
+        }
+      })
+      .catch(() => {
+        validating = false;
+        settle([], [...rej, ...accepted], undefined, fireRejected, event);
+      });
   };
 
   const handleDragEnter = (e: DragEvent): void => {
@@ -202,25 +330,23 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     if (!raw) return;
 
-    const accept = getAccept();
-    const acceptedFiles: File[] = [];
-    const rejectedFiles: File[] = [];
+    dispatchWithValidation(Array.from(raw), e, (f, ev) => onDrop?.(f, ev), onDropRejected);
+  };
 
-    for (const f of Array.from(raw)) {
-      (matchesAccept(f, accept) ? acceptedFiles : rejectedFiles).push(f);
-    }
+  const handlePaste = (e: ClipboardEvent): void => {
+    if (resolveDisabled(disabled)) return;
 
-    // Apply maxFiles limit: excess accepted files become rejected.
-    if (maxFiles !== undefined && acceptedFiles.length > maxFiles) {
-      rejectedFiles.push(...acceptedFiles.splice(maxFiles));
-    }
+    const clipFiles = e.clipboardData?.files;
 
-    files = acceptedFiles;
-    rejected = rejectedFiles;
+    if (!clipFiles?.length) return;
 
-    if (acceptedFiles.length > 0) onDrop?.(acceptedFiles, e);
-
-    if (rejectedFiles.length > 0) onDropRejected?.(rejectedFiles, e);
+    e.preventDefault();
+    dispatchWithValidation(
+      Array.from(clipFiles),
+      e,
+      options.onPaste ? (f, ev) => options.onPaste!(f, ev) : (f, ev) => onDrop?.(f, ev as unknown as DragEvent),
+      onDropRejected,
+    );
   };
 
   element.addEventListener('dragenter', handleDragEnter);
@@ -228,6 +354,10 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   element.addEventListener('dragleave', handleDragLeave);
   element.addEventListener('drop', handleDrop);
 
+  if (options.paste) window.addEventListener('paste', handlePaste);
+
+  // These global listeners catch drags that end outside the zone.
+  // The window 'drop' also fires for in-zone drops, but resetCounter() is idempotent at counter=0.
   window.addEventListener('dragend', resetCounter);
   window.addEventListener('drop', resetCounter);
 
@@ -236,6 +366,9 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     element.removeEventListener('dragover', handleDragOver);
     element.removeEventListener('dragleave', handleDragLeave);
     element.removeEventListener('drop', handleDrop);
+
+    if (options.paste) window.removeEventListener('paste', handlePaste);
+
     window.removeEventListener('dragend', resetCounter);
     window.removeEventListener('drop', resetCounter);
     resetCounter();
@@ -253,5 +386,8 @@ export function createDropZone(options: DropZoneOptions): DropZone {
       return rejected;
     },
     [Symbol.dispose]: destroy,
+    get validating() {
+      return validating;
+    },
   };
 }

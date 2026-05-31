@@ -111,6 +111,57 @@ zone.destroy();
 using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
 ```
 
+### Async validation
+
+Gate drops behind an async check with `onValidate`. The zone sets `validating: true` while the promise is pending; on resolution, accepted files go to `onDrop` and rejected files go to `onDropRejected`.
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*'],
+  onValidate: async (files) => {
+    const ok = await checkServerQuota(files);
+    return ok; // false → all files forwarded to onDropRejected
+  },
+  onDrop: (files) => uploadFiles(files),
+  onDropRejected: (files) => showError('Quota exceeded'),
+});
+
+// show a spinner while checking
+console.log(zone.validating); // true during pending check
+```
+
+A synchronous boolean return skips the microtask queue entirely:
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  onValidate: (files) => files.every((f) => f.size < 5_000_000), // sync
+  onDrop: handleFiles,
+});
+```
+
+### Clipboard paste
+
+Set `paste: true` to accept files pasted from the clipboard. The same `accept`, `maxFiles`, and `onValidate` pipeline applies.
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  paste: true,
+  accept: ['image/*'],
+  onPaste: (files, event) => {
+    uploadFiles(files);
+  },
+  onDropRejected: (files, event) => {
+    // event is ClipboardEvent when rejected via paste
+    showError(`${files.length} file(s) not accepted`);
+  },
+});
+```
+
+When `onPaste` is omitted, accepted pasted files fall through to `onDrop`.
+
 ---
 
 ## Sortable
@@ -156,7 +207,9 @@ createSortable({
 
 ### Keyboard reordering
 
-Focus an item and use arrow keys to move it. `Home` and `End` move to boundaries.
+Focus an item and use arrow keys to move it. `Home` and `End` move to the boundary positions.
+
+When an item is already at the first or last position, the boundary key press is not consumed — the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`.
 
 ### Connected lists
 
@@ -270,6 +323,61 @@ createSortable({
 sortable.destroy();
 // or:
 using sortable = createSortable({ element: listEl, onReorder: saveOrder });
+```
+
+### FLIP animation hook
+
+`onBeforeReorder` fires just before the DOM reorder commits, for both drag and keyboard moves. At the time of the call items are still in their pre-commit positions, making it the right place to record element bounds for FLIP animations.
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  onBeforeReorder: (from, to) => {
+    // snapshot bounds before the DOM moves
+    const snapshots = new Map(
+      getItems().map((el) => [el.dataset.sortId!, el.getBoundingClientRect()]),
+    );
+
+    requestAnimationFrame(() => {
+      // animate from snapshot to new position
+      for (const [id, before] of snapshots) {
+        const el = listEl.querySelector(`[data-sort-id="${id}"]`) as HTMLElement;
+        const after = el.getBoundingClientRect();
+        const dy = before.top - after.top;
+        if (dy === 0) continue;
+        el.style.transform = `translateY(${dy}px)`;
+        el.style.transition = 'none';
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 200ms ease';
+          el.style.transform = '';
+        });
+      }
+    });
+  },
+  onReorder: saveOrder,
+});
+```
+
+### Optimistic updates and revert
+
+`onReorder` may return a revert function. Calling `sortable.revert()` invokes it and clears it. Use this to roll back optimistic UI updates on server failure. Only the most recent reorder can be reverted.
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  onReorder: (ids) => {
+    const prev = currentOrder;
+    setOrder(ids); // optimistic update
+    return () => setOrder(prev); // rolled back by sortable.revert()
+  },
+});
+
+// On server error:
+try {
+  await api.saveOrder(currentOrder);
+} catch {
+  sortable.revert();
+}
 ```
 
 ## Framework Integration

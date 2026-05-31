@@ -1,6 +1,5 @@
 import { css } from '@vielzeug/craft';
-import { type Fixture, mount } from '@vielzeug/craft/testing';
-import { user } from '@vielzeug/craft/testing';
+import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
 vi.mock('../../styles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../styles')>();

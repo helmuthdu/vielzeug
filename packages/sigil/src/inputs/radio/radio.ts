@@ -2,8 +2,8 @@ import { computed, define, defineField, html, inject, onCleanup, prop } from '@v
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, createCheckable, createListControl, toAbortSignal } from '../../headless';
-import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { type CheckableChangePayload, componentSignal, createCheckable, createListControl } from '../../headless';
+import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -14,7 +14,6 @@ import {
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
-import { connectFormField } from '../shared/use-field';
 import componentStyles from './radio.css?inline';
 
 /** Radio component properties */
@@ -164,13 +163,15 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
       },
       prefix: 'radio',
       role: 'radio',
-      signal: toAbortSignal(onCleanup),
+      signal: componentSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
     const { assistiveId, checked, disabled, labelId, toggle } = checkable;
 
-    connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
+    checkable.bindFormField(
+      defineField<string>({ disabled: checkable.disabled, toFormValue: (v) => v, value: checkable.checkableFormValue }),
+    );
 
     bind({
       attr: {

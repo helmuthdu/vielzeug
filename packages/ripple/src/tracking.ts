@@ -107,6 +107,22 @@ export const withSourceObserver = <T>(observer: SourceObserver, fn: () => T): T 
   }
 };
 
+// ── untrack ───────────────────────────────────────────────────────────────────
+
+/**
+ * Runs `fn` without recording any reactive reads as dependencies of the enclosing
+ * effect or computed. Useful when you need to read reactive state "silently".
+ *
+ * @example
+ * ```ts
+ * effect(() => {
+ *   const a = count.value;               // tracked
+ *   const b = untrack(() => name.value); // NOT tracked — no re-run when name changes
+ * });
+ * ```
+ */
+export const untrack = <T>(fn: () => T): T => withTracking(null, fn);
+
 // ── trackSource ───────────────────────────────────────────────────────────────
 //
 // Records `source` as a dependency of the currently active tracking context.

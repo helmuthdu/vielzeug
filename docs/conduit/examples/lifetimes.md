@@ -18,9 +18,9 @@ Set `lifetime` in `factory()` options to control when Conduit creates a new inst
 The factory runs once. Every subsequent call returns the same instance.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const Counter = createToken<{ id: number }>('Counter');
+const Counter = token<{ id: number }>('Counter');
 let nextId = 0;
 
 const container = createContainer();
@@ -40,9 +40,9 @@ console.log(nextId);    // 1 — factory ran once
 The factory runs on every resolution. The result is never cached.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const RequestId = createToken<string>('RequestId');
+const RequestId = token<string>('RequestId');
 const container = createContainer();
 
 container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'transient' });
@@ -58,9 +58,9 @@ console.log(id1 === id2); // false — two distinct UUIDs
 One instance per child container. The factory must be resolved from a child — calling `resolve()` or `resolveSync()` on the root for a scoped token throws `ScopedResolutionError`.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const Session = createToken<{ userId: string }>('Session');
+const Session = token<{ userId: string }>('Session');
 const container = createContainer();
 
 container.factory(Session, () => ({ userId: crypto.randomUUID() }), { lifetime: 'scoped' });
@@ -76,6 +76,31 @@ console.log(s1 === s2); // true  — same child scope
 console.log(s1 === s3); // false — different child scopes
 ```
 
+#### Named Scope
+
+One instance per scope container created with a specific `ScopeToken`. Use `scope()` to create the token and `createScope(scopeToken)` to create the matching container.
+
+```ts
+import { createContainer, scope, token } from '@vielzeug/conduit';
+
+const RequestScope = scope('request');
+const RequestId = token<string>('RequestId');
+const container = createContainer();
+
+container.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
+
+// Resolving from the root or a plain child throws ScopedResolutionError
+// Resolving from a matching scope container creates one instance per scope
+const scopeA = container.createScope(RequestScope);
+const scopeB = container.createScope(RequestScope);
+
+const idA = await scopeA.resolve(RequestId);
+const idB = await scopeB.resolve(RequestId);
+
+console.log(idA === idB); // false — each scope has its own instance
+console.log(await scopeA.resolve(RequestId) === idA); // true — same scope, same instance
+```
+
 ### Pitfalls
 
 - A transient factory can never be resolved synchronously with `resolveSync()` — transients are never cached. Use `resolve()` for transient providers.
@@ -84,6 +109,7 @@ console.log(s1 === s3); // false — different child scopes
 
 ### Related
 
+- [Named Scopes](./multi-providers.md)
 - [Child Containers](./child-containers.md)
 - [Sync Resolution](./sync-resolution.md)
 - [Dispose Lifecycle](./dispose-lifecycle.md)

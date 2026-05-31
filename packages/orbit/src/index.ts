@@ -34,13 +34,13 @@ export type { LimitShiftOptions, ShiftLimiter, ShiftOptions } from './middleware
 export { limitShift } from './middleware/shift';
 
 export { size } from './middleware/size';
-export type { SizeApplyArgs, SizeOptions } from './middleware/size';
+export type { SizeOptions } from './middleware/size';
 
 // Preset types (functions live on the @vielzeug/orbit/presets sub-path)
 export type { PositioningPreset, PresetOptions } from './presets';
 
 // Public utilities
-export { getAlignment, getSide } from './utils';
+export { MIDDLEWARE_NAME, getAlignment, getSide } from './utils';
 
 // Types
 export type {
@@ -49,6 +49,7 @@ export type {
   ComputePositionOptions,
   ComputePositionResult,
   DetectOverflowOptions,
+  FlipData,
   FloatHandle,
   HideData,
   Middleware,
@@ -60,6 +61,7 @@ export type {
   Placement,
   Rect,
   ReferenceElement,
+  ShiftData,
   Side,
   SideObject,
   SizeData,

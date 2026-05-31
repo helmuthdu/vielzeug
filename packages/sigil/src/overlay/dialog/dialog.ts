@@ -1,4 +1,4 @@
-import { define, html, prop, ref, onMounted } from '@vielzeug/craft';
+import { define, html, onMounted, prop, ref } from '@vielzeug/craft';
 
 import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
 import type { PaddingSize, RoundedSize } from '../../types';

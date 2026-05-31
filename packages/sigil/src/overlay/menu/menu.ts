@@ -11,7 +11,7 @@ import {
   type DropdownCloseReason,
   type OverlayOpenDetail,
 } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
 import menuItemStyles from './menu-item.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
@@ -212,24 +212,32 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
     }
 
     const optionList = createOptionList<HTMLElement>({
-      getBoundary: () => el,
-      getItems: getItems,
-      getPanel: () => panelEl,
-      getReference: () => triggerEl,
-      getTrigger: () => triggerEl,
-      isDisabled: () => isDisabled.value,
-      isItemDisabled: (item) => item.hasAttribute('disabled'),
-      // syncAria on the slotted trigger element handles aria-expanded, aria-controls,
-      // aria-haspopup, and aria-disabled — opt out of duplicate management here.
-      manageAriaExpanded: false,
-      onClose: (reason) => emit('close', { reason }),
-      onNavigate: (_action, index) => {
-        const nextItem = getItems()[index];
-
-        getItemFocusable(nextItem)?.focus();
+      behavior: {
+        isDisabled: () => isDisabled.value,
+        // syncAria on the slotted trigger element handles aria-expanded, aria-controls,
+        // aria-haspopup, and aria-disabled — opt out of duplicate management here.
+        manageAriaExpanded: false,
       },
-      onOpen: (reason) => emit('open', { reason }),
-      positionerOptions: {
+      dom: {
+        getBoundary: () => el,
+        getPanel: () => panelEl,
+        getReference: () => triggerEl,
+        getTrigger: () => triggerEl,
+      },
+      items: {
+        getItems: getItems,
+        isItemDisabled: (item) => item.hasAttribute('disabled'),
+      },
+      on: {
+        onClose: (reason) => emit('close', { reason }),
+        onNavigate: (_action, index) => {
+          const nextItem = getItems()[index];
+
+          getItemFocusable(nextItem)?.focus();
+        },
+        onOpen: (reason) => emit('open', { reason }),
+      },
+      positioning: {
         getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
         matchWidth: false,
         offsetPx: 4,

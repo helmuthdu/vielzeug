@@ -50,8 +50,27 @@
   }
 
   /* Expand height to fit inset label + input row */
-  .field:has(.label-inset:not([hidden])) {
+  .input-wrapper:has(.label:not([hidden])) .field {
     height: auto;
+  }
+
+  /* Outside placement: label is above the field (natural flow) */
+
+  /* Inset placement (default): label appears inside the field border */
+  :host(:not([label-placement='outside'])) .input-wrapper {
+    position: relative;
+  }
+
+  :host(:not([label-placement='outside'])) .label {
+    position: absolute;
+    inset-block-start: var(--size-2);
+    inset-inline-start: var(--_padding-x, var(--size-3));
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  :host(:not([label-placement='outside'])) .input-wrapper:has(.label:not([hidden])) .field {
+    padding-block-start: calc(var(--size-2) + 1lh + 2px);
   }
 
   .input-row {
@@ -65,13 +84,14 @@
        Label Styles
        ======================================== */
 
-  .label-inset,
-  .label-outside,
-  label.label-inset,
-  label.label-outside {
+  .label,
+  label.label {
+    margin-bottom: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: var(--text-xs);
     font-weight: var(--font-medium);
+    line-height: var(--leading-tight);
     color: var(--color-contrast-500);
     white-space: nowrap;
     cursor: pointer;
@@ -79,15 +99,11 @@
     transition: var(--_motion-transition, color var(--transition-fast));
   }
 
-  .label-inset,
-  label.label-inset {
-    margin-bottom: 2px;
-    font-size: var(--text-xs);
-    line-height: var(--leading-tight);
-  }
-
-  .label-outside,
-  label.label-outside {
+  /* Outside placement: label moves outside the field via CSS */
+  :host([label-placement='outside']) .label,
+  :host([label-placement='outside']) label.label {
+    order: -1;
+    margin-bottom: 0;
     font-size: var(--text-sm);
     line-height: var(--leading-none);
   }
@@ -158,8 +174,7 @@
     transform: translateY(-1px);
   }
 
-  :host(:not([disabled])) .field:focus-within .label-inset,
-  :host(:not([disabled])) .field:focus-within .label-outside {
+  :host(:not([disabled])) .field:focus-within .label {
     color: var(--_theme-focus);
   }
 

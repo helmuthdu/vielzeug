@@ -358,7 +358,7 @@ describe('createVirtualizer – measureEl', () => {
   });
 });
 
-// ─── refresh / invalidate ─────────────────────────────────────────────────────
+// ─── refresh / invalidate / redraw ─────────────────────────────────────────────
 
 describe('createVirtualizer – refresh / invalidate', () => {
   it('refresh keeps measured sizes', async () => {
@@ -404,6 +404,46 @@ describe('createVirtualizer – refresh / invalidate', () => {
     expect(v.items.find((i) => i.index === 0)?.size).toBe(20);
     expect(v.totalSize).toBe(5 * 20);
     v.destroy();
+  });
+});
+
+// ─── redraw ───────────────────────────────────────────────────────────────────
+
+describe('createVirtualizer – redraw', () => {
+  it('re-emits without changing sizes or offsets (O(1) path)', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const onChange = vi.fn();
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20, onChange });
+    const callsBefore = onChange.mock.calls.length;
+
+    v.redraw();
+
+    expect(onChange.mock.calls.length).toBe(callsBefore + 1);
+    // Sizes unchanged
+    expect(v.totalSize).toBe(5 * 20);
+    v.destroy();
+  });
+
+  it('preserves measured sizes (does not clear cache)', async () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20, overscan: { end: 0, start: 0 } });
+
+    v.measure(0, 50);
+    await flushMicrotasks();
+
+    v.redraw();
+
+    expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
+    v.destroy();
+  });
+
+  it('is a no-op after destroy', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    v.destroy();
+
+    expect(() => v.redraw()).not.toThrow();
   });
 });
 
@@ -883,6 +923,7 @@ describe('createVirtualizer – lifecycle', () => {
       v.measureEl(0, document.createElement('div'));
       v.invalidate();
       v.refresh();
+      v.redraw();
       v.prepend(3);
       v.scrollToIndex(0);
       v.scrollToOffset(0);
@@ -901,5 +942,54 @@ describe('exported constants', () => {
 
   it('DEFAULT_OVERSCAN is 3', () => {
     expect(DEFAULT_OVERSCAN).toBe(3);
+  });
+});
+
+// ─── Empty-state dedup (Bug 2) ────────────────────────────────────────────────
+
+describe('createVirtualizer – empty-state dedup', () => {
+  it('does not re-emit on repeated scroll events when count is 0', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const onChange = vi.fn();
+
+    createVirtualizer(el, { count: 0, estimateSize: 20, onChange });
+
+    const callsAfterConstruct = onChange.mock.calls.length;
+
+    // commitDedup(-1,-1) records prevTotalSize=0 so prevTotalSize===totalSize
+    // on subsequent calls. Without the fix this re-emits on every scroll event.
+    el.dispatchEvent(new Event('scroll'));
+    el.dispatchEvent(new Event('scroll'));
+    el.dispatchEvent(new Event('scroll'));
+
+    expect(onChange.mock.calls.length).toBe(callsAfterConstruct);
+  });
+
+  it('does not re-emit when viewport size is 0 and scroll fires', () => {
+    const el = makeContainer({ clientHeight: 0 });
+    const onChange = vi.fn();
+
+    createVirtualizer(el, { count: 10, estimateSize: 20, onChange });
+
+    const callsAfterConstruct = onChange.mock.calls.length;
+
+    el.dispatchEvent(new Event('scroll'));
+    el.dispatchEvent(new Event('scroll'));
+
+    expect(onChange.mock.calls.length).toBe(callsAfterConstruct);
+  });
+
+  it('re-emits once when count transitions from 0 to positive', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const onChange = vi.fn();
+    const v = createVirtualizer(el, { count: 0, estimateSize: 20, onChange });
+
+    const callsBefore = onChange.mock.calls.length;
+
+    v.update({ count: 5 });
+
+    expect(onChange.mock.calls.length).toBe(callsBefore + 1);
+    expect(onChange.mock.calls.at(-1)?.[0].items.length).toBeGreaterThan(0);
+    v.destroy();
   });
 });

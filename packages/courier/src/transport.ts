@@ -1,6 +1,14 @@
-import { anySignal } from '@vielzeug/arsenal';
-
 export type FetchContext = { init: RequestInit; url: string };
+
+export function anySignal(...signals: ReadonlyArray<AbortSignal | null | undefined>): AbortSignal | undefined {
+  const active = signals.filter((s): s is AbortSignal => s != null);
+
+  if (active.length === 0) return undefined;
+
+  if (active.length === 1) return active[0];
+
+  return AbortSignal.any(active);
+}
 export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 
 export type TransportOptions = {

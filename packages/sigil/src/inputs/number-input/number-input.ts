@@ -5,7 +5,7 @@ import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createSpinnerControl } from '../../headless';
 import '../../content/icon/icon';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { useTextField } from '../shared/use-field';
@@ -121,12 +121,12 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
         helper: undefined,
         label: props.label,
         labelPlacement: props['label-placement'],
-        onChange: (event, value) => {
+        onChange: (event: Event, value: string) => {
           const n = value !== '' ? Number.parseFloat(value) : null;
 
           commit(Number.isNaN(n ?? NaN) ? null : n, event);
         },
-        onInput: (event, value) => {
+        onInput: (event: Event, value: string) => {
           const n = value !== '' ? Number.parseFloat(value) : null;
 
           emit('input', { originalEvent: event, value: Number.isNaN(n ?? NaN) ? null : n });
@@ -206,23 +206,10 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
           <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
         </button>
         <div class="field-wrapper" part="field">
-          <label
-            class="label-outside"
-            for="${tf.fieldId}"
-            id="${label.outside.id}"
-            part="label"
-            ?hidden="${() => !label.outside.show.value}"
+          <label class="label" for="${tf.fieldId}" id="${label.id}" part="label" ?hidden="${() => !label.show.value}"
             >${props.label}</label
           >
           <div class="field" part="input-wrapper">
-            <label
-              class="label-inset"
-              for="${tf.fieldId}"
-              id="${label.inset.id}"
-              part="label"
-              ?hidden="${() => !label.inset.show.value}"
-              >${props.label}</label
-            >
             <input
               part="input"
               id="${tf.fieldId}"

@@ -11,20 +11,20 @@ Application startup requires several independent services to be initialized in p
 
 ### Solution
 
-Use `Promise.all()` with multiple `container.resolve()` calls to initialize independent providers concurrently. Use `container.resolveMany()` only when one token intentionally has multiple providers.
+Use `container.resolveMany()` to resolve multiple tokens concurrently and get a typed tuple back in one call.
 
-#### Parallel resolution of independent tokens
+#### Parallel resolution with resolveMany
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Logger { log(msg: string): void }
 interface Config { apiUrl: string }
 interface Metrics { record(event: string): void }
 
-const Logger = createToken<Logger>('Logger');
-const Config = createToken<Config>('Config');
-const Metrics = createToken<Metrics>('Metrics');
+const Logger = token<Logger>('Logger');
+const Config = token<Config>('Config');
+const Metrics = token<Metrics>('Metrics');
 
 const container = createContainer();
 
@@ -32,39 +32,46 @@ container.value(Logger, console);
 container.factory(Config, async () => fetch('/config.json').then((r) => r.json()));
 container.factory(Metrics, async () => initMetrics());
 
-// All three initialize concurrently
-const [logger, config, metrics] = await Promise.all([
-  container.resolve(Logger),
-  container.resolve(Config),
-  container.resolve(Metrics),
-]);
+// All three initialize concurrently; result is a typed tuple
+const [logger, config, metrics] = await container.resolveMany([Logger, Config, Metrics] as const);
 ```
 
-#### Resolving multiple providers for one token
+#### Parallel resolution with Promise.all
+
+Use `Promise.all` when you need per-token error handling or conditional resolution.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-interface Plugin { name: string; activate(): void }
+interface Cache { get(key: string): unknown }
 
-const Plugin = createToken<Plugin>('Plugin');
+const Logger = token<{ log(msg: string): void }>('Logger');
+const Cache = token<Cache>('Cache');
+
 const container = createContainer();
+container.value(Logger, console);
+container.factory(Cache, async () => connectCache());
 
-container.value(Plugin, { name: 'analytics', activate() {} }, { multi: true });
-container.value(Plugin, { name: 'logger', activate() {} }, { multi: true });
-container.value(Plugin, { name: 'devtools', activate() {} }, { multi: true });
+// Wrap individual calls when partial failure is acceptable
+const [logger, cacheResult] = await Promise.all([
+  container.resolve(Logger),
+  container.tryResolve(Cache),
+]);
 
-const plugins = await container.resolveMany(Plugin);
-plugins.forEach((p) => p.activate());
+if (cacheResult.ok) {
+  logger.log(`Cache connected`);
+} else {
+  logger.log('Cache unavailable — running without cache');
+}
 ```
 
 ### Pitfalls
 
-- `Promise.all()` fails fast — if any one factory rejects, the entire call rejects. Wrap individual calls in `resolveOptional()` when partial failure is acceptable.
-- Calling `resolveMany()` on a token with a single non-multi provider throws `MultipleProvidersError`. Use `resolve()` for tokens that should have exactly one provider.
+- `resolveMany()` rejects if **any** token fails — it uses `Promise.all` semantics. Use `tryResolve()` on individual tokens when partial failure is acceptable.
+- `resolveMany()` takes an **array of distinct tokens** (`[T1, T2, T3] as const`) and returns a typed tuple. It is not for resolving multiple implementations of the same token.
 
 ### Related
 
-- [Multi Providers](./multi-providers.md)
 - [Async Providers](./async-providers.md)
+- [Sync Resolution](./sync-resolution.md)
 - [Basic Setup](./basic-setup.md)

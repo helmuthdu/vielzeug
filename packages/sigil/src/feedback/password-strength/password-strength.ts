@@ -1,5 +1,4 @@
-import { computed, define, html } from '@vielzeug/craft';
-import { prop } from '@vielzeug/craft';
+import { computed, define, html, prop } from '@vielzeug/craft';
 
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './password-strength.css?inline';

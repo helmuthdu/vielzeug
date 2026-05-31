@@ -16,18 +16,17 @@ import {
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
+  type ChoiceChangeDetail,
   createChoiceField,
   createStableId,
-  type ChoiceChangeDetail,
   getChoiceLabel,
   getLightChildrenByTag,
   setBooleanAttribute,
   setMaybeAttribute,
 } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { connectFormField } from '../shared/use-field';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -139,7 +138,9 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
     });
     const checkedValues = choice.selectedValues;
 
-    connectFormField(choice, defineField, choice.formValue, (v) => v);
+    choice.bindFormField(
+      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
+    );
 
     const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);

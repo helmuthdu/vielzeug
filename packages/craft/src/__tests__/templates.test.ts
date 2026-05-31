@@ -220,12 +220,11 @@ describe('Template: HTML System', () => {
       warn.mockRestore();
     });
 
-    it('should block data: scheme in src', async () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { query } = await mount(() => html`<img src=${'data:text/html,<script>evil()</script>'} />`);
+    it('should allow data: scheme in src (e.g. inline images)', async () => {
+      const dataUri = 'data:image/png;base64,iVBORw0KGgo=';
+      const { query } = await mount(() => html`<img src=${dataUri} />`);
 
-      expect(query('img')?.hasAttribute('src')).toBe(false);
-      warn.mockRestore();
+      expect(query('img')?.getAttribute('src')).toBe(dataUri);
     });
 
     it('should block javascript: in action attribute', async () => {

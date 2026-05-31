@@ -1,4 +1,12 @@
-import { createWorker, WorkerError } from '../worker';
+import {
+  createWorker,
+  PROTOCOL_VERSION,
+  WorkerError,
+  WorkerQueueFullError,
+  WorkerRuntimeError,
+  WorkerTaskError,
+  WorkerTimeoutError,
+} from '../worker';
 
 async function expectWorkerErrorCode<T>(promise: Promise<T>, code: string): Promise<void> {
   await expect(promise).rejects.toMatchObject({ code });
@@ -194,14 +202,15 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
-    it('preserves original error metadata in cause while keeping WorkerError identity', async () => {
+    it('preserves original error metadata in cause as WorkerTaskError', async () => {
       const worker = createWorker<void, never>(() => {
         throw new TypeError('bad type');
       });
-      const error = await worker.run(undefined).catch((e) => e as WorkerError);
+      const error = await worker.run(undefined).catch((e) => e as WorkerTaskError);
 
       expect(error).toBeInstanceOf(WorkerError);
-      expect(error.name).toBe('WorkerError');
+      expect(error).toBeInstanceOf(WorkerTaskError);
+      expect(error.name).toBe('WorkerTaskError');
       expect(error.code).toBe('task');
       expect((error.cause as Error).name).toBe('TypeError');
       expect((error.cause as Error).message).toBe('bad type');
@@ -659,6 +668,82 @@ describe('createWorker', () => {
       expect(chunks).toEqual([0, 1, 2]);
       worker.dispose();
     }, 2000);
+
+    it('propagates task errors thrown during streaming', async () => {
+      const worker = createWorker<number, number[]>((n) => {
+        if (n < 0) throw new Error('bad stream');
+
+        return (async function* () {
+          yield 1;
+        })() as unknown as number[];
+      });
+
+      await expect(async () => {
+        for await (const _ of worker.runStream(-1)) {
+          // consume
+        }
+      }).rejects.toMatchObject({ code: 'task', message: 'bad stream' });
+      worker.dispose();
+    });
+
+    it('rejects with WorkerRuntimeError when all slots are busy during runStream', async () => {
+      const worker = createWorker<number, number[]>(
+        (n) =>
+          (async function* () {
+            await new Promise((r) => setTimeout(r, 100));
+            yield n;
+          })() as unknown as number[],
+        { concurrency: 1 },
+      );
+
+      // Occupy the only slot
+      const stream1 = worker.runStream(1);
+
+      // All slots busy — must fail with WorkerRuntimeError, not WorkerQueueFullError
+      const error = await (async () => {
+        for await (const _ of worker.runStream(2)) {
+          // should never yield
+        }
+      })().catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(WorkerRuntimeError);
+      expect((error as WorkerRuntimeError).code).toBe('worker');
+
+      // Drain stream1 to release the slot
+      for await (const _ of stream1) {
+        // consume
+      }
+      worker.dispose();
+    }, 2000);
+
+    it('does not contaminate the next stream with a stale timeout when consumer breaks early', async () => {
+      const worker = createWorker<number, number[]>(
+        (n) =>
+          (async function* () {
+            for (let i = 0; i < n; i++) {
+              await new Promise((r) => setTimeout(r, 5));
+              yield i;
+            }
+          })() as unknown as number[],
+        { concurrency: 1 },
+      );
+
+      // Break early from a stream that has a generous timeout set.
+      // Without the cancel() fix, the old 1000ms timer would fire and kill the next stream.
+      for await (const _ of worker.runStream(100, { timeout: 1000 })) {
+        break;
+      }
+
+      // Second stream must complete normally — not killed by the stale timer from the first.
+      const chunks: number[] = [];
+
+      for await (const chunk of worker.runStream(3)) {
+        chunks.push(chunk as unknown as number);
+      }
+
+      expect(chunks).toEqual([0, 1, 2]);
+      worker.dispose();
+    }, 5000);
   });
 
   describe('createModuleWorker', () => {
@@ -682,6 +767,265 @@ describe('createWorker', () => {
 
       // Just verify construction doesn't throw; actual execution needs a real module worker.
       expect(() => createModuleWorker<number, number>('http://localhost/worker.js')).not.toThrow();
+    });
+  });
+
+  describe('typed error classes (F6)', () => {
+    it('PROTOCOL_VERSION is exported as a number constant', () => {
+      expect(typeof PROTOCOL_VERSION).toBe('number');
+      expect(PROTOCOL_VERSION).toBeGreaterThan(0);
+    });
+
+    it('timeout error is instanceof WorkerTimeoutError with timeoutMs', async () => {
+      const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 25 });
+      const error = await worker.run(undefined).catch((e) => e);
+
+      expect(error).toBeInstanceOf(WorkerError);
+      expect(error).toBeInstanceOf(WorkerTimeoutError);
+      expect(error.name).toBe('WorkerTimeoutError');
+      expect(error.code).toBe('timeout');
+      expect(error.timeoutMs).toBe(25);
+      worker.dispose();
+    }, 1000);
+
+    it('close() timeout error is a WorkerTimeoutError with timeoutMs', async () => {
+      const worker = createWorker<void, void>(() => new Promise(() => {}));
+      const running = worker.run(undefined);
+      const error = await worker.close(25).catch((e) => e);
+
+      expect(error).toBeInstanceOf(WorkerTimeoutError);
+      expect(error.timeoutMs).toBe(25);
+      worker.dispose();
+      await running.catch(() => {});
+    }, 1000);
+
+    it('task error is instanceof WorkerTaskError with cause', async () => {
+      const worker = createWorker<void, never>(() => {
+        throw new RangeError('out of range');
+      });
+      const error = await worker.run(undefined).catch((e) => e);
+
+      expect(error).toBeInstanceOf(WorkerError);
+      expect(error).toBeInstanceOf(WorkerTaskError);
+      expect(error.name).toBe('WorkerTaskError');
+      expect(error.code).toBe('task');
+      expect((error.cause as Error).name).toBe('RangeError');
+      worker.dispose();
+    });
+
+    it('queue full error is instanceof WorkerQueueFullError with maxQueue', async () => {
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 20)), {
+        concurrency: 1,
+        maxQueue: 1,
+      });
+      const running = worker.run(undefined).catch(() => {});
+      const queued = worker.run(undefined).catch(() => {});
+      const error = await worker.run(undefined).catch((e) => e);
+
+      expect(error).toBeInstanceOf(WorkerQueueFullError);
+      expect(error.name).toBe('WorkerQueueFullError');
+      expect(error.code).toBe('queue_full');
+      expect(error.maxQueue).toBe(1);
+      worker.dispose();
+      await Promise.all([running, queued]);
+    });
+  });
+
+  describe('priority queue (F2)', () => {
+    it('higher-priority tasks run before lower-priority tasks', async () => {
+      // Track completion order via .then() — task functions cannot close over local vars.
+      const completionOrder: number[] = [];
+      const record = (v: number) => {
+        completionOrder.push(v);
+
+        return v;
+      };
+
+      // concurrency=1 ensures the blocker fills the slot; queued tasks then run by priority
+      const worker = createWorker<number, number>(
+        async (n) => {
+          await new Promise((r) => setTimeout(r, n === -1 ? 30 : 0));
+
+          return n;
+        },
+        { concurrency: 1 },
+      );
+
+      // Blocker holds the slot while we queue tasks with different priorities
+      const blocker = worker.run(-1);
+      const p1 = worker.run(1, { priority: 1 }).then(record);
+      const p3 = worker.run(3, { priority: 3 }).then(record);
+      const p2 = worker.run(2, { priority: 2 }).then(record);
+
+      await blocker;
+      await Promise.all([p1, p2, p3]);
+
+      // Should complete: 3 (highest), 2, 1 (lowest)
+      expect(completionOrder).toEqual([3, 2, 1]);
+      worker.dispose();
+    }, 2000);
+
+    it('tasks with equal priority run FIFO', async () => {
+      const completionOrder: number[] = [];
+      const record = (v: number) => {
+        completionOrder.push(v);
+
+        return v;
+      };
+
+      const worker = createWorker<number, number>(
+        async (n) => {
+          await new Promise((r) => setTimeout(r, n === -1 ? 30 : 0));
+
+          return n;
+        },
+        { concurrency: 1 },
+      );
+
+      const blocker = worker.run(-1);
+      const q1 = worker.run(10).then(record);
+      const q2 = worker.run(20).then(record);
+      const q3 = worker.run(30).then(record);
+
+      await blocker;
+      await Promise.all([q1, q2, q3]);
+
+      expect(completionOrder).toEqual([10, 20, 30]);
+      worker.dispose();
+    }, 2000);
+  });
+
+  describe('heartbeat (F4)', () => {
+    it('inline workers auto-send heartbeats keeping long-running tasks alive', async () => {
+      // Task takes 60ms. Without heartbeat, a 40ms watchdog would kill it.
+      // With auto-heartbeats at 20ms intervals (heartbeatTimeout/2=40/2), the watchdog resets.
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 60)));
+
+      await expect(worker.run(undefined, { heartbeatTimeout: 40 })).resolves.toBeUndefined();
+      worker.dispose();
+    }, 2000);
+
+    it('kills the task when heartbeats are suppressed (negative heartbeat test)', async () => {
+      // Wrap the Worker to intercept and discard heartbeat messages so the watchdog fires.
+      const OriginalWorker = globalThis.Worker as unknown as new (url: string) => Worker;
+
+      class HeartbeatBlockingWorker {
+        onmessage: ((e: MessageEvent) => void) | null = null;
+        onerror: ((e: ErrorEvent) => void) | null = null;
+        private readonly inner: Worker;
+
+        constructor(url: string) {
+          this.inner = new OriginalWorker(url);
+          // Discard any message that looks like a heartbeat before forwarding to the host.
+          this.inner.onmessage = (e: MessageEvent) => {
+            if (e.data && typeof e.data === 'object' && 'heartbeat' in e.data) return;
+
+            this.onmessage?.(e);
+          };
+          this.inner.onerror = (e: ErrorEvent) => this.onerror?.(e);
+        }
+
+        postMessage(data: unknown, transfer?: Transferable[]): void {
+          (this.inner as unknown as { postMessage(d: unknown, t: Transferable[]): void }).postMessage(
+            data,
+            transfer ?? [],
+          );
+        }
+
+        terminate(): void {
+          this.inner.terminate();
+        }
+      }
+
+      Object.defineProperty(globalThis, 'Worker', {
+        configurable: true,
+        value: HeartbeatBlockingWorker,
+        writable: true,
+      });
+
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 500)));
+      const error = await worker.run(undefined, { heartbeatTimeout: 50 }).catch((e) => e);
+
+      Object.defineProperty(globalThis, 'Worker', {
+        configurable: true,
+        value: OriginalWorker,
+        writable: true,
+      });
+
+      expect(error).toBeInstanceOf(WorkerTimeoutError);
+      expect(error.timeoutMs).toBe(50);
+      expect(error.code).toBe('timeout');
+      worker.dispose();
+    }, 2000);
+  });
+
+  describe('onSlotError (F3)', () => {
+    it('calls onSlotError when worker.onerror fires and provides a restart callback', async () => {
+      const slotErrors: WorkerRuntimeError[] = [];
+      let capturedRestart: (() => void) | null = null;
+
+      // Intercept Worker construction to capture the instance for manual onerror triggering
+      const OriginalWorker = globalThis.Worker;
+      let workerInstance: { onerror: ((e: ErrorEvent) => void) | null } | null = null;
+
+      const InterceptWorker = function (this: unknown, url: string, opts?: WorkerOptions) {
+        const instance = new (OriginalWorker as new (url: string, opts?: WorkerOptions) => Worker)(url, opts);
+
+        workerInstance = instance as unknown as { onerror: ((e: ErrorEvent) => void) | null };
+
+        return instance;
+      } as unknown as typeof Worker;
+
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: InterceptWorker, writable: true });
+
+      const worker = createWorker<number, number>((n) => n, {
+        onSlotError: (error, restart) => {
+          slotErrors.push(error);
+          capturedRestart = restart;
+        },
+      });
+
+      const runPromise = worker.run(1);
+
+      // Wait for the worker to be created and the task dispatched
+      await new Promise<void>((r) => setTimeout(r, 10));
+
+      // Simulate a worker runtime error
+      workerInstance?.onerror?.({ message: 'simulated crash' } as ErrorEvent);
+
+      await runPromise.catch(() => {});
+
+      expect(slotErrors).toHaveLength(1);
+      expect(slotErrors[0]).toBeInstanceOf(WorkerRuntimeError);
+      expect(slotErrors[0]!.code).toBe('worker');
+      expect(typeof capturedRestart).toBe('function');
+
+      // Restore original Worker
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: OriginalWorker, writable: true });
+      worker.dispose();
+    }, 2000);
+  });
+
+  describe('group() drain with multiple failures (R7)', () => {
+    it('drain() settles all tasks before throwing, preventing unhandled rejections', async () => {
+      const worker = createWorker<number, number>((n) => {
+        if (n < 0) throw new Error(`fail:${n}`);
+
+        return n;
+      });
+
+      const g = worker.group();
+
+      g.run(-1).catch(() => {}); // explicitly handle so no unhandled rejection
+      g.run(-2).catch(() => {}); // explicitly handle so no unhandled rejection
+      g.run(3).catch(() => {});
+
+      const drainError = await g.drain().catch((e) => e);
+
+      // drain() should throw (first failure) but NOT cause unhandled rejections
+      expect(drainError).toBeInstanceOf(Error);
+      expect(drainError.message).toMatch(/fail:/);
+      worker.dispose();
     });
   });
 });

@@ -1,7 +1,9 @@
 import type {
   BehaviorBus,
+  BehaviorBusOptions,
   BehaviorInitial,
   BusOptions,
+  EmissionErrorContext,
   EventKey,
   EventMap,
   Listener,
@@ -9,88 +11,128 @@ import type {
   Unsubscribe,
 } from './types';
 
+import { makeBusDelegate } from './_delegate';
 import { createBus } from './bus';
 
 /**
- * Creates a bus that replays the last known value for each event to new subscribers.
+ * Creates a bus that replays the last known value(s) for each event to new subscribers.
  *
- * When a listener subscribes via `on()` or `once()`, it immediately receives the current value
- * for that event (if one has been emitted or was provided as an initial value).
+ * When a listener subscribes via `on()` or `once()`, it immediately receives the current
+ * buffered value(s) for that event (if any have been emitted or were provided as initial values).
  * `events()`, `wait()`, and `waitAny()` behave like a regular bus — no replay.
  *
  * @param initial - Optional map of event names to their starting values.
- * @param options - Standard bus options forwarded to the underlying `createBus` call.
+ * @param options - Bus options plus optional `replay` count (default: 1).
  *
  * @example
  * const bus = createBehaviorBus<{ count: number }>({ count: 0 });
  * bus.on('count', (n) => console.log(n)); // logs 0 immediately
  * bus.emit('count', 1);
  * bus.on('count', (n) => console.log(n)); // logs 1 immediately (latest value)
+ *
+ * @example — replay window
+ * const bus = createBehaviorBus<{ msg: string }>({}, { replay: 3 });
+ * bus.emit('msg', 'a'); bus.emit('msg', 'b'); bus.emit('msg', 'c');
+ * bus.on('msg', console.log); // logs 'a', 'b', 'c' synchronously
  */
 export function createBehaviorBus<T extends EventMap>(
   initial?: BehaviorInitial<T>,
-  options?: BusOptions<T>,
+  options?: BehaviorBusOptions<T>,
 ): BehaviorBus<T> {
-  const current = new Map<string, unknown>(Object.entries(initial ?? {}));
-  const userOnDispatch = options?.onDispatch;
+  // F4: replay window — number of most-recent values replayed to new subscribers.
+  const replayCount = options?.replay ?? 1;
 
-  const bus = createBus<T>({
-    ...options,
-    onDispatch(event: EventKey<T>, payload: unknown) {
-      current.set(event, payload);
-      userOnDispatch?.(event, payload);
-    },
-  });
+  // R4: Pass options through to createBus unchanged (no onDispatch interception).
+  // Capture values by wrapping emit() instead.
+  const { replay: _replay, ...busOptions } = options ?? {};
+  const bus = createBus<T>(busOptions as BusOptions<T>);
 
-  function getCurrent<K extends EventKey<T>>(event: K): T[K] | undefined {
-    return current.get(event as string) as T[K] | undefined;
+  // Replay buffers: Map<eventKey, last N payloads>. Seeded from initial values.
+  const buffers = new Map<string, unknown[]>(Object.entries(initial ?? {}).map(([k, v]) => [k, [v]]));
+
+  // Wrap listener calls during synchronous replay so that throws are routed through
+  // options.onError when configured — matching the behaviour of live emit() calls.
+  function callSafeReplay(listener: Listener<unknown>, event: EventKey<T>, value: unknown): void {
+    try {
+      listener(value);
+    } catch (err) {
+      if (options?.onError) {
+        options.onError({ err, event, payload: value, timestamp: Date.now() } as EmissionErrorContext<T>);
+      } else {
+        throw err;
+      }
+    }
   }
 
-  // F2: Override on() to replay the current value to new subscribers.
+  // R4: Wrap emit() to capture current values before dispatching to listeners.
+  // This is explicit and decoupled from onDispatch — current() always returns the latest value
+  // for the currently-dispatching event, even inside a listener callback.
+  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [T[K]]): number {
+    const payload = (args as unknown[])[0];
+    const buf = buffers.get(event as string) ?? [];
+
+    buf.push(payload);
+
+    if (buf.length > replayCount) buf.shift();
+
+    buffers.set(event as string, buf);
+
+    return bus.emit(event, ...(args as []));
+  }
+
+  function getCurrent<K extends EventKey<T>>(event: K): T[K] | undefined {
+    const buf = buffers.get(event as string);
+
+    return buf !== undefined && buf.length > 0 ? (buf[buf.length - 1] as T[K]) : undefined;
+  }
+
+  // F2 (via on()): Replay buffered values synchronously to new subscribers.
+  // For `once: true`, only the latest value is replayed (preserves the "fires exactly once" contract).
+  // For regular subscriptions with replay > 1, all buffered values are replayed in order.
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe {
-    // Don't replay or subscribe if the bus is disposed or the caller's signal is already aborted.
     if (bus.disposed || opts?.signal?.aborted) return () => {};
 
-    if (current.has(event as string)) {
-      listener(current.get(event as string) as T[K]);
+    const buf = buffers.get(event as string);
 
-      // Already fired — no future subscription needed when once is true.
-      if (opts?.once) return () => {};
+    if (buf?.length) {
+      if (opts?.once) {
+        // Replay latest value only — preserves the "fires exactly once" contract.
+        callSafeReplay(listener as Listener<unknown>, event, buf[buf.length - 1] as T[K]);
+
+        return () => {};
+      }
+
+      for (const value of buf) {
+        callSafeReplay(listener as Listener<unknown>, event, value as T[K]);
+      }
     }
 
     return bus.on(event, listener, opts);
   }
 
-  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe {
-    return on(event, listener, { once: true, signal });
+  function once<K extends EventKey<T>>(
+    event: K,
+    listener: Listener<T[K]>,
+    opts?: { signal?: AbortSignal },
+  ): Unsubscribe {
+    return on(event, listener, { once: true, signal: opts?.signal });
   }
 
   function dispose(): void {
     bus.dispose();
-    current.clear();
+    buffers.clear();
   }
 
-  // Explicit delegation — avoids object spread snapshotting getters at creation time.
-  return {
-    current: getCurrent,
-    get disposalSignal() {
-      return bus.disposalSignal;
-    },
-    dispose,
-    get disposed() {
-      return bus.disposed;
-    },
-    emit: bus.emit,
-    eventNames: bus.eventNames,
-    events: bus.events,
-    listenerCount: bus.listenerCount,
-    on,
-    onAny: bus.onAny,
-    once,
-    pipe: bus.pipe,
-    removeAllListeners: bus.removeAllListeners,
-    [Symbol.dispose]: dispose,
-    wait: bus.wait,
-    waitAny: bus.waitAny,
-  };
+  // R5: Use makeBusDelegate to avoid enumerating every Bus<T> method.
+  // Override only the four methods that differ from the underlying bus.
+  const delegate = makeBusDelegate<T>(bus) as BehaviorBus<T>;
+
+  delegate.current = getCurrent;
+  delegate.dispose = dispose;
+  delegate.emit = emit as Bus<T>['emit'];
+  delegate.on = on;
+  delegate.once = once;
+  delegate[Symbol.dispose] = dispose;
+
+  return delegate;
 }

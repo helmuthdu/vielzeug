@@ -1,4 +1,4 @@
-import { format } from '../format';
+import { format, formatParts } from '../format';
 import { money } from '../money';
 
 describe('format', () => {
@@ -126,5 +126,61 @@ describe('format', () => {
       expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: -1 })).toThrow(RangeError);
       expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: -1 })).toThrow(RangeError);
     });
+  });
+});
+
+describe('formatParts', () => {
+  it('returns semantic parts for a simple USD amount', () => {
+    const parts = formatParts(money('1234.56', 'USD'));
+
+    expect(parts.find((p) => p.type === 'currency')?.value).toBe('$');
+    expect(parts.find((p) => p.type === 'integer')?.value).toBe('1,234');
+    expect(parts.find((p) => p.type === 'decimal')?.value).toBe('.');
+    expect(parts.find((p) => p.type === 'fraction')?.value).toBe('56');
+  });
+
+  it('includes minusSign for negative amounts', () => {
+    const parts = formatParts(money('-100.00', 'USD'));
+
+    expect(parts.some((p) => p.type === 'minusSign')).toBe(true);
+    expect(parts.find((p) => p.type === 'integer')?.value).toBe('100');
+  });
+
+  it('omits decimal and fraction when maximumFractionDigits is 0', () => {
+    const parts = formatParts(money('100.56', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+
+    expect(parts.some((p) => p.type === 'decimal')).toBe(false);
+    expect(parts.some((p) => p.type === 'fraction')).toBe(false);
+  });
+
+  it('string-joined parts equal format() output', () => {
+    const m = money('1234.56', 'USD');
+
+    expect(
+      formatParts(m)
+        .map((p) => p.value)
+        .join(''),
+    ).toBe(format(m));
+  });
+
+  it('string-joined parts equal format() for negative amounts', () => {
+    const m = money('-99.99', 'USD');
+
+    expect(
+      formatParts(m)
+        .map((p) => p.value)
+        .join(''),
+    ).toBe(format(m));
+  });
+
+  it('string-joined parts equal format() with code style', () => {
+    const m = money('1000.00', 'USD');
+    const opts = { style: 'code' as const };
+
+    expect(
+      formatParts(m, opts)
+        .map((p) => p.value)
+        .join(''),
+    ).toBe(format(m, opts));
   });
 });

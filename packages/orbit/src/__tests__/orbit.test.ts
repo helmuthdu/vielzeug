@@ -10,12 +10,13 @@ import {
   compose,
   computePosition,
   detectOverflow,
-  float,
   flip,
+  float,
   getAlignment,
   getSide,
   hide,
   limitShift,
+  MIDDLEWARE_NAME,
   offset,
   shift,
   size,
@@ -360,31 +361,26 @@ describe('size', () => {
     expect(result.middlewareData.size?.availableHeight).toBe(380);
   });
 
-  it('calls the apply callback with size data and elements', () => {
+  it('reports available size in middlewareData.size', () => {
     const { floating, reference } = makeElements(
       { height: 40, width: 100, x: 200, y: 340 },
       { height: 100, width: 80 },
     );
-    const apply = vi.fn();
 
-    computePosition(reference, floating, { middleware: [size({ apply })], placement: 'bottom' });
+    const result = computePosition(reference, floating, { middleware: [size()], placement: 'bottom' });
 
-    expect(apply).toHaveBeenCalledOnce();
-    expect(apply.mock.calls[0][0].availableHeight).toBe(388);
-    expect(apply.mock.calls[0][0].elements.floating).toBe(floating);
+    expect(result.middlewareData.size?.availableHeight).toBe(388);
+    expect(result.middlewareData.size?.availableWidth).toBeTypeOf('number');
   });
 
   it('runs once after a flip reset, reflecting flipped placement', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 80, width: 80 });
-    const apply = vi.fn();
     const result = computePosition(reference, floating, {
-      middleware: [flip(), size({ apply })],
+      middleware: [flip(), size()],
       placement: 'bottom',
     });
 
     expect(result.placement).toBe('top');
-    expect(apply).toHaveBeenCalledTimes(1);
-    expect(apply.mock.calls[0][0].availableHeight).toBe(720);
     expect(result.middlewareData.size?.availableHeight).toBe(720);
   });
 });
@@ -401,7 +397,7 @@ describe('arrow', () => {
       placement: 'bottom',
     });
 
-    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, x: 35 });
+    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, constrained: false, x: 35 });
   });
 
   it('provides y data for horizontal placements', () => {
@@ -411,7 +407,7 @@ describe('arrow', () => {
       placement: 'right',
     });
 
-    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, y: 35 });
+    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, constrained: false, y: 35 });
   });
 
   it('clamps arrow x when padding forces it away from ideal position', () => {
@@ -427,6 +423,7 @@ describe('arrow', () => {
 
     expect(arrowData.x).toBeGreaterThanOrEqual(10);
     expect(arrowData.centerOffset).not.toBe(0); // clamped away from ideal
+    expect(arrowData.constrained).toBe(true);
   });
 });
 
@@ -953,5 +950,320 @@ describe('limitShift', () => {
     });
 
     expect(withLimit.x).toBe(withoutLimit.x);
+  });
+});
+
+// ─── R6: MIDDLEWARE_NAME symbol ───────────────────────────────────────────────
+
+describe('MIDDLEWARE_NAME symbol', () => {
+  it('is attached to all built-in middleware', () => {
+    const arrowEl = makeArrow({ height: 10, width: 10 });
+
+    for (const mw of [arrow({ element: arrowEl }), autoPlacement(), flip(), hide(), offset(8), shift(), size()]) {
+      expect((mw as Record<symbol, string>)[MIDDLEWARE_NAME]).toBeTypeOf('string');
+    }
+  });
+
+  it('does not collide with string properties on wrapped functions', () => {
+    // A user-wrapped function that has `__name` set should not interfere.
+    const userMw = Object.assign(() => ({}), { __name: 'flip' });
+
+    // MIDDLEWARE_NAME symbol is not present, so ordering validation ignores it.
+    expect((userMw as Record<symbol, unknown>)[MIDDLEWARE_NAME]).toBeUndefined();
+  });
+});
+
+// ─── R8: arrow.constrained ────────────────────────────────────────────────────
+
+describe('arrow.constrained', () => {
+  beforeEach(() => setViewport());
+
+  it('is false when arrow is centered perfectly', () => {
+    // Wide ref, small float, small arrow — ideal x = center, no clamping needed.
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [arrow({ element: makeArrow({ height: 10, width: 10 }) })],
+      placement: 'bottom',
+    });
+
+    expect(result.middlewareData.arrow?.constrained).toBe(false);
+  });
+
+  it('is true when the arrow is clamped by padding', () => {
+    // Narrow ref forces arrow to be clamped by padding.
+    const { floating, reference } = makeElements({ height: 40, width: 5, x: 200, y: 300 }, { height: 30, width: 100 });
+    const result = computePosition(reference, floating, {
+      middleware: [arrow({ element: makeArrow({ height: 10, width: 10 }), padding: 10 })],
+      placement: 'bottom-start',
+    });
+
+    expect(result.middlewareData.arrow?.constrained).toBe(true);
+  });
+});
+
+// ─── F3: FlipData + ShiftData ─────────────────────────────────────────────────
+
+describe('FlipData', () => {
+  beforeEach(() => setViewport());
+
+  it('records skippedPlacements when flip changes placement (single fallback)', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [flip()],
+      placement: 'bottom',
+    });
+
+    expect(result.placement).toBe('top');
+    expect(result.middlewareData.flip?.skippedPlacements).toEqual(['bottom']);
+  });
+
+  it('accumulates all evaluated-and-overflowing candidates in skippedPlacements', () => {
+    // Ref near bottom-left corner — bottom overflows (y=490+80>500), left overflows (x=-50<0), top fits.
+    setViewport(500, 500);
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 450 }, { height: 80, width: 100 });
+    const result = computePosition(reference, floating, {
+      middleware: [flip({ fallbackPlacements: ['left', 'top'] })],
+      placement: 'bottom',
+    });
+
+    expect(result.placement).toBe('top');
+    // Both 'bottom' (original) and 'left' (evaluated, overflowed) must appear before 'top'.
+    expect(result.middlewareData.flip?.skippedPlacements).toContain('bottom');
+    expect(result.middlewareData.flip?.skippedPlacements).toContain('left');
+    expect(result.middlewareData.flip?.skippedPlacements).not.toContain('top');
+  });
+
+  it('does not write flip data when placement is unchanged', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [flip()],
+      placement: 'bottom',
+    });
+
+    expect(result.placement).toBe('bottom');
+    expect(result.middlewareData.flip).toBeUndefined();
+  });
+});
+
+describe('ShiftData', () => {
+  beforeEach(() => setViewport());
+
+  it('records the shift amounts in middlewareData.shift', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 990, y: 760 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [shift()],
+      placement: 'bottom-start',
+    });
+
+    expect(result.middlewareData.shift).toMatchObject({ x: expect.any(Number), y: expect.any(Number) });
+    expect(result.middlewareData.shift!.x).not.toBe(0); // overflow forced a shift
+  });
+
+  it('records zero shift when no overflow occurs', () => {
+    // Ref well inside viewport — no shift needed.
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [shift()],
+      placement: 'bottom',
+    });
+
+    expect(result.middlewareData.shift).toMatchObject({ x: 0, y: 0 });
+  });
+});
+
+// ─── F1: global boundary + padding ───────────────────────────────────────────
+
+describe('global boundary and padding (F1)', () => {
+  it('uses global boundary for all overflow-aware middleware', () => {
+    setViewport(1024, 768);
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 30, width: 80 });
+
+    // Without global padding: flip fires because float overflows viewport bottom.
+    const withoutPadding = computePosition(reference, floating, {
+      middleware: [flip()],
+      placement: 'bottom',
+    });
+
+    // With global padding=100: the safe zone shrinks, flip fires even for less overflow.
+    const withPadding = computePosition(reference, floating, {
+      middleware: [flip()],
+      padding: 100,
+      placement: 'bottom',
+    });
+
+    expect(withoutPadding.placement).toBe('top');
+    expect(withPadding.placement).toBe('top'); // still flips with padding
+  });
+
+  it('global padding shrinks available space reported by size()', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements(
+      { height: 40, width: 100, x: 200, y: 340 },
+      { height: 100, width: 80 },
+    );
+
+    const noGlobal = computePosition(reference, floating, {
+      middleware: [size()],
+      placement: 'bottom',
+    });
+
+    const withGlobal = computePosition(reference, floating, {
+      middleware: [size()],
+      padding: 20,
+      placement: 'bottom',
+    });
+
+    // Global padding of 20 reduces available height by 20 from the bottom.
+    expect(withGlobal.middlewareData.size!.availableHeight).toBe(noGlobal.middlewareData.size!.availableHeight - 20);
+  });
+
+  it('per-middleware padding overrides global padding', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements(
+      { height: 40, width: 100, x: 200, y: 340 },
+      { height: 100, width: 80 },
+    );
+
+    const globalOnly = computePosition(reference, floating, {
+      middleware: [size()],
+      padding: 20,
+      placement: 'bottom',
+    });
+
+    const localOverride = computePosition(reference, floating, {
+      middleware: [size({ padding: 0 })],
+      padding: 20,
+      placement: 'bottom',
+    });
+
+    // Local padding: 0 overrides global: 20 → more space available.
+    expect(localOverride.middlewareData.size!.availableHeight).toBeGreaterThan(
+      globalOnly.middlewareData.size!.availableHeight,
+    );
+  });
+});
+
+// ─── R2: containingBlock in float() ──────────────────────────────────────────
+
+describe('containingBlock in float()', () => {
+  it('applies containingBlock offset to the default style application', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const container = document.createElement('div');
+
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 200, width: 400, x: 50, y: 100 }),
+    );
+
+    const handle = float(reference, floating, {
+      autoUpdate: false,
+      containingBlock: container,
+      placement: 'bottom',
+    });
+
+    // Viewport: x=210, y=340. Container offset (50, 100) → (160, 240).
+    expect(floating.style.left).toBe('160px');
+    expect(floating.style.top).toBe('240px');
+    handle.cleanup();
+  });
+});
+
+// ─── F2: pauseWhenHidden ──────────────────────────────────────────────────────
+
+describe('pauseWhenHidden (F2)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not call update on scroll when reference is off-screen', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, {});
+    const update = vi.fn();
+    let ioCallback: IntersectionObserverCallback | undefined;
+
+    class MockIO {
+      constructor(cb: IntersectionObserverCallback) {
+        ioCallback = cb;
+      }
+
+      disconnect = vi.fn();
+      observe = vi.fn();
+      unobserve = vi.fn();
+    }
+
+    vi.stubGlobal('IntersectionObserver', MockIO);
+
+    const cleanup = autoUpdate(reference, floating, update, { pauseWhenHidden: true, throttle: 0 });
+
+    // Initial call fires (before IO async).
+    expect(update).toHaveBeenCalledTimes(1);
+
+    // Simulate IO reporting reference as invisible.
+    ioCallback?.([{ isIntersecting: false }] as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+
+    // Scroll event should not trigger update while invisible.
+    window.dispatchEvent(new Event('scroll'));
+    expect(update).toHaveBeenCalledTimes(1);
+
+    // Simulate IO reporting visible again — should trigger one update.
+    ioCallback?.([{ isIntersecting: true }] as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+    expect(update).toHaveBeenCalledTimes(2);
+
+    cleanup();
+  });
+
+  it('updates normally when pauseWhenHidden: false', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, {});
+    const update = vi.fn();
+    const cleanup = autoUpdate(reference, floating, update, { pauseWhenHidden: false });
+
+    window.dispatchEvent(new Event('scroll'));
+    expect(update).toHaveBeenCalledTimes(2); // initial + scroll
+
+    cleanup();
+  });
+});
+
+// ─── F5: SSR no-op shim ───────────────────────────────────────────────────────
+
+describe('SSR shim', () => {
+  it('computePosition returns zero-coord result with requested placement', async () => {
+    const { computePosition: ssrComputePosition } = await import('../ssr');
+    const reference = { getBoundingClientRect: () => ({ height: 40, width: 100, x: 200, y: 300 }) };
+    const floating = {} as HTMLElement;
+
+    const result = ssrComputePosition(reference, floating, { placement: 'top' });
+
+    expect(result.placement).toBe('top');
+    expect(result.x).toBe(0);
+    expect(result.y).toBe(0);
+  });
+
+  it('autoUpdate returns a no-op cleanup', async () => {
+    const { autoUpdate: ssrAutoUpdate } = await import('../ssr');
+    const update = vi.fn();
+    const cleanup = ssrAutoUpdate({} as Element, {} as HTMLElement, update);
+
+    expect(update).not.toHaveBeenCalled();
+    expect(() => cleanup()).not.toThrow();
+  });
+
+  it('float returns a FloatHandle with no-op methods', async () => {
+    const { float: ssrFloat } = await import('../ssr');
+    const handle = ssrFloat({} as Element, {} as HTMLElement, { placement: 'right' });
+
+    expect(handle.cssAnchor).toBe(false);
+    expect(handle.getPosition()?.placement).toBe('right');
+    expect(() => handle.update()).not.toThrow();
+    expect(() => handle.cleanup()).not.toThrow();
   });
 });

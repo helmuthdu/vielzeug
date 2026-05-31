@@ -45,6 +45,7 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
 
   const queue: PendingItem<K, V>[] = [];
   let scheduled = false;
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
 
   function flush(): void {
@@ -85,7 +86,8 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
         flush();
       });
     } else {
-      setTimeout(() => {
+      pendingTimer = setTimeout(() => {
+        pendingTimer = null;
         scheduled = false;
         flush();
       }, windowMs);
@@ -99,6 +101,11 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
      */
     dispose(): void {
       disposed = true;
+
+      if (pendingTimer !== null) {
+        clearTimeout(pendingTimer);
+        pendingTimer = null;
+      }
 
       const err = new Error('[courier] Batcher disposed');
 

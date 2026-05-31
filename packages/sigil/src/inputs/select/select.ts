@@ -6,29 +6,27 @@ import {
   html,
   inject,
   onCleanup,
+  onMounted,
   prop,
   signal,
   watch,
-  onMounted,
 } from '@vielzeug/craft';
 
-import type { DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
-import type { ChoiceChangeDetail } from '../../headless';
-import type { SelectableFieldProps } from '../../shared/config';
-
-import '../../feedback/chip/chip';
-import '../../content/icon/icon';
+import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
+import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { createComposite, toAbortSignal } from '../../headless';
+import { componentSignal, createChoiceField, createOptionList } from '../../headless';
+import '../../feedback/chip/chip';
+import '../../content/icon/icon';
 import {
-  FIELD_SIZE_PRESET,
   disablableBundle,
+  FIELD_SIZE_PRESET,
   loadableBundle,
   roundableBundle,
   sizableBundle,
   themableBundle,
-} from '../../shared/config';
+} from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -39,7 +37,6 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { connectFormField } from '../shared/use-field';
 import componentStyles from './select.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -198,34 +195,40 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
 
-    const abortSignal = toAbortSignal(onCleanup);
-    const { choice, optionList } = createComposite<OptionItem>({
-      field: {
-        disabled: fCtxProps.disabled,
-        error: props.error,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        multiple: props.multiple,
-        prefix: 'select',
-        validateOn: formCtx?.validateOn,
-        value: props.value,
+    const abortSignal = componentSignal(onCleanup);
+    const choice = createChoiceField({
+      disabled: fCtxProps.disabled,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      multiple: props.multiple,
+      prefix: 'select',
+      validateOn: formCtx?.validateOn,
+      value: props.value,
+    });
+    const optionList = createOptionList<OptionItem>({
+      behavior: {
+        isDisabled: () => choice.disabled.value,
+        manageAriaExpanded: false,
       },
-      listFactory: (c) => ({
+      dom: {
         getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
-        getItems: () => options.value,
         getPanel: () => dropdownEl,
         getReference: () => triggerEl,
         getTrigger: () => triggerEl,
-        isDisabled: () => c.disabled.value,
-        manageAriaExpanded: false,
+      },
+      items: {
+        getItems: () => options.value,
+      },
+      on: {
         onClose: (reason) => {
           emit('close', { reason });
-          c.triggerValidation('blur');
+          choice.triggerValidation('blur');
         },
         onOpen: (reason) => emit('open', { reason }),
-      }),
+      },
       signal: abortSignal,
     });
 
@@ -234,11 +237,12 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     const selectedValues = choice.selectedValues;
     const isDisabled = choice.disabled;
 
-    connectFormField(choice, defineField, choice.formValue, (v) => v);
+    choice.bindFormField(
+      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
+    );
 
     const { fieldId: selectId } = choice;
-    const { id: labelInsetId } = choice.label.inset;
-    const { id: labelOutsideId } = choice.label.outside;
+    const labelId = choice.label.id;
     const listboxId = `listbox-${selectId}`;
     const { focusedIndex, isOpen } = optionList;
 
@@ -306,10 +310,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
     const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
     const hasLabel = computed(() => !!props.label.value);
-    const { insetLabelHidden, outsideLabelHidden } = {
-      insetLabelHidden: () => !choice.label.inset.show.value,
-      outsideLabelHidden: () => !choice.label.outside.show.value,
-    };
+    const labelHidden = () => !choice.label.show.value;
 
     function buildFlatList(opts: OptionItem[]): FlatRow[] {
       const flat: FlatRow[] = [];
@@ -457,7 +458,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
 
     return html`<slot style="display:none"></slot>
       <div class="select-wrapper">
-        <label class="label-outside" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}">${props.label}</label>
+        <label class="label" id="${labelId}" ?hidden="${labelHidden}">${props.label}</label>
         <div
           class="field"
           ref="${(el: HTMLElement) => {
@@ -470,8 +471,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
           :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
           :aria-expanded="${() => String(isOpen.value)}"
           :aria-invalid="${() => (props.error.value ? 'true' : null)}"
-          :aria-labelledby="${() => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null)}">
-          <label class="label-inset" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
+          :aria-labelledby="${() => (hasLabel.value ? labelId : null)}">
           <div class="trigger-row">
             <div class="chips-row" ?hidden="${() => !showChips.value}">
               ${() =>

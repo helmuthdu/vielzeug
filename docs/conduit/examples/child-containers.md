@@ -14,12 +14,12 @@ Some dependencies should be isolated to a request, job, or test scope — a fres
 Use `container.createChild()` to create a child container that inherits root registrations but maintains its own scope cache. Register scoped providers on the root with `lifetime: 'scoped'` and resolve from the child. Dispose the child when the scope ends.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface RequestService { id: string; handle(path: string): string }
 
-const RequestId = createToken<string>('RequestId');
-const RequestService = createToken<RequestService>('RequestService');
+const RequestId = token<string>('RequestId');
+const RequestService = token<RequestService>('RequestService');
 
 const container = createContainer();
 
@@ -49,11 +49,11 @@ await requestB.dispose(); // cleans up requestB's scoped instances
 #### Overriding a parent registration in a child
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Logger { log(msg: string): void }
 
-const Logger = createToken<Logger>('Logger');
+const Logger = token<Logger>('Logger');
 const container = createContainer();
 
 container.value(Logger, console);

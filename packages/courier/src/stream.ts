@@ -1,16 +1,17 @@
-import { anySignal, exponentialBackoff, getOrCreate, sleep } from '@vielzeug/arsenal';
+import { exponentialBackoff, getOrCreate, sleep } from '@vielzeug/arsenal';
 
 import type { Params } from './url';
 
 import { HttpError } from './errors';
 import { buildRequestInit } from './serialize';
 import {
+  anySignal,
   buildTimeoutSignal,
   createTransportCore,
-  validateTimeout,
   type Interceptor,
   type TransportCore,
   type TransportOptions,
+  validateTimeout,
 } from './transport';
 import { buildUrl } from './url';
 
@@ -187,7 +188,9 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
     const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
     const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
-    const reconnectDelay = reconnectOpts.delay ?? defaultReconnectDelay;
+    // `activeReconnectDelay` is mutable so the server's `retry:` field can update
+    // the reconnection interval without the caller needing to handle it manually.
+    let activeReconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? defaultReconnectDelay;
 
     function dispatchEvent(event: string, rawData: string): void {
       const handlers = listeners.get(event);
@@ -265,7 +268,12 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
               if (field === 'event') currentEvent = value;
               else if (field === 'data') currentData += (currentData ? '\n' : '') + value;
               else if (field === 'id' && !value.includes('\0')) currentId = value;
-              // 'retry' directive acknowledged but managed via ReconnectOptions
+              else if (field === 'retry') {
+                // Honor the server's advised reconnect interval (SSE spec §9.2.6).
+                const ms = parseInt(value, 10);
+
+                if (!Number.isNaN(ms)) activeReconnectDelay = ms;
+              }
             }
           }
         }
@@ -303,15 +311,17 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
             break;
           }
 
-          // Budget exhausted → fire onError for errors, stop
+          // Budget exhausted → always signal via onError so the caller knows
+          // the reconnect cycle has ended (whether the close was clean or not).
           if (attempt >= maxReconnects) {
-            if (connectError) onError?.(connectError);
+            onError?.(connectError ?? new Error('[courier] SSE reconnect budget exhausted'));
 
             break;
           }
 
           // Budget available → sleep and retry
-          const delay = typeof reconnectDelay === 'function' ? reconnectDelay(attempt) : reconnectDelay;
+          const delay =
+            typeof activeReconnectDelay === 'function' ? activeReconnectDelay(attempt) : activeReconnectDelay;
 
           attempt++;
           await sleep(delay, ac.signal).catch(() => {});

@@ -33,11 +33,15 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 - Declarative route tables with nested names (`dashboard.settings`)
 - Named and raw-path navigation through one `navigate()` API
 - Route middleware, data loaders, and lazy route modules
-- Per-route `onLeave` guards and global `beforeLeave` leave guards
-- `component` + `meta` payloads on matched branch state
+- Global `beforeLeave` leave guards with optional route scoping
+- `component` + `meta` + `data` payloads on matched branch state
+- Per-match `status` for granular loading/streaming feedback in nested layouts
+- Streaming data loaders via async generators
+- Declarative `notFound` fallback route
 - Browser and memory history drivers
-- Guard helpers via `redirectTo()`
+- `redirectTo()` middleware helper
 - SSR-compatible `match()` for data prefetching without side effects
+- `waitFor(name)` for testing and lifecycle coordination
 
 ## Installation
 
@@ -54,29 +58,27 @@ import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    home: {
-      path: '/',
-      handler: () => renderHome(),
-    },
+    home: { path: '/' },
     dashboard: {
       path: '/dashboard',
       children: {
-        index: {
-          index: true,
-          handler: () => renderDashboardHome(),
-        },
+        index: { index: true },
         settings: {
           path: 'settings',
           data: async () => fetchSettings(),
-          handler: ({ data }) => renderSettings(data),
         },
       },
     },
-    notFound: {
-      path: '*',
-      handler: () => renderNotFound(),
-    },
   },
+  notFound: {
+    component: NotFoundPage,
+  },
+});
+
+// React to state changes:
+router.subscribe((state) => {
+  const leaf = state.matches.at(-1);
+  render(leaf?.component, leaf?.data);
 });
 
 await router.navigate({ name: 'dashboard.settings' });

@@ -9,7 +9,7 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { MIDDLEWARE_ORDER_RULES, baseCoords, toRect } from './utils';
+import { baseCoords, MIDDLEWARE_NAME, MIDDLEWARE_ORDER_RULES, toRect } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
 // ── Dev-mode middleware ordering validation ───────────────────────────────────
 
 function validateMiddlewareOrder(middleware: Middleware[]): void {
-  const names = middleware.map((mw) => (mw as { __name?: string }).__name ?? null);
+  const names = middleware.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
 
   for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
     const beforeIdx = names.indexOf(before);
@@ -66,7 +66,7 @@ function validateMiddlewareOrder(middleware: Middleware[]): void {
 export function computePosition(
   reference: ReferenceElement,
   floating: HTMLElement,
-  { containingBlock, middleware = [], placement = 'bottom' }: ComputePositionOptions = {},
+  { boundary, containingBlock, middleware = [], padding, placement = 'bottom' }: ComputePositionOptions = {},
 ): ComputePositionResult {
   if (import.meta.env.DEV) {
     if (reference === floating) {
@@ -97,12 +97,14 @@ export function computePosition(
   let middlewareData: MiddlewareData = {};
   let rects = getRects(reference, floating);
 
-  for (let resets = 0; resets < 50; resets += 1) {
+  for (let resets = 0; resets < 8; resets += 1) {
     let state: MiddlewareState = {
       ...baseCoords(currentPlacement, rects.reference, rects.floating),
+      boundary,
       elements: { floating, reference },
       initialPlacement: placement,
       middlewareData,
+      padding,
       placement: currentPlacement,
       rects,
     };

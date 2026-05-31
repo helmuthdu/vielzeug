@@ -1,6 +1,7 @@
 import type { CleanupFn, ReadonlySignal, Subscription, WatchOptions } from './types';
 
 import { effect } from './effect';
+import { StateError } from './error';
 import { withTracking } from './tracking';
 
 /**
@@ -44,8 +45,16 @@ export const watch = <T>(
 
     const returned = withTracking(null, () => callback(next, p));
 
+    // R6: throw on non-function truthy returns — consistent with effect().
+    // Do not return values from watch callbacks unless returning a cleanup function.
+    if (returned !== undefined && typeof returned !== 'function') {
+      throw new StateError(
+        'INVALID_CLEANUP',
+        `watch() callback returned ${typeof returned} — expected a cleanup function or void.`,
+      );
+    }
+
     if (typeof returned === 'function') pendingCleanup = returned;
-    // Non-function returns (e.g. Array.push result) are silently ignored
   };
 
   return effect((): CleanupFn => {

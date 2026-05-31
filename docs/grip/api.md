@@ -40,11 +40,14 @@ interface DropZoneOptions {
   element: HTMLElement;
   accept?: string[] | (() => string[]);
   maxFiles?: number;
+  onValidate?: (files: File[]) => boolean | Promise<boolean>;
   disabled?: boolean | (() => boolean);
   dropEffect?: DataTransfer['dropEffect'];
   onDrop?: (files: File[], event: DragEvent) => void;
-  onDropRejected?: (files: File[], event: DragEvent) => void;
+  onDropRejected?: (files: File[], event: DragEvent | ClipboardEvent) => void;
   onHoverChange?: (hovered: boolean) => void;
+  paste?: boolean;
+  onPaste?: (files: File[], event: ClipboardEvent) => void;
 }
 ```
 
@@ -55,6 +58,7 @@ interface DropZone extends Disposable {
   readonly hovered: boolean;
   readonly files: readonly File[];
   readonly rejected: readonly File[];
+  readonly validating: boolean;
 }
 ```
 
@@ -75,7 +79,8 @@ interface SortableOptions {
   disabled?: boolean | (() => boolean);
   onDragStart?: (id: string, event: DragEvent) => void;
   onDragEnd?: (id: string, event: DragEvent) => void;
-  onReorder?: (orderedIds: string[]) => void;
+  onBeforeReorder?: (from: string[], to: string[]) => void;
+  onReorder?: (orderedIds: string[]) => void | (() => void);
 }
 ```
 
@@ -95,6 +100,7 @@ interface AutoScrollOptions {
 ```ts
 interface Sortable extends Disposable {
   readonly isDragging: boolean;
+  revert(): void;
   sync(): void;
 }
 ```
@@ -117,16 +123,19 @@ declare function createDropZone(options: DropZoneOptions): DropZone;
 
 Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` handle.
 
-| Option           | Type                                        | Default  | Description                                                                                                                                                |
-| ---------------- | ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `element`        | `HTMLElement`                               | —        | **Required.** The element to attach drag listeners to.                                                                                                     |
-| `accept`         | `string[] \| (() => string[])`              | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
-| `maxFiles`       | `number`                                    | —        | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                   |
-| `disabled`       | `boolean \| (() => boolean)`                | —        | When truthy, all drag events are ignored and hover state does not change. Accepts a boolean or a function for reactive framework integration.              |
-| `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`      | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
-| `onDrop`         | `(files: File[], event: DragEvent) => void` | —        | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
-| `onDropRejected` | `(files: File[], event: DragEvent) => void` | —        | Called with files that did not match `accept` or exceeded `maxFiles`. Not called if all files are accepted.                                                |
-| `onHoverChange`  | `(hovered: boolean) => void`                | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                  |
+| Option           | Type                                                       | Default   | Description                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `element`        | `HTMLElement`                                              | —         | **Required.** The element to attach drag listeners to.                                                                                                     |
+| `accept`         | `string[] \| (() => string[])`                             | `[]`      | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
+| `maxFiles`       | `number`                                                   | —         | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                   |
+| `onValidate`     | `(files: File[]) => boolean \| Promise<boolean>`           | —         | Optional async gating step. Called after type/`accept`/`maxFiles` filtering, before `onDrop`. Return or resolve `false` to reject all accepted files. `zone.validating` is `true` while a promise is pending. Only receives type-accepted files. |
+| `disabled`       | `boolean \| (() => boolean)`                               | —         | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault`, so underlying elements receive the events. |
+| `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`                     | `'copy'`  | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
+| `onDrop`         | `(files: File[], event: DragEvent) => void`                | —         | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
+| `onDropRejected` | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —      | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`. The event is a `ClipboardEvent` for paste rejections. |
+| `onHoverChange`  | `(hovered: boolean) => void`                               | —         | Called when hover state toggles. Use this callback for drag-over styling.                                                                                  |
+| `paste`          | `boolean`                                                  | `false`   | When `true`, attaches a `paste` listener to `window`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.  |
+| `onPaste`        | `(files: File[], event: ClipboardEvent) => void`           | —         | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                      |
 
 **Returns:** `DropZone`
 
@@ -172,10 +181,16 @@ Accepted files from the last drop.
 
 `readonly rejected: readonly File[]`
 
-Rejected files from the last drop.
+Rejected files from the last drop or paste.
+
+### `zone.validating`
+
+`readonly validating: boolean`
+
+`true` while an `onValidate` promise is pending. Use this to render a loading indicator between file selection and the acceptance/rejection callbacks firing.
 
 ```ts
-console.log(zone.hovered); // false initially
+console.log(zone.validating); // true between drop and onValidate resolution
 ```
 
 ### `zone.destroy()`
@@ -225,7 +240,8 @@ Makes the direct children of a container element reorderable via drag. Each item
 - `disabled`: `boolean | (() => boolean)`. Blocks drag interactions. If a list becomes disabled mid-drag, Grip cancels the drag and restores the original order.
 - `onDragStart`: `(id: string, event: DragEvent) => void`. Called when a drag starts.
 - `onDragEnd`: `(id: string, event: DragEvent) => void`. Called when a drag ends, whether completed or cancelled.
-- `onReorder`: `(orderedIds: string[]) => void`. Called with the new order after a successful drop, only when the order actually changed.
+- `onBeforeReorder`: `(from: string[], to: string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for FLIP animation setup.
+- `onReorder`: `(orderedIds: string[]) => void | (() => void)`. Called with the new order after a successful reorder (drag or keyboard), only when the order changed. May return a revert function; if returned, `sortable.revert()` will invoke it.
 
 **Returns:** `Sortable`
 
@@ -265,6 +281,32 @@ Use one scope per connected set of containers. Sortables without an explicit sco
 `readonly isDragging: boolean`
 
 `true` while an item drag is in progress.
+
+### `sortable.revert()`
+
+`revert(): void`
+
+Calls the revert function returned by the last `onReorder` invocation (if any) and clears it. A no-op when no revert function was provided or it has already been consumed. Works for both drag-based and keyboard-based reorders.
+
+Only the most recent reorder can be reverted — a new reorder overwrites the stored function.
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  onReorder: (ids) => {
+    const prev = currentOrder;
+    setOrder(ids);
+    return () => setOrder(prev); // ← enable revert
+  },
+});
+
+// On server error:
+try {
+  await api.saveOrder(ids);
+} catch {
+  sortable.revert();
+}
+```
 
 ### `sortable.sync()`
 

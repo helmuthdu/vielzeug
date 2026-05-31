@@ -45,7 +45,7 @@ define('my-tooltip', {
         cleanup = null;
       });
 
-      // Cleanup is run automatically on unmount by craft
+      // Cleanup is run automatically on unmount by Craft
       return () => cleanup?.();
     });
   },

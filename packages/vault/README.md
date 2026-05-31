@@ -58,10 +58,17 @@ await db.putAll('users', [
 await db.put('users', { id: 3, name: 'Carol', age: 28 }, ttl.hours(1));
 
 const first = await db.query('users').between('age', 18, 99).orderBy('name').first();
-const exists = await db.has('users', 1);
 
-void first;
-void exists;
+// observe always fires immediately with the current snapshot, then on each change
+const stop = db.observe('users', (rows) => console.log(rows.length));
+
+// stop from outside via AbortController
+const controller = new AbortController();
+for await (const users of db.watch('users', { signal: controller.signal })) {
+  console.log(users.length);
+}
+
+void first, stop;
 ```
 
 ## Documentation

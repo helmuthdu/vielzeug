@@ -1,4 +1,6 @@
-import { WILDCARD, createWard, owns, rule } from '../index';
+import type { WardRuleInput } from '../types';
+
+import { createWard, defineRules, owns, rule, WILDCARD } from '../index';
 
 // ---------------------------------------------------------------------------
 // Fluent rule builder
@@ -96,5 +98,57 @@ describe('ward: fluent rule builder', () => {
 
     expect(rules).toHaveLength(2);
     expect(rules.every((r) => r.priority === 3)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// owns
+// ---------------------------------------------------------------------------
+
+describe('owns', () => {
+  it('returns true when data[attributeKey] === principal.id', () => {
+    const pred = owns<{ authorId: string }>('authorId');
+
+    expect(pred({ data: { authorId: 'u1' }, principal: { id: 'u1', roles: ['editor'] } })).toBe(true);
+  });
+
+  it('returns false when data[attributeKey] !== principal.id', () => {
+    const pred = owns<{ authorId: string }>('authorId');
+
+    expect(pred({ data: { authorId: 'u2' }, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
+  });
+
+  it('returns false when data is undefined', () => {
+    const pred = owns<{ authorId: string }>('authorId');
+
+    expect(pred({ data: undefined, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
+  });
+
+  it('returns false when data is not an object', () => {
+    const pred = owns('authorId') as (ctx: { data: unknown; principal: { id: string; roles: string[] } }) => boolean;
+
+    expect(pred({ data: 'hello', principal: { id: 'u1', roles: [] } })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// defineRules
+// ---------------------------------------------------------------------------
+
+describe('defineRules', () => {
+  it('returns the exact same array reference (identity)', () => {
+    const input: WardRuleInput<'read'>[] = [{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }];
+    const result = defineRules(input);
+
+    expect(result).toBe(input);
+  });
+
+  it('infers generic types from the input', () => {
+    const result = defineRules<'read' | 'update'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
+      { action: 'update', effect: 'allow', resource: 'posts', role: 'editor' },
+    ]);
+
+    expect(result).toHaveLength(2);
   });
 });

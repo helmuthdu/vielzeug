@@ -22,7 +22,7 @@ const cart = store({ items: [] as string[], total: 0 });
 cart.patch({ total: 42 });
 
 // Updater function
-cart.update((s) => ({ ...s, items: [...s.items, 'apple'] }));
+cart.replace((s) => ({ ...s, items: [...s.items, 'apple'] }));
 
 // Watch a derived slice via computed()
 const totalSignal = computed(() => cart.value.total);
@@ -31,7 +31,7 @@ watch(totalSignal, (total) => console.log('total:', total));
 // Batch
 batch(() => {
   cart.patch({ total: 0 });
-  cart.update((s) => ({ ...s, items: [] }));
+  cart.replace((s) => ({ ...s, items: [] }));
 });
 
 cart.reset();

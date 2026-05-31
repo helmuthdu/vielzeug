@@ -16,7 +16,7 @@ Use `wait()` for async coordination between modules:
 ```ts
 // Module A: waits for auth before doing work
 async function loadDashboard() {
-  const { userId } = await appBus.wait('user:login', AbortSignal.timeout(10_000));
+  const { userId } = await appBus.wait('user:login', { signal: AbortSignal.timeout(10_000) });
   const data = await fetchDashboard(userId);
   renderDashboard(data);
 }

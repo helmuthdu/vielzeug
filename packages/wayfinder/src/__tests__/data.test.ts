@@ -9,23 +9,21 @@ describe('data() loader', () => {
   beforeEach(resetMocks);
   afterEach(disposeRouter);
 
-  it('passes the resolved value to the handler as ctx.data', async () => {
-    const handler = vi.fn();
-
+  it('resolves data value and stores it in the leaf match node', async () => {
     mockLocation.pathname = '/profile';
-    await boot(
+
+    const router = await boot(
       createRouter({
         routes: {
           profile: {
             data: async () => ({ user: 'alice' }),
-            handler,
             path: '/profile',
           },
         },
       }),
     );
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: { user: 'alice' } }));
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ user: 'alice' });
   });
 
   it('receives params, query, and an AbortSignal', async () => {
@@ -38,7 +36,6 @@ describe('data() loader', () => {
         routes: {
           userDetail: {
             data: dataFn,
-            handler: vi.fn(),
             path: '/users/:id',
           },
         },
@@ -62,7 +59,6 @@ describe('data() loader', () => {
         routes: {
           item: {
             data: async ({ params }) => ({ id: params.id }),
-            handler: vi.fn(),
             path: '/items/:id',
           },
         },

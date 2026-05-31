@@ -1,6 +1,6 @@
 import type { MountSetup } from '../testing';
 
-import { define, type ComponentDefinition } from '../index';
+import { type ComponentDefinition, define } from '../index';
 
 export const expectType = <T>(_value: T): void => {
   // compile-time-only helper for typing assertions

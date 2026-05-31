@@ -98,17 +98,14 @@ function createWebStorageAdapter<S extends AnySchema>(
   initOwnedKeys();
 
   /**
-   * Reads a single entry. Returns the live value, or `undefined` if missing/expired/corrupt.
+   * Reads a single entry without side effects. Returns the live value,
+   * or `undefined` if missing/expired/corrupt.
    *
-   * `cleanup: true` (default) immediately removes the storage key and evicts from `ownedKeys`
-   * on any non-live result. Pass `cleanup: false` for batch scans (`count`, `getAll`) where
-   * the caller collects stale keys and evicts them after iteration to avoid mutating `ownedKeys`
-   * mid-loop.
+   * Callers that want to evict stale entries must call `evict(storageKey)` explicitly.
+   * This design avoids the `{ cleanup?: boolean }` flag that required callers to remember
+   * to pass `{ cleanup: false }` inside loops.
    */
-  const readEntry = <T extends Record<string, unknown>>(
-    storageKey: string,
-    { cleanup = true }: { cleanup?: boolean } = {},
-  ): T | undefined => {
+  const parseEntry = <T extends Record<string, unknown>>(storageKey: string): T | undefined => {
     const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
@@ -116,25 +113,18 @@ function createWebStorageAdapter<S extends AnySchema>(
     try {
       const stored = codec.decode<T>(JSON.parse(raw) as unknown);
 
-      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
-        if (cleanup) {
-          storage().removeItem(storageKey);
-          ownedKeys.delete(storageKey);
-        }
-
-        return undefined;
-      }
+      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) return undefined;
 
       return stored.value;
     } catch {
-      // JSON parse failure — always treat as stale.
-      if (cleanup) {
-        storage().removeItem(storageKey);
-        ownedKeys.delete(storageKey);
-      }
-
       return undefined;
     }
+  };
+
+  /** Removes a stale/expired/corrupt entry from storage and the owned-keys registry. */
+  const evict = (storageKey: string): void => {
+    storage().removeItem(storageKey);
+    ownedKeys.delete(storageKey);
   };
 
   const core: StorageBackend<S> = {
@@ -154,7 +144,6 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async count<K extends keyof S & string>(table: K): Promise<number> {
-      const target = storage();
       const prefix = getPrefix(table);
       const expiredKeys: string[] = [];
       let liveCount = 0;
@@ -162,7 +151,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const value = readEntry<RecordOf<S, K>>(storageKey, { cleanup: false });
+        const value = parseEntry<RecordOf<S, K>>(storageKey);
 
         if (value === undefined) {
           expiredKeys.push(storageKey);
@@ -172,8 +161,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
 
       for (const storageKey of expiredKeys) {
-        target.removeItem(storageKey);
-        ownedKeys.delete(storageKey);
+        evict(storageKey);
       }
 
       return liveCount;
@@ -181,11 +169,10 @@ function createWebStorageAdapter<S extends AnySchema>(
 
     async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
       const storageKey = encodeStorageKey(name, table, String(key));
-      const value = readEntry<RecordOf<S, K>>(storageKey);
+      const value = parseEntry<RecordOf<S, K>>(storageKey);
 
       if (value !== undefined) {
-        storage().removeItem(storageKey);
-        ownedKeys.delete(storageKey);
+        evict(storageKey);
 
         return true;
       }
@@ -198,11 +185,10 @@ function createWebStorageAdapter<S extends AnySchema>(
 
       for (const key of keys) {
         const storageKey = encodeStorageKey(name, table, String(key));
-        const value = readEntry<RecordOf<S, K>>(storageKey);
+        const value = parseEntry<RecordOf<S, K>>(storageKey);
 
         if (value !== undefined) {
-          storage().removeItem(storageKey);
-          ownedKeys.delete(storageKey);
+          evict(storageKey);
           deleted += 1;
         }
       }
@@ -211,11 +197,15 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, table, String(key)));
+      const storageKey = encodeStorageKey(name, table, String(key));
+      const value = parseEntry<RecordOf<S, K>>(storageKey);
+
+      if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
+
+      return value;
     },
 
     async getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]> {
-      const target = storage();
       const records: RecordOf<S, K>[] = [];
       const expiredKeys: string[] = [];
       const prefix = getPrefix(table);
@@ -223,7 +213,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const value = readEntry<RecordOf<S, K>>(storageKey, { cleanup: false });
+        const value = parseEntry<RecordOf<S, K>>(storageKey);
 
         if (value === undefined) {
           expiredKeys.push(storageKey);
@@ -234,8 +224,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
 
       for (const storageKey of expiredKeys) {
-        target.removeItem(storageKey);
-        ownedKeys.delete(storageKey);
+        evict(storageKey);
       }
 
       return records;
@@ -253,18 +242,22 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      return readEntry<RecordOf<S, K>>(encodeStorageKey(name, table, String(key))) !== undefined;
+      const storageKey = encodeStorageKey(name, table, String(key));
+      const value = parseEntry<RecordOf<S, K>>(storageKey);
+
+      if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
+
+      return value !== undefined;
     },
 
     async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
-      const target = storage();
       const prefix = getPrefix(table);
       const expiredKeys: string[] = [];
 
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const raw = target.getItem(storageKey);
+        const raw = storage().getItem(storageKey);
 
         if (raw === null) {
           expiredKeys.push(storageKey);
@@ -283,8 +276,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
 
       for (const storageKey of expiredKeys) {
-        target.removeItem(storageKey);
-        ownedKeys.delete(storageKey);
+        evict(storageKey);
       }
 
       return expiredKeys.length;

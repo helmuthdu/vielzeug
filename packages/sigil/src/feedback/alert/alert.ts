@@ -4,7 +4,7 @@ import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../../content/icon/icon';
 import { awaitExit } from '../../overlay/shared/await-exit';
-import { roundableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,

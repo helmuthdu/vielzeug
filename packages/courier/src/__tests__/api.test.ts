@@ -484,6 +484,32 @@ describe('HTTP Client', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
+
+    it('does NOT auto-deduplicate concurrent DELETE requests', async () => {
+      // DELETE is idempotent but has side-effects; dedup must be opt-in via dedupeKey.
+      const http = createApi();
+
+      fetchMock.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(jsonResponse(null)), 50)));
+
+      await Promise.all([http.delete('/users/1'), http.delete('/users/1')]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('deduplicates DELETE requests when explicit dedupeKey is provided', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(jsonResponse(null)), 50)));
+
+      const [r1, r2] = await Promise.all([
+        http.delete('/users/1', { dedupeKey: 'del-user-1' }),
+        http.delete('/users/1', { dedupeKey: 'del-user-1' }),
+      ]);
+
+      expect(r1).toBeNull();
+      expect(r2).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Timeout & Errors', () => {

@@ -7,10 +7,10 @@ function makeGrid(clientHeight = 300, clientWidth = 400) {
   return makeContainer({ clientHeight, clientWidth });
 }
 
-// ─── Visible cells ────────────────────────────────────────────────────────────
+// ─── Visible rows and cols ───────────────────────────────────────────────────
 
-describe('createGridVirtualizer – visible cells', () => {
-  it('emits cells covering the initial viewport', () => {
+describe('createGridVirtualizer – visible rows and cols', () => {
+  it('emits rows and cols covering the initial viewport', () => {
     const el = makeGrid(100, 120);
     const v = createGridVirtualizer(el, {
       colCount: 10,
@@ -21,33 +21,30 @@ describe('createGridVirtualizer – visible cells', () => {
       rowCount: 10,
     });
 
-    expect(v.cells.length).toBeGreaterThan(0);
-
-    const rows = [...new Set(v.cells.map((c) => c.rowIndex))];
-    const cols = [...new Set(v.cells.map((c) => c.colIndex))];
-
-    expect(rows.length).toBeGreaterThanOrEqual(3);
-    expect(cols.length).toBeGreaterThanOrEqual(3);
+    expect(v.rows.length).toBeGreaterThanOrEqual(3);
+    expect(v.cols.length).toBeGreaterThanOrEqual(3);
     v.destroy();
   });
 
-  it('emits no cells when rowCount is 0', () => {
+  it('emits no rows when rowCount is 0', () => {
     const el = makeGrid();
     const v = createGridVirtualizer(el, { colCount: 5, estimateColSize: 40, estimateRowSize: 30, rowCount: 0 });
 
-    expect(v.cells).toHaveLength(0);
+    expect(v.rows).toHaveLength(0);
+    expect(v.cols).toHaveLength(0);
     v.destroy();
   });
 
-  it('emits no cells when colCount is 0', () => {
+  it('emits no cols when colCount is 0', () => {
     const el = makeGrid();
     const v = createGridVirtualizer(el, { colCount: 0, estimateColSize: 40, estimateRowSize: 30, rowCount: 5 });
 
-    expect(v.cells).toHaveLength(0);
+    expect(v.rows).toHaveLength(0);
+    expect(v.cols).toHaveLength(0);
     v.destroy();
   });
 
-  it('cell shape has correct position info', () => {
+  it('row and col item shapes have correct position info', () => {
     const el = makeGrid(100, 120);
     const v = createGridVirtualizer(el, {
       colCount: 5,
@@ -58,18 +55,8 @@ describe('createGridVirtualizer – visible cells', () => {
       rowCount: 5,
     });
 
-    const cell = v.cells[0]!;
-
-    expect(cell).toMatchObject({
-      colEnd: 40,
-      colIndex: 0,
-      colSize: 40,
-      colStart: 0,
-      rowEnd: 30,
-      rowIndex: 0,
-      rowSize: 30,
-      rowStart: 0,
-    });
+    expect(v.rows[0]).toMatchObject({ end: 30, index: 0, size: 30, start: 0 });
+    expect(v.cols[0]).toMatchObject({ end: 40, index: 0, size: 40, start: 0 });
     v.destroy();
   });
 });
@@ -111,7 +98,7 @@ describe('createGridVirtualizer – totalSize', () => {
 // ─── onChange ─────────────────────────────────────────────────────────────────
 
 describe('createGridVirtualizer – onChange', () => {
-  it('calls onChange on creation with initial cells', () => {
+  it('calls onChange on creation with initial rows, cols, and size', () => {
     const el = makeGrid(100, 120);
     const onChange = vi.fn();
 
@@ -121,9 +108,12 @@ describe('createGridVirtualizer – onChange', () => {
 
     const state = onChange.mock.calls.at(-1)?.[0];
 
-    expect(state).toHaveProperty('cells');
+    expect(state).toHaveProperty('rows');
+    expect(state).toHaveProperty('cols');
     expect(state).toHaveProperty('totalHeight');
     expect(state).toHaveProperty('totalWidth');
+    expect(Array.isArray(state.rows)).toBe(true);
+    expect(Array.isArray(state.cols)).toBe(true);
   });
 });
 
@@ -202,7 +192,8 @@ describe('createGridVirtualizer – measurement', () => {
     );
     await flushMicrotasks();
 
-    expect(onChange.mock.calls.length).toBeGreaterThan(callsBefore);
+    // R4: single coordinated flush — both axes trigger exactly one onChange call
+    expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(v.totalHeight).toBe(70 + 90 + 2 * 50);
     expect(v.totalWidth).toBe(100 + 4 * 80);
     v.destroy();

@@ -1,6 +1,6 @@
 ---
 title: Familiar — Usage Guide
-description: How to use worker for task functions, single workers, pools, maxQueue back-pressure, timeouts, AbortSignal, transferables, status, and testing.
+description: How to use familiar for task functions, single workers, pools, streaming, priorities, heartbeat, timeouts, cancellation, typed errors, and testing.
 ---
 
 [[toc]]
@@ -80,10 +80,10 @@ const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'aut
 
 ## Queue Back-Pressure (`maxQueue`)
 
-Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full, `run()` rejects with `WorkerError` code `'queue_full'`.
+Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full and `onFull` is `'reject'` (the default), `run()` rejects immediately with `WorkerQueueFullError`:
 
 ```ts
-import { createWorker, WorkerError } from '@vielzeug/familiar';
+import { createWorker, WorkerQueueFullError } from '@vielzeug/familiar';
 
 const worker = createWorker<number, number>((n) => n * 2, {
   concurrency: 1,
@@ -93,11 +93,13 @@ const worker = createWorker<number, number>((n) => n * 2, {
 try {
   await worker.run(1);
 } catch (error) {
-  if (error instanceof WorkerError && error.code === 'queue_full') {
-    console.error('Back-pressure triggered, queue is full');
+  if (error instanceof WorkerQueueFullError) {
+    console.error(`Back-pressure triggered: queue is full (max ${error.maxQueue})`);
   }
 }
 ```
+
+For producer→consumer pipelines, use `onFull: 'wait'` to suspend the caller instead. See [Queue Back-Pressure (`onFull`)](#queue-back-pressure-onfull) below.
 
 ## Timeouts
 
@@ -269,6 +271,114 @@ for await (const result of pool.batch([1, 2, 3], { timeout: 500 })) {
 
 If any task throws, `batch()` cancels remaining queued tasks and re-throws the error.
 
+Pass `ordered: false` to yield results in completion order instead of submission order (higher throughput when tasks take different amounts of time):
+
+```ts
+for await (const result of pool.batch([1, 2, 3], { ordered: false })) {
+  console.log(result); // arrives as soon as each task finishes
+}
+```
+
+## Streaming (`runStream`)
+
+When a task yields multiple partial results, use `runStream()`. The task function must return an async iterable; each yielded value is forwarded to the caller as a chunk.
+
+::: warning Requires a free slot
+`runStream()` cannot queue. If all slots are busy it throws `WorkerRuntimeError` immediately. Design streaming workloads so slots are available or use `run()` for queueable alternatives.
+:::
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+// Task returns an async iterable
+const worker = createWorker<{ start: number; end: number }, number[]>(
+  ({ start, end }) =>
+    (async function* () {
+      for (let i = start; i <= end; i++) {
+        await new Promise((r) => setTimeout(r, 10)); // simulate work per chunk
+        yield i;
+      }
+    })() as unknown as number[],
+);
+
+for await (const chunk of worker.runStream({ start: 1, end: 5 })) {
+  console.log('chunk:', chunk); // 1, 2, 3, 4, 5
+}
+
+worker.dispose();
+```
+
+Breaking out of the loop early (or throwing from the body) releases the slot cleanly — no leak, no stale timers.
+
+## Task Groups (`group`)
+
+Use `group()` when you want to cancel and drain a set of related tasks together.
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+const g = pool.group();
+
+// Submit tasks into the group
+const p1 = g.run(1);
+const p2 = g.run(2);
+const p3 = g.run(3);
+
+// Wait for all group tasks to settle (success or failure)
+await g.drain();
+
+console.log(g.size); // 3
+
+pool.dispose();
+```
+
+Cancel all pending tasks in the group with `g.abort()`:
+
+```ts
+const g = pool.group();
+
+const p1 = g.run(slowTask1);
+const p2 = g.run(slowTask2);
+const p3 = g.run(slowTask3);
+
+g.abort(); // p2, p3 (queued) reject; p1 (in-flight) completes normally
+await p1;
+```
+
+`drain()` throws the first error after all tasks have settled, preventing unhandled rejections from subsequent failures:
+
+```ts
+const g = pool.group();
+
+g.run(failingTask1).catch(() => {}); // handle individually
+g.run(failingTask2).catch(() => {}); // handle individually
+
+const err = await g.drain().catch((e) => e);
+// err is the first failure — both tasks settled before throw
+```
+
+## Priority Queue
+
+Pass `priority` per `run()` call. Higher values run before lower values when tasks queue up. Equal priorities are FIFO.
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<string, string>((s) => s.toUpperCase(), { concurrency: 1 });
+
+// Queue multiple tasks — the slot is busy with a blocker
+const blocker = pool.run('low-priority-blocker');
+
+pool.run('low', { priority: 1 });
+pool.run('critical', { priority: 100 }); // runs first once blocker finishes
+pool.run('normal', { priority: 10 });
+
+// Execution order after blocker: critical → normal → low
+```
+
+Default priority is `0`.
+
 ## Per-Run Timeout
 
 The `timeout` option can also be passed per `run()` call, overriding the pool-level timeout for that specific task:
@@ -314,6 +424,165 @@ try {
 ```
 
 Use `dispose()` for immediate forceful termination.
+
+## Heartbeat Monitoring
+
+Use `heartbeatTimeout` to kill tasks that stop responding (e.g., blocked CPU work in a module worker). If the worker does not send a heartbeat within `heartbeatTimeout` ms, the task is rejected with `WorkerTimeoutError`.
+
+**Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatTimeout / 2` intervals, so long-running tasks stay alive as long as they progress:
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 5000)));
+
+// 60s watchdog — auto-heartbeats keep it alive throughout
+await worker.run(undefined, { heartbeatTimeout: 60_000 });
+worker.dispose();
+```
+
+**Module workers** (`createModuleWorker`) must send heartbeats manually at the interval specified in `event.data.heartbeatInterval`:
+
+```ts
+// my-worker.ts
+self.onmessage = async (event) => {
+  const { id, input, heartbeatInterval } = event.data;
+
+  // Send heartbeats at the requested interval
+  const hb = heartbeatInterval
+    ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval)
+    : null;
+
+  try {
+    self.postMessage({ id, result: await heavyWork(input) });
+  } finally {
+    if (hb) clearInterval(hb);
+  }
+};
+```
+
+## Slot Error Handling (`onSlotError`)
+
+Use `onSlotError` to be notified when a Worker slot crashes with an unhandled runtime error. The slot is stopped automatically; call `restart()` to pre-warm a replacement Worker.
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>((n) => n * 2, {
+  concurrency: 4,
+  onSlotError: (error, restart) => {
+    console.error('Worker slot crashed:', error.message);
+    // Optionally pre-warm the replacement Worker immediately
+    restart();
+  },
+});
+```
+
+If `onSlotError` is omitted, errors are handled silently and the slot restarts lazily on the next `run()` call.
+
+## Queue Back-Pressure (`onFull`)
+
+By default, `run()` rejects with `WorkerQueueFullError` when `maxQueue` is reached (`onFull: 'reject'`). Set `onFull: 'wait'` to suspend the caller instead — natural backpressure for producer→consumer pipelines:
+
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>((n) => n * 2, {
+  concurrency: 2,
+  maxQueue: 10,
+  onFull: 'wait', // callers suspend until a queue slot opens
+});
+
+// Producer — never rejects with queue_full
+for (let i = 0; i < 1000; i++) {
+  await pool.run(i); // suspends automatically when queue is full
+}
+
+await pool.close();
+```
+
+## Module Workers (`createModuleWorker`)
+
+Use `createModuleWorker` when the task needs imports, top-level await, or module-scope helpers that cannot be inlined into a self-contained function.
+
+```ts
+// my-worker.ts — a regular ES module
+import { heavyLib } from './heavy-lib.js';
+
+self.onmessage = async (event) => {
+  const { id, input } = event.data;
+  try {
+    self.postMessage({ id, result: await heavyLib.process(input) });
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    self.postMessage({ id, error: { name: err.name, message: err.message, stack: err.stack } });
+  }
+};
+
+// main.ts
+import { createModuleWorker } from '@vielzeug/familiar';
+
+const pool = createModuleWorker<string, string>(
+  new URL('./my-worker.ts', import.meta.url),
+  { concurrency: 4 },
+);
+
+const result = await pool.run('hello');
+pool.dispose();
+```
+
+See the [API Reference](./api.md#createmoduleworker) for the full message protocol schema.
+
+## Typed Errors
+
+Each failure reason has its own class with extra fields for context. Use `instanceof` checks for precise handling:
+
+```ts
+import {
+  createWorker,
+  WorkerQueueFullError,
+  WorkerTaskError,
+  WorkerTerminatedError,
+  WorkerTimeoutError,
+} from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>((n) => {
+  if (n < 0) throw new RangeError('negative input');
+  return n * 2;
+}, { concurrency: 1, maxQueue: 5, timeout: 1000 });
+
+try {
+  await pool.run(input);
+} catch (err) {
+  if (err instanceof WorkerTimeoutError) {
+    // .timeoutMs tells you exactly how long it waited
+    console.error(`Timed out after ${err.timeoutMs}ms`);
+  } else if (err instanceof WorkerTaskError) {
+    // .cause is the original error thrown inside the task
+    console.error('Task threw:', (err.cause as Error).message);
+  } else if (err instanceof WorkerQueueFullError) {
+    // .maxQueue is the configured limit
+    console.error(`Queue full (max ${err.maxQueue} tasks)`);
+  } else if (err instanceof WorkerTerminatedError) {
+    console.error('Pool was disposed');
+  }
+}
+```
+
+All error subclasses extend `WorkerError` — use `instanceof WorkerError` as a catch-all:
+
+```ts
+import { WorkerError } from '@vielzeug/familiar';
+
+try {
+  await pool.run(input);
+} catch (err) {
+  if (err instanceof WorkerError) {
+    // err.code is always set: 'timeout' | 'task' | 'queue_full' | 'terminated' | 'worker' | 'invalid_options'
+    console.error(`Worker error [${err.code}]:`, err.message);
+  }
+}
+```
 
 ## Runtime Availability
 
@@ -406,9 +675,33 @@ describe('add worker', () => {
 }
 ```
 
+### `TestWorkerOptions`
+
+```ts
+type TestWorkerOptions = {
+  concurrency?: number;  // default: 1
+  maxQueue?: number;
+  onFull?: 'reject' | 'wait';
+};
+```
+
+The default `concurrency: 1` gives deterministic serial execution. Increase it only when testing concurrency-specific behavior:
+
+```ts
+// Test that 3 tasks run truly in parallel
+const worker = createTestWorker<number, number>(
+  (n) => new Promise((r) => setTimeout(() => r(n), 20)),
+  { concurrency: 3 },
+);
+
+const start = Date.now();
+const results = await Promise.all([worker.run(1), worker.run(2), worker.run(3)]);
+console.log(Date.now() - start); // ~20ms — ran in parallel
+```
+
 ## Prime (Pre-initialize)
 
-Call `prime()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task. Unlike the old `warmup()`, `prime()` returns a `Promise<void[]>` you can `await` to know when all slots are genuinely ready.
+Call `prime()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task.
 
 ```ts
 import { createWorker } from '@vielzeug/familiar';

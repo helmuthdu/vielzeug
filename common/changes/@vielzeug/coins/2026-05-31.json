@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/coins",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

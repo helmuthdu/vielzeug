@@ -73,13 +73,22 @@ const bob = await db.get('users', 2);
 console.log(bob?.name); // 'Bob'
 ```
 
-#### `getOrDefault` inside batch
+#### `getOrDefault`
 
-`getOrDefault` is only available inside `batch()`. It returns the existing record if found; otherwise it inserts and returns the result of `defaultFn()`. On IndexedDB the check and insert are atomic (same IDB transaction).
+`getOrDefault` is available at the top-level adapter **and** inside `batch()`. It returns the existing record if found; otherwise it inserts and returns the result of `defaultFn()`.
+
+```ts
+// Top-level — no batch needed
+const user = await db.getOrDefault('users', 1, () => ({ id: 1, name: 'Guest' }));
+console.log(user.name);
+```
+
+For **IndexedDB**, wrap in `batch()` when you need the check and insert to be atomic (same IDB transaction):
 
 ```ts
 await db.batch(['users'], async (tx) => {
-  // Returns Alice if id 1 already exists; inserts and returns Guest otherwise
+  // Returns Alice if id 1 already exists; inserts and returns Guest otherwise.
+  // On IndexedDB, the check and insert are atomic within this transaction.
   const user = await tx.getOrDefault('users', 1, () => ({ id: 1, name: 'Guest' }));
   console.log(user.name);
 });

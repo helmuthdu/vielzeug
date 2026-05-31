@@ -1,4 +1,4 @@
-import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craft';
+import { computed, define, effect, html, inject, prop, signal, styleMap, when } from '@vielzeug/craft';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';

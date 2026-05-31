@@ -1,4 +1,4 @@
-import { createSessionStorage, table, ttl, type Adapter } from '../index';
+import { type Adapter, createSessionStorage, table, ttl } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 

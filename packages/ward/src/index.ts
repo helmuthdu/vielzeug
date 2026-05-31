@@ -1,8 +1,7 @@
 export { ANONYMOUS, WILDCARD } from './constants';
 export { createWard } from './factory';
-export { owns } from './helpers';
-export { rule } from './builder';
-export { matchesPattern } from './resource';
+export { defineRules, owns, rule } from './builder';
+export { matchesPattern, patternCovers } from './resource';
 export { createExpressGuard, createHonoGuard, guardRequest } from './middleware';
 export type {
   BoundWard,
@@ -18,5 +17,8 @@ export type {
   WardOptions,
   WardPredicate,
   WardRule,
+  WardRuleInput,
+  WardTrace,
+  WardTraceCandidate,
 } from './types';
 export type { ExpressGuardOptions, GuardResult, HonoGuardOptions, PrincipalExtractor } from './middleware';

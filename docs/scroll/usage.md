@@ -18,11 +18,11 @@ const listEl = document.querySelector<HTMLElement>('.list')!;
 const virt = createVirtualizer(scrollEl, {
   count: 10_000,
   estimateSize: 36,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
       el.textContent = `Row ${item.index}`;
@@ -65,62 +65,56 @@ A common alternative is to make the spacer and item container the same element:
 </div>
 ```
 
-## DOM Module for Dropdowns and Listboxes
+## DOM Adapter for Dropdowns and Listboxes
 
-If your component already has a dropdown scroll container and a listbox element, use `createDomVirtualList` from `@vielzeug/scroll/dom`. It wraps the `Virtualizer` lifecycle and keeps the integration surface tiny.
+If your component already has a dropdown scroll container and a listbox element, use `createDomVirtualList`. It wraps the `Virtualizer` lifecycle and keeps the integration surface small. Items arrive as `VirtualRenderItem<T>` — a `VirtualItem` enriched with a `.data` field. Use `recycle` for efficient DOM node reuse.
+
+The virtualizer is created lazily on the first non-empty `setItems()` call and destroyed automatically when `setItems([])` is called (clearing list styles in the process).
 
 ```ts
-import { createDomVirtualList } from '@vielzeug/scroll/dom';
+import { createDomVirtualList } from '@vielzeug/scroll';
 
 type Option = { disabled?: boolean; label: string; value: string };
 
 let options: Option[] = [];
 
 const domVirtualList = createDomVirtualList<Option>({
-  clear: (listEl) => {
-    for (const el of Array.from(listEl.querySelectorAll('.option'))) el.remove();
-  },
   estimateSize: 36,
   gap: 6,
   getItemKey: (_index, option) => option.value,
   listElement: listboxEl,
-  overscan: { start: 4, end: 4 },
-  render: ({ items, listEl, totalSize, virtualItems }) => {
-    listEl.style.height = `${totalSize}px`;
-    for (const item of virtualItems) {
-      const opt = items[item.index];
-      if (!opt) continue;
-
-      const row = document.createElement('button');
+  overscan: { end: 4, start: 4 },
+  render: ({ items, listEl, recycle }) => {
+    for (const item of items) {
+      const row = recycle(item.data.value, () => document.createElement('button'));
       row.type = 'button';
       row.className = 'option';
-      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
-      row.textContent = opt.label;
-      row.disabled = !!opt.disabled;
-      row.addEventListener('click', () => selectOption(opt));
+      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);height:${item.size}px;`;
+      row.textContent = item.data.label;
+      row.disabled = !!item.data.disabled;
       listEl.appendChild(row);
     }
   },
   scrollElement: dropdownEl,
 });
 
-// Keep this in sync when options or open state change
+// Keep in sync when options change
 domVirtualList.setItems(options);
-domVirtualList.setActive(isOpen);
 
-// Keyboard nav helper
+// Open: setItems populates the list
+// Close: setItems([]) destroys the virtualizer and clears list styles
+domVirtualList.setItems(isOpen ? options : []);
+
+// Keyboard nav
 domVirtualList.scrollToIndex(focusedIndex, { align: 'auto' });
-
-// Optional variable-height measurement for rendered rows
-domVirtualList.measure(renderedIndex, rowEl.offsetHeight);
 
 // Component teardown
 domVirtualList.destroy();
 ```
 
-For variable-height rows, pass `getItemKey` whenever the same logical items can be reordered, filtered, or reinserted. Without stable keys, `createDomVirtualList` clears measured heights on each `setItems()` call by design.
+For variable-height rows, pass `getItemKey` so measurements survive `setItems()` calls when items reorder or are filtered.
 
-When multiple sizes are available at once (e.g., from a `ResizeObserver` batch), use `measureBatch` to coalesce them into a single rebuild:
+When multiple sizes are available at once, use `measureBatch` to coalesce into a single rebuild:
 
 ```ts
 domVirtualList.measureBatch(
@@ -128,17 +122,7 @@ domVirtualList.measureBatch(
 );
 ```
 
-When the DOM is rebuilt — for example, a portal remounts — swap the elements live with `setTarget` rather than destroying and recreating the controller:
-
-```ts
-domVirtualList.setTarget(newScrollEl, newListEl);
-```
-
-Use `domVirtualList.invalidate()` when many row heights changed and you want to discard all cached measurements.
-
-::: tip Migration note
-If you previously managed `createVirtualizer`, attach/destroy, and list-height styles manually for a dropdown/listbox, you can move that glue code into `createDomVirtualList` and keep rendering logic in a single `render` callback.
-:::
+Use `domVirtualList.invalidate()` to discard all cached measurements.
 
 ## Fixed Heights
 
@@ -148,11 +132,11 @@ Pass a single number to `estimateSize` when all rows are the same height. This i
 const virt = createVirtualizer(scrollEl, {
   count: 10_000,
   estimateSize: 36, // every row is 36px
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     list.style.height = `${totalSize}px`;
     list.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
       el.textContent = data[item.index].name;
@@ -170,7 +154,7 @@ Pass a **per-index function** to `estimateSize` when rows have predictable but n
 const virt = createVirtualizer(scrollEl, {
   count: flatList.length,
   estimateSize: (i) => (flatList[i].type === 'header' ? 48 : 36),
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     // render...
   },
 });
@@ -184,11 +168,11 @@ For truly dynamic heights (e.g. text wrapping, embedded images), render items at
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 60, // initial estimate
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     list.style.height = `${totalSize}px`;
     list.innerHTML = '';
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const el = document.createElement('div');
       el.dataset.index = String(item.index);
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
@@ -198,7 +182,7 @@ const virt = createVirtualizer(scrollEl, {
 
     // Measure after the DOM has painted
     requestAnimationFrame(() => {
-      for (const item of virtualItems) {
+      for (const item of items) {
         const el = list.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
         if (el) virt.measure(item.index, el.offsetHeight);
       }
@@ -249,7 +233,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 ```
 
-`onMeasure` fires once per item per distinct size change. It does not fire when `measure()` is called with a size identical to the current effective height.
+`onMeasure` fires once per item per distinct size change.
 
 ## Overscan
 
@@ -259,14 +243,14 @@ const virt = createVirtualizer(scrollEl, {
 createVirtualizer(scrollEl, {
   count: 1_000,
   estimateSize: 36,
-  overscan: { start: 5, end: 5 }, // render 5 extra items above and below the visible window (default: 3)
+  overscan: { start: 5, end: 5 }, // render 5 extra items above and below (default: 3)
   onChange: () => {
     /* ... */
   },
 });
 ```
 
-You can also set asymmetric overscan:
+Asymmetric overscan:
 
 ```ts
 createVirtualizer(scrollEl, {
@@ -288,10 +272,10 @@ const virt = createVirtualizer(scrollEl, {
   count: chips.length,
   estimateSize: 120,
   horizontal: true,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     list.style.width = `${totalSize}px`;
 
-    for (const item of virtualItems) {
+    for (const item of items) {
       const chip = document.createElement('button');
       chip.style.cssText = `position:absolute;left:${item.start}px;top:0;width:${item.size}px;`;
       chip.textContent = chips[item.index].label;
@@ -310,32 +294,22 @@ const virt = createVirtualizer(window, {
   count: rows.length,
   estimateSize: 40,
   initialOffset: 320,
-  onChange: (virtualItems, totalSize) => {
+  onChange: ({ items, totalSize }) => {
     spacer.style.height = `${totalSize}px`;
-    renderRows(virtualItems);
+    renderRows(items);
   },
 });
 ```
 
-## Scroll State Hooks
+## Scroll State
 
-Use `onScrollingChange`, `onScrollEnd`, and `isScrolling` when you need active-scroll UI states.
+Use `virt.scrollOffset` to read the current scroll position at any time.
 
 ```ts
-const virt = createVirtualizer(scrollEl, {
-  count: rows.length,
-  estimateSize: 36,
-  onScrollingChange: (next) => {
-    scrollEl.dataset.scrolling = String(next);
-  },
-  onScrollEnd: (offset) => {
-    sessionStorage.setItem('lastOffset', String(offset));
-  },
-});
+const virt = createVirtualizer(scrollEl, { count: rows.length, estimateSize: 36, onChange: render });
 
-if (virt.isScrolling) {
-  // e.g. pause expensive row effects
-}
+// Accessed outside onChange
+console.log(virt.scrollOffset);
 ```
 
 ## Updating Options
@@ -354,6 +328,9 @@ virt.update({ count: data.length, overscan: { start: 5, end: 5 } });
 
 // Rebuild after reordering/filtering stable-key rows
 virt.refresh();
+
+// Re-emit without rebuilding offsets when only data changed, not sizes
+virt.redraw();
 ```
 
 ## Switching Row Density
@@ -477,10 +454,10 @@ function VirtualList({ rows }: { rows: Row[] }) {
     const virt = createVirtualizer(scrollEl, {
       count: rows.length,
       estimateSize: 36,
-      onChange: (virtualItems, totalSize) => {
+      onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-        for (const item of virtualItems) {
+        for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = rows[item.index]?.label ?? '';
@@ -518,10 +495,10 @@ onMounted(() => {
   virt = createVirtualizer(scrollRef.value, {
     count: props.rows.length,
     estimateSize: 36,
-    onChange: (virtualItems, totalSize) => {
+    onChange: ({ items, totalSize }) => {
       listEl.style.height = `${totalSize}px`;
       listEl.innerHTML = '';
-      for (const item of virtualItems) {
+      for (const item of items) {
         const el = document.createElement('div');
         el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
         el.textContent = props.rows[item.index]?.label ?? '';
@@ -554,10 +531,10 @@ onUnmounted(() => virt?.destroy());
     virt = createVirtualizer(scrollEl, {
       count: rows.length,
       estimateSize: 36,
-      onChange: (virtualItems, totalSize) => {
+      onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-        for (const item of virtualItems) {
+        for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = rows[item.index]?.label ?? '';
@@ -594,10 +571,10 @@ class VirtualList extends LitElement {
     this.#virt = createVirtualizer(scrollEl, {
       count: this.rows.length,
       estimateSize: 36,
-      onChange: (virtualItems, totalSize) => {
+      onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-        for (const item of virtualItems) {
+        for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = this.rows[item.index]?.label ?? '';
@@ -644,9 +621,11 @@ define('virtual-list', {
       const virt = createVirtualizer(scrollRef.value, {
         count: 1000,
         estimateSize: 40,
-        onChange: (items, totalSize) => {
+        onChange: ({ items, totalSize }) => {
           listEl.style.height = `${totalSize}px`;
           listEl.innerHTML = items.map((i) => `<div style="position:absolute;top:${i.start}px;height:40px;">Row ${i.index}</div>`).join('');
+        },
+        },
         },
       });
       return () => virt.destroy();
@@ -667,6 +646,7 @@ define('virtual-list', {
 - Call `destroy()` in the framework cleanup callback (useEffect return, onUnmounted, onDestroy) to free resize observers.
 - Use `overscan` to pre-render rows above and below the visible area to reduce blank flicker during fast scrolling.
 - Prefer `scrollToIndex()` with `align: 'start'` for programmatic navigation; use `align: 'center'` for focus management.
-- Use `createDomVirtualList()` for comboboxes, listboxes, and selects — it manages the container DOM for you.
+- Use `createDomVirtualList()` for comboboxes, listboxes, and selects — it manages the virtualizer lifecycle and DOM node pooling for you.
 - Invalidate measurements with `invalidate()` when item content changes size (e.g., after expanding an accordion row).
 - For very large lists (>100k items), set a narrower `overscan` to limit DOM node count at any one time.
+- Use `redraw()` when item data changes but sizes stay the same (O(1)). Use `refresh()` when sizes may have changed (O(n)).

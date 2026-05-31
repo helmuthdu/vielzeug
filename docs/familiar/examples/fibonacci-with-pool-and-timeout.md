@@ -14,7 +14,7 @@ A recursive CPU-bound computation (e.g., Fibonacci) can run arbitrarily long wit
 Classic CPU-bound example with a safety timeout:
 
 ```ts
-import { createWorker, WorkerError } from '@vielzeug/familiar';
+import { createWorker, WorkerTimeoutError } from '@vielzeug/familiar';
 
 const fibPool = createWorker<number, number>(
   function fib(n) {
@@ -28,8 +28,8 @@ async function computeFibonacci(n: number): Promise<number | null> {
   try {
     return await fibPool.run(n);
   } catch (error) {
-    if (error instanceof WorkerError && error.code === 'timeout') {
-      console.error(`Fibonacci(${n}) exceeded 5 second timeout`);
+    if (error instanceof WorkerTimeoutError) {
+      console.error(`Fibonacci(${n}) exceeded ${error.timeoutMs}ms timeout`);
       return null;
     }
     throw error;

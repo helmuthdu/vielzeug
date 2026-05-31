@@ -1,21 +1,24 @@
 import {
-  define,
   computed,
   createContext,
+  define,
   html,
   inject,
-  provide,
-  signal,
-  type ReadonlySignal,
-  watch,
   onMounted,
   prop,
+  provide,
+  type ReadonlySignal,
+  signal,
+  watch,
 } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
+import groupStyles from './sidebar-group.css?inline';
+import itemStyles from './sidebar-item.css?inline';
+import sidebarStyles from './sidebar.css?inline';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -77,8 +80,6 @@ export type SidebarContext = {
 export const SIDEBAR_CTX = createContext<SidebarContext>('SidebarContext');
 
 // ─── bit-sidebar styles ──────────────────────────────────────────────────────
-
-import sidebarStyles from './sidebar.css?inline';
 
 /** bit-sidebar element interface */
 export type SidebarElement = HTMLElement &
@@ -633,8 +634,6 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
 
 // ─── bit-sidebar-group styles ────────────────────────────────────────────────
 
-import groupStyles from './sidebar-group.css?inline';
-
 /** Sidebar group properties */
 export type BitSidebarGroupProps = {
   /** Whether this group can be collapsed */
@@ -744,8 +743,6 @@ define<BitSidebarGroupProps, BitSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
 });
 
 // ─── bit-sidebar-item styles ─────────────────────────────────────────────────
-
-import itemStyles from './sidebar-item.css?inline';
 
 /** Sidebar item properties */
 export type BitSidebarItemProps = {

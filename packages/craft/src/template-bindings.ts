@@ -1,19 +1,19 @@
-import { effect as rawEffect, isSignal, StateError, untrack, type ReadonlySignal } from '@vielzeug/ripple';
+import { effect as rawEffect, isSignal, type ReadonlySignal, StateError, untrack } from '@vielzeug/ripple';
 
-import { propRegistry } from './props';
 import {
-  isHtmlResult,
   type AttrBinding,
+  type AttrPropMeta,
   type Binding,
   type DirectiveBinding,
   type EventBinding,
   type HtmlBinding,
   type HtmlBindingValue,
+  isHtmlResult,
   type RefBinding,
   type SpreadBinding,
   type TextBinding,
 } from './types/bindings';
-import { listen, removeNodes, runAll, setAttr, isStructuredValue } from './utils/dom';
+import { isStructuredValue, listen, removeNodes, runAll, setAttr } from './utils/dom';
 
 export type RegisterCleanup = (fn: () => void) => void;
 
@@ -91,9 +91,7 @@ const applyCheckedValue = (
   if (isLive) state.last = next;
 };
 
-type PropMetaLike = { parse: (v: string | null) => unknown; reflect: boolean; signal: { value: unknown } };
-
-const syncRegisteredProp = (el: HTMLElement, meta: PropMetaLike, binding: AttrBinding, value: unknown): void => {
+const syncRegisteredProp = (el: HTMLElement, meta: AttrPropMeta, binding: AttrBinding, value: unknown): void => {
   const parsed = isStructuredValue(value)
     ? value
     : meta.parse(
@@ -118,14 +116,12 @@ const syncRegisteredProp = (el: HTMLElement, meta: PropMetaLike, binding: AttrBi
 };
 
 export const applyAttrBinding = (binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
-  const { el, mode, name } = binding;
-  const meta = propRegistry.get(el)?.get(name) as PropMetaLike | undefined;
+  const { el, mode, name, propMeta } = binding;
   const liveState: LiveWriteState = { last: undefined };
 
   const update = (value: unknown): void => {
-    if (meta) {
-      if (!isStructuredValue(value)) syncRegisteredProp(el, meta, binding, value);
-      else syncRegisteredProp(el, meta, binding, value);
+    if (propMeta) {
+      syncRegisteredProp(el, propMeta, binding, value);
 
       return;
     }

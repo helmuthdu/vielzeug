@@ -42,17 +42,19 @@ describe('codecs', () => {
       { defaultLimit: 10 },
     );
 
-    expect(decoded).toEqual({ limit: 5, page: 2, search: '' });
+    expect(decoded).toEqual({ limit: 5, page: 2 });
     expect('filter' in decoded).toBe(false);
     expect('sort' in decoded).toBe(false);
+    expect('search' in decoded).toBe(false);
   });
 
-  it('omits filter and sort keys when params are absent', () => {
+  it('omits filter, sort, and search keys when params are absent', () => {
     const decoded = decodeQuery({ limit: '5', page: '1' }, { defaultLimit: 10 });
 
-    expect(decoded).toEqual({ limit: 5, page: 1, search: '' });
+    expect(decoded).toEqual({ limit: 5, page: 1 });
     expect('filter' in decoded).toBe(false);
     expect('sort' in decoded).toBe(false);
+    expect('search' in decoded).toBe(false);
   });
 
   it('throws for malformed filter in strict mode', () => {
@@ -73,5 +75,37 @@ describe('codecs', () => {
     expect('search' in params).toBe(false);
     expect(params.limit).toBe('10');
     expect(params.page).toBe('1');
+  });
+
+  it('accepts URLSearchParams as input', () => {
+    const sp = new URLSearchParams({ limit: '5', page: '2', search: 'hello' });
+    const decoded = decodeQuery(sp, { defaultLimit: 10 });
+
+    expect(decoded).toEqual({ limit: 5, page: 2, search: 'hello' });
+  });
+
+  it('URLSearchParams without search omits search key', () => {
+    const sp = new URLSearchParams({ limit: '10', page: '1' });
+    const decoded = decodeQuery(sp, { defaultLimit: 10 });
+
+    expect(decoded).toEqual({ limit: 10, page: 1 });
+    expect('search' in decoded).toBe(false);
+  });
+
+  it('URLSearchParams with filter and sort round-trips correctly', () => {
+    const sp = new URLSearchParams({
+      filter: JSON.stringify({ active: true }),
+      limit: '5',
+      page: '1',
+      sort: JSON.stringify({ by: 'name' }),
+    });
+    const decoded = decodeQuery(sp, { defaultLimit: 10 });
+
+    expect(decoded).toEqual({
+      filter: { active: true },
+      limit: 5,
+      page: 1,
+      sort: { by: 'name' },
+    });
   });
 });

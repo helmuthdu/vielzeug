@@ -5,26 +5,13 @@ import {
   html,
   inject,
   onMounted,
-  provide,
-  signal,
-  type ReadonlySignal,
-  watch,
   prop,
+  provide,
+  type ReadonlySignal,
+  signal,
+  watch,
 } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
-
-const listen = (
-  el: EventTarget | null | undefined,
-  name: string,
-  handler: (e: any) => void,
-  options?: AddEventListenerOptions,
-): (() => void) => {
-  if (!el) return () => {};
-
-  el.addEventListener(name, handler as EventListener, options);
-
-  return () => el.removeEventListener(name, handler as EventListener, options);
-};
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -39,6 +26,19 @@ import {
 } from '../../styles';
 import { computeSafeRel } from '../../utils';
 import navbarStyles from './navbar.css?inline';
+
+const listen = (
+  el: EventTarget | null | undefined,
+  name: string,
+  handler: (e: any) => void,
+  options?: AddEventListenerOptions,
+): (() => void) => {
+  if (!el) return () => {};
+
+  el.addEventListener(name, handler as EventListener, options);
+
+  return () => el.removeEventListener(name, handler as EventListener, options);
+};
 
 type NavbarMode = 'floating' | 'sticky';
 

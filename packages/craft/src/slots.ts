@@ -103,15 +103,29 @@ export const createSlots = (): ComponentSlots<string> => {
     }
   };
 
+  // Watch for dynamically-inserted <slot> elements (e.g. inside when(), each()).
+  let observer: MutationObserver | null = null;
+
   // setup() runs before the template is rendered, so bind once now (if any slots
   // already exist) and schedule another pass after first render.
   bindAllSlots();
   onMounted(() => {
     bindAllSlots();
     recomputeAllSlots();
+
+    if (host.shadowRoot) {
+      observer = new MutationObserver(() => {
+        bindAllSlots();
+        recomputeAllSlots();
+      });
+      observer.observe(host.shadowRoot, { childList: true, subtree: true });
+    }
   });
 
   onCleanup(() => {
+    observer?.disconnect();
+    observer = null;
+
     for (const cleanup of slotCleanupMap.values()) cleanup();
 
     slotCleanupMap.clear();

@@ -2,13 +2,12 @@ import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/cr
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, createCheckable, toAbortSignal } from '../../headless';
-import { SWITCH_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { type CheckableChangePayload, componentSignal, createCheckable } from '../../headless';
+import { disablableBundle, sizableBundle, SWITCH_SIZE_PRESET, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
-import { connectFormField } from '../shared/use-field';
 import componentStyles from './switch.css?inline';
 
 export type BitSwitchEvents = {
@@ -99,13 +98,15 @@ define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
       },
       prefix: 'switch',
       role: 'switch',
-      signal: toAbortSignal(onCleanup),
+      signal: componentSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
     const { assistiveId, checked, disabled, handleClick, handleKeydown, labelId } = checkable;
 
-    connectFormField(checkable, defineField, checkable.checkableFormValue, (v) => v);
+    checkable.bindFormField(
+      defineField<string>({ disabled: checkable.disabled, toFormValue: (v) => v, value: checkable.checkableFormValue }),
+    );
 
     applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown });
 

@@ -7,7 +7,7 @@ description: 'Auth and guards example for @vielzeug/wayfinder.'
 
 ### Problem
 
-Auth checks duplicated across handlers create inconsistent enforcement. Unauthenticated users reaching protected handlers receive partial or invalid state.
+Auth checks duplicated across data loaders create inconsistent enforcement. Unauthenticated users reaching protected routes receive partial or invalid state.
 
 ### Solution
 
@@ -31,18 +31,15 @@ const router = createRouter({
   routes: {
     login: {
       path: '/login',
-      handler: () => renderLogin(),
+      component: LoginPage,
     },
     dashboard: {
       path: '/dashboard',
       middleware: [requireAuth],
-      handler: (ctx) => renderDashboard(ctx.locals.user),
-    },
-    notFound: {
-      path: '*',
-      handler: () => renderNotFound(),
+      component: DashboardPage,
     },
   },
+  notFound: { component: NotFoundPage },
 });
 ```
 
@@ -55,11 +52,11 @@ import { createRouter, redirectTo } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    login: { path: '/login', handler: () => renderLogin() },
+    login: { path: '/login', component: LoginPage },
     admin: {
       path: '/admin',
       middleware: [redirectTo({ name: 'login' }, { replace: true })],
-      handler: () => renderAdmin(),
+      component: AdminPage,
     },
   },
 });

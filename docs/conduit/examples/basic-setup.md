@@ -11,13 +11,13 @@ You need to wire together a small application graph — a logger and a service t
 
 ### Solution
 
-Use `createToken()` to define each dependency contract, `container.value()` or `container.factory()` to register providers, and `await container.resolve()` to get an instance.
+Use `token()` to define each dependency contract, `container.value()` or `container.factory()` to register providers, and `await container.resolve()` to get an instance.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const Logger = createToken<{ log(message: string): void }>('Logger');
-const Service = createToken<{ run(): Promise<void> }>('Service');
+const Logger = token<{ log(message: string): void }>('Logger');
+const Service = token<{ run(): Promise<void> }>('Service');
 
 const container = createContainer();
 
@@ -46,7 +46,7 @@ await container.dispose();
 ### Pitfalls
 
 - Calling `container.resolve()` before `container.value()` or `container.factory()` throws `ProviderNotFoundError`. Register all providers before resolving.
-- Passing a token of type `Token<A>` where `Token<B>` is expected is a type error at compile time. Each `createToken()` call creates a distinct symbol even when descriptions match.
+- Passing a token of type `Token<A>` where `Token<B>` is expected is a type error at compile time. Each `token()` call creates a distinct symbol even when descriptions match.
 
 ### Related
 

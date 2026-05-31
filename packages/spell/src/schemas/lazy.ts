@@ -1,5 +1,4 @@
-import type { SchemaDescriptor, SchemaState } from '../core';
-import type { ParseValue } from '../core';
+import type { ParseValue, SchemaDescriptor, SchemaState } from '../core';
 
 import { Schema } from '../core';
 
@@ -17,11 +16,11 @@ export class LazySchema<T> extends Schema<T> {
   }
 
   protected override _parseValueSync(value: unknown): ParseValue {
-    const result = this._resolve().safeParse(value);
+    const result = this._resolve()._parseFullSync(value);
 
-    if (result.success) return { data: result.data, issues: [], typeOk: true };
+    if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
 
-    return { data: value, issues: result.error.issues, typeOk: true };
+    return { data: value, issues: result.issues, typeOk: true };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {

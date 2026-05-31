@@ -61,4 +61,18 @@ describe('isMatch', () => {
   it('ignores properties not in source', () => {
     expect(isMatch({ a: 1, b: 2, c: 3 }, { a: 1, c: 3 })).toBe(true);
   });
+
+  it('returns false when source is a Map (not matched by key iteration)', () => {
+    expect(isMatch({ a: 1 }, new Map([['a', 1]]))).toBe(false);
+    expect(isMatch(new Map([['a', 1]]), new Map([['a', 1]]))).toBe(false);
+  });
+
+  it('returns false when source is a Set', () => {
+    expect(isMatch([1, 2, 3], new Set([1, 2, 3]))).toBe(false);
+    expect(isMatch(new Set([1, 2]), new Set([1, 2]))).toBe(false);
+  });
+
+  it('returns false when object is a Map and source is a plain object', () => {
+    expect(isMatch(new Map([['a', 1]]), { a: 1 })).toBe(false);
+  });
 });

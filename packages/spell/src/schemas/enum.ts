@@ -23,10 +23,6 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
     this.values = values;
   }
 
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { enum: [...this.values] };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'enum', values: this.values };
   }

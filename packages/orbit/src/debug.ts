@@ -126,15 +126,12 @@ export function debugFloat(
 
   const userApply = options.apply;
 
-  function wrappedApply(
-    result: ComputePositionResult,
-    els: { floating: HTMLElement; reference: ReferenceElement },
-  ): void {
+  function wrappedApply(result: ComputePositionResult): void {
     if (userApply) {
-      userApply(result, els);
+      userApply(result);
     } else {
-      els.floating.style.left = `${result.x}px`;
-      els.floating.style.top = `${result.y}px`;
+      floating.style.left = `${result.x}px`;
+      floating.style.top = `${result.y}px`;
     }
 
     renderOverlay(result);

@@ -55,13 +55,20 @@ describe('template caching', () => {
     expect(result.fragment.querySelector('p')?.textContent).toBe('Hello world');
   });
 
-  it('signal at node position creates a text node in the fragment', () => {
+  it('signal at node position uses a comment anchor in the fragment', () => {
     const count = signal(42);
     const result = html`<span>${count}</span>`;
 
-    // The text node is in the fragment; signal binding is applied on apply()
+    // Signals always use HtmlBinding (comment anchor). The actual text content
+    // is inserted when apply() runs the reactive effect.
     const span = result.fragment.querySelector('span');
 
-    expect(span?.textContent).toBe('42');
+    // The span exists in the fragment
+    expect(span).not.toBeNull();
+
+    // A comment node is used as an anchor; no text yet before apply()
+    const hasComment = Array.from(span!.childNodes).some((n) => n.nodeType === Node.COMMENT_NODE);
+
+    expect(hasComment).toBe(true);
   });
 });

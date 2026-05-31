@@ -1,6 +1,6 @@
 import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, resolveMessage } from '../core';
+import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
@@ -156,23 +156,6 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
       return fail(ErrorCode.invalid_finite, resolveMessage(message, { value: value as number }));
     });
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const ann = this._annotations;
-    const base: Record<string, unknown> = { type: ann.typeHint ?? 'number' };
-
-    if (ann.minimum !== undefined) base['minimum'] = ann.minimum;
-
-    if (ann.maximum !== undefined) base['maximum'] = ann.maximum;
-
-    if (ann.exclusiveMinimum !== undefined) base['exclusiveMinimum'] = ann.exclusiveMinimum;
-
-    if (ann.exclusiveMaximum !== undefined) base['exclusiveMaximum'] = ann.exclusiveMaximum;
-
-    if (ann.multipleOf !== undefined) base['multipleOf'] = ann.multipleOf;
-
-    return base;
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

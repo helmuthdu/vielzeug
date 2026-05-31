@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/grip",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

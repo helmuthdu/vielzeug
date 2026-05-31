@@ -1,32 +1,48 @@
-import { cache } from '@vielzeug/arsenal';
-
 import type { CurrencyCode, RoundingMode } from './types';
 
-const currencyDecimalsCache = cache<string, number>(128);
+// Inline bounded FIFO cache — no external dependency required.
+// Evicts the oldest entry when the size limit is reached (Map insertion-order iteration).
+export function lruCache<K, V>(maxSize: number): { get(k: K): V | undefined; set(k: K, v: V): void } {
+  const map = new Map<K, V>();
+
+  return {
+    get: (k) => map.get(k),
+    set: (k, v) => {
+      if (map.size >= maxSize) map.delete(map.keys().next().value as K);
+
+      map.set(k, v);
+    },
+  };
+}
+
+const currencyDecimalsCache = lruCache<string, number>(512);
 
 /**
  * Returns the number of minor-unit decimal places for a given ISO 4217 currency code.
- * Uses Intl.NumberFormat to resolve the canonical value (e.g. USD→2, JPY→0, KWD→3).
- * Throws `RangeError` for unrecognized currency codes.
+ * Uses `Intl.NumberFormat` to resolve the canonical value (e.g. USD→2, JPY→0, KWD→3).
+ * Throws `RangeError` for unrecognized codes or when the runtime cannot determine decimals.
  */
 export function getCurrencyDecimals(currencyCode: string): number {
   const cached = currencyDecimalsCache.get(currencyCode);
 
   if (cached !== undefined) return cached;
 
-  let decimals: number;
+  let resolved: number | undefined;
 
   try {
-    decimals =
-      new Intl.NumberFormat('en', { currency: currencyCode, style: 'currency' }).resolvedOptions()
-        .maximumFractionDigits ?? 2;
+    resolved = new Intl.NumberFormat('en', { currency: currencyCode, style: 'currency' }).resolvedOptions()
+      .maximumFractionDigits;
   } catch {
     throw new RangeError(`Invalid ISO 4217 currency code: "${currencyCode}"`);
   }
 
-  currencyDecimalsCache.set(currencyCode, decimals);
+  if (resolved === undefined) {
+    throw new RangeError(`Could not determine decimal places for currency: "${currencyCode}"`);
+  }
 
-  return decimals;
+  currencyDecimalsCache.set(currencyCode, resolved);
+
+  return resolved;
 }
 
 /**
@@ -34,7 +50,7 @@ export function getCurrencyDecimals(currencyCode: string): number {
  * Throws `RangeError` if unrecognized. Uses `getCurrencyDecimals` internally so
  * the result is cached for subsequent decimal lookups.
  */
-export function assertValidCurrency(code: string): CurrencyCode {
+export function validateCurrencyCode(code: string): CurrencyCode {
   getCurrencyDecimals(code);
 
   return code as CurrencyCode;
@@ -55,9 +71,13 @@ export function pow10(exponent: number): bigint {
   return 10n ** BigInt(exponent);
 }
 
+/** Regex for valid decimal strings accepted by `parseRational`. */
+const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
+
 /**
  * Parses a decimal string into a rational `{ numerator, denominator, negative }`.
- * The denominator is always a power of 10, and the numerator is always non-negative.
+ * The denominator is always a power of 10 and the numerator is always non-negative.
+ * Throws `RangeError` for non-numeric input.
  *
  * @example
  * parseRational('1.5')  → { numerator: 15n, denominator: 10n, negative: false }
@@ -65,6 +85,10 @@ export function pow10(exponent: number): bigint {
  * parseRational('3')    → { numerator: 3n,  denominator: 1n,  negative: false }
  */
 export function parseRational(str: string): { denominator: bigint; negative: boolean; numerator: bigint } {
+  if (!DECIMAL_RE.test(str)) {
+    throw new RangeError(`Invalid decimal string: "${str}"`);
+  }
+
   const negative = str.startsWith('-');
   const absStr = negative ? str.slice(1) : str;
   const dotIndex = absStr.indexOf('.');
@@ -77,53 +101,61 @@ export function parseRational(str: string): { denominator: bigint; negative: boo
 }
 
 /**
- * Applies a rounding mode to a truncated-toward-zero division result.
+ * Applies a rounding mode to a truncated division result.
  *
- * @param quotient     The integer part of the division (BigInt truncation toward zero).
- * @param absRemainder Absolute value of the remainder.
+ * **Contract**: `quotient` and `absRemainder` must be non-negative (absolute values).
+ * The caller is responsible for:
+ *   1. Computing everything in terms of absolute values.
+ *   2. Passing `negative = true` when the true mathematical result is negative.
+ *   3. Applying the sign after: `negative ? -result : result`.
+ *
+ * Returns the absolute value of the rounded result.
+ *
+ * @param quotient     Non-negative integer part of the division (`|dividend| / divisor`).
+ * @param absRemainder Non-negative remainder (`|dividend| % divisor`).
  * @param denominator  The divisor used to produce quotient/remainder.
  * @param mode         The desired rounding mode.
- * @param isPositive   Whether the un-truncated result is non-negative.
+ * @param negative     Whether the true mathematical result is negative. Defaults to `false`.
  */
 export function applyRounding(
   quotient: bigint,
   absRemainder: bigint,
   denominator: bigint,
   mode: RoundingMode,
-  isPositive: boolean,
+  negative = false,
 ): bigint {
   if (absRemainder === 0n) return quotient;
 
-  const increment = isPositive ? 1n : -1n;
-
   switch (mode) {
     case 'ceiling':
-      // Toward +∞: truncation IS ceiling for negatives; positives need one step up.
-      return isPositive ? quotient + 1n : quotient;
+      // Toward +∞: round up for positive results, truncate for negative results.
+      return negative ? quotient : quotient + 1n;
 
     case 'down':
+      // Toward zero: always truncate.
       return quotient;
 
     case 'floor':
-      // Toward −∞: truncation IS floor for positives; negatives need one more step down.
-      return isPositive ? quotient : quotient - 1n;
+      // Toward −∞: truncate for positive results, one step more for negative results.
+      return negative ? quotient + 1n : quotient;
 
     case 'half-away-from-zero':
-      return absRemainder * 2n >= denominator ? quotient + increment : quotient;
+      return absRemainder * 2n >= denominator ? quotient + 1n : quotient;
 
     case 'half-even': {
       const twice = absRemainder * 2n;
 
       if (twice < denominator) return quotient;
 
-      if (twice > denominator) return quotient + increment;
+      if (twice > denominator) return quotient + 1n;
 
       // Exactly half — round to the nearest even integer.
-      return quotient % 2n === 0n ? quotient : quotient + increment;
+      return quotient % 2n === 0n ? quotient : quotient + 1n;
     }
 
     case 'up':
-      return quotient + increment;
+      // Away from zero: always round away.
+      return quotient + 1n;
 
     default:
       throw new RangeError(`Unknown rounding mode: ${String(mode)}`);

@@ -5,7 +5,7 @@ package: conduit
 category: di
 keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
 related: [rune, herald, ward]
-exports: [createContainer, createToken]
+exports: [createContainer, token, scope]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createContainer, createToken]
 
 **Package:** `@vielzeug/conduit` &nbsp;·&nbsp; **Category:** Di
 
-**Key exports:** `createContainer`, `createToken`
+**Key exports:** `createContainer`, `token`, `scope`
 
 **When to use:** Type-safe DI container with singleton/transient lifetimes, child scopes, async providers, and circular dependency detection.
 
@@ -53,10 +53,10 @@ yarn add @vielzeug/conduit
 ## Quick Start
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const Logger = createToken<{ log(message: string): void }>('Logger');
-const Service = createToken<{ run(): Promise<void> }>('Service');
+const Logger = token<{ log(message: string): void }>('Logger');
+const Service = token<{ run(): Promise<void> }>('Service');
 
 const container = createContainer();
 
@@ -110,11 +110,20 @@ await container.dispose(); // all hooks run automatically
 
 ## Features
 
-- Small core API — `createToken`, `createContainer`, a handful of container methods
+- Small core API — `token`, `scope`, `createContainer`, and a focused set of container methods
 - Typed dependency contracts via Symbol tokens with phantom types
+- Named scope tokens via `scope()` and `createScope()` for explicit lifecycle isolation
 - Async-first resolution with singleton deduplication for concurrent callers
 - Sync resolution path (`resolveSync`) for hot paths after warm-up
+- `resolveMany()` to resolve multiple tokens in parallel with typed tuples
+- `tryResolve()` for result-object resolution without throwing
+- `resolveAll()` to eagerly warm all singletons and validate startup
 - Registration existence check (`has`) without triggering factory execution
+- `ContainerModule` for grouping related registrations and async setup
+- `validate()` for registration-time cycle detection
+- `freeze()` to lock the container after startup
+- `inspect()` to get a serializable dependency graph
+- `on()` to subscribe to container lifecycle events
 - Dispose hooks on both factory and value registrations
 - Child containers for request/component/test scope boundaries
 - Explicit disposal lifecycle with `Symbol.asyncDispose` support

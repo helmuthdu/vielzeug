@@ -15,7 +15,7 @@ Use `toSignals()` to expose the source as reactive Ripple signals, and store sha
 
 ```ts
 import { effect, store } from '@vielzeug/ripple';
-import { createLocalSource, sortBy, toSignals } from '@vielzeug/sourcerer';
+import { createLocalSource, toSignals } from '@vielzeug/sourcerer';
 
 type User = { id: number; name: string; role: 'admin' | 'member' };
 
@@ -37,17 +37,14 @@ const controls = store({
 
 // Reactively project shared UI state into the source
 effect(() => {
-  void source.update({
-    filter:
-      controls.value.role === 'all'
-        ? undefined
-        : (user) => user.role === controls.value.role,
-    search: controls.value.query,
-    sort:
-      controls.value.sort === 'name'
-        ? sortBy((u) => u.name, 'asc')
-        : sortBy((u) => u.role, 'asc'),
-  });
+  const { query, role, sort } = controls.value;
+  void source.setFilter(role === 'all' ? undefined : (user) => user.role === role);
+  void source.setSort(
+    sort === 'name'
+      ? (a, b) => a.name.localeCompare(b.name)
+      : (a, b) => a.role.localeCompare(b.role),
+  );
+  void source.searchNow(query);
 });
 
 // Any update to controls automatically re-filters/sorts/paginates the source
@@ -79,8 +76,8 @@ const { current, meta, dispose } = toSignals(source);
 ### Pitfalls
 
 - The `effect()` runs immediately on creation. Make sure the source is initialized before the effect is created.
-- Use `update()` inside the effect to apply all fields atomically — one recompute, one notification.
 - Do **not** write to `controls` inside the `effect()` callback — this creates an infinite reactive loop. Only read from `controls` in the effect; write from UI event handlers.
+- Calling `setFilter()`, `setSort()`, and `searchNow()` in sequence triggers three recomputes. For a single notification, consider setting `filter` and `sort` in the initial config and only using `searchNow()` from the effect.
 - Always call `dispose()` when the component or page is torn down to release the signal subscriptions.
 
 ### Related

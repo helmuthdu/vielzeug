@@ -7,22 +7,21 @@ description: Complete API surface for @vielzeug/sourcerer.
 
 ## API At a Glance
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-|---|---|---|---|
-| `createLocalSource()` | In-memory reactive collection with filter, sort, and search | Sync (in-memory) | Default `searchFn` is fuzzy, not substring |
-| `createRemoteSource()` | Async server-backed collection with page navigation | Async | Fetches on creation; set `autoFetch: false` to delay |
-| `createCursorSource()` | Async collection navigated by cursor tokens | Async | `next()`/`prev()` are no-ops when the cursor is absent |
-| `createInfiniteSource()` | Async append-mode (infinite scroll) collection | Async | `loadMore()` is a no-op once all items are loaded |
-| `toSignals()` | Wrap a page-based source in Ripple computed signals | Sync | Must call `dispose()` or signals leak |
-| `toCursorSignals()` | Wrap a cursor source in Ripple computed signals | Sync | Must call `dispose()` or signals leak |
-| `toInfiniteSignals()` | Wrap an infinite source in Ripple computed signals | Sync | Returns `all`, not `current`; must call `dispose()` |
-| `encodeQuery()` | Serialize source query to URL params | Sync | Filter and sort are JSON-stringified |
-| `decodeQuery()` | Deserialize URL params to a source query | Sync | Malformed JSON is silently dropped by default |
-| `filterContains()` | Predicate: field contains a string | Sync | Case-insensitive by default |
-| `filterEquals()` | Predicate: value equals expected | Sync | Uses `===` — fails for object references |
-| `filterRange()` | Predicate: number within bounds | Sync | Omitting both `min` and `max` matches everything |
-| `sortBy()` | Sorter factory for a field | Sync | Ascending by default; pass `'desc'` explicitly |
-| `and()`, `or()`, `not()` | Compose predicates | Sync | — |
+| Symbol | Purpose | Common gotcha |
+|---|---|---|
+| `createLocalSource()` | In-memory reactive collection with filter, sort, and search | Default `searchFn` is fuzzy, not substring |
+| `createRemoteSource()` | Async server-backed collection with page navigation | Fetches on creation; set `autoFetch: false` to delay |
+| `createCursorSource()` | Async collection navigated by cursor tokens | `next()`/`prev()` are no-ops when the cursor is absent |
+| `createInfiniteSource()` | Async append-mode (infinite scroll) collection | `loadMore()` is a no-op once `meta.hasMore` is `false` |
+| `toSignals()` | Wrap any source in Ripple computed signals | Must call `dispose()` or signals leak |
+| `SourceError` | Structured error class with `message`, `cause`, `query`, `attempt` | Extends `Error`; access context via getters, not object spread |
+| `sourceState()` | Derive a discriminated union (`loading`/`error`/`data`) from any source | — |
+| `itemRange()` | Compute 1-based display range from `SourceMeta` | Returns `{ start: 0, end: 0 }` when `totalItems === 0` |
+| `prefetchSource()` | SSR: fetch first page, return serialisable snapshot | **Throws `SourceError`** if fetch fails |
+| `prefetchSourceWithSource()` | SSR: fetch first page, return both snapshot and live source | Caller must call `source.dispose()` |
+| `composeFetch()` | Layer middleware around a `fetch`-shaped function | Middlewares execute left-to-right (first = outermost) |
+| `encodeQuery()` | Serialize source query to URL params | Filter and sort are JSON-stringified |
+| `decodeQuery()` | Deserialize URL params (or `URLSearchParams`) to a source query | Malformed JSON is silently dropped by default |
 
 ## Package Entry Point
 
@@ -47,13 +46,17 @@ createLocalSource<T>(
 type LocalConfig<T> = {
   debounceMs?: number;   // default: 300
   filter?: Predicate<T>;
-  limit?: number;        // default: 10
+  filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
+  limit?: number;        // default: 20
   searchFn?: (items: readonly T[], query: string) => readonly T[];
   sort?: Sorter<T>;
+  sortAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
 };
 ```
 
 The default `searchFn` uses fuzzy matching from `@vielzeug/arsenal`. Provide a custom `searchFn` to use exact substring matching or any other strategy.
+
+`filterAsync` and `sortAsync` run after their synchronous counterparts. They set `meta.isLoading = true` during computation and accept an `AbortSignal` — a new call aborts any running async computation.
 
 **Returns:** `LocalSource<T>` — reactive in-memory source with pagination, filter, sort, and search.
 
@@ -79,20 +82,26 @@ createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
 ```ts
 type RemoteConfig<T, TFilter, TSort> = {
-  autoFetch?: boolean;   // default: true — fetches on creation
-  debounceMs?: number;   // default: 300
+  autoFetch?: boolean;       // default: true — fetches on creation
+  debounceMs?: number;       // default: 300
   fetch: (
     q: { filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort },
     signal: AbortSignal,
   ) => Promise<{ items: readonly T[]; total: number }>;
   filter?: TFilter;
-  limit?: number;        // default: 10
-  queryKey?: (q: { filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort }) => string;
+  limit?: number;            // default: 20
+  onFetch?: (event: FetchEvent<TFilter, TSort>) => void;  // telemetry callback
+  queryKey?: (q: RemoteSourceQuery<TFilter, TSort>) => string;
+  refreshInterval?: number;  // auto re-fetch every N ms; cancelled on dispose()
+  retry?: RetryConfig;
+  snapshot?: SourceSnapshot<T>; // pre-populate from SSR snapshot
   sort?: TSort;
+  staleTime?: number;        // skip re-fetch if same query key fetched within N ms (default: 0)
 };
 ```
 
-`queryKey` defaults to a stable JSON serialization with recursively sorted keys. Override it for custom deduplication or caching keys.
+`queryKey` defaults to a stable JSON serialization with recursively sorted keys.
+`staleTime` compares the **query key** — navigating to a different page always fetches even within the stale window.
 
 **Returns:** `RemoteSource<T, TFilter, TSort>` — async server-backed source with page navigation and optimistic update support.
 
@@ -107,6 +116,7 @@ const source = createRemoteSource({
     return res.json();
   },
   limit: 20,
+  staleTime: 5000,
 });
 await source.ready();
 ```
@@ -129,8 +139,8 @@ type CursorConfig<T, TCursor = string> = {
     q: { after?: TCursor; before?: TCursor; limit: number; search?: string },
     signal: AbortSignal,
   ) => Promise<{ items: readonly T[]; nextCursor?: TCursor; prevCursor?: TCursor; total?: number }>;
-  limit?: number;        // default: 10
-  queryKey?: (q: { after?: TCursor; before?: TCursor; limit: number; search?: string }) => string;
+  limit?: number;        // default: 20
+  queryKey?: (q: CursorSourceQuery<TCursor>) => string;
 };
 ```
 
@@ -168,11 +178,11 @@ type InfiniteConfig<T> = {
     q: { limit: number; page: number; search?: string },
     signal: AbortSignal,
   ) => Promise<{ items: readonly T[]; total: number }>;
-  limit?: number;        // default: 10
+  limit?: number;        // default: 20
 };
 ```
 
-**Returns:** `InfiniteSource<T>` — async append-mode source. Use `loadMore()` to add pages; read all accumulated items from `source.all`.
+**Returns:** `InfiniteSource<T>` — async append-mode source. Use `loadMore()` to add pages; read all accumulated items from `source.current`.
 
 **Example:**
 
@@ -188,24 +198,25 @@ const source = createInfiniteSource({
 });
 await source.ready();
 await source.loadMore(); // appends page 2
-console.log(source.all.length, source.meta.hasMore);
+console.log(source.current.length, source.meta.hasMore);
 ```
 
 ---
 
 ## `LocalSource<T>` Methods
 
-Extends `Source<T>`. All methods return `Promise<void>`.
+All methods return `Promise<void>` unless noted.
 
 | Method | Description |
 |---|---|
-| `commit()` | Flush pending debounced search and apply immediately |
+| `dispose()` | Release internal resources |
+| `flush()` | Flush pending debounced search and apply immediately |
 | `goTo(page)` | Navigate to the given page number |
 | `goToLast()` | Navigate to the last page |
+| `hydrate(state)` | Apply a partial `SourceQuery` snapshot; no-op if nothing changed |
 | `next()` | Navigate to the next page (no-op at last page) |
 | `prev()` | Navigate to the previous page (no-op at first page) |
 | `reset()` | Restore initial config and return to page 1 |
-| `restore(state)` | Apply a partial `SourceQuery` snapshot |
 | `search(query)` | Debounced search — sets `meta.isSearchPending` until fired |
 | `searchNow(query)` | Immediate search, cancels any pending debounce |
 | `setData(data)` | Replace the dataset and reset to page 1 |
@@ -214,7 +225,6 @@ Extends `Source<T>`. All methods return `Promise<void>`.
 | `setSort(sort?)` | Set or clear the sorter and reset to page 1 |
 | `subscribe(listener)` | Subscribe to state changes; returns unsubscribe function |
 | `toQuery()` | Return the current state as a `SourceQuery` |
-| `update(patch)` | Atomically apply a partial query patch; no-op if nothing changed |
 
 ---
 
@@ -224,16 +234,17 @@ All methods return `Promise<void>` except `optimisticUpdate` and `subscribe`.
 
 | Method | Description |
 |---|---|
-| `commit()` | Flush pending debounced search |
+| `dispose()` | Release internal resources, cancel pending requests and refresh interval |
+| `flush()` | Flush pending debounced search |
 | `goTo(page)` | Navigate to page and fetch |
 | `goToLast()` | Navigate to the last page based on current `total` |
+| `hydrate(state)` | Apply a partial `RemoteSourceQuery` snapshot and fetch if changed |
 | `next()` | Next page (no-op at last page) |
 | `optimisticUpdate(mutator, options?)` | Apply instant UI update; returns rollback function |
 | `prev()` | Previous page (no-op at first page) |
-| `ready()` | Resolve when no requests are pending and no debounce is active |
+| `ready(timeout?)` | Resolve when no requests are pending and no debounce is active; optional timeout rejects with an error |
 | `refresh()` | Re-fetch the current query |
 | `reset()` | Restore initial config and refetch |
-| `restore(state)` | Apply a partial `RemoteSourceQuery` snapshot and fetch if changed |
 | `search(query)` | Debounced search |
 | `searchNow(query)` | Immediate search |
 | `setFilter(filter?)` | Set or clear the filter and fetch |
@@ -241,7 +252,6 @@ All methods return `Promise<void>` except `optimisticUpdate` and `subscribe`.
 | `setSort(sort?)` | Set or clear the sort and fetch |
 | `subscribe(listener)` | Subscribe to state changes; returns unsubscribe function |
 | `toQuery()` | Return the current state as a `RemoteSourceQuery` |
-| `update(patch)` | Atomically apply a partial query patch; no-op if nothing changed |
 
 ### `optimisticUpdate`
 
@@ -255,6 +265,7 @@ optimisticUpdate(
 - Applies `mutator` to the current items immediately.
 - The returned rollback function is a **no-op** once the next successful fetch has settled.
 - On fetch failure, state is restored to the pre-optimistic items (not empty).
+- Only one optimistic update can be active at a time — a second call throws.
 
 ---
 
@@ -262,15 +273,18 @@ optimisticUpdate(
 
 | Method | Description |
 |---|---|
+| `dispose()` | Release internal resources |
+| `flush()` | Flush pending debounced search |
 | `next()` | Advance using `nextCursor` (no-op if none) |
 | `prev()` | Go back using `prevCursor` (no-op if none) |
-| `ready()` | Resolve when idle |
+| `ready(timeout?)` | Resolve when idle; optional timeout |
 | `refresh()` | Re-fetch current cursor position |
 | `reset()` | Clear cursors and fetch from the start |
 | `search(query)` | Debounced search (resets cursor position) |
 | `searchNow(query)` | Immediate search (resets cursor position) |
 | `setLimit(limit)` | Set page size (resets cursor position) |
 | `subscribe(listener)` | Subscribe; returns unsubscribe |
+| `toQuery()` | Return the current state as a `CursorSourceQuery` |
 
 ---
 
@@ -278,29 +292,32 @@ optimisticUpdate(
 
 | Method | Description |
 |---|---|
-| `loadMore()` | Fetch the next page and append to `all` (no-op when fully loaded) |
-| `ready()` | Resolve when idle |
+| `dispose()` | Release internal resources |
+| `flush()` | Flush pending debounced search |
+| `loadMore()` | Fetch the next page and append to `current` (no-op when `meta.hasMore === false`) |
+| `ready(timeout?)` | Resolve when idle; optional timeout |
 | `reset()` | Clear accumulated items and fetch from page 1 |
 | `search(query)` | Debounced search (resets accumulator) |
 | `searchNow(query)` | Immediate search (resets accumulator) |
 | `setLimit(limit)` | Set page size and restart from page 1 |
 | `subscribe(listener)` | Subscribe; returns unsubscribe |
+| `toQuery()` | Return the current state as an `InfiniteSourceQuery` |
 
 ---
 
-## Signal Adapters
+## Signal Adapter
 
 ### `toSignals`
 
 ```ts
-toSignals<T>(source: BaseSource<T>): {
+toSignals<T, TMeta>(source: ReactiveSource<T, TMeta>): {
   current: ComputedSignal<readonly T[]>;
   dispose: () => void;
-  meta: ComputedSignal<SourceMeta>;
+  meta: ComputedSignal<TMeta>;
 }
 ```
 
-Wraps a page-based local or remote source. `current` and `meta` are `ComputedSignal` — they update automatically when the source changes.
+Works with all four source types — local, remote, cursor, and infinite. `current` and `meta` are `ComputedSignal` — they update automatically when the source changes.
 
 **Returns:** Object with `current`, `meta`, and `dispose`.
 
@@ -316,35 +333,182 @@ effect(() => console.log(meta.value.pageNumber, current.value.length));
 dispose();
 ```
 
----
-
-### `toCursorSignals`
-
-```ts
-toCursorSignals<T>(source: CursorSource<T>): {
-  current: ComputedSignal<readonly T[]>;
-  dispose: () => void;
-  meta: ComputedSignal<CursorMeta>;
-}
-```
-
-**Returns:** Object with `current`, `meta`, and `dispose`.
+> `dispose()` unsubscribes from the source, disposes both computed signals, and releases the internal tick signal.
 
 ---
 
-### `toInfiniteSignals`
+## Error Utilities
+
+### `SourceError`
 
 ```ts
-toInfiniteSignals<T>(source: InfiniteSource<T>): {
-  all: ComputedSignal<readonly T[]>;
-  dispose: () => void;
-  meta: ComputedSignal<InfiniteMeta>;
+class SourceError extends Error {
+  readonly name = 'SourceError';
+  get attempt(): number;  // retry attempt that produced this error (0-based)
+  get query(): unknown;   // query that triggered the failure
+  // Also inherits: .message, .cause, .stack
 }
 ```
 
-**Returns:** Object with `all` (not `current`), `meta`, and `dispose`.
+Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value.
 
-`dispose()` unsubscribes from the source, disposes both computed signals, and disposes the internal tick signal.
+**Example:**
+
+```ts
+try {
+  await prefetchSource({ fetch: fetchUsers, limit: 20 });
+} catch (err) {
+  if (err instanceof SourceError) {
+    console.error(err.message, err.query, err.cause);
+  }
+}
+```
+
+---
+
+### `sourceState`
+
+```ts
+sourceState<T>(source: {
+  readonly current: readonly T[];
+  readonly meta: { readonly error: SourceError | null; readonly isLoading: boolean };
+}): SourceState<T>
+```
+
+Derives a discriminated union from any source:
+
+```ts
+type SourceState<T> =
+  | { readonly status: 'loading' }
+  | { readonly error: SourceError; readonly status: 'error' }
+  | { readonly items: readonly T[]; readonly status: 'data' };
+```
+
+**Example:**
+
+```ts
+import { sourceState } from '@vielzeug/sourcerer';
+
+const state = sourceState(source);
+switch (state.status) {
+  case 'loading': return renderSpinner();
+  case 'error':   return renderError(state.error.message);
+  case 'data':    return renderList(state.items);
+}
+```
+
+---
+
+### `itemRange`
+
+```ts
+itemRange(meta: Readonly<{
+  pageNumber: number;
+  pageSize: number;
+  totalItems: number;
+}>): { end: number; start: number }
+```
+
+Computes 1-based display item numbers. Returns `{ start: 0, end: 0 }` when `totalItems === 0`.
+
+**Example:**
+
+```ts
+import { itemRange } from '@vielzeug/sourcerer';
+
+const { start, end } = itemRange(source.meta);
+// page 2 of 20 per page, 150 total -> { start: 21, end: 40 }
+console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
+```
+
+---
+
+## SSR Prefetch
+
+### `prefetchSource`
+
+```ts
+prefetchSource<T, TFilter = unknown, TSort = unknown>(
+  cfg: RemoteConfig<T, TFilter, TSort>,
+): Promise<SourceSnapshot<T>>
+```
+
+Fetches the first page server-side and returns a serialisable `SourceSnapshot`. **Throws `SourceError`** if the fetch fails.
+
+```ts
+type SourceSnapshot<T> = Readonly<{
+  items: readonly T[];
+  page: number;
+  search?: string;
+  total: number;
+}>;
+```
+
+**Example:**
+
+```ts
+import { prefetchSource } from '@vielzeug/sourcerer';
+
+// server.ts
+const snapshot = await prefetchSource({ fetch: fetchUsers, limit: 20 });
+
+// client.ts
+const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
+```
+
+---
+
+### `prefetchSourceWithSource`
+
+```ts
+prefetchSourceWithSource<T, TFilter = unknown, TSort = unknown>(
+  cfg: RemoteConfig<T, TFilter, TSort>,
+): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }>
+```
+
+Like `prefetchSource` but also returns the live source so subsequent fetches do not double-request page 1. **Throws `SourceError`** if the fetch fails. Caller is responsible for calling `source.dispose()`.
+
+---
+
+## Fetch Middleware
+
+### `composeFetch`
+
+```ts
+composeFetch<TQuery, TResult>(
+  base: (q: TQuery, signal: AbortSignal) => Promise<TResult>,
+  ...middlewares: FetchMiddleware<TQuery, TResult>[],
+): (q: TQuery, signal: AbortSignal) => Promise<TResult>
+```
+
+```ts
+type FetchMiddleware<TQuery = unknown, TResult = unknown> = (
+  q: TQuery,
+  signal: AbortSignal,
+  next: (q: TQuery, signal: AbortSignal) => Promise<TResult>,
+) => Promise<TResult>;
+```
+
+Middlewares execute left-to-right (first = outermost wrapper).
+
+**Example:**
+
+```ts
+import { composeFetch } from '@vielzeug/sourcerer';
+import type { FetchMiddleware } from '@vielzeug/sourcerer';
+
+const logging: FetchMiddleware = async (q, signal, next) => {
+  console.log('fetch', q);
+  const result = await next(q, signal);
+  console.log('done', q);
+  return result;
+};
+
+const source = createRemoteSource({
+  fetch: composeFetch(baseFetch, logging),
+  limit: 20,
+});
+```
 
 ---
 
@@ -358,16 +522,14 @@ encodeQuery<TFilter, TSort>(
 ): QueryParams  // Record<string, string>
 ```
 
-Serializes `filter` and `sort` as JSON when present. Omits empty `search`.
-
-**Returns:** `QueryParams` — flat `Record<string, string>` suitable for `new URLSearchParams()`.
+Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
 **Example:**
 
 ```ts
 import { encodeQuery } from '@vielzeug/sourcerer';
 
-const params = encodeQuery({ page: 2, limit: 20, search: 'ada', filter: { role: 'admin' }, sort: undefined });
+const params = encodeQuery({ page: 2, limit: 20, search: 'ada', filter: { role: 'admin' } });
 // { page: '2', limit: '20', search: 'ada', filter: '{"role":"admin"}' }
 new URLSearchParams(params).toString();
 ```
@@ -378,120 +540,55 @@ new URLSearchParams(params).toString();
 
 ```ts
 decodeQuery<TFilter, TSort>(
-  params: QueryParamsInput,  // Record<string, string | string[] | undefined>
+  params: QueryParamsInput | URLSearchParams,
   options?: { defaultLimit?: number; strict?: boolean },
 ): Partial<RemoteSourceQuery<TFilter, TSort>>
 ```
 
-- `defaultLimit` defaults to `10`.
+Accepts either a `Record<string, string | string[] | undefined>` or a `URLSearchParams` instance directly.
+
+- `defaultLimit` defaults to `20`.
 - When `strict: false` (default), malformed `filter`/`sort` JSON is silently dropped.
 - When `strict: true`, malformed JSON throws.
-
-**Returns:** `Partial<RemoteSourceQuery<TFilter, TSort>>` — pass directly to `source.restore()`.
+- `search` is omitted from the result when absent (no `search: ''` default).
 
 **Example:**
 
 ```ts
 import { decodeQuery } from '@vielzeug/sourcerer';
 
-const params = Object.fromEntries(new URLSearchParams(location.search));
-const query = decodeQuery<Filter, Sort>(params, { defaultLimit: 20 });
-await source.restore(query);
+// Pass URLSearchParams directly
+const query = decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 });
+await source.hydrate(query);
 ```
 
 ---
 
-## Predicate and Sort Helpers
+## Pagination Utilities
 
-### `filterContains`
-
-```ts
-filterContains<T>(
-  getValue: (item: T) => string | null | undefined,
-  query: string,
-  caseSensitive?: boolean,  // default: false
-): Predicate<T>
-```
-
-**Returns:** `Predicate<T>` — true when the field contains `query` (case-insensitive by default).
-
-**Example:**
+### `clampPage`
 
 ```ts
-import { createLocalSource, filterContains } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(users, { limit: 10 });
-await source.setFilter(filterContains((u) => u.name, 'ada'));
+clampPage(page: number, pageCount: number): number
 ```
+
+Returns `page` clamped to `[1, pageCount]`. Returns `1` when `pageCount === 0`.
 
 ---
 
-### `filterEquals`
+### `pageCount`
 
 ```ts
-filterEquals<T, V>(getValue: (item: T) => V, expected: V): Predicate<T>
+pageCount(totalItems: number, limit: number): number
 ```
 
-**Returns:** `Predicate<T>` — true when `getValue(item) === expected`.
+Returns `Math.ceil(totalItems / limit)`.
 
 ---
 
-### `filterRange`
+### `itemRange`
 
-```ts
-filterRange<T>(
-  getValue: (item: T) => number,
-  bounds: { min?: number; max?: number },
-): Predicate<T>
-```
-
-**Returns:** `Predicate<T>` — true when the numeric field is within `[min, max]`. Both bounds are optional.
-
----
-
-### `sortBy`
-
-```ts
-sortBy<T, V extends number | string | Date>(
-  getValue: (item: T) => V,
-  direction?: 'asc' | 'desc',  // default: 'asc'
-): Sorter<T>
-```
-
-**Returns:** `Sorter<T>` — comparator function suitable for `Array.prototype.sort`.
-
-**Example:**
-
-```ts
-import { sortBy } from '@vielzeug/sourcerer';
-
-await source.setSort(sortBy((u) => u.name, 'desc'));
-```
-
----
-
-### `and`, `or`, `not`
-
-```ts
-and<T>(...predicates: Predicate<T>[]): Predicate<T>
-or<T>(...predicates: Predicate<T>[]): Predicate<T>
-not<T>(predicate: Predicate<T>): Predicate<T>
-```
-
-**Returns:** `Predicate<T>` — composed predicate.
-
-**Example:**
-
-```ts
-import { and, filterContains, filterRange } from '@vielzeug/sourcerer';
-
-await source.setFilter(
-  and(
-    filterContains((u) => u.name, 'a'),
-    filterRange((u) => u.age, { min: 18 }),
-  ),
-);
-```
+See [Error Utilities > `itemRange`](#itemrange) above.
 
 ---
 
@@ -501,17 +598,16 @@ await source.setFilter(
 type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
 type Sorter<T> = (a: T, b: T) => number;
 
-type SourceQuery = Readonly<{ limit: number; page: number; search: string }>;
+// search is OPTIONAL — omitted when no search is active
+type SourceQuery = Readonly<{ limit: number; page: number; search?: string }>;
 
 type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = SourceQuery &
   Readonly<{ filter?: TFilter; sort?: TSort }>;
 
 type SourceMeta = Readonly<{
-  errorMessage: string | null;
+  error: SourceError | null;    // null when healthy
   isLoading: boolean;
   isSearchPending: boolean;
-  itemEnd: number;
-  itemStart: number;
   pageCount: number;
   pageNumber: number;
   pageSize: number;
@@ -519,7 +615,7 @@ type SourceMeta = Readonly<{
 }>;
 
 type CursorMeta = Readonly<{
-  errorMessage: string | null;
+  error: SourceError | null;
   hasNextPage: boolean;
   hasPrevPage: boolean;
   isLoading: boolean;
@@ -529,20 +625,44 @@ type CursorMeta = Readonly<{
 }>;
 
 type InfiniteMeta = Readonly<{
-  errorMessage: string | null;
+  error: SourceError | null;
   hasMore: boolean;
   isLoading: boolean;
+  isLoadingMore: boolean;   // true only during loadMore() — not during reset()
   isSearchPending: boolean;
   pageSize: number;
   totalItems: number;
 }>;
 
-type BaseSource<T> = {
+type ReactiveSource<T, TMeta> = {
   readonly current: readonly T[];
-  readonly meta: SourceMeta;
+  readonly meta: TMeta;
   subscribe(listener: () => void): () => void;
 };
 
+type SourceState<T> =
+  | { readonly status: 'loading' }
+  | { readonly error: SourceError; readonly status: 'error' }
+  | { readonly items: readonly T[]; readonly status: 'data' };
+
 type QueryParams = Record<string, string>;
 type QueryParamsInput = Record<string, string | string[] | undefined>;
+
+type SourceSnapshot<T> = Readonly<{
+  items: readonly T[];
+  page: number;
+  search?: string;
+  total: number;
+}>;
+
+type RetryConfig = {
+  attempts: number;
+  delay?: number | ((attempt: number) => number);
+};
+
+type FetchEvent<TFilter = unknown, TSort = unknown> = {
+  query: RemoteSourceQuery<TFilter, TSort>;
+  result: 'error' | 'success';
+  durationMs: number;
+};
 ```

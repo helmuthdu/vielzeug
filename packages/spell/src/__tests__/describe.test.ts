@@ -309,7 +309,7 @@ describe('describe() — record', () => {
 
 describe('describe() — set', () => {
   it('returns item descriptor', () => {
-    expect(s.set(s.string()).toDescriptor()).toMatchObject({ item: { kind: 'string' }, kind: 'set' });
+    expect(s.set(s.string()).toDescriptor()).toMatchObject({ items: { kind: 'string' }, kind: 'set' });
   });
 });
 

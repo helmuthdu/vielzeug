@@ -1,10 +1,9 @@
-import { type ReadonlySignal, onEvent, watch } from '@vielzeug/craft';
+import { onEvent, type ReadonlySignal, watch } from '@vielzeug/craft';
 import { type Signal, signal } from '@vielzeug/ripple';
 
 import type { DialogCloseReason, OverlayControl, OverlayOpenReason } from '../../headless';
 
-import { createOverlayControl } from '../../headless';
-import { createFocusManager } from '../../headless';
+import { createFocusManager, createOverlayControl } from '../../headless';
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 

@@ -1,23 +1,23 @@
 // ── Lifecycle → AbortSignal bridge ──────────────────────────────────────────
 
 /**
- * Converts a framework cleanup hook to a standard `AbortSignal`.
+ * Creates a standard `AbortSignal` tied to the component's craft lifecycle.
  *
- * Call inside a craft `setup()` function and pass the returned signal to any
- * headless primitive that accepts `signal?: AbortSignal`. The signal is aborted
- * automatically when the framework triggers the registered `onCleanup` callback.
+ * Call once at the top of a craft `setup()` function and pass the returned
+ * signal to any headless primitive that accepts `signal?: AbortSignal`. The
+ * signal is aborted automatically when the component is torn down.
  *
  * @example
  * ```ts
  * define('bit-checkbox', {
  *   setup(props, { el, bind }) {
- *     const signal = toAbortSignal(onCleanup);
+ *     const signal = componentSignal(onCleanup);
  *     const checkable = createCheckable({ signal, host: el, ... });
  *   },
  * });
  * ```
  */
-export const toAbortSignal = (onCleanup: (fn: () => void) => void): AbortSignal => {
+export const componentSignal = (onCleanup: (fn: () => void) => void): AbortSignal => {
   const controller = new AbortController();
 
   onCleanup(() => controller.abort());

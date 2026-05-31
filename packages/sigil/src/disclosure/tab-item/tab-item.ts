@@ -1,4 +1,4 @@
-import { define, prop, computed, effect, html, inject } from '@vielzeug/craft';
+import { computed, define, effect, html, inject, prop } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 

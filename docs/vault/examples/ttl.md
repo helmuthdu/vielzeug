@@ -43,10 +43,14 @@ await db.put('sessions', { id: 's5', userId: 5 }, ttl.days(7));
 const pruned = await db.pruneExpired();
 console.log(pruned); // { sessions: 0 } — none have expired yet
 
+// Prune only specific tables
+const partial = await db.pruneExpired(['sessions']);
+console.log(partial); // { sessions: 0 }
+
 // Schedule periodic pruning for write-heavy tables
 const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
 
-// On app teardown
+// On app teardown (before dispose)
 stop();
 db.dispose();
 ```
@@ -68,7 +72,7 @@ for (const t of info.tables) {
 - Expired records are evicted **lazily** on the next read to that key. If a table is written to frequently but rarely read, expired records accumulate. Call `pruneExpired()` or `scheduleExpiredPrune` to reclaim storage proactively.
 - `ttl.hours(0)` is valid and means the record expires immediately. The record may still be readable within the same synchronous tick, but will be treated as expired on the next async read.
 - On **IndexedDB**, `pruneExpired` uses a cursor-based pass — expired records are deleted without loading their values into memory. On **LocalStorage / SessionStorage** and **Memory**, each key is checked in sequence.
-- `scheduleExpiredPrune` uses `setInterval` internally. Always call the returned `stop()` function before calling `db.dispose()` to avoid a timer callback firing on a disposed adapter.
+- `scheduleExpiredPrune` uses `setInterval` internally. Call the returned `stop()` function before calling `db.dispose()` when a manual stop is needed. When `dispose()` is called without stopping the schedule first, the next interval tick will receive a `VaultDisposedError` and automatically clear the timer — so no dangling timer will fire after the adapter is torn down.
 
 ### Related
 

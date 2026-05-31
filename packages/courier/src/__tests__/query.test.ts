@@ -850,4 +850,62 @@ describe('Query Client', () => {
       expect(notifications).toBe(0);
     });
   });
+
+  describe('cancelAll', () => {
+    it('cancelAll() aborts all in-flight query fetches', async () => {
+      const qc = createQuery();
+      const aborted: boolean[] = [];
+
+      const p = qc
+        .fetch({
+          fn: ({ signal }) =>
+            new Promise<{ id: number }>((_, reject) => {
+              signal.addEventListener('abort', () => {
+                aborted.push(true);
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+          key: ['x'],
+        })
+        .catch(() => {});
+
+      qc.cancelAll();
+      await p;
+
+      expect(aborted).toEqual([true]);
+    });
+
+    it('cancelAll() does not dispose the client', () => {
+      const qc = createQuery();
+
+      qc.cancelAll();
+
+      expect(qc.disposed).toBe(false);
+    });
+
+    it('cancelAll() is a no-op when there are no in-flight fetches', () => {
+      const qc = createQuery();
+
+      expect(() => qc.cancelAll()).not.toThrow();
+    });
+  });
+
+  describe('Focus / reconnect helpers', () => {
+    it('bindRefetch() triggers refetchStale() on window online event', () => {
+      const qc = createQuery();
+      const spyRefetch = vi.spyOn(qc, 'refetchStale');
+
+      const unbind = bindRefetch(qc);
+
+      window.dispatchEvent(new Event('online'));
+
+      expect(spyRefetch).toHaveBeenCalledTimes(1);
+
+      unbind();
+
+      window.dispatchEvent(new Event('online'));
+
+      expect(spyRefetch).toHaveBeenCalledTimes(1);
+    });
+  });
 });

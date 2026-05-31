@@ -24,10 +24,10 @@ interface AppEvents {
 const errors: Array<{ err: unknown; event: string; payload: unknown }> = [];
 
 const bus = createBus<AppEvents>({
-  onError(err, event, payload) {
+  onError({ err, event, payload, timestamp }) {
     // Collect instead of rethrowing — other listeners continue
     errors.push({ err, event, payload });
-    console.error(`[bus] listener error on "${String(event)}"`, err);
+    console.error(`[bus] listener error on "${String(event)}" at ${timestamp}`, err);
   },
 });
 

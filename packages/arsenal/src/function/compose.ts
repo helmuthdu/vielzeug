@@ -28,7 +28,7 @@ type FirstReturnType<T extends readonly Fn[]> = T extends [infer First extends F
 export function compose<T extends readonly [Fn, ...Fn[]]>(
   ...fns: T
 ): (...args: LastParameters<T>) => FirstReturnType<T> {
-  assert(fns.length > 0, 'compose requires at least one function', { args: { fns } });
+  assert(fns.length > 0, 'compose requires at least one function');
 
   const lastFn = fns[fns.length - 1];
   const restFns = fns.slice(0, -1);

@@ -297,6 +297,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
   // Internal: starts the network fetch for an entry using the given FetchConfig.
   // Safe to call from background revalidation paths without corrupting cache state.
+  // Callers are responsible for updating entry.lastConfig before invoking this.
   function startFetch<T>(entry: CacheEntry<T>, config: FetchConfig<T>): Promise<T> {
     if (entry.inflight) return entry.inflight.promise;
 
@@ -308,11 +309,6 @@ export function createQuery(opts?: QueryClientOptions) {
       status: entry.status,
       updatedAt: entry.updatedAt,
     };
-
-    // Record config for background revalidation before any async work begins.
-    // Always update — even on failure — so invalidate()/refetchStale() always use
-    // the most recent fn and options rather than a stale successful config.
-    entry.lastConfig = config;
 
     // Create the promise and assign it to inflight BEFORE calling markFetching.
     // markFetching notifies observers synchronously; assigning inflight first closes
@@ -395,9 +391,9 @@ export function createQuery(opts?: QueryClientOptions) {
       return entry.data as T | undefined;
     }
 
-    // Record the most recent config before the inflight check so background
-    // revalidation after the current fetch completes uses the latest fn and options,
-    // even when this call joins an already-running request.
+    // Keep config for background revalidation even when joining an in-flight
+    // request — so the most recent fn / staleTime / retry options take effect
+    // when the next invalidation or background refetch fires.
     entry.lastConfig = config;
 
     if (entry.inflight) return entry.inflight.promise;
@@ -530,13 +526,17 @@ export function createQuery(opts?: QueryClientOptions) {
     key: QueryKey,
     opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
   ): SyncStore<QueryState<S>> {
+    // Stable observer used by peek() — hoisted to avoid a new object allocation
+    // on every getSnapshot call (React's useSyncExternalStore calls this on every render).
+    const peekObserver: QueryObserver<T, S> = { listener: () => {}, ...opts };
+
     return {
       peek(): QueryState<S> {
         const entry = entries.get(stableStringify(key)) as CacheEntry<T> | undefined;
 
         if (!entry) return IDLE_STATE as QueryState<S>;
 
-        return toObserverState(entry, { listener: () => {}, ...opts });
+        return toObserverState(entry, peekObserver);
       },
 
       subscribe(onStoreChange: () => void): Unsubscribe {
@@ -550,7 +550,7 @@ export function createQuery(opts?: QueryClientOptions) {
         const observer: QueryObserver<T, S> = {
           ...opts,
           listener: () => onStoreChange(),
-          previous: toObserverState(entry, { listener: () => {}, ...opts }),
+          previous: toObserverState(entry, peekObserver),
         };
 
         entry.observers.add(observer as QueryObserver<T, unknown>);
@@ -612,6 +612,11 @@ export function createQuery(opts?: QueryClientOptions) {
 
   return {
     cancel,
+    cancelAll(): void {
+      for (const entry of entries.values()) {
+        entry.inflight?.controller.abort();
+      }
+    },
     clear: clearCache,
     dispose(): void {
       disposed = true;

@@ -1,4 +1,4 @@
-import { ValidationError, s } from '../index';
+import { s, ValidationError } from '../index';
 
 describe('s.date()', () => {
   const d = new Date('2024-06-01');

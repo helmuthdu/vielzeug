@@ -1,11 +1,10 @@
 export { exchange } from './exchange';
-export { format } from './format';
+export { format, formatParts } from './format';
 export {
   abs,
   add,
   allocate,
   compare,
-  currency,
   divide,
   fromJSON,
   greaterThan,
@@ -26,6 +25,15 @@ export {
   sum,
   toDecimal,
   toJSON,
+  toCurrencyCode,
   toNumber,
 } from './money';
-export type { CurrencyCode, ExchangeRate, FormatOptions, Money, MoneyJSON, RoundingMode } from './types';
+export type {
+  CurrencyCode,
+  ExchangeRate,
+  FormatOptions,
+  Money,
+  MoneyFormatPart,
+  MoneyJSON,
+  RoundingMode,
+} from './types';

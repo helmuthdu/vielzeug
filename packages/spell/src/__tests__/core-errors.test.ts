@@ -1,4 +1,4 @@
-import { ValidationError, errorsAt, s } from '../index';
+import { errorsAt, s, ValidationError } from '../index';
 
 describe('ValidationError message and shaping', () => {
   it('formats a root-level issue with fallback path label', () => {

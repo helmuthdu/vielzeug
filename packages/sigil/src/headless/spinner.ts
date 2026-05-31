@@ -1,7 +1,9 @@
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
+import { clamp as clampRange } from '@vielzeug/arsenal';
+
 import { dispatchKeyboardAction } from './keyboard';
-import { clamp as clampRange, toFiniteNumber, toPositiveStep } from './numbers';
+import { toFiniteNumber, toPositiveStep } from './numbers';
 
 export type SpinnerControlOptions = {
   commit: (value: number | null, originalEvent?: Event) => void;

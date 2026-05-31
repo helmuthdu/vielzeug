@@ -5,77 +5,73 @@ description: 'Object utility examples for Arsenal.'
 
 ## Object Utilities
 
-Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for cloning, diffing, nested path access, caching, and more.
+Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for deep merging, nested path access, diffing, caching, and more.
 
-## 📚 Quick Reference
+## Quick Reference
 
-## Problem
-
-Implement 📚 quick reference in a production-friendly way with `@vielzeug/arsenal` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/arsenal` installed.
-
-- [`stash`](./object/stash.md): Key-value cache with automatic GC and observer support.
-- [`deepClone`](./object/deepClone.md): Deep clone nested values and common JS structures.
+- [`stash`](./object/stash.md): TTL-aware key-value cache with stampede prevention and eviction callback.
 - [`defaults`](./object/defaults.md): Apply fallback values for undefined keys.
 - [`diff`](./object/diff.md): Compare two objects and return the structural differences.
-- [`entries`](./object/entries.md): Typed wrapper for Object.entries.
+- [`entries`](./object/entries.md): Typed wrapper for `Object.entries`.
 - [`filterValues`](./object/filterValues.md): Filter object keys by value predicate.
-- [`fromEntries`](./object/fromEntries.md): Typed wrapper for Object.fromEntries.
+- [`flattenPaths`](./object/flattenPaths.md): Flatten nested object to a `{ 'a.b': value }` map.
+- [`fromEntries`](./object/fromEntries.md): Typed wrapper for `Object.fromEntries`.
+- [`getOrCreate`](./object/getOrCreate.md): Lazily initialise a `Map` entry.
+- [`getPath`](./object/path.md): Safely access nested properties using dot-notation strings.
 - [`has`](./object/has.md): Type-safe key existence check.
 - [`invert`](./object/invert.md): Invert key-value pairs.
-- [`keys`](./object/keys.md): Typed wrapper for Object.keys.
+- [`keys`](./object/keys.md): Typed wrapper for `Object.keys`.
 - [`mapKeys`](./object/mapKeys.md): Transform object keys.
 - [`mapValues`](./object/mapValues.md): Transform object values.
-- [`deepMerge` and `shallowMerge`](./object/merge.md): Merge multiple objects.
+- [`deepMerge` and `deepMergeWith`](./object/merge.md): Merge multiple objects deeply.
 - [`pick`](./object/pick.md): Create a new object with only selected keys.
 - [`omit`](./object/omit.md): Create a new object excluding selected keys.
 - [`parseJSON`](./object/parseJSON.md): Safely parse JSON strings with optional fallback value.
-- [`get`](./object/path.md): Safely access nested properties using dot-notation strings.
 - [`prune`](./object/prune.md): Recursively remove null/undefined/empty values.
-- [`values`](./object/values.md): Typed wrapper for Object.values.
+- [`stableStringify`](./object/stableStringify.md): Deterministic JSON-like string for cache keys.
+- [`values`](./object/values.md): Typed wrapper for `Object.values`.
 
-## 💡 Practical Examples
+## Practical Examples
 
-### Cloning & Diffing
+### Diffing
 
 ```ts
-import { deepClone, diff } from '@vielzeug/arsenal';
+import { diff } from '@vielzeug/arsenal';
 
 const config = { api: { host: 'localhost', port: 8080 }, flags: { beta: false } };
-const finalConfig = deepClone(config);
+const updated = structuredClone(config);
 
-finalConfig.api.port = 3000;
-finalConfig.flags.beta = true;
+updated.api.port = 3000;
+updated.flags.beta = true;
 
 // Find what changed
-const changes = diff(config, finalConfig);
+const changes = diff(config, updated);
 // { api: { port: 3000 }, flags: { beta: true } }
 ```
 
-### Deep vs Shallow Merge
+### Deep Merge
 
 ```ts
-import { deepMerge, shallowMerge } from '@vielzeug/arsenal';
+import { deepMerge, deepMergeWith } from '@vielzeug/arsenal';
 
 const base = { api: { host: 'localhost', port: 8080 }, tags: ['core'] };
 const override = { api: { port: 3000 }, tags: ['docs'] };
 
-const deep = deepMerge(base, override);
+// Arrays are replaced by default
+const merged = deepMerge(base, override);
+// { api: { host: 'localhost', port: 3000 }, tags: ['docs'] }
+
+// Concatenate arrays instead
+const concat = deepMergeWith({ arrayStrategy: 'concat' })(base, override);
 // { api: { host: 'localhost', port: 3000 }, tags: ['core', 'docs'] }
 
-const shallow = shallowMerge(base, override);
-// { api: { port: 3000 }, tags: ['docs'] }
-
-console.log(deep, shallow);
+console.log(merged, concat);
 ```
 
 ### Accessing Nested Data
 
 ```ts
-import { get, omit, pick } from '@vielzeug/arsenal';
+import { getPath, omit, pick } from '@vielzeug/arsenal';
 
 const data = {
   user: {
@@ -85,17 +81,15 @@ const data = {
   },
 };
 
-// Access via path string
-const theme = get(data, 'user.profile.settings.theme'); // 'dark'
-
-// Search values anywhere in the object
-const hasDark = seek(data, 'dark'); // true
+// Dot notation only — 'a.1.b' for array indices; bracket notation ('a[1].b') throws TypeError
+const theme = getPath(data, 'user.profile.settings.theme'); // 'dark'
+const missing = getPath(data, 'user.profile.missing', 'fallback'); // 'fallback'
 
 const user = { id: 1, name: 'Alice', role: 'admin', password: 'secret' };
 const safe = pick(user, ['id', 'name', 'role']);
 const noSecret = omit(user, ['password']);
 
-console.log(theme, hasDark, safe, noSecret);
+console.log(theme, missing, safe, noSecret);
 ```
 
 ### Pruning & Cleaning
@@ -110,53 +104,77 @@ prune('  hello  '); // 'hello'
 prune('   '); // undefined
 ```
 
-### Caching
+### Caching with stash
 
 ```ts
 import { stash } from '@vielzeug/arsenal';
 
-const myCache = stash<string>({ hash: (key) => JSON.stringify(key) });
-myCache.set(['user', 1], 'John Doe');
-myCache.get(['user', 1]); // 'John Doe'
-myCache.scheduleGc(['user', 1], 5000); // Auto-delete after 5s
-myCache.size(); // 1
+const myCache = stash<User, readonly unknown[]>({
+  hash: (key) => JSON.stringify(key),
+  onEvict: (key, user) => console.log('evicted', key, user.id),
+});
+
+myCache.set(['user', 1], { id: 1, name: 'Alice' }, { ttlMs: 30_000 });
+myCache.get(['user', 1]); // { id: 1, name: 'Alice' }
+
+// getOrSet caches the result including undefined — factory called only once per key
+const user = await myCache.getOrSet(['user', 2], () => fetchUser(2));
+
+// Concurrent calls to getOrSet share one in-flight Promise (stampede prevention)
+const [a, b] = await Promise.all([
+  myCache.getOrSet(['user', 3], () => fetchUser(3)),
+  myCache.getOrSet(['user', 3], () => fetchUser(3)), // deduplicated
+]);
+
+myCache.size(); // 3
 ```
 
-## 🔗 All Object Utilities
+### Stable Cache Keys
+
+```ts
+import { stableStringify } from '@vielzeug/arsenal';
+
+// Key is the same regardless of property insertion order
+const key1 = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
+const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
+key1 === key2; // true
+
+// Handles Dates, Sets, Maps, bigints
+stableStringify(new Set([3, 1, 2]));              // '[Set:1,2,3]'
+stableStringify(new Map([['b', 2], ['a', 1]]));   // '[Map:"a"=>1,"b"=>2]'
+stableStringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
+
+// Class instances fall back to String() by default
+// Pass { strict: true } to throw a TypeError instead
+stableStringify(new MyClass(), { strict: true }); // TypeError
+```
+
+## All Object Utilities
 
 - [stash](./object/stash.md)
-- [deepClone](./object/deepClone.md)
 - [defaults](./object/defaults.md)
 - [diff](./object/diff.md)
 - [entries](./object/entries.md)
 - [filterValues](./object/filterValues.md)
+- [flattenPaths](./object/flattenPaths.md)
 - [fromEntries](./object/fromEntries.md)
+- [getOrCreate](./object/getOrCreate.md)
+- [getPath](./object/path.md)
 - [has](./object/has.md)
 - [invert](./object/invert.md)
 - [keys](./object/keys.md)
 - [mapKeys](./object/mapKeys.md)
 - [mapValues](./object/mapValues.md)
-- [deepMerge and shallowMerge](./object/merge.md)
+- [deepMerge and deepMergeWith](./object/merge.md)
 - [pick](./object/pick.md)
 - [omit](./object/omit.md)
 - [parseJSON](./object/parseJSON.md)
-- [get](./object/path.md)
 - [prune](./object/prune.md)
+- [stableStringify](./object/stableStringify.md)
 - [values](./object/values.md)
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+## Related Examples
 
 - [Array Examples](./array.md)
 - [Async Examples](./async.md)
-- [Date Examples](./date.md)
+- [Typed Examples](./typed.md)

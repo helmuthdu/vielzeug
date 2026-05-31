@@ -1,4 +1,4 @@
-import { VaultScopeError, createMemory, table, ttl, type Adapter, type MetricsEvent } from '../index';
+import { type Adapter, createMemory, type MetricsEvent, table, ttl, VaultScopeError } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -111,13 +111,11 @@ describe('Memory adapter', () => {
   test('batch defers notifications until completion', async () => {
     const snapshots: User[][] = [];
 
-    db.observe(
-      'users',
-      (rows) => {
-        snapshots.push([...rows]);
-      },
-      { immediate: false },
-    );
+    db.observe('users', (rows) => {
+      snapshots.push([...rows]);
+    });
+
+    await Promise.resolve(); // consume initial empty snapshot
 
     await db.batch(['users'], async (tx) => {
       await tx.put('users', { id: 1, name: 'Alice' });
@@ -126,9 +124,9 @@ describe('Memory adapter', () => {
 
     await Promise.resolve();
 
-    // Should have received exactly ONE notification (after batch), not two
-    expect(snapshots).toHaveLength(1);
-    expect(snapshots[0]).toEqual([
+    // Initial empty snapshot + one batch notification (not two)
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[1]).toEqual([
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
@@ -228,14 +226,19 @@ describe('Memory adapter', () => {
 
   test('clear on empty table does not trigger observers', async () => {
     const snapshots: User[][] = [];
-    const stop = db.observe('users', (rows) => snapshots.push(rows), { immediate: false });
+    const stop = db.observe('users', (rows) => snapshots.push(rows));
+
+    await Promise.resolve(); // consume initial empty snapshot
+
+    const lenAfterInit = snapshots.length; // 1: initial empty snapshot
 
     await db.clear('users'); // table is already empty
 
     await Promise.resolve();
     stop();
 
-    expect(snapshots).toHaveLength(0);
+    // clear on empty table does not fire an additional notification
+    expect(snapshots).toHaveLength(lenAfterInit);
   });
 
   test('clear does not notify observers when all records are TTL-expired', async () => {
@@ -245,14 +248,18 @@ describe('Memory adapter', () => {
     vi.advanceTimersByTime(2000); // all records are now logically expired
 
     const snapshots: User[][] = [];
-    const stop = db.observe('users', (rows) => snapshots.push(rows), { immediate: false });
+    const stop = db.observe('users', (rows) => snapshots.push(rows));
+
+    await Promise.resolve(); // consume initial empty snapshot (all expired = logical empty)
+
+    const lenAfterInit = snapshots.length;
 
     await db.clear('users');
     await Promise.resolve();
     stop();
 
-    // core.count() returns 0 (all expired), so clear() skips the notify call entirely
-    expect(snapshots).toHaveLength(0);
+    // core.count() returns 0 (all expired), so clear() skips the notify call
+    expect(snapshots).toHaveLength(lenAfterInit);
 
     vi.useRealTimers();
   });
@@ -281,26 +288,7 @@ describe('Memory adapter', () => {
     expect(await db.has('users', 1)).toBe(false);
   });
 
-  test('observe emits initial snapshot when immediate:true is passed', async () => {
-    await db.put('users', { id: 1, name: 'Alice' });
-
-    const snapshots: User[][] = [];
-    const stop = db.observe(
-      'users',
-      (rows) => {
-        snapshots.push(rows);
-      },
-      { immediate: true },
-    );
-
-    await Promise.resolve();
-    stop();
-
-    expect(snapshots).toHaveLength(1);
-    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
-  });
-
-  test('observe does not emit initial snapshot by default', async () => {
+  test('observe always emits initial snapshot on registration', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     const snapshots: User[][] = [];
@@ -311,8 +299,24 @@ describe('Memory adapter', () => {
     await Promise.resolve();
     stop();
 
-    // No immediate snapshot — only future mutations will fire
-    expect(snapshots).toHaveLength(0);
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('observe always fires immediately (no silent registration)', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => {
+      snapshots.push(rows);
+    });
+
+    await Promise.resolve();
+    stop();
+
+    // observe always fires: exactly one initial snapshot
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
   test('instances are isolated', async () => {
@@ -326,26 +330,22 @@ describe('Memory adapter', () => {
   test('listener errors do not block other observers', async () => {
     const received: User[][] = [];
 
-    db.observe(
-      'users',
-      () => {
-        throw new Error('bad listener');
-      },
-      { immediate: false },
-    );
-    db.observe(
-      'users',
-      (rows) => {
-        received.push(rows);
-      },
-      { immediate: false },
-    );
+    db.observe('users', () => {
+      throw new Error('bad listener');
+    });
+    db.observe('users', (rows) => {
+      received.push(rows);
+    });
+
+    await Promise.resolve(); // consume initial empty snapshots
+
+    const lenAfterInit = received.length;
 
     await db.put('users', { id: 1, name: 'Alice' });
     await Promise.resolve();
 
-    expect(received).toHaveLength(1);
-    expect(received[0]).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(received).toHaveLength(lenAfterInit + 1);
+    expect(received[lenAfterInit]).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
   test('dispose prevents further observations', async () => {
@@ -419,16 +419,12 @@ describe('Memory adapter', () => {
 
     try {
       const received = new Promise<User[]>((resolve) => {
-        const stop = db2.observe(
-          'users',
-          (rows) => {
-            if (rows.length > 0) {
-              stop();
-              resolve(rows);
-            }
-          },
-          { immediate: false },
-        );
+        const stop = db2.observe('users', (rows) => {
+          if (rows.length > 0) {
+            stop();
+            resolve(rows);
+          }
+        });
       });
 
       await db1.put('users', { id: 7, name: 'Remote' });
@@ -485,6 +481,8 @@ describe('Memory adapter', () => {
 
         db2.observe('users', spy);
 
+        await Promise.resolve(); // consume initial empty snapshot
+
         // Inject a completely malformed message on the shared channel
         const attacker = new BroadcastChannel('vault-memory:sec-malformed');
 
@@ -494,9 +492,12 @@ describe('Memory adapter', () => {
         attacker.postMessage({ table: 'users', type: 'unknown-type' });
         attacker.close();
 
+        const callsBefore = spy.mock.calls.length;
+
         await Promise.resolve();
 
-        expect(spy).not.toHaveBeenCalled();
+        // No additional calls from malformed messages
+        expect(spy.mock.calls.length).toBe(callsBefore);
         expect(await db2.count('users')).toBe(0);
       } finally {
         db1.dispose();
@@ -584,18 +585,14 @@ describe('Memory adapter', () => {
       try {
         // Use an observer to await the BroadcastChannel message delivery (macrotask)
         const received = new Promise<User>((resolve) => {
-          const stop = db2.observe(
-            'users',
-            (rows) => {
-              const found = rows.find((r) => r.id === 99);
+          const stop = db2.observe('users', (rows) => {
+            const found = rows.find((r) => r.id === 99);
 
-              if (found) {
-                stop();
-                resolve(found);
-              }
-            },
-            { immediate: false },
-          );
+            if (found) {
+              stop();
+              resolve(found);
+            }
+          });
         });
 
         await db1.put('users', { id: 99, name: 'Legit' });
@@ -677,7 +674,7 @@ describe('Memory adapter', () => {
       expect(snapshots).toHaveLength(0);
     });
 
-    test('fires after single-table change when other observed table has never changed (immediate: false)', async () => {
+    test('fires after single-table change when only one observed table receives a mutation', async () => {
       // Regression: before the prefetch fix, writing only to users would never trigger
       // the listener because posts had never delivered a snapshot.
       const snapshots: { posts: Post[]; users: User[] }[] = [];

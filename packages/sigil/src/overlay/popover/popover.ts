@@ -1,8 +1,8 @@
 import { computed, define, html, onMounted, prop, syncAria } from '@vielzeug/craft';
 import { type Placement } from '@vielzeug/orbit';
 
-import { createStableId, parseStringTriggers, type DialogCloseReason, type OverlayOpenReason } from '../../headless';
-import { disablableBundle } from '../../shared/config';
+import { createStableId, type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
+import { disablableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './popover.css?inline';

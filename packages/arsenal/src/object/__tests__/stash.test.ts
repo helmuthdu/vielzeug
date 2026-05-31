@@ -59,61 +59,31 @@ describe('stash', () => {
     expect(c.size()).toBe(2);
   });
 
-  it('should schedule garbage collection', () => {
+  it('should expire entries with ttlMs', () => {
     const c = stash<string>({ hash });
 
-    c.set(['temp'], 'data');
-    c.scheduleGc(['temp'], 1000);
+    c.set(['temp'], 'data', { ttlMs: 1000 });
 
     expect(c.get(['temp'])).toBe('data');
     vi.advanceTimersByTime(1000);
     expect(c.get(['temp'])).toBeUndefined();
   });
 
-  it('should cancel previous GC when scheduling new one', () => {
+  it('should not evict when ttl is Infinity', () => {
     const c = stash<string>({ hash });
 
-    c.set(['item'], 'value');
-
-    c.scheduleGc(['item'], 500);
-    vi.advanceTimersByTime(300);
-    c.scheduleGc(['item'], 1000); // Reschedule
-
-    vi.advanceTimersByTime(500);
-    expect(c.get(['item'])).toBe('value'); // Still exists
-
-    vi.advanceTimersByTime(500);
-    expect(c.get(['item'])).toBeUndefined(); // Now deleted
+    c.set(['k'], 'v', { ttlMs: Number.POSITIVE_INFINITY });
+    vi.advanceTimersByTime(1_000_000);
+    expect(c.get(['k'])).toBe('v');
   });
 
-  it('should store and retrieve metadata', () => {
-    const c = stash<string, readonly unknown[], { role: string }>({ hash });
-
-    c.set(['user', 1], 'Alice', { meta: { role: 'admin' } });
-
-    const meta = c.getEntry(['user', 1])?.meta;
-
-    expect(meta).toEqual({ role: 'admin' });
-  });
-
-  it('set() can update metadata and clear it with undefined', () => {
-    const c = stash<string, readonly unknown[], { ttlLabel?: string }>({ hash });
-
-    c.set(['k'], 'v1', { meta: { ttlLabel: 'short' } });
-    expect(c.getEntry(['k'])?.meta).toEqual({ ttlLabel: 'short' });
-
-    c.set(['k'], 'v2', { meta: undefined });
-    expect(c.getEntry(['k'])?.meta).toBeUndefined();
-  });
-
-  it('should clear GC timers on clear', () => {
+  it('should throw for non-finite ttl values except Infinity', () => {
     const c = stash<string>({ hash });
 
-    c.set(['a'], 'A');
-    c.scheduleGc(['a'], 5000);
-    c.clear();
-    vi.advanceTimersByTime(5000);
-    expect(c.get(['a'])).toBeUndefined();
+    c.set(['k'], 'v');
+
+    expect(() => c.set(['k2'], 'v', { ttlMs: Number.NaN })).toThrow(TypeError);
+    expect(() => c.set(['k3'], 'v', { ttlMs: Number.NEGATIVE_INFINITY })).toThrow(TypeError);
   });
 
   it('should handle complex keys', () => {
@@ -142,57 +112,6 @@ describe('stash', () => {
     expect(first).toBe(1);
     expect(second).toBe(1);
     expect(c.get(['k'])).toBe(1);
-  });
-
-  it('getOrSet() should not recompute when cached value is undefined', () => {
-    const c = stash<undefined | string>({ hash });
-    const factory = vi.fn<() => undefined>(() => undefined);
-
-    const first = c.getOrSet(['k'], factory);
-    const second = c.getOrSet(['k'], factory);
-
-    expect(first).toBeUndefined();
-    expect(second).toBeUndefined();
-    expect(factory).toHaveBeenCalledTimes(1);
-    expect(c.getEntry(['k'])).toEqual({ meta: undefined, value: undefined });
-  });
-
-  it('touch() should return false for missing keys', () => {
-    const c = stash<string>({ hash });
-
-    expect(c.touch(['missing'], 100)).toBe(false);
-  });
-
-  it('touch() should refresh ttl for existing keys', () => {
-    const c = stash<string>({ hash });
-
-    c.set(['k'], 'v', { ttlMs: 500 });
-    vi.advanceTimersByTime(300);
-    expect(c.touch(['k'], 1000)).toBe(true);
-
-    vi.advanceTimersByTime(500);
-    expect(c.get(['k'])).toBe('v');
-
-    vi.advanceTimersByTime(600);
-    expect(c.get(['k'])).toBeUndefined();
-  });
-
-  it('should not evict when ttl is Infinity', () => {
-    const c = stash<string>({ hash });
-
-    c.set(['k'], 'v', { ttlMs: Number.POSITIVE_INFINITY });
-    vi.advanceTimersByTime(1_000_000);
-    expect(c.get(['k'])).toBe('v');
-  });
-
-  it('should throw for non-finite ttl values except Infinity', () => {
-    const c = stash<string>({ hash });
-    const seeded = c.getOrSet(['k'], () => 'v');
-
-    expect(seeded).toBe('v');
-
-    expect(() => c.scheduleGc(['k'], Number.NaN)).toThrow(TypeError);
-    expect(() => c.scheduleGc(['k'], Number.NEGATIVE_INFINITY)).toThrow(TypeError);
   });
 
   it('should expose entries() iterator', () => {
@@ -285,5 +204,42 @@ describe('stash', () => {
     c.clear();
 
     expect(onEvict).toHaveBeenCalledTimes(2);
+  });
+
+  it('getOrSet() caches undefined values — factory is called only once', () => {
+    const factory = vi.fn(() => undefined);
+    const c = stash<undefined>({ hash });
+
+    c.getOrSet(['k'], factory);
+    c.getOrSet(['k'], factory);
+    c.getOrSet(['k'], factory);
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(c.get(['k'])).toBeUndefined();
+  });
+
+  it('getOrSet() async: caches resolved undefined — factory not called again', async () => {
+    let resolve!: (v: undefined) => void;
+    const factory = vi.fn(
+      () =>
+        new Promise<undefined>((r) => {
+          resolve = r;
+        }),
+    );
+    const c = stash<undefined>({ hash });
+
+    const p1 = c.getOrSet(['k'], factory);
+    const p2 = c.getOrSet(['k'], factory); // in-flight dedup
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    resolve(undefined);
+    await expect(p1).resolves.toBeUndefined();
+    await expect(p2).resolves.toBeUndefined();
+
+    // After resolution, value is cached — factory not called again
+    const sync = c.getOrSet(['k'], factory);
+
+    expect(sync).toBeUndefined();
+    expect(factory).toHaveBeenCalledTimes(1);
   });
 });

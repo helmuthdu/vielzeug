@@ -57,7 +57,7 @@ void alice, all, count, live, missing, a, c, updated;
 
 ### Pitfalls
 
-- `update()` returns `undefined` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
+- `update()` throws `VaultError` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
 - `count()` returns only live (non-expired) records. If you have many TTL-expired records that have not been pruned, `count()` may be lower than `getAll()` would suggest at first glance — both exclude expired records, but expired records still occupy storage until pruned.
 - `putAll()` writes all records in a single atomic IDB transaction on IndexedDB. On LocalStorage and Memory adapters, each record is written individually — a failure mid-array does not roll back earlier writes.

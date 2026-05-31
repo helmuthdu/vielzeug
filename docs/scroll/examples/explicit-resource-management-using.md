@@ -18,7 +18,7 @@ function renderList(scrollEl: HTMLElement, rows: string[]) {
   using virt = createVirtualizer(scrollEl, {
     count: rows.length,
     estimateSize: 36,
-    onChange: (virtualItems, totalSize) => {
+    onChange: ({ items, totalSize }) => {
       // render...
     },
   });

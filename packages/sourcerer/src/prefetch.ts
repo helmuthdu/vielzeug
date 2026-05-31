@@ -3,42 +3,36 @@ import type { RemoteConfig, RemoteSource, SourceSnapshot } from './types';
 import { createRemoteSource } from './remoteSource';
 
 /**
- * Creates a remote source, waits for the first fetch to complete, and returns a
- * serializable snapshot of the loaded state. The source is disposed automatically.
+ * Fetches a single page of data and returns a serialisable `SourceSnapshot`.
+ * The underlying source is created, fetched, then immediately disposed.
  *
- * Designed for server-side rendering: run `prefetchSource` on the server, embed
- * the snapshot in the page, then hydrate on the client by passing `snapshot` to
- * `createRemoteSource` — the client starts in a loaded state with no loading flash.
+ * Ideal for SSR: embed the result in HTML and pass it to `createRemoteSource({ snapshot })`.
  *
  * @example
  * ```ts
- * // --- Server ---
+ * // server.ts
  * const snapshot = await prefetchSource({ fetch: fetchUsers, limit: 20 });
- * const html = renderToString(App) +
- *   `<script>window.__SNAP__ = ${JSON.stringify(snapshot)}</script>`;
- *
- * // --- Client ---
- * const source = createRemoteSource({
- *   fetch: fetchUsers,
- *   limit: 20,
- *   snapshot: window.__SNAP__,
- *   autoFetch: false, // snapshot is fresh — skip background re-fetch
- * });
- * // source.current and source.meta are populated immediately.
+ * // client.ts
+ * const source = createRemoteSource({ fetch: fetchUsers, snapshot });
  * ```
  */
 export async function prefetchSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: RemoteConfig<T, TFilter, TSort>,
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
 ): Promise<SourceSnapshot<T>> {
-  const source = createRemoteSource({ ...cfg, autoFetch: true });
+  const source = createRemoteSource<T, TFilter, TSort>({ ...cfg, autoFetch: false });
 
-  await source.ready();
+  await source.refresh();
 
-  const query = source.toQuery();
+  if (source.meta.error) {
+    source.dispose();
+    throw source.meta.error;
+  }
+
+  const q = source.toQuery();
   const snapshot: SourceSnapshot<T> = {
-    items: [...source.current],
-    page: query.page,
-    search: query.search || undefined,
+    items: source.current,
+    ...(q.search && { search: q.search }),
+    page: source.meta.pageNumber,
     total: source.meta.totalItems,
   };
 
@@ -47,30 +41,38 @@ export async function prefetchSource<T, TFilter = unknown, TSort = unknown>(
   return snapshot;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace prefetchSource {
-  /**
-   * Like `prefetchSource`, but also returns the live source after prefetching.
-   * The caller is responsible for calling `source.dispose()` when done.
-   *
-   * Use this when you need both the snapshot (for serialization) and the live source
-   * (for continuing to use after SSR hand-off).
-   */
-  export async function withSource<T, TFilter = unknown, TSort = unknown>(
-    cfg: RemoteConfig<T, TFilter, TSort>,
-  ): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }> {
-    const source = createRemoteSource({ ...cfg, autoFetch: true });
+/**
+ * Like `prefetchSource`, but returns both the snapshot and the still-live source.
+ * The **caller** is responsible for disposing the source.
+ *
+ * Use this when you need the snapshot for SSR serialisation **and** the live source
+ * for subsequent client-side updates — avoiding a double-fetch.
+ *
+ * @example
+ * ```ts
+ * const { snapshot, source } = await prefetchSourceWithSource({ fetch: fetchUsers, limit: 20 });
+ * // Embed snapshot in HTML for hydration, keep source for reactivity.
+ * ```
+ */
+export async function prefetchSourceWithSource<T, TFilter = unknown, TSort = unknown>(
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
+): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }> {
+  const source = createRemoteSource<T, TFilter, TSort>({ ...cfg, autoFetch: false });
 
-    await source.ready();
+  await source.refresh();
 
-    const query = source.toQuery();
-    const snapshot: SourceSnapshot<T> = {
-      items: [...source.current],
-      page: query.page,
-      search: query.search || undefined,
-      total: source.meta.totalItems,
-    };
-
-    return { snapshot, source };
+  if (source.meta.error) {
+    source.dispose();
+    throw source.meta.error;
   }
+
+  const q = source.toQuery();
+  const snapshot: SourceSnapshot<T> = {
+    items: source.current,
+    ...(q.search && { search: q.search }),
+    page: source.meta.pageNumber,
+    total: source.meta.totalItems,
+  };
+
+  return { snapshot, source };
 }

@@ -1,4 +1,4 @@
-import { autoUpdate, computePosition, flip, offset, shift, size, type Placement } from '@vielzeug/orbit';
+import { autoUpdate, computePosition, flip, offset, type Placement, shift, size } from '@vielzeug/orbit';
 
 import type { OverlayPositioner } from './overlay';
 

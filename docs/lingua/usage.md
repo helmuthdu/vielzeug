@@ -147,10 +147,10 @@ Key characteristics:
 
 ## Validating Catalogs
 
-Use `validateCatalog()` during development or CI to detect plural branches that are missing CLDR forms for a target locale.
+Use `validateCatalog()` during development or CI to detect plural branches that are missing CLDR forms for a target locale. Import it from the dedicated `@vielzeug/lingua/validate` entry — do not import it from the main entry or it will end up in your production bundle.
 
 ```ts
-import { validateCatalog } from '@vielzeug/lingua';
+import { validateCatalog } from '@vielzeug/lingua/validate';
 import ar from './locales/ar.json';
 
 const warnings = validateCatalog(ar, 'ar');
@@ -158,11 +158,50 @@ const warnings = validateCatalog(ar, 'ar');
 // warnings = [{ key: 'inbox', locale: 'ar', form: 'zero' }, ...]
 
 if (warnings.length > 0) {
-  console.warn('Missing plural forms:', warnings);
+  throw new Error(`Missing plural forms:\n${JSON.stringify(warnings, null, 2)}`);
 }
 ```
 
 The function inspects the catalog for keys that look like plural branches (i.e. have at least one CLDR form as a child) and compares the present forms against the full CLDR set for the given locale. It uses `Intl.PluralRules` internally.
+
+## Bound Translation Functions
+
+`bind(key)` returns a function permanently bound to one translation key. The function caches the catalog lookup and
+invalidates automatically whenever the locale or catalog changes. Use it in render loops where you call the same
+translation many times.
+
+```ts
+const greet = i18n.bind('greeting');
+
+// Cached lookup — no repeated key resolution
+users.forEach((u) => greet({ name: u.name }));
+
+// Re-resolves automatically after locale switch
+await i18n.setLocale('de');
+greet({ name: 'Alice' }); // => German greeting
+```
+
+## Forking for SSR and Testing
+
+`fork(overrides?)` creates a child instance that inherits the parent's current catalog snapshot, loaders, and
+namespace registry, but has its own locale, fallback chain, and subscribers. Use it to isolate per-request locale
+state in SSR without re-creating and re-registering everything from scratch.
+
+```ts
+// SSR: share catalog setup; one fork per request
+const reqI18n = i18n.fork({ locale: req.locale });
+await reqI18n.setLocale(req.locale);
+const html = `<h1>${reqI18n.t('title')}</h1>`;
+
+// Tests: custom missing-key handler without polluting the shared instance
+const testI18n = i18n.fork({ onMissingKey: (k) => `MISSING:${k}` });
+```
+
+Key characteristics of forks:
+
+- Catalog mutations (register, merge) on the fork do not affect the parent, and vice versa.
+- The namespace registry is copied at fork time. Post-fork registrations are not shared.
+- Forks do not inherit subscribers.
 
 ## Missing Handling
 
@@ -324,16 +363,16 @@ i18n.t('greeting', { name: 'Alice' }); // => 'Hello, Alice!'
 
 Output is identical to non-compile mode. The flag is transparent — switch it on or off without changing call sites.
 
-## Using watch() with AbortController
+## Using subscribe() with AbortController
 
-`watch()` is the preferred subscription API in modern environments. It integrates directly with `AbortController` / `AbortSignal`:
+Pass `{ signal }` to `subscribe()` to unsubscribe automatically when an `AbortController` fires:
 
 ```ts
 // React
 useEffect(() => {
   const controller = new AbortController();
 
-  i18n.watch(({ locale }) => {
+  i18n.subscribe(({ locale }) => {
     document.documentElement.lang = locale;
   }, { immediate: true, signal: controller.signal });
 
@@ -342,6 +381,6 @@ useEffect(() => {
 
 // Svelte (onDestroy)
 const controller = new AbortController();
-i18n.watch(({ locale }) => snapshot = locale, { signal: controller.signal });
+i18n.subscribe(({ locale }) => { snapshot = locale; }, { signal: controller.signal });
 onDestroy(() => controller.abort());
 ```

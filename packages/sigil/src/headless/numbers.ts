@@ -1,7 +1,5 @@
 // ── Number helpers ────────────────────────────────────────────────────────────
 
-export { clamp } from '@vielzeug/arsenal';
-
 export const toFiniteNumber = (value: unknown): number | undefined => {
   const parsed = Number(value);
 

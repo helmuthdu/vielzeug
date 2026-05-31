@@ -1,8 +1,6 @@
 import type { Middleware } from './types';
 
-import { MIDDLEWARE_ORDER_RULES } from './utils';
-
-type TaggedMiddleware = Middleware & { __name?: string };
+import { MIDDLEWARE_NAME, MIDDLEWARE_ORDER_RULES } from './utils';
 
 function validateOrder(names: Array<string | null>): void {
   for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
@@ -12,7 +10,7 @@ function validateOrder(names: Array<string | null>): void {
     if (beforeIdx !== -1 && afterIdx !== -1 && beforeIdx < afterIdx) {
       throw new Error(
         `[orbit] compose(): "${before}" must come after "${after}". ` +
-          `Recommended order: offset -> flip/autoPlacement -> shift -> size -> arrow.`,
+          `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
       );
     }
   }
@@ -38,7 +36,7 @@ function validateOrder(names: Array<string | null>): void {
  */
 export function compose(...middleware: Array<Middleware | null | undefined | false>): Middleware[] {
   const mws = middleware.filter(Boolean) as Middleware[];
-  const names = mws.map((mw) => (mw as TaggedMiddleware).__name ?? null);
+  const names = mws.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
 
   validateOrder(names);
 

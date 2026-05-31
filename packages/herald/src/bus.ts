@@ -1,14 +1,13 @@
-import { anySignal } from '@vielzeug/arsenal';
-
 import type {
   Bus,
   BusOptions,
   EmissionErrorContext,
   EventKey,
   EventMap,
+  EventStream,
   Listener,
-  PipeEntry,
   PipeableKey,
+  PipeEntry,
   SubscribeOptions,
   Unsubscribe,
   WaitAnyResult,
@@ -24,10 +23,75 @@ export class BusDisposedError extends Error {
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
 const noop = () => {};
 
+/**
+ * Returns the first of the two signals to abort, or `a` if only one is provided.
+ * Adds and cleans up its own event listeners — no leaks even when neither signal fires.
+ */
+function combineSignals(a: AbortSignal, b?: AbortSignal): AbortSignal {
+  if (!b) return a;
+
+  if (a.aborted) return a;
+
+  if (b.aborted) return b;
+
+  const ctrl = new AbortController();
+  const onA = (): void => ctrl.abort(a.reason);
+  const onB = (): void => ctrl.abort(b.reason);
+
+  a.addEventListener('abort', onA, { once: true });
+  b.addEventListener('abort', onB, { once: true });
+  ctrl.signal.addEventListener(
+    'abort',
+    () => {
+      a.removeEventListener('abort', onA);
+      b.removeEventListener('abort', onB);
+    },
+    { once: true },
+  );
+
+  return ctrl.signal;
+}
+
 // Each registration gets a unique Entry object, allowing the same listener function
 // to be registered multiple times independently (aligns with Node EventEmitter / mitt).
 type Entry = { fn: Listener<unknown>; unsub: () => void };
 type WildcardEntry = { fn: (event: string, payload: unknown) => void; unsub: () => void };
+
+// R7: Collapse the last three positional params of registerEntry into an options object.
+type RegisterEntryOpts = { offLog: string; onLog: string; onRemove?: () => void };
+
+// F1: makeEventStream wraps a generator with AsyncDisposable + filter/map operators.
+// Module-scoped (not inside createBus) — no per-emit allocation.
+function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<void>): EventStream<V> {
+  // filter and map create derived generators that iterate `gen`. Disposing the parent (via
+  // onDispose) cascades to close derived generators through the for-await protocol: when gen
+  // receives a done result, the for-await loop inside the derived generator exits normally.
+  const filterFn = (pred: (v: V) => boolean): EventStream<V> => {
+    async function* fg(): AsyncGenerator<V> {
+      for await (const value of gen) {
+        if (pred(value)) yield value;
+      }
+    }
+
+    return makeEventStream(fg(), onDispose);
+  };
+
+  const mapFn = <U>(fn: (v: V) => U): EventStream<U> => {
+    async function* mg(): AsyncGenerator<U> {
+      for await (const value of gen) {
+        yield fn(value);
+      }
+    }
+
+    return makeEventStream<U>(mg(), onDispose);
+  };
+
+  return Object.assign(gen, {
+    filter: filterFn as EventStream<V>['filter'],
+    map: mapFn,
+    [Symbol.asyncDispose]: onDispose,
+  }) as unknown as EventStream<V>;
+}
 
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   // Per-event set of Entry objects. Set identity prevents accidental dedup of entries;
@@ -39,18 +103,29 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const maxListeners = options?.maxListeners;
 
   function mergeSignal(signal?: AbortSignal): AbortSignal {
-    return anySignal(disposeController.signal, signal) ?? disposeController.signal;
+    return combineSignals(disposeController.signal, signal);
   }
 
-  // R1: Shared subscription lifecycle. Eliminates the 35-line duplication between onWithSignal and
-  // onAnyWithSignal: idempotent-guard, entry insertion, signal wiring, debug logging, maxListeners.
+  // R2: callSafe is defined once per bus (not per emit) — avoids re-allocating on every emission.
+  // Captures options.onError via closure. Used in emit() for both specific and wildcard loops.
+  function callSafe(fn: () => void, event: EventKey<T>, payload: unknown, timestamp: number): void {
+    try {
+      fn();
+    } catch (err) {
+      if (options?.onError) {
+        options.onError({ err, event, payload, timestamp } as EmissionErrorContext<T>);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  // R7: registerEntry opts object — self-documenting call sites instead of 6 positional params.
   function registerEntry<E extends { unsub: () => void }>(
     container: Set<E>,
     makeEntry: (unsub: () => void) => E,
     signal: AbortSignal,
-    onLog: string,
-    offLog: string,
-    onRemove?: () => void,
+    { offLog, onLog, onRemove }: RegisterEntryOpts,
   ): () => void {
     if (signal.aborted) return noop;
 
@@ -98,16 +173,13 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     // the event key has been removed from the outer map.
     const capturedSet = set;
 
-    return registerEntry(
-      capturedSet,
-      (unsub) => ({ fn: listener as Listener<unknown>, unsub }),
-      signal,
-      `on("${event}")`,
-      `off("${event}")`,
-      () => {
+    return registerEntry(capturedSet, (unsub) => ({ fn: listener as Listener<unknown>, unsub }), signal, {
+      offLog: `off("${event}")`,
+      onLog: `on("${event}")`,
+      onRemove: () => {
         if (capturedSet.size === 0) listeners.delete(event);
       },
-    );
+    });
   }
 
   function onAnyWithSignal(listener: (event: EventKey<T>, payload: unknown) => void, signal: AbortSignal): () => void {
@@ -115,24 +187,39 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       wildcards,
       (unsub) => ({ fn: listener as (event: string, payload: unknown) => void, unsub }),
       signal,
-      'onAny',
-      'onAny off',
+      { offLog: 'onAny off', onLog: 'onAny' },
     );
   }
 
+  // R3: Use a const ref object to hold the unsub handle — avoids the forward-reference that
+  // TypeScript cannot prove safe with `const unsub = f(() => unsub)`. The `ref` binding never
+  // changes (only its property is mutated), satisfying prefer-const. By the time the inner
+  // callback fires (only possible after onWithSignal returns), ref.unsub is the real handle.
   function onceWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
-    let unsub: () => void = noop;
+    const ref = { unsub: noop as Unsubscribe };
 
-    unsub = onWithSignal(
+    ref.unsub = onWithSignal(
       event,
       (payload) => {
-        unsub();
+        ref.unsub();
         listener(payload);
       },
       signal,
     );
 
-    return unsub;
+    return ref.unsub;
+  }
+
+  // F2: onAny with once — fires the wildcard listener exactly once, then auto-removes.
+  function onAnyWithOnce(listener: (event: EventKey<T>, payload: unknown) => void, signal: AbortSignal): () => void {
+    const ref = { unsub: noop as Unsubscribe };
+
+    ref.unsub = onAnyWithSignal((event, payload) => {
+      ref.unsub();
+      listener(event, payload);
+    }, signal);
+
+    return ref.unsub;
   }
 
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): () => void {
@@ -143,16 +230,26 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     return onWithSignal(event, listener, signal);
   }
 
-  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): () => void {
-    return onceWithSignal(event, listener, mergeSignal(signal));
+  // R6: once() and onAny() now take an options object instead of a raw AbortSignal.
+  // Consistent with on(), enables future option extensions without another breaking change.
+  function once<K extends EventKey<T>>(
+    event: K,
+    listener: Listener<T[K]>,
+    opts?: { signal?: AbortSignal },
+  ): () => void {
+    return onceWithSignal(event, listener, mergeSignal(opts?.signal));
   }
 
-  function onAny(listener: (event: EventKey<T>, payload: unknown) => void, signal?: AbortSignal): () => void {
-    return onAnyWithSignal(listener, mergeSignal(signal));
+  function onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): () => void {
+    const signal = mergeSignal(opts?.signal);
+
+    if (opts?.once) return onAnyWithOnce(listener, signal);
+
+    return onAnyWithSignal(listener, signal);
   }
 
-  function wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]> {
-    const activeSignal = mergeSignal(signal);
+  function wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]> {
+    const activeSignal = mergeSignal(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
 
@@ -180,7 +277,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   function events<K extends EventKey<T>>(
     event: K,
     opts?: { maxBuffer?: number; signal?: AbortSignal },
-  ): AsyncGenerator<T[K]> & AsyncDisposable {
+  ): EventStream<T[K]> {
     const maxBuffer = opts?.maxBuffer ?? Infinity;
 
     if (maxBuffer <= 0) throw new RangeError('maxBuffer must be a positive number');
@@ -190,7 +287,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     if (activeSignal.aborted) {
       const empty = (async function* (): AsyncGenerator<T[K]> {})();
 
-      return Object.assign(empty, { [Symbol.asyncDispose]: async (): Promise<void> => {} });
+      return makeEventStream(empty, async (): Promise<void> => {});
     }
 
     const queue: T[K][] = [];
@@ -207,7 +304,6 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       activeSignal,
     );
 
-    // R5: Named function for readable stack traces instead of an anonymous IIFE.
     async function* generate(): AsyncGenerator<T[K]> {
       try {
         while (!activeSignal.aborted) {
@@ -234,28 +330,66 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     const gen = generate();
 
-    // R3: AsyncDisposable support — `await using stream = bus.events(...)` tears down cleanly.
-    // unsub() is called directly here because gen.return() only runs the finally block when the
-    // generator has been started (at least one next() call). The unsub guard makes it idempotent.
-    return Object.assign(gen, {
-      [Symbol.asyncDispose]: async (): Promise<void> => {
-        unsub();
-        await gen.return(undefined as unknown as T[K]);
-      },
+    // Symbol.asyncDispose calls unsub() directly because gen.return() only runs the finally
+    // block when the generator has been started (at least one next() call). The unsub guard
+    // (called = false in registerEntry) makes this idempotent.
+    return makeEventStream(gen, async (): Promise<void> => {
+      unsub();
+      await gen.return(undefined as unknown as T[K]);
     });
   }
 
-  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
-    if (disposeController.signal.aborted) return;
+  // dispatch is defined at createBus() scope (once per bus, not per emit call) — consistent with
+  // callSafe. Receives event/payload/timestamp as arguments so it can be invoked from both the
+  // direct path and the middleware chain without capturing per-emit locals in a closure.
+  function dispatch(event: EventKey<T>, payload: unknown, timestamp: number): number {
+    let count = 0;
+    const set = listeners.get(event);
+
+    if (set?.size) {
+      for (const entry of [...set]) {
+        callSafe(() => entry.fn(payload), event, payload, timestamp);
+        count++;
+      }
+    }
+
+    if (wildcards.size) {
+      for (const entry of [...wildcards]) {
+        callSafe(() => entry.fn(event, payload), event, payload, timestamp);
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  // F5: emit() returns the number of listeners invoked (specific + wildcard).
+  // Returns 0 if bus is disposed, middleware blocked dispatch, or validatePayload rejected.
+  // F6: Middleware runs before onDispatch and listeners.
+  // F7: validatePayload runs first — throw to reject the emit.
+  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number {
+    if (disposeController.signal.aborted) return 0;
 
     const payload = (args as unknown[])[0];
     const timestamp = Date.now();
 
-    const set = listeners.get(event);
+    // F7: validatePayload
+    if (options?.validatePayload) {
+      try {
+        options.validatePayload(event, payload);
+      } catch (err) {
+        if (options?.onError) {
+          options.onError({ err, event, payload, timestamp } as EmissionErrorContext<T>);
 
-    // R2: Include wildcard count so the total is never misleadingly 0 when only wildcards exist.
+          return 0;
+        }
+
+        throw err;
+      }
+    }
+
     if (debug) {
-      const specific = set?.size ?? 0;
+      const specific = listeners.get(event)?.size ?? 0;
       const wild = wildcards.size;
 
       console.debug(
@@ -265,40 +399,35 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     options?.onDispatch?.(event, payload);
 
-    // R6: callSafe avoids duplicating try/catch/onError across specific and wildcard loops.
-    // R4/F5: onError receives a structured EmissionErrorContext instead of positional args.
-    function callSafe(fn: () => void): void {
-      try {
-        fn();
-      } catch (err) {
-        if (options?.onError) {
-          const context: EmissionErrorContext<T> = { err, event, payload, timestamp };
+    // F6: Middleware pipeline — each middleware calls next() to proceed.
+    const middleware = options?.middleware;
 
-          options.onError(context);
-        } else {
-          throw err;
-        }
+    if (middleware?.length) {
+      let dispatched = 0;
+      let i = 0;
+
+      function next(): void {
+        if (i < middleware.length) middleware[i++](event, payload, next);
+        else dispatched = dispatch(event, payload, timestamp);
       }
+
+      next();
+
+      return dispatched;
     }
 
-    if (set?.size) {
-      for (const entry of [...set]) callSafe(() => entry.fn(payload));
-    }
-
-    // Wildcard listeners run after event-specific listeners
-    if (wildcards.size) {
-      for (const entry of [...wildcards]) callSafe(() => entry.fn(event, payload));
-    }
+    return dispatch(event, payload, timestamp);
   }
 
+  // R8: listenerCount(event) now includes wildcard listeners — they fire on every emission of
+  // that event, so the count reflects "how many listeners will run when I emit this event".
+  // listenerCount() (no arg) = sum(specific per event) + wildcards (wildcards counted once).
   function listenerCount(event?: EventKey<T>): number {
-    if (event !== undefined) return listeners.get(event)?.size ?? 0;
+    if (event !== undefined) return (listeners.get(event)?.size ?? 0) + wildcards.size;
 
-    let total = 0;
+    let total = wildcards.size;
 
     for (const set of listeners.values()) total += set.size;
-
-    total += wildcards.size;
 
     return total;
   }
@@ -325,15 +454,15 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
   function waitAny<K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     eventList: K,
-    signal?: AbortSignal,
+    opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
-    const activeSignal = mergeSignal(signal);
+    const activeSignal = mergeSignal(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
 
     return new Promise<WaitAnyResult<T, K>>((resolve, reject) => {
       const raceController = new AbortController();
-      const raceSignal = anySignal(activeSignal, raceController.signal)!;
+      const raceSignal = combineSignals(activeSignal, raceController.signal);
 
       function onAbort() {
         reject(activeSignal.reason);
@@ -355,15 +484,15 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     });
   }
 
-  // F1: pipe() as a first-class instance method — lets consumers pipe without importing pipeEvents.
-  // Implemented inline to avoid circular imports (pipe.ts → bus.ts → pipe.ts).
+  // pipe() is implemented inline to avoid circular imports (pipe.ts → bus.ts → pipe.ts).
+  // pipeEvents() in pipe.ts is a one-liner wrapper that delegates here (R1).
   function pipe<U extends EventMap>(
     target: Bus<U>,
     entries: readonly [PipeEntry<T, U>, ...PipeEntry<T, U>[]],
     pipeSignalArg?: AbortSignal,
   ): Unsubscribe {
     // Stop when target disposes or when the caller's signal fires.
-    const pipeSignal = anySignal(target.disposalSignal, pipeSignalArg) ?? target.disposalSignal;
+    const pipeSignal = combineSignals(target.disposalSignal, pipeSignalArg);
 
     // Cast needed: emit's conditional rest args (void vs payload) cannot be resolved in a generic
     // context. At runtime, passing undefined for void events is safe — the bus ignores it.

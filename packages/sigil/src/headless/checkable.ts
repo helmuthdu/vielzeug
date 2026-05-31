@@ -1,17 +1,9 @@
 import { assert } from '@vielzeug/arsenal';
-import { type ReadonlySignal, type Signal, computed, signal } from '@vielzeug/ripple';
+import { createStableId } from '@vielzeug/craft';
+import { computed, effect, type ReadonlySignal, type Signal, signal, untrack, watch } from '@vielzeug/ripple';
 
-import { createReactiveBindings } from './a11y-host';
-import {
-  createErrorHelperState,
-  createField,
-  type ErrorHelperState,
-  type FieldOptions,
-  type ValidationTrigger,
-} from './field-base';
-import { createStableId } from './id';
+import { createField, type ErrorHelperState, type FieldOptions, type ValidationTrigger } from './field-base';
 import { createInteraction } from './keyboard';
-import { syncedSignal } from './synced-signal';
 
 // ── Checkable control ─────────────────────────────────────────────────────────
 
@@ -21,12 +13,10 @@ export type CheckableChangePayload = {
   value: string;
 };
 
-export type CheckableOptions = Pick<FieldOptions, 'disabled' | 'prefix' | 'validateOn'> & {
+export type CheckableOptions = Pick<FieldOptions, 'disabled' | 'error' | 'helper' | 'prefix' | 'validateOn'> & {
   checked: ReadonlySignal<boolean | undefined>;
   clearIndeterminateFirst?: boolean;
-  error?: ReadonlySignal<string | undefined>;
   group?: { toggle: (value: string, originalEvent?: Event) => void };
-  helper?: ReadonlySignal<string | undefined>;
   host: Element;
   indeterminate?: ReadonlySignal<boolean | undefined>;
   onToggle?: (payload: CheckableChangePayload) => void;
@@ -47,7 +37,7 @@ export type CheckableHandle = {
   /** The stable `id` for the assistive-text region (used for `aria-describedby`). */
   assistiveId: string;
   bindFormField: (field: { reportValidity(): void }) => void;
-  /** @internal Used by `connectFormField` to bind the native form field. */
+  /** Used by checkable components to bind the native form field. */
   /** The form submission value: null when unchecked/indeterminate, the value string when checked. */
   checkableFormValue: ReadonlySignal<string | null>;
   checked: Signal<boolean>;
@@ -81,18 +71,29 @@ export type CheckableHandle = {
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   assert(!!options.host, '[sigil] createCheckable: host element is required');
 
-  const [checked, stopCheckedSync] = syncedSignal(options.checked, (v) => Boolean(v));
-  const [indeterminate, stopIndeterminateSync] = options.indeterminate
-    ? syncedSignal(options.indeterminate, (v) => Boolean(v))
-    : [signal(false), () => {}];
+  // Inline synced signal: local writable signal kept in sync with external source.
+  const checked = signal<boolean>(untrack(() => Boolean(options.checked.value)));
+  const checkedSub = watch(options.checked, (v) => {
+    checked.value = Boolean(v);
+  });
+
+  let indeterminate: Signal<boolean>;
+  let indeterminateSub: { dispose(): void } | null = null;
+
+  if (options.indeterminate) {
+    indeterminate = signal<boolean>(untrack(() => Boolean(options.indeterminate!.value)));
+    indeterminateSub = watch(options.indeterminate, (v) => {
+      indeterminate.value = Boolean(v);
+    });
+  } else {
+    indeterminate = signal(false);
+  }
 
   const checkableFormValue = computed<string | null>(() =>
     indeterminate.value ? null : checked.value ? (options.value.value ?? '') : null,
   );
 
-  const assistive = createErrorHelperState({ error: options.error, helper: options.helper });
-
-  const { assistiveId, bindFormField, disabled, fieldId, triggerValidation } = createField(options);
+  const { assistive, assistiveId, bindFormField, disabled, fieldId, triggerValidation } = createField(options);
 
   const createPayload = (event: Event): CheckableChangePayload => ({
     checked: checked.value,
@@ -140,38 +141,62 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   // Set the ARIA role once — it is static for a given checkable instance.
   options.host.setAttribute('role', options.role);
 
-  // Unified reactive ARIA sync + helper ID stamping via createA11yHost.
+  // Unified reactive ARIA sync + helper ID stamping in a single effect.
   // Re-runs whenever any tracked signal changes. _labelEl and _helperEl are
   // reactive so their effects fire automatically when the elements mount.
-  const { stop: stopAriaEffect } = createReactiveBindings(options.host, {
-    aria: {
-      'aria-checked': () =>
-        options.role === 'checkbox' && indeterminate.value ? 'mixed' : checked.value ? 'true' : 'false',
-      'aria-describedby': () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : undefined),
-      'aria-disabled': () => (disabled.value ? 'true' : undefined),
-      'aria-invalid': () => (assistive.value.errorText ? 'true' : undefined),
-      'aria-labelledby': () => {
-        const el = _labelEl.value;
+  const ariaEffect = effect(() => {
+    const host = options.host;
 
-        if (el && !el.id) el.id = labelId;
+    // aria-checked
+    const checkedVal = options.role === 'checkbox' && indeterminate.value ? 'mixed' : checked.value ? 'true' : 'false';
 
-        return el?.id ?? undefined;
-      },
-    },
-    run: () => {
-      // Stamp the helper element's stable ID so aria-describedby resolves
-      // even when assistive text is absent (pure ID reservation).
-      const el = _helperEl.value;
+    host.setAttribute('aria-checked', checkedVal);
 
-      if (el && !el.id) el.id = assistiveId;
-    },
-    signal: options.signal,
+    // aria-describedby
+    const hasAssistive = assistive.value.errorText || assistive.value.helperText;
+
+    if (hasAssistive) {
+      host.setAttribute('aria-describedby', assistiveId);
+    } else {
+      host.removeAttribute('aria-describedby');
+    }
+
+    // aria-disabled
+    if (disabled.value) {
+      host.setAttribute('aria-disabled', 'true');
+    } else {
+      host.removeAttribute('aria-disabled');
+    }
+
+    // aria-invalid
+    if (assistive.value.errorText) {
+      host.setAttribute('aria-invalid', 'true');
+    } else {
+      host.removeAttribute('aria-invalid');
+    }
+
+    // aria-labelledby: stamp the label element's stable ID
+    const labelElRef = _labelEl.value;
+
+    if (labelElRef) {
+      if (!labelElRef.id) labelElRef.id = labelId;
+
+      host.setAttribute('aria-labelledby', labelElRef.id);
+    } else {
+      host.removeAttribute('aria-labelledby');
+    }
+
+    // Stamp the helper element's stable ID so aria-describedby resolves
+    // even when assistive text is absent (pure ID reservation).
+    const helperElRef = _helperEl.value;
+
+    if (helperElRef && !helperElRef.id) helperElRef.id = assistiveId;
   });
 
   const cleanup = (): void => {
-    stopCheckedSync();
-    stopIndeterminateSync();
-    stopAriaEffect();
+    checkedSub.dispose();
+    indeterminateSub?.dispose();
+    ariaEffect.dispose();
   };
 
   options.signal?.addEventListener('abort', cleanup, { once: true });

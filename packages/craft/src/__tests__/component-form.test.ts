@@ -1,5 +1,3 @@
-import type { Signal } from '@vielzeug/ripple';
-
 import { createFormContext, defineField, html, signal } from '../index';
 import { mount } from '../testing';
 
@@ -50,10 +48,19 @@ describe('createFormContext()', () => {
     expect(form.dirty.value).toBe(false);
   });
 
+  it('markDirty sets dirty to true', () => {
+    const form = createFormContext();
+
+    expect(form.dirty.value).toBe(false);
+    form.markDirty();
+    expect(form.dirty.value).toBe(true);
+  });
+
   it('reset sets dirty to false', () => {
     const form = createFormContext();
 
-    (form.dirty as Signal<boolean>).value = true;
+    form.markDirty();
+    expect(form.dirty.value).toBe(true);
     form.reset();
     expect(form.dirty.value).toBe(false);
   });

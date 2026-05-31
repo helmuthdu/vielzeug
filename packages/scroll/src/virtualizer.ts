@@ -1,14 +1,15 @@
+import { createAxis1D, type VirtualItem } from './axis1d';
 import {
   createScrollAdapter,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
+  type MeasurementCache,
   normalizeOverscan,
+  type Overscan,
   resolveEstimateFn,
+  type ScrollTarget,
   toNonNegativeInt,
   toPositiveNumber,
-  type MeasurementCache,
-  type Overscan,
-  type ScrollTarget,
   type VirtualKey,
 } from './utils';
 
@@ -18,17 +19,11 @@ export {
   type MeasurementCache,
   type Overscan,
   type ScrollTarget,
+  type VirtualItem,
   type VirtualKey,
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface VirtualItem {
-  end: number;
-  index: number;
-  size: number;
-  start: number;
-}
 
 export interface VirtualizerState {
   readonly items: VirtualItem[];
@@ -46,29 +41,43 @@ export interface VirtualizerOptions {
   /** External measurement cache for scroll restoration or SSR pre-measurement. */
   measurementCache?: MeasurementCache;
   onChange?: (state: VirtualizerState) => void;
-  /** Zero-allocation alternative to onChange for range-based consumers (prefetch, analytics). */
+  /**
+   * Zero-allocation alternative to `onChange`. Fires with the raw render range.
+   * When this is provided WITHOUT `onChange`, the `v.items` getter stays empty —
+   * items are never allocated, making this suitable for prefetch / analytics.
+   */
   onRangeChange?: (first: number, last: number) => void;
   overscan?: Overscan;
   sticky?: (index: number) => boolean;
 }
 
 /**
- * Options accepted by `update()`. Structural layout options only —
- * callbacks and immutable boot options are excluded.
+ * Options accepted by `update()`. Explicit interface instead of Omit<...>
+ * for better IDE hover and autocomplete (R7).
  */
-export type VirtualizerUpdateOptions = Partial<
-  Omit<VirtualizerOptions, 'horizontal' | 'initialOffset' | 'measurementCache' | 'onChange' | 'onRangeChange'>
->;
+export interface VirtualizerUpdateOptions {
+  count?: number;
+  estimateSize?: number | ((index: number) => number);
+  gap?: number;
+  getItemKey?: ((index: number) => VirtualKey) | undefined;
+  overscan?: Overscan;
+  sticky?: ((index: number) => boolean) | undefined;
+}
 
 export interface ScrollToIndexOptions {
   align?: 'auto' | 'center' | 'end' | 'start';
   behavior?: ScrollBehavior;
-  /** Called when the scroll animation completes (or immediately for instant scrolls). */
+  /** Called when the scroll animation completes (instant scrolls: next microtask). */
   onComplete?: () => void;
 }
 
 export interface Virtualizer {
   readonly count: number;
+  /**
+   * Currently rendered items.
+   * Populated when `onChange` is registered OR when no callbacks are registered.
+   * Returns an empty array when ONLY `onRangeChange` is provided (zero-alloc path).
+   */
   readonly items: VirtualItem[];
   readonly scrollOffset: number;
   readonly stickyItems: VirtualItem[];
@@ -81,6 +90,12 @@ export interface Virtualizer {
   measureEl: (index: number, el: HTMLElement) => () => void;
   /** Prepend `additionalCount` items at the top while keeping the viewport visually stable. */
   prepend: (additionalCount: number) => void;
+  /**
+   * Re-emit the current visible range without rebuilding offsets.
+   * Use when item data changed but sizes did not (O(1) vs refresh's O(n)).
+   */
+  redraw: () => void;
+  /** Rebuild the full offset table and re-emit (use when item sizes may have changed). */
   refresh: () => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
@@ -101,138 +116,54 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let overscan = normalizeOverscan(options.overscan, DEFAULT_OVERSCAN);
   let stickyFn: ((index: number) => boolean) | null = options.sticky ?? null;
 
-  // Callbacks fixed at construction — not swappable via update() (R7).
+  // Callbacks fixed at construction — not swappable via update().
   const onChange = options.onChange;
   const onRangeChange = options.onRangeChange;
 
-  // External or internal measurement cache (R: MeasurementCache future improvement).
+  // R2: Only allocate items[] when consumers will actually read them.
+  // If ONLY onRangeChange is registered (no onChange), skip allocation entirely.
+  const needsItems = !!onChange || !onRangeChange;
+
+  // External or internal measurement cache.
   const measuredByKey: MeasurementCache = options.measurementCache ?? new Map();
 
   let items: VirtualItem[] = [];
   let stickyItems: VirtualItem[] = [];
-  let totalSize = 0;
+
+  // ─── Axis setup ──────────────────────────────────────────────────────────────
+  // The axis1d primitive owns offset management. The sizeAt closure captures
+  // the live `measuredByKey`, `getItemKey`, and `estimateFn` by reference so
+  // updates to those let-variables are picked up automatically.
+
+  const ax = createAxis1D(count, (i) => measuredByKey.get(getItemKey(i)) ?? estimateFn(i), gap);
+
+  // F2: Velocity-based adaptive overscan (internal, no API change).
+  let scrollVelocity = 0; // px/ms
+  let lastScrollTime = 0;
+
+  // F6: Scroll anchor — prevents viewport jump when items above fold are measured.
+  let anchorIndex = -1;
+  let anchorDistanceFromTop = 0;
+
   let scrollOffset = 0;
-  let offsets: number[] = [];
   let viewportSize = 0;
-  let prevRenderStart = -1;
-  let prevRenderEnd = -1;
-  let prevTotalSize = -1;
-  let prevScrollOffset = -1;
-  let pendingBuild = false;
-  let minChangedIndex = Infinity;
+  let prevScrollOffset = -1; // for sticky dedup
   let destroyed = false;
 
-  // ─── Offset helpers ──────────────────────────────────────────────────────────
-
-  function sizeAt(index: number): number {
-    return measuredByKey.get(getItemKey(index)) ?? estimateFn(index);
-  }
-
-  function startAt(index: number): number {
-    return offsets[index] ?? 0;
-  }
-
-  function endAt(index: number): number {
-    return startAt(index) + sizeAt(index);
-  }
+  // ─── Scroll clamping ─────────────────────────────────────────────────────────
 
   function clampScrollOffset(offset: number): number {
     const safe = Number.isFinite(offset) ? offset : 0;
-    const maxOffset = Math.max(0, totalSize - viewportSize);
+    const maxOffset = Math.max(0, ax.totalSize - viewportSize);
 
     return Math.min(maxOffset, Math.max(0, safe));
   }
 
-  // ─── Offset table ────────────────────────────────────────────────────────────
-
-  /**
-   * Full O(n) rebuild. Pass `forceEmit: true` to invalidate dedup guards so
-   * computeVisible() always emits after this call (R10).
-   */
-  function rebuildOffsets(forceEmit = false): void {
-    if (forceEmit) {
-      prevRenderStart = -1;
-      prevRenderEnd = -1;
-      prevScrollOffset = -1;
-    }
-
-    const next: number[] = [0];
-    let pos = 0;
-
-    for (let i = 0; i < count; i++) {
-      pos += sizeAt(i) + (i < count - 1 ? gap : 0);
-      next.push(pos);
-    }
-
-    offsets = next;
-    totalSize = pos;
-  }
-
-  /**
-   * Incremental O(count - fromIndex) rebuild — used after measurement.
-   * Always forces re-emit since measurements produce layout changes.
-   */
-  function rebuildOffsetsFrom(fromIndex: number): void {
-    if (!Number.isFinite(fromIndex) || fromIndex >= count) return;
-
-    prevRenderStart = -1;
-    prevRenderEnd = -1;
-    prevScrollOffset = -1;
-
-    let pos = offsets[fromIndex] ?? 0;
-
-    for (let i = fromIndex; i < count; i++) {
-      offsets[i] = pos;
-      pos += sizeAt(i) + (i < count - 1 ? gap : 0);
-    }
-
-    offsets[count] = pos;
-    totalSize = pos;
-  }
-
-  // ─── Visible range ───────────────────────────────────────────────────────────
-
-  function findFirstVisible(offsetStart: number): number {
-    let lo = 0;
-    let hi = count - 1;
-
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-
-      if (endAt(mid) <= offsetStart) lo = mid + 1;
-      else hi = mid;
-    }
-
-    return lo;
-  }
-
-  function findLastVisible(offsetEnd: number, firstVisible: number): number {
-    let lo = firstVisible;
-    let hi = count - 1;
-
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-
-      if (startAt(mid) < offsetEnd) lo = mid;
-      else hi = mid - 1;
-    }
-
-    return lo;
-  }
-
-  function itemFromIndex(index: number): VirtualItem {
-    const start = startAt(index);
-    const size = sizeAt(index);
-
-    return { end: start + size, index, size, start };
-  }
-
-  // ─── Sticky items ────────────────────────────────────────────────────────────
+  // ─── Sticky items ─────────────────────────────────────────────────────────────
 
   function computeStickyItems(): VirtualItem[] {
     if (!stickyFn || count === 0 || scrollOffset <= 0) return [];
 
-    // Binary search: last index whose natural start is strictly above the viewport top.
     let lastAbove = -1;
     let lo = 0;
     let hi = count - 1;
@@ -240,7 +171,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
 
-      if (startAt(mid) < scrollOffset) {
+      if (ax.startAt(mid) < scrollOffset) {
         lastAbove = mid;
         lo = mid + 1;
       } else {
@@ -261,12 +192,12 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
     if (activeIdx === -1) return [];
 
-    const activeSize = sizeAt(activeIdx);
+    const activeSize = ax.sizeAt(activeIdx);
     let nextStickyStart = Infinity;
 
     for (let i = activeIdx + 1; i < count; i++) {
       if (stickyFn(i)) {
-        nextStickyStart = startAt(i);
+        nextStickyStart = ax.startAt(i);
         break;
       }
     }
@@ -282,63 +213,71 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     if (destroyed) return;
 
     if (count === 0 || viewportSize <= 0) {
-      if (prevRenderStart !== -1 || prevTotalSize !== totalSize) {
-        prevRenderStart = -1;
-        prevRenderEnd = -1;
-        prevTotalSize = totalSize;
-        prevScrollOffset = -1;
+      if (ax.prevStart !== -1 || ax.prevTotalSize !== ax.totalSize) {
+        // Commit with sentinel renderStart=-1 so prevTotalSize is captured as the
+        // current totalSize. Using resetDedup() would set prevTotalSize=-1, causing
+        // the guard to fire on every subsequent scroll/resize (Bug 2).
+        ax.commitDedup(-1, -1);
 
         items = [];
         stickyItems = [];
 
         if (onRangeChange) onRangeChange(-1, -1);
 
-        if (onChange) onChange({ items, stickyItems, totalSize });
+        if (onChange) onChange({ items, stickyItems, totalSize: ax.totalSize });
       }
 
       return;
     }
 
-    const start = scrollOffset;
-    const end = start + viewportSize;
-    const firstVisible = findFirstVisible(start);
-    const lastVisible = findLastVisible(end, firstVisible);
-    const renderStart = Math.max(0, firstVisible - overscan.start);
-    const renderEnd = Math.min(count - 1, lastVisible + overscan.end);
+    // F2: Adaptive overscan — scale up during fast scrolling.
+    // velocityMultiplier: 1× at rest, up to 5× at ≥200 px/ms.
+    // Scale factor 0.02: at 200 px/ms → 1 + 200×0.02 = 5 (capped).
+    const velocityMultiplier = Math.min(5, 1 + scrollVelocity * 0.02);
+    const effectiveOverscan = {
+      end: Math.round(overscan.end * velocityMultiplier),
+      start: Math.round(overscan.start * velocityMultiplier),
+    };
+
+    const { renderEnd, renderStart } = ax.computeRange(
+      scrollOffset,
+      scrollOffset + viewportSize,
+      effectiveOverscan.start,
+      effectiveOverscan.end,
+    );
 
     // Sticky recomputes on every scroll pixel — bypass dedup in that case.
     const stickyScrolled = stickyFn !== null && scrollOffset !== prevScrollOffset;
-    const rangeChanged = renderStart !== prevRenderStart || renderEnd !== prevRenderEnd;
-    const sizeChanged = prevTotalSize !== totalSize;
+    const rangeChanged = !ax.isDedupSame(renderStart, renderEnd);
 
-    if (!rangeChanged && !sizeChanged && !stickyScrolled) return;
+    if (!rangeChanged && !stickyScrolled) return;
 
-    prevRenderStart = renderStart;
-    prevRenderEnd = renderEnd;
-    prevTotalSize = totalSize;
+    ax.commitDedup(renderStart, renderEnd);
     prevScrollOffset = scrollOffset;
 
-    // Zero-allocation range notification — fires before items array is built (R: onRangeChange).
-    if ((rangeChanged || sizeChanged) && onRangeChange) {
-      onRangeChange(renderStart, renderEnd);
+    // Fire zero-allocation range notification before items array is built (R2).
+    if (rangeChanged && onRangeChange) onRangeChange(renderStart, renderEnd);
+
+    // R2: Build items array only when consumers need it.
+    if (needsItems) {
+      const nextItems: VirtualItem[] = [];
+
+      for (let i = renderStart; i <= renderEnd; i++) {
+        nextItems.push(ax.itemAt(i));
+      }
+
+      items = nextItems;
+      stickyItems = stickyFn ? computeStickyItems() : [];
+    } else {
+      items = [];
+      stickyItems = [];
     }
 
-    // Always build items for v.items getter and onChange consumers.
-    const nextItems: VirtualItem[] = [];
-
-    for (let i = renderStart; i <= renderEnd; i++) {
-      nextItems.push(itemFromIndex(i));
-    }
-
-    items = nextItems;
-    stickyItems = stickyFn ? computeStickyItems() : [];
-
-    if (onChange) onChange({ items, stickyItems, totalSize });
+    if (onChange) onChange({ items, stickyItems, totalSize: ax.totalSize });
   }
 
-  // ─── Measurement (R2) ────────────────────────────────────────────────────────
+  // ─── Measurement (R6: measure delegates to measureBatch) ─────────────────────
 
-  /** Returns true if the measurement was new/changed. Updates minChangedIndex. */
   function recordMeasurement(index: number, size: number): boolean {
     if (!Number.isFinite(index)) return false;
 
@@ -355,25 +294,78 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     if (measuredByKey.get(key) === s) return false;
 
     measuredByKey.set(key, s);
-
-    if (i < minChangedIndex) minChangedIndex = i;
+    ax.markChanged(i);
 
     return true;
   }
 
-  function scheduleBuild(): void {
-    if (pendingBuild) return;
+  // F6: Record a scroll anchor before a batch of measurements arrives.
+  function recordScrollAnchor(): void {
+    if (scrollOffset <= 0 || count === 0) {
+      anchorIndex = -1;
 
-    pendingBuild = true;
-    queueMicrotask(() => {
-      pendingBuild = false;
+      return;
+    }
 
-      const fromIdx = minChangedIndex;
+    anchorIndex = ax.findFirst(scrollOffset);
+    anchorDistanceFromTop = scrollOffset - ax.startAt(anchorIndex);
+  }
 
-      minChangedIndex = Infinity;
-      rebuildOffsetsFrom(fromIdx);
-      computeVisible();
+  // F6: After rebuild, restore the anchor to prevent viewport jump.
+  function restoreScrollAnchor(): void {
+    if (anchorIndex < 0) return;
+
+    const expectedOffset = ax.startAt(anchorIndex) + anchorDistanceFromTop;
+    const delta = expectedOffset - scrollOffset;
+
+    anchorIndex = -1;
+
+    if (Math.abs(delta) >= 1) {
+      const newOffset = clampScrollOffset(scrollOffset + delta);
+
+      domAxis.writeOffset(newOffset, 'auto');
+      scrollOffset = newOffset;
+    }
+  }
+
+  function measureBatch(entries: Array<{ index: number; size: number }>): void {
+    if (destroyed) return;
+
+    let changed = false;
+
+    for (const { index, size } of entries) {
+      if (recordMeasurement(index, size)) changed = true;
+    }
+
+    if (changed) {
+      // Record anchor before the first pending build is scheduled (F6).
+      if (!ax.pendingBuild) recordScrollAnchor();
+
+      ax.scheduleBuild(() => {
+        restoreScrollAnchor();
+        computeVisible();
+      });
+    }
+  }
+
+  /** R6: Single-item convenience — delegates to measureBatch. */
+  function measure(index: number, size: number): void {
+    measureBatch([{ index, size }]);
+  }
+
+  /** Attach a ResizeObserver to `el`. Returns a disconnect function. */
+  function measureEl(index: number, el: HTMLElement): () => void {
+    if (destroyed) return () => {};
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        measure(index, horizontal ? entry.contentRect.width : entry.contentRect.height);
+      }
     });
+
+    ro.observe(el);
+
+    return () => ro.disconnect();
   }
 
   // ─── Option updates ───────────────────────────────────────────────────────────
@@ -387,6 +379,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
       if (nextCount !== count) {
         count = nextCount;
+        ax.setCount(count);
         needsRebuild = true;
       }
     }
@@ -402,6 +395,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
       if (nextGap !== gap) {
         gap = nextGap;
+        ax.setGap(gap);
         needsRebuild = true;
       }
     }
@@ -430,74 +424,46 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
       if (nextStickyFn !== stickyFn) {
         stickyFn = nextStickyFn;
-        prevRenderStart = -1; // force re-emit to flush updated stickyItems
+        ax.resetDedup(); // force re-emit to flush updated stickyItems
       }
 
       needsCompute = true;
     }
 
-    if (needsRebuild) rebuildOffsets(true);
+    if (needsRebuild) ax.rebuild(true);
 
     if (needsCompute || needsRebuild) computeVisible();
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────────
 
-  function measure(index: number, size: number): void {
-    if (destroyed) return;
-
-    if (recordMeasurement(index, size)) scheduleBuild();
-  }
-
-  function measureBatch(entries: Array<{ index: number; size: number }>): void {
-    if (destroyed) return;
-
-    let changed = false;
-
-    for (const { index, size } of entries) {
-      if (recordMeasurement(index, size)) changed = true;
-    }
-
-    if (changed) scheduleBuild();
-  }
-
-  /** Attach a ResizeObserver to `el`. Returns a disconnect function. */
-  function measureEl(index: number, el: HTMLElement): () => void {
-    if (destroyed) return () => {};
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const size = horizontal ? entry.contentRect.width : entry.contentRect.height;
-
-        measure(index, size);
-      }
-    });
-
-    ro.observe(el);
-
-    return () => ro.disconnect();
-  }
-
   function invalidate(): void {
     if (destroyed) return;
 
     measuredByKey.clear();
-    minChangedIndex = Infinity; // cancel any pending incremental rebuild
-    rebuildOffsets(true);
-    computeVisible();
-  }
-
-  function refresh(): void {
-    if (destroyed) return;
-
-    rebuildOffsets(true); // force re-emit — caller knows content changed
+    ax.rebuild(true);
     computeVisible();
   }
 
   /**
-   * Prepend `additionalCount` items at the top while keeping the viewport
-   * visually stable (R: bidirectional/prepend future improvement).
+   * R3: Re-emit the current range without rebuilding offsets.
+   * Use when item data changed but sizes did not — O(1) vs refresh's O(n).
    */
+  function redraw(): void {
+    if (destroyed) return;
+
+    ax.resetDedup();
+    computeVisible();
+  }
+
+  /** Full O(n) offset rebuild followed by re-emit. */
+  function refresh(): void {
+    if (destroyed) return;
+
+    ax.rebuild(true);
+    computeVisible();
+  }
+
   function prepend(additionalCount: number): void {
     if (destroyed) return;
 
@@ -506,14 +472,14 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     if (n === 0) return;
 
     count += n;
-    rebuildOffsets(true);
+    ax.setCount(count);
+    ax.rebuild(true);
 
-    // startAt(n) = total height of the n prepended items — scroll down by that
-    // amount so the user continues to see the same content.
-    const prependedHeight = startAt(n);
+    // Adjust scroll to keep the same content visible (F6-like stable prepend).
+    const prependedHeight = ax.startAt(n);
     const newOffset = clampScrollOffset(scrollOffset + prependedHeight);
 
-    axis.writeOffset(newOffset, 'auto');
+    domAxis.writeOffset(newOffset, 'auto');
     scrollOffset = newOffset;
 
     computeVisible();
@@ -532,8 +498,8 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     const clampedIndex = Math.max(0, Math.min(safeIndex, count - 1));
     const align = opts.align ?? 'auto';
     const behavior = opts.behavior ?? 'auto';
-    const itemStart = startAt(clampedIndex);
-    const itemSize = sizeAt(clampedIndex);
+    const itemStart = ax.startAt(clampedIndex);
+    const itemSize = ax.sizeAt(clampedIndex);
     const itemEnd = itemStart + itemSize;
 
     let targetOffset: number;
@@ -549,7 +515,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       const visibleEnd = visibleStart + viewportSize;
 
       if (itemStart >= visibleStart && itemEnd <= visibleEnd) {
-        // Already visible — still fire completion if requested.
         if (opts.onComplete) queueMicrotask(opts.onComplete);
 
         return;
@@ -558,10 +523,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       targetOffset = itemStart < visibleStart ? itemStart : itemEnd - viewportSize;
     }
 
-    axis.writeOffset(clampScrollOffset(targetOffset), behavior);
+    domAxis.writeOffset(clampScrollOffset(targetOffset), behavior);
 
     if (opts.onComplete) {
-      // Smooth scroll: use native scrollend event with microtask fallback.
       if (behavior === 'smooth' && 'onscrollend' in target) {
         (target as EventTarget).addEventListener('scrollend', opts.onComplete, { once: true });
       } else {
@@ -573,7 +537,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   function scrollToOffset(offset: number, opts: { behavior?: ScrollBehavior } = {}): void {
     if (destroyed) return;
 
-    axis.writeOffset(clampScrollOffset(offset), opts.behavior ?? 'auto');
+    domAxis.writeOffset(clampScrollOffset(offset), opts.behavior ?? 'auto');
   }
 
   function destroy(): void {
@@ -584,33 +548,40 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   }
 
   // ─── Bootstrap ───────────────────────────────────────────────────────────────
-  //
-  // Function declarations for scroll/resize handlers are defined here first so
-  // they can be passed to createScrollAdapter. The handlers close over `axis`,
-  // which is const-assigned immediately after. Since event callbacks only fire
-  // asynchronously, axis is always assigned before any handler runs.
 
   function handleScroll(): void {
-    scrollOffset = clampScrollOffset(axis.readOffset());
+    const now = performance.now();
+    const newOffset = clampScrollOffset(domAxis.readOffset());
+    const dt = now - lastScrollTime;
+
+    // F2: Track velocity for adaptive overscan.
+    if (dt > 0 && dt < 300 && lastScrollTime > 0) {
+      scrollVelocity = Math.abs(newOffset - scrollOffset) / dt;
+    } else if (dt >= 300) {
+      scrollVelocity = 0;
+    }
+
+    lastScrollTime = now;
+    scrollOffset = newOffset;
     computeVisible();
   }
 
   function handleResize(): void {
-    viewportSize = axis.readViewportSize();
+    viewportSize = domAxis.readViewportSize();
     computeVisible();
   }
 
   const adapter = createScrollAdapter(target, handleScroll, handleResize);
-  const axis = horizontal ? adapter.x : adapter.y;
+  const domAxis = horizontal ? adapter.x : adapter.y;
 
-  rebuildOffsets(true);
+  ax.rebuild(true);
 
   if (options.initialOffset !== undefined) {
-    axis.writeOffset(clampScrollOffset(options.initialOffset), 'auto');
+    domAxis.writeOffset(clampScrollOffset(options.initialOffset), 'auto');
   }
 
-  scrollOffset = clampScrollOffset(axis.readOffset());
-  viewportSize = axis.readViewportSize();
+  scrollOffset = clampScrollOffset(domAxis.readOffset());
+  viewportSize = domAxis.readViewportSize();
 
   computeVisible();
 
@@ -627,6 +598,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     measureBatch,
     measureEl,
     prepend,
+    redraw,
     refresh,
     get scrollOffset() {
       return scrollOffset;
@@ -640,7 +612,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       destroy();
     },
     get totalSize() {
-      return totalSize;
+      return ax.totalSize;
     },
     update,
   };

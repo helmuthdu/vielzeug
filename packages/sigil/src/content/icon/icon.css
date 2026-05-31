@@ -1,14 +1,16 @@
-:host {
-  display: inline-flex;
-  line-height: 0;
-  vertical-align: middle;
-  color: inherit;
-}
+@layer sigil.base {
+  :host {
+    display: inline-flex;
+    line-height: 0;
+    vertical-align: middle;
+    color: inherit;
+  }
 
-:host([hidden]) {
-  display: none;
-}
+  :host([hidden]) {
+    display: none;
+  }
 
-svg {
-  display: block;
+  svg {
+    display: block;
+  }
 }

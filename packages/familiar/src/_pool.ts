@@ -14,13 +14,14 @@ import { abortError } from '@vielzeug/arsenal';
 import type { BatchOptions, RunOptions, TaskGroup, WorkerHandle, WorkerStatus } from './_types';
 
 import { type QueueItem, TaskQueue } from './_queue';
-import { WorkerError } from './_types';
+import { WorkerQueueFullError, WorkerRuntimeError, WorkerTerminatedError, WorkerTimeoutError } from './_types';
 
 /** Strategy that executes one task. Provided by the caller (real Slot or in-process fn). */
 export type Executor<TInput, TOutput> = (
   input: TInput,
   transferables: Transferable[],
   timeout: number | undefined,
+  heartbeatTimeout: number | undefined,
 ) => Promise<TOutput>;
 
 export type PoolOptions = {
@@ -77,7 +78,7 @@ export function createPool<TInput, TOutput>(
 
           if (idx !== -1) idleResolvers.splice(idx, 1);
 
-          reject(new WorkerError('timeout', `close() timed out after ${timeoutMs}ms`));
+          reject(new WorkerTimeoutError(timeoutMs));
         }, timeoutMs);
 
         if (typeof timer === 'object' && 'unref' in timer) (timer as { unref(): void }).unref();
@@ -113,7 +114,7 @@ export function createPool<TInput, TOutput>(
 
       const taskTimeout = item.timeout ?? defaultTimeout;
 
-      executor(item.input, item.transferables, taskTimeout).then(
+      executor(item.input, item.transferables, taskTimeout, item.heartbeatTimeout).then(
         (result) => {
           activeCount -= 1;
           completedCount += 1;
@@ -125,9 +126,7 @@ export function createPool<TInput, TOutput>(
         (error: unknown) => {
           activeCount -= 1;
 
-          const code = error instanceof WorkerError ? error.code : undefined;
-
-          if (code !== 'terminated') failedCount += 1;
+          if (!(error instanceof WorkerTerminatedError)) failedCount += 1;
 
           item.reject(error);
           drainLoop();
@@ -146,7 +145,7 @@ export function createPool<TInput, TOutput>(
     while (queue.size > 0) {
       const item = queue.shift();
 
-      if (!item) break; // all remaining slots were cancelled
+      if (!item) break;
 
       if (item.signal?.aborted) {
         item.cleanupAbort?.();
@@ -174,7 +173,7 @@ export function createPool<TInput, TOutput>(
       if (!item) break;
 
       item.cleanupAbort?.();
-      item.reject(new WorkerError('terminated', 'Worker was terminated'));
+      item.reject(new WorkerTerminatedError());
     }
 
     const resolvers = idleResolvers.splice(0);
@@ -200,14 +199,14 @@ export function createPool<TInput, TOutput>(
   // ─── run() ───────────────────────────────────────────────────────────────────
 
   async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
-    const { signal, timeout, transferables = [] } = runOptions;
+    const { heartbeatTimeout, priority = 0, signal, timeout, transferables = [] } = runOptions;
 
     if (terminated) {
-      throw new WorkerError('terminated', 'Worker was terminated');
+      throw new WorkerTerminatedError();
     }
 
     if (closePromise) {
-      throw new WorkerError('terminated', 'Worker is closing');
+      throw new WorkerTerminatedError('Worker is closing');
     }
 
     if (signal?.aborted) {
@@ -219,9 +218,9 @@ export function createPool<TInput, TOutput>(
         await new Promise<void>((resolve) => fullWaiters.push(resolve));
       }
 
-      if (terminated) throw new WorkerError('terminated', 'Worker was terminated');
+      if (terminated) throw new WorkerTerminatedError();
 
-      if (closePromise) throw new WorkerError('terminated', 'Worker is closing');
+      if (closePromise) throw new WorkerTerminatedError('Worker is closing');
     }
 
     let resolve!: (value: TOutput) => void;
@@ -232,10 +231,20 @@ export function createPool<TInput, TOutput>(
       reject = rej;
     });
 
-    const item: QueueItem<TInput, TOutput> = { input, reject, resolve, signal, timeout, transferables };
+    const item: QueueItem<TInput, TOutput> = {
+      heartbeatTimeout,
+      input,
+      priority,
+      reject,
+      resolve,
+      signal,
+      timeout,
+      transferables,
+    };
 
     if (!queue.enqueue(item, onFull === 'wait' ? undefined : maxQueue)) {
-      throw new WorkerError('queue_full', `Queue is full (maxQueue=${maxQueue})`);
+      // maxQueue is guaranteed defined here: enqueue() only returns false when maxQueue is set.
+      throw new WorkerQueueFullError(maxQueue as number);
     }
 
     if (signal) {
@@ -276,64 +285,45 @@ export function createPool<TInput, TOutput>(
           yield await p;
         }
       } else {
-        // As-completed streaming: race all promises using a shared notification channel.
-        type Settlement = { error?: unknown; index: number; value?: TOutput };
+        // As-completed: yield results in the order tasks finish, not submission order.
+        // A single-slot notification channel wakes the consumer when the next result is ready.
+        type Completion = { error: unknown } | { value: TOutput };
 
-        const pending = promises.length;
-        let settled = 0;
-        const results: (Settlement | undefined)[] = new Array(pending);
-        const notify: Array<(s: Settlement) => void> = [];
+        const completions: Completion[] = [];
+        let notifier: (() => void) | null = null;
 
-        for (let i = 0; i < pending; i++) {
-          const idx = i;
-
-          promises[idx]!.then(
+        for (const p of promises) {
+          p.then(
             (value) => {
-              const s: Settlement = { index: idx, value };
-
-              results[idx] = s;
-              settled += 1;
-              notify.shift()?.(s);
+              completions.push({ value });
+              notifier?.();
+              notifier = null;
             },
             (error: unknown) => {
-              const s: Settlement = { error, index: idx };
-
-              results[idx] = s;
-              settled += 1;
-              notify.shift()?.(s);
+              completions.push({ error });
+              notifier?.();
+              notifier = null;
             },
           );
         }
 
-        let yielded = 0;
-
-        while (yielded < pending) {
-          // If no result is ready yet, wait for the next settlement notification.
-          const next: Settlement = await new Promise<Settlement>((resolve) => {
-            // Check if any settled result is waiting to be picked up.
-            const ready = results.find((r, i) => r !== undefined && i >= yielded);
-
-            if (ready) {
-              resolve(ready);
-            } else {
-              notify.push(resolve);
-            }
-          });
-
-          if ('error' in next && next.error !== undefined) {
-            ac.abort();
-            throw next.error;
+        for (let i = 0; i < promises.length; i++) {
+          while (completions.length === 0) {
+            await new Promise<void>((resolve) => {
+              notifier = resolve;
+            });
           }
 
-          yielded += 1;
-          yield next.value as TOutput;
-        }
+          const next = completions.shift()!;
 
-        void settled;
+          if ('error' in next) throw next.error;
+
+          yield next.value;
+        }
       }
-    } catch (error) {
+    } finally {
+      // Abort remaining in-flight tasks on any exit path (normal, consumer break, or error).
       ac.abort();
-      throw error;
     }
   }
 
@@ -349,7 +339,12 @@ export function createPool<TInput, TOutput>(
       },
 
       async drain(): Promise<void> {
-        await Promise.all(promises);
+        // Snapshot before awaiting so tasks added concurrently with drain() are not included.
+        const snapshot = promises.slice();
+        const results = await Promise.allSettled(snapshot);
+        const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+
+        if (failure) throw failure.reason;
       },
 
       run(input: TInput, runOpts: Omit<RunOptions, 'signal'> = {}): Promise<TOutput> {
@@ -374,7 +369,7 @@ export function createPool<TInput, TOutput>(
       [Symbol.asyncIterator]() {
         return {
           next(): Promise<IteratorResult<never>> {
-            return Promise.reject(new WorkerError('worker', 'runStream() is not supported by this handle type'));
+            return Promise.reject(new WorkerRuntimeError('runStream() is not supported by this handle type'));
           },
         };
       },

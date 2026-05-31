@@ -16,21 +16,11 @@ export function token<T>(description: string): Token<T> {
 // ScopeToken — named lifecycle scopes
 // ---------------------------------------------------------------------------
 
-/**
- * A named scope identifier. Created via scope(). Used as a `lifetime` in
- * factory registrations to bind instances to a specific scope container.
- */
 export type ScopeToken = symbol & { __scopeToken?: never };
 
 /**
  * Creates a named scope token. Factories registered with a ScopeToken lifetime
  * are only resolvable from a container created with createScope(scopeToken).
- *
- * @example
- * const RequestScope = scope('request');
- * container.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: RequestScope });
- * const requestContainer = container.createScope(RequestScope);
- * const session = await requestContainer.resolve(Session);
  */
 export function scope(name: string): ScopeToken {
   return Symbol(name) as ScopeToken;
@@ -46,7 +36,6 @@ export type ValueOptions<T> = {
   dispose?: (instance: T) => Promise<void> | void;
 };
 
-// Infer dep types directly from the token tuple — no manual generics needed.
 type InferTokenTypes<D extends Token<any>[]> = { [K in keyof D]: D[K] extends Token<infer U> ? U : never };
 
 export type FactoryOptions<T> = {
@@ -58,7 +47,6 @@ export type FactoryOptions<T> = {
 // ContainerModule — grouping and async setup
 // ---------------------------------------------------------------------------
 
-/** A function that registers providers on a container. May be async. */
 export type ContainerModule = (container: Container) => Promise<void> | void;
 
 // ---------------------------------------------------------------------------
@@ -71,6 +59,12 @@ export type ContainerEvent =
   | { type: 'dispose' };
 
 export type ContainerEventListener = (event: ContainerEvent) => void;
+
+// ---------------------------------------------------------------------------
+// Result type
+// ---------------------------------------------------------------------------
+
+export type ResolveResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -86,8 +80,10 @@ export class CircularDependencyError extends Error {
 }
 
 export class ProviderNotFoundError extends Error {
-  constructor(tok: Token<any>) {
-    super(`No provider registered for token: ${tokenName(tok)}`);
+  constructor(tok: Token<any>, containerName?: string) {
+    const loc = containerName ? ` (in container '${containerName}')` : '';
+
+    super(`No provider registered for token: ${tokenName(tok)}${loc}`);
     this.name = 'ProviderNotFoundError';
   }
 }
@@ -104,7 +100,9 @@ export class SyncResolutionError extends Error {
     const reason =
       lifetime === 'transient'
         ? 'transient factories are never cached'
-        : 'the instance has not been resolved yet; call await container.resolve() first';
+        : typeof lifetime === 'symbol'
+          ? `named-scope "${(lifetime as symbol).description ?? 'anonymous'}" instance has not been resolved yet in this scope`
+          : 'the instance has not been resolved yet; call await container.resolve() first';
 
     super(`Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
     this.name = 'SyncResolutionError';
@@ -128,8 +126,10 @@ export class ScopedResolutionError extends Error {
 }
 
 export class ContainerDisposedError extends Error {
-  constructor() {
-    super('Cannot use a disposed container.');
+  constructor(containerName?: string) {
+    const loc = containerName ? ` (container '${containerName}')` : '';
+
+    super(`Cannot use a disposed container${loc}.`);
     this.name = 'ContainerDisposedError';
   }
 }
@@ -154,7 +154,7 @@ type FactoryDescriptor<T> = {
 
 type Registration<T = unknown> = FactoryDescriptor<T> | ValueRegistration<T>;
 
-// Cache state separated from the immutable factory descriptor.
+// Cache state is separate from the immutable factory descriptor.
 type CacheEntry<T = unknown> = {
   instance?: T;
   // Retained on failure — subsequent calls rethrow the same rejection (no silent retry).
@@ -183,6 +183,9 @@ export type ContainerGraph = {
 // ---------------------------------------------------------------------------
 
 export interface Container {
+  /** Human-readable identifier for this container. Set via createContainer({ name }). */
+  readonly name: string;
+
   /** Whether the container has been disposed. */
   readonly disposed: boolean;
 
@@ -216,18 +219,22 @@ export interface Container {
   resolveOptional<T>(tok: Token<T>): Promise<T | undefined>;
 
   /**
+   * Resolve a token, returning a result object instead of throwing.
+   * { ok: true, value } on success, { ok: false, error } on failure.
+   */
+  tryResolve<T>(tok: Token<T>): Promise<ResolveResult<T>>;
+
+  /**
+   * Resolve multiple tokens in parallel, returning a typed tuple.
+   */
+  resolveMany<const D extends Token<any>[]>(toks: D): Promise<InferTokenTypes<D>>;
+
+  /**
    * Eagerly resolve all registered singleton factories across the entire
    * container hierarchy. Useful for startup validation and pre-warming
    * resolveSync() hot paths.
    */
   resolveAll(): Promise<void>;
-
-  /**
-   * Return a proxy that defers synchronous resolution until the first property
-   * access. The token must be resolvable via resolveSync() at access time
-   * (i.e., a value or an already-warmed singleton/scoped instance).
-   */
-  deferred<T extends object>(tok: Token<T>): T;
 
   /**
    * Return a serializable graph of every registered token and its dependency
@@ -236,43 +243,38 @@ export interface Container {
   inspect(opts?: { deep?: boolean }): ContainerGraph;
 
   /**
-   * Perform registration-time cycle detection across the full dependency graph.
-   * Throws CircularDependencyError if any cycle is found. Returns this for
-   * chaining.
+   * Perform registration-time cycle detection across the full dependency graph
+   * (all ancestors included). Throws CircularDependencyError if any cycle is
+   * found. Returns this for chaining.
    */
   validate(): this;
 
+  /**
+   * Freeze the container. After freeze(), value() and factory() throw. Useful
+   * to ensure no further registrations happen after startup completes.
+   */
+  freeze(): this;
+
   /** Create a generic child container that inherits this container's registrations. */
-  createChild(): Container;
+  createChild(opts?: { name?: string }): Container;
 
   /**
    * Create a named-scope child container. Factories registered with this
    * ScopeToken as their lifetime will be resolved and cached within this
    * scope container.
    */
-  createScope(scopeToken: ScopeToken): Container;
+  createScope(scopeToken: ScopeToken, opts?: { name?: string }): Container;
 
   /**
-   * Apply container modules sequentially (each module may be async). Throws
-   * ContainerDisposedError if the container is disposed. Returns Promise<this>
-   * for chaining: `const c = await createContainer().load(authModule)`.
+   * Apply container modules sequentially (each module may be async).
+   * Throws ContainerDisposedError if the container is disposed.
+   * Returns Promise<this> for chaining.
    */
   load(...modules: ContainerModule[]): Promise<this>;
 
   /**
-   * Apply container modules in parallel via Promise.all. Use for independent
-   * modules that do not register tokens that depend on each other.
-   */
-  loadAll(...modules: ContainerModule[]): Promise<this>;
-
-  /**
-   * Subscribe to container events (register, resolve, dispose). Returns an
-   * unsubscribe function.
-   *
-   * @example
-   * const unsubscribe = container.on((event) => console.log(event));
-   * // later:
-   * unsubscribe();
+   * Subscribe to container events (register, resolve, dispose). Events
+   * propagate up to parent containers. Returns an unsubscribe function.
    */
   on(listener: ContainerEventListener): () => void;
 
@@ -283,37 +285,44 @@ export interface Container {
 }
 
 // ---------------------------------------------------------------------------
-// ContainerImpl (internal — not exported directly)
+// ContainerImpl
 // ---------------------------------------------------------------------------
 
 class ContainerImpl implements Container {
   #registry = new Map<Token<any>, Registration<any>>();
-  // Per-container cache: maps a FactoryDescriptor to its resolved state.
-  // Scoped instances live in the child's #cache, keyed by the parent descriptor.
   #cache = new Map<FactoryDescriptor<any>, CacheEntry<any>>();
   #parent?: ContainerImpl;
-  #scope?: ScopeToken;
+  #scopeTag?: ScopeToken;
   #listeners = new Set<ContainerEventListener>();
   #disposed = false;
+  #frozen = false;
+  readonly name: string;
 
-  constructor(parent?: ContainerImpl, scope?: ScopeToken) {
+  constructor(parent?: ContainerImpl, opts: { name?: string; scopeTag?: ScopeToken } = {}) {
     this.#parent = parent;
-    this.#scope = scope;
+    this.#scopeTag = opts.scopeTag;
+    this.name = opts.name ?? (parent ? `${parent.name}:child` : 'root');
   }
 
   #assertNotDisposed(): void {
-    if (this.#disposed) throw new ContainerDisposedError();
+    if (this.#disposed) throw new ContainerDisposedError(this.name);
   }
 
-  // Errors in listeners must not affect container operation.
+  #assertNotFrozen(): void {
+    if (this.#frozen) throw new Error(`Container '${this.name}' is frozen and cannot accept new registrations.`);
+  }
+
+  // Emit to local listeners then propagate up to parent.
   #emit(event: ContainerEvent): void {
     for (const listener of this.#listeners) {
       try {
         listener(event);
       } catch {
-        // intentionally swallowed
+        // swallowed — listener errors must not disrupt container operation
       }
     }
+
+    if (this.#parent) this.#parent.#emit(event);
   }
 
   get disposed(): boolean {
@@ -322,6 +331,7 @@ class ContainerImpl implements Container {
 
   value<T>(tok: Token<T>, val: T, opts?: ValueOptions<T>): this {
     this.#assertNotDisposed();
+    this.#assertNotFrozen();
 
     if (this.#registry.has(tok)) throw new DuplicateRegistrationError(tok);
 
@@ -339,6 +349,7 @@ class ContainerImpl implements Container {
     opts?: FactoryOptions<T> & { deps?: D },
   ): this {
     this.#assertNotDisposed();
+    this.#assertNotFrozen();
 
     if (this.#registry.has(tok)) throw new DuplicateRegistrationError(tok);
 
@@ -365,7 +376,7 @@ class ContainerImpl implements Container {
   async resolve<T>(tok: Token<T>): Promise<T> {
     this.#assertNotDisposed();
 
-    const result = await this.#resolveToken(tok, []);
+    const result = await this.#resolveToken(tok, new Set(), []);
 
     this.#emit({ description: tokenName(tok), type: 'resolve' });
 
@@ -377,43 +388,13 @@ class ContainerImpl implements Container {
 
     const reg = this.#getRegistration(tok) as Registration<T> | undefined;
 
-    if (!reg) throw new ProviderNotFoundError(tok);
+    if (!reg) throw new ProviderNotFoundError(tok, this.name);
 
     const result = this.#resolveSyncReg(tok, reg);
 
     this.#emit({ description: tokenName(tok), type: 'resolve' });
 
     return result;
-  }
-
-  #resolveSyncReg<T>(tok: Token<T>, reg: Registration<T>): T {
-    if (reg.kind === 'value') return reg.value;
-
-    const { lifetime } = reg;
-
-    // Named scope token — find the ancestor scope container and read its cache.
-    if (typeof lifetime === 'symbol') {
-      const scopeContainer = this.#findScope(lifetime);
-
-      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
-
-      const entry = scopeContainer.#cache.get(reg);
-
-      if (entry?.resolved) return entry.instance as T;
-
-      throw new SyncResolutionError(tok, lifetime);
-    }
-
-    if (lifetime === 'scoped' && !this.#parent) throw new ScopedResolutionError(tok);
-
-    if (lifetime === 'transient') throw new SyncResolutionError(tok, lifetime);
-
-    const cacheContainer = lifetime === 'singleton' ? this.#findOwnerContainer(tok) : this;
-    const entry = cacheContainer.#cache.get(reg);
-
-    if (entry?.resolved) return entry.instance as T;
-
-    throw new SyncResolutionError(tok, lifetime);
   }
 
   async resolveOptional<T>(tok: Token<T>): Promise<T | undefined> {
@@ -426,44 +407,36 @@ class ContainerImpl implements Container {
     }
   }
 
+  async tryResolve<T>(tok: Token<T>): Promise<ResolveResult<T>> {
+    try {
+      const value = await this.resolve(tok);
+
+      return { ok: true, value };
+    } catch (error) {
+      return { error, ok: false };
+    }
+  }
+
+  async resolveMany<const D extends Token<any>[]>(toks: D): Promise<InferTokenTypes<D>> {
+    return Promise.all(toks.map((t) => this.resolve(t))) as Promise<InferTokenTypes<D>>;
+  }
+
   async resolveAll(): Promise<void> {
     this.#assertNotDisposed();
 
     const seen = new Set<Token<any>>();
     const singletons: Promise<unknown>[] = [];
 
-    // Walk the full hierarchy so child.resolveAll() warms inherited singletons too.
     for (const c of this.#ancestors()) {
       for (const [tok, reg] of c.#registry) {
         if (!seen.has(tok as Token<any>) && reg.kind === 'factory' && reg.lifetime === 'singleton') {
           seen.add(tok as Token<any>);
-          singletons.push(this.#resolveToken(tok as Token<unknown>, []));
+          singletons.push(this.#resolveToken(tok as Token<unknown>, new Set(), []));
         }
       }
     }
 
     await Promise.all(singletons);
-  }
-
-  // R1+R2: Arrow function captures `this` — no `const self` alias needed.
-  // Renamed from lazy() to deferred() to reflect that resolution is sync on access,
-  // not truly async-lazy (the token must already be pre-warmed).
-  deferred<T extends object>(tok: Token<T>): T {
-    let resolved: T | undefined;
-
-    return new Proxy({} as T, {
-      get: (_target, prop, receiver) => {
-        if (!resolved) {
-          const reg = this.#getRegistration(tok);
-
-          if (!reg) throw new ProviderNotFoundError(tok);
-
-          resolved = this.#resolveSyncReg(tok, reg as Registration<T>);
-        }
-
-        return Reflect.get(resolved, prop, receiver);
-      },
-    });
   }
 
   inspect(opts?: { deep?: boolean }): ContainerGraph {
@@ -479,7 +452,6 @@ class ContainerImpl implements Container {
           if (reg.kind === 'value') {
             nodes.push({ deps: [], description: tokenName(tok as Token<any>), kind: 'value' });
           } else {
-            // Represent named scope tokens as 'scope:<name>' for serializability.
             const lifetime =
               typeof reg.lifetime === 'symbol'
                 ? `scope:${(reg.lifetime as symbol).description ?? 'anonymous'}`
@@ -524,39 +496,37 @@ class ContainerImpl implements Container {
       visited.add(tok);
     };
 
-    for (const tok of this.#registry.keys()) {
-      if (!visited.has(tok as Token<any>)) {
-        visit(tok as Token<any>, []);
+    // Seed from full ancestor chain so parent-only cycles are also caught.
+    for (const c of this.#ancestors()) {
+      for (const tok of c.#registry.keys()) {
+        if (!visited.has(tok as Token<any>)) visit(tok as Token<any>, []);
       }
     }
 
     return this;
   }
 
-  createChild(): Container {
-    this.#assertNotDisposed();
-
-    return new ContainerImpl(this);
-  }
-
-  createScope(scopeToken: ScopeToken): Container {
-    this.#assertNotDisposed();
-
-    return new ContainerImpl(this, scopeToken);
-  }
-
-  async load(...modules: ContainerModule[]): Promise<this> {
-    this.#assertNotDisposed();
-
-    for (const mod of modules) await mod(this);
+  freeze(): this {
+    this.#frozen = true;
 
     return this;
   }
 
-  async loadAll(...modules: ContainerModule[]): Promise<this> {
+  createChild(opts?: { name?: string }): Container {
     this.#assertNotDisposed();
 
-    await Promise.all(modules.map((mod) => mod(this)));
+    return new ContainerImpl(this, { name: opts?.name });
+  }
+
+  createScope(scopeToken: ScopeToken, opts?: { name?: string }): Container {
+    this.#assertNotDisposed();
+
+    return new ContainerImpl(this, { name: opts?.name, scopeTag: scopeToken });
+  }
+
+  async load(...modules: ContainerModule[]): Promise<this> {
+    this.#assertNotDisposed();
+    for (const mod of modules) await mod(this);
 
     return this;
   }
@@ -571,30 +541,26 @@ class ContainerImpl implements Container {
     if (this.#disposed) return;
 
     this.#disposed = true;
-
     this.#emit({ type: 'dispose' });
 
     const hooks: Promise<void>[] = [];
-
-    // Locally-registered providers (value + factory)
-    for (const reg of this.#registry.values()) {
-      if (reg.kind === 'value') {
-        if (reg.dispose) hooks.push(Promise.resolve().then(() => reg.dispose!(reg.value)));
-      } else if (reg.dispose) {
-        const entry = this.#cache.get(reg);
-
-        if (entry?.resolved) hooks.push(Promise.resolve().then(() => reg.dispose!(entry.instance as any)));
-      }
-    }
-
-    // Scoped/named-scope instances inherited from the parent are not in #registry
-    // but their resolved entries live in this child's #cache.
     const ownDescriptors = new Set<FactoryDescriptor<any>>();
 
     for (const reg of this.#registry.values()) {
-      if (reg.kind === 'factory') ownDescriptors.add(reg);
+      if (reg.kind === 'value') {
+        if (reg.dispose) hooks.push(Promise.resolve().then(() => reg.dispose!(reg.value)));
+      } else {
+        ownDescriptors.add(reg);
+
+        if (reg.dispose) {
+          const entry = this.#cache.get(reg);
+
+          if (entry?.resolved) hooks.push(Promise.resolve().then(() => reg.dispose!(entry.instance as any)));
+        }
+      }
     }
 
+    // Inherited scoped instances cached locally (not in #registry)
     for (const [descriptor, entry] of this.#cache) {
       if (!ownDescriptors.has(descriptor) && descriptor.dispose && entry.resolved) {
         hooks.push(Promise.resolve().then(() => descriptor.dispose!(entry.instance as any)));
@@ -618,6 +584,10 @@ class ContainerImpl implements Container {
     return this.dispose();
   }
 
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
   #getRegistration<T>(tok: Token<T>): Registration<T> | undefined {
     const local = this.#registry.get(tok) as Registration<T> | undefined;
 
@@ -630,16 +600,14 @@ class ContainerImpl implements Container {
     return this.#parent.#getRegistration(tok);
   }
 
-  /** Returns the container that owns the registration for tok (the first in the chain that has it). */
   #findOwnerContainer<T>(tok: Token<T>): ContainerImpl {
     for (const c of this.#ancestors()) {
       if (c.#registry.has(tok)) return c;
     }
 
-    return this; // fallback — caller has verified tok exists
+    return this;
   }
 
-  /** Iterates this container then each ancestor up the parent chain. */
   *#ancestors(): Generator<ContainerImpl> {
     yield this;
 
@@ -652,7 +620,7 @@ class ContainerImpl implements Container {
   }
 
   #findScope(scopeToken: ScopeToken): ContainerImpl | undefined {
-    if (this.#scope === scopeToken) return this;
+    if (this.#scopeTag === scopeToken) return this;
 
     if (!this.#parent) return undefined;
 
@@ -670,79 +638,100 @@ class ContainerImpl implements Container {
     return entry;
   }
 
-  async #resolveToken<T>(tok: Token<T>, stack: Token<any>[]): Promise<T> {
-    if (stack.includes(tok)) throw new CircularDependencyError([...stack, tok]);
+  /** Populate a cache entry for a factory, deduplicating concurrent calls. */
+  #populate<T>(
+    entry: CacheEntry<T>,
+    reg: FactoryDescriptor<T>,
+    visiting: Set<Token<any>>,
+    path: Token<any>[],
+  ): Promise<T> {
+    if (entry.resolved) return Promise.resolve(entry.instance as T);
 
-    const reg = this.#getRegistration(tok) as Registration<T> | undefined;
+    if (entry.promise) return entry.promise;
 
-    if (!reg) throw new ProviderNotFoundError(tok);
-
-    const childStack = [...stack, tok];
-
-    return this.#resolveReg(tok, reg, childStack);
-  }
-
-  async #resolveReg<T>(tok: Token<T>, reg: Registration<T>, stack: Token<any>[]): Promise<T> {
-    if (reg.kind === 'value') return reg.value;
-
-    const { deps, factory, lifetime } = reg;
-
-    // Named scope token — find the scope container and use its cache.
-    if (typeof lifetime === 'symbol') {
-      const scopeContainer = this.#findScope(lifetime);
-
-      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
-
-      const entry = scopeContainer.#getCache(reg);
-
-      if (entry.resolved) return entry.instance as T;
-
-      if (entry.promise) return entry.promise;
-
-      entry.promise = (async () => {
-        const args = await Promise.all(deps.map((dep) => this.#resolveToken(dep, stack)));
-
-        return factory(...args);
-      })().then((instance) => {
+    entry.promise = Promise.all(reg.deps.map((dep) => this.#resolveToken(dep, new Set(visiting), path)))
+      .then((args) => reg.factory(...args))
+      .then((instance) => {
         entry.instance = instance;
         entry.resolved = true;
 
         return instance;
       });
 
-      return entry.promise;
+    return entry.promise;
+  }
+
+  async #resolveToken<T>(tok: Token<T>, visiting: Set<Token<any>>, path: Token<any>[]): Promise<T> {
+    if (visiting.has(tok)) throw new CircularDependencyError([...path, tok]);
+
+    const reg = this.#getRegistration(tok) as Registration<T> | undefined;
+
+    if (!reg) throw new ProviderNotFoundError(tok, this.name);
+
+    visiting.add(tok);
+
+    const result = await this.#resolveReg(tok, reg, visiting, [...path, tok]);
+
+    visiting.delete(tok);
+
+    return result;
+  }
+
+  async #resolveReg<T>(tok: Token<T>, reg: Registration<T>, visiting: Set<Token<any>>, path: Token<any>[]): Promise<T> {
+    if (reg.kind === 'value') return reg.value;
+
+    const { lifetime } = reg;
+
+    // Named scope token
+    if (typeof lifetime === 'symbol') {
+      const scopeContainer = this.#findScope(lifetime);
+
+      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
+
+      return this.#populate(scopeContainer.#getCache(reg), reg, visiting, path);
     }
 
     if (lifetime === 'scoped' && !this.#parent) throw new ScopedResolutionError(tok);
 
     if (lifetime === 'transient') {
-      const args = await Promise.all(deps.map((dep) => this.#resolveToken(dep, stack)));
+      const args = await Promise.all(reg.deps.map((dep) => this.#resolveToken(dep, visiting, path)));
 
-      return factory(...args);
+      return reg.factory(...args);
     }
 
-    // singleton or scoped: cache in the owner container (for singletons) or this container (for scoped).
-    // Singletons must live in the owning container so they are shared across child containers.
+    // singleton or scoped — cache in owner (singleton) or this (scoped)
     const cacheContainer = lifetime === 'singleton' ? this.#findOwnerContainer(tok) : this;
-    const entry = cacheContainer.#getCache(reg);
 
-    if (entry.resolved) return entry.instance as T;
+    return this.#populate(cacheContainer.#getCache(reg), reg, visiting, path);
+  }
 
-    // Return any in-flight or failed promise — no silent retry on failure.
-    if (entry.promise) return entry.promise;
+  #resolveSyncReg<T>(tok: Token<T>, reg: Registration<T>): T {
+    if (reg.kind === 'value') return reg.value;
 
-    entry.promise = (async () => {
-      const args = await Promise.all(deps.map((dep) => this.#resolveToken(dep, stack)));
+    const { lifetime } = reg;
 
-      return factory(...args);
-    })().then((instance) => {
-      entry.instance = instance;
-      entry.resolved = true;
+    if (typeof lifetime === 'symbol') {
+      const scopeContainer = this.#findScope(lifetime);
 
-      return instance;
-    });
+      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
 
-    return entry.promise;
+      const entry = scopeContainer.#cache.get(reg);
+
+      if (entry?.resolved) return entry.instance as T;
+
+      throw new SyncResolutionError(tok, lifetime);
+    }
+
+    if (lifetime === 'scoped' && !this.#parent) throw new ScopedResolutionError(tok);
+
+    if (lifetime === 'transient') throw new SyncResolutionError(tok, lifetime);
+
+    const cacheContainer = lifetime === 'singleton' ? this.#findOwnerContainer(tok) : this;
+    const entry = cacheContainer.#cache.get(reg);
+
+    if (entry?.resolved) return entry.instance as T;
+
+    throw new SyncResolutionError(tok, lifetime);
   }
 }
 
@@ -750,6 +739,6 @@ class ContainerImpl implements Container {
 // Public factory
 // ---------------------------------------------------------------------------
 
-export function createContainer(): Container {
-  return new ContainerImpl();
+export function createContainer(opts?: { name?: string }): Container {
+  return new ContainerImpl(undefined, { name: opts?.name ?? 'root' });
 }

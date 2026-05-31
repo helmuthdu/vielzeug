@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/arsenal",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

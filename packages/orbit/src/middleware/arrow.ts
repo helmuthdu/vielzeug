@@ -37,7 +37,7 @@ export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
       const maxX = Math.max(minX, state.rects.floating.width - arrowRect.width - inset.right);
       const x = clamp(idealX, minX, maxX);
 
-      return { data: { arrow: { centerOffset: idealX - x, x } } };
+      return { data: { arrow: { centerOffset: idealX - x, constrained: x !== idealX, x } } };
     }
 
     const idealY = state.rects.reference.y + state.rects.reference.height / 2 - state.y - arrowRect.height / 2;
@@ -45,6 +45,6 @@ export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
     const maxY = Math.max(minY, state.rects.floating.height - arrowRect.height - inset.bottom);
     const y = clamp(idealY, minY, maxY);
 
-    return { data: { arrow: { centerOffset: idealY - y, y } } };
+    return { data: { arrow: { centerOffset: idealY - y, constrained: y !== idealY, y } } };
   }, 'arrow');
 }

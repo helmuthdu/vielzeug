@@ -6,7 +6,7 @@
  */
 
 import { CRAFTIT_ERRORS } from './errors';
-import { getCurrentElement, _getCurrentRuntimeContext } from './runtime';
+import { _getCurrentRuntimeContext, getCurrentElement } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
@@ -41,34 +41,18 @@ export const provide = <T>(key: InjectionKey<T>, value: T): void => {
 export function inject<T>(key: InjectionKey<T>): T | undefined;
 export function inject<T>(key: InjectionKey<T>, fallback: T): T;
 export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
-  // During setup, use the cached ancestor chain from the runtime context (R9).
+  // Must be called synchronously during component setup where a runtime context exists.
   const ctx = _getCurrentRuntimeContext();
 
-  const chain = ctx ? (ctx._ancestorChain ??= buildAncestorChain(ctx.element)) : null;
+  if (!ctx) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 
-  if (chain) {
-    for (const node of chain) {
-      const map = contextRegistry.get(node);
+  // Use the cached ancestor chain from the runtime context (built once per setup call).
+  const chain = (ctx._ancestorChain ??= buildAncestorChain(ctx.element));
 
-      if (map?.has(key)) return map.get(key) as T;
-    }
+  for (const node of chain) {
+    const map = contextRegistry.get(node);
 
-    return rest.length > 0 ? rest[0] : undefined;
-  }
-
-  // Fallback: called outside setup context, traverse live DOM.
-  let node: Node | null = getCurrentElement();
-
-  while (node) {
-    if (node instanceof HTMLElement) {
-      const map = contextRegistry.get(node);
-
-      if (map?.has(key)) return map.get(key) as T;
-    }
-
-    const root = node.getRootNode() as Node;
-
-    node = (node as HTMLElement).parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+    if (map?.has(key)) return map.get(key) as T;
   }
 
   return rest.length > 0 ? rest[0] : undefined;

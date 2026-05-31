@@ -9,7 +9,7 @@ import type {
   WeekStartDay,
 } from './types';
 
-import { inferSharedTimeZone, inferTimeZone, normalizeRange, resolveZoned } from './internal';
+import { inferSharedTimeZone, inferTimeZone, normalizeRange, toZoned } from './internal';
 
 // ─── Boundary step durations ──────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ function startOfInput(
   unit: BoundaryUnit,
   options: TimeOptionsWithTz & { weekStartsOn?: WeekStartDay },
 ): Temporal.ZonedDateTime {
-  const zoned = resolveZoned(input, options);
+  const zoned = toZoned(input, options);
 
   if (unit === 'week') return alignToWeekStart(zoned.with(TIME_ZERO), options.weekStartsOn ?? 1);
 

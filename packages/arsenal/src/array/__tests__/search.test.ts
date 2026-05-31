@@ -48,3 +48,61 @@ describe('fuzzy', () => {
     expect(result).toEqual([]);
   });
 });
+
+describe('search scored mode', () => {
+  const data = [
+    { age: 25, name: 'John Doe' },
+    { age: 30, name: 'Jane Doe' },
+    { age: 22, name: 'Alice Smith' },
+  ];
+
+  it('returns ScoredResult array when mode is scored', () => {
+    const results = search(data, 'doe', { mode: 'scored' });
+
+    expect(results).toHaveLength(2);
+    expect(results[0]).toHaveProperty('item');
+    expect(results[0]).toHaveProperty('score');
+    expect(typeof results[0]!.score).toBe('number');
+  });
+
+  it('returns results sorted by score descending', () => {
+    const results = search(data, 'john', { mode: 'scored' });
+
+    expect(results.length).toBeGreaterThanOrEqual(1);
+
+    for (let i = 1; i < results.length; i++) {
+      expect(results[i - 1]!.score).toBeGreaterThanOrEqual(results[i]!.score);
+    }
+  });
+
+  it('returns all items with score 1 when query is empty', () => {
+    const results = search(data, '', { mode: 'scored' });
+
+    expect(results).toHaveLength(3);
+    expect(results.every((r) => r.score === 1)).toBe(true);
+  });
+
+  it('filters by threshold in scored mode', () => {
+    const results = search(data, 'alice', { mode: 'scored', threshold: 0.9 });
+
+    expect(results.every((r) => r.score >= 0.9)).toBe(true);
+  });
+
+  it('restricts to fields in scored mode', () => {
+    const results = search(data, '25', { fields: ['name'], mode: 'scored' });
+
+    expect(results).toEqual([]);
+  });
+
+  it('handles large arrays without stack overflow', () => {
+    const large = Array.from({ length: 200_000 }, (_, i) => ({ id: i, name: `item-${i}` }));
+
+    expect(() => search(large, 'item-42', { mode: 'scored' })).not.toThrow();
+  });
+
+  it('handles items with large array fields without stack overflow', () => {
+    const record = { tags: Array.from({ length: 200_000 }, (_, i) => `tag-${i}`) };
+
+    expect(() => search([record], 'tag-42', { mode: 'scored' })).not.toThrow();
+  });
+});

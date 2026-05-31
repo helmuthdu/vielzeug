@@ -2,33 +2,33 @@ import { createMemoryHistory, createRouter } from '../';
 import { createDeferred, settle } from './test-utils';
 
 describe('lazy routes', () => {
-  it('loads handler from lazy module on first navigation', async () => {
-    const handler = vi.fn();
+  it('loads data fn from lazy module on first navigation', async () => {
+    const dataFn = vi.fn(async () => ({ loaded: true }));
     const history = createMemoryHistory('/page');
     const router = createRouter({
       history,
       routes: {
         page: {
-          lazy: async () => ({ handler }),
+          lazy: async () => ({ data: dataFn }),
           path: '/page',
         },
       },
     });
 
     await settle();
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(dataFn).toHaveBeenCalledTimes(1);
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
     router.dispose();
   });
 
   it('loads data function from lazy module', async () => {
     const dataFn = vi.fn(async () => ({ loaded: true }));
-    const handler = vi.fn();
     const history = createMemoryHistory('/page');
     const router = createRouter({
       history,
       routes: {
         page: {
-          lazy: async () => ({ data: dataFn, handler }),
+          lazy: async () => ({ data: dataFn }),
           path: '/page',
         },
       },
@@ -36,12 +36,12 @@ describe('lazy routes', () => {
 
     await settle();
     expect(dataFn).toHaveBeenCalled();
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: { loaded: true } }));
+    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
     router.dispose();
   });
 
   it('only calls the lazy factory once across multiple navigations', async () => {
-    const factory = vi.fn(async () => ({ handler: vi.fn() }));
+    const factory = vi.fn(async () => ({ data: vi.fn() }));
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -98,7 +98,6 @@ describe('lazy routes', () => {
   it('keeps lazy hydration consistent across overlapping navigations', async () => {
     const { promise: lazyReady, resolve: resolveLazy } = createDeferred<void>();
     const dataFn = vi.fn(async () => ({ loaded: true }));
-    const handler = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -108,7 +107,7 @@ describe('lazy routes', () => {
           lazy: async () => {
             await lazyReady;
 
-            return { data: dataFn, handler };
+            return { data: dataFn };
           },
           path: '/page/:id',
         },
@@ -125,14 +124,13 @@ describe('lazy routes', () => {
     await Promise.all([first, second]);
 
     expect(dataFn).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledTimes(1);
     expect(router.getSnapshot().location.pathname).toBe('/page/b');
     router.dispose();
   });
 
   it('retries the lazy factory after a failed import', async () => {
     let attempt = 0;
-    const handler = vi.fn();
+    const dataFn = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -144,7 +142,7 @@ describe('lazy routes', () => {
 
             if (attempt === 1) throw new Error('network error');
 
-            return { handler };
+            return { data: dataFn };
           },
           path: '/page',
         },
@@ -156,12 +154,12 @@ describe('lazy routes', () => {
     // First navigation fails because the lazy factory throws.
     await expect(router.navigate({ path: '/page' })).rejects.toThrow('network error');
     expect(attempt).toBe(1);
-    expect(handler).not.toHaveBeenCalled();
+    expect(dataFn).not.toHaveBeenCalled();
 
     // Second navigation retries; record must not be permanently poisoned.
     await router.navigate({ path: '/page' });
     expect(attempt).toBe(2);
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(dataFn).toHaveBeenCalledTimes(1);
     router.dispose();
   });
 

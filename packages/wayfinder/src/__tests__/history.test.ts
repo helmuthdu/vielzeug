@@ -88,15 +88,15 @@ describe('createMemoryHistory', () => {
   });
 
   it('works as a drop-in for createRouter', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/about'),
-      routes: { about: { handler, path: '/about' }, home: { path: '/' } },
+      routes: { about: { data, path: '/about' }, home: { path: '/' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 });

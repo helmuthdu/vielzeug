@@ -1,6 +1,6 @@
 import type { CurrencyCode, Money, MoneyJSON, RoundingMode } from './types';
 
-import { absMod, applyRounding, assertValidCurrency, getCurrencyDecimals, parseRational, pow10 } from './utils';
+import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
 
 // ─── Factories ───────────────────────────────────────────────────────────────
 
@@ -13,12 +13,12 @@ import { absMod, applyRounding, assertValidCurrency, getCurrencyDecimals, parseR
  *
  * @example
  * ```ts
- * const usd = currency('USD');    // CurrencyCode — validated
- * currency('NOTREAL');            // throws RangeError
+ * const usd = toCurrencyCode('USD');    // CurrencyCode — validated
+ * toCurrencyCode('NOTREAL');            // throws RangeError
  * ```
  */
-export function currency(code: string): CurrencyCode {
-  return assertValidCurrency(code);
+export function toCurrencyCode(code: string): CurrencyCode {
+  return validateCurrencyCode(code);
 }
 
 /**
@@ -37,8 +37,8 @@ export function currency(code: string): CurrencyCode {
  * money(123456n,   'USD') // { amount: 123456n, currency: 'USD' }
  * ```
  */
-export function money(amount: bigint | number | string, cur: string): Money {
-  const validCurrency = assertValidCurrency(cur);
+export function money(amount: bigint | number | string, currency: string): Money {
+  const validCurrency = validateCurrencyCode(currency);
 
   if (typeof amount === 'bigint') {
     return { amount, currency: validCurrency };
@@ -46,6 +46,14 @@ export function money(amount: bigint | number | string, cur: string): Money {
 
   // getCurrencyDecimals is cached from the assertValidCurrency call above.
   return { amount: parseToMinorUnits(String(amount), getCurrencyDecimals(validCurrency)), currency: validCurrency };
+}
+
+// ─── Internal ─────────────────────────────────────────────────────────────────
+
+function assertSameCurrency(a: Money, b: Money): void {
+  if (a.currency !== b.currency) {
+    throw new TypeError(`Currency mismatch: ${a.currency} and ${b.currency}`);
+  }
 }
 
 /**
@@ -58,7 +66,7 @@ function parseToMinorUnits(str: string, decimals: number): bigint {
   const scale = pow10(decimals);
   const raw = numerator * scale;
   const quotient = raw / denominator;
-  const result = applyRounding(quotient, absMod(raw, denominator), denominator, 'half-away-from-zero', true);
+  const result = applyRounding(quotient, raw % denominator, denominator, 'half-away-from-zero');
 
   return negative ? -result : result;
 }
@@ -93,10 +101,12 @@ export function subtract(a: Money, b: Money): Money {
  * ```
  */
 export function multiply(m: Money, factor: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
-  const { denominator, negative, numerator } = parseRational(String(factor));
-  const raw = m.amount * numerator;
+  const { denominator, negative: factorNegative, numerator } = parseRational(String(factor));
+  const negative = m.amount < 0n !== factorNegative;
+  const absAmount = m.amount < 0n ? -m.amount : m.amount;
+  const raw = absAmount * numerator;
   const quotient = raw / denominator;
-  const result = applyRounding(quotient, absMod(raw, denominator), denominator, mode, raw >= 0n);
+  const result = applyRounding(quotient, raw % denominator, denominator, mode, negative);
 
   return { amount: negative ? -result : result, currency: m.currency };
 }
@@ -115,14 +125,16 @@ export function multiply(m: Money, factor: number | string, mode: RoundingMode =
  * ```
  */
 export function divide(m: Money, divisor: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
-  const { denominator, negative, numerator } = parseRational(String(divisor));
+  const { denominator: parsedDenom, negative: divisorNegative, numerator } = parseRational(String(divisor));
 
   if (numerator === 0n) throw new RangeError('Division by zero');
 
-  // Dividing by (numerator/denominator) = multiplying by (denominator/numerator).
-  const raw = m.amount * denominator;
+  const negative = m.amount < 0n !== divisorNegative;
+  const absAmount = m.amount < 0n ? -m.amount : m.amount;
+  // Dividing by (numerator/parsedDenom) = multiplying by (parsedDenom/numerator).
+  const raw = absAmount * parsedDenom;
   const quotient = raw / numerator;
-  const result = applyRounding(quotient, absMod(raw, numerator), numerator, mode, raw >= 0n);
+  const result = applyRounding(quotient, raw % numerator, numerator, mode, negative);
 
   return { amount: negative ? -result : result, currency: m.currency };
 }
@@ -147,13 +159,13 @@ export function divide(m: Money, divisor: number | string, mode: RoundingMode = 
  * ```
  */
 export function allocate(m: Money, ratios: readonly (number | string)[]): Money[] {
-  if (ratios.length === 0) throw new Error('allocate requires at least one ratio');
+  if (ratios.length === 0) throw new RangeError('allocate requires at least one ratio');
 
   const parsedRatios = ratios.map((r) => parseRational(String(r)));
 
-  if (parsedRatios.some((p) => p.negative)) throw new Error('All ratios must be non-negative');
+  if (parsedRatios.some((p) => p.negative)) throw new RangeError('All ratios must be non-negative');
 
-  if (!parsedRatios.some((p) => p.numerator > 0n)) throw new Error('At least one ratio must be positive');
+  if (!parsedRatios.some((p) => p.numerator > 0n)) throw new RangeError('At least one ratio must be positive');
 
   const negative = m.amount < 0n;
   const absAmount = negative ? -m.amount : m.amount;
@@ -205,7 +217,7 @@ export function allocate(m: Money, ratios: readonly (number | string)[]): Money[
  * ```
  */
 export function sum(moneys: readonly Money[]): Money {
-  if (moneys.length === 0) throw new Error('sum requires at least one Money value');
+  if (moneys.length === 0) throw new RangeError('sum requires at least one Money value');
 
   return moneys.reduce(add);
 }
@@ -359,7 +371,7 @@ export function toJSON(m: Money): MoneyJSON {
  * ```
  */
 export function fromJSON(json: MoneyJSON): Money {
-  const validCurrency = assertValidCurrency(json.currency);
+  const validCurrency = validateCurrencyCode(json.currency);
   let amount: bigint;
 
   try {
@@ -409,12 +421,4 @@ export function toNumber(m: Money): number {
   const decimals = getCurrencyDecimals(m.currency);
 
   return Number(m.amount) / Math.pow(10, decimals);
-}
-
-// ─── Internal ─────────────────────────────────────────────────────────────────
-
-function assertSameCurrency(a: Money, b: Money): void {
-  if (a.currency !== b.currency) {
-    throw new Error(`Currency mismatch: ${a.currency} and ${b.currency}`);
-  }
 }

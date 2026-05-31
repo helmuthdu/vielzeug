@@ -22,6 +22,20 @@ const name = signal('Alice');
 const items = signal<string[]>([]);
 ```
 
+### Batched Signals
+
+When a signal receives many rapid synchronous writes (e.g., scroll positions, pointer events), set `batched: true` to coalesce them into a single microtask notification:
+
+```ts
+const pointer = signal({ x: 0, y: 0 }, { batched: true });
+
+// All three writes coalesce into one microtask notification
+pointer.value = { x: 10, y: 0 };
+pointer.value = { x: 20, y: 5 };
+pointer.value = { x: 30, y: 10 };
+// downstream effects receive only { x: 30, y: 10 }
+```
+
 ### Reading and Writing
 
 ```ts
@@ -63,7 +77,6 @@ count.value = 1; // → logs "count is: 1"
 count.value = 2; // → logs "count is: 2"
 
 sub.dispose(); // dispose — no more runs
-// or: sub()          — calling directly also disposes
 // or: using sub = effect(...) — TC39 using declaration
 ```
 
@@ -121,10 +134,10 @@ effect(
   { scheduler: 'raf' },
 );
 
-// Trace mode — logs changed reactive sources to the console before each re-run
+// Custom scheduler function — any scheduling strategy is supported
 effect(
-  () => computeHeavyThing(a.value, b.value),
-  { trace: true },
+  () => renderHighFrequency(pos.value),
+  { scheduler: (run) => requestIdleCallback(run) },
 );
 
 // Increase the loop guard for known deep cascade graphs
@@ -134,12 +147,13 @@ effect(
 );
 ```
 
-| Option           | Type              | Default    | Description                                                      |
-| ---------------- | ----------------- | ---------- | ---------------------------------------------------------------- |
-| `scheduler`      | `EffectScheduler` | `'sync'`   | `'sync'` \| `'microtask'` \| `'raf'`                             |
-| `name`           | `string`          | —          | Shown in error messages                                          |
-| `trace`          | `boolean`         | `false`    | Log changed sources before each re-run                           |
-| `maxIterations`  | `number`          | `100`      | Loop guard threshold for this effect                             |
+| Option           | Type                                            | Default    | Description                                                          |
+| ---------------- | ----------------------------------------------- | ---------- | -------------------------------------------------------------------- |
+| `scheduler`      | `EffectScheduler \| (run: () => void) => void`  | `'sync'`   | `'sync'` \| `'microtask'` \| `'raf'`, or a custom function           |
+| `name`           | `string`                                        | —          | Shown in error messages                                              |
+| `maxIterations`  | `number`                                        | `100`      | Loop guard threshold for this effect                                 |
+
+For debugging which deps trigger re-runs, use `traceEffect()` instead of `effect()` — see [traceEffect](#traceeffect) below.
 
 ### `untrack`
 
@@ -231,7 +245,6 @@ const sub = watch(count, (next, prev) => {
 
 count.value = 1; // → logs "0 → 1"
 sub.dispose();
-// or: sub()    — calling directly also disposes
 ```
 
 ### Options
@@ -340,6 +353,108 @@ define('my-component', {
 });
 ```
 
+## `asyncScope`
+
+`asyncScope(setup)` is the async variant of `scope()`. It is useful when setup involves async initialization but you still need to register cleanups from the synchronous preamble.
+
+`onCleanup()` must be called **synchronously** — before the first `await`. Calls after an `await` throw `StateError('INVALID_CLEANUP')`.
+
+```ts
+import { asyncScope, onCleanup } from '@vielzeug/ripple';
+
+const s = await asyncScope(async () => {
+  const stream = openStream(); // synchronous resource
+  onCleanup(() => stream.close()); // ✓ — before any await
+
+  const db = await openDatabase(); // async — tracking stops here
+  // onCleanup() here would throw INVALID_CLEANUP
+  s.run(() => {
+    // use db synchronously in the returned scope
+    onCleanup(() => db.close());
+  });
+});
+
+// cleanup all resources:
+s.dispose();
+```
+
+## `traceEffect`
+
+`traceEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
+
+```ts
+import { traceEffect } from '@vielzeug/ripple';
+
+const stop = traceEffect(
+  () => renderUser(userId.value, name.value),
+  { name: 'renderUser' },
+);
+
+// Console output on re-run:
+// [ripple:trace] "renderUser" re-running — changed sources:
+//   userId (v1 -> v2)
+```
+
+## Async Computed
+
+`asyncComputed(factory, options?)` tracks reactive dependencies inside an async factory and automatically re-runs when they change. The factory receives an `AbortSignal` that is aborted when the factory is superseded or disposed.
+
+The signal's `.value` is an `AsyncComputedState<T>` discriminated union — always one of `'idle'`, `'pending'`, `'fulfilled'`, or `'error'`.
+
+```ts
+import { signal, effect, asyncComputed } from '@vielzeug/ripple';
+
+const userId = signal('u1');
+
+const user = asyncComputed(async (signal) => {
+  const id = userId.value; // ← tracked dep (synchronous read)
+  const res = await fetch(`/users/${id}`, { signal });
+  if (!res.ok) throw new Error('Not found');
+  return res.json() as Promise<User>;
+}, { initialValue: undefined });
+
+effect(() => {
+  const state = user.value;
+  switch (state.status) {
+    case 'idle':
+    case 'pending': showSpinner(); break;
+    case 'fulfilled': renderUser(state.value); break;
+    case 'error': showError(state.error); break;
+  }
+});
+
+userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
+user.dispose();      // cancel and detach
+```
+
+::: tip deps must be read synchronously
+`asyncComputed` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
+:::
+
+## Store History / Time-Travel
+
+`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Every `.patch()`, `.replace()`, or `.reset()` pushes a snapshot. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
+
+```ts
+import { storeWithHistory } from '@vielzeug/ripple';
+
+const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100 });
+
+editor.patch({ text: 'hello', cursor: 5 });
+editor.patch({ text: 'hello world', cursor: 11 });
+
+console.log(editor.historyLength); // 3  (initial + 2 patches)
+console.log(editor.historyAt(0));  // { text: '', cursor: 0 }
+
+editor.undo();
+console.log(editor.value.text);    // 'hello'
+
+editor.redo();
+console.log(editor.value.text);    // 'hello world'
+```
+
+All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`, `map`, `filter`, `watch`) work as usual on a `StoreWithHistory<T>`.
+
 ## Stores
 
 A `Store<T>` adds structured state helpers on top of a `.value` getter. Every signal primitive (`computed`, `effect`, `watch`, `batch`, `untrack`) works on stores directly.
@@ -377,10 +492,10 @@ s.patch({ count: 1 });
 Receives the current state; return value replaces it:
 
 ```ts
-s.update((current) => ({ ...current, count: current.count + 1 }));
+s.replace((current) => ({ ...current, count: current.count + 1 }));
 ```
 
-`patch()` and `update()` are no-ops when the resulting state passes the `equals` check configured on the store (default: `Object.is`).
+`patch()` and `replace()` are no-ops when the resulting state passes the `equals` check configured on the store (default: `Object.is`).
 
 ## Resetting State
 
@@ -551,10 +666,10 @@ function createCounterService(): CounterService {
   return {
     state: readonly(s),
     increment() {
-      s.update((st) => ({ count: st.count + 1 }));
+      s.replace((st) => ({ count: st.count + 1 }));
     },
     decrement() {
-      s.update((st) => ({ count: st.count - 1 }));
+      s.replace((st) => ({ count: st.count - 1 }));
     },
   };
 }
@@ -796,6 +911,34 @@ it('computed updates reactively', () => {
 });
 ```
 
+## DevTools
+
+`installDevTools(hook)` installs a global observation hook for signal writes, effect runs, and computed recomputes. Pass `null` to uninstall.
+
+```ts
+import { installDevTools } from '@vielzeug/ripple';
+
+installDevTools({
+  onSignalWrite(signal, name, newValue) {
+    console.log(`[write] ${name ?? '?'} =`, newValue);
+  },
+  onEffectRun(name) {
+    performance.mark(`effect:start:${name ?? 'anon'}`);
+  },
+  onEffectDispose(name) {
+    performance.mark(`effect:end:${name ?? 'anon'}`);
+  },
+  onComputedRecompute(name) {
+    console.log(`[computed] ${name ?? '?'} recomputed`);
+  },
+});
+
+// Uninstall when no longer needed
+installDevTools(null);
+```
+
+All hook methods are optional. The hook is stored on `globalThis.__RIPPLE_DEVTOOLS__` and takes effect immediately after installation.
+
 ## Best Practices
 
 ### 1. Signals for Primitive Values, Stores for Objects
@@ -848,14 +991,14 @@ batch(() => {
 });
 ```
 
-### 5. Use `.update()` to Avoid Stale Reads
+### 5. Use `.update()` / `.replace()` to Avoid Stale Reads
 
 ```ts
-// ✅ concise and avoids re-reading .value
+// ✅ signals: atomic read-modify-write
 count.update((n) => n + 1);
 
-// also fine for stores
-cart.update((s) => ({ ...s, items: [...s.items, newItem] }));
+// ✅ stores: replace via function
+cart.replace((s) => ({ ...s, items: [...s.items, newItem] }));
 ```
 
 ### 6. Dispose Effects and Computeds When No Longer Needed

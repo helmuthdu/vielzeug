@@ -1,6 +1,6 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, resolveMessage } from '../core';
+import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
@@ -85,10 +85,6 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
 
       return fail(ErrorCode.invalid_multiple_of, resolveMessage(message, { step, value: typed }), { step });
     });
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { type: 'integer' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

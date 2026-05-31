@@ -1,341 +1,335 @@
-import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SourceMeta } from './types';
+import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SourceSnapshot } from './types';
 
 import { createSourceCore } from './core';
-import { createMeta, pageCount } from './pagination';
+import { createFetchManager } from './fetchManager';
+import { clampPage, createMeta, pageCount } from './pagination';
+import { SourceError } from './types';
 import { defaultKeyOf, defaultRetryDelay, extractError, retry } from './utils';
 
-type RemoteQuery<TFilter, TSort> = Readonly<{
-  filter?: TFilter;
-  limit: number;
-  page: number;
-  search?: string;
-  sort?: TSort;
-}>;
-
-type RemoteResult<T> = Readonly<{ items: readonly T[]; total: number }>;
-
-type OptimisticEntry<T> = {
-  active: boolean;
-  items: readonly T[];
-  prevItems: readonly T[];
-  prevTotal: number;
-  total: number;
-};
-
+/** Creates a remote page-based source that fetches data from a network endpoint. */
 export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   cfg: RemoteConfig<T, TFilter, TSort>,
 ): RemoteSource<T, TFilter, TSort> {
   const core = createSourceCore();
-  const limitDefault = Math.max(1, cfg.limit ?? 10);
+
+  // ── Config defaults ─────────────────────────────────────────────────────────
   const debounceMs = cfg.debounceMs ?? 300;
-  const keyOf = cfg.queryKey ?? defaultKeyOf;
-  const autoFetch = cfg.autoFetch ?? true;
   const retryAttempts = cfg.retry?.attempts ?? 0;
   const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const refreshIntervalMs = cfg.refreshInterval ?? 0;
+  const autoFetch = cfg.autoFetch !== false;
+  const staleTimeMs = cfg.staleTime ?? 0;
+  const keyOf = cfg.queryKey ?? defaultKeyOf;
 
-  // Initialise from snapshot when provided (SSR hydration).
-  let page = cfg.snapshot?.page ?? 1;
-  let limit = limitDefault;
-  let search = cfg.snapshot?.search ?? '';
-  let filter = cfg.filter as TFilter | undefined;
-  let sort = cfg.sort as TSort | undefined;
-
-  let items: readonly T[] = cfg.snapshot?.items ?? [];
-  let total = cfg.snapshot?.total ?? 0;
-  let error: string | null = null;
-  let cachedMeta!: SourceMeta;
-
-  // Optimistic update state — null when inactive.
-  let optimistic: OptimisticEntry<T> | null = null;
-
-  // pendingCount tracks in-flight requests including joiners for the same key.
-  let pendingCount = 0;
-
-  // latestKey prevents stale out-of-order responses from overwriting newer results.
-  let latestKey = '';
-
+  // ── Mutable state ───────────────────────────────────────────────────────────
+  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
+  let page = 1;
+  let search = '';
+  let filter: TFilter | undefined = cfg.filter;
+  let sort: TSort | undefined = cfg.sort;
+  let items: readonly T[] = [];
+  let total = 0;
+  let error: SourceError | null = null;
+  let lastFetchTime = 0;
+  let lastFetchKey = '';
   let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  const inflight = new Map<string, { controller: AbortController; promise: Promise<void> }>();
+  // Optimistic update state.
+  let optimistic: { active: boolean; prevItems: readonly T[]; prevTotal: number } | null = null;
 
-  const toQuery = (): RemoteSourceQuery<TFilter, TSort> => ({ filter, limit, page, search, sort });
+  // ── In-flight deduplication ─────────────────────────────────────────────────
+  const fm = createFetchManager<RemoteSourceQuery<TFilter, TSort>>(keyOf);
 
-  const toFetchQuery = (): RemoteQuery<TFilter, TSort> => ({
-    filter,
-    limit,
-    page,
-    search: search || undefined,
-    sort,
+  // ── Snapshot pre-population ─────────────────────────────────────────────────
+  if (cfg.snapshot) {
+    items = cfg.snapshot.items;
+    total = cfg.snapshot.total;
+
+    if (cfg.snapshot.page) page = cfg.snapshot.page;
+
+    if (cfg.snapshot.search) search = cfg.snapshot.search;
+
+    lastFetchTime = Date.now();
+  }
+
+  // ── Cached accessors ────────────────────────────────────────────────────────
+  let cachedCurrent: readonly T[] = [];
+  let cachedMeta = createMeta({
+    error: null,
+    isLoading: false,
+    isSearchPending: false,
+    pageNumber: 1,
+    pageSize: limit,
+    totalItems: 0,
   });
 
-  const assign = (res: RemoteResult<T>) => {
-    items = res.items;
-    total = res.total ?? 0;
-
-    if (optimistic) optimistic.active = false;
-
-    optimistic = null;
-
-    page = Math.min(Math.max(1, page), pageCount(total, limit));
-  };
-
   const refreshMeta = () => {
+    const pages = pageCount(total, limit);
+    const safePage = clampPage(page, pages);
+
+    // items is already the current page from the server — no local slicing needed.
+    cachedCurrent = items;
     cachedMeta = createMeta({
-      errorMessage: error,
-      isLoading: pendingCount > 0,
+      error,
+      isLoading: fm.pendingCount > 0,
       isSearchPending: core.isScheduled,
-      pageNumber: page,
+      pageNumber: safePage,
       pageSize: limit,
-      totalItems: optimistic?.total ?? total,
+      totalItems: total,
     });
   };
 
-  const notify = () => {
+  // Initialise cache before first fetch.
+  refreshMeta();
+
+  const commit = () => {
     refreshMeta();
     core.notify();
   };
 
-  const fetchQuery = async (q: RemoteQuery<TFilter, TSort>): Promise<void> => {
-    const key = keyOf(q);
-    const startTime = Date.now();
-
-    latestKey = key;
-
-    // Abort superseded requests.
-    for (const [k, entry] of inflight) {
-      if (k !== key) entry.controller.abort();
+  // ── Assign result ───────────────────────────────────────────────────────────
+  const assign = (result: Readonly<{ items: readonly T[]; total: number }>) => {
+    if (optimistic?.active) {
+      optimistic.active = false;
+      optimistic = null;
     }
 
-    // Join an identical in-flight request rather than issuing a duplicate.
-    if (inflight.has(key)) {
-      pendingCount++;
-      notify();
-
-      try {
-        await inflight.get(key)!.promise;
-      } finally {
-        pendingCount--;
-        notify();
-      }
-
-      return;
-    }
-
-    const controller = new AbortController();
-
-    pendingCount++;
-    error = null;
-    notify();
-
-    const promise = retry((signal) => cfg.fetch(q, signal), {
-      delay: retryDelay,
-      signal: controller.signal,
-      times: retryAttempts + 1,
-    })
-      .then((result) => {
-        if (key === latestKey) {
-          assign(result);
-          error = null;
-          cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
-        }
-      })
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
-
-        if (key === latestKey) {
-          if (optimistic?.active) {
-            // Restore pre-optimistic state on failure.
-            optimistic.active = false;
-            items = optimistic.prevItems;
-            total = optimistic.prevTotal;
-            optimistic = null;
-          } else {
-            items = [];
-            total = 0;
-          }
-
-          error = extractError(reason);
-          cfg.onFetch?.({ durationMs: Date.now() - startTime, error: error, query: q, status: 'error' });
-        }
-      })
-      .finally(() => {
-        inflight.delete(key);
-        pendingCount--;
-        notify();
-      });
-
-    inflight.set(key, { controller, promise });
-    await promise;
+    items = result.items;
+    total = result.total;
+    page = clampPage(page, pageCount(total, limit));
   };
 
-  const doUpdate = () => fetchQuery(toFetchQuery());
+  // ── Core fetch ──────────────────────────────────────────────────────────────
+  const toRemoteQuery = (): RemoteSourceQuery<TFilter, TSort> => ({
+    ...(filter !== undefined && { filter }),
+    ...(sort !== undefined && { sort }),
+    ...(search && { search }),
+    limit,
+    page,
+  });
 
-  refreshMeta();
+  const fetchQuery = (q: RemoteSourceQuery<TFilter, TSort>): Promise<void> => {
+    const key = keyOf(q);
 
+    if (staleTimeMs > 0 && key === lastFetchKey && total > 0 && Date.now() - lastFetchTime < staleTimeMs) {
+      return Promise.resolve();
+    }
+
+    error = null;
+
+    return fm.run(
+      q,
+      async (q, signal, isLatest) => {
+        const startTime = Date.now();
+
+        try {
+          const result = await retry((sig) => cfg.fetch(q, sig), {
+            delay: retryDelay,
+            signal,
+            times: retryAttempts + 1,
+          });
+
+          if (isLatest()) {
+            assign(result);
+            error = null;
+            lastFetchKey = key;
+            lastFetchTime = Date.now();
+            cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
+          }
+        } catch (reason: unknown) {
+          if (signal.aborted) return;
+
+          if (isLatest()) {
+            if (optimistic?.active) {
+              optimistic.active = false;
+              items = optimistic.prevItems;
+              total = optimistic.prevTotal;
+              optimistic = null;
+            } else {
+              items = [];
+              total = 0;
+            }
+
+            error = new SourceError(extractError(reason), { cause: reason, query: q });
+            cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
+          }
+        }
+      },
+      commit,
+    );
+  };
+
+  const doUpdate = () => fetchQuery(toRemoteQuery());
+
+  // ── Auto-fetch ──────────────────────────────────────────────────────────────
   if (autoFetch) {
     void doUpdate();
   }
 
-  if (refreshIntervalMs > 0) {
+  // ── Refresh interval ────────────────────────────────────────────────────────
+  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
     refreshTimer = setInterval(() => {
-      void doUpdate();
-    }, refreshIntervalMs);
+      if (!core.isDisposed) void doUpdate();
+    }, cfg.refreshInterval);
   }
 
-  const api: RemoteSource<T, TFilter, TSort> = {
+  // ── Public API ──────────────────────────────────────────────────────────────
+  return {
     get current() {
-      return optimistic?.items ?? items;
+      return cachedCurrent;
     },
 
     dispose() {
-      if (refreshTimer) {
+      if (refreshTimer !== undefined) {
         clearInterval(refreshTimer);
         refreshTimer = undefined;
       }
 
-      for (const entry of inflight.values()) {
-        entry.controller.abort();
-      }
-
-      inflight.clear();
+      fm.dispose();
       core.dispose();
     },
 
-    flush(): Promise<void> {
+    flush() {
       return core.flush(() => doUpdate());
     },
 
-    goTo(p: number): Promise<void> {
-      page = Math.max(1, Math.trunc(p));
+    goTo(target) {
+      if (target === page) return Promise.resolve();
+
+      page = target;
 
       return doUpdate();
     },
 
-    goToLast(): Promise<void> {
-      return api.goTo(pageCount(total, limit));
+    goToLast() {
+      const last = pageCount(total, limit);
+
+      if (page === last) return Promise.resolve();
+
+      page = last;
+
+      return doUpdate();
     },
 
-    hydrate(patch): Promise<void> {
+    hydrate(patch) {
       let changed = false;
 
       if (patch.limit !== undefined) {
-        const nextLimit = Math.max(1, Math.trunc(patch.limit));
+        const n = Math.max(1, Math.trunc(patch.limit));
 
-        if (nextLimit !== limit) {
-          limit = nextLimit;
+        if (n !== limit) {
+          limit = n;
           changed = true;
         }
       }
 
-      if (patch.search !== undefined && patch.search !== search) {
-        search = patch.search;
-        changed = true;
+      if ('search' in patch) {
+        const s = patch.search ?? '';
+
+        if (s !== search) {
+          search = s;
+          changed = true;
+        }
       }
 
       if ('filter' in patch && patch.filter !== filter) {
         filter = patch.filter;
+        page = 1;
         changed = true;
       }
 
       if ('sort' in patch && patch.sort !== sort) {
         sort = patch.sort;
+        page = 1;
         changed = true;
       }
 
-      if (patch.page !== undefined) {
-        const nextPage = Math.max(1, Math.trunc(patch.page));
-
-        if (nextPage !== page) {
-          page = nextPage;
-          changed = true;
-        }
+      if (patch.page !== undefined && patch.page !== page) {
+        page = patch.page;
+        changed = true;
       }
 
-      if (changed) return doUpdate();
+      if (!changed) return Promise.resolve();
 
-      return Promise.resolve();
+      return doUpdate();
     },
 
     get meta() {
       return cachedMeta;
     },
 
-    next(): Promise<void> {
-      if (page >= pageCount(total, limit)) return Promise.resolve();
+    next() {
+      const pages = pageCount(total, limit);
 
-      page += 1;
+      if (page >= pages) return Promise.resolve();
+
+      page++;
 
       return doUpdate();
     },
 
     optimisticUpdate(mutator, options) {
-      if (optimistic) {
+      if (optimistic?.active) {
         throw new Error(
-          'An optimistic update is already pending. Call the rollback function before starting a new one.',
+          'An optimistic update is already active. Rollback the previous update before starting another.',
         );
       }
 
-      const entry: OptimisticEntry<T> = {
-        active: true,
-        items: mutator(items),
-        prevItems: items,
-        prevTotal: total,
-        total: options?.total ?? total,
+      const prevItems = items;
+      const prevTotal = total;
+
+      optimistic = { active: true, prevItems, prevTotal };
+      items = mutator(items);
+      total = options?.total ?? total;
+      commit();
+
+      return () => {
+        if (optimistic?.active) {
+          optimistic.active = false;
+          items = prevItems;
+          total = prevTotal;
+          optimistic = null;
+          commit();
+        }
       };
-
-      const rollback = () => {
-        if (!entry.active) return;
-
-        entry.active = false;
-        items = entry.prevItems;
-        total = entry.prevTotal;
-        optimistic = null;
-        notify();
-      };
-
-      optimistic = entry;
-      notify();
-
-      return rollback;
     },
 
-    prev(): Promise<void> {
+    prev() {
       if (page <= 1) return Promise.resolve();
 
-      page -= 1;
+      page--;
 
       return doUpdate();
     },
 
-    ready(): Promise<void> {
-      return core.ready(() => pendingCount === 0 && !core.isScheduled);
+    ready(timeout) {
+      return core.ready(() => fm.pendingCount === 0 && !core.isScheduled, timeout);
     },
 
-    refresh(): Promise<void> {
+    refresh() {
       return doUpdate();
     },
 
-    reset(): Promise<void> {
-      page = 1;
-      limit = limitDefault;
+    reset() {
       search = '';
-      filter = cfg.filter as TFilter | undefined;
-      sort = cfg.sort as TSort | undefined;
+      page = 1;
 
       return doUpdate();
     },
 
-    search(q: string) {
+    search(q) {
+      if (q === search) return;
+
       search = q;
       page = 1;
       core.schedule(() => {
         void doUpdate();
       }, debounceMs);
-      notify();
+      commit();
     },
 
-    searchNow(q: string): Promise<void> {
+    searchNow(q) {
+      if (q === search) return Promise.resolve();
+
       core.cancelTimer();
       search = q;
       page = 1;
@@ -343,21 +337,29 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       return doUpdate();
     },
 
-    setFilter(f?: TFilter): Promise<void> {
+    setFilter(f) {
+      if (f === filter) return Promise.resolve();
+
       filter = f;
       page = 1;
 
       return doUpdate();
     },
 
-    setLimit(n: number): Promise<void> {
-      limit = Math.max(1, Math.trunc(n));
+    setLimit(n) {
+      const next = Math.max(1, Math.trunc(n));
+
+      if (next === limit) return Promise.resolve();
+
+      limit = next;
       page = 1;
 
       return doUpdate();
     },
 
-    setSort(s?: TSort): Promise<void> {
+    setSort(s) {
+      if (s === sort) return Promise.resolve();
+
       sort = s;
       page = 1;
 
@@ -369,9 +371,32 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     toQuery() {
-      return toQuery();
+      return {
+        ...(filter !== undefined && { filter }),
+        ...(sort !== undefined && { sort }),
+        ...(search && { search }),
+        limit,
+        page,
+      };
     },
   };
+}
 
-  return api;
+/** Creates a pre-populated `SourceSnapshot` suitable for embedding in HTML or passing over the wire. */
+export async function prefetchRemoteSource<T, TFilter = unknown, TSort = unknown>(
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
+): Promise<SourceSnapshot<T>> {
+  const source = createRemoteSource({ ...cfg, autoFetch: false });
+
+  await source.refresh();
+
+  const snapshot: SourceSnapshot<T> = {
+    items: source.current,
+    page: source.meta.pageNumber,
+    total: source.meta.totalItems,
+  };
+
+  source.dispose();
+
+  return snapshot;
 }

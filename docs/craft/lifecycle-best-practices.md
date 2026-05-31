@@ -112,8 +112,7 @@ define('toggle-host', {
 
 ## Pick the Right Cleanup Primitive
 
-- Use `onCleanup(fn)` for component-owned teardown.
-- Use `onElement()` for per-element teardown.
-- Return cleanup from `onMounted()` when cleanup belongs to mount-time setup.
-- Use `onEvent()` for event listeners that should auto-cleanup.
-- Use `listen()` when you need manual lifecycle control.
+- Use `onCleanup(fn)` for component-owned teardown (intervals, WebSockets, subscriptions).
+- Use `onElement()` for per-element teardown tied to a specific ref.
+- Return a cleanup function from `onMounted()` when cleanup belongs to mount-time initialization.
+- Use `onEvent()` for event listeners that should auto-cleanup on disconnect.

@@ -1,5 +1,7 @@
 import type { Fn } from '../types';
 
+import { LruMap } from '../typed/_lruMap';
+
 type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;
   maxSize?: number;
@@ -65,7 +67,7 @@ export function memo<T extends Fn>(
   fn: T,
   { key, maxSize = Infinity, ttl = Infinity }: MemoOptions<T> = {},
 ): Memoized<T> {
-  const cache = new Map<PropertyKey, CacheEntry<ReturnType<T>>>();
+  const cache = new LruMap<PropertyKey, CacheEntry<ReturnType<T>>>(maxSize);
   const inFlight = new Set<PropertyKey>();
 
   const resolveKey = (...args: Parameters<T>): PropertyKey => (key ? key(...args) : defaultKey(args));
@@ -76,7 +78,7 @@ export function memo<T extends Fn>(
     const cached = cache.get(cacheKey);
 
     if (cached && cached.expiresAt > now) {
-      cache.delete(cacheKey);
+      // Move to end (LRU bump) — delete+set handled inside LruMap.set
       cache.set(cacheKey, cached);
 
       return cached.value;
@@ -85,7 +87,6 @@ export function memo<T extends Fn>(
     const result = fn(...args);
     const entry: CacheEntry<ReturnType<T>> = { expiresAt: now + ttl, value: result as ReturnType<T> };
 
-    cache.delete(cacheKey);
     cache.set(cacheKey, entry);
 
     if (isPromise(result)) {
@@ -99,18 +100,8 @@ export function memo<T extends Fn>(
     }
 
     // LRU eviction — skip in-flight entries to avoid evicting pending Promises
-    while (cache.size > maxSize) {
-      let evicted = false;
-
-      for (const oldestKey of cache.keys()) {
-        if (!inFlight.has(oldestKey)) {
-          cache.delete(oldestKey);
-          evicted = true;
-          break;
-        }
-      }
-
-      if (!evicted) break; // all remaining entries are in-flight
+    while (cache.isOverCapacity) {
+      if (!cache.evictOldest((k) => !inFlight.has(k))) break;
     }
 
     return result as ReturnType<T>;

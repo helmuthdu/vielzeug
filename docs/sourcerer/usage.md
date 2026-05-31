@@ -7,7 +7,7 @@ description: Practical usage patterns for local, remote, cursor, and infinite so
 
 ## Basic Usage
 
-`createLocalSource()` manages an in-memory array. All operations are synchronous; the returned methods return resolved promises so code is uniform with remote sources.
+`createLocalSource()` manages an in-memory array. All operations are synchronous; methods return resolved promises so code is uniform with remote sources.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
@@ -29,7 +29,7 @@ console.log(source.meta.totalItems); // 1
 
 ## Local Source
 
-`createLocalSource()` manages an in-memory array. All operations are synchronous; the returned methods return resolved promises so code is uniform with remote sources.
+`createLocalSource()` manages an in-memory array. Recomputation is synchronous unless `filterAsync` or `sortAsync` is configured.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
@@ -43,49 +43,48 @@ const source = createLocalSource<User>(users, { limit: 10 });
 
 ```ts
 createLocalSource(data, {
-  limit: 10,          // items per page (default: 10)
+  limit: 10,          // items per page (default: 20)
   debounceMs: 300,    // debounce delay for source.search() (default: 300)
-  filter: (u) => u.active,   // initial filter predicate
+  filter: (u) => u.active,   // initial synchronous filter predicate
   sort: (a, b) => a.name.localeCompare(b.name), // initial sorter
-  searchFn: (items, query) => items.filter(/* custom match */), // override default fuzzy search
+  searchFn: (items, query) => items.filter(/* custom match */), // override default search
+  // Async variants — enable Web Worker offloading via @vielzeug/familiar:
+  filterAsync: async (items, signal) => items.filter(/* expensive filter */),
+  sortAsync: async (items, signal) => [...items].sort(/* expensive sort */),
 });
 ```
+
+`filterAsync` and `sortAsync` run after their synchronous counterparts. They set `meta.isLoading = true` during computation and accept an `AbortSignal` — a new call aborts any running async computation.
 
 ### Mutations
 
 ```ts
-source.setFilter((user) => user.role === 'admin');
-source.setSort((a, b) => a.name.localeCompare(b.name));
-await source.searchNow('ada');  // immediate
+await source.setFilter((user) => user.role === 'admin');
+await source.setSort((a, b) => a.name.localeCompare(b.name));
+await source.searchNow('ada');  // immediate, cancels any pending debounce
 source.search('ada');           // debounced — fire-and-forget
-await source.commit();          // flush pending debounced search
+await source.flush();           // flush pending debounced search immediately
 await source.goTo(2);
 await source.setData(newUsers); // replace entire dataset
-await source.reset();           // restore initial config, reset to page 1
+await source.reset();           // restore initial filter/sort, reset to page 1
 ```
 
-### Atomic updates
+### Hydrating from URL state
 
-Use `update()` to change multiple fields in a single operation. One recompute, one notification.
+Use `hydrate()` to apply URL-decoded state in one operation — only fields that changed trigger a recompute.
 
 ```ts
-// Apply limit change and jump to a specific page together
-await source.update({ limit: 5, page: 2 });
+import { decodeQuery } from '@vielzeug/sourcerer';
 
-// Clear search and reset page
-await source.update({ page: 1, search: '' });
-
-// Replace filter and sort simultaneously — offset resets once
-await source.update({ filter: (u) => u.active, sort: (a, b) => a.name.localeCompare(b.name) });
+const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
+await source.hydrate(query);
 ```
-
-> `update()` skips fields that haven't changed (identity comparison for filter/sort, value comparison for primitives) — passing the same values is a no-op.
 
 ---
 
 ## Remote Source
 
-`createRemoteSource()` wraps an async `fetch` function and manages page state, loading, error, debounced search, concurrency, and request cancellation.
+`createRemoteSource()` wraps an async `fetch` function and manages page state, loading, errors, debounced search, concurrency, and request cancellation.
 
 ```ts
 import { createRemoteSource } from '@vielzeug/sourcerer';
@@ -112,15 +111,22 @@ await source.ready();
 
 ```ts
 createRemoteSource({
-  fetch,              // required: (query, AbortSignal) => Promise<{ items, total }>
-  limit: 25,          // items per page (default: 10)
-  debounceMs: 300,    // debounce for source.search() (default: 300)
-  filter,             // initial filter value
-  sort,               // initial sort value
-  autoFetch: true,    // fetch on creation (default: true)
+  fetch,                      // required: (query, AbortSignal) => Promise<{ items, total }>
+  limit: 25,                  // items per page (default: 20)
+  debounceMs: 300,            // debounce for source.search() (default: 300)
+  filter,                     // initial filter value
+  sort,                       // initial sort value
+  autoFetch: true,            // fetch on creation (default: true)
   queryKey: (q) => `${q.page}-${q.limit}`, // custom deduplication key
+  staleTime: 5000,            // skip re-fetch if last fetch was within this many ms (default: 0)
+  refreshInterval: 30_000,    // auto re-fetch every N ms; cancelled on dispose()
+  retry: { attempts: 2, delay: (n) => n * 1000 }, // retry on failure
+  onFetch: (event) => logger.info(event), // telemetry callback
+  snapshot,                   // pre-populate from SSR snapshot
 });
 ```
+
+`staleTime` compares the **query key** — navigating to a different page always fetches even when the previous result is still within the stale window.
 
 ### The `fetch` callback
 
@@ -142,11 +148,11 @@ fetch: async ({ filter, limit, page, search, sort }, signal) => {
 ### Mutations
 
 ```ts
-source.setFilter({ role: 'admin' });
-source.setSort({ by: 'name', dir: 'asc' });
+await source.setFilter({ role: 'admin' });
+await source.setSort({ by: 'name', dir: 'asc' });
 await source.searchNow('ada');
 source.search('ada');     // debounced — triggers fetch after debounceMs
-await source.commit();    // flush pending debounced search immediately
+await source.flush();     // flush pending debounced search immediately
 await source.goTo(3);
 await source.next();
 await source.prev();
@@ -155,15 +161,16 @@ await source.reset();     // restore initial config and refetch
 await source.refresh();   // re-fetch current query
 ```
 
-### Atomic updates
-
-Like `createLocalSource`, `update()` batches multiple field changes into a single fetch call.
+### Hydrating from URL state
 
 ```ts
-await source.update({ limit: 5, page: 3, search: 'x' });
+import { decodeQuery } from '@vielzeug/sourcerer';
+
+const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
+await source.hydrate(query);
 ```
 
-`update()` is a no-op if none of the provided values differ from the current state.
+`hydrate()` is a no-op when no field has changed — safe to call on every page load.
 
 ### Optimistic updates
 
@@ -183,7 +190,9 @@ try {
 }
 ```
 
-The returned `rollback` function is a no-op once the next successful fetch has settled; calling it after a confirmed server response is safe.
+- The rollback function is a **no-op** once the next successful fetch has settled.
+- On fetch failure, the pre-optimistic items are restored (not an empty array).
+- Only one optimistic update can be active at a time — a second call throws.
 
 ### Concurrency and request deduplication
 
@@ -196,9 +205,10 @@ The returned `rollback` function is a no-op once the next successful fetch has s
 ```ts
 const source = createRemoteSource({ fetch, autoFetch: true });
 await source.ready(); // resolves when pendingCount === 0 and no debounce timer is active
+await source.ready(5000); // rejects with timeout error after 5 s if still loading
 ```
 
-Use `ready()` in server-side rendering, test setup, or any flow that needs the initial data before rendering.
+Use `ready()` in server-side rendering, test setup, or any flow that needs initial data before rendering.
 
 ---
 
@@ -231,13 +241,13 @@ await source.prev();  // go back using prevCursor
 await source.reset(); // clear cursors and refetch from the start
 ```
 
-`next()` and `prev()` are no-ops if there is no cursor in that direction. There is no page number concept; navigation is always cursor-relative.
+`next()` and `prev()` are no-ops if there is no cursor in that direction.
 
 ---
 
 ## Infinite Source
 
-`createInfiniteSource()` accumulates pages in `all` as the user loads more. Searching resets the accumulator and starts fresh from page 1.
+`createInfiniteSource()` accumulates items in `source.current` as the user loads more pages. Searching and `reset()` clear the accumulator and start fresh from page 1.
 
 ```ts
 import { createInfiniteSource } from '@vielzeug/sourcerer';
@@ -251,54 +261,114 @@ const source = createInfiniteSource<Post>({
 });
 
 await source.ready();
-console.log(source.all);          // first page
-console.log(source.meta.hasMore); // true if more pages exist
+console.log(source.current);            // first page of posts
+console.log(source.meta.hasMore);       // true if more pages exist
+console.log(source.meta.isLoadingMore); // true only during loadMore() fetches
 
-await source.loadMore();          // fetches page 2 and appends to source.all
-await source.loadMore();          // fetches page 3, appends again
+await source.loadMore();  // fetches page 2 and appends to source.current
+await source.loadMore();  // fetches page 3, appends again
 
-await source.reset();             // clear all, restart from page 1
+await source.reset();     // clear all, restart from page 1
 ```
 
-`loadMore()` is a no-op when `source.all.length >= source.meta.totalItems`.
+`loadMore()` is a no-op when `meta.hasMore` is `false`.
+
+`meta.isLoadingMore` is `true` only during `loadMore()` — distinct from `meta.isLoading` which is `true` during `reset()` and the initial fetch.
+
+---
+
+## Error Handling
+
+All sources expose `meta.error` as a `SourceError | null`. `SourceError` extends `Error` and carries structured context for logging and display:
+
+```ts
+if (source.meta.error) {
+  console.error(source.meta.error.message);  // human-readable message
+  console.error(source.meta.error.cause);    // original thrown value
+  console.error(source.meta.error.query);    // query that triggered the failure
+}
+```
+
+For simpler branching, use `sourceState()`:
+
+```ts
+import { sourceState } from '@vielzeug/sourcerer';
+
+const state = sourceState(source);
+
+switch (state.status) {
+  case 'loading': return renderSpinner();
+  case 'error':   return renderError(state.error.message);
+  case 'data':    return renderList(state.items);
+}
+```
+
+`sourceState()` works with any source type.
 
 ---
 
 ## Read Model
 
-Every source exposes a consistent read interface.
+Every source exposes `current`, `meta`, and `subscribe`.
 
 ```ts
-// Page-based sources (local, remote)
-source.current  // readonly T[] — items on the current page
-source.meta     // SourceMeta — pagination and status snapshot
-
-// Infinite source
-source.all      // readonly T[] — all accumulated items
-source.meta     // InfiniteMeta
-
-// Cursor source
-source.current  // readonly T[] — items on the current cursor page
-source.meta     // CursorMeta
+source.current  // readonly T[] — items on the current page (or all accumulated for infinite)
+source.meta     // SourceMeta | CursorMeta | InfiniteMeta — pagination and status snapshot
 ```
 
 ### `SourceMeta`
 
 ```ts
-type SourceMeta = {
-  errorMessage: string | null;
+type SourceMeta = Readonly<{
+  error: SourceError | null;    // null when healthy
   isLoading: boolean;
-  isSearchPending: boolean;
-  itemEnd: number;      // 1-based index of the last item on this page (0 if empty)
-  itemStart: number;    // 1-based index of the first item on this page (0 if empty)
+  isSearchPending: boolean;     // true while a debounced search timer is active
   pageCount: number;
   pageNumber: number;
   pageSize: number;
   totalItems: number;
-};
+}>;
 ```
 
-`meta` is replaced with a new object reference on every change. Both `current`/`all` and `meta` are stable references between changes — safe to compare with `===` to detect updates.
+Use `itemRange()` to compute display-level item numbers:
+
+```ts
+import { itemRange } from '@vielzeug/sourcerer';
+
+const { start, end } = itemRange(source.meta);
+// e.g. "Showing 21–40 of 150"
+console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
+```
+
+### `CursorMeta`
+
+```ts
+type CursorMeta = Readonly<{
+  error: SourceError | null;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  isLoading: boolean;
+  isSearchPending: boolean;
+  pageSize: number;
+  totalItems: number;
+}>;
+```
+
+### `InfiniteMeta`
+
+```ts
+type InfiniteMeta = Readonly<{
+  error: SourceError | null;
+  hasMore: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;   // true only during loadMore() — not during reset()
+  isSearchPending: boolean;
+  pageSize: number;
+  totalItems: number;
+}>;
+```
+
+`meta` is replaced with a new object reference on every change. Both `current` and `meta` are stable between changes — safe to compare with `===` to detect updates.
 
 ---
 
@@ -318,9 +388,9 @@ unsubscribe();
 
 ---
 
-## Ripple Signal Adapters
+## Ripple Signal Adapter
 
-Wrap any source in Ripple reactive signals with `toSignals()`, `toCursorSignals()`, or `toInfiniteSignals()`.
+`toSignals()` wraps any source in Ripple computed signals — works for all four source types.
 
 ```ts
 import { effect } from '@vielzeug/ripple';
@@ -336,20 +406,8 @@ effect(() => {
 
 await source.goTo(2); // effect re-runs automatically
 
-// When done, release all reactive resources
+// Release reactive resources when done
 dispose();
-```
-
-```ts
-import { toCursorSignals } from '@vielzeug/sourcerer';
-
-const { current, meta, dispose } = toCursorSignals(cursorSource);
-```
-
-```ts
-import { toInfiniteSignals } from '@vielzeug/sourcerer';
-
-const { all, meta, dispose } = toInfiniteSignals(infiniteSource);
 ```
 
 > Always call `dispose()` when the source is no longer needed. It unsubscribes from the source and releases the computed signals and their internal tick signal.
@@ -358,7 +416,8 @@ const { all, meta, dispose } = toInfiniteSignals(infiniteSource);
 
 ## URL Query Param Sync
 
-Serialize source state to URL params and restore it on page load.
+`encodeQuery()` serializes source state to flat URL-safe string params.
+`decodeQuery()` parses URL params (or a `URLSearchParams` instance) back into a partial query object.
 
 ```ts
 import { decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
@@ -367,15 +426,76 @@ import { decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 const params = encodeQuery(source.toQuery());
 // -> { page: '2', limit: '25', search: 'ada', filter: '{"role":"admin"}' }
 
-// Restore from URL params (e.g. new URLSearchParams(location.search))
-const query = decodeQuery(
-  Object.fromEntries(new URLSearchParams(location.search)),
-  { defaultLimit: 25 },
-);
-await source.restore(query);
+// Restore from URLSearchParams directly
+const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
+await source.hydrate(query);
 ```
 
-`decodeQuery` is fault-tolerant: malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
+`decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
+
+`search` is omitted from both `toQuery()` and `decodeQuery()` output when no search is active (no `search: ''` noise in URLs).
+
+---
+
+## SSR Prefetch
+
+`prefetchSource()` fetches one page on the server and returns a serialisable `SourceSnapshot`. Pass the snapshot to `createRemoteSource({ snapshot })` on the client to skip the initial loading flash.
+
+```ts
+// server.ts
+import { prefetchSource } from '@vielzeug/sourcerer';
+
+const snapshot = await prefetchSource({ fetch: fetchUsers, limit: 20 });
+// snapshot is JSON-serialisable: { items, total, page, search? }
+
+// client.ts
+import { createRemoteSource } from '@vielzeug/sourcerer';
+
+const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
+// source starts populated — no loading flash
+```
+
+`prefetchSource()` throws a `SourceError` if the fetch fails. Handle it server-side before embedding the snapshot.
+
+If you need both the snapshot and a live source without a double-fetch, use `prefetchSourceWithSource()`:
+
+```ts
+import { prefetchSourceWithSource } from '@vielzeug/sourcerer';
+
+const { snapshot, source } = await prefetchSourceWithSource({ fetch: fetchUsers, limit: 20 });
+// Use snapshot for SSR HTML embedding, source for subsequent client-side updates
+// Caller is responsible for calling source.dispose()
+source.dispose();
+```
+
+---
+
+## Fetch Middleware
+
+`composeFetch()` layers middleware around any `fetch`-shaped function. Middlewares execute left-to-right (first = outermost).
+
+```ts
+import { composeFetch } from '@vielzeug/sourcerer';
+
+const fetchWithMiddleware = composeFetch(
+  baseApiFetch,
+  loggingMiddleware,   // runs first
+  retryMiddleware,     // runs second
+);
+```
+
+Each middleware has the signature `(q, signal, next) => Promise<TResult>`:
+
+```ts
+import type { FetchMiddleware } from '@vielzeug/sourcerer';
+
+const loggingMiddleware: FetchMiddleware = async (q, signal, next) => {
+  console.log('fetch', q);
+  const result = await next(q, signal);
+  console.log('done', q);
+  return result;
+};
+```
 
 ---
 
@@ -489,9 +609,10 @@ effect(() => { void source.searchNow(controls.value.query); });
 
 ## Best Practices
 
-- Use `update()` instead of chained individual setters — one fetch, one notification.
 - Use `searchNow()` for form submit actions; use `search()` (debounced) for keypress flows.
 - Pass the `AbortSignal` from the `fetch` callback to your HTTP client so superseded requests are cancelled.
-- Call `ready()` in server-side rendering or test `await`s — not in every render.
+- Call `ready()` in server-side rendering or test setup — not in every render cycle.
 - Always call `dispose()` on signal adapters returned by `toSignals()` when the UI is torn down.
-- For URL sync, prefer `decodeQuery` + `restore()` over manually reconstructing source state from params.
+- For URL sync, prefer `decodeQuery()` + `hydrate()` over manually reconstructing source state from params.
+- Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
+- Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.

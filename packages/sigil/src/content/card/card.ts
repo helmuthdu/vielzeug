@@ -3,7 +3,7 @@ import { define, effect, html, prop } from '@vielzeug/craft';
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
 import { createInteraction } from '../../headless';
-import { disablableBundle, loadableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, loadableBundle, themableBundle } from '../../shared';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
 

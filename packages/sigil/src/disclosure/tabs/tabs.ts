@@ -3,19 +3,19 @@ import {
   createContext,
   define,
   html,
+  onMounted,
   prop,
   provide,
   type ReadonlySignal,
   ref,
   signal,
   watch,
-  onMounted,
 } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { createListControl, createInteraction } from '../../headless';
-import { sizableBundle, themableBundle } from '../../shared/config';
+import { createInteraction, createListControl } from '../../headless';
+import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
 import styles from './tabs.css?inline';
 

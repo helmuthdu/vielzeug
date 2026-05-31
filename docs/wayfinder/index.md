@@ -57,27 +57,20 @@ import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    home: {
-      path: '/',
-      handler: () => renderHome(),
-    },
+    home: { path: '/' },
     dashboard: {
       path: '/dashboard',
       children: {
-        index: {
-          index: true,
-          handler: () => renderDashboardHome(),
-        },
+        index: { index: true },
         settings: {
           path: 'settings',
           data: async () => fetchSettings(),
-          handler: ({ data }) => renderSettings(data),
         },
       },
     },
-    notFound: {
-      path: '*',
-      handler: () => renderNotFound(),
+  },
+  notFound: {
+    component: NotFoundPage,
     },
   },
 });
@@ -110,10 +103,14 @@ import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    home: { path: '/', handler: () => renderHome() },
-    dashboard: { path: '/dashboard', handler: () => renderDashboard() },
-    notFound: { path: '*', handler: () => renderNotFound() },
+    home: { path: '/' },
+    dashboard: { path: '/dashboard' },
   },
+  notFound: { component: NotFoundPage },
+});
+
+router.subscribe((state) => {
+  render(state.matches.at(-1)?.component);
 });
 ```
 
@@ -147,17 +144,21 @@ const router = createRouter({
 - Named and raw-path navigation through one `navigate()` API
 - Lazy-load route modules on first navigation
 - Middleware for guards, analytics, and error boundaries
-- Per-route `data()` loaders with `AbortSignal` cancellation
-- Per-route `onLeave` guards and global `beforeLeave` leave guards
+- Route `data()` loaders with `AbortSignal` cancellation and async-generator streaming
+- Per-match `status` for granular loading/streaming feedback in nested layouts
+- Global `beforeLeave` leave guards with optional route scoping
 - Typed and coercible search params via `coerceSearch`
+- Per-route `onError` boundaries for degraded data states
+- Declarative `notFound` fallback in router options
 - Hover-prefetch via `router.preload()`
 - Branch resolve without navigation via `router.resolve()`
-- SSR data prefetch via `router.match(url, signal?)`
+- SSR data prefetch via `router.match(url)`
 - Scroll restoration via the `scroll` option
 - History entry state readable as `ctx.historyState`
 - Errors from data loaders exposed on `router.getSnapshot().error`
+- `router.waitFor(name)` for lifecycle coordination and testing
 - Memory history for tests and non-browser environments
-- Wildcard routes for not-found and catch-all cases
+- Wildcard routes for catch-all cases
 - Base-path support for app subdirectories
 - View Transition API with per-navigation override
 

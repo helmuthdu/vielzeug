@@ -1,7 +1,6 @@
-import type { Issue, MessageFn, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { Issue, MessageFn, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
@@ -137,17 +136,6 @@ export class ArraySchema<T> extends Schema<T[]> {
 
       return fail(ErrorCode.invalid_unique, resolveMessage(message, { value: typed }), { unique: true });
     });
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const ann = this._annotations;
-    const base: Record<string, unknown> = { items: this.itemSchema.toJsonSchema(), type: 'array' };
-
-    if (ann.minItems !== undefined) base['minItems'] = ann.minItems;
-
-    if (ann.maxItems !== undefined) base['maxItems'] = ann.maxItems;
-
-    return base;
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

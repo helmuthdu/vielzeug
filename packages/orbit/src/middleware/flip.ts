@@ -1,7 +1,7 @@
 import type { DetectOverflowOptions, Middleware, Placement } from '../types';
 
 import { detectOverflow, getPlacementOverflow, hasOverflow, totalOverflow } from '../overflow';
-import { OPPOSITE, getAlignment, getSide, tagMiddleware, withPlacement } from '../utils';
+import { getAlignment, getSide, OPPOSITE, tagMiddleware, withPlacement } from '../utils';
 
 export interface FlipOptions extends DetectOverflowOptions {
   /**
@@ -24,6 +24,7 @@ export function flip(options: FlipOptions = {}): Middleware {
     const side = getSide(state.placement);
     const align = getAlignment(state.placement);
     const fallbackPlacements = options.fallbackPlacements ?? [withPlacement(OPPOSITE[side], align)];
+    const skipped: Placement[] = [state.placement];
     let bestPlacement = state.placement;
     let bestScore = totalOverflow(currentOverflow);
 
@@ -32,8 +33,13 @@ export function flip(options: FlipOptions = {}): Middleware {
       const score = totalOverflow(candidateOverflow);
 
       if (!hasOverflow(candidateOverflow)) {
-        return { reset: { placement: candidate } };
+        return {
+          data: { flip: { skippedPlacements: skipped } },
+          reset: { placement: candidate },
+        };
       }
+
+      skipped.push(candidate);
 
       if (score < bestScore) {
         bestPlacement = candidate;
@@ -42,7 +48,10 @@ export function flip(options: FlipOptions = {}): Middleware {
     }
 
     if (bestPlacement !== state.placement) {
-      return { reset: { placement: bestPlacement } };
+      return {
+        data: { flip: { skippedPlacements: skipped } },
+        reset: { placement: bestPlacement },
+      };
     }
   }, 'flip');
 }

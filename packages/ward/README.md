@@ -4,7 +4,7 @@ package: ward
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, wayfinder, conduit]
-exports: [createWard, owns, WILDCARD, ANONYMOUS]
+exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS]
 ---
 
 # @vielzeug/ward
@@ -18,7 +18,7 @@ exports: [createWard, owns, WILDCARD, ANONYMOUS]
 
 **Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createWard`, `owns`, `WILDCARD`, `ANONYMOUS`
+**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 
@@ -64,6 +64,14 @@ ward.can(principal, 'posts', 'read');
 ward.can(principal, 'posts', 'update', { authorId: 'u1' });
 ward.can(null, 'posts', 'read'); // anonymous
 
+// Full decision object — three distinct variants
+const decision = ward.explain(principal, 'posts', 'update', { authorId: 'u2' });
+if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+
+// Full decision trace with all matching candidates
+const trace = ward.trace(principal, 'posts', 'update', { authorId: 'u2' });
+trace.candidates.forEach(c => console.log(c.rule.effect, c.score, c.won));
+
 // Principal-bound view — principal is snapshotted at bind time
 const bound = ward.forUser(principal);
 
@@ -71,6 +79,10 @@ bound.can('posts', 'read');
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
 bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.explain('posts', 'update', { authorId: 'u2' });
+
+// Conflict detection
+const conflicts = ward.detectConflicts();
+if (conflicts.length > 0) console.warn('Policy conflicts:', conflicts);
 ```
 
 ## Documentation

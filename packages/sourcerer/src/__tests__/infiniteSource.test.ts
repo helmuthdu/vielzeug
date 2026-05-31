@@ -67,6 +67,91 @@ describe('createInfiniteSource', () => {
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
+
+    it('isLoadingMore clears after reset() aborts an in-flight loadMore', async () => {
+      let resolveLoadMore!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce({ items: ['a'], total: 3 })
+        .mockImplementationOnce(
+          () =>
+            new Promise<{ items: string[]; total: number }>((r) => {
+              resolveLoadMore = r;
+            }),
+        )
+        .mockResolvedValueOnce({ items: ['reset-page-1'], total: 1 });
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset(); // page 1 loaded
+
+      const loadMorePromise = source.loadMore(); // starts in-flight, aborted below
+
+      expect(source.meta.isLoadingMore).toBe(true);
+
+      // reset() aborts the loadMore in-flight
+      const resetPromise = source.reset();
+
+      // resolve the aborted loadMore after reset starts
+      resolveLoadMore({ items: ['late-page-2'], total: 3 });
+
+      await loadMorePromise;
+      await resetPromise;
+
+      // Both flags must be clear — no stuck spinner
+      expect(source.meta.isLoading).toBe(false);
+      expect(source.meta.isLoadingMore).toBe(false);
+    });
+
+    it('sets isLoadingMore true during loadMore and false after', async () => {
+      let resolve!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce({ items: ['a'], total: 3 })
+        .mockImplementationOnce(
+          () =>
+            new Promise((r) => {
+              resolve = r;
+            }),
+        );
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+
+      expect(source.meta.isLoadingMore).toBe(false);
+      expect(source.meta.isLoading).toBe(false);
+
+      const p = source.loadMore();
+
+      expect(source.meta.isLoadingMore).toBe(true);
+      expect(source.meta.isLoading).toBe(false);
+
+      resolve({ items: ['b'], total: 3 });
+      await p;
+
+      expect(source.meta.isLoadingMore).toBe(false);
+    });
+
+    it('sets isLoading true during initial fetch, not isLoadingMore', async () => {
+      let resolve!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi.fn(
+        () =>
+          new Promise<{ items: string[]; total: number }>((r) => {
+            resolve = r;
+          }),
+      );
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      const p = source.reset();
+
+      expect(source.meta.isLoading).toBe(true);
+      expect(source.meta.isLoadingMore).toBe(false);
+
+      resolve({ items: ['a'], total: 1 });
+      await p;
+
+      expect(source.meta.isLoading).toBe(false);
+      expect(source.meta.isLoadingMore).toBe(false);
+    });
   });
 
   describe('reset', () => {
@@ -131,7 +216,22 @@ describe('createInfiniteSource', () => {
 
       await source.reset();
 
-      expect(source.meta.errorMessage).toBe('infinite-fail');
+      expect(source.meta.error?.message).toBe('infinite-fail');
+      expect(source.meta.error?.name).toBe('SourceError');
+    });
+
+    it('clears error on successful fetch after failure', async () => {
+      const fetch = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce({ items: ['ok'], total: 1 });
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      await source.reset();
+      expect(source.meta.error).not.toBeNull();
+
+      await source.reset();
+      expect(source.meta.error).toBeNull();
     });
   });
 
@@ -174,7 +274,7 @@ describe('createInfiniteSource', () => {
 
       expect(fetch).toHaveBeenCalledTimes(2);
       expect(source.current).toEqual(['retried']);
-      expect(source.meta.errorMessage).toBeNull();
+      expect(source.meta.error).toBeNull();
     });
   });
 
@@ -190,6 +290,27 @@ describe('createInfiniteSource', () => {
       await source.reset();
 
       expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ready with timeout', () => {
+    it('resolves immediately when already idle', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      await expect(source.ready(1000)).resolves.toBeUndefined();
+    });
+
+    it('resolves after fetch completes within timeout', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      const p = source.ready(5000);
+
+      void source.reset();
+
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBeUndefined();
     });
   });
 });

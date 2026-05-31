@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/familiar",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

@@ -1,7 +1,24 @@
 ---
 title: 'Arsenal — Money Examples'
-description: 'Money utility examples for Arsenal.'
+description: 'Money utilities have moved to @vielzeug/coins.'
 ---
+
+# Money Utilities
+
+> **These utilities have moved.**
+>
+> `currency`, `exchange`, and all related money helpers are now part of [`@vielzeug/coins`](/coins/).
+> This page is kept for redirect purposes only.
+
+## Migration
+
+```diff
+- import { currency, exchange } from '@vielzeug/arsenal';
++ import { currency, exchange } from '@vielzeug/coins';
+```
+
+See the full [Coins documentation](/coins/) for the updated API.
+
 
 # Money Utilities
 

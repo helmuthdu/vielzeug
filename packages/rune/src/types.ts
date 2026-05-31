@@ -3,15 +3,26 @@
 export type LogType = 'debug' | 'error' | 'fatal' | 'info' | 'warn';
 export type LogLevel = LogType | 'off';
 
+/** Numeric priority for each level. Lower = more verbose. Exported for transport authors. */
+export const PRIORITY: Record<LogLevel, number> = {
+  debug: 0,
+  error: 3,
+  fatal: 4,
+  info: 1,
+  off: 5,
+  warn: 2,
+};
+
+/** Returns true if `level` passes the `threshold`. Returns false when `level` is 'off'. Exported for transport/middleware authors. */
+export function isLevelEnabled(threshold: LogLevel, level: LogLevel): boolean {
+  if (level === 'off') return false;
+
+  return PRIORITY[threshold] <= PRIORITY[level];
+}
+
 /* ─── Bindings & errors ─── */
 
 export type Bindings = Record<string, unknown>;
-
-export type SerializedError = {
-  message: string;
-  name: string;
-  stack?: string;
-};
 
 /* ─── Log entry ─── */
 
@@ -48,11 +59,11 @@ export type LogMiddleware = (entry: LogEntry) => LogEntry | null;
 export type ConsoleThemeEntry = {
   /** Badge text / glyph to display (e.g. '🅸', '→', 'INFO'). */
   badge: string;
-  /** Background color (CSS hex). Used as the badge background in browsers; badge text color in Node. */
+  /** Background color (CSS hex). Used as badge background in browser; as badge text tint in Node ANSI. */
   bg: string;
-  /** Border color for the badge. */
+  /** Border color for the badge (browser only). */
   border: string;
-  /** Text color inside the badge. */
+  /** Foreground / text color inside the badge (browser only). */
   color: string;
 };
 
@@ -65,6 +76,12 @@ export type ConsoleThemeEntry = {
  */
 export type ConsoleTheme = Partial<Record<LogType | 'group' | 'ns', Partial<ConsoleThemeEntry>>>;
 
+/**
+ * Fully-resolved console theme where every level and every field is populated.
+ * Returned by `resolveTheme()`. Useful for building custom transports on top of the default theme.
+ */
+export type ResolvedTheme = Record<LogType | 'group' | 'ns', ConsoleThemeEntry>;
+
 /* ─── Transport option types ─── */
 
 export type ConsoleTransportOptions = {
@@ -73,6 +90,20 @@ export type ConsoleTransportOptions = {
    * Default: true when process.stdout.isTTY is true, false otherwise.
    */
   ansi?: boolean;
+  /**
+   * Object serialization format for Node.js output.
+   * - 'json' — JSON.stringify (machine-readable, fails on circular refs)
+   * - 'raw' — pass the object directly to the console method (default)
+   * Default: 'raw'.
+   */
+  format?: 'json' | 'raw';
+  /**
+   * Custom object inspector function. When provided, context/bindings objects are
+   * passed through this function before being written to the console.
+   * Typical use: pass `require('util').inspect` or `(v) => util.inspect(v, { colors: true, depth: 4 })`
+   * in Node.js environments for richer object formatting.
+   */
+  inspectFn?: (value: unknown) => string;
   /** Minimum level to output. Default: 'debug'. */
   level?: LogLevel;
   /** Partial theme overrides merged on top of the default theme. */
@@ -140,8 +171,25 @@ export type BatchTransportOptions = {
   level?: LogLevel;
   /** Maximum buffer size before an early flush. Default: 50. */
   maxSize?: number;
-  /** Callback to receive flushed batches. */
-  onFlush: (entries: LogEntry[]) => void;
+  /**
+   * Callback to receive flushed batches. May return a Promise — async rejections
+   * are forwarded to `onFlushError` in addition to synchronous throws.
+   */
+  onFlush: (entries: LogEntry[]) => void | Promise<void>;
+  /**
+   * Called when onFlush throws synchronously or rejects asynchronously.
+   * Allows retry/dead-letter logic. Default: silent.
+   */
+  onFlushError?: (entries: LogEntry[], error: unknown) => void;
+};
+
+export type PipeOptions = {
+  /**
+   * Called when one of the piped transports throws.
+   * Receives the thrown error and the log entry that triggered it.
+   * Default: silent (errors are swallowed to protect remaining transports).
+   */
+  onError?: (error: unknown, entry: LogEntry) => void;
 };
 
 export type SampleTransportOptions = {
@@ -185,6 +233,19 @@ export type RuneOptions = {
    */
   onTransportError?: (error: unknown, entry: LogEntry, transportIndex: number) => void;
   /**
+   * Fraction of entries to sample before they reach transports (0–1).
+   * Applied after middleware, before transport dispatch.
+   * More efficient than sampleTransport — skips the entire transport pipeline for dropped entries.
+   * Default: 1 (no sampling).
+   */
+  sample?: number;
+  /**
+   * Console theme overrides. Applies to both consoleTransport (for log entries) and
+   * group()/groupCollapsed() (for group labels). Inherited by child loggers.
+   * Default: DEFAULT_THEME.
+   */
+  theme?: ConsoleTheme;
+  /**
    * Transport pipeline. Each transport receives every entry that passes the level threshold.
    * Default: [consoleTransport()].
    */
@@ -197,6 +258,8 @@ export type RuneConfig = {
   namespace: string;
   now: () => Date;
   onTransportError: (error: unknown, entry: LogEntry, transportIndex: number) => void;
+  sample: number;
+  theme: ConsoleTheme | undefined;
   transports: Transport[];
 };
 

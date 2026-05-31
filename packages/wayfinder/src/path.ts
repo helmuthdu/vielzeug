@@ -1,5 +1,4 @@
-import type { RouteMatcher, RouteRecord } from './types';
-import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteParams } from './types';
+import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteMatcher, RouteParams, RouteRecord } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {

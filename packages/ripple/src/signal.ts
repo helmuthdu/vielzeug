@@ -1,6 +1,8 @@
 import type { ComputedSignal, ReactiveOptions, Signal, SignalOptions, Subscription } from './types';
 
 import { computed } from './computed';
+import { getDevToolsHook } from './devtools';
+import { StateError } from './error';
 import { ReactiveBase } from './reactive-base';
 import { notifyNodeChange } from './scheduling';
 import { SubscriptionImpl } from './subscription';
@@ -34,8 +36,9 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
     if (this.equals_(this.value_, next)) return;
 
     this.value_ = next;
-    // F1: use global revision clock so ComputedImpl can do O(1) fast-path check.
     this.version = tickRevision();
+
+    getDevToolsHook()?.onSignalWrite?.(this, this.name, next);
 
     if (this.batched_) {
       if (!this.batchPending_) {
@@ -59,7 +62,11 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
   }
 
   readonly subscribe = (listener: () => void): Subscription => {
-    if (this.disposed_) return new SubscriptionImpl(() => {});
+    if (this.disposed_) {
+      const label = this.name ? ` "${this.name}"` : '';
+
+      throw new StateError('DISPOSED_READ', `Cannot subscribe to disposed signal${label}`);
+    }
 
     this.addEffectSub(listener);
 

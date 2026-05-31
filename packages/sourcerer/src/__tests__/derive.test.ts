@@ -24,10 +24,11 @@ describe('deriveSource', () => {
 
     upper.subscribe(listener);
 
-    await parent.goTo(1);
+    // setData triggers a recompute and notifies subscribers.
+    await parent.setData(['apple', 'banana', 'cherry', 'date']);
 
     expect(listener).toHaveBeenCalled();
-    expect(upper.current).toEqual(['APPLE', 'BANANA', 'CHERRY']);
+    expect(upper.current).toEqual(['APPLE', 'BANANA', 'CHERRY', 'DATE']);
   });
 
   it('notifies own subscribers when parent changes', async () => {
@@ -52,7 +53,8 @@ describe('deriveSource', () => {
     derived.subscribe(listener);
     derived.dispose();
 
-    await parent.goTo(1);
+    // setData triggers parent notification; derived is unsubscribed.
+    await parent.setData([4, 5, 6]);
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -80,5 +82,24 @@ describe('deriveSource', () => {
 
     // Listener should have been removed.
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('meta proxy reflects live parent meta updates', async () => {
+    const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+    const derived = deriveSource(source, (items) => items.map(String));
+
+    expect(derived.meta.pageNumber).toBe(1);
+    expect(derived.meta.totalItems).toBe(5);
+
+    await source.goTo(2);
+
+    // Meta should now reflect page 2 of the parent.
+    expect(derived.meta.pageNumber).toBe(2);
+    expect(derived.meta.totalItems).toBe(5);
+
+    await source.setData([10, 20]);
+
+    expect(derived.meta.totalItems).toBe(2);
+    expect(derived.meta.pageNumber).toBe(1);
   });
 });

@@ -180,4 +180,28 @@ describe('memoize', () => {
     expect(slow).toHaveBeenCalledTimes(2); // NOT called again for key 1
     await expect(p3).resolves.toBe(42);
   });
+
+  it('eviction loop breaks gracefully when all entries are in-flight', async () => {
+    // maxSize: 1. Fill with 2 in-flight entries. The eviction loop should break
+    // rather than loop forever when no evictable entry is available.
+    const resolvers: Array<(v: number) => void> = [];
+    const slow = vi.fn(
+      (_x: number) =>
+        new Promise<number>((r) => {
+          resolvers.push(r);
+        }),
+    );
+    const memoizedFn = memo(slow, { maxSize: 1 });
+
+    const p1 = memoizedFn(1);
+    const p2 = memoizedFn(2);
+
+    // Both entries are in-flight; the while loop must exit without hanging
+    expect(slow).toHaveBeenCalledTimes(2);
+
+    resolvers[0]!(10);
+    resolvers[1]!(20);
+    await expect(p1).resolves.toBe(10);
+    await expect(p2).resolves.toBe(20);
+  });
 });

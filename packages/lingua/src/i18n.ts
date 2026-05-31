@@ -1,4 +1,4 @@
-import { type Formatter, createFormatter } from './format';
+import { createFormatter, type Formatter } from './format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,12 +28,6 @@ export type I18nState = {
 };
 
 export type SubscribeOptions = {
-  immediate?: boolean;
-  /** AbortSignal — automatically unsubscribes when the signal is aborted. */
-  signal?: AbortSignal;
-};
-
-export type WatchOptions = {
   immediate?: boolean;
   /** AbortSignal — automatically unsubscribes when the signal is aborted. */
   signal?: AbortSignal;
@@ -73,6 +67,43 @@ export type MessageBranchKeys<T, P extends string = '', D extends number = 4> = 
           : (P extends '' ? K : `${P}.${K}`) | MessageBranchKeys<T[K], P extends '' ? K : `${P}.${K}`, Depth[D]>;
       }[string & keyof T]
     : never;
+
+// ─── Pipe-plural shorthand (F1) ───────────────────────────────────────────────
+// A leaf string containing '|' is parsed as a pipe-delimited plural shorthand.
+// Supported part counts and their form mappings (positional, left-to-right):
+//   2 parts → one | other
+//   3 parts → zero | one | other
+//   6 parts → zero | one | two | few | many | other
+// Any other part count is treated as a plain string with no expansion.
+
+const PIPE_FORM_MAPS: Readonly<Record<number, readonly string[]>> = {
+  2: ['one', 'other'],
+  3: ['zero', 'one', 'other'],
+  6: ['zero', 'one', 'two', 'few', 'many', 'other'],
+};
+
+function parsePipePlural(value: string): Messages | null {
+  const pipeIdx = value.indexOf('|');
+
+  if (pipeIdx === -1) return null;
+
+  const parts = value.split('|');
+  const forms = PIPE_FORM_MAPS[parts.length];
+
+  if (!forms) return null;
+
+  // An empty part is almost certainly a catalog authoring error.
+  // Treat the whole value as a plain string rather than silently producing an empty form.
+  if (parts.some((p) => p.trim() === '')) return null;
+
+  const result: Messages = {};
+
+  for (let i = 0; i < parts.length; i++) {
+    result[forms[i]] = parts[i];
+  }
+
+  return result;
+}
 
 // ─── Template compilation ─────────────────────────────────────────────────────
 // When `compile: true` is passed in I18nOptions, message strings are parsed once
@@ -164,8 +195,36 @@ export type I18nOptions<M extends Messages = Messages> = {
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 export type I18n<M extends Messages = Messages> = {
+  /**
+   * Returns a bound translation function for a specific key.
+   * The returned function caches the key lookup and invalidates on any catalog or locale change,
+   * making it suitable for hot-path render loops where key-string allocation matters.
+   *
+   * @example
+   * const greet = i18n.bind('greeting');
+   * users.forEach(u => greet({ name: u.name }));
+   */
+  bind(key: MessageLeafKeys<M> | (string & {})): (vars?: TranslateVars) => string;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
+  /**
+   * Creates a derived instance that inherits the current catalog snapshot, loaders,
+   * and namespace registry, but has its own locale, fallback chain, and subscribers.
+   * Catalog mutations on the fork do not affect the parent.
+   *
+   * Namespace registrations made on the parent **before** forking are copied to the fork.
+   * Registrations made after the fork are not propagated in either direction.
+   *
+   * Useful for SSR (one fork per request) and testing (custom onMissingKey).
+   *
+   * @example
+   * // SSR: per-request locale without touching the shared instance
+   * const reqI18n = i18n.fork({ locale: req.locale });
+   *
+   * // Tests: assert on missing-key behaviour without polluting the shared instance
+   * const testI18n = i18n.fork({ onMissingKey: k => `MISSING:${k}` });
+   */
+  fork(overrides?: Omit<I18nOptions<M>, 'catalogs' | 'compile'>): I18n<M>;
   /** Snapshot version starts at 0 and increments by 1 per observable change. */
   getSnapshot(): I18nSnapshot;
   /**
@@ -250,29 +309,19 @@ export type I18n<M extends Messages = Messages> = {
    * For cardinal plurals, `count=0` checks `${key}.zero` before the CLDR-selected form.
    * Ordinal plurals follow CLDR exclusively.
    *
+   * Pipe-delimited shorthand in the catalog is expanded at registration time:
+   * `{ inbox: 'One message|{count} messages' }` → `{ inbox: { one: '...', other: '...' } }`.
+   *
    * @security Returns a raw, unsanitized string — see `t()` for guidance on safe rendering.
    */
   tp(key: MessageBranchKeys<M> | (string & {}), count: number, vars?: TranslateVars, ordinal?: boolean): string;
-  /**
-   * Subscribes to locale/catalog changes using an `AbortSignal` for lifecycle management.
-   * Preferred alternative to `subscribe()` in modern environments.
-   *
-   * @example
-   * // React:
-   * useEffect(() => {
-   *   const controller = new AbortController();
-   *   i18n.watch(({ locale }) => {
-   *     document.documentElement.lang = locale;
-   *   }, { immediate: true, signal: controller.signal });
-   *   return () => controller.abort();
-   * }, []);
-   */
-  watch(callback: (snapshot: I18nSnapshot) => void, options?: WatchOptions): void;
 };
 
 // ─── Internals ────────────────────────────────────────────────────────────────
 
-// Module-level cache for canon() — Intl.getCanonicalLocales is pure.
+// Module-level canonical-locale cache — Intl.getCanonicalLocales is pure.
+// Bounded at CANON_CACHE_MAX to prevent unbounded growth from dynamic locale strings.
+const CANON_CACHE_MAX = 256;
 const canonCache = new Map<string, string>();
 
 function canon(locale: string): string {
@@ -290,17 +339,40 @@ function canon(locale: string): string {
 
   if (!canonical) throw new Error(`[lingua/E004] Invalid BCP 47 locale tag: "${locale}".`);
 
+  if (canonCache.size >= CANON_CACHE_MAX) canonCache.clear();
+
   canonCache.set(locale, canonical);
 
   return canonical;
 }
 
-// Catalog storage: flat map of dot-notation keys → raw strings.
-// When compile mode is on, a parallel map holds pre-compiled templates.
-type CatalogEntry = {
-  compiled?: Map<string, CompiledTemplate>;
-  strings: Map<string, string>;
-};
+// CatalogEntry encapsulates the string/compiled-template invariant.
+// Every mutation goes through `set()` so the compiled map stays in sync with strings.
+class CatalogEntry {
+  readonly compiled: Map<string, CompiledTemplate> | undefined;
+  readonly strings = new Map<string, string>();
+
+  constructor(withCompile: boolean) {
+    this.compiled = withCompile ? new Map() : undefined;
+  }
+
+  get(key: string): { compiled?: CompiledTemplate; message: string } | undefined {
+    const message = this.strings.get(key);
+
+    if (message === undefined) return undefined;
+
+    return { compiled: this.compiled?.get(key), message };
+  }
+
+  set(key: string, value: string): void {
+    this.strings.set(key, value);
+    this.compiled?.set(key, compileTemplate(value));
+  }
+
+  setAll(flat: Iterable<[string, string]>): void {
+    for (const [k, v] of flat) this.set(k, v);
+  }
+}
 
 function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]; set: Set<Locale> } {
   const set = new Set<Locale>();
@@ -318,6 +390,26 @@ function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]
   return { chain: [...set], set };
 }
 
+function flattenStrings(messages: Messages, result = new Map<string, string>(), prefix?: string): Map<string, string> {
+  for (const [key, value] of Object.entries(messages)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === 'string') {
+      const plural = parsePipePlural(value);
+
+      if (plural) {
+        flattenStrings(plural, result, fullKey);
+      } else {
+        result.set(fullKey, value);
+      }
+    } else {
+      flattenStrings(value as Messages, result, fullKey);
+    }
+  }
+
+  return result;
+}
+
 function selectPluralForm(
   cache: Map<string, Intl.PluralRules>,
   locale: Locale,
@@ -333,37 +425,6 @@ function selectPluralForm(
   }
 
   return rules.select(count);
-}
-
-function makeCatalogEntry(messages: Messages, withCompile: boolean): CatalogEntry {
-  const strings = flattenStrings(messages);
-  const compiled = withCompile ? compileStrings(strings) : undefined;
-
-  return { compiled, strings };
-}
-
-function flattenStrings(messages: Messages, result = new Map<string, string>(), prefix?: string): Map<string, string> {
-  for (const [key, value] of Object.entries(messages)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-
-    if (typeof value === 'string') {
-      result.set(fullKey, value);
-    } else {
-      flattenStrings(value as Messages, result, fullKey);
-    }
-  }
-
-  return result;
-}
-
-function compileStrings(strings: Map<string, string>): Map<string, CompiledTemplate> {
-  const compiled = new Map<string, CompiledTemplate>();
-
-  for (const [key, template] of strings) {
-    compiled.set(key, compileTemplate(template));
-  }
-
-  return compiled;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -423,59 +484,29 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     }
   };
 
-  const findMessage = (key: string): string | undefined => {
+  // Single-pass entry lookup: returns message + compiled template in one chain traversal (R4).
+  const findEntry = (key: string): { compiled?: CompiledTemplate; message: string } | undefined => {
     for (const candidate of activeChain) {
-      const value = catalogs.get(candidate)?.strings.get(key);
+      const found = catalogs.get(candidate)?.get(key);
 
-      if (value !== undefined) return value;
+      if (found !== undefined) return found;
     }
 
     return undefined;
   };
 
-  const findCompiled = (key: string): CompiledTemplate | undefined => {
-    for (const candidate of activeChain) {
-      const entry = catalogs.get(candidate);
-      const compiled = entry?.compiled?.get(key);
+  const interpolate = (
+    key: string,
+    found: { compiled?: CompiledTemplate; message: string },
+    vars: TranslateVars | undefined,
+  ): string => {
+    if (found.compiled) return renderTemplate(found.compiled, vars, key, locale, onMissingVar);
 
-      if (compiled !== undefined) return compiled;
-    }
-
-    return undefined;
-  };
-
-  const interpolateKey = (key: string, message: string, vars: TranslateVars | undefined): string => {
-    if (withCompile) {
-      const compiled = findCompiled(key);
-
-      if (compiled) return renderTemplate(compiled, vars, key, locale, onMissingVar);
-    }
-
-    // Regex-based path (non-compile mode or compiled form not found).
-    return message.replace(INTERPOLATION_PATTERN, (_match, varName: string) => {
+    return found.message.replace(INTERPOLATION_PATTERN, (_match, varName: string) => {
       const value = vars?.[varName];
 
       return value == null ? onMissingVar(varName, key, locale) : String(value);
     });
-  };
-
-  const applyCatalog = (normalized: Locale, normalized2: Locale, strings: Map<string, string>): void => {
-    const entry = catalogs.get(normalized2);
-
-    if (entry) {
-      for (const [k, v] of strings) {
-        entry.strings.set(k, v);
-
-        if (entry.compiled) {
-          entry.compiled.set(k, compileTemplate(v));
-        }
-      }
-    } else {
-      catalogs.set(normalized2, {
-        compiled: withCompile ? compileStrings(strings) : undefined,
-        strings,
-      });
-    }
   };
 
   const registerInternal = (loc: Locale, source: LocaleSource<M>): void => {
@@ -497,7 +528,11 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       catalogs.delete(normalized);
     } else {
       loaders.delete(normalized);
-      catalogs.set(normalized, makeCatalogEntry(source as M, withCompile));
+
+      const entry = new CatalogEntry(withCompile);
+
+      entry.setAll(flattenStrings(source as M));
+      catalogs.set(normalized, entry);
     }
 
     if (activeChainSet.has(normalized)) bump();
@@ -513,7 +548,10 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       if (typeof typedSource === 'function') {
         loaders.set(normalized, typedSource as Loader<M>);
       } else {
-        catalogs.set(normalized, makeCatalogEntry(typedSource as M, withCompile));
+        const entry = new CatalogEntry(withCompile);
+
+        entry.setAll(flattenStrings(typedSource as M));
+        catalogs.set(normalized, entry);
       }
     }
   }
@@ -537,7 +575,11 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
         if (loaders.get(normalized) !== loader) return;
 
         loaders.delete(normalized);
-        catalogs.set(normalized, makeCatalogEntry(messages, withCompile));
+
+        const entry = new CatalogEntry(withCompile);
+
+        entry.setAll(flattenStrings(messages));
+        catalogs.set(normalized, entry);
         loadingTasks.delete(normalized);
 
         if (activeChainSet.has(normalized)) bump();
@@ -565,8 +607,17 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
     const mergeMessages = typeof source === 'function' ? await (source as Loader<M>)() : (source as M);
     const mergeFlat = flattenStrings(mergeMessages);
+    const existing = catalogs.get(normalized);
 
-    applyCatalog(normalized, normalized, mergeFlat);
+    if (existing) {
+      existing.setAll(mergeFlat);
+    } else {
+      const entry = new CatalogEntry(withCompile);
+
+      entry.setAll(mergeFlat);
+      catalogs.set(normalized, entry);
+    }
+
     knownLocales.add(normalized);
 
     if (activeChainSet.has(normalized)) bump();
@@ -574,11 +625,11 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
   const translate = (key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string => {
     const base = String(key);
-    const message = findMessage(base);
+    const found = findEntry(base);
 
-    if (message === undefined) return onMissingKey(base, locale);
+    if (!found) return onMissingKey(base, locale);
 
-    return interpolateKey(base, message, vars);
+    return interpolate(base, found, vars);
   };
 
   const translatePlural = (
@@ -597,16 +648,20 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
     const base = String(key);
     const form = selectPluralForm(pluralCache, locale, count, ordinal);
-    const selectedKey = !ordinal && count === 0 ? `${base}.zero` : `${base}.${form}`;
-    const message = findMessage(selectedKey) ?? findMessage(`${base}.other`);
 
-    if (message === undefined) return onMissingKey(base, locale);
+    // Determine the candidate key, then explicitly fall back to `.other` (R8).
+    const primaryKey = !ordinal && count === 0 ? `${base}.zero` : `${base}.${form}`;
+    let resolvedKey = primaryKey;
+    let found = findEntry(primaryKey);
 
-    return interpolateKey(
-      selectedKey.endsWith('.other') ? `${base}.other` : selectedKey,
-      message,
-      vars ? { ...vars, count } : { count },
-    );
+    if (!found) {
+      resolvedKey = `${base}.other`;
+      found = findEntry(resolvedKey);
+    }
+
+    if (!found) return onMissingKey(base, locale);
+
+    return interpolate(resolvedKey, found, vars ? { ...vars, count } : { count });
   };
 
   const subscribeInternal = (callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe => {
@@ -630,7 +685,56 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   };
 
   return {
+    bind(key: MessageLeafKeys<M> | (string & {})): (vars?: TranslateVars) => string {
+      const base = String(key);
+      let snapshotRef = snapshot;
+      let cached = findEntry(base);
+
+      return (vars?: TranslateVars): string => {
+        // Invalidate on any catalog or locale change (bump() replaces snapshot reference).
+        if (snapshot !== snapshotRef) {
+          snapshotRef = snapshot;
+          cached = findEntry(base);
+        }
+
+        if (!cached) return onMissingKey(base, locale);
+
+        return interpolate(base, cached, vars);
+      };
+    },
+
     fmt,
+
+    fork(overrides?: Omit<I18nOptions<M>, 'catalogs' | 'compile'>): I18n<M> {
+      const forkedCatalogs: Record<Locale, LocaleSource<M>> = {};
+
+      // Snapshot all currently resolved catalogs as plain-object sources.
+      for (const [loc, entry] of catalogs) {
+        forkedCatalogs[loc] = Object.fromEntries(entry.strings) as unknown as M;
+      }
+
+      // Preserve loaders for locales that haven't been resolved yet.
+      for (const [loc, loader] of loaders) {
+        forkedCatalogs[loc] = loader;
+      }
+
+      const child = createI18n<M>({
+        catalogs: forkedCatalogs,
+        compile: withCompile,
+        fallback: overrides?.fallback ?? (fallback.length > 0 ? fallback : undefined),
+        locale: overrides?.locale ?? locale,
+        onMissingKey: overrides?.onMissingKey ?? cfg.onMissingKey,
+        onMissingVar: overrides?.onMissingVar ?? cfg.onMissingVar,
+        onSubscriberError: overrides?.onSubscriberError ?? cfg.onSubscriberError,
+      });
+
+      // Copy the namespace registry so the fork can call loadNamespace() independently.
+      for (const [ns, factory] of namespaceRegistry) {
+        child.registerNamespace(ns, factory);
+      }
+
+      return child;
+    },
 
     getSnapshot() {
       return snapshot;
@@ -654,7 +758,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     },
 
     has(key: MessageLeafKeys<M> | (string & {})): boolean {
-      return findMessage(String(key)) !== undefined;
+      return findEntry(String(key)) !== undefined;
     },
 
     loadNamespace(ns: string, loc?: Locale): Promise<void> {
@@ -707,18 +811,17 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     restoreState(state: I18nState): void {
       for (const [loc, flatCatalog] of Object.entries(state.catalogs)) {
         const normalized = canon(loc);
-        const strings = new Map(Object.entries(flatCatalog));
+        const entry = new CatalogEntry(withCompile);
 
+        entry.setAll(Object.entries(flatCatalog));
         knownLocales.add(normalized);
-        catalogs.set(normalized, {
-          compiled: withCompile ? compileStrings(strings) : undefined,
-          strings,
-        });
+        catalogs.set(normalized, entry);
       }
 
       const normalized = canon(state.locale);
 
       locale = normalized;
+      knownLocales.add(normalized);
       ({ chain: activeChain, set: activeChainSet } = buildLocaleChain(locale, fallback));
       fmt.clear();
       bump();
@@ -728,7 +831,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       const pre = String(prefix);
 
       return {
-        has: (key) => findMessage(`${pre}.${key}`) !== undefined,
+        has: (key) => findEntry(`${pre}.${key}`) !== undefined,
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
         tp: (key, count, vars?, ordinal?) => translatePlural(`${pre}.${key}`, count, vars, ordinal),
       };
@@ -756,9 +859,5 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
     t: translate,
     tp: translatePlural,
-
-    watch(callback: (snapshot: I18nSnapshot) => void, options?: WatchOptions): void {
-      subscribeInternal(callback, options);
-    },
   };
 }

@@ -1,9 +1,7 @@
 import type {
+  MatchStatus,
   Middleware,
-  NavigateOptions,
-  NamedNavigationTarget,
   NavigationStatus,
-  RawNavigationTarget,
   ResolvedQueryParams,
   RouteBranchDef,
   RouteContext,
@@ -32,11 +30,16 @@ export function createRouteState<TMeta = unknown, TComponent = unknown>(input: {
   };
 }
 
+/**
+ * Build a RouteMatchBranch from compiled defs, data results, and optional per-node statuses.
+ * F1: Each node carries its own `status` for fine-grained nested layout feedback.
+ */
 export function buildMatchBranch<TMeta = unknown, TComponent = unknown>(
   branchDefs: readonly RouteBranchDef<TMeta, TComponent>[],
   params: RouteParams,
   pathname: string,
   dataResults: unknown[],
+  statuses?: readonly MatchStatus[],
 ): RouteMatchBranch<TMeta, TComponent> {
   return branchDefs.map((def, i): RouteMatchBranch<TMeta, TComponent>[number] => ({
     component: def.component as TComponent,
@@ -45,6 +48,7 @@ export function buildMatchBranch<TMeta = unknown, TComponent = unknown>(
     name: def.name,
     params: { ...params },
     pathname,
+    status: statuses?.[i] ?? 'idle',
   }));
 }
 
@@ -66,18 +70,6 @@ export function createRouteContext<TRoutes extends RouteTable>(
     params,
     pathname: location.pathname,
     query: resolvedQuery,
-  };
-}
-
-// ─── redirectTo middleware helper ─────────────────────────────────────────────
-
-/** Build redirect middleware for common guard flows. */
-export function redirectTo<TRoutes extends RouteTable = RouteTable>(
-  target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
-  options?: NavigateOptions,
-): Middleware<TRoutes> {
-  return async (context) => {
-    await context.navigate(target, options);
   };
 }
 

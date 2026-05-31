@@ -12,10 +12,6 @@ export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
     );
   }
 
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { type: 'boolean' };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'boolean' };
   }

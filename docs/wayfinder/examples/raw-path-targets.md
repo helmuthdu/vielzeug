@@ -18,10 +18,10 @@ import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    home: { path: '/', handler: () => renderHome() },
-    checkout: { path: '/checkout', handler: () => renderCheckout() },
-    notFound: { path: '*', handler: () => renderNotFound() },
+    home: { path: '/' },
+    checkout: { path: '/checkout' },
   },
+  notFound: { component: NotFoundPage },
 });
 
 // One-off marketing URL that doesn't belong in the route table.

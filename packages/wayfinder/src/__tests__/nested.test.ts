@@ -7,13 +7,13 @@ import { settle } from './test-utils';
 
 describe('nested routes', () => {
   it('compiles and matches nested child routes', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/dashboard/settings'),
       routes: {
         dashboard: {
           children: {
-            settings: { handler, path: 'settings' },
+            settings: { data, path: 'settings' },
           },
           path: '/dashboard',
         },
@@ -22,7 +22,7 @@ describe('nested routes', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
@@ -44,13 +44,13 @@ describe('nested routes', () => {
   });
 
   it('index child inherits the parent path', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/dashboard'),
       routes: {
         dashboard: {
           children: {
-            index: { handler, index: true },
+            index: { data, index: true },
             settings: { path: 'settings' },
           },
           path: '/dashboard',
@@ -60,7 +60,7 @@ describe('nested routes', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
@@ -89,7 +89,7 @@ describe('nested routes', () => {
         parent: {
           children: {
             child: {
-              handler: () => {
+              data: () => {
                 calls.push('handler');
               },
               middleware: [
@@ -140,7 +140,6 @@ describe('nested routes', () => {
           children: {
             profile: {
               data: async () => ({ page: 'profile' }),
-              handler: vi.fn(),
               path: 'profile',
             },
           },

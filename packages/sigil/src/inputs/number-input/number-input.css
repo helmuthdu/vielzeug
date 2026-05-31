@@ -24,6 +24,43 @@
     margin-top: var(--size-7);
   }
 
+  .field-wrapper {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--size-1);
+  }
+
+  .label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  /* Inset placement (default): label floats over the field */
+  :host(:not([label-placement='outside'])) .label {
+    position: absolute;
+    inset-block-start: var(--size-2);
+    inset-inline-start: var(--size-3);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  :host(:not([label-placement='outside'])) .field-wrapper:has(.label:not([hidden])) .field {
+    padding-block-start: calc(var(--size-2) + 1lh + 2px);
+  }
+
+  /* Outside placement */
+  :host([label-placement='outside']) .label {
+    font-size: var(--text-sm);
+    line-height: var(--leading-none);
+  }
+
   /* Style the spin buttons */
   button {
     display: inline-flex;

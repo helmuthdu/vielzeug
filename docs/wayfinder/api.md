@@ -19,9 +19,10 @@ description: Complete API reference for Wayfinder.
 | `router.url(name, params?, query?)` | Build a URL for a named route | Sync | Throws if the route name is unknown |
 | `router.isActive(name, options?)` | Check if a named route matches the current URL | Sync | Reads `history.location` directly, not from snapshot |
 | `router.resolve(pathname)` | Resolve a pathname to a branch without side effects | Sync | Returns `null` for redirect routes |
-| `router.match(url, signal?)` | Resolve a URL to a full state including data loaders | Async | Lazy modules are resolved as a side effect |
+| `router.match(url, options?)` | Resolve a URL to a full state including data loaders | Async | Lazy modules are resolved as a side effect |
 | `router.preload(name, params?)` | Eagerly run data loaders without navigating | Async | Results are discarded on the next navigation |
-| `router.beforeLeave(blocker)` | Register a global leave guard | Sync (returns unsub) | Fires after per-route `onLeave` guards |
+| `router.waitFor(name)` | Wait for the router to settle on a named route | Async | Rejects immediately if `status === 'error'` |
+| `router.beforeLeave(blocker, options?)` | Register a global leave guard | Sync (returns unsub) | Scoped to specific routes via `options.routes` |
 | `router.dispose()` | Remove listeners and shut down the router | Sync | Idempotent — safe to call multiple times |
 
 ## Package Entry Point
@@ -38,16 +39,16 @@ import { createRouter } from '@vielzeug/wayfinder';
 const router = createRouter({
   base: '/app',
   routes: {
-    home: { path: '/', handler: () => renderHome() },
+    home: { path: '/' },
     dashboard: {
       path: '/dashboard',
       children: {
-        index: { index: true, handler: () => renderDashboardHome() },
-        settings: { path: 'settings', data: () => fetchSettings(), handler: ({ data }) => renderSettings(data) },
+        index: { index: true },
+        settings: { path: 'settings', data: () => fetchSettings() },
       },
     },
-    notFound: { path: '*', handler: () => renderNotFound() },
   },
+  notFound: { component: NotFoundPage },
 });
 ```
 
@@ -56,7 +57,8 @@ const router = createRouter({
 | `base`           | `string`                       | `'/'`                    | Base path prefix for all routes                                                                                                                  |
 | `history`        | `HistoryDriver`                | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                |
 | `middleware`     | `Middleware[]`                 | `[]`                     | Global middleware prepended to every route                                                                                                       |
-| `onError`        | `(error, context) => void`     | —                        | Optional sink for non-awaited/background router errors (`initial-navigation`, `history-listener`, `preload`)                                     |
+| `notFound`       | `Pick<ContentRouteDefinition, 'component' \| 'data' \| 'meta' \| 'middleware'>` | — | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. |
+| `onError`        | `(error, context) => void`     | —                        | Optional sink for non-awaited/background router errors                                                                                          |
 | `routes`         | `RouteTable`                   | required                 | Declarative route table. Object key order defines match precedence.                                                                              |
 | `scroll`         | `(to, from) => ScrollDecision` | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position. |
 | `viewTransition` | `boolean`                      | `false`                  | Wrap navigations in the View Transition API when available                                                                                       |
@@ -83,22 +85,15 @@ Nested routes are declared with `children`, and child names become compound name
 
 ```ts
 const routes = {
-  home: {
-    path: '/',
-    handler: () => renderHome(),
-  },
+  home: { path: '/' },
   dashboard: {
     path: '/dashboard',
     middleware: [requireAuth],
     children: {
-      index: {
-        index: true,
-        handler: () => renderDashboard(),
-      },
+      index: { index: true },
       settings: {
         path: 'settings',
         data: async () => fetchSettings(),
-        handler: ({ data }) => renderSettings(data),
       },
     },
   },
@@ -106,13 +101,9 @@ const routes = {
     path: '/users/:id',
     meta: { section: 'users' },
     data: async ({ params }) => fetchUser(params.id),
-    handler: ({ data }) => renderUser(data),
+    onError: (error) => ({ error, user: null }),
   },
-  notFound: {
-    path: '*',
-    handler: () => renderNotFound(),
-  },
-});
+};
 ```
 
 Each route definition supports these fields:
@@ -123,12 +114,11 @@ Each route definition supports these fields:
 | `children`     | `Record<string, RouteDefinition>`           | Nested child routes. Child names are appended to the parent route name.                                                   |
 | `index`        | `boolean`                                   | Default child route that inherits the parent path.                                                                        |
 | `component`    | `unknown`                                   | Optional framework view payload exposed on the leaf `RouteMatch`.                                                         |
-| `data`         | `DataFn`                                    | Optional route data function. Runs after middleware and before the handler.                                               |
-| `handler`      | `RouteHandler`                              | Optional terminal handler. Receives `HandlerContext` (extends `RouteContext` with `data`).                                |
-| `lazy`         | `() => Promise<{ handler?, data?, component?, meta? }>` | Lazy-load the route module. Called once on first navigation; result overrides static fields in the hydration cache. |
+| `data`         | `DataFn`                                    | Data loader. Runs after middleware; result available as `match.data`. Supports streaming via `AsyncGenerator`.             |
+| `lazy`         | `() => Promise<{ data?, component?, meta? }>` | Lazy-load the route module. Called once on first navigation; result overrides static fields in the hydration cache.     |
 | `meta`         | `unknown`                                   | Static metadata exposed on each `RouteMatch` in the branch.                                                               |
 | `middleware`   | `Middleware[]`                              | Optional route-specific middleware                                                                                        |
-| `onLeave`      | `() => MaybePromise<boolean>`               | Per-route leave guard. Return `false` to cancel navigation away from this route. Fires before global `beforeLeave` guards. |
+| `onError`      | `(error, context: DataContext) => MaybePromise<unknown>` | Per-route error boundary for data loader failures. Return value becomes `match.data` for degraded rendering. |
 | `redirect`     | `NavigationTarget`                          | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
 | `coerceSearch` | `(raw: QueryParams) => ResolvedQueryParams` | Coerce raw URL string values into typed values. Return value replaces `ctx.query`. Throwing leaves the parsed query unchanged. |
 
@@ -243,7 +233,7 @@ Resolve a pathname without running middleware, handlers, data loaders, or subscr
 
 ---
 
-#### `router.match(url, signal?)`
+#### `router.match(url, options?)`
 
 ```ts
 // SSR data prefetch
@@ -251,7 +241,8 @@ const state = await router.match('/users/42');
 
 // With cancellation
 const controller = new AbortController();
-const state = await router.match('/dashboard', controller.signal);
+const state = await router.match('/dashboard', { signal: controller.signal });
+```
 ```
 
 Resolve a full URL to a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
@@ -259,6 +250,26 @@ Resolve a full URL to a `RouteState` including data loader results, without modi
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 
 **Returns:** `Promise<RouteState | null>`
+
+---
+
+#### `router.waitFor(name)`
+
+```ts
+// Navigate and wait for data to settle
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+const state = await router.waitFor('userDetail');
+const user = state.matches.at(-1)?.data;
+
+// Useful in tests with memory history:
+const history = createMemoryHistory('/dashboard');
+const router = createRouter({ history, routes });
+const state = await router.waitFor('dashboard');
+```
+
+Waits for the router to reach `status: 'idle'` with the named route active in the matched branch. Rejects immediately if `status === 'error'`. Resolves immediately if the router is already idle on the target route.
+
+**Returns:** `Promise<RouteState>`
 
 ---
 
@@ -281,9 +292,9 @@ Eagerly runs the data loaders for a named route without navigating. Useful for h
 
 ```ts
 // Guard unsaved-changes forms
-const remove = router.beforeLeave(async () => {
+const remove = router.beforeLeave(async (destination) => {
   if (!form.isDirty) return true;
-  return confirm('Leave without saving?');
+  return confirm(`Leave without saving? (going to ${destination.pathname})`);
 });
 
 // Remove the guard when the form unmounts
@@ -292,7 +303,14 @@ remove();
 
 Register a global leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`.
 
-For route-scoped leave guards that only apply to a specific route, use the `onLeave` field in the route definition instead. When both are present, `onLeave` (leaf → root) fires before global `beforeLeave` guards (in registration order).
+Scope a guard to fire only when navigating away from a specific route:
+
+```ts
+router.beforeLeave(
+  async () => confirm('Discard changes?'),
+  { routes: ['editor'] },
+);
+```
 
 Declarative `redirect` routes bypass all leave guards.
 
@@ -364,7 +382,7 @@ Register a listener that is called after each subsequent state change. The liste
 
 ### `RouteContext<Params, TRoutes>`
 
-Context passed to middleware functions. Handlers receive `HandlerContext` (a subtype that also carries `data`).
+Context passed to middleware and data loader functions.
 
 ```ts
 type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
@@ -385,25 +403,19 @@ type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends Rout
 
 Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 
-### `HandlerContext<Params, TRoutes>`
+`ctx.locals` is mutable and shared across the entire middleware chain for one navigation. Use it to pass values from middleware to data loaders.
 
-```ts
-type HandlerContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> =
-  RouteContext<Params, TRoutes> & {
-    /** Result of the route's `data()` function, or `undefined` if none was defined. */
-    readonly data: unknown;
-  };
-```
-
-Only available inside route `handler` functions. Middleware always runs before `data()`, so `data` is never present in middleware context.
+`ctx.query` is the coerced query (after `coerceSearch`). `router.getSnapshot().location.query` always contains raw string values from URL parsing.
 
 ### `DataFn<Params, TRoutes>`
 
 ```ts
 type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
   context: DataContext<Params, TRoutes>,
-) => unknown | Promise<unknown>;
+) => DataStream | MaybePromise<unknown>;
 ```
+
+Return an `AsyncGenerator` to stream partial results (see `DataStream`).
 
 ### `DataContext<Params, TRoutes>`
 
@@ -416,12 +428,23 @@ type DataContext<Params extends RouteParams = RouteParams, TRoutes extends Route
 };
 ```
 
-### `RouteHandler<Params, TRoutes>`
+### `DataStream<T>`
 
 ```ts
-type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
-  context: RouteContext<Params, TRoutes>,
-) => void | Promise<void>;
+type DataStream<T = unknown> = AsyncGenerator<T, T>;
+```
+
+Return a `DataStream` from a `data()` function to stream partial results. Each `yield` updates `match.data` immediately with `match.status: 'streaming'`. The `return` value is the final settled data with `match.status: 'idle'`.
+
+```ts
+data: async function* ({ signal }) {
+  const items: Item[] = [];
+  for await (const batch of streamBatches({ signal })) {
+    items.push(...batch);
+    yield items;   // partial — status: 'streaming'
+  }
+  return items;    // final  — status: 'idle'
+},
 ```
 
 ### `Middleware<TRoutes>`
@@ -433,9 +456,7 @@ type Middleware<TRoutes extends RouteTable = RouteTable> = (
 ) => void | Promise<void>;
 ```
 
-Middleware ordering is simple: global middleware first, then route middleware, then the handler.
-
-If a route defines `data`, middleware still runs first. The effective order is global middleware, route middleware, data, then handler.
+Middleware ordering is simple: global middleware first, then route middleware, then `data()`.
 
 ### `UntypedNamedNavigationTarget`
 
@@ -482,7 +503,7 @@ type RouteState = {
   readonly error?: unknown;
   readonly location: RouteLocation;
   readonly matches: readonly RouteMatch[];
-  readonly status: 'idle' | 'loading' | 'error';
+  readonly status: NavigationStatus;
 };
 
 type RouteLocation = {
@@ -491,7 +512,7 @@ type RouteLocation = {
   readonly historyState: unknown;
   readonly pathname: string;
   /** Raw parsed query params — always string values from URL parsing.
-   * For coerced values (numbers, booleans), read `ctx.query` inside middleware or handlers.
+   * For coerced values (numbers, booleans), read `ctx.query` inside middleware or data loaders.
    */
   readonly query: QueryParams;
 };
@@ -507,6 +528,8 @@ type RouteMatch = {
   readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
+  /** Per-node loading status. Reflects individual loader state in nested layouts. */
+  readonly status: MatchStatus;
 };
 ```
 
@@ -552,15 +575,38 @@ type RouteMatchBranch = readonly RouteMatch[];
 ### `NavigationStatus`
 
 ```ts
-type NavigationStatus = 'idle' | 'loading' | 'error';
+type NavigationStatus = 'idle' | 'loading' | 'streaming' | 'error';
 ```
+
+Top-level status of the router. `'streaming'` means at least one active data loader is an async generator and has yielded at least one value but has not yet returned.
+
+### `MatchStatus`
+
+```ts
+type MatchStatus = 'error' | 'idle' | 'loading' | 'streaming';
+```
+
+Per-node status on each `RouteMatch`. Useful for nested layouts that want to show per-slot loading indicators.
 
 ### `BeforeLeaveBlocker`
 
 ```ts
 // Return true to allow navigation, false to cancel.
-type BeforeLeaveBlocker = () => MaybePromise<boolean>;
+type BeforeLeaveBlocker = (destination: NavigationDestination) => MaybePromise<boolean>;
 ```
+
+### `NavigationDestination`
+
+```ts
+type NavigationDestination = {
+  readonly name?: string;    // route name if navigating to a named route
+  readonly params: RouteParams;
+  readonly pathname: string;
+  readonly query: QueryParams;
+};
+```
+
+Passed to every `beforeLeave` blocker. Use `destination.pathname` and `destination.query` to make context-aware allow/block decisions.
 
 ### `IsActiveOptions`
 
@@ -581,11 +627,15 @@ type ScrollDecision = ScrollPosition | 'preserve' | 'top';
 ### `RouterErrorContext`
 
 ```ts
-type RouterErrorSource = 'initial-navigation' | 'history-listener' | 'preload';
-type RouterErrorContext = {
-  readonly source: RouterErrorSource;
-};
+type RouterErrorContext =
+  | { routeName: string; source: 'data-loader' }   // data() threw
+  | { routeName: string; source: 'middleware' }     // middleware threw
+  | { source: 'coerce-search' | 'history-listener' | 'initial-navigation' | 'preload' };
+
+type RouterErrorSource = RouterErrorContext['source'];
 ```
+
+Passed to the `onError` callback in `createRouter` options. The `routeName` is present when the error originates from a named route's `data()` or `middleware`.
 
 ### `HistoryDriver`
 
@@ -641,7 +691,9 @@ Wayfinder does not export custom `Error` subclasses. All errors are thrown as na
 
 - Wayfinder no longer exposes imperative registration methods like `on()`, `group()`, or `use()`.
 - Wayfinder names come from the route-table object keys.
-- Not-found handling is just another route, typically `path: '*'`.
+- `data()` is the terminal action. Its return value becomes `match.data`. There is no separate `handler` step.
+- For unmatched URLs, use the `notFound` router option rather than `path: '*'` in the route table.
 - Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`.
 - Declarative `redirect` on a route definition is for permanent alias redirects. The `redirectTo()` middleware helper is for conditional guards.
-- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/component/meta are stored in the router's internal hydration cache — the compiled `RouteRecord` is never mutated.
+- `lazy` factories are called at most once per `RouteRecord`. The loaded `data`/`component`/`meta` are stored in the router's internal hydration cache. `handler` is not accepted in the lazy-resolved module.
+- `onError` in a route definition is a per-route data-loader boundary. If `onError` itself throws, the router falls through to `status: 'error'` as usual.

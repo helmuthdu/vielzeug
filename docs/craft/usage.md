@@ -305,26 +305,21 @@ define('rating-input', {
 });
 ```
 
-## suspend
+## async setup
 
-`suspend()` runs an async function and returns a reactive signal that transitions through loading → resolved/error states.
+When `setup()` returns a `Promise<HTMLResult>`, craft renders `loading()` immediately and swaps in the real template once the promise resolves. Use `onError` to handle failures gracefully.
 
 ```ts
-import { define, html, suspend } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 
 define('user-profile', {
-  props: { userId: prop.string('1') },
-  setup(props) {
-    const profile = suspend(
-      () => fetch('/api/users/' + props.userId.value).then((r) => r.json()),
-      {
-        fallback: () => html`<p>Loading…</p>`,
-        error: (e) => html`<p>Error: ${String(e)}</p>`,
-        render: (user) => html`<p>${user.name}</p>`,
-      },
-    );
+  props: { userId: prop.string('') },
+  loading: () => html`<p>Loading…</p>`,
+  onError: (_err, el) => html`<p>Failed to load for ${el.getAttribute('user-id')}</p>`,
+  async setup(props) {
+    const user = await fetch(`/api/users/${props.userId.value}`).then((r) => r.json());
 
-    return html`<div>${profile}</div>`;
+    return html`<p>${user.name}</p>`;
   },
 });
 ```

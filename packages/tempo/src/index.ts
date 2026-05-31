@@ -2,7 +2,10 @@
 export { Temporal } from '@js-temporal/polyfill';
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
-export { difference, now, parseInstant, parseLocal, shift, toInstant, toZoned } from './core';
+export { difference, isValid, now, parseAny, parseInstant, parseLocal, shift } from './core';
+
+// ─── Internal utilities (public API) ─────────────────────────────────────────
+export { toInstant, toZoned } from './internal';
 
 // ─── Boundary ─────────────────────────────────────────────────────────────────
 export { endOf, startOf } from './boundary';
@@ -24,7 +27,7 @@ export {
 } from './format';
 
 // ─── Classify ─────────────────────────────────────────────────────────────────
-export { classify, expires, timeDiff } from './classify';
+export { classify, expires, humanize, timeDiff } from './classify';
 
 // ─── Range ────────────────────────────────────────────────────────────────────
 export { dateRange, recurrence } from './range';

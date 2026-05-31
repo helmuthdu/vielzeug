@@ -1,5 +1,4 @@
 export * from './assert';
-export * from './predicate';
 export * from './compare';
 export * from './compareBy';
 export * from './compose';
@@ -11,6 +10,7 @@ export * from './memo';
 export * from './once';
 export * from './partial';
 export * from './pipe';
+export * from './predicate';
 export * from './runAll';
 export * from './tap';
 export * from './throttle';

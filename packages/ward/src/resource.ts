@@ -35,3 +35,37 @@ export function matchesPattern(pattern: string, value: string): boolean {
 
   return false;
 }
+
+/**
+ * Returns true if every concrete value that matches `narrow` also matches `broad`.
+ * This is the coverage relation used for rule conflict detection.
+ *
+ * Pattern hierarchy (most to least permissive): `*` > `ns:*` > exact
+ *
+ * Unlike `matchesPattern(broad, narrow)` — which works accidentally — this
+ * function explicitly documents and tests the coverage semantics so it remains
+ * correct if new pattern syntax is added in the future.
+ *
+ * @example
+ * patternCovers('*',       'posts:*')   // true  — * covers everything
+ * patternCovers('posts:*', 'posts:123') // true  — namespace covers exact
+ * patternCovers('posts:*', 'posts:*')  // true  — same pattern covers itself
+ * patternCovers('posts:*', '*')         // false — namespace does not cover global wildcard
+ * patternCovers('posts',   'posts:*')   // false — exact does not cover namespace
+ */
+export function patternCovers(broad: string, narrow: string): boolean {
+  // Global wildcard covers everything
+  if (broad === WILDCARD) return true;
+
+  // Nothing else covers global wildcard
+  if (narrow === WILDCARD) return false;
+
+  // Namespace wildcard: covers any value starting with the same namespace prefix,
+  // including nested namespace wildcards ("posts:*" covers "posts:sub:*") and exact IDs.
+  if (broad.endsWith(':*')) {
+    return narrow.startsWith(broad.slice(0, -1));
+  }
+
+  // Exact only covers itself
+  return broad === narrow;
+}

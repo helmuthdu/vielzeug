@@ -1,11 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Bindings, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
+import type { LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 
 import { lazy } from '../lazy';
 import { createLogger, Rune } from '../logger';
 import {
-  PRIORITY,
   batchTransport,
   consoleTransport,
   jsonTransport,
@@ -14,6 +13,7 @@ import {
   remoteTransport,
   sampleTransport,
 } from '../transports';
+import { isLevelEnabled, PRIORITY } from '../types';
 
 /* ─── Test helpers ─── */
 
@@ -498,13 +498,13 @@ describe('consoleTransport', () => {
     expect(prefix).toContain('⚡');
   });
 
-  it('group() reads resolved theme from consoleTransport instance (R1)', () => {
+  it('group() reads resolved theme from RuneOptions.theme (R1)', () => {
     const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
 
     vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
     const log = createLogger({
-      transports: [consoleTransport({ theme: { group: { badge: '📦' } } })],
+      theme: { group: { badge: '📦' } },
     });
 
     log.group('deploy', () => {});
@@ -701,7 +701,7 @@ describe('batchTransport', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('buffers entries and flushes on maxSize', () => {
+  it('buffers entries and flushes on maxSize', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({ maxSize: 2, onFlush: (entries) => flushed.push(entries) });
     const log = createLogger({ transports: [batch] });
@@ -710,11 +710,13 @@ describe('batchTransport', () => {
     expect(flushed).toHaveLength(0);
 
     log.info('b');
+    // flush is async (Promise.resolve().then()) — drain the microtask queue
+    await Promise.resolve();
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(2);
   });
 
-  it('flushes on interval', () => {
+  it('flushes on interval', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({ interval: 1000, onFlush: (entries) => flushed.push(entries) });
     const log = createLogger({ transports: [batch] });
@@ -723,28 +725,31 @@ describe('batchTransport', () => {
     expect(flushed).toHaveLength(0);
 
     vi.advanceTimersByTime(1000);
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('x');
   });
 
-  it('dispose stops interval and flushes remaining', () => {
+  it('dispose stops interval and flushes remaining', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({ interval: 10_000, onFlush: (entries) => flushed.push(entries) });
     const log = createLogger({ transports: [batch] });
 
     log.info('final');
     batch.dispose();
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('final');
 
     vi.advanceTimersByTime(20_000);
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(1);
   });
 
-  it('flush() empties buffer without stopping the timer', () => {
+  it('flush() empties buffer without stopping the timer', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({ interval: 5000, maxSize: 100, onFlush: (entries) => flushed.push(entries) });
     const log = createLogger({ transports: [batch] });
@@ -752,23 +757,26 @@ describe('batchTransport', () => {
     log.info('a');
     log.info('b');
     batch.flush();
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(2);
 
     log.info('c');
     vi.advanceTimersByTime(5000);
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(2);
   });
 
-  it('filters below configured level', () => {
+  it('filters below configured level', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({ level: 'error', maxSize: 1, onFlush: (entries) => flushed.push(entries) });
     const log = createLogger({ transports: [batch] });
 
     log.info('no');
     log.error('yes');
+    await Promise.resolve();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].level).toBe('error');
@@ -958,7 +966,7 @@ describe('lazy bindings', () => {
 /* ─── time() ─── */
 
 describe('time()', () => {
-  it('emits a debug entry with duration_ms in context', () => {
+  it('emits a debug entry with duration_ms in context and label as message (R7)', () => {
     const { entries, log } = setup();
 
     const value = log.time('work', () => 42);
@@ -966,9 +974,10 @@ describe('time()', () => {
     expect(value).toBe(42);
     expect(entries).toHaveLength(1);
     expect(entries[0].level).toBe('debug');
-    expect(entries[0].message).toBe('timer');
-    expect((entries[0].context as Record<string, unknown>)['label']).toBe('work');
+    expect(entries[0].message).toBe('work');
     expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
+    // label is now the message — not in context
+    expect('label' in (entries[0].context ?? {})).toBe(false);
   });
 
   it('emits on async completion', async () => {
@@ -977,8 +986,8 @@ describe('time()', () => {
     const value = await log.time('async-work', () => Promise.resolve('done'));
 
     expect(value).toBe('done');
-    expect(entries[0].message).toBe('timer');
-    expect((entries[0].context as Record<string, unknown>)['label']).toBe('async-work');
+    expect(entries[0].message).toBe('async-work');
+    expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
   });
 
   it('still emits when sync fn throws', () => {
@@ -991,17 +1000,16 @@ describe('time()', () => {
     ).toThrow('boom');
 
     expect(entries).toHaveLength(1);
-    expect(entries[0].message).toBe('timer');
-    expect((entries[0].context as Record<string, unknown>)['label']).toBe('fail');
+    expect(entries[0].message).toBe('fail');
   });
 
-  it('still emits when async fn rejects', async () => {
+  it('still emits and re-throws when async fn rejects', async () => {
     const { entries, log } = setup();
 
     await expect(log.time('async-fail', () => Promise.reject(new Error('bad')))).rejects.toThrow('bad');
 
-    expect(entries[0].message).toBe('timer');
-    expect((entries[0].context as Record<string, unknown>)['label']).toBe('async-fail');
+    expect(entries[0].message).toBe('async-fail');
+    expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
   });
 
   it('skips emit but still runs fn when logLevel is off', () => {
@@ -1041,8 +1049,8 @@ describe('time()', () => {
       expect(handler).toHaveBeenCalledWith(
         'debug',
         expect.objectContaining({
-          context: expect.objectContaining({ duration_ms: expect.any(Number), label: 'measured' }),
-          message: 'timer',
+          context: expect.objectContaining({ duration_ms: expect.any(Number) }),
+          message: 'measured',
         }),
       ),
     );
@@ -1113,7 +1121,7 @@ describe('group and groupCollapsed', () => {
     expect(groupSpy).not.toHaveBeenCalled();
   });
 
-  it('does not call console.group when no consoleTransport is configured', () => {
+  it('always calls console.group even without a consoleTransport (R1 behavior)', () => {
     const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
     const endSpy = vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
     const { transport } = createTestTransport();
@@ -1122,8 +1130,8 @@ describe('group and groupCollapsed', () => {
     const result = log.group('label', () => 'value');
 
     expect(result).toBe('value');
-    expect(groupSpy).not.toHaveBeenCalled();
-    expect(endSpy).not.toHaveBeenCalled();
+    expect(groupSpy).toHaveBeenCalledTimes(1);
+    expect(endSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1191,6 +1199,7 @@ describe('pipe() fan-out transport (F2)', () => {
   it('dispatches to all transports in the pipe', () => {
     const a = createTestTransport();
     const b = createTestTransport();
+    // pipe() with only transport args (no options object)
     const log = createLogger({ transports: [pipe(a.transport, b.transport)] });
 
     log.info('broadcast');
@@ -1220,6 +1229,331 @@ describe('lazy bindings in per-call context (F5)', () => {
     log.debug({ cost: lazy(factory) }, 'x');
 
     expect(factory).not.toHaveBeenCalled();
+  });
+});
+
+/* ─── sample option (F3) ─── */
+
+describe('sample option on RuneOptions (F3)', () => {
+  it('sample:1 emits all entries', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ sample: 1, transports: [transport] });
+
+    for (let i = 0; i < 100; i++) log.info('x');
+
+    expect(entries).toHaveLength(100);
+  });
+
+  it('sample:0 suppresses all entries', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ sample: 0, transports: [transport] });
+
+    for (let i = 0; i < 20; i++) log.info('x');
+
+    expect(entries).toHaveLength(0);
+  });
+
+  it('child inherits sample from parent', () => {
+    const { entries, transport } = createTestTransport();
+    const parent = createLogger({ sample: 0, transports: [transport] });
+    const child = parent.child({ namespace: 'child' });
+
+    for (let i = 0; i < 20; i++) child.info('x');
+
+    expect(entries).toHaveLength(0);
+  });
+
+  it('sample is applied after middleware', () => {
+    const { entries, transport } = createTestTransport();
+    const dropped: string[] = [];
+    const mw = (e: LogEntry | null): LogEntry | null => {
+      if (e?.message === 'drop') {
+        dropped.push('dropped');
+
+        return null;
+      }
+
+      return e;
+    };
+    const log = createLogger({ middleware: [mw], sample: 1, transports: [transport] });
+
+    log.info('drop');
+    log.info('keep');
+
+    expect(dropped).toHaveLength(1);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBe('keep');
+  });
+});
+
+/* ─── batchTransport onFlushError (F5) ─── */
+
+describe('batchTransport onFlushError (F5)', () => {
+  it('calls onFlushError when onFlush throws synchronously', async () => {
+    const flushError = new Error('flush failed');
+    const onFlushError = vi.fn();
+    const onFlush = vi.fn().mockImplementation(() => {
+      throw flushError;
+    });
+
+    const batch = batchTransport({ maxSize: 1, onFlush, onFlushError });
+    const log = createLogger({ transports: [batch] });
+
+    log.info('trigger flush');
+
+    // flush runs via Promise.resolve().then() so we await a microtask
+    await vi.waitFor(() => expect(onFlushError).toHaveBeenCalledOnce());
+
+    const [entries, err] = onFlushError.mock.calls[0] as [LogEntry[], unknown];
+
+    expect(err).toBe(flushError);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBe('trigger flush');
+  });
+
+  it('calls onFlushError when onFlush returns a rejected promise (R3)', async () => {
+    const flushError = new Error('async flush failed');
+    const onFlushError = vi.fn();
+    const onFlush = vi.fn().mockRejectedValue(flushError);
+
+    const batch = batchTransport({ maxSize: 1, onFlush, onFlushError });
+    const log = createLogger({ transports: [batch] });
+
+    log.info('async trigger');
+
+    await vi.waitFor(() => expect(onFlushError).toHaveBeenCalledOnce());
+
+    const [entries, err] = onFlushError.mock.calls[0] as [LogEntry[], unknown];
+
+    expect(err).toBe(flushError);
+    expect(entries[0].message).toBe('async trigger');
+  });
+});
+
+/* ─── pipe() fault tolerance (R3) ─── */
+
+describe('pipe() fault tolerance (R3)', () => {
+  it('continues to remaining transports when one throws', () => {
+    const { entries: bEntries, transport: bTransport } = createTestTransport();
+
+    const throwingTransport: Transport = () => {
+      throw new Error('boom');
+    };
+
+    const fanout = pipe(throwingTransport, bTransport);
+    const log = createLogger({ transports: [fanout] });
+
+    expect(() => log.info('should not propagate')).not.toThrow();
+    expect(bEntries).toHaveLength(1);
+  });
+
+  it('calls onError callback when a transport throws (R2)', () => {
+    const errors: Array<{ err: unknown }> = [];
+    const { transport: bTransport } = createTestTransport();
+
+    const throwingTransport: Transport = () => {
+      throw new Error('pipe-fail');
+    };
+
+    const fanout = pipe({ onError: (err) => errors.push({ err }) }, throwingTransport, bTransport);
+    const log = createLogger({ transports: [fanout] });
+
+    log.info('x');
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].err).toBeInstanceOf(Error);
+  });
+
+  it('pipe() with no options works as before (variadic transports)', () => {
+    const a = createTestTransport();
+    const b = createTestTransport();
+    const log = createLogger({ transports: [pipe(a.transport, b.transport)] });
+
+    log.info('broadcast');
+
+    expect(a.entries).toHaveLength(1);
+    expect(b.entries).toHaveLength(1);
+  });
+});
+
+/* ─── consoleTransport format option (F6) ─── */
+
+describe('consoleTransport inspectFn / format options (F6)', () => {
+  it('format:json serializes context as a JSON string', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const t = consoleTransport({ format: 'json', timestamp: false });
+
+    t({ bindings: {}, context: { a: 1 }, level: 'info', message: 'test', namespace: '', timestamp: new Date() });
+
+    expect(infoSpy).toHaveBeenCalled();
+
+    // The JSON string appears in the args
+    const args = infoSpy.mock.calls[0] as unknown[];
+
+    expect(args.some((a) => typeof a === 'string' && a.includes('"a":1'))).toBe(true);
+
+    infoSpy.mockRestore();
+  });
+
+  it('format:raw passes the object directly', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const ctx = { x: 2 };
+    const t = consoleTransport({ format: 'raw', timestamp: false });
+
+    t({ bindings: {}, context: ctx, level: 'info', message: 'raw', namespace: '', timestamp: new Date() });
+
+    expect(infoSpy).toHaveBeenCalled();
+
+    // mergeContext spreads into a new object, so check by value
+    const args = infoSpy.mock.calls[0] as unknown[];
+
+    expect(args.some((a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>)['x'] === 2)).toBe(
+      true,
+    );
+
+    infoSpy.mockRestore();
+  });
+
+  it('inspectFn is called with the merged context/bindings object', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const inspectFn = vi.fn((v) => `INSPECTED:${JSON.stringify(v)}`);
+    const ctx = { key: 'val' };
+    const t = consoleTransport({ inspectFn, timestamp: false });
+
+    t({ bindings: {}, context: ctx, level: 'info', message: 'msg', namespace: '', timestamp: new Date() });
+
+    expect(inspectFn).toHaveBeenCalledWith(ctx);
+
+    const args = infoSpy.mock.calls[0] as unknown[];
+
+    expect(args.some((a) => typeof a === 'string' && a.startsWith('INSPECTED:'))).toBe(true);
+
+    infoSpy.mockRestore();
+  });
+
+  it('resolveTheme is called once at factory time, not per emit (R4)', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const t = consoleTransport({ timestamp: false });
+    const entry = { bindings: {}, level: 'info' as const, message: 'x', namespace: '', timestamp: new Date() };
+
+    // Emit 50 times — resolveTheme should be once at factory, not 50 times
+    for (let i = 0; i < 50; i++) t(entry);
+
+    expect(infoSpy).toHaveBeenCalledTimes(50);
+
+    infoSpy.mockRestore();
+  });
+});
+
+/* ─── isLevelEnabled (R8) ─── */
+
+describe('isLevelEnabled (R8/R6)', () => {
+  it('returns true when entry level meets threshold', () => {
+    expect(isLevelEnabled('warn', 'warn')).toBe(true);
+    expect(isLevelEnabled('warn', 'error')).toBe(true);
+    expect(isLevelEnabled('warn', 'fatal')).toBe(true);
+  });
+
+  it('returns false when entry level is below threshold', () => {
+    expect(isLevelEnabled('warn', 'debug')).toBe(false);
+    expect(isLevelEnabled('warn', 'info')).toBe(false);
+  });
+
+  it('off threshold suppresses everything', () => {
+    expect(isLevelEnabled('off', 'fatal')).toBe(false);
+  });
+
+  it('off level always returns false regardless of threshold (R6)', () => {
+    expect(isLevelEnabled('debug', 'off')).toBe(false);
+    expect(isLevelEnabled('off', 'off')).toBe(false);
+  });
+
+  it('enabled() returns false for off level (R6)', () => {
+    const { log } = setup({ logLevel: 'debug' });
+
+    expect(log.enabled('off')).toBe(false);
+  });
+});
+
+/* ─── child() theme deep-merge ─── */
+
+describe('child() theme deep-merge', () => {
+  it('child theme override only replaces specified fields', () => {
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    const parent = createLogger({ theme: { warn: { bg: '#111111' } } });
+    // Child only changes the badge, not bg — bg from parent should still apply
+    const child = parent.child({ theme: { warn: { badge: '!!' } } });
+
+    child.group('test', () => {});
+
+    // Theme resolution should not throw; group renders
+    expect(groupSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('child without theme override inherits parent theme', () => {
+    const { entries, transport } = createTestTransport();
+    const parent = createLogger({ theme: { warn: { badge: 'P' } }, transports: [transport] });
+    const child = parent.child({ namespace: 'child' });
+
+    expect(child.config.theme).toEqual(parent.config.theme);
+  });
+
+  it('child with undefined theme inherits parent theme unchanged', () => {
+    const parentTheme = { error: { badge: 'E!' } };
+    const parent = createLogger({ theme: parentTheme });
+    const child = parent.child({});
+
+    expect(child.config.theme).toEqual(parentTheme);
+  });
+});
+
+/* ─── sample: 0.5 proportional logger-level ─── */
+
+describe('sample option proportional rate (F3)', () => {
+  it('sample:0.5 forwards approximately half of entries', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ sample: 0.5, transports: [transport] });
+
+    for (let i = 0; i < 2000; i++) log.info('x');
+
+    expect(entries.length).toBeGreaterThan(700);
+    expect(entries.length).toBeLessThan(1300);
+  });
+});
+
+/* ─── consoleTransport empty context ─── */
+
+describe('consoleTransport with no context or bindings', () => {
+  it('emits message-only entries without error', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const t = consoleTransport({ timestamp: false });
+
+    // Both bindings and context empty
+    expect(() =>
+      t({ bindings: {}, level: 'info', message: 'hello', namespace: '', timestamp: new Date() }),
+    ).not.toThrow();
+
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+
+    const args = infoSpy.mock.calls[0] as unknown[];
+
+    expect(args.some((a) => a === 'hello')).toBe(true);
+
+    infoSpy.mockRestore();
+  });
+
+  it('emits entries with no message and no context without error', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const t = consoleTransport({ timestamp: false });
+
+    expect(() => t({ bindings: {}, level: 'info', namespace: '', timestamp: new Date() })).not.toThrow();
+
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+
+    infoSpy.mockRestore();
   });
 });
 

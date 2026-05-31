@@ -11,7 +11,7 @@ import type {
   TimeOptions,
 } from './types';
 
-import { displayRangeTz, displayTz, fail, inferTimeZone, resolveInstant, resolveZoned } from './internal';
+import { fail, inferTimeZone, toInstant, toZoned } from './internal';
 
 // ─── Formatter types ──────────────────────────────────────────────────────────
 
@@ -107,17 +107,26 @@ function getDurationFormatter(options: {
   );
 }
 
+// ─── Time scale constants ─────────────────────────────────────────────────────
+
+const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_HOUR = 3_600;
+const SECONDS_PER_DAY = 86_400;
+const SECONDS_PER_WEEK = 604_800;
+const SECONDS_PER_MONTH = 2_629_800; // ≈ 30.4375 days × 86400
+const SECONDS_PER_YEAR = 31_557_600; // 365.25 days × 86400
+
 // ─── Relative time helpers ────────────────────────────────────────────────────
 
 const RELATIVE_UNITS: ReadonlyArray<{ scale: number; thresholdToPromote: number; unit: Intl.RelativeTimeFormatUnit }> =
   [
-    { scale: 1, thresholdToPromote: 60, unit: 'second' },
-    { scale: 60, thresholdToPromote: 60, unit: 'minute' },
-    { scale: 3600, thresholdToPromote: 24, unit: 'hour' },
-    { scale: 86400, thresholdToPromote: 7, unit: 'day' },
-    { scale: 604800, thresholdToPromote: 2629800 / 604800, unit: 'week' },
-    { scale: 2629800, thresholdToPromote: 12, unit: 'month' },
-    { scale: 31557600, thresholdToPromote: Number.POSITIVE_INFINITY, unit: 'year' },
+    { scale: 1, thresholdToPromote: SECONDS_PER_MINUTE, unit: 'second' },
+    { scale: SECONDS_PER_MINUTE, thresholdToPromote: SECONDS_PER_HOUR / SECONDS_PER_MINUTE, unit: 'minute' },
+    { scale: SECONDS_PER_HOUR, thresholdToPromote: SECONDS_PER_DAY / SECONDS_PER_HOUR, unit: 'hour' },
+    { scale: SECONDS_PER_DAY, thresholdToPromote: SECONDS_PER_WEEK / SECONDS_PER_DAY, unit: 'day' },
+    { scale: SECONDS_PER_WEEK, thresholdToPromote: SECONDS_PER_MONTH / SECONDS_PER_WEEK, unit: 'week' },
+    { scale: SECONDS_PER_MONTH, thresholdToPromote: 12, unit: 'month' },
+    { scale: SECONDS_PER_YEAR, thresholdToPromote: Number.POSITIVE_INFINITY, unit: 'year' },
   ];
 
 function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; value: number } {
@@ -131,34 +140,52 @@ function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; v
     if (Math.abs(value) < thresholdToPromote) return { unit, value };
   }
 
-  return { unit: 'year', value: Math.round(roundedSeconds / 31557600) };
+  return { unit: 'year', value: Math.round(roundedSeconds / SECONDS_PER_YEAR) };
 }
 
 // ─── Duration fallback renderer ───────────────────────────────────────────────
 
-const DURATION_FIELDS: ReadonlyArray<{ plural: string; singular: string; unit: keyof Temporal.Duration }> = [
-  { plural: 'years', singular: 'year', unit: 'years' },
-  { plural: 'months', singular: 'month', unit: 'months' },
-  { plural: 'weeks', singular: 'week', unit: 'weeks' },
-  { plural: 'days', singular: 'day', unit: 'days' },
-  { plural: 'hours', singular: 'hour', unit: 'hours' },
-  { plural: 'minutes', singular: 'minute', unit: 'minutes' },
-  { plural: 'seconds', singular: 'second', unit: 'seconds' },
-  { plural: 'milliseconds', singular: 'millisecond', unit: 'milliseconds' },
-];
+// All English duration unit names follow the same pluralization rule: singular = plural.slice(0, -1)
+const DURATION_UNITS = [
+  'years',
+  'months',
+  'weeks',
+  'days',
+  'hours',
+  'minutes',
+  'seconds',
+  'milliseconds',
+] as const satisfies ReadonlyArray<keyof Temporal.Duration>;
 
 function buildDurationFallback(duration: Temporal.Duration): string {
   const parts: string[] = [];
 
-  for (const { plural, singular, unit } of DURATION_FIELDS) {
-    const value = duration[unit] as number;
+  for (const unit of DURATION_UNITS) {
+    const value = Math.abs(duration[unit] as number);
 
-    if (value !== 0) parts.push(`${Math.abs(value)} ${Math.abs(value) === 1 ? singular : plural}`);
+    if (value !== 0) parts.push(`${value} ${value === 1 ? unit.slice(0, -1) : unit}`);
   }
 
-  if (parts.length === 0) return '0 seconds';
+  return parts.length === 0 ? '0 seconds' : parts.join(', ');
+}
 
-  return parts.join(', ');
+// ─── Private helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Resolves a shared display timezone for two-input range functions.
+ * Throws when both inputs are `ZonedDateTime` with different zones and no `options.tz` override.
+ */
+function resolveRangeTz(start: TimeInput, end: TimeInput, options: FormatOptions, caller: string): string | undefined {
+  if (options.tz) return options.tz;
+
+  const startTz = start instanceof Temporal.ZonedDateTime ? start.timeZoneId : undefined;
+  const endTz = end instanceof Temporal.ZonedDateTime ? end.timeZoneId : undefined;
+
+  if (startTz && endTz && startTz !== endTz) {
+    fail(`${caller} received ZonedDateTime inputs with different time zones. Pass options.tz explicitly.`);
+  }
+
+  return startTz ?? endTz;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -176,9 +203,9 @@ function buildDurationFallback(duration: Temporal.Duration): string {
  * ```
  */
 export function format(input: TimeInput, options: FormatOptions = {}): string {
-  const tz = displayTz(input, options.tz);
+  const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
-  return makeFormatter(options, tz).format(new Date(resolveInstant(input, { tz }).epochMilliseconds));
+  return makeFormatter(options, tz).format(new Date(toInstant(input, { tz }).epochMilliseconds));
 }
 
 /**
@@ -191,12 +218,12 @@ export function format(input: TimeInput, options: FormatOptions = {}): string {
  * ```
  */
 export function formatRange(start: TimeInput, end: TimeInput, options: FormatOptions = {}): string {
-  const tz = displayRangeTz(start, end, options.tz);
+  const tz = resolveRangeTz(start, end, options, 'formatRange');
   const formatter = makeFormatter(options, tz);
 
   return formatter.formatRange(
-    new Date(resolveInstant(start, { tz }).epochMilliseconds),
-    new Date(resolveInstant(end, { tz }).epochMilliseconds),
+    new Date(toInstant(start, { tz }).epochMilliseconds),
+    new Date(toInstant(end, { tz }).epochMilliseconds),
   );
 }
 
@@ -210,13 +237,17 @@ export function formatRange(start: TimeInput, end: TimeInput, options: FormatOpt
  * // [{ type: 'month', value: '3', source: 'startRange' }, ...]
  * ```
  */
-export function formatRangeParts(start: TimeInput, end: TimeInput, options: FormatOptions = {}) {
-  const tz = displayRangeTz(start, end, options.tz);
+export function formatRangeParts(
+  start: TimeInput,
+  end: TimeInput,
+  options: FormatOptions = {},
+): ReturnType<Intl.DateTimeFormat['formatRangeToParts']> {
+  const tz = resolveRangeTz(start, end, options, 'formatRangeParts');
   const formatter = makeFormatter(options, tz);
 
   return formatter.formatRangeToParts(
-    new Date(resolveInstant(start, { tz }).epochMilliseconds),
-    new Date(resolveInstant(end, { tz }).epochMilliseconds),
+    new Date(toInstant(start, { tz }).epochMilliseconds),
+    new Date(toInstant(end, { tz }).epochMilliseconds),
   );
 }
 
@@ -231,7 +262,7 @@ export function formatRangeParts(start: TimeInput, end: TimeInput, options: Form
  * ```
  */
 export function formatInstant(input: TimeInput, options: TimeOptions = {}): string {
-  return resolveInstant(input, options).toString();
+  return toInstant(input, options).toString();
 }
 
 /**
@@ -247,7 +278,7 @@ export function formatInstant(input: TimeInput, options: TimeOptions = {}): stri
 export function formatZoned(input: TimeInput, options: TimeOptions = {}): string {
   const tz = inferTimeZone(input, options);
 
-  return resolveZoned(input, { prefer: options.prefer, tz }).toString();
+  return toZoned(input, { prefer: options.prefer, tz }).toString();
 }
 
 /**
@@ -324,7 +355,7 @@ export function formatDuration(input: string | Temporal.DurationLike, options: D
  * ```
  */
 export function formatParts(input: TimeInput, options: FormatOptions = {}): Intl.DateTimeFormatPart[] {
-  const tz = displayTz(input, options.tz);
+  const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
-  return makeFormatter(options, tz).formatToParts(new Date(resolveInstant(input, { tz }).epochMilliseconds));
+  return makeFormatter(options, tz).formatToParts(new Date(toInstant(input, { tz }).epochMilliseconds));
 }

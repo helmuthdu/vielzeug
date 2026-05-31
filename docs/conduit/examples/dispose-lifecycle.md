@@ -18,11 +18,11 @@ Attach a `dispose` hook via the `opts.dispose` parameter on `factory()` or `valu
 Factory `dispose` hooks fire only for instances that were resolved at least once.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Pool { end(): Promise<void> }
 
-const DbPool = createToken<Pool>('DbPool');
+const DbPool = token<Pool>('DbPool');
 const container = createContainer();
 
 container.factory(
@@ -40,11 +40,11 @@ await container.dispose(); // calls pool.end()
 `value()` dispose hooks always fire at disposal, regardless of whether the value was ever resolved.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface Db { close(): Promise<void> }
 
-const Db = createToken<Db>('Db');
+const Db = token<Db>('Db');
 const container = createContainer();
 
 const db = await connectDb();
@@ -58,11 +58,11 @@ await container.dispose(); // calls db.close() even if Db was never resolved
 Child containers have their own disposal lifecycle. Disposing a child runs only its scoped hooks and does not affect the parent.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
 interface ScopedCache { clear(): void }
 
-const ScopedCache = createToken<ScopedCache>('ScopedCache');
+const ScopedCache = token<ScopedCache>('ScopedCache');
 const container = createContainer();
 
 container.factory(
@@ -84,10 +84,10 @@ await child.dispose(); // runs child's scoped hooks only; root is unaffected
 If one or more hooks throw or reject, the container still disposes fully and all errors are collected into an `AggregateError`.
 
 ```ts
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const A = createToken<object>('A');
-const B = createToken<object>('B');
+const A = token<object>('A');
+const B = token<object>('B');
 const container = createContainer();
 
 container.value(A, {}, { dispose: () => { throw new Error('A cleanup failed'); } });

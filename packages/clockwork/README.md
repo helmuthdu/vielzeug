@@ -6,23 +6,26 @@
 [![npm downloads](https://img.shields.io/npm/dm/@vielzeug/clockwork.svg)](https://npmjs.com/package/@vielzeug/clockwork)
 [![TypeScript support](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](#)
 
-A production-ready finite state machine with typed events, reactive state, async invokes, persistence, and debugging—built on `@vielzeug/ripple` with zero external dependencies.
+A production-ready finite state machine with typed events, reactive state, async invokes, delayed transitions, hierarchical states, middleware, persistence, and debugging—built on `@vielzeug/ripple` with zero external dependencies.
 
 ## Why Clockwork?
 
 - **Type-safe** — Discriminated event unions with full TypeScript inference
 - **Reactive** — State and context are `@vielzeug/ripple` signals
 - **Async-first** — Native Promise support with onDone/onError handlers and automatic AbortSignal cancellation
+- **Delayed transitions** — Timer-based `after` transitions with guards and actions
+- **Hierarchical** — Compound states with automatic leaf resolution
+- **Middleware** — Composable event processing pipeline
 - **Persistent** — Save/load/clear snapshots via pluggable adapters
-- **Debuggable** — Optional lifecycle hooks, `onTransition` callback, and ring-buffer transition tracing
-- **Validated** — Comprehensive definition validation and context checking at startup
+- **Debuggable** — Discriminated union debug events, `onTransition` callback, and ring-buffer transition tracing
+- **Validated** — Comprehensive definition validation and context checking
 - **Zero overhead** — Debug features have zero cost when unused
 - **Zero deps** — Depends only on `@vielzeug/ripple` (peer)
 
 ## Quick Start
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type Event = { type: 'INC' } | { type: 'RESET' };
 
@@ -32,8 +35,8 @@ const machine = defineMachine<'idle', { count: number }, Event>({
   states: {
     idle: {
       on: {
-        INC:   { actions: [assign(({ context }) => ({ count: context.count + 1 }))], target: 'idle' },
-        RESET: { actions: [assign(() => ({ count: 0 }))], target: 'idle' },
+        INC:   { actions: [({ context }) => { context.count += 1; }], target: 'idle' },
+        RESET: { actions: [({ context }) => { context.count = 0; }], target: 'idle' },
       },
     },
   },
@@ -59,10 +62,8 @@ m[Symbol.dispose](); // cleanup
 Definitions are immutable, validated configurations. Instances are live machines.
 
 ```ts
-// Define once — validated and frozen at this call
 const definition = defineMachine({ /* ... */ });
 
-// Interpret many — each instance is independent
 const m1 = interpret(definition);
 const m2 = interpret(definition);
 
@@ -78,10 +79,7 @@ Single transitions use shorthand; multiple guarded alternatives use arrays:
 states: {
   idle: {
     on: {
-      // Shorthand — one possible transition
       GO: { target: 'active' },
-
-      // Array — first passing guard wins
       LOAD: [
         { guard: ({ context }) => context.authorized, target: 'dashboard' },
         { target: 'unauthorized' },
@@ -91,100 +89,50 @@ states: {
 }
 ```
 
-### Typed Events
-
-Use discriminated unions for exhaustive event handling:
-
-```ts
-type Event =
-  | { email: string; password: string; type: 'LOGIN' }
-  | { type: 'LOGOUT' }
-  | { token: string; type: 'REFRESH_TOKEN' };
-
-// Payloads are type-checked — missing 'email' is a compile error
-m.send({ type: 'LOGIN', email: 'user@example.com', password: 'secret' });
-```
-
-### Entry and Exit Actions
-
-`entry` fires when a state is entered; `exit` fires when it is left. Entry receives only `{ context }` — use transition `actions` if you need the event payload:
-
-```ts
-states: {
-  active: {
-    entry: ({ context }) => { context.startTime = Date.now(); },
-    exit:  ({ context }) => { context.duration = Date.now() - context.startTime; },
-    on: { STOP: { target: 'idle' } },
-  },
-}
-```
-
 ### Async Invokes
 
-Run promises when entering states. Automatically dispatches events on completion or error, and aborts on state exit:
+Run promises when entering states with automatic cancellation on exit:
 
 ```ts
 states: {
   loading: {
-    invoke: [
-      {
-        src: async ({ signal }) => fetch('/api/data', { signal }).then(r => r.json()),
-        onDone:  (result) => ({ type: 'DATA_READY', data: result }),
-        onError: (error)  => ({ type: 'DATA_ERROR', error: String(error) }),
-      },
-    ],
+    invoke: [{
+      src: async ({ signal }) => fetch('/api/data', { signal }).then(r => r.json()),
+      onDone:  (result) => ({ type: 'DATA_READY', data: result }),
+      onError: (error)  => ({ type: 'DATA_ERROR', error: String(error) }),
+    }],
     on: {
+      DATA_READY: { target: 'idle' },
       DATA_ERROR: { target: 'error' },
-      DATA_READY: { actions: [assign(({ event }) => ({ data: event.data }))], target: 'idle' },
     },
+  },
+}
+```
+
+### Delayed Transitions
+
+Timer-based transitions with optional guards:
+
+```ts
+states: {
+  notification: {
+    after: [{ delay: 5000, target: 'dismissed' }],
   },
 }
 ```
 
 ### Persistence
 
-Save and restore machine state using a persistence adapter:
+Save and restore machine state via pluggable adapters:
 
 ```ts
 const m = interpret(machine, {
   persistence: {
-    clear: () => localStorage.removeItem('machine'),
-    load:  () => JSON.parse(localStorage.getItem('machine') ?? 'null'),
-    save:  (snapshot) => localStorage.setItem('machine', JSON.stringify(snapshot)),
+    load:  () => JSON.parse(localStorage.getItem('state') ?? 'null') ?? undefined,
+    save:  (snapshot) => localStorage.setItem('state', JSON.stringify(snapshot)),
+    clear: () => localStorage.removeItem('state'),
   },
 });
-
-// Explicitly clear persisted state (disposal does NOT clear it)
-m.clearPersistence();
-```
-
-### Checking State
-
-```ts
-m.state.value;            // current state string
-m.matches('idle');        // true if in 'idle'
-m.matches('a', 'b');      // true if in 'a' or 'b'
-m.can({ type: 'GO' });    // true if GO is a valid event right now
-```
-
-### Debugging and Tracing
-
-Optional hooks for observability with zero overhead when omitted:
-
-```ts
-const m = interpret(machine, {
-  debug: {
-    onTransitionSkipped: ({ event, from }) =>
-      console.log(`${event.type} rejected in ${from}`),
-    onInvokeDone: ({ invokeId, result }) =>
-      console.log(`invoke #${invokeId} done:`, result),
-  },
-  onTransition: ({ from, to, event }) =>
-    analytics.track('state_change', { from, to, event: event.type }),
-  traceLimit: 100,
-});
-
-console.log(m.getTrace()); // chronological transition history
 ```
 
 ## Key Exports
@@ -194,7 +142,6 @@ console.log(m.getTrace()); // chronological transition history
 | `defineMachine()` | Create immutable, validated FSM definition |
 | `interpret()` | Create live machine instance from definition |
 | `resolveTransition()` | Pure function for unit-testing transitions |
-| `assign()` | Helper to shallow-merge context updates |
 | `MachineError` | Typed error for validation and runtime failures |
 
 ## Features
@@ -204,16 +151,19 @@ console.log(m.getTrace()); // chronological transition history
 | Typed events | Discriminated unions with TypeScript inference |
 | Reactive state | Signals from `@vielzeug/ripple` |
 | Async tasks | Native Promises with onDone/onError and AbortSignal |
-| Persistence | Pluggable adapter; explicit `clearPersistence()` |
-| Context validation | Type guards at init, hydration, every transition |
-| Entry/exit actions | Lifecycle hooks per state |
-| Guards | Conditional transitions based on context |
-| Shorthand transitions | Single object or array — your choice |
+| Delayed transitions | Timer-based `after` with guards and actions |
+| Hierarchical states | Compound states with automatic leaf resolution |
+| Middleware | Composable event interception pipeline |
+| Persistence | Pluggable adapter for snapshot save/load/clear |
+| Context validation | Type guards at init and every transition |
+| Entry/exit hooks | Lifecycle functions per state |
+| Guards | Conditional transitions based on context and event |
 | Tracing | Ring buffer of last N transitions |
-| Debug hooks | Optional lifecycle callbacks |
+| Debug events | Discriminated union debug callback |
 | Event queue | FIFO processing with configurable loop guard |
-| Context isolation | Cloned draft before commit; rolled back on validation failure |
+| Context isolation | Cloned draft before commit; rolled back on failure |
 | Pure resolver | `resolveTransition()` — test logic without side effects |
+| Subscribe | Change-detection subscription without ripple dependency |
 
 ## Installation
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createDropZone, matchesAccept } from '../drop-zone';
-import { makeDragEvent } from './helpers';
+import { makeClipboardEvent, makeDragEvent } from './helpers';
 
 // ─── matchesAccept ────────────────────────────────────────────────────────────
 
@@ -405,6 +405,217 @@ describe('createDropZone', () => {
       element.dispatchEvent(makeDragEvent('drop', { files: [new File([''], 'a.txt')] }));
 
       expect(onDrop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('paste', () => {
+    it('fires onPaste with accepted files when paste: true', () => {
+      const element = document.createElement('div');
+      const onPaste = vi.fn();
+      const file = new File(['data'], 'a.png', { type: 'image/png' });
+      const zone = createDropZone({ accept: ['image/*'], element, onPaste, paste: true });
+
+      window.dispatchEvent(makeClipboardEvent([file]));
+
+      expect(onPaste).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('falls back to onDrop when onPaste is not provided', () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const file = new File(['data'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ element, onDrop, paste: true });
+
+      window.dispatchEvent(makeClipboardEvent([file]));
+
+      expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('filters pasted files by accept list', () => {
+      const element = document.createElement('div');
+      const onPaste = vi.fn();
+      const onDropRejected = vi.fn();
+      const img = new File(['img'], 'a.png', { type: 'image/png' });
+      const txt = new File(['txt'], 'b.txt', { type: 'text/plain' });
+      const zone = createDropZone({ accept: ['image/*'], element, onDropRejected, onPaste, paste: true });
+
+      window.dispatchEvent(makeClipboardEvent([img, txt]));
+
+      expect(onPaste).toHaveBeenCalledWith([img], expect.any(Event));
+      expect(onDropRejected).toHaveBeenCalledWith([txt], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('ignores paste events when paste: false (default)', () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const zone = createDropZone({ element, onDrop });
+
+      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+
+      expect(onDrop).not.toHaveBeenCalled();
+
+      zone.destroy();
+    });
+
+    it('ignores paste events when disabled', () => {
+      const element = document.createElement('div');
+      const onPaste = vi.fn();
+      const zone = createDropZone({ disabled: true, element, onPaste, paste: true });
+
+      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+
+      expect(onPaste).not.toHaveBeenCalled();
+
+      zone.destroy();
+    });
+
+    it('removes paste listener on destroy', () => {
+      const element = document.createElement('div');
+      const onPaste = vi.fn();
+      const zone = createDropZone({ element, onPaste, paste: true });
+
+      zone.destroy();
+      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+
+      expect(onPaste).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onValidate', () => {
+    it('calls onDrop when onValidate resolves true', async () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const onValidate = vi.fn().mockResolvedValue(true);
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ element, onDrop, onValidate });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      await Promise.resolve(); // flush microtasks
+
+      expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('calls onDropRejected when onValidate resolves false', async () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const onDropRejected = vi.fn();
+      const onValidate = vi.fn().mockResolvedValue(false);
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ element, onDrop, onDropRejected, onValidate });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      await Promise.resolve();
+
+      expect(onDrop).not.toHaveBeenCalled();
+      expect(onDropRejected).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('sets validating to true during pending validation then false after', async () => {
+      const element = document.createElement('div');
+      let resolveValidation!: (v: boolean) => void;
+      const validation = new Promise<boolean>((res) => {
+        resolveValidation = res;
+      });
+      const zone = createDropZone({ element, onValidate: () => validation });
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      expect(zone.validating).toBe(true);
+
+      resolveValidation(true);
+      await validation;
+      await Promise.resolve();
+
+      expect(zone.validating).toBe(false);
+
+      zone.destroy();
+    });
+
+    it('falls back to onDropRejected when onValidate throws', async () => {
+      const element = document.createElement('div');
+      const onDropRejected = vi.fn();
+      const onValidate = vi.fn().mockRejectedValue(new Error('server error'));
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ element, onDropRejected, onValidate });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      await Promise.resolve();
+      await Promise.resolve(); // two microtask ticks for rejection
+
+      expect(onDropRejected).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('skips onValidate when all files are already rejected by type filter', async () => {
+      const element = document.createElement('div');
+      const onValidate = vi.fn();
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ accept: ['image/*'], element, onValidate });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      await Promise.resolve();
+
+      expect(onValidate).not.toHaveBeenCalled();
+
+      zone.destroy();
+    });
+
+    it('works synchronously when onValidate returns a boolean', () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const zone = createDropZone({ element, onDrop, onValidate: () => true });
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [file] }));
+
+      expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
+
+      zone.destroy();
+    });
+
+    it('runs onValidate for pasted files and sets validating during pending validation', async () => {
+      const element = document.createElement('div');
+
+      document.body.appendChild(element);
+
+      let resolveValidation!: (ok: boolean) => void;
+      const validation = new Promise<boolean>((res) => {
+        resolveValidation = res;
+      });
+      const onValidate = vi.fn(() => validation);
+      const onPaste = vi.fn();
+      const zone = createDropZone({ element, onPaste, onValidate, paste: true });
+      const file = new File(['a'], 'a.txt', { type: 'text/plain' });
+
+      window.dispatchEvent(makeClipboardEvent([file]));
+
+      expect(zone.validating).toBe(true);
+
+      resolveValidation(true);
+      await validation;
+      await Promise.resolve();
+
+      expect(onPaste).toHaveBeenCalledWith([file], expect.any(Event));
+      expect(zone.validating).toBe(false);
+
+      zone.destroy();
+      element.remove();
     });
   });
 });

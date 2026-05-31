@@ -104,6 +104,11 @@ export type CheckContext = {
   }) => void;
 };
 
+/**
+ * Return type of a synchronous `check()` callback. Explicitly excludes `Promise`
+ * to produce a compile-time error when an async function is accidentally passed to `check()`.
+ * Use `checkAsync()` for async validation.
+ */
 export type CheckFnResult = void | null | undefined | boolean | string;
 
 /** Re-exported from errors for convenience — defined there. */
@@ -115,32 +120,35 @@ export type { FlatError, FlatErrorFirst, FormattedErrors } from './errors';
  * Visitor map for schema.walk(). Container handlers receive already-walked children (type R).
  * All handlers are optional — unmatched kinds fall through to the `unknown` fallback.
  * Throws if no handler matches and no `unknown` fallback is provided.
+ *
+ * Each handler receives the concrete schema type for that kind, enabling access to
+ * schema-specific properties (e.g. `ArraySchema.itemSchema`) without casting.
  */
 export type SchemaWalker<R> = {
-  array?: (schema: AnySchema, item: R) => R;
-  bigint?: (schema: AnySchema) => R;
-  boolean?: (schema: AnySchema) => R;
-  date?: (schema: AnySchema) => R;
-  enum?: (schema: AnySchema) => R;
-  instanceof?: (schema: AnySchema) => R;
-  intersect?: (schema: AnySchema, branches: R[]) => R;
-  lazy?: (schema: AnySchema) => R;
-  literal?: (schema: AnySchema) => R;
-  map?: (schema: AnySchema, key: R, value: R) => R;
-  never?: (schema: AnySchema) => R;
-  nullable?: (schema: AnySchema, inner: R) => R;
-  nullish?: (schema: AnySchema, inner: R) => R;
-  number?: (schema: AnySchema) => R;
-  object?: (schema: AnySchema, fields: Record<string, R>) => R;
-  optional?: (schema: AnySchema, inner: R) => R;
-  pipe?: (schema: AnySchema, from: R, to: R) => R;
-  record?: (schema: AnySchema, key: R, value: R) => R;
-  set?: (schema: AnySchema, item: R) => R;
-  string?: (schema: AnySchema) => R;
-  tuple?: (schema: AnySchema, items: R[], rest: R | null) => R;
-  union?: (schema: AnySchema, branches: R[]) => R;
+  array?: (schema: import('./schemas/array').ArraySchema<any>, item: R) => R;
+  bigint?: (schema: import('./schemas/bigint').BigIntSchema<any>) => R;
+  boolean?: (schema: import('./schemas/boolean').BooleanSchema<any>) => R;
+  date?: (schema: import('./schemas/date').DateSchema<any>) => R;
+  enum?: (schema: import('./schemas/enum').EnumSchema<any>) => R;
+  instanceof?: (schema: import('./schemas/instanceof').InstanceOfSchema<any>) => R;
+  intersect?: (schema: import('./schemas/intersect').IntersectSchema<any>, branches: R[]) => R;
+  lazy?: (schema: import('./schemas/lazy').LazySchema<any>) => R;
+  literal?: (schema: import('./schemas/literal').LiteralSchema<any>) => R;
+  map?: (schema: import('./schemas/map').MapSchema<any, any>, key: R, value: R) => R;
+  never?: (schema: import('./schemas/never').NeverSchema) => R;
+  nullable?: (schema: import('./core').WrapperSchema<any, 'nullable'>, inner: R) => R;
+  nullish?: (schema: import('./core').WrapperSchema<any, 'nullish'>, inner: R) => R;
+  number?: (schema: import('./schemas/number').NumberSchema<any>) => R;
+  object?: (schema: import('./schemas/object').ObjectSchema<any>, fields: Record<string, R>) => R;
+  optional?: (schema: import('./core').WrapperSchema<any, 'optional'>, inner: R) => R;
+  pipe?: (schema: import('./core').PipeSchema<any, any>, from: R, to: R) => R;
+  record?: (schema: import('./schemas/record').RecordSchema<any, any>, key: R, value: R) => R;
+  set?: (schema: import('./schemas/set').SetSchema<any>, item: R) => R;
+  string?: (schema: import('./schemas/string').StringSchema<any>) => R;
+  tuple?: (schema: import('./schemas/tuple').TupleSchema<any, any>, items: R[], rest: R | null) => R;
+  union?: (schema: import('./schemas/union').UnionSchema<any>, branches: R[]) => R;
   unknown?: (schema: AnySchema) => R;
-  variant?: (schema: AnySchema, branches: Record<string, R>) => R;
+  variant?: (schema: import('./schemas/variant').VariantSchema<any, any>, branches: Record<string, R>) => R;
 };
 
 type BaseDescriptor = {
@@ -175,7 +183,7 @@ export type SchemaDescriptor = BaseDescriptor &
     | { items: SchemaDescriptor[]; kind: 'tuple'; rest: SchemaDescriptor | null }
     | { fields: Record<string, SchemaDescriptor>; kind: 'object'; strict: boolean }
     | { key: SchemaDescriptor; kind: 'record'; value: SchemaDescriptor }
-    | { item: SchemaDescriptor; kind: 'set' }
+    | { items: SchemaDescriptor; kind: 'set' }
     | { key: SchemaDescriptor; kind: 'map'; value: SchemaDescriptor }
     | { branches: SchemaDescriptor[]; kind: 'union' | 'intersect' }
     | { branches: Record<string, SchemaDescriptor>; discriminator: string; kind: 'variant' }
@@ -186,14 +194,13 @@ export type WrapperMode = 'nullable' | 'nullish' | 'optional';
 
 /* -------------------- ParseResult (forward-references ValidationError) -------------------- */
 
+import type { Schema } from './core';
 // Import only the type to avoid circular dependencies
 import type { ValidationError } from './errors';
 
 export type ParseResult<T> = { data: T; success: true } | { error: ValidationError; success: false };
 
 /* -------------------- AnySchema / Infer (forward-references Schema) -------------------- */
-
-import type { Schema } from './core';
 
 export type AnySchema = Schema<unknown, unknown>;
 export type InferOutput<T> = T extends Schema<infer O> ? O : never;

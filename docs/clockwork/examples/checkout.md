@@ -14,7 +14,7 @@ Shopping carts need to survive page reloads and guide users through shipping →
 Use the persistence adapter to save snapshots on every state change. Replay snapshots on app init to resume interrupted checkouts. Machine definition stays deterministic; persistence is pluggable.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type CartContext = {
   items: Array<{ id: string; name: string; price: number; qty: number }>;
@@ -47,16 +47,15 @@ const checkoutMachine = defineMachine<
           {
             target: 'shopping',
             actions: [
-              assign(({ context, event }) => {
+              ({ context, event }) => {
                 const existing = context.items.find(i => i.id === event.id);
-                const items = existing
-                  ? context.items.map(i => (i.id === event.id ? { ...i, qty: i.qty + 1 } : i))
-                  : [...context.items, { id: event.id, name: event.name, price: event.price, qty: 1 }];
-                return {
-                  items,
-                  total: items.reduce((sum, i) => sum + i.price * i.qty, 0),
-                };
-              }),
+                if (existing) {
+                  context.items = context.items.map(i => (i.id === event.id ? { ...i, qty: i.qty + 1 } : i));
+                } else {
+                  context.items = [...context.items, { id: event.id, name: event.name, price: event.price, qty: 1 }];
+                }
+                context.total = context.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+              },
             ],
           },
         ],
@@ -64,13 +63,10 @@ const checkoutMachine = defineMachine<
           {
             target: 'shopping',
             actions: [
-              assign(({ context, event }) => {
-                const items = context.items.filter(i => i.id !== event.id);
-                return {
-                  items,
-                  total: items.reduce((sum, i) => sum + i.price * i.qty, 0),
-                };
-              }),
+              ({ context, event }) => {
+                context.items = context.items.filter(i => i.id !== event.id);
+                context.total = context.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+              },
             ],
           },
         ],
@@ -87,7 +83,7 @@ const checkoutMachine = defineMachine<
         ENTER_SHIPPING: [
           {
             target: 'payment',
-            actions: [assign(({ event }) => ({ shippingAddress: event.address }))],
+            actions: [({ context, event }) => { context.shippingAddress = event.address; }],
           },
         ],
       },
@@ -97,7 +93,7 @@ const checkoutMachine = defineMachine<
         ENTER_PAYMENT: [
           {
             target: 'confirming',
-            actions: [assign(({ event }) => ({ paymentId: event.paymentId }))],
+            actions: [({ context, event }) => { context.paymentId = event.paymentId; }],
           },
         ],
       },
@@ -177,7 +173,6 @@ checkout.send({ type: 'ENTER_PAYMENT', paymentId: 'tok_visa' }); // state: 'conf
 setTimeout(() => {
   if (checkout.state.value === 'success') {
     console.log('Final total:', checkout.context.value.total); // 42.98
-    checkout.context.value.persistence.clear(); // Clear after success
   }
 }, 1000);
 ```
@@ -185,7 +180,7 @@ setTimeout(() => {
 ### Pitfalls
 
 - **Persistence saves every state change, not just checkpoints** — Loading a massive 1MB snapshot on every app init is slow. Use compression or only save at key states (use nested machines to save selectively).
-- **JSON serialization strips functions and Symbols** — If context contains callbacks or Symbol.dispose, they won't survive save/load. Store only plain data in context.
+- **JSON serialization strips functions and Symbols** — If context contains callbacks or Symbol.dispose, they won’t survive save/load. Store only plain data in context.
 - **No validation on load; corrupted data causes silent failures** — If localStorage is mangled, JSON.parse() throws. Wrap load in try/catch and provide a validateSnapshot option to sanitize data before restore.
 - **Cart items belong in database, not localStorage** — For real e-commerce, persist machine state but fetch current item prices/availability from backend on restore. Never trust frontend cart data.
 

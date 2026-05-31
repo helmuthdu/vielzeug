@@ -4,17 +4,17 @@ import {
   defineField,
   html,
   inject,
-  onEvent,
   onCleanup,
+  onEvent,
+  onMounted,
   prop,
   ref,
   signal,
-  onMounted,
 } from '@vielzeug/craft';
 import { createDropZone, matchesAccept } from '@vielzeug/grip';
 
 import { createInteraction, createStableId } from '../../headless';
-import { FILE_INPUT_SIZE_PRESET } from '../../shared/config';
+import { FILE_INPUT_SIZE_PRESET } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,

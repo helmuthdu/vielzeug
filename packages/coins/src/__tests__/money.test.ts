@@ -3,7 +3,6 @@ import {
   add,
   allocate,
   compare,
-  currency,
   divide,
   fromJSON,
   greaterThan,
@@ -22,29 +21,45 @@ import {
   splitEvenly,
   subtract,
   sum,
+  toCurrencyCode,
   toDecimal,
   toJSON,
   toNumber,
 } from '../money';
 
-describe('currency factory', () => {
+describe('toCurrencyCode factory', () => {
   it('returns a valid CurrencyCode for recognised ISO 4217 code', () => {
-    expect(currency('USD')).toBe('USD');
-    expect(currency('EUR')).toBe('EUR');
-    expect(currency('JPY')).toBe('JPY');
+    expect(toCurrencyCode('USD')).toBe('USD');
+    expect(toCurrencyCode('EUR')).toBe('EUR');
+    expect(toCurrencyCode('JPY')).toBe('JPY');
   });
 
   it('throws RangeError for unrecognised currency code', () => {
-    expect(() => currency('NOTREAL')).toThrow(RangeError);
-    expect(() => currency('NOTREAL')).toThrow('Invalid ISO 4217 currency code');
+    expect(() => toCurrencyCode('NOTREAL')).toThrow(RangeError);
+    expect(() => toCurrencyCode('NOTREAL')).toThrow('Invalid ISO 4217 currency code');
   });
 
   it('throws for empty string', () => {
-    expect(() => currency('')).toThrow(RangeError);
+    expect(() => toCurrencyCode('')).toThrow(RangeError);
   });
 });
 
 describe('money factory', () => {
+  describe('invalid amount strings', () => {
+    it('throws RangeError for non-numeric string', () => {
+      expect(() => money('abc', 'USD')).toThrow(RangeError);
+      expect(() => money('abc', 'USD')).toThrow('Invalid decimal string');
+    });
+
+    it('throws RangeError for amount with multiple dots', () => {
+      expect(() => money('1.2.3', 'USD')).toThrow(RangeError);
+    });
+
+    it('throws RangeError for empty string amount', () => {
+      expect(() => money('', 'USD')).toThrow(RangeError);
+    });
+  });
+
   describe('from decimal string', () => {
     it('parses standard two-decimal amounts', () => {
       expect(money('1234.56', 'USD')).toEqual({ amount: 123456n, currency: 'USD' });
@@ -139,6 +154,7 @@ describe('add', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(TypeError);
     expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -153,6 +169,7 @@ describe('subtract', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(TypeError);
     expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -220,6 +237,29 @@ describe('multiply', () => {
       expect(multiply(money('1.00', 'USD'), '0.055', 'half-even')).toEqual({ amount: 6n, currency: 'USD' });
     });
   });
+
+  describe('negative near-zero rounding (1 minor unit × factor < 1)', () => {
+    // -1 cent × 0.5 = -0.5 cents — quotient is 0n but true result is negative
+    it("'half-away-from-zero' rounds -0.5 to -1", () => {
+      expect(multiply(money(-1n, 'USD'), '0.5')).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'floor' rounds -0.5 toward −∞ to -1", () => {
+      expect(multiply(money(-1n, 'USD'), '0.5', 'floor')).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'ceiling' rounds -0.5 toward +∞ to 0", () => {
+      expect(multiply(money(-1n, 'USD'), '0.5', 'ceiling')).toEqual({ amount: 0n, currency: 'USD' });
+    });
+
+    it("'up' rounds -0.5 away from zero to -1", () => {
+      expect(multiply(money(-1n, 'USD'), '0.5', 'up')).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'down' truncates -0.5 toward zero to 0", () => {
+      expect(multiply(money(-1n, 'USD'), '0.5', 'down')).toEqual({ amount: 0n, currency: 'USD' });
+    });
+  });
 });
 
 describe('divide', () => {
@@ -268,6 +308,29 @@ describe('divide', () => {
 
     it("'ceiling' truncates fractional negative result (toward zero)", () => {
       expect(divide(money('-100.00', 'USD'), 3, 'ceiling')).toEqual({ amount: -3333n, currency: 'USD' });
+    });
+  });
+
+  describe('negative near-zero rounding (1 minor unit ÷ 2)', () => {
+    // -1 cent ÷ 2 = -0.5 cents — quotient is 0n but true result is negative
+    it("'half-away-from-zero' rounds -0.5 to -1", () => {
+      expect(divide(money(-1n, 'USD'), 2)).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'floor' rounds -0.5 toward −∞ to -1", () => {
+      expect(divide(money(-1n, 'USD'), 2, 'floor')).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'ceiling' rounds -0.5 toward +∞ to 0", () => {
+      expect(divide(money(-1n, 'USD'), 2, 'ceiling')).toEqual({ amount: 0n, currency: 'USD' });
+    });
+
+    it("'up' rounds -0.5 away from zero to -1", () => {
+      expect(divide(money(-1n, 'USD'), 2, 'up')).toEqual({ amount: -1n, currency: 'USD' });
+    });
+
+    it("'down' truncates -0.5 toward zero to 0", () => {
+      expect(divide(money(-1n, 'USD'), 2, 'down')).toEqual({ amount: 0n, currency: 'USD' });
     });
   });
 });
@@ -383,15 +446,17 @@ describe('allocate', () => {
 
   describe('error cases', () => {
     it('throws on empty ratios', () => {
+      expect(() => allocate(money('10.00', 'USD'), [])).toThrow(RangeError);
       expect(() => allocate(money('10.00', 'USD'), [])).toThrow('at least one ratio');
     });
 
     it('throws on negative ratios', () => {
+      expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow(RangeError);
       expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow('non-negative');
     });
 
     it('throws when all ratios are zero', () => {
-      expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow();
+      expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow(RangeError);
     });
   });
 });
@@ -484,10 +549,12 @@ describe('sum', () => {
   });
 
   it('throws on empty array', () => {
+    expect(() => sum([])).toThrow(RangeError);
     expect(() => sum([])).toThrow('at least one');
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(TypeError);
     expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
   });
 });
@@ -505,6 +572,7 @@ describe('min', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => min(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow(TypeError);
     expect(() => min(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -522,6 +590,7 @@ describe('max', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => max(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow(TypeError);
     expect(() => max(money('1.00', 'USD'), money('1.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -574,7 +643,9 @@ describe('comparison predicates', () => {
   it('predicates throw on currency mismatch', () => {
     const eur = money('5.00', 'EUR');
 
+    expect(() => greaterThan(five, eur)).toThrow(TypeError);
     expect(() => greaterThan(five, eur)).toThrow('Currency mismatch');
+    expect(() => lessThan(five, eur)).toThrow(TypeError);
     expect(() => lessThan(five, eur)).toThrow('Currency mismatch');
   });
 });
@@ -593,6 +664,7 @@ describe('compare', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow(TypeError);
     expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -607,6 +679,7 @@ describe('isEqual', () => {
   });
 
   it('throws on currency mismatch', () => {
+    expect(() => isEqual(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow(TypeError);
     expect(() => isEqual(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });

@@ -279,7 +279,7 @@ const unchanged = isEqual(prev, next);
 Typed finite state machines with discriminated event unions, guard conditions, async invokes with cancellation, and reactive state/context as Ripple signals.
 
 ```typescript
-import { defineMachine, interpret, assign } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
 
@@ -287,8 +287,8 @@ const authMachine = defineMachine({
   initial: 'idle',
   context: { token: '' },
   states: {
-    idle: { on: { LOGIN: [{ target: 'active', actions: [assign(({ event }) => ({ token: event.token }))] }] } },
-    active: { on: { LOGOUT: [{ target: 'idle', actions: [assign(() => ({ token: '' }))] }] } },
+    idle: { on: { LOGIN: [{ target: 'active', actions: [({ context, event }) => { context.token = event.token; }] }] } },
+    active: { on: { LOGOUT: [{ target: 'idle', actions: [({ context }) => { context.token = ''; }] }] } },
   },
 });
 

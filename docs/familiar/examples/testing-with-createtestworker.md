@@ -57,15 +57,47 @@ describe('math worker', () => {
 
 - Call history can be inspected for verification and debugging.
 - Errors are properly caught and tested.
+- `concurrency` defaults to `1` for deterministic serial ordering. Increase it to test concurrency-specific behavior.
+
+### `TestWorkerOptions`
+
+```ts
+type TestWorkerOptions = {
+  concurrency?: number;  // default: 1
+  maxQueue?: number;
+  onFull?: 'reject' | 'wait';
+};
+```
+
+Test concurrency-specific behavior by raising `concurrency`:
+
+```ts
+it('runs tasks in parallel', async () => {
+  const worker = createTestWorker<number, number>(
+    (n) => new Promise((r) => setTimeout(() => r(n * 2), 20)),
+    { concurrency: 3 },
+  );
+
+  const start = Date.now();
+  const results = await Promise.all([worker.run(1), worker.run(2), worker.run(3)]);
+  expect(Date.now() - start).toBeLessThan(40); // ran concurrently
+
+  expect(results).toEqual([2, 4, 6]);
+  worker.dispose();
+});
+```
 
 ### Pitfalls
 
-- `createTestWorker` runs the task function synchronously in the test process. If your task relies on browser-only APIs (e.g., `OffscreenCanvas`, `ImageData`), those are unavailable in a Node.js test environment.
+- `createTestWorker` runs the task function in-process. If your task relies on browser-only APIs (e.g., `OffscreenCanvas`, `ImageData`), those are unavailable in a Node.js test environment.
 - `createTestWorker` does not enforce Worker serialization constraints. A task that passes non-serializable values (functions, class instances) will work in tests but fail at runtime with a real Worker.
+- `runStream()` is not supported. Test streaming logic by calling the underlying async generator function directly.
 - Timeouts configured on the real `WorkerPool` are not honoured by `createTestWorker`. Test timeout behavior with a real worker and `vi.useFakeTimers` instead.
+- Failed task calls are not recorded in `worker.calls`. Only successful completions appear.
 
 ### Related
 
 - [Cancellable Batch](./cancellable-batch.md)
 - [Data Transformation Pipeline](./data-transformation-pipeline.md)
 - [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)
+- [Typed Error Handling](./typed-error-handling.md)

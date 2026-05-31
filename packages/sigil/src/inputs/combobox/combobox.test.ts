@@ -281,24 +281,20 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const insetLabel = fixture.query<HTMLElement>('.label-inset');
-      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+      const label = fixture.query<HTMLElement>('.label');
 
-      expect(insetLabel?.hidden).toBe(false);
-      expect(outsideLabel?.hidden).toBe(true);
+      expect(label?.hidden).toBe(false);
     });
 
-    it('shows outside label when label-placement is outside', async () => {
+    it('shows label when label-placement is outside', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country', 'label-placement': 'outside' },
         html: optionsHtml,
       });
 
-      const insetLabel = fixture.query<HTMLElement>('.label-inset');
-      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+      const label = fixture.query<HTMLElement>('.label');
 
-      expect(insetLabel?.hidden).toBe(true);
-      expect(outsideLabel?.hidden).toBe(false);
+      expect(label?.hidden).toBe(false);
     });
 
     it('uses proper combobox and listbox roles', async () => {

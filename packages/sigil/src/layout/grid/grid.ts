@@ -1,6 +1,8 @@
 import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
 
+import styles from './grid.css?inline';
+
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
   ['colsXl', '--size-screen-xl'],
@@ -31,8 +33,6 @@ const BP_FALLBACKS: Record<string, number> = {
   '--size-screen-sm': 640,
   '--size-screen-xl': 1280,
 };
-
-import styles from './grid.css?inline';
 
 type ColCount = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
 

@@ -12,7 +12,7 @@ import { MapSchema } from './schemas/map';
 import { NeverSchema } from './schemas/never';
 import { NumberSchema } from './schemas/number';
 import { ObjectSchema, type ObjectShape } from './schemas/object';
-import { type NormalizeItems, type RawOrSchema, normalizeToSchemas } from './schemas/raw-or';
+import { type NormalizeItems, normalizeToSchemas, type RawOrSchema } from './schemas/raw-or';
 import { RecordSchema } from './schemas/record';
 import { SetSchema } from './schemas/set';
 import { StringSchema } from './schemas/string';

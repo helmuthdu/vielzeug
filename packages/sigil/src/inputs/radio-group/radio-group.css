@@ -24,8 +24,8 @@
 
   .radio-group-items {
     display: flex;
-    flex-direction: var(--radio-group-direction, column);
-    gap: var(--radio-group-gap, var(--size-2));
+    flex-direction: var(--bit-radio-group-direction, column);
+    gap: var(--bit-radio-group-gap, var(--size-2));
   }
 
   .helper-text {

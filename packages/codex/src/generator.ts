@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 // to locate the source files at runtime. tsc rewrites these to .js in dist/ via
 // rewriteRelativeImportExtensions in tsconfig.json.
 import { parseFrontmatter } from './frontmatter.ts';
-import { DOC_PAGES, type BundledData, type BundledPackage, type CemDeclaration, type DocPage } from './types.ts';
+import { type BundledData, type BundledPackage, type CemDeclaration, DOC_PAGES, type DocPage } from './types.ts';
 
 // Resolves to dist/ in the compiled build, src/ when loaded directly under --experimental-strip-types.
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -33,6 +33,20 @@ export interface ArrowData {
   x?: number;
   y?: number;
   centerOffset: number;
+  /** `true` when the arrow was clamped away from its ideal center position (e.g. floating element shifted by `shift()`). */
+  constrained: boolean;
+}
+
+export interface FlipData {
+  /** Placements that were evaluated and overflowed before the winning placement was chosen. */
+  skippedPlacements: Placement[];
+}
+
+export interface ShiftData {
+  /** Amount shifted on the x axis in pixels. */
+  x: number;
+  /** Amount shifted on the y axis in pixels. */
+  y: number;
 }
 
 export interface HideData {
@@ -49,7 +63,9 @@ export interface SizeData {
 
 export interface MiddlewareData {
   arrow?: ArrowData;
+  flip?: FlipData;
   hide?: HideData;
+  shift?: ShiftData;
   size?: SizeData;
   [key: string]: unknown;
 }
@@ -64,6 +80,10 @@ export interface MiddlewareState {
   rects: { floating: Rect; reference: Rect };
   elements: { floating: HTMLElement; reference: ReferenceElement };
   middlewareData: MiddlewareData;
+  /** Global default boundary for overflow detection. Per-middleware `boundary` takes precedence. */
+  boundary?: Element | Rect;
+  /** Global default padding for overflow detection. Per-middleware `padding` takes precedence. */
+  padding?: Padding;
 }
 
 /**
@@ -111,6 +131,16 @@ export interface ComputePositionOptions {
    * Without this option, coordinates are viewport-relative (correct for `position: fixed`).
    */
   containingBlock?: Element | null;
+  /**
+   * Default boundary for all overflow-aware middleware (`flip`, `shift`, `autoPlacement`, `size`, `hide`).
+   * Per-middleware `boundary` takes precedence. Defaults to the visual viewport when omitted.
+   */
+  boundary?: Element | Rect;
+  /**
+   * Default padding for all overflow-aware middleware.
+   * Per-middleware `padding` takes precedence. Defaults to `0` when omitted.
+   */
+  padding?: Padding;
 }
 
 /**

@@ -54,6 +54,8 @@ export interface SortableOptions {
    * May optionally return a revert function. If returned, calling `sortable.revert()` will invoke
    * it and clear the stored function — useful for rolling back optimistic UI updates on failure.
    *
+   * @see {@link Sortable.revert}
+   *
    * @example
    * ```ts
    * onReorder: (ids) => {
@@ -62,11 +64,32 @@ export interface SortableOptions {
    *   return () => reorderItems(prev); // revert on server error
    * },
    * ```
+   *
+   * Note: only the most recent reorder (drag or keyboard) can be reverted.
+   * A new reorder overwrites the stored revert function.
    */
   onReorder?: (orderedIds: string[]) => void | (() => void);
   /**
+   * Called just before a successful drag commit with the before and after order snapshots.
+   * Use this hook to set up FLIP animations — the source items are still in their
+   * pre-commit positions at the time of the call.
+   *
+   * @example
+   * ```ts
+   * onBeforeReorder: (from, to) => {
+   *   // record element positions here, then animate after the next microtask
+   * }
+   * ```
+   */
+  onBeforeReorder?: (from: string[], to: string[]) => void;
+  /**
    * When truthy, drag interactions are ignored.
    * Accepts a function for reactive framework integration.
+   *
+   * Note: if `disabled` transitions to `true` while a drag is in progress the
+   * drag is treated as a cancellation — the item snaps back to its original
+   * position rather than committing the last placeholder location.
+   *
    * @example disabled={() => isReadOnly.value}
    */
   disabled?: boolean | (() => boolean);
@@ -87,8 +110,29 @@ export interface Sortable extends Disposable {
   /**
    * Calls the revert function returned by the last `onReorder` invocation (if any) and clears it.
    * A no-op when no revert function was provided or has already been consumed.
+   *
+   * Works for both drag-based and keyboard-based reorders.
+   * Note: only the most recent reorder can be reverted; a new reorder overwrites the stored function.
+   *
+   * @example
+   * ```ts
+   * onReorder: (ids) => {
+   *   const prev = order;
+   *   setOrder(ids);
+   *   return () => setOrder(prev); // ← provide this to enable revert()
+   * },
+   * // later, on server error:
+   * sortable.revert();
+   * ```
    */
   revert(): void;
+  /**
+   * Re-reads the container's children and reapplies `draggable`, ARIA roles,
+   * and handle attributes. Call this after programmatically adding, removing,
+   * or replacing items — e.g. after a framework render that replaces DOM nodes.
+   *
+   * Not needed when items are only reordered via drag or keyboard.
+   */
   sync(): void;
 }
 
@@ -102,12 +146,12 @@ interface ResolvedAutoScrollOptions {
 }
 
 interface SortableController {
+  commitReorder: (orderedIds: string[]) => void;
   getOrderedIds: () => string[];
   isDisabled: () => boolean;
+  notifyBeforeReorder: (from: string[], to: string[]) => void;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
-  notifyReorder: (orderedIds: string[]) => void | (() => void);
-  setLastRevert: (fn: (() => void) | null) => void;
 }
 
 /**
@@ -268,9 +312,8 @@ function commitSession(scope: SortableScopeState, event: DragEvent): void {
 
     if (!hasOrderChanged(beforeOrder, afterOrder)) continue;
 
-    const revert = controller.notifyReorder(afterOrder);
-
-    controller.setLastRevert(typeof revert === 'function' ? revert : null);
+    controller.notifyBeforeReorder(beforeOrder, afterOrder);
+    controller.commitReorder(afterOrder);
   }
 }
 
@@ -279,6 +322,9 @@ function finishSession(scope: SortableScopeState, event: DragEvent, forceCancel:
 
   const { active } = scope;
 
+  // If source or target became disabled during the drag (e.g. reactive disabled:()=>…),
+  // treat it as a cancellation — don't commit an operation the user can no longer
+  // meaningfully confirm.
   if (
     forceCancel ||
     !event.dataTransfer ||
@@ -343,13 +389,12 @@ function applyKeyboardReorder(
   getOrderedIds: () => string[],
   key: string,
   axis: 'vertical' | 'horizontal',
-): string[] | boolean {
+): string[] | null {
   const items = getItems();
   const currentIndex = items.indexOf(item);
 
-  if (currentIndex < 0) return false;
+  if (currentIndex < 0) return null;
 
-  const prevOrder = getOrderedIds();
   const isForward = axis === 'vertical' ? key === 'ArrowDown' : key === 'ArrowRight';
   const isBackward = axis === 'vertical' ? key === 'ArrowUp' : key === 'ArrowLeft';
   let targetIndex: number;
@@ -363,22 +408,21 @@ function applyKeyboardReorder(
   } else if (key === 'End') {
     targetIndex = items.length - 1;
   } else {
-    return false;
+    return null;
   }
 
-  if (targetIndex === currentIndex) return true;
+  // Already at the boundary — return null so the caller does not call preventDefault
+  // and the browser can handle the key (e.g. scrolling the page).
+  if (targetIndex === currentIndex) return null;
 
   const targetItem = items[targetIndex];
 
-  if (!targetItem) return false;
+  if (!targetItem) return null;
 
   element.insertBefore(item, targetIndex > currentIndex ? targetItem.nextSibling : targetItem);
-
   item.focus();
 
-  const nextOrder = getOrderedIds();
-
-  return hasOrderChanged(prevOrder, nextOrder) ? nextOrder : true;
+  return getOrderedIds();
 }
 
 // ─── createSortableScope ──────────────────────────────────────────────────────
@@ -432,8 +476,6 @@ export function createSortable(options: SortableOptions): Sortable {
 
   const getOrderedIds = (): string[] => getItems().map((el) => el.getAttribute(itemAttribute)!);
 
-  const getId = (el: HTMLElement): string => el.getAttribute(itemAttribute) ?? '';
-
   const syncItems = (): void => {
     clearHandleAttributes(element);
 
@@ -483,14 +525,16 @@ export function createSortable(options: SortableOptions): Sortable {
   let lastRevert: (() => void) | null = null;
 
   const controller: SortableController = {
+    commitReorder: (orderedIds) => {
+      const revert = options.onReorder?.(orderedIds);
+
+      lastRevert = typeof revert === 'function' ? revert : null;
+    },
     getOrderedIds,
     isDisabled: () => resolveDisabled(options.disabled),
+    notifyBeforeReorder: (from, to) => options.onBeforeReorder?.(from, to),
     notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
     notifyDragStart: (id, event) => options.onDragStart?.(id, event),
-    notifyReorder: (orderedIds) => options.onReorder?.(orderedIds),
-    setLastRevert: (fn) => {
-      lastRevert = fn;
-    },
   };
 
   sortableScope.controllers.add(controller);
@@ -513,7 +557,7 @@ export function createSortable(options: SortableOptions): Sortable {
 
     const placeholder = createPlaceholder(item);
     const originalNextSibling = item.nextSibling;
-    const activeId = getId(item);
+    const activeId = item.getAttribute(itemAttribute) ?? '';
 
     // Snapshot only the source controller at drag start; targets are snapshotted lazily.
     const initialOrders = new Map<SortableController, string[]>();
@@ -620,17 +664,15 @@ export function createSortable(options: SortableOptions): Sortable {
 
     if (!item || !element.contains(item)) return;
 
-    const result = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis);
+    const prevOrder = getOrderedIds();
+    const newOrder = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis);
 
-    if (result === false) return;
+    // null means unrecognized key or boundary — let the browser handle it (e.g. page scroll)
+    if (newOrder === null) return;
 
     e.preventDefault();
-
-    if (Array.isArray(result)) {
-      const revert = options.onReorder?.(result);
-
-      lastRevert = typeof revert === 'function' ? revert : null;
-    }
+    controller.notifyBeforeReorder(prevOrder, newOrder);
+    controller.commitReorder(newOrder);
   };
 
   syncItems();

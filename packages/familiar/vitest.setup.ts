@@ -15,6 +15,10 @@ globalThis.window.URL.revokeObjectURL = vi.fn((url: string) => {
   blobStore.delete(url);
 });
 
+// WorkerMock supports three message types from the generated worker script (R9):
+//   1. Standard request/response:  host→worker { id, input }  →  worker→host { id, result } or { id, error }
+//   2. Streaming chunks:           host→worker { id, input, stream: true }  →  worker→host { id, chunk }* + { id, result: undefined }
+//   3. Heartbeat:                  host→worker { id, input, heartbeatInterval }  →  worker→host { id, heartbeat: true }* (auto-sent at the interval)
 class WorkerMock {
   onerror: ((event: ErrorEvent) => void) | null = null;
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;

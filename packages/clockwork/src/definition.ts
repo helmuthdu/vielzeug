@@ -2,12 +2,11 @@ import type { MachineConfig, MachineEvent, StateNode, TransitionDef } from './ty
 
 import { MachineError } from './errors.js';
 
-// ── Hierarchy helpers ────────────────────────────────────────────────────────
+// ── Hierarchy helpers (internal — not re-exported from index) ─────────────────
 
 /**
  * Resolves a target state to its deepest initial leaf.
  * For compound states (those with `states` + `initial`), recursively descends.
- * Returns the full dot-path to the leaf state.
  */
 export const resolveLeaf = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   topLevelStates: Record<string, StateNode<State, Ctx, Ev>>,
@@ -20,14 +19,12 @@ export const resolveLeaf = <State extends string, Ctx extends object, Ev extends
 
   if (!node) return target;
 
-  // Walk existing segments
   for (let i = 1; i < segments.length; i++) {
     node = node.states?.[segments[i]];
 
     if (!node) return target;
   }
 
-  // Descend into initial substates
   let path = target;
 
   while (node?.states && node.initial) {
@@ -76,12 +73,10 @@ export const getAncestorPaths = (path: string): string[] => {
 // ── Validation ───────────────────────────────────────────────────────────────
 
 const validateNode = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  states: Record<string, StateNode<State, Ctx, Ev>>,
   node: StateNode<string, Ctx, Ev>,
   path: string,
   allTopLevel: Record<string, StateNode<State, Ctx, Ev>>,
 ): void => {
-  // Validate compound state has initial
   if (node.states && !node.initial) {
     throw new MachineError(
       'MACHINE_MISSING_COMPOUND_INITIAL',
@@ -98,7 +93,6 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     );
   }
 
-  // Validate transitions
   for (const [eventType, input] of Object.entries(node.on ?? {})) {
     const defs = Array.isArray(input) ? input : [input];
 
@@ -111,7 +105,6 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     }
 
     for (const tr of defs as Array<TransitionDef<State, Ctx, Ev>>) {
-      // Target must be resolvable: either a top-level state or a dot-path
       const targetRoot = tr.target.split('.')[0];
 
       if (!(targetRoot in allTopLevel)) {
@@ -124,10 +117,30 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     }
   }
 
-  // Recurse into substates
+  // Validate after targets and delays
+  for (const afterDef of node.after ?? []) {
+    if (afterDef.delay < 0) {
+      throw new MachineError(
+        'MACHINE_INVALID_AFTER_DELAY',
+        `[machine] state "${path}" after delay must be >= 0, got ${afterDef.delay}`,
+        { delay: afterDef.delay, path },
+      );
+    }
+
+    const targetRoot = afterDef.target.split('.')[0];
+
+    if (!(targetRoot in allTopLevel)) {
+      throw new MachineError(
+        'MACHINE_UNKNOWN_TARGET',
+        `[machine] state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
+        { delay: afterDef.delay, path, target: afterDef.target },
+      );
+    }
+  }
+
   if (node.states) {
     for (const [name, child] of Object.entries(node.states)) {
-      validateNode(states, child, `${path}.${name}`, allTopLevel);
+      validateNode(child, `${path}.${name}`, allTopLevel);
     }
   }
 };
@@ -146,19 +159,29 @@ const validateDefinition = <State extends string, Ctx extends object, Ev extends
   }
 
   for (const [stateName, node] of Object.entries(states) as Array<[string, StateNode<State, Ctx, Ev>]>) {
-    validateNode(states, node, stateName, states);
+    validateNode(node, stateName, states);
   }
 };
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
 /**
- * Defines a state machine configuration with full validation and type inference.
+ * Defines and validates a state machine configuration.
+ *
+ * State and context types are inferred from the config object.
+ * For typed events, pass the event union as a generic parameter.
+ *
  * @example
+ * // Inference (no generics needed for simple cases):
  * const machine = defineMachine({
  *   initial: 'idle',
+ *   context: { count: 0 },
  *   states: { idle: { on: { GO: { target: 'active' } } }, active: {} },
  * });
+ *
+ * // With typed events:
+ * type Ev = { type: 'GO' } | { type: 'STOP' };
+ * const machine = defineMachine<'idle' | 'active', { count: number }, Ev>({ ... });
  */
 export const defineMachine = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   config: MachineConfig<State, Ctx, Ev>,

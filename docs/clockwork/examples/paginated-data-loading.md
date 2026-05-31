@@ -19,7 +19,7 @@ Managing all these states together leads to spaghetti code with race conditions 
 Use Machine for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
 
 ```ts
-import { defineMachine, interpret, assign } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 import { createSource } from '@vielzeug/sourcerer';
 import { signal, readonly } from '@vielzeug/ripple';
 
@@ -101,38 +101,38 @@ const dataMachine = defineMachine({
   },
 });
 
-const incrementAttempts = assign(({ context }) => ({
-  attempts: context.attempts + 1,
-}));
+const incrementAttempts = ({ context }: any) => {
+  context.attempts += 1;
+};
 
-const resetAttempts = assign(() => ({
-  attempts: 0,
-}));
+const resetAttempts = ({ context }: any) => {
+  context.attempts = 0;
+};
 
-const updatePage = assign(({ context, event }) => ({
-  page: (event as any).page,
-}));
+const updatePage = ({ context, event }: any) => {
+  context.page = event.page;
+};
 
-const updateSearch = assign(({ context, event }) => ({
-  search: (event as any).query,
-  page: 1, // Reset to first page on search
-}));
+const updateSearch = ({ context, event }: any) => {
+  context.search = event.query;
+  context.page = 1; // Reset to first page on search
+};
 
-const updateSort = assign(({ context, event }) => ({
-  sortField: (event as any).field,
-  sortOrder: (event as any).order,
-  page: 1,
-}));
+const updateSort = ({ context, event }: any) => {
+  context.sortField = event.field;
+  context.sortOrder = event.order;
+  context.page = 1;
+};
 
-const recordData = assign(({ event }) => ({
-  items: (event as any).items,
-  total: (event as any).total,
-  error: null,
-}));
+const recordData = ({ context, event }: any) => {
+  context.items = event.items;
+  context.total = event.total;
+  context.error = null;
+};
 
-const recordError = assign(({ event }) => ({
-  error: (event as any).error,
-}));
+const recordError = ({ context, event }: any) => {
+  context.error = event.error;
+};
 
 // Setup data source
 const userSource = createSource({

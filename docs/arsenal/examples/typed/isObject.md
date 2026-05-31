@@ -7,12 +7,6 @@
 
 Checks if a value is a plain object.
 
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isObject.ts
-:::
-
 ## Features
 
 - **Type Guard**: Narrows `unknown` to `object`

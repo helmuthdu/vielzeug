@@ -24,7 +24,7 @@ describe('Navigation', () => {
       const router = createRouter({
         routes: {
           ...routes,
-          about: { handler: vi.fn(), path: '/about' },
+          about: { data: vi.fn(), path: '/about' },
         },
       });
 
@@ -38,7 +38,7 @@ describe('Navigation', () => {
     it('{ replace: true } calls replaceState instead of pushState', async () => {
       const router = createRouter({
         routes: {
-          about: { handler: vi.fn(), path: '/about' },
+          about: { data: vi.fn(), path: '/about' },
         },
       });
 
@@ -52,7 +52,7 @@ describe('Navigation', () => {
     it('{ state } is forwarded to history state', async () => {
       const router = createRouter({
         routes: {
-          about: { handler: vi.fn(), path: '/about' },
+          about: { data: vi.fn(), path: '/about' },
         },
       });
 
@@ -64,13 +64,13 @@ describe('Navigation', () => {
     });
 
     it('resolves after the destination handler has run', async () => {
-      const handler = vi.fn(async () => {
+      const data = vi.fn(async () => {
         await new Promise((resolve) => setTimeout(resolve, 1));
       });
       const router = createRouter({
         routes: {
           home: { path: '/' },
-          page: { handler, path: '/page' },
+          page: { data, path: '/page' },
         },
       });
 
@@ -88,40 +88,40 @@ describe('Navigation', () => {
     });
 
     it('strips the base prefix when matching routes', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         base: '/app',
         routes: {
-          about: { handler, path: '/about' },
+          about: { data, path: '/about' },
         },
       });
 
       mockLocation.pathname = '/app/about';
       await boot(router);
 
-      expect(handler).toHaveBeenCalled();
+      expect(data).toHaveBeenCalled();
     });
 
     it('does not strip sibling prefixes when base paths only partially overlap', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         base: '/app',
         routes: {
-          apple: { handler, path: '/apple' },
+          apple: { data, path: '/apple' },
         },
       });
 
       mockLocation.pathname = '/apple';
       await boot(router);
 
-      expect(handler).toHaveBeenCalled();
+      expect(data).toHaveBeenCalled();
     });
 
     it('does not push a new history entry for the current named route URL', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         routes: {
-          about: { handler, path: '/about' },
+          about: { data, path: '/about' },
         },
       });
 
@@ -135,10 +135,10 @@ describe('Navigation', () => {
     });
 
     it('deduplicates identical query strings on named navigation', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         routes: {
-          search: { handler, path: '/search' },
+          search: { data, path: '/search' },
         },
       });
 
@@ -153,26 +153,26 @@ describe('Navigation', () => {
     });
 
     it('{ force: true } bypasses deduplication', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         routes: {
-          about: { handler, path: '/about' },
+          about: { data, path: '/about' },
         },
       });
 
       mockLocation.pathname = '/about';
       await boot(router);
 
-      handler.mockClear();
+      data.mockClear();
       await router.navigate({ name: 'about' }, { force: true });
-      expect(handler).toHaveBeenCalled();
+      expect(data).toHaveBeenCalled();
     });
 
     it('updates dedup state after popstate navigation', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         routes: {
-          about: { handler, path: '/about' },
+          about: { data, path: '/about' },
           home: { path: '/' },
         },
       });
@@ -184,19 +184,19 @@ describe('Navigation', () => {
       window.dispatchEvent(new Event('popstate'));
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
 
-      handler.mockClear();
+      data.mockClear();
       mockHistory.pushState.mockClear();
       await router.navigate({ name: 'about' });
 
       expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/about');
-      expect(handler).toHaveBeenCalledTimes(1);
+      expect(data).toHaveBeenCalledTimes(1);
     });
 
     it('supports raw path targets via navigate({ path })', async () => {
       const target = vi.fn();
       const router = createRouter({
         routes: {
-          target: { handler: target, path: '/target' },
+          target: { data: target, path: '/target' },
         },
       });
 
@@ -212,11 +212,11 @@ describe('Navigation', () => {
     });
 
     it('does not duplicate the base segment when navigating with a base-prefixed raw path', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
       const router = createRouter({
         base: '/app',
         routes: {
-          about: { handler, path: '/about' },
+          about: { data, path: '/about' },
         },
       });
 
@@ -226,30 +226,30 @@ describe('Navigation', () => {
       await router.navigate({ path: '/app/about' });
 
       expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/app/about');
-      expect(handler).toHaveBeenCalledTimes(1);
+      expect(data).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Lifecycle', () => {
     it('constructor triggers the initial route match', async () => {
-      const handler = vi.fn();
+      const data = vi.fn();
 
       mockLocation.pathname = '/';
       await boot(
         createRouter({
           routes: {
-            home: { handler, path: '/' },
+            home: { data, path: '/' },
           },
         }),
       );
 
-      expect(handler).toHaveBeenCalled();
+      expect(data).toHaveBeenCalled();
     });
 
     it('dispose() is idempotent and blocks later use', async () => {
       const router = createRouter({
         routes: {
-          home: { handler: vi.fn(), path: '/' },
+          home: { data: vi.fn(), path: '/' },
         },
       });
 
@@ -354,6 +354,7 @@ describe('Navigation', () => {
           name: 'dashboard',
           params: {},
           pathname: '/dashboard/settings',
+          status: 'idle',
         },
         {
           component: undefined,
@@ -362,6 +363,7 @@ describe('Navigation', () => {
           name: 'dashboard.settings',
           params: {},
           pathname: '/dashboard/settings',
+          status: 'idle',
         },
       ]);
       expect(router.resolve('/app/missing')).toBeNull();
@@ -384,6 +386,7 @@ describe('Navigation', () => {
           name: 'current',
           params: {},
           pathname: '/current',
+          status: 'idle',
         },
       ]);
     });
@@ -466,14 +469,14 @@ describe('Navigation', () => {
   });
 });
 
-describe('handler error propagation', () => {
-  it('a throwing handler propagates the error to the navigate() caller', async () => {
+describe('data error propagation', () => {
+  it('a throwing data fn propagates the error to the navigate() caller', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         bad: {
-          handler: () => {
+          data: () => {
             throw new Error('handler boom');
           },
           path: '/bad',

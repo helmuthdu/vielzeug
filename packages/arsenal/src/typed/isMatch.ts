@@ -19,7 +19,7 @@
  *
  * @returns `true` if the object is a match, else `false`.
  */
-export function isMatch(object: any, source: any): boolean {
+export function isMatch(object: unknown, source: unknown): boolean {
   if (object === source) return true;
 
   if (object == null || source == null) return false;
@@ -30,14 +30,22 @@ export function isMatch(object: any, source: any): boolean {
   if (isObjArray !== isSrcArray) return false;
 
   if (isObjArray && isSrcArray) {
-    if (source.length > object.length) return false;
+    const objArr = object as unknown[];
+    const srcArr = source as unknown[];
 
-    return source.every((item: any, i: number) => isMatch(object[i], item));
+    if (srcArr.length > objArr.length) return false;
+
+    return srcArr.every((item, i) => isMatch(objArr[i], item));
   }
 
-  if (typeof source === 'object') {
-    for (const key of Object.keys(source)) {
-      if (!isMatch(object?.[key], source[key])) {
+  if (typeof source === 'object' && typeof object === 'object') {
+    // Map and Set are not structurally matched by key iteration — treat as opaque
+    if (source instanceof Map || source instanceof Set || object instanceof Map || object instanceof Set) {
+      return false;
+    }
+
+    for (const key of Object.keys(source as Record<string, unknown>)) {
+      if (!isMatch((object as Record<string, unknown>)?.[key], (source as Record<string, unknown>)[key])) {
         return false;
       }
     }

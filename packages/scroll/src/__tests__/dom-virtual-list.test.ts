@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createDomVirtualList } from '../dom-virtual-list';
+import { createDomVirtualList, createVirtualScroller } from '../dom-virtual-list';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
 type Row = { id: number; label: string; size: number };
@@ -412,6 +412,122 @@ describe('createDomVirtualList – invalidate', () => {
   });
 });
 
+// ─── R11: Virtualizer interface delegation ────────────────────────────────────
+
+describe('createDomVirtualList – Virtualizer interface (R11)', () => {
+  it('count, totalSize, scrollOffset, items, stickyItems are readable', () => {
+    const { listEl, scrollEl } = makeList(120);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+    });
+
+    // before setItems: all defaults
+    expect(ctrl.count).toBe(0);
+    expect(ctrl.totalSize).toBe(0);
+    expect(ctrl.scrollOffset).toBe(0);
+    expect(ctrl.items).toEqual([]);
+    expect(ctrl.stickyItems).toEqual([]);
+
+    ctrl.setItems(makeRows(10));
+
+    expect(ctrl.count).toBe(10);
+    expect(ctrl.totalSize).toBe(10 * 30);
+    ctrl.destroy();
+  });
+
+  it('scrollToOffset is forwarded to underlying virtualizer', () => {
+    const { listEl, scrollEl } = makeList(120);
+    const rows = makeRows(100);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(rows);
+    ctrl.scrollToOffset(300);
+
+    expect(scrollEl.scrollTop).toBe(300);
+    ctrl.destroy();
+  });
+
+  it('Symbol.dispose delegates to destroy', () => {
+    const { listEl, scrollEl } = makeList();
+    const ctrl = createDomVirtualList<Row>({
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+    });
+
+    expect(() => ctrl[Symbol.dispose]()).not.toThrow();
+  });
+});
+
+// ─── R3: redraw() ──────────────────────────────────────────────────────────────
+
+describe('createDomVirtualList – redraw', () => {
+  it('re-emits render without clearing measurements', async () => {
+    const { listEl, scrollEl } = makeList(300);
+    const render = vi.fn();
+    const rows = makeRows(10);
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render,
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(rows);
+    ctrl.measure(0, 80);
+    await flushMicrotasks();
+
+    const callsBefore = render.mock.calls.length;
+
+    ctrl.redraw();
+
+    expect(render.mock.calls.length).toBe(callsBefore + 1);
+
+    // Measurement still intact
+    const args = render.mock.calls.at(-1)?.[0];
+
+    expect(args?.items.find((i: { index: number }) => i.index === 0)?.size).toBe(80);
+    ctrl.destroy();
+  });
+
+  it('stable-key setItems uses redraw (not invalidate)', async () => {
+    const { listEl, scrollEl } = makeList(300);
+    const renderSizes: number[] = [];
+    const rows = makeRows(10);
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: ({ items }) => {
+        for (const item of items) renderSizes[item.index] = item.size;
+      },
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(rows);
+    ctrl.measure(0, 80);
+    await flushMicrotasks();
+
+    // setItems with same keys — should redraw, NOT invalidate
+    ctrl.setItems([...rows]);
+
+    // measurement should still be present after redraw
+    expect(renderSizes[0]).toBe(80);
+    ctrl.destroy();
+  });
+});
+
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 describe('createDomVirtualList – lifecycle', () => {
@@ -483,5 +599,143 @@ describe('createDomVirtualList – lifecycle', () => {
     expect(listEl.textContent).toBe('');
     expect(listEl.style.height).toBe('');
     expect(listEl.style.position).toBe('');
+  });
+});
+
+// ─── setItems double-render fix (Bug 5) ───────────────────────────────────────
+
+describe('createDomVirtualList – setItems double-render', () => {
+  it('does not double-render when count changes with stable keys', () => {
+    const { listEl, scrollEl } = makeList(500);
+    const render = vi.fn();
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      getItemKey: (_, row) => row.id,
+      listElement: listEl,
+      render,
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(makeRows(5));
+
+    const callsAfterFirst = render.mock.calls.length;
+
+    // Adding items changes count — render should fire exactly once more.
+    ctrl.setItems(makeRows(10));
+    expect(render.mock.calls.length).toBe(callsAfterFirst + 1);
+    ctrl.destroy();
+  });
+
+  it('does render when count is unchanged with stable keys', () => {
+    const { listEl, scrollEl } = makeList(500);
+    const render = vi.fn();
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      getItemKey: (_, row) => row.id,
+      listElement: listEl,
+      render,
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(makeRows(5));
+
+    const callsAfterFirst = render.mock.calls.length;
+
+    // Same count but different data — redraw() must fire.
+    const replaced = makeRows(5).map((r) => ({ ...r, label: 'updated' }));
+
+    ctrl.setItems(replaced);
+    expect(render.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    ctrl.destroy();
+  });
+});
+
+// ─── createVirtualScroller ────────────────────────────────────────────────────
+
+describe('createVirtualScroller', () => {
+  it('appends a scroll container to the given container', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    expect(container.children.length).toBe(1);
+
+    const scrollEl = container.children[0] as HTMLElement;
+
+    expect(scrollEl.style.overflow).toContain('auto');
+    ctrl.destroy();
+  });
+
+  it('destroy() removes the scroll container from the DOM', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    expect(container.children.length).toBe(1);
+    ctrl.destroy();
+    expect(container.children.length).toBe(0);
+  });
+
+  it('live getter count reflects current value after setItems', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    expect(ctrl.count).toBe(0);
+    ctrl.setItems(makeRows(10));
+    // With spread snapshot this returns 0; Proxy returns the current value.
+    expect(ctrl.count).toBe(10);
+    ctrl.destroy();
+  });
+
+  it('live getter totalSize reflects current value after setItems', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    ctrl.setItems(makeRows(5));
+    expect(ctrl.totalSize).toBe(5 * 30);
+    ctrl.setItems(makeRows(10));
+    expect(ctrl.totalSize).toBe(10 * 30);
+    ctrl.destroy();
+  });
+
+  it('applies containerClass to the scroll element', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      containerClass: 'my-scroller',
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    const scrollEl = container.children[0] as HTMLElement;
+
+    expect(scrollEl.className).toBe('my-scroller');
+    ctrl.destroy();
   });
 });

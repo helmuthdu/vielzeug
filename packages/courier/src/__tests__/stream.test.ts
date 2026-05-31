@@ -303,7 +303,7 @@ describe('createStream — sse()', () => {
     expect(callCount).toBe(1);
   });
 
-  it('calls onError when reconnect attempts are exhausted', async () => {
+  it('calls onError when reconnect attempts are exhausted after errors', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
@@ -321,6 +321,60 @@ describe('createStream — sse()', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toBeInstanceOf(Error);
+  });
+
+  it('calls onError with budget-exhausted error when server always closes cleanly', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    // Server always sends a clean close (empty stream, no error)
+    fetchMock.mockResolvedValue(sseResponse(sseStream('')));
+
+    const errors: Error[] = [];
+    const source = stream.sse('/events', {
+      onError: (e) => errors.push(e),
+      reconnect: { delay: 0, times: 2 },
+    });
+
+    await waitFor(() => errors.length > 0);
+    source.close();
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toMatch(/budget exhausted/i);
+  });
+
+  it('honors server retry: directive as the new reconnect delay', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+    const timestamps: number[] = [];
+    let callCount = 0;
+
+    fetchMock.mockImplementation(() => {
+      timestamps.push(Date.now());
+      callCount++;
+
+      if (callCount === 1) {
+        // First response: set retry to 50ms, then close cleanly
+        return Promise.resolve(sseResponse(sseStream('retry: 50\n\ndata: first\n\n')));
+      }
+
+      // Second response: close cleanly (exhausts budget)
+      return Promise.resolve(sseResponse(sseStream('data: second\n\n')));
+    });
+
+    const messages: string[] = [];
+    const source = stream.sse('/events', {
+      reconnect: { delay: 0, times: 1 }, // initial delay 0, but server overrides to 50ms
+    });
+
+    source.on('message', (d: string) => messages.push(d));
+
+    await waitFor(() => callCount >= 2, 1000);
+    source.close();
+
+    // The delay between the two calls should be at least ~50ms (server-advised retry)
+    const elapsed = timestamps[1] - timestamps[0];
+
+    expect(elapsed).toBeGreaterThanOrEqual(40);
+    expect(messages).toContain('first');
   });
 
   it('runs request through the interceptor pipeline', async () => {

@@ -1,63 +1,39 @@
-import type { ComputedSignal, Signal } from '@vielzeug/ripple';
-
 import { computed, signal } from '@vielzeug/ripple';
 
+import type { ReactiveSource } from './types';
+
 /**
- * Adapts any reactive source (local, remote, cursor, or infinite) into ripple computed signals.
- *
- * All source types expose `current`, `meta`, and `subscribe`, so a single generic adapter
- * handles all four. Call `dispose()` when the source is no longer needed.
+ * Wraps any reactive source as a pair of ripple signals: `current` and `meta`.
+ * The signals update whenever the source notifies its subscribers.
  *
  * @example
  * ```ts
- * const source = createLocalSource(data, { limit: 10 });
- * const { current, meta, dispose } = toSignals(source);
- *
- * effect(() => {
- *   console.log('Page:', meta.value.pageNumber);
- *   console.log('Items:', current.value);
- * });
- *
- * source.goTo(2); // triggers effects automatically
- * dispose();      // release reactive resources when done
+ * const { current, meta } = toSignals(source);
+ * const itemCount = computed(() => current.value.length);
+ * effect(() => console.log('page:', meta.value.pageNumber));
  * ```
  */
-export function toSignals<T, TMeta>(source: {
-  readonly current: readonly T[];
-  readonly meta: TMeta;
-  subscribe(listener: () => void): () => void;
-}): { current: ComputedSignal<readonly T[]>; dispose: () => void; meta: ComputedSignal<TMeta> } {
-  const tick: Signal<number> = signal(0);
+export function toSignals<T, TMeta>(source: ReactiveSource<T, TMeta>) {
+  // Advance the global ripple revision clock so computed() evaluates immediately on first read.
+  const tick = signal(0);
 
-  // Write the initial value to advance ripple's global revision counter.
-  // Without this, computed() skips evaluation on the first .value read when
-  // the global revision clock is at 0 (no prior signal writes in this context).
-  tick.value = 1;
+  tick.value++;
 
-  const current = computed(() => {
-    void tick.value; // establish reactive dependency
-
-    return source.current;
-  });
-
-  const meta = computed(() => {
-    void tick.value; // establish reactive dependency
-
-    return source.meta;
-  });
-
-  const unsubscribe = source.subscribe(() => {
-    tick.value ^= 1;
+  const dispose = source.subscribe(() => {
+    tick.value++;
   });
 
   return {
-    current,
-    dispose: () => {
-      unsubscribe();
-      current.dispose();
-      meta.dispose();
-      tick.dispose();
-    },
-    meta,
+    current: computed(() => {
+      void tick.value;
+
+      return source.current;
+    }),
+    dispose,
+    meta: computed(() => {
+      void tick.value;
+
+      return source.meta;
+    }),
   };
 }

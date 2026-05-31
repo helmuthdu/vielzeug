@@ -2,7 +2,7 @@ import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } f
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { getRecordKey } from '../internal';
-import { defaultCodec, type StoredRecord, parseStored } from '../ttl';
+import { defaultCodec, type StoredRecord } from '../ttl';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -12,36 +12,38 @@ type MemoryBroadcastMsg =
   | { entries: Array<{ key: string; stored: StoredRecord<unknown> }>; table: string; type: 'putAll' };
 
 /** Runtime type guard — rejects malformed or unknown BroadcastChannel messages. */
-function isBroadcastMsg(data: unknown): data is MemoryBroadcastMsg {
-  if (typeof data !== 'object' || data === null) return false;
+function makeBroadcastMsgGuard(codec: { decode<T>(raw: unknown): (StoredRecord<T> & { value: T }) | undefined }) {
+  return function isBroadcastMsg(data: unknown): data is MemoryBroadcastMsg {
+    if (typeof data !== 'object' || data === null) return false;
 
-  const d = data as Record<string, unknown>;
+    const d = data as Record<string, unknown>;
 
-  if (typeof d['table'] !== 'string' || typeof d['type'] !== 'string') return false;
+    if (typeof d['table'] !== 'string' || typeof d['type'] !== 'string') return false;
 
-  switch (d['type']) {
-    case 'clear':
-      return true;
-    case 'delete':
-      return typeof d['key'] === 'string';
-    case 'deleteMany':
-      return Array.isArray(d['keys']) && (d['keys'] as unknown[]).every((k) => typeof k === 'string');
-    case 'put':
-      return typeof d['key'] === 'string' && parseStored(d['stored']) !== undefined;
-    case 'putAll':
-      return (
-        Array.isArray(d['entries']) &&
-        (d['entries'] as unknown[]).every(
-          (e) =>
-            typeof e === 'object' &&
-            e !== null &&
-            typeof (e as Record<string, unknown>)['key'] === 'string' &&
-            parseStored((e as Record<string, unknown>)['stored']) !== undefined,
-        )
-      );
-    default:
-      return false;
-  }
+    switch (d['type']) {
+      case 'clear':
+        return true;
+      case 'delete':
+        return typeof d['key'] === 'string';
+      case 'deleteMany':
+        return Array.isArray(d['keys']) && (d['keys'] as unknown[]).every((k) => typeof k === 'string');
+      case 'put':
+        return typeof d['key'] === 'string' && codec.decode(d['stored']) !== undefined;
+      case 'putAll':
+        return (
+          Array.isArray(d['entries']) &&
+          (d['entries'] as unknown[]).every(
+            (e) =>
+              typeof e === 'object' &&
+              e !== null &&
+              typeof (e as Record<string, unknown>)['key'] === 'string' &&
+              codec.decode((e as Record<string, unknown>)['stored']) !== undefined,
+          )
+        );
+      default:
+        return false;
+    }
+  };
 }
 
 type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
@@ -56,6 +58,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
   const { codec = defaultCodec, logger, name, onMetrics, schema, signals, validators } = options;
   const tables = new Map(Object.keys(schema).map((k) => [k, new Map<string, StoredRecord<unknown>>()]));
   const getTableStore = (table: string) => tables.get(table)!;
+  const isBroadcastMsg = makeBroadcastMsgGuard(codec);
 
   const channel =
     name !== undefined && typeof BroadcastChannel !== 'undefined'
@@ -253,7 +256,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
               }
 
               try {
-                const parsed = parseStored(stored as unknown);
+                const parsed = codec.decode(stored as unknown);
 
                 if (!parsed) return false;
 

@@ -1,167 +1,145 @@
 import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery } from './types';
 
 import { createSourceCore } from './core';
+import { createFetchManager } from './fetchManager';
+import { SourceError } from './types';
 import { defaultKeyOf, defaultRetryDelay, extractError, retry } from './utils';
 
-const DEFAULTS = { debounceMs: 300, limit: 10 } as const;
-
-/**
- * Creates a cursor-based data source backed by a remote fetch function.
- * Uses cursor tokens rather than page numbers for forward/backward navigation.
- */
+/** Creates a cursor-based (keyset-pagination) source that fetches data from a network endpoint. */
 export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCursor>): CursorSource<T, TCursor> {
   const core = createSourceCore();
-  const limitDefault = Math.max(1, cfg.limit ?? DEFAULTS.limit);
-  const debounceMs = cfg.debounceMs ?? DEFAULTS.debounceMs;
-  const keyOf = cfg.queryKey ?? defaultKeyOf;
-  const autoFetch = cfg.autoFetch ?? true;
+
+  // ── Config defaults ─────────────────────────────────────────────────────────
+  const debounceMs = cfg.debounceMs ?? 300;
   const retryAttempts = cfg.retry?.attempts ?? 0;
   const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const refreshIntervalMs = cfg.refreshInterval ?? 0;
+  const autoFetch = cfg.autoFetch !== false;
+  const keyOf = cfg.queryKey ?? defaultKeyOf;
 
-  let limit = limitDefault;
+  // ── Mutable state ───────────────────────────────────────────────────────────
+  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
   let search = '';
-  let after: TCursor | undefined;
-  let before: TCursor | undefined;
+  let afterCursor: TCursor | undefined;
+  let beforeCursor: TCursor | undefined;
   let nextCursor: TCursor | undefined;
   let prevCursor: TCursor | undefined;
-
   let items: readonly T[] = [];
   let total = 0;
-  let error: string | null = null;
-  let cachedMeta!: CursorMeta;
-  let pendingCount = 0;
-  let latestKey = '';
+  let error: SourceError | null = null;
 
-  let refreshTimer: ReturnType<typeof setInterval> | undefined;
+  // ── In-flight deduplication ─────────────────────────────────────────────────
+  const fm = createFetchManager<CursorSourceQuery<TCursor>>(keyOf);
 
-  const inflight = new Map<string, { controller: AbortController; promise: Promise<void> }>();
-
-  const buildQuery = (): CursorSourceQuery<TCursor> => ({
-    after,
-    before,
-    limit,
-    search: search || undefined,
-  });
+  // ── Cached accessors ────────────────────────────────────────────────────────
+  let cachedCurrent: readonly T[] = [];
+  let cachedMeta: CursorMeta = {
+    error: null,
+    hasNextPage: false,
+    hasPrevPage: false,
+    isLoading: false,
+    isSearchPending: false,
+    pageSize: limit,
+    totalItems: 0,
+  };
 
   const refreshMeta = () => {
+    cachedCurrent = items;
     cachedMeta = {
-      errorMessage: error,
+      error,
       hasNextPage: nextCursor !== undefined,
       hasPrevPage: prevCursor !== undefined,
-      isLoading: pendingCount > 0,
+      isLoading: fm.pendingCount > 0,
       isSearchPending: core.isScheduled,
       pageSize: limit,
       totalItems: total,
     };
   };
 
-  const notify = () => {
+  refreshMeta();
+
+  const commit = () => {
     refreshMeta();
     core.notify();
   };
 
-  const fetchQuery = async (q: CursorSourceQuery<TCursor>): Promise<void> => {
-    const key = keyOf(q);
-    const startTime = Date.now();
+  // ── Core fetch ──────────────────────────────────────────────────────────────
+  const toRemoteQuery = (): CursorSourceQuery<TCursor> => ({
+    ...(afterCursor !== undefined && { after: afterCursor }),
+    ...(beforeCursor !== undefined && { before: beforeCursor }),
+    ...(search && { search }),
+    limit,
+  });
 
-    latestKey = key;
-
-    for (const [k, entry] of inflight) {
-      if (k !== key) entry.controller.abort();
-    }
-
-    if (inflight.has(key)) {
-      pendingCount++;
-      notify();
-
-      try {
-        await inflight.get(key)!.promise;
-      } finally {
-        pendingCount--;
-        notify();
-      }
-
-      return;
-    }
-
-    const controller = new AbortController();
-
-    pendingCount++;
+  const fetchQuery = (q: CursorSourceQuery<TCursor>): Promise<void> => {
     error = null;
-    notify();
 
-    const promise = retry((signal) => cfg.fetch(q, signal), {
-      delay: retryDelay,
-      signal: controller.signal,
-      times: retryAttempts + 1,
-    })
-      .then((result) => {
-        if (key === latestKey) {
-          items = result.items;
-          total = result.total ?? 0;
-          nextCursor = result.nextCursor;
-          prevCursor = result.prevCursor;
-          error = null;
-          cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
+    return fm.run(
+      q,
+      async (q, signal, isLatest) => {
+        const startTime = Date.now();
+
+        try {
+          const result = await retry((sig) => cfg.fetch(q, sig), {
+            delay: retryDelay,
+            signal,
+            times: retryAttempts + 1,
+          });
+
+          if (isLatest()) {
+            items = result.items;
+            total = result.total ?? result.items.length;
+            nextCursor = result.nextCursor;
+            prevCursor = result.prevCursor;
+            error = null;
+            cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
+          }
+        } catch (reason: unknown) {
+          if (signal.aborted) return;
+
+          if (isLatest()) {
+            items = [];
+            total = 0;
+            nextCursor = undefined;
+            prevCursor = undefined;
+            error = new SourceError(extractError(reason), { cause: reason, query: q });
+            cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
+          }
         }
-      })
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
-
-        if (key === latestKey) {
-          error = extractError(reason);
-          items = [];
-          total = 0;
-          nextCursor = undefined;
-          prevCursor = undefined;
-          cfg.onFetch?.({ durationMs: Date.now() - startTime, error: error, query: q, status: 'error' });
-        }
-      })
-      .finally(() => {
-        inflight.delete(key);
-        pendingCount--;
-        notify();
-      });
-
-    inflight.set(key, { controller, promise });
-    await promise;
+      },
+      commit,
+    );
   };
 
-  const doUpdate = () => fetchQuery(buildQuery());
+  const doUpdate = () => fetchQuery(toRemoteQuery());
 
-  refreshMeta();
+  // ── Auto-fetch + refresh interval ───────────────────────────────────────────
+  if (autoFetch) void doUpdate();
 
-  if (autoFetch) {
-    void doUpdate();
-  }
+  let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  if (refreshIntervalMs > 0) {
+  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
     refreshTimer = setInterval(() => {
-      void doUpdate();
-    }, refreshIntervalMs);
+      if (!core.isDisposed) void doUpdate();
+    }, cfg.refreshInterval);
   }
 
+  // ── Public API ──────────────────────────────────────────────────────────────
   return {
     get current() {
-      return items;
+      return cachedCurrent;
     },
 
     dispose() {
-      if (refreshTimer) {
+      if (refreshTimer !== undefined) {
         clearInterval(refreshTimer);
         refreshTimer = undefined;
       }
 
-      for (const entry of inflight.values()) {
-        entry.controller.abort();
-      }
-
-      inflight.clear();
+      fm.dispose();
       core.dispose();
     },
 
-    flush(): Promise<void> {
+    flush() {
       return core.flush(() => doUpdate());
     },
 
@@ -169,66 +147,71 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return cachedMeta;
     },
 
-    next(): Promise<void> {
+    next() {
       if (!nextCursor) return Promise.resolve();
 
-      after = nextCursor;
-      before = undefined;
+      afterCursor = nextCursor;
+      beforeCursor = undefined;
 
       return doUpdate();
     },
 
-    prev(): Promise<void> {
+    prev() {
       if (!prevCursor) return Promise.resolve();
 
-      before = prevCursor;
-      after = undefined;
+      beforeCursor = prevCursor;
+      afterCursor = undefined;
 
       return doUpdate();
     },
 
-    ready(): Promise<void> {
-      return core.ready(() => pendingCount === 0 && !core.isScheduled);
+    ready(timeout) {
+      return core.ready(() => fm.pendingCount === 0 && !core.isScheduled, timeout);
     },
 
-    refresh(): Promise<void> {
+    refresh() {
       return doUpdate();
     },
 
-    reset(): Promise<void> {
-      limit = limitDefault;
+    reset() {
       search = '';
-      after = undefined;
-      before = undefined;
-      nextCursor = undefined;
-      prevCursor = undefined;
+      afterCursor = undefined;
+      beforeCursor = undefined;
 
       return doUpdate();
     },
 
-    search(q: string) {
+    search(q) {
+      if (q === search) return;
+
       search = q;
-      after = undefined;
-      before = undefined;
+      afterCursor = undefined;
+      beforeCursor = undefined;
       core.schedule(() => {
         void doUpdate();
       }, debounceMs);
-      notify();
+      commit();
     },
 
-    searchNow(q: string): Promise<void> {
+    searchNow(q) {
+      if (q === search) return Promise.resolve();
+
       core.cancelTimer();
       search = q;
-      after = undefined;
-      before = undefined;
+      afterCursor = undefined;
+      beforeCursor = undefined;
 
       return doUpdate();
     },
 
-    setLimit(n: number): Promise<void> {
-      limit = Math.max(1, Math.trunc(n));
-      after = undefined;
-      before = undefined;
+    setLimit(n) {
+      const next = Math.max(1, Math.trunc(n));
+
+      if (next === limit) return Promise.resolve();
+
+      limit = next;
+      afterCursor = undefined;
+      beforeCursor = undefined;
 
       return doUpdate();
     },
@@ -237,8 +220,13 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return core.subscribe(listener);
     },
 
-    toQuery(): CursorSourceQuery<TCursor> {
-      return buildQuery();
+    toQuery() {
+      return {
+        ...(afterCursor !== undefined && { after: afterCursor }),
+        ...(beforeCursor !== undefined && { before: beforeCursor }),
+        ...(search && { search }),
+        limit,
+      };
     },
   };
 }

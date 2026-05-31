@@ -17,7 +17,7 @@ Hard-coding dependencies between machines creates tight coupling and race condit
 Use Herald as a message bus to decouple machines. Each machine publishes events about state changes, and other machines subscribe and react accordingly. This creates a pub/sub pattern where machines are independent but coordinated.
 
 ```ts
-import { defineMachine, interpret, assign } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 import { createEventBus } from '@vielzeug/herald';
 
 // Shared event types
@@ -163,11 +163,11 @@ const notificationMachine = defineMachine({
   },
 });
 
-// Action factories
-const recordLogin = assign(({ event }) => ({
-  userId: (event as any).userId,
-  token: (event as any).token,
-}));
+// Action functions — mutate context directly
+const recordLogin = ({ context, event }: any) => {
+  context.userId = event.userId;
+  context.token = event.token;
+};
 
 const publishLoginEvent = () => {
   events.emit({ scope: 'user', event: { type: 'LOGIN', userId: '', token: '' } });
@@ -199,14 +199,30 @@ const publishSessionExpireEvent = () => {
   });
 };
 
-const resetInactivity = assign(() => ({ inactiveSeconds: 0, warningShown: false }));
-const markWarningShown = assign(() => ({ warningShown: true }));
-const clearUser = assign(() => ({ userId: '', token: '', profile: {} }));
-const recordNotification = assign(({ event }) => ({
-  message: (event as any).message,
-  level: (event as any).level,
-}));
-const clearNotification = assign(() => ({ message: '', level: 'info' as const }));
+const resetInactivity = ({ context }: any) => {
+  context.inactiveSeconds = 0;
+  context.warningShown = false;
+};
+
+const markWarningShown = ({ context }: any) => {
+  context.warningShown = true;
+};
+
+const clearUser = ({ context }: any) => {
+  context.userId = '';
+  context.token = '';
+  context.profile = {};
+};
+
+const recordNotification = ({ context, event }: any) => {
+  context.message = event.message;
+  context.level = event.level;
+};
+
+const clearNotification = ({ context }: any) => {
+  context.message = '';
+  context.level = 'info';
+};
 
 const startActivityTimer = () => {
   // Start 15-min idle timer

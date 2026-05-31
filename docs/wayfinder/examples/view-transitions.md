@@ -19,10 +19,10 @@ import { createRouter } from '@vielzeug/wayfinder';
 const router = createRouter({
   viewTransition: true,
   routes: {
-    home: { path: '/', handler: () => renderHome() },
-    settings: { path: '/settings', handler: () => renderSettings() },
-    notFound: { path: '*', handler: () => renderNotFound() },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
+  notFound: { component: NotFoundPage },
 });
 
 await router.navigate({ name: 'settings' });                          // uses transition

@@ -1,10 +1,9 @@
-import type { AnySchema, Issue, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { AnySchema, Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 import { LiteralSchema } from './literal';
-import { type InferObject, type ObjectShape, ObjectSchema } from './object';
+import { type InferObject, ObjectSchema, type ObjectShape } from './object';
 
 type VariantMap = Record<string, ObjectSchema<any>>;
 type InferVariantMap<K extends string, M extends VariantMap> = {
@@ -82,11 +81,11 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
 
     if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
 
-    const result = resolved.matched.safeParse(value);
+    const result = resolved.matched._parseFullSync(value);
 
-    return result.success
+    return result.issues.length === 0
       ? { data: result.data, issues: [], typeOk: true }
-      : { data: value, issues: result.error.issues, typeOk: true };
+      : { data: value, issues: result.issues, typeOk: true };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
@@ -99,12 +98,6 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return result.success
       ? { data: result.data, issues: [], typeOk: true }
       : { data: value, issues: result.error.issues, typeOk: true };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const oneOf = [...this._map.values()].map((s) => s.toJsonSchema());
-
-    return { discriminator: { propertyName: this._discriminator }, oneOf };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

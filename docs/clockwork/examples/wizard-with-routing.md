@@ -18,7 +18,7 @@ Without coordination, the machine state and route can get out of sync, causing c
 Use Machine to manage wizard steps with Wayfinder to sync the current step to the URL. The machine guards validate transitions and the router handles URL changes.
 
 ```ts
-import { defineMachine, interpret, assign } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 import { createRouter, navigate } from '@vielzeug/wayfinder';
 
 type WizardEvent =
@@ -72,12 +72,30 @@ const wizardMachine = defineMachine({
   },
 });
 
-const recordStep1Data = assign(({ context, event }) => ({
-  formData: {
+const recordStep1Data = ({ context, event }: any) => {
+  context.formData = {
     ...context.formData,
-    name: (event as any).data?.name || '',
-  },
-}));
+    name: event.data?.name || '',
+  };
+};
+
+const recordStep2Data = ({ context, event }: any) => {
+  context.formData = {
+    ...context.formData,
+    ...event.data,
+  };
+};
+
+const recordStep3Data = ({ context, event }: any) => {
+  context.formData = {
+    ...context.formData,
+    ...event.formData,
+  };
+};
+
+const uploadFormData = ({ context }: any) => {
+  // Submit context.formData to API
+};
 
 const validateStep2 = (ctx: any) => {
   return ctx.formData.name && ctx.formData.name.length > 2;

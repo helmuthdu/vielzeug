@@ -2,9 +2,9 @@
 description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens]
+keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async]
 related: [craft, forge, herald]
-exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, scope, onCleanup, readonly, isSignal, isComputed, isStore]
+exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, traceEffect, isSignal, isComputed, isStore, installDevTools]
 ---
 
 # @vielzeug/ripple
@@ -18,9 +18,9 @@ exports: [signal, computed, effect, effectAsync, watch, batch, store, untrack, s
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `watch`, `batch`, `store`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `traceEffect`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
 
-**When to use:** Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+**When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
 **Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
 
@@ -60,12 +60,34 @@ const items = cart.lens('items');           // Signal<number> — cached, path-s
 items.value = 3;
 console.log(cart.value); // { items: 3, label: 'empty' }
 
-// Effect options — scheduler, trace, name
+cart.replace((s) => ({ ...s, label: 'checkout' })); // replace entire state via fn
+cart.reset();
+
+// Effect options — scheduler, name, custom scheduler fn
 const stop = effect(
   () => console.log('items:', items.value),
   { scheduler: 'microtask', name: 'cart-logger' },
 );
-stop();
+stop.dispose();
+
+// Async computed — tracks deps and re-runs on change
+import { asyncComputed } from '@vielzeug/ripple';
+
+const userId = signal('u1');
+const userState = asyncComputed(async (signal) => {
+  const id = userId.value; // tracked dep
+  return fetch(`/users/${id}`, { signal }).then((r) => r.json());
+});
+// userState.value → { status: 'idle' | 'pending' | 'fulfilled' | 'error', value, error }
+
+// Store with undo/redo history
+import { storeWithHistory } from '@vielzeug/ripple';
+
+const editor = storeWithHistory({ text: '' }, { maxHistory: 50 });
+editor.patch({ text: 'hello' });
+editor.patch({ text: 'hello world' });
+editor.undo(); // back to 'hello'
+editor.redo(); // forward to 'hello world'
 ```
 
 ## Documentation

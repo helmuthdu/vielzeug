@@ -91,14 +91,18 @@ const form = createForm({
 });
 ```
 
-Use `schemaValidator(schema)` explicitly when you need custom error message transformation:
+For per-field validation with a schema, use `fieldValidator` from `@vielzeug/forge/validators`:
 
 ```ts
-import { createForm, schemaValidator } from '@vielzeug/forge';
+import { fieldValidator } from '@vielzeug/forge/validators';
+import { s } from '@vielzeug/spell';
 
 const form = createForm({
   defaultValues: { age: 0, email: '' },
-  validator: schemaValidator(schema),
+  validators: {
+    age: fieldValidator(s.number().min(18, 'Must be 18+')),
+    email: fieldValidator(s.string().email('Invalid email')),
+  },
 });
 ```
 
@@ -152,7 +156,7 @@ form.subscribe((state) => {
 
 ## Connect (Field Binding)
 
-`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure.
+`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure. Each binding owns its own independent debounce timer; call `disconnect()` when the field unmounts to cancel it.
 
 ```ts
 const emailConn = form.connect('email');
@@ -162,6 +166,9 @@ input.addEventListener('blur', () => emailConn.onBlur());
 
 // Live getters re-evaluate on every access
 console.log(emailConn.value, emailConn.error, emailConn.touched, emailConn.dirty);
+
+// On unmount: cancel any pending debounce timer
+emailConn.disconnect();
 ```
 
 ### Validation Modes
@@ -184,7 +191,7 @@ const passwordConn = form.connect('password', { validateOnBlur: true, debounce: 
 
 | Preset                           | `touchOnBlur` | `validateOnBlur` | `validateOnChange` | `validateOnTouch` |
 | -------------------------------- | ------------- | ---------------- | ------------------ | ----------------- |
-| `ValidationModes.onSubmit` (default) | ✅        | —                | —                  | —                 |
+| `ValidationModes.onSubmit` (default) | —         | —                | —                  | —                 |
 | `ValidationModes.onBlur`         | ✅            | ✅               | —                  | —                 |
 | `ValidationModes.onChange`       | ✅            | —                | ✅                 | —                 |
 | `ValidationModes.onTouched`      | ✅            | ✅               | —                  | ✅                |
@@ -206,7 +213,7 @@ const form = createForm({
   },
 });
 
-// Store the result — each call creates a new object
+// scope() is memoized — repeated calls with the same prefix return the same object
 const address = form.scope('address');
 
 address.get('city');                     // same as form.get('address.city')
@@ -219,9 +226,22 @@ await address.submit((vals) => vals);    // validates and submits only address.*
 **Key characteristics:**
 
 - `dispose()` on a scoped form is a no-op — call `parentForm.dispose()` to tear down.
-- `scope.state` returns the **full** form state. `state.errors`, `state.isValid`, and `state.touchedFields` reflect the entire form, not just the scoped fields.
-- `validate()` and `submit()` correctly isolate their results to the scoped prefix.
-- `touchedFields` in `state` contains full-prefixed paths. On a scoped form, prefer `scope.validate()` rather than `scope.validateFields([...state.touchedFields])` to avoid double-prefixing.
+- `scope.state` returns the **full** form state. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results contain relative keys and a scoped `valid` flag.
+- `touchedFields` in `state` contains full-prefixed paths. Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` to avoid double-prefixing.
+
+### Scoped Subscriptions
+
+`subscribeScoped` delivers form state filtered to the scope's prefix — `errors`, `touchedFields`, and `validatingFields` use relative keys, and the listener **only fires when the scoped projection changes**:
+
+```ts
+const address = form.scope('address');
+
+address.subscribeScoped((state) => {
+  // state.errors → { city: 'Required' }  (not 'address.city')
+  // does not fire when form.set('name', 'Alice') is called
+  renderAddressErrors(state.errors);
+});
+```
 
 ## Subscriptions
 
@@ -234,7 +254,7 @@ const stopEmail = form.subscribeField('email', (field) => {
   console.log(field.value, field.error, field.touched, field.dirty);
 });
 
-// Call with sync: true to also receive the current snapshot immediately
+// Pass sync: true to receive the current snapshot immediately on subscription
 form.subscribeField('email', (field) => updatePreview(String(field.value)), { sync: true });
 
 stopEmail();
@@ -246,6 +266,31 @@ Snapshot semantics:
 - `form.state` and `form.field(name)` return stable, frozen snapshots.
 - Reference identity is preserved until a relevant mutation occurs.
 - These are directly compatible with external-store patterns such as React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
+
+## Streaming Validation
+
+`validateStream()` runs all field validators in parallel and yields each result as it resolves. It is **read-only** — it does not write errors to form state. The form-level validator, if set, is yielded last with `field: '_form'`.
+
+```ts
+for await (const { field, error } of form.validateStream()) {
+  if (error) showInlineError(field, error);
+}
+// form.state.errors is unchanged after the loop
+```
+
+## Snapshots and Restore
+
+Capture and replay complete form state for undo/redo or "discard changes" flows:
+
+```ts
+const draft = form.snapshot();
+
+// ... user edits ...
+form.set('email', 'different@example.com');
+
+// Revert all changes, including errors, touched, dirty, and submitCount
+form.restore(draft);
+```
 
 ## Arrays
 
@@ -285,6 +330,8 @@ form.patch({ name: 'Alice' });          // merge specific fields into store and 
 form.resetField('email');               // restore single field to baseline
 form.removeField('coupon');             // drop field entirely (value, touched, error, validator)
 ```
+
+`patch()` accepts a `DeepPartial` object — nested paths are flattened automatically. Useful for applying a server response without dirtying the form.
 
 ## Lifecycle
 
@@ -385,38 +432,43 @@ export default {
 
 ### With Spell
 
-Combine Sieve schemas with Forge to get typed validation rules without writing validator functions by hand.
+Combine Spell schemas with Forge to get typed validation rules without writing validator functions by hand.
 
 ```ts
-import { createForm, schemaValidator } from '@vielzeug/forge';
+import { createForm } from '@vielzeug/forge';
+import { fieldValidator } from '@vielzeug/forge/validators';
 import { s } from '@vielzeug/spell';
 
-const schema = s.object({
-  email: s.string().email('Invalid email'),
-  password: s.string().min(8, 'Min 8 characters'),
-  age: s.number().min(18, 'Must be 18+'),
-});
-
-// Pass the schema directly — Forge auto-detects safeParse
+// Per-field validation with a Spell schema
 const form = createForm({
   defaultValues: { email: '', password: '', age: 0 },
-  validator: schema,
+  validators: {
+    age: fieldValidator(s.number().min(18, 'Must be 18+')),
+    email: fieldValidator(s.string().email('Invalid email')),
+    password: fieldValidator(s.string().min(8, 'Min 8 characters')),
+  },
 });
 
-// Or wrap with schemaValidator() for custom error transformation
-const form2 = createForm({
+// Full-form schema validation (auto-detects safeParse)
+const schema = s.object({
+  age: s.number().min(18, 'Must be 18+'),
+  email: s.string().email('Invalid email'),
+  password: s.string().min(8, 'Min 8 characters'),
+});
+
+const formWithSchema = createForm({
   defaultValues: { email: '', password: '', age: 0 },
-  validator: schemaValidator(schema),
+  validator: schema,
 });
 ```
 
 ## Best Practices
 
-- Call `connect()` once per field and store the result — never call it inside a render or update loop.
-- Call `scope()` once and store the result — each call creates a new binding object.
+- Call `connect()` once per field and store the result — never call it inside a render or update loop. Call `binding.disconnect()` when the field unmounts to cancel any pending debounce timer.
+- `scope()` is memoized — repeated calls with the same prefix return the same object. Store the result for clarity, but it is safe to call multiple times.
 - Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
 - Wrap multi-field mutations in `batch()` to emit a single subscriber notification.
 - Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
 - Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.
 - Use `replace()` after a successful async load instead of `reset()` — `replace()` updates the baseline so `isDirty` reflects changes against the new data.
-- Guard submit handlers with `state.isSubmitting` before the call, or check `result.ok` after — never assume success.
+- Guard concurrent submissions with `form.isSubmitting` or `state.isSubmitting` — calling `submit()` while a submission is in progress throws synchronously.

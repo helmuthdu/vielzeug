@@ -55,13 +55,13 @@ yarn add @vielzeug/grip
 ```ts
 import { createDropZone, createSortable } from '@vielzeug/grip';
 
-// File drop zone
+// File drop zone — with async validation and paste support
 using zone = createDropZone({
   element: document.getElementById('dropzone')!,
   accept: ['image/*', '.pdf'],
-  onDrop: (files) => {
-    uploadFiles(files);
-  },
+  paste: true,
+  onValidate: async (files) => checkServerQuota(files),
+  onDrop: (files) => uploadFiles(files),
   onDropRejected: (files) => {
     showError(`${files.length} file(s) not accepted`);
   },
@@ -70,11 +70,17 @@ using zone = createDropZone({
   },
 });
 
-// Sortable list
+// Sortable list — with revert support for optimistic updates
 using sortable = createSortable({
   element: document.getElementById('list')!,
+  keyboard: true,
+  onBeforeReorder: (from, to) => {
+    // record positions here before the DOM commits (for FLIP animations)
+  },
   onReorder: (ids) => {
-    saveOrder(ids);
+    const prev = currentOrder;
+    setOrder(ids);
+    return () => setOrder(prev); // enable sortable.revert() on failure
   },
 });
 ```
@@ -134,10 +140,15 @@ const zone = createDropZone({
 - **MIME type pre-validation** — queries `dataTransfer.items` during drag to set `dropEffect='none'` before the drop; confirmed against `File.type` on drop
 - **Flexible accept patterns** — MIME types (`image/png`), wildcards (`image/*`), and file extensions (`.pdf`)
 - **`maxFiles` limit** — cap the number of accepted files per drop; excess files are forwarded to `onDropRejected`
-- **`onDropRejected`** — separate callback for files that didn't match `accept` or exceeded `maxFiles`; enables rejection UX without extra filtering logic
+- **`onValidate` async gating** — optional async step after type filtering; `zone.validating` is `true` while a promise is pending; only receives type-accepted files
+- **Clipboard paste support** — `paste: true` routes pasted files through the same `accept`, `maxFiles`, and `onValidate` pipeline; `onPaste` provides a separate callback; `onDropRejected` receives a `ClipboardEvent` for paste rejections
+- **`onDropRejected`** — separate callback for files that didn't match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`; event type reflects whether the rejection came from a drop or a paste
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
 - **Custom drag preview** — pass an element or a `(id, item, event) => element | null` factory; control hotspot with `dragImageOffset`
+- **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; items are still in pre-commit positions, making it ideal for FLIP animation setup
+- **`sortable.revert()`** — `onReorder` may return a revert function; `revert()` calls it and clears it for rolling back optimistic updates on server failure
+- **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
 - **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
 - **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup

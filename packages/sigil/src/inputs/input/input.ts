@@ -1,17 +1,11 @@
 import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
 import { computed } from '@vielzeug/ripple';
 
-import type { TextFieldProps } from '../../shared/config';
+import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
 
+import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import '../../content/icon/icon';
-import {
-  FIELD_SIZE_PRESET,
-  disablableBundle,
-  roundableBundle,
-  sizableBundle,
-  themableBundle,
-} from '../../shared/config';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -161,10 +155,10 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
         label: props.label,
         labelPlacement: props['label-placement'],
         maxLength: props.maxlength,
-        onChange: (event, value) => {
+        onChange: (event: Event, value: string) => {
           emit('change', { originalEvent: event, value });
         },
-        onInput: (event, value) => {
+        onInput: (event: Event, value: string) => {
           emit('input', { originalEvent: event, value });
         },
         prefix: 'input',
@@ -179,6 +173,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
       assistive,
       assistiveId,
       clear: clearValue,
+      counter,
       errorId,
       fieldId: inputId,
       value: fieldValue,
@@ -207,6 +202,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
     });
 
     const { aria, label } = tf;
+    const labelHidden = () => !label.show.value;
     const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
     const passwordTogglePressed = () => String(showPassword.value);
     const passwordToggleIcon = () =>
@@ -217,10 +213,10 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
     const helperText = () => assistive.value.helperText;
     const errorHidden = () => !assistive.value.errorText;
     const errorText = () => assistive.value.errorText;
-    const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
-    const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);
-    const counterHidden = () => !assistive.value.hasCounter;
-    const counterText = () => assistive.value.counterText;
+    const counterNearLimit = () => (counter?.value.counterNearLimit && !counter?.value.counterAtLimit ? '' : null);
+    const counterAtLimit = () => (counter?.value.counterAtLimit ? '' : null);
+    const counterHidden = () => !counter;
+    const counterText = () => counter?.value.counterText ?? '';
 
     const togglePassword = () => {
       showPassword.value = !showPassword.value;
@@ -229,23 +225,10 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
 
     return html`
       <div class="input-wrapper" part="wrapper">
-        <label
-          class="label-outside"
-          for="${inputId}"
-          id="${label.outside.id}"
-          part="label"
-          ?hidden="${() => !label.outside.show.value}"
+        <label class="label" for="${inputId}" id="${label.id}" part="label" ?hidden="${labelHidden}"
           ><slot name="label">${props.label}</slot></label
         >
         <div class="field" part="field">
-          <label
-            class="label-inset"
-            for="${inputId}"
-            id="${label.inset.id}"
-            part="label"
-            ?hidden="${() => !label.inset.show.value}"
-            ><slot name="label">${props.label}</slot></label
-          >
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input

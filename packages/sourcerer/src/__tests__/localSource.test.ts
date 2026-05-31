@@ -1,5 +1,6 @@
 import { decodeQuery, encodeQuery } from '../codecs';
 import { createLocalSource } from '../localSource';
+import { itemRange } from '../pagination';
 
 describe('createLocalSource', () => {
   beforeEach(() => {
@@ -10,101 +11,139 @@ describe('createLocalSource', () => {
     vi.restoreAllMocks();
   });
 
-  describe('pagination behavior', () => {
-    it('navigates with goTo, next, prev and boundary helpers', async () => {
+  describe('basic pagination', () => {
+    it('paginates data with default limit of 20', () => {
+      const data = Array.from({ length: 25 }, (_, i) => i + 1);
+      const source = createLocalSource(data);
+
+      expect(source.current).toHaveLength(20);
+      expect(source.meta.totalItems).toBe(25);
+      expect(source.meta.pageCount).toBe(2);
+    });
+
+    it('respects custom limit', () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
 
       expect(source.current).toEqual([1, 2]);
-
-      await source.goTo(3);
-      expect(source.current).toEqual([5]);
-
-      await source.next();
-      expect(source.current).toEqual([5]); // already at last page
-
-      await source.prev();
-      expect(source.current).toEqual([3, 4]);
-
-      await source.goTo(1);
-      expect(source.current).toEqual([1, 2]);
-
-      await source.goToLast();
-      expect(source.current).toEqual([5]);
+      expect(source.meta.pageCount).toBe(3);
     });
 
-    it('clamps invalid page values in goTo', async () => {
+    it('goTo navigates to the specified page', async () => {
       const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
 
-      await source.goTo(-99);
-      expect(source.meta.pageNumber).toBe(1);
+      await source.goTo(2);
 
-      await source.goTo(999);
       expect(source.meta.pageNumber).toBe(2);
+      expect(source.current).toEqual([3, 4]);
+    });
+
+    it('next moves to the next page', async () => {
+      const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
+
+      await source.next();
+
+      expect(source.meta.pageNumber).toBe(2);
+    });
+
+    it('prev moves to the previous page', async () => {
+      const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
+
+      await source.goTo(2);
+      await source.prev();
+
+      expect(source.meta.pageNumber).toBe(1);
+    });
+
+    it('prev does not go below page 1', async () => {
+      const source = createLocalSource([1, 2, 3], { limit: 2 });
+
+      await source.prev();
+
+      expect(source.meta.pageNumber).toBe(1);
+    });
+
+    it('goToLast navigates to the last page', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+
+      await source.goToLast();
+
+      expect(source.meta.pageNumber).toBe(3);
+      expect(source.current).toEqual([5]);
+    });
+
+    it('setLimit updates page size and resets to page 1', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+
+      await source.goTo(2);
+      await source.setLimit(3);
+
+      expect(source.meta.pageSize).toBe(3);
+      expect(source.meta.pageNumber).toBe(1);
+    });
+
+    it('setData replaces data and recomputes', async () => {
+      const source = createLocalSource([1, 2, 3], { limit: 2 });
+
+      await source.setData([10, 20, 30, 40]);
+
+      expect(source.current).toEqual([10, 20]);
+      expect(source.meta.totalItems).toBe(4);
     });
   });
 
-  describe('hydrate — bulk URL state restore', () => {
-    it('applies multiple fields atomically in a single hydrate call', async () => {
-      // Data: [1,2,3,4,5,6], filter evens → [2,4,6], sort asc → [2,4,6], limit 1, page 2 → [4]
-      const source = createLocalSource([1, 2, 3, 4, 5, 6], {
-        filter: (item: number) => item % 2 === 0,
-        limit: 3,
-        sort: (a: number, b: number) => a - b,
+  describe('filter and sort', () => {
+    it('applies initial filter from config', () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], {
+        filter: (x) => x > 2,
+        limit: 10,
       });
 
-      // Evens sorted asc: [2,4,6], limit 3, page 1 → [2,4,6]
-      expect(source.current).toEqual([2, 4, 6]);
-
-      // Reduce limit to 1, go to page 2 → [4]
-      await source.hydrate({ limit: 1, page: 2 });
-
-      expect(source.current).toEqual([4]);
-      expect(source.meta.pageNumber).toBe(2);
+      expect(source.current).toEqual([3, 4, 5]);
     });
 
-    it('hydrate preserves page when limit changes (no implicit reset)', async () => {
-      const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 2 });
+    it('applies initial sort from config', () => {
+      const source = createLocalSource([3, 1, 4, 1, 5], {
+        sort: (a, b) => a - b,
+      });
 
-      await source.goTo(2);
-      await source.hydrate({ limit: 6 });
-
-      // hydrate applies exactly what is given — page is naturally clamped to last
-      // valid page, NOT reset to 1 (old update() behavior). With 6 items / limit 6 = 1 page.
-      expect(source.meta.pageNumber).toBe(1);
-      expect(source.meta.pageCount).toBe(1);
+      expect(source.current[0]).toBe(1);
     });
 
-    it('hydrate is a no-op when nothing changes', async () => {
-      const source = createLocalSource([1, 2, 3], { limit: 10 });
-      const listener = vi.fn();
+    it('setFilter replaces the active filter', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
 
-      source.subscribe(listener);
+      await source.setFilter((x) => x % 2 === 0);
 
-      await source.hydrate({ limit: 10, page: 1, search: '' });
-
-      expect(listener).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('state updates', () => {
-    it('setData replaces raw data and resets to first page', async () => {
-      const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 3 });
-
-      await source.goTo(2);
-      await source.setData([6, 5, 4, 3, 2, 1]);
-
-      expect(source.meta.pageNumber).toBe(1);
-      expect(source.current).toEqual([6, 5, 4]);
+      expect(source.current).toEqual([2, 4]);
     });
 
-    it('resets to initial config state', async () => {
+    it('setFilter with undefined clears the filter', async () => {
+      const source = createLocalSource([1, 2, 3], {
+        filter: (x) => x > 1,
+        limit: 10,
+      });
+
+      await source.setFilter(undefined);
+
+      expect(source.current).toEqual([1, 2, 3]);
+    });
+
+    it('setSort replaces the active sort', async () => {
+      const source = createLocalSource([3, 1, 2], { limit: 10 });
+
+      await source.setSort((a, b) => a - b);
+
+      expect(source.current).toEqual([1, 2, 3]);
+    });
+
+    it('reset restores initial filter and sort', async () => {
       const source = createLocalSource([1, 2, 3, 4], { filter: (x) => x > 1, limit: 2, sort: (a, b) => b - a });
 
       await source.searchNow('3');
       await source.goTo(2);
       await source.reset();
 
-      expect(source.toQuery()).toEqual({ limit: 2, page: 1, search: '' });
+      expect(source.toQuery()).toEqual({ limit: 2, page: 1 });
       expect(source.current).toEqual([4, 3]);
     });
   });
@@ -124,7 +163,6 @@ describe('createLocalSource', () => {
     });
 
     it('uses only the latest debounced query', async () => {
-      // Use a custom exact-match searchFn to avoid fuzzy false positives.
       const source = createLocalSource(['alpha', 'beta', 'gamma'], {
         searchFn: (items, q) => items.filter((s) => (s as string).includes(q)),
       });
@@ -209,22 +247,44 @@ describe('createLocalSource', () => {
       expect('hasNoItems' in meta).toBe(false);
       expect('isFirstPage' in meta).toBe(false);
       expect('isLastPage' in meta).toBe(false);
+      expect('itemStart' in meta).toBe(false);
+      expect('itemEnd' in meta).toBe(false);
+      expect('errorMessage' in meta).toBe(false);
     });
 
-    it('itemStart and itemEnd are correct on first page', () => {
+    it('itemRange computes correct display range', () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 3 });
 
-      expect(source.meta.itemStart).toBe(1);
-      expect(source.meta.itemEnd).toBe(3);
+      const range = itemRange(source.meta);
+
+      expect(range.start).toBe(1);
+      expect(range.end).toBe(3);
       expect(source.meta.totalItems).toBe(5);
       expect(source.meta.pageCount).toBe(2);
     });
 
-    it('itemStart and itemEnd are zero for empty results', async () => {
+    it('itemRange returns zeros for empty results', () => {
       const source = createLocalSource([], { limit: 10 });
 
-      expect(source.meta.itemStart).toBe(0);
-      expect(source.meta.itemEnd).toBe(0);
+      const range = itemRange(source.meta);
+
+      expect(range.start).toBe(0);
+      expect(range.end).toBe(0);
+    });
+
+    it('toQuery omits search key when no search is active', () => {
+      const source = createLocalSource([1, 2, 3], { limit: 10 });
+
+      expect(source.toQuery()).toEqual({ limit: 10, page: 1 });
+      expect('search' in source.toQuery()).toBe(false);
+    });
+
+    it('toQuery includes search when active', async () => {
+      const source = createLocalSource([1, 2, 3], { limit: 10 });
+
+      await source.searchNow('hello');
+
+      expect(source.toQuery()).toEqual({ limit: 10, page: 1, search: 'hello' });
     });
   });
 
@@ -261,6 +321,41 @@ describe('createLocalSource', () => {
       await source.searchNow('alice');
 
       expect(source.current).toEqual([{ name: 'Alice' }, { name: 'ALICE' }]);
+    });
+  });
+
+  describe('async filter and sort', () => {
+    it('filterAsync applies asynchronous filter and sets isLoading', async () => {
+      const filterAsync = vi.fn(async (items: readonly number[]) => items.filter((x) => x > 2));
+      const source = createLocalSource([1, 2, 3, 4, 5], { filterAsync, limit: 10 });
+
+      // Trigger a recompute through the async path.
+      await source.setData([1, 2, 3, 4, 5]);
+
+      expect(source.current).toEqual([3, 4, 5]);
+      expect(source.meta.isLoading).toBe(false);
+    });
+
+    it('sortAsync applies asynchronous sort', async () => {
+      const sortAsync = vi.fn(async (items: readonly number[]) => [...items].sort((a, b) => b - a));
+      const source = createLocalSource([1, 3, 2], { limit: 10, sortAsync });
+
+      await source.setData([1, 3, 2]);
+
+      expect(source.current).toEqual([3, 2, 1]);
+      expect(source.meta.isLoading).toBe(false);
+    });
+
+    it('filterAsync error sets meta.error and clears view', async () => {
+      const filterAsync = vi.fn(async () => {
+        throw new Error('filter failed');
+      });
+      const source = createLocalSource([1, 2, 3], { filterAsync, limit: 10 });
+
+      await source.setData([1, 2, 3]);
+
+      expect(source.meta.error?.message).toBe('filter failed');
+      expect(source.current).toEqual([]);
     });
   });
 });

@@ -7,116 +7,116 @@ import { settle } from './test-utils';
 
 describe('path patterns', () => {
   it('matches the root path', async () => {
-    const handler = vi.fn();
-    const router = createRouter({ history: createMemoryHistory('/'), routes: { home: { handler, path: '/' } } });
+    const data = vi.fn();
+    const router = createRouter({ history: createMemoryHistory('/'), routes: { home: { data, path: '/' } } });
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('matches static paths exactly', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/about'),
-      routes: { about: { handler, path: '/about' } },
+      routes: { about: { data, path: '/about' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('extracts a single named param', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/users/123'),
-      routes: { user: { handler, path: '/users/:id' } },
+      routes: { user: { data, path: '/users/:id' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { id: '123' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ params: { id: '123' } }));
     router.dispose();
   });
 
   it('extracts multiple named params', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/users/123/posts/456'),
-      routes: { post: { handler, path: '/users/:userId/posts/:postId' } },
+      routes: { post: { data, path: '/users/:userId/posts/:postId' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { postId: '456', userId: '123' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ params: { postId: '456', userId: '123' } }));
     router.dispose();
   });
 
   it('decodes percent-encoded param values', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/search/hello%20world'),
-      routes: { search: { handler, path: '/search/:query' } },
+      routes: { search: { data, path: '/search/:query' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { query: 'hello world' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ params: { query: 'hello world' } }));
     router.dispose();
   });
 
   it('matches bare wildcard * (any path)', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/a/b/c'),
-      routes: { catchAll: { handler, path: '*' } },
+      routes: { catchAll: { data, path: '*' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('matches static wildcard suffix /docs/*', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/docs/guide/intro'),
-      routes: { docs: { handler, path: '/docs/*' } },
+      routes: { docs: { data, path: '/docs/*' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalled();
+    expect(data).toHaveBeenCalled();
     router.dispose();
   });
 
   it('captures a named wildcard across multiple segments', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/files/one/two/three'),
-      routes: { files: { handler, path: '/files/:rest*' } },
+      routes: { files: { data, path: '/files/:rest*' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: 'one/two/three' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: 'one/two/three' } }));
     router.dispose();
   });
 
   it('captures an empty string for named wildcard when no tail remains', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/files/'),
-      routes: { files: { handler, path: '/files/:rest*' } },
+      routes: { files: { data, path: '/files/:rest*' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: '' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: '' } }));
     router.dispose();
   });
 
@@ -148,8 +148,8 @@ describe('route table', () => {
     const router = createRouter({
       history: createMemoryHistory('/a/42'),
       routes: {
-        byParam: { handler: first, path: '/a/:id' },
-        byStatic: { handler: second, path: '/a/42' },
+        byParam: { data: first, path: '/a/:id' },
+        byStatic: { data: second, path: '/a/42' },
       },
     });
 
@@ -190,7 +190,7 @@ describe('route table', () => {
     const router = createRouter({
       history: createMemoryHistory('/missing'),
       routes: {
-        fallback: { handler: fallback, path: '*' },
+        fallback: { data: fallback, path: '*' },
         home: { path: '/' },
       },
     });
@@ -215,7 +215,7 @@ describe('route table', () => {
     expect(() =>
       createRouter({
         routes: {
-          broken: { handler: vi.fn() } as never,
+          broken: { data: vi.fn() } as never,
         },
       }),
     ).toThrow('must define path or set index: true');

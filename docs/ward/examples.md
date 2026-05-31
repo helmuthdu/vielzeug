@@ -15,3 +15,5 @@ description: Practical examples and recipes for ward.
 - [Disabling Wildcard Fallback](./examples/disabling-wildcard-fallback.md)
 - [Logger For Auditing](./examples/logger-for-auditing.md)
 - [Snapshot Restore For Test Isolation](./examples/snapshot-restore-for-test-isolation.md)
+- [Conflict Detection](./examples/conflict-detection.md)
+- [Trace a Decision](./examples/trace-decision.md)

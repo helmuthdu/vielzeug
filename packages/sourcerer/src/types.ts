@@ -1,7 +1,5 @@
 export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
-
 export type Sorter<T> = (a: T, b: T) => number;
-
 export type QueryParamsInput = Record<string, string | string[] | undefined>;
 export type QueryParams = Record<string, string>;
 
@@ -16,7 +14,8 @@ export type RetryConfig = Readonly<{
 export type SourceQuery = Readonly<{
   limit: number;
   page: number;
-  search: string;
+  /** Absent when no search is active. */
+  search?: string;
 }>;
 
 export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = SourceQuery &
@@ -39,14 +38,48 @@ export type InfiniteSourceQuery = Readonly<{
 }>;
 
 /**
+ * Structured error type for all data source failures.
+ * Carries the original cause, the query that triggered the error, and the attempt number.
+ *
+ * @example
+ * ```ts
+ * if (source.meta.error) {
+ *   console.error(source.meta.error.message, source.meta.error.query);
+ * }
+ * ```
+ */
+export class SourceError extends Error {
+  override readonly name = 'SourceError';
+
+  constructor(
+    message: string,
+    private readonly _opts: {
+      readonly attempt?: number;
+      readonly cause?: unknown;
+      readonly query?: unknown;
+    } = {},
+  ) {
+    super(message, _opts.cause !== undefined ? { cause: _opts.cause } : undefined);
+  }
+
+  get attempt(): number {
+    return this._opts.attempt ?? 0;
+  }
+
+  get query(): unknown {
+    return this._opts.query;
+  }
+}
+
+/**
  * Event emitted by the `onFetch` callback after each fetch attempt settles.
- * Fires once per unique query key; joiners do not receive a duplicate event.
+ * Carries the full `SourceError` on failure for rich diagnostics.
  */
 export type FetchEvent<TQuery = unknown> = Readonly<{
   /** Total time in ms from issuing the request to receiving a response (includes retries). */
   durationMs: number;
-  /** Error message when `status` is `'error'`. */
-  error?: string;
+  /** Structured error when `status` is `'error'`. */
+  error?: SourceError;
   /** The query object that was fetched. */
   query: TQuery;
   status: 'error' | 'success';
@@ -54,13 +87,13 @@ export type FetchEvent<TQuery = unknown> = Readonly<{
 
 /**
  * Metadata snapshot describing the current pagination and loading state of a source.
+ * Use `itemRange(meta)` to compute display-level start/end item numbers.
  */
 export type SourceMeta = Readonly<{
-  errorMessage: string | null;
+  /** Structured error from the most recent failed fetch. `null` when healthy. */
+  error: SourceError | null;
   isLoading: boolean;
   isSearchPending: boolean;
-  itemEnd: number;
-  itemStart: number;
   pageCount: number;
   pageNumber: number;
   pageSize: number;
@@ -86,30 +119,20 @@ export type SourceSnapshot<T> = Readonly<{
  * ```ts
  * const state = sourceState(source);
  * if (state.status === 'loading') return <Spinner />;
- * if (state.status === 'error') return <Error message={state.message} />;
+ * if (state.status === 'error') return <Error message={state.error.message} />;
  * return <List items={state.items} />;
  * ```
  */
 export type SourceState<T> =
+  | { readonly error: SourceError; readonly status: 'error' }
   | { readonly items: readonly T[]; readonly status: 'data' }
-  | { readonly message: string; readonly status: 'error' }
   | { readonly status: 'loading' };
 
-// ── Reactive source interface (F1) ───────────────────────────────────────────
+// ── Reactive source interface ─────────────────────────────────────────────────
 
 /**
  * Minimal observable interface shared by all source and derived source types.
- * Framework adapters (React hooks, Vue composables, Svelte stores) should target
- * this interface rather than concrete source types for maximum portability.
- *
- * @example
- * ```ts
- * function useSource<T, TMeta>(source: ReactiveSource<T, TMeta>) {
- *   const [state, setState] = useState({ current: source.current, meta: source.meta });
- *   useEffect(() => source.subscribe(() => setState({ current: source.current, meta: source.meta })), [source]);
- *   return state;
- * }
- * ```
+ * Framework adapters should target this interface for maximum portability.
  */
 export type ReactiveSource<T, TMeta = SourceMeta> = {
   readonly current: readonly T[];
@@ -120,17 +143,13 @@ export type ReactiveSource<T, TMeta = SourceMeta> = {
 
 /**
  * Read-only reactive projection derived from a parent source.
- * Alias for `ReactiveSource<T, TMeta>` — returned by `deriveSource` and `mergeSource`.
+ * Returned by `deriveSource()` and `mergeSource()`.
  */
 export type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
 
-// ── Page-based source types ──────────────────────────────────────────────────
+// ── Page-based source types ───────────────────────────────────────────────────
 
-/**
- * Shared navigation interface for all page-based source types (local and remote).
- * Captures the ~10 identical methods that were previously duplicated between
- * `Source` and `RemoteSource`.
- */
+/** Shared navigation interface for all page-based source types (local and remote). */
 export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   flush(): Promise<void>;
   goTo(page: number): Promise<void>;
@@ -145,7 +164,7 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
 
 /**
  * Full interface for local (in-memory) page-based sources.
- * `hydrate(patch)` applies URL-decoded state preserving the page number.
+ * `hydrate(patch)` applies URL-decoded state without resetting page.
  */
 export type Source<T> = PageNavigator<T> & {
   hydrate(patch: Partial<SourceQuery & { filter?: Predicate<T>; sort?: Sorter<T> }>): Promise<void>;
@@ -160,37 +179,48 @@ export type LocalSource<T> = Source<T> & {
 
 /**
  * Full interface for remote page-based sources.
- * `hydrate(patch)` applies URL-decoded state preserving the page number.
- * `optimisticUpdate(mutator)` applies an immediate provisional state before a fetch settles.
- * Throws if a concurrent optimistic update is already pending.
+ * `optimisticUpdate(mutator)` throws if a concurrent update is already pending.
  */
 export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<T> & {
   hydrate(patch: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
   /**
    * Applies an optimistic update immediately before a fetch settles.
-   * Returns a rollback function. The optimistic state is automatically cleared on the next
-   * successful fetch, or rolled back automatically on failure.
+   * Returns a rollback function. The optimistic state is automatically cleared
+   * on the next successful fetch, or rolled back on failure.
    *
-   * @throws {Error} If an optimistic update is already active — roll back the previous one first.
+   * @throws {Error} If an optimistic update is already active.
    */
   optimisticUpdate(mutator: (current: readonly T[]) => readonly T[], options?: { total?: number }): () => void;
-  ready(): Promise<void>;
+  ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
   setFilter(filter?: TFilter): Promise<void>;
   setSort(sort?: TSort): Promise<void>;
   toQuery(): RemoteSourceQuery<TFilter, TSort>;
 };
 
+// ── Config types ──────────────────────────────────────────────────────────────
+
 export type LocalConfig<T> = Readonly<{
   debounceMs?: number;
   filter?: Predicate<T>;
+  /**
+   * Async filter applied after the sync `filter`, enabling Web Worker offloading
+   * via `@vielzeug/familiar`. Sets `meta.isLoading` to `true` during computation.
+   * The signal is aborted when a new computation supersedes this one.
+   */
+  filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
   limit?: number;
   /**
    * Custom search function. Default: case-insensitive JSON substring match.
-   * Provide a domain-specific function for better relevance and performance on large datasets.
+   * Provide a domain-specific function for better relevance on large datasets.
    */
   searchFn?: (items: readonly T[], query: string) => readonly T[];
   sort?: Sorter<T>;
+  /**
+   * Async sort applied after the sync `sort`. Sets `meta.isLoading` to `true`
+   * during computation, enabling Web Worker offloading.
+   */
+  sortAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
 }>;
 
 export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
@@ -206,7 +236,7 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
   limit?: number;
   /**
    * Called after each fetch attempt settles (success or failure).
-   * Useful for logging, telemetry, and debugging without needing middleware.
+   * Useful for logging, telemetry, and debugging.
    */
   onFetch?: (
     event: FetchEvent<Readonly<{ filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort }>>,
@@ -225,12 +255,19 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
    */
   snapshot?: SourceSnapshot<T>;
   sort?: TSort;
+  /**
+   * Skip re-fetching if the last successful fetch was within this many ms.
+   * Returns cached data immediately. Combine with `refreshInterval` for
+   * stale-while-revalidate behaviour.
+   * Default: `0` (always re-fetch).
+   */
+  staleTime?: number;
 }>;
 
-// ── Cursor-based source types ────────────────────────────────────────────────
+// ── Cursor-based source types ─────────────────────────────────────────────────
 
 export type CursorMeta = Readonly<{
-  errorMessage: string | null;
+  error: SourceError | null;
   hasNextPage: boolean;
   hasPrevPage: boolean;
   isLoading: boolean;
@@ -243,7 +280,7 @@ export type CursorSource<T, TCursor = string> = ReactiveSource<T, CursorMeta> & 
   flush(): Promise<void>;
   next(): Promise<void>;
   prev(): Promise<void>;
-  ready(): Promise<void>;
+  ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
   reset(): Promise<void>;
   search(query: string): void;
@@ -268,12 +305,14 @@ export type CursorConfig<T, TCursor = string> = Readonly<{
   retry?: RetryConfig;
 }>;
 
-// ── Infinite (append) source types ──────────────────────────────────────────
+// ── Infinite (append) source types ───────────────────────────────────────────
 
 export type InfiniteMeta = Readonly<{
-  errorMessage: string | null;
+  error: SourceError | null;
   hasMore: boolean;
   isLoading: boolean;
+  /** `true` only during `loadMore()` fetches — distinct from the initial load. */
+  isLoadingMore: boolean;
   isSearchPending: boolean;
   pageSize: number;
   totalItems: number;
@@ -283,7 +322,11 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
   flush(): Promise<void>;
   /** Appends the next page of results to `current`. No-op when `meta.hasMore` is false. */
   loadMore(): Promise<void>;
-  ready(): Promise<void>;
+  /**
+   * Resolves when no fetch is in progress (including `loadMore` fetches).
+   * Rejects after `timeout` ms if still loading.
+   */
+  ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
   search(query: string): void;
   searchNow(query: string): Promise<void>;

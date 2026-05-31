@@ -1,4 +1,4 @@
-import { createApi, type ApiClient } from './api';
+import { type ApiClient, createApi } from './api';
 import { createMutation, type Mutation, type MutationFn, type MutationOptions } from './mutation';
 import { createQuery, type QueryClient, type QueryClientOptions } from './query';
 import { createStream, type StreamClient } from './stream';
@@ -14,7 +14,7 @@ export type CourierOptions = TransportOptions & {
 export interface Courier {
   /** HTTP request client — GET, POST, PUT, PATCH, DELETE, and generic `request()`. */
   api: ApiClient;
-  /** Abort all in-flight requests and SSE connections. Does not dispose the client. */
+  /** Abort all in-flight requests, SSE connections, and query cache fetches. Does not dispose the client. */
   cancelAll(): void;
   /** Permanently dispose the client. All in-flight requests are aborted. */
   dispose(): void;
@@ -78,6 +78,7 @@ export function createCourier(opts?: CourierOptions): Courier {
 
     cancelAll(): void {
       transport.cancelAll();
+      queryClient.cancelAll();
     },
 
     dispose(): void {

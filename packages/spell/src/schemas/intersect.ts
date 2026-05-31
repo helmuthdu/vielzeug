@@ -1,7 +1,6 @@
-import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
 
-import { Schema, isPlainObject } from '../core';
+import { isPlainObject, Schema } from '../core';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
@@ -34,43 +33,36 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
     this.schemas = schemas;
   }
 
-  private _applyBranchResult(
-    index: number,
-    result: { data: unknown; success: true } | { error: { issues: Issue[] }; success: false },
-    state: { issues: Issue[]; output: unknown },
-  ): void {
-    if (!result.success) {
-      state.issues.push(...result.error.issues);
-
-      return;
-    }
-
-    state.output = index === 0 ? result.data : deepMerge(state.output, result.data);
-  }
-
   protected override _parseValueSync(value: unknown): ParseValue {
     const state: { issues: Issue[]; output: unknown } = { issues: [], output: value };
 
     for (let i = 0; i < this.schemas.length; i++) {
-      const result = this.schemas[i].safeParse(value);
+      const result = this.schemas[i]._parseFullSync(value);
 
-      this._applyBranchResult(i, result, state);
+      if (result.issues.length > 0) {
+        state.issues.push(...result.issues);
+      } else {
+        state.output = i === 0 ? result.data : deepMerge(state.output, result.data);
+      }
     }
 
     return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    const results = await Promise.all(this.schemas.map((s) => s.safeParseAsync(value)));
     const state: { issues: Issue[]; output: unknown } = { issues: [], output: value };
 
-    results.forEach((result, i) => this._applyBranchResult(i, result, state));
+    for (let i = 0; i < this.schemas.length; i++) {
+      const result = await this.schemas[i]._parseFullAsync(value);
+
+      if (result.issues.length > 0) {
+        state.issues.push(...result.issues);
+      } else {
+        state.output = i === 0 ? result.data : deepMerge(state.output, result.data);
+      }
+    }
 
     return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { allOf: this.schemas.map((s) => s.toJsonSchema()) };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

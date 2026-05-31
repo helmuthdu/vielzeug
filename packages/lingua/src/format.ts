@@ -25,7 +25,11 @@
  * ```
  */
 
-import { getOrCreate } from '@vielzeug/arsenal';
+function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
+  if (!cache.has(key)) cache.set(key, build());
+
+  return cache.get(key) as F;
+}
 
 export type DurationValue = Partial<
   Record<
@@ -64,7 +68,7 @@ export type Formatter = {
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   duration(value: DurationValue, options?: DurationFormatOptions): string;
-  list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
+  list(value: Array<string | number>, options?: ListFormatOptions): string;
   /** Formats a number with the current locale. */
   number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
@@ -140,7 +144,8 @@ export function createFormatter(source: string | (() => string)): Formatter {
     try {
       return `${locale}:${JSON.stringify(sorted)}`;
     } catch {
-      // Circular references or BigInt values — fall back to locale key only.
+      // Circular references or BigInt values — fall back to locale-only key.
+      // Multiple callers with different unserializable options will share the same formatter instance.
       return locale;
     }
   }
@@ -184,7 +189,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
 
     list(value, options) {
       const locale = getLocale();
-      const items = value.map(String);
+      const items = value.map((v) => String(v));
       // list() has exactly two string options with small finite value domains.
       // We normalize both to their resolved defaults and build the key directly
       // rather than using cachedKey(). This also prevents cache misses when

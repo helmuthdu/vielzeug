@@ -1,4 +1,4 @@
-import { ValidationError, s } from '../index';
+import { s, ValidationError } from '../index';
 
 describe('safeParse and safeParseAsync', () => {
   it('safeParse() returns parsed data on success', () => {

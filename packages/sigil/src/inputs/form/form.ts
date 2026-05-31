@@ -18,8 +18,8 @@ export type BitFormProps = {
   size?: ComponentSize;
   /** Validate on: 'submit' | 'change' | 'blur' | 'input' */
   validateOn?: ValidationTrigger;
-  /** Form visual variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
+  /** Form visual variant — propagated to all child form fields via FormContext */
+  variant?: VisualVariant;
 };
 
 /** Events emitted by the form component */
@@ -67,7 +67,7 @@ define<BitFormProps, BitFormEvents>(FORM_TAG, {
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
     size: prop.string<ComponentSize>(),
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
-    variant: prop.string<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>>(),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props, { bind, el, emit }) {
     const shadowRoot = el.shadowRoot;

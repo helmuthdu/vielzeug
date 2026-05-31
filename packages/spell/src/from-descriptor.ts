@@ -34,11 +34,11 @@ export function fromDescriptor(descriptor: SchemaDescriptor): AnySchema {
 
     case 'array': {
       const d = descriptor as Extract<SchemaDescriptor, { kind: 'array' }>;
-      const schema = new ArraySchema(fromDescriptor(d.items));
+      let schema = new ArraySchema(fromDescriptor(d.items));
 
-      if (d.minItems !== undefined) schema.min(d.minItems);
+      if (d.minItems !== undefined) schema = schema.min(d.minItems);
 
-      if (d.maxItems !== undefined) schema.max(d.maxItems);
+      if (d.maxItems !== undefined) schema = schema.max(d.maxItems);
 
       return schema;
     }
@@ -74,11 +74,12 @@ export function fromDescriptor(descriptor: SchemaDescriptor): AnySchema {
       return new NeverSchema();
 
     case 'number': {
-      const n = new NumberSchema();
+      const d = descriptor as Extract<SchemaDescriptor, { kind: 'number' }>;
+      let n = new NumberSchema();
 
-      if ('minimum' in descriptor && descriptor.minimum !== undefined) n.min(descriptor.minimum);
+      if (d.minimum !== undefined) n = n.min(d.minimum);
 
-      if ('maximum' in descriptor && descriptor.maximum !== undefined) n.max(descriptor.maximum);
+      if (d.maximum !== undefined) n = n.max(d.maximum);
 
       return n;
     }
@@ -99,23 +100,25 @@ export function fromDescriptor(descriptor: SchemaDescriptor): AnySchema {
     case 'set': {
       const d = descriptor as Extract<SchemaDescriptor, { kind: 'set' }>;
 
-      return new SetSchema(fromDescriptor(d.item));
+      return new SetSchema(fromDescriptor(d.items));
     }
 
     case 'string': {
-      const s = new StringSchema();
+      const d = descriptor as Extract<SchemaDescriptor, { kind: 'string' }>;
+      let s = new StringSchema();
 
-      if ('minLength' in descriptor && descriptor.minLength !== undefined) s.min(descriptor.minLength);
+      if (d.minLength !== undefined) s = s.min(d.minLength);
 
-      if ('maxLength' in descriptor && descriptor.maxLength !== undefined) s.max(descriptor.maxLength);
+      if (d.maxLength !== undefined) s = s.max(d.maxLength);
 
       return s;
     }
 
     case 'tuple': {
       const d = descriptor as Extract<SchemaDescriptor, { kind: 'tuple' }>;
+      const base = new TupleSchema(d.items.map(fromDescriptor) as any);
 
-      return new TupleSchema(d.items.map(fromDescriptor) as any);
+      return d.rest !== null ? base.rest(fromDescriptor(d.rest)) : base;
     }
 
     case 'union': {
@@ -126,6 +129,9 @@ export function fromDescriptor(descriptor: SchemaDescriptor): AnySchema {
 
     // 'variant', 'pipe', 'instanceof', 'lazy' cannot be losslessly reconstructed
     default:
-      return new Schema<unknown>();
+      throw new Error(
+        `[@vielzeug/spell] fromDescriptor(): "${kind}" descriptors cannot be reconstructed ` +
+          `(round-trip not supported for lazy, pipe, instanceof, variant). Check descriptor.kind first.`,
+      );
   }
 }

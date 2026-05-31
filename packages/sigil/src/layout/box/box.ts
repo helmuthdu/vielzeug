@@ -1,4 +1,4 @@
-import { define, prop, html } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 

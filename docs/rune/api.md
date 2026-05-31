@@ -10,9 +10,11 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | Symbol               | Purpose                                          | Execution mode | Common gotcha                                              |
 | -------------------- | ------------------------------------------------ | -------------- | ---------------------------------------------------------- |
 | `createLogger()`     | Create an isolated `Logger` instance             | Sync           | Omitting `transports` defaults to `consoleTransport()`     |
-| `Rune`               | Pre-created default logger singleton             | —              | Shared instance — scope or child it before use             |
+| `Rune`               | Pre-created default logger singleton             | —              | Shared instance — use `child()` or `withBindings()` to scope |
 | `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                       |
-| `consoleTransport()` | Styled console output                            | Sync           | `group()`/`groupCollapsed()` require this transport        |
+| `pipe()`             | Fan-out dispatcher to multiple transports        | Sync           | Errors in one transport don't propagate to others          |
+| `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                             |
+| `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry      |
 | `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`             |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                |
 | `batchTransport()`   | Buffered batch delivery with flush interval      | Sync/Interval  | Must call `.dispose()` on shutdown to flush remaining      |
@@ -51,9 +53,12 @@ const serverLog = createLogger({
   namespace: 'server',
   transports: [
     consoleTransport(),
-    remoteTransport(async (type, data) => {
-      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-    }, { level: 'error' }),
+    remoteTransport({
+      handler: async (type, data) => {
+        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+      },
+      level: 'error',
+    }),
   ],
 });
 ```
@@ -62,12 +67,12 @@ const serverLog = createLogger({
 
 `Rune` is the pre-created default logger (`createLogger()` called once at module load).
 
-Use it as a quick-start singleton. Scope it for module-level use:
+Use it as a quick-start singleton or create a child for module-level use:
 
 ```ts
 import { Rune } from '@vielzeug/rune';
 
-const log = Rune.scope('app.worker');
+const log = Rune.child({ namespace: 'app.worker' });
 ```
 
 ## lazy(fn)
@@ -113,9 +118,9 @@ Argument rules:
 
 | Method                 | Returns  | What it does                                           |
 | ---------------------- | -------- | ------------------------------------------------------ |
-| `scope(name)`          | `Logger` | Appends `.name` to namespace; inherits everything else |
 | `child(overrides?)`    | `Logger` | Clones config, applies overrides, inherits bindings    |
 | `withBindings(fields)` | `Logger` | Pins fields to every subsequent call                   |
+| `use(middleware)`      | `Logger` | Appends a middleware function to the processing chain  |
 
 `child()` transport inheritance:
 
@@ -128,7 +133,7 @@ Argument rules:
 | Method                      | Returns   | Description                                                            |
 | --------------------------- | --------- | ---------------------------------------------------------------------- |
 | `enabled(level)`            | `boolean` | True if entries at this level pass the configured threshold            |
-| `time(label, fn)`           | `T`       | Measures sync/async execution; emits `debug` entry with `{ duration_ms }` in context |
+| `time(label, fn)`           | `T`       | Measures sync/async execution; emits `debug` entry with label as message and `{ duration_ms }` in context |
 | `group(label, fn)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject         |
 | `groupCollapsed(label, fn)` | `T`       | Same as `group`, using `console.groupCollapsed`                        |
 
@@ -149,11 +154,14 @@ consoleTransport(options?: ConsoleTransportOptions): Transport
 
 Writes styled output to the browser console (CSS badges) or Node terminal (plain text). This is the default transport.
 
-| Option      | Type       | Default    | Description             |
-| ----------- | ---------- | ---------- | ----------------------- |
-| `level`     | `LogLevel` | `'debug'`  | Minimum level to output |
-| `timestamp` | `boolean`  | `true`     | Include `HH:MM:SS.mmm`  |
-| `variant`   | `Variant`  | `'symbol'` | Badge rendering style   |
+| Option      | Type                      | Default   | Description                                        |
+| ----------- | ------------------------- | --------- | -------------------------------------------------- |
+| `level`     | `LogLevel`                | `'debug'` | Minimum level to output                            |
+| `timestamp` | `boolean`                 | `true`    | Include `HH:MM:SS.mmm`                             |
+| `ansi`      | `boolean`                 | auto      | Force ANSI color codes on/off (Node only)          |
+| `format`    | `'json' \| 'raw'`         | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
+| `inspectFn` | `(v: unknown) => string`  | —         | Custom object formatter (e.g. `util.inspect`)      |
+| `theme`     | `ConsoleTheme`            | —         | Override default badge colours for this transport  |
 
 **Returns:** `Transport`
 
@@ -161,24 +169,27 @@ Writes styled output to the browser console (CSS badges) or Node terminal (plain
 
 ```ts
 import { consoleTransport, createLogger } from '@vielzeug/rune';
+import { inspect } from 'node:util';
 
 const log = createLogger({
-  transports: [consoleTransport({ level: 'info', variant: 'symbol', timestamp: true })],
+  transports: [consoleTransport({ level: 'info', timestamp: true, inspectFn: inspect })],
 });
 ```
 
-### remoteTransport(handler, options?)
+### remoteTransport(options)
 
 ```ts
-remoteTransport(handler: RemoteHandler, options?: RemoteTransportOptions): Transport
+remoteTransport(options: RemoteTransportOptions): Transport
 ```
 
 Forwards entries asynchronously to a remote handler. Fire-and-forget — handler errors are swallowed to `console.warn` and never propagate to the caller.
 
-| Option  | Type                            | Default       | Description                             |
-| ------- | ------------------------------- | ------------- | --------------------------------------- |
-| `level` | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
-| `env`   | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
+| Option    | Type                            | Default       | Description                             |
+| --------- | ------------------------------- | ------------- | --------------------------------------- |
+| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry |
+| `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
+| `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
+| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws          |
 
 **Returns:** `Transport`
 
@@ -189,9 +200,12 @@ import { createLogger, remoteTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   transports: [
-    remoteTransport(async (type, data) => {
-      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-    }, { level: 'error' }),
+    remoteTransport({
+      handler: async (type, data) => {
+        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+      },
+      level: 'error',
+    }),
   ],
 });
 ```
@@ -235,12 +249,13 @@ batchTransport(options: BatchTransportOptions): BatchTransport
 
 Buffers entries and delivers them in batches. Flushes when the buffer reaches `maxSize` or after `interval` elapses.
 
-| Option     | Type                          | Default   | Description                           |
-| ---------- | ----------------------------- | --------- | ------------------------------------- |
-| `onFlush`  | `(entries: LogEntry[]) => void` | —       | Required. Receives each batch.        |
-| `level`    | `LogLevel`                    | `'debug'` | Minimum level to buffer               |
-| `interval` | `number`                      | `5000`    | Flush interval in milliseconds        |
-| `maxSize`  | `number`                      | `50`      | Max buffer size before an early flush |
+| Option          | Type                                                | Default   | Description                                    |
+| --------------- | --------------------------------------------------- | --------- | ---------------------------------------------- |
+| `onFlush`       | `(entries: LogEntry[]) => void \| Promise<void>`    | —         | Required. Receives each batch (may be async)   |
+| `onFlushError`  | `(entries: LogEntry[], error: unknown) => void`     | —         | Called when `onFlush` throws or rejects        |
+| `level`         | `LogLevel`                                          | `'debug'` | Minimum level to buffer                        |
+| `interval`      | `number`                                            | `5000`    | Flush interval in milliseconds                 |
+| `maxSize`       | `number`                                            | `50`      | Max buffer size before an early flush          |
 
 The returned `BatchTransport` adds:
 
@@ -289,7 +304,7 @@ const log = createLogger({
   transports: [
     sampleTransport({
       rate: 0.1,
-      transport: remoteTransport(handler),
+      transport: remoteTransport({ handler }),
     }),
   ],
 });
@@ -320,11 +335,85 @@ const log = createLogger({
   transports: [
     redactTransport({
       keys: ['password', 'token', 'ssn'],
-      transport: remoteTransport(handler),
+      transport: remoteTransport({ handler }),
     }),
   ],
 });
 ```
+
+### pipe(...transports) / pipe(options, ...transports)
+
+```ts
+pipe(...transports: Transport[]): Transport
+pipe(options: PipeOptions, ...transports: Transport[]): Transport
+```
+
+Dispatches each `LogEntry` to every transport in the list independently. An error thrown by one transport does not stop the others. Use in place of separate array entries when you want fault isolation or a shared error observer.
+
+| Option    | Type                                      | Description                                          |
+| --------- | ----------------------------------------- | ---------------------------------------------------- |
+| `onError` | `(error: unknown, entry: LogEntry) => void` | Called with the error and entry when any transport throws |
+
+**Returns:** `Transport`
+
+**Example:**
+
+```ts
+import { consoleTransport, createLogger, pipe, remoteTransport } from '@vielzeug/rune';
+
+const log = createLogger({
+  transports: [
+    pipe(
+      { onError: (err) => metrics.increment('log.transport.error') },
+      consoleTransport(),
+      remoteTransport({ handler, level: 'error' }),
+    ),
+  ],
+});
+```
+```
+
+## Utilities
+
+### isLevelEnabled(threshold, level)
+
+```ts
+isLevelEnabled(threshold: LogLevel, level: LogLevel): boolean
+```
+
+Returns `true` when `level` is at or above `threshold`. Always returns `false` when `level` is `'off'`. Useful for building custom transports that respect level filtering.
+
+```ts
+import { isLevelEnabled } from '@vielzeug/rune';
+
+isLevelEnabled('warn', 'error'); // true
+isLevelEnabled('warn', 'info');  // false
+isLevelEnabled('debug', 'off'); // false
+```
+
+### PRIORITY
+
+```ts
+const PRIORITY: Record<LogLevel, number>
+```
+
+Exported priority map: `{ debug: 0, info: 1, warn: 2, error: 3, fatal: 4, off: 5 }`. Useful for building custom transports or middleware that perform level comparisons.
+
+### resolveTheme(override?)
+
+```ts
+resolveTheme(override?: ConsoleTheme): ResolvedTheme
+```
+
+Merges a partial `ConsoleTheme` onto `DEFAULT_THEME` and returns a fully resolved `ResolvedTheme`. Called once at `consoleTransport()` factory time — the resolved theme is captured in a closure and reused per entry.
+
+### DEFAULT_THEME
+
+The built-in badge and namespace colour definitions used by `consoleTransport()`. Override per-transport via `ConsoleTransportOptions.theme` or per-logger via `RuneOptions.theme`.
+
+### DEFAULT_TRANSPORT
+
+The singleton `consoleTransport()` instance reused when no `transports` array is provided to `createLogger()`. Avoids ANSI detection on every call.
 
 ## Types
 
@@ -336,21 +425,9 @@ const log = createLogger({
 
 `LogType | 'off'` — threshold order: `debug < info < warn < error < fatal < off`
 
-### Variant
-
-`'icon' | 'symbol' | 'text'` — Badge rendering style for `consoleTransport`.
-
 ### Bindings
 
 `Record<string, unknown>` — Key-value context pinned via `withBindings()` or passed per-call.
-
-### SerializedError
-
-| Field     | Type      | Description      |
-| --------- | --------- | ---------------- |
-| `message` | `string`  | Error message    |
-| `name`    | `string`  | Error class name |
-| `stack`   | `string?` | Stack trace      |
 
 ### LogEntry
 
@@ -390,14 +467,29 @@ Payload shape delivered to `RemoteHandler`:
 
 `(type: LogType, data: RemoteLogData) => void`
 
+### PipeOptions
+
+| Field     | Type                                      | Description                                               |
+| --------- | ----------------------------------------- | --------------------------------------------------------- |
+| `onError` | `(error: unknown, entry: LogEntry) => void` | Called when a transport in the pipe throws or rejects   |
+
+### ResolvedTheme
+
+`Record<LogType | 'group' | 'ns', ConsoleThemeEntry>` — fully resolved theme after merging onto `DEFAULT_THEME`. Returned by `resolveTheme()`.
+
 ### RuneOptions
 
-| Field        | Type                            | Default                 | Description                  |
-| ------------ | ------------------------------- | ----------------------- | ---------------------------- |
-| `logLevel`   | `LogLevel?`                     | `'debug'`               | Logger level threshold       |
-| `namespace`  | `string?`                       | `''`                    | Namespace prefix             |
-| `transports` | `Transport[]?`                  | `[consoleTransport()]`  | Transport pipeline           |
-| `env`        | `'production' \| 'development'` | auto-detected           | Runtime environment override |
+| Field              | Type                            | Default                | Description                                              |
+| ------------------ | ------------------------------- | ---------------------- | -------------------------------------------------------- |
+| `logLevel`         | `LogLevel?`                     | `'debug'`              | Logger level threshold                                   |
+| `namespace`        | `string?`                       | `''`                   | Namespace prefix                                         |
+| `transports`       | `Transport[]?`                  | `[DEFAULT_TRANSPORT]`  | Transport pipeline                                       |
+| `bindings`         | `Bindings?`                     | `{}`                   | Initial pinned bindings                                  |
+| `middleware`       | `LogMiddleware[]?`               | `[]`                   | Entry transform/filter chain                             |
+| `now`              | `() => Date`                    | `() => new Date()`     | Timestamp factory (useful in tests)                      |
+| `onTransportError` | `(error, entry, index) => void` | `console.warn`         | Called when a transport throws synchronously             |
+| `sample`           | `number?`                       | `1`                    | Keep probability 0–1; applied after middleware           |
+| `theme`            | `ConsoleTheme?`                 | —                      | Theme for console output and `group()` rendering         |
 
 ### RuneConfig
 
@@ -405,9 +497,13 @@ Resolved configuration exposed via `logger.config`:
 
 ```ts
 type RuneConfig = {
-  env: 'development' | 'production';
   logLevel: LogLevel;
+  middleware: LogMiddleware[];
   namespace: string;
+  now: () => Date;
+  onTransportError: (error: unknown, entry: LogEntry, transportIndex: number) => void;
+  sample: number;
+  theme: ConsoleTheme | undefined;
   transports: Transport[];
 };
 ```
@@ -423,6 +519,14 @@ type LogMethod = {
 ```
 
 Every log-level method uses this signature. Every call must provide at least one argument.
+
+### LogMiddleware
+
+```ts
+type LogMiddleware = (entry: LogEntry, next: (entry: LogEntry) => void) => void;
+```
+
+Middleware functions intercept entries before they reach transports. Call `next(entry)` to continue, or omit the call to drop the entry. Added via `use(fn)` or `RuneOptions.middleware`.
 
 ### LazyBinding
 
@@ -446,10 +550,10 @@ type Logger = {
   readonly bindings: Readonly<Bindings>;
   readonly config: Readonly<RuneConfig>;
   child: (overrides?: RuneOptions) => Logger;
-  scope: (name: string) => Logger;
+  use: (middleware: LogMiddleware) => Logger;
   withBindings: (bindings: Bindings) => Logger;
   enabled: (type: LogLevel) => boolean;
-  time: <T>(label: string, fn: () => T) => T;
+  time: <T>(label: string, fn: () => T, level?: LogType) => T;
   group: <T>(label: string, fn: () => T) => T;
   groupCollapsed: <T>(label: string, fn: () => T) => T;
   debug: LogMethod;
@@ -462,18 +566,23 @@ type Logger = {
 
 ### ConsoleTransportOptions
 
-| Field       | Type       | Default    | Description             |
-| ----------- | ---------- | ---------- | ----------------------- |
-| `level`     | `LogLevel` | `'debug'`  | Minimum level to output |
-| `timestamp` | `boolean`  | `true`     | Include `HH:MM:SS.mmm`  |
-| `variant`   | `Variant`  | `'symbol'` | Badge rendering style   |
+| Field       | Type                     | Default   | Description                                         |
+| ----------- | ------------------------ | --------- | --------------------------------------------------- |
+| `level`     | `LogLevel`               | `'debug'` | Minimum level to output                             |
+| `timestamp` | `boolean`                | `true`    | Include `HH:MM:SS.mmm`                              |
+| `ansi`      | `boolean`                | auto      | Force ANSI color codes on/off (Node only)           |
+| `format`    | `'json' \| 'raw'`        | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
+| `inspectFn` | `(v: unknown) => string` | —         | Custom object formatter (e.g. `util.inspect`)       |
+| `theme`     | `ConsoleTheme`           | —         | Override default badge colours for this transport   |
 
 ### RemoteTransportOptions
 
-| Field   | Type                            | Default       | Description                             |
-| ------- | ------------------------------- | ------------- | --------------------------------------- |
-| `level` | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
-| `env`   | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
+| Field     | Type                            | Default       | Description                             |
+| --------- | ------------------------------- | ------------- | --------------------------------------- |
+| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry |
+| `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
+| `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
+| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws          |
 
 ### JsonTransportOptions
 
@@ -484,12 +593,13 @@ type Logger = {
 
 ### BatchTransportOptions
 
-| Field      | Type                            | Default   | Description                           |
-| ---------- | ------------------------------- | --------- | ------------------------------------- |
-| `onFlush`  | `(entries: LogEntry[]) => void` | —         | Required. Receives each batch.        |
-| `level`    | `LogLevel`                      | `'debug'` | Minimum level to buffer               |
-| `interval` | `number`                        | `5000`    | Flush interval in milliseconds        |
-| `maxSize`  | `number`                        | `50`      | Max buffer size before an early flush |
+| Field          | Type                                             | Default   | Description                                  |
+| -------------- | ------------------------------------------------ | --------- | -------------------------------------------- |
+| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async) |
+| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects      |
+| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                      |
+| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds               |
+| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush        |
 
 ### SampleTransportOptions
 

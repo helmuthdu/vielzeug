@@ -16,14 +16,10 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `onCleanup()`      | Register teardown for component disconnect     | Sync           | Must be called synchronously during setup             |
 | `onElement()`      | Run callback when a ref resolves to an element | Sync           | Re-runs when the element reference changes            |
 | `onEvent()`        | Scoped event listener with auto-cleanup        | Sync           | Must be called during setup or scope.run()            |
-| `listen()`         | Manual event listener (returns cleanup fn)     | Sync           | Does not auto-cleanup — call the returned function    |
 | `prop.*`           | Typed prop helpers (string, bool, number, …)   | Sync           | Prop values are signals — read `.value`               |
-| `provide/inject`   | Context API for parent-to-descendant sharing   | Sync           | Call `provide()` during setup, not in onMounted       |
+| `provide/inject`   | Context API for parent-to-descendant sharing   | Sync           | `inject()` throws if called outside setup             |
 | `ref()`            | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                 |
 | `createContext()`  | Create a typed injection key                   | Sync           | Context is scoped to the component tree               |
-| `suspend()`        | Async rendering with pending/error states      | Async          | Re-runs when reactive deps inside asyncFn change      |
-| `memo()`           | Memoized derived value with explicit deps      | Sync           | Signals inside fn do not invalidate the memo          |
-| `syncedSignal()`   | Locally-writable signal synced to source       | Sync           | Call stop() to unsubscribe from source                |
 
 ## Package Entry Points
 
@@ -65,12 +61,31 @@ setup(props, ctx) {
 ```ts
 type ComponentDefinition<Props, Emits, SlotNames> = {
   formAssociated?: boolean;
+  loading?: () => HTMLResult;            // Template shown while async setup is pending
+  onError?: (error: CraftitError, element: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult;
-  shadow?: Partial<ShadowRootInit>;
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) =>
+    HTMLResult | Promise<HTMLResult>;
+  shadow?: Partial<ShadowRootInit> | false; // false = light DOM (no shadow root)
   slots?: readonly SlotNames[];
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
+```
+
+#### Async setup
+
+When `setup()` returns a `Promise<HTMLResult>`, `loading()` is rendered immediately. The real template replaces it once the promise resolves.
+
+```ts
+define('user-profile', {
+  props: { userId: prop.string('') },
+  loading: () => html`<p>Loading…</p>`,
+  onError: (_err, el) => html`<p>Failed to load ${el.getAttribute('user-id')}</p>`,
+  async setup(props) {
+    const user = await fetchUser(props.userId.value);
+    return html`<p>${user.name}</p>`;
+  },
+});
 ```
 
 ## Runtime Helpers
@@ -91,10 +106,6 @@ Registers work that runs after the component template is mounted. Multiple calls
 
 Adds an event listener and automatically removes it on cleanup. Must be called during setup or `scope.run()`.
 
-### `listen(target, event, listener, options?)`
-
-Adds an event listener and returns a manual cleanup function. Unlike `onEvent()`, does not require a runtime scope — cleanup must be managed by the caller.
-
 ### `onCleanup(fn)`
 
 ```ts
@@ -107,29 +118,7 @@ Registers a cleanup function to be called when the component disconnects. Must b
 
 Runs `callback` when a `ref()` resolves to an element and re-runs when that element changes. Returns a subscription.
 
-### `memo(deps, fn)`
 
-```ts
-memo<T>(deps: () => readonly unknown[], fn: () => T): ReadonlySignal<T>;
-```
-
-Creates a memoized derived value. `fn` is re-evaluated only when the `deps` array changes (compared with `Object.is`). Signals read inside `fn` do not invalidate the memo.
-
-### `syncedSignal(source, transform?)`
-
-```ts
-syncedSignal<TIn, TOut>(source: ReadonlySignal<TIn>, transform?: (v: TIn) => TOut): [Signal<TOut>, () => void];
-```
-
-Creates a locally-writable signal that stays in sync with an external source. Returns `[signal, stop]`.
-
-### `suspend(asyncFn, options)`
-
-```ts
-suspend<T>(asyncFn: () => Promise<T>, options: SuspendOptions<T>): ReadonlySignal<HTMLResult>;
-```
-
-Runs an async function and returns a signal that transitions through pending → resolved states. Options: `fallback`, `error`, `render`.
 
 ## Props API
 
@@ -167,7 +156,8 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 | `when(condition, truthy, falsy?)` | Conditional rendering                         |
 | `classMap(record)`                | Reactive class string from object map          |
 | `styleMap(record)`                | Reactive inline style string from object map   |
-| `live(signal)`                    | Live form binding — skips stale writes         |
+| `live(signal)`                    | Live form binding — skips stale writes to in-focus inputs |
+| `model(signal)`                   | Two-way value binding (reads value, writes on input event) |
 | `raw(value)`                      | Trusted HTML rendering (XSS risk without sanitizer) |
 
 ### Event Modifiers
@@ -192,12 +182,11 @@ bind({
   attr: { role: 'button', 'aria-expanded': () => String(open.value) },
   class: { 'is-open': open },
   style: { '--height': () => height.value + 'px' },
-  prop: { value: { get: () => count.value, set: (v) => (count.value = v) } },
   on: { click: handleClick },
 });
 ```
 
-For standalone use outside setup, use `createBind(element)`.
+`bind()` returns a cleanup function. For standalone use outside setup, use `createBind(element)`.
 
 ### `syncAria(target, config)`
 
@@ -211,34 +200,72 @@ syncAria(element, {
 });
 ```
 
+When `autoCleanup: true` is passed and `syncAria` is called outside a component setup context (e.g., in a standalone module), a DEV warning is logged because no cleanup can be registered automatically.
+
 ## Slots
 
-- `slots.has(name?)` — `ReadonlySignal<boolean>` — whether the slot has content
-- `slots.elements(name?)` — `ReadonlySignal<Element[]>` — assigned elements
+- `slots.has(name?)` — `ReadonlySignal<boolean>` — whether the named (or default) slot has assigned content
+- `slots.elements(name?)` — `ReadonlySignal<Element[]>` — the assigned elements for the slot
 
-When `slots` is declared as a `const` array on the definition, TypeScript narrows slot name arguments.
+Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount. When `slots` is declared as a `const` array on the definition, TypeScript narrows the accepted slot name arguments.
 
 ## Context API
 
 - `createContext<T>(description?)` — Create a typed injection key
-- `provide(key, value)` — Provide a value to descendants
-- `inject(key)` — Resolve from nearest ancestor (returns `undefined` if not found)
-- `inject(key, fallback)` — Resolve with fallback
-- `injectStrict(key)` — Resolve or throw
+- `provide(key, value)` — Provide a value to descendants (must be called during `setup()`)
+- `inject(key)` — Resolve from nearest ancestor; returns `undefined` if not found
+- `inject(key, fallback)` — Resolve with a fallback value
+- `injectStrict(key)` — Resolve or throw if absent
 
-Context correctly resolves `undefined` as a provided value (uses presence check, not value comparison).
+Both `provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws `'Lifecycle hooks must be called synchronously during component setup'`. Context resolution walks the ancestor chain including shadow DOM boundaries.
 
 ## Utilities
 
-- `ref<T>()` — Create a signal-based element reference
-- `refs<T>()` — Create an array-based element reference collector
-- `createId(prefix?)` — Generate a unique ID string
+- `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
+- `createId(prefix?)` — Generate an auto-incrementing unique ID string (e.g. `cft-1`).
+- `createStableId(prefix?)` — Generate a stable unique ID with a short random tag (e.g. `field-a3k21`).
 
 ## Form-Associated API
 
-- `defineField(options): FormFieldHandle` — Wire a form-associated element with internals
-- `createForm(options): FormContextValue` — Create form coordination context
-- `provideFormContext(ctx)` / `useFormContext()` — Provide/inject form context
+### `defineField(options)`
+
+Wire a form-associated element to `ElementInternals`. Requires `formAssociated: true` on the component definition.
+
+```ts
+type FormFieldOptions<T> = {
+  disabled?: ReadonlySignal<boolean>;
+  toFormValue?: (value: T) => File | FormData | string | null;
+  value: Signal<T> | ReadonlySignal<T>;
+};
+
+type FormFieldHandle = {
+  checkValidity(): boolean;
+  readonly internals: ElementInternals;
+  reportValidity(): boolean;
+  setCustomValidity(message: string): void;
+  setValidity: ElementInternals['setValidity'];
+};
+```
+
+### Form Context
+
+Coordinate form state across child field components:
+
+- `createFormContext(options?)` — Create a `FormContextValue`
+- `provideFormContext(ctx)` — Provide to descendants via `provide(FORM_CONTEXT_KEY, ctx)`
+- `useFormContext()` — Inject from nearest ancestor
+
+```ts
+type FormContextValue = {
+  readonly dirty: ReadonlySignal<boolean>;
+  markDirty(): void;                              // Call from input/change handlers
+  registerField(validity: ReadonlySignal<boolean>): () => void;
+  reset(): void;                                   // Resets dirty to false
+  submit(e?: Event): Promise<void>;
+  readonly submitting: ReadonlySignal<boolean>;
+  readonly valid: ReadonlySignal<boolean>;         // true when all registered fields are valid
+};
+```
 
 ## Observer APIs
 
@@ -253,18 +280,53 @@ Import from `@vielzeug/craft/observers`.
 
 Import from `@vielzeug/craft/testing`.
 
-| API                    | Purpose                                     |
-| ---------------------- | ------------------------------------------- |
-| `mount(setup, options?)` | Mount a component and return a fixture    |
-| `cleanup()`            | Remove all mounted elements                 |
-| `flush(options?)`      | Drain reactive updates and animation frames |
-| `install(afterEach)`   | Auto-register cleanup with test runner      |
-| `mock(tag, template?)` | Register a stub custom element              |
-| `fire.*`               | Synchronous event dispatchers               |
-| `user.*`               | Async interaction helpers (type, click, etc) |
-| `waitFor(fn, options?)` | Poll until assertion passes                |
-| `waitForEvent(el, name)` | Wait for a specific event                |
-| `within(element)`      | Scoped query helpers                        |
+| API                        | Purpose                                                   |
+| -------------------------- | --------------------------------------------------------- |
+| `mount(setup, options?)`   | Mount a component and return a test fixture               |
+| `cleanup()`                | Remove all mounted elements and reset test state          |
+| `install(afterEach)`       | Register `cleanup()` with the test runner's `afterEach`   |
+| `flush(options?)`          | Drain reactive updates and animation frames               |
+| `FLUSH_DEEP`               | Pre-built options for deep async chains (`maxTurns: 12`)  |
+| `mock(tag, template?)`     | Register a no-op stub custom element                      |
+| `renderHook(setup)`        | Run lifecycle hooks in isolation without a full component |
+| `fire.*`                   | Synchronous DOM event dispatchers                         |
+| `user.*`                   | Async user interactions (type, fill, click, press, …)     |
+| `waitFor(fn, options?)`    | Poll until an assertion passes or a condition is truthy   |
+| `waitForEvent(el, name)`   | Resolve when the target element emits the named event     |
+| `within(element)`          | Scoped query helpers (`query`, `queryAll`, …)             |
+
+> **Test isolation:** `cleanup()` also resets internal `live()` signal tracking and the raw HTML sanitizer. Call it in `afterEach` (or use `install(afterEach)`) to prevent state leaking between tests.
+
+#### `Fixture` interface
+
+```ts
+interface Fixture<T extends HTMLElement = HTMLElement> {
+  element: T;
+  readonly shadow: ShadowRoot | null;
+  query<E extends Element>(selector: string): E | null;
+  queryAll<E extends Element>(selector: string): E[];
+  queryByText<E extends Element>(text: string, selector?: string): E | null;
+  queryByTestId<E extends Element>(testId: string): E | null;
+  attr(name: string, value: string | number | boolean): Promise<void>;
+  attrs(record: Record<string, string | number | boolean>): Promise<void>;
+  flush(options?: FlushOptions): Promise<void>;
+  act(fn: () => unknown): Promise<void>;
+  destroy(): void;
+}
+```
+
+#### `renderHook`
+
+Useful for testing composable lifecycle hooks (`onMounted`, `effect`, `inject`, etc.) without a template:
+
+```ts
+const { result, flush, destroy } = await renderHook(() => {
+  const count = signal(0);
+  onMounted(() => { count.value = 1; });
+  return count;
+});
+export(result.value).toBe(1);
+```
 
 ## Ripple Re-exports
 
@@ -275,121 +337,72 @@ Craft re-exports these from `@vielzeug/ripple`:
 
 ## Lifecycle Events
 
-| Event              | When                                    |
-| ------------------ | --------------------------------------- |
-| `craft:connect`    | After every `connectedCallback`         |
-| `craft:disconnect` | After `disconnectedCallback` (phase=UNMOUNTED, before reset) |
-| `craft:error`      | When setup throws (bubbles, composed)   |
+| Event              | When                                                         |
+| ------------------ | ------------------------------------------------------------ |
+| `craft:connect`    | After every `connectedCallback` (including reconnects)       |
+| `craft:disconnect` | After `disconnectedCallback`, before component state is reset |
+| `craft:error`      | When setup throws — bubbles, composed; detail is `CraftitError` |
 
-## Types
+## Key Types
 
 ```ts
-type CleanupFn = () => void;
-
-type HTMLResult = { __brand: 'HTMLResult' };
-
-type CSSResult = { __brand: 'CSSResult' };
-
-type InjectionKey<T> = symbol & { __type?: T };
-
-type Ref<T extends Element = Element> = Signal<T | null>;
-
-type Refs<T extends Element = Element> = Signal<T[]>;
-
-type RefCallback<T extends Element = Element> = (el: T | null) => void;
-
 type PropDef<T> = {
   default: T;
-  parse?: (value: string | null) => T;
+  parse: (value: string | null) => T;
   reflect?: boolean;
 };
 
-type PropsDef<P> = { [K in keyof P]: PropDef<P[K]> };
+type SetupContextBag<
+  Emits extends Record<string, unknown> = Record<string, unknown>,
+  SlotNames extends string = string,
+> = {
+  bind: HostBindFn;          // Apply reactive bindings to the host element
+  el: HTMLElement;            // The host element
+  emit: EmitFn<Emits>;        // Dispatch typed custom events
+  slots: ComponentSlots<SlotNames>; // Reactive slot signals
+};
 
-type PropInputDefs = Record<string, PropDef<unknown>>;
-
-type InferPropsFromDefs<D> = { [K in keyof D]: D[K] extends PropDef<infer T> ? T : never };
-
-type InferPropsSignals<P> = { [K in keyof P]: Signal<P[K]> };
+type ComponentDefinition<Props, Emits, SlotNames extends string> = {
+  formAssociated?: boolean;
+  loading?: () => HTMLResult;                         // Shown while async setup is pending
+  onError?: (error: CraftitError, el: HTMLElement) => HTMLResult | void;
+  props?: PropsDef<Props>;
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) =>
+    HTMLResult | Promise<HTMLResult>;
+  shadow?: Partial<ShadowRootInit> | false;           // false = light DOM
+  slots?: readonly SlotNames[];
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+};
 
 type HostBindConfig = {
-  attr?: Record<string, string | (() => string) | ReadonlySignal<string>>;
-  class?: Record<string, boolean | (() => boolean) | ReadonlySignal<boolean>>;
-  on?: Record<string, (e: Event) => void>;
-  prop?: Record<string, HostPropDescriptor>;
-  style?: Record<string, string | (() => string) | ReadonlySignal<string>>;
+  attr?: Record<string, HostBindingValue>;
+  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | ReadonlySignal<boolean>>;
+  on?: Record<string, (event: Event) => void>;
+  style?: Record<string, HostBindingValue>;
 };
-
-type HostPropDescriptor = {
-  get: () => unknown;
-  set: (v: unknown) => void;
-};
-
-type HostBindFn = (config: HostBindConfig) => void;
 
 type ComponentSlots<S extends string = string> = {
   elements(name?: S): ReadonlySignal<Element[]>;
   has(name?: S): ReadonlySignal<boolean>;
 };
 
-type SetupContextBag<Emits = Record<string, unknown>, SlotNames extends string = string> = {
-  bind: HostBindFn;
-  el: HTMLElement;
-  emit: EmitFn<Emits>;
-  slots: ComponentSlots<SlotNames>;
-};
+type Ref<T extends Element> = Signal<T | null>;
 
-type ComponentDefinition<Props = {}, Emits = {}, SlotNames extends string = string> = {
-  formAssociated?: boolean;
-  props?: PropsDef<Props>;
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult;
-  shadow?: Partial<ShadowRootInit>;
-  slots?: readonly SlotNames[];
-  styles?: (string | CSSStyleSheet | CSSResult)[];
-};
+type RefCallback<T extends Element> = (el: T | null) => void;
 
-type SuspendOptions<T> = {
-  error?: (e: unknown) => HTMLResult;
-  fallback?: () => HTMLResult;
-  render: (data: T) => HTMLResult;
-};
+type InjectionKey<T> = symbol & { readonly __craftit_injection_key?: T };
 
-type SyncAriaOptions = Record<string, string | (() => string)>;
-
-type FormFieldHandle = {
-  checkValidity(): boolean;
-  reportValidity(): boolean;
-  setCustomValidity(message: string): void;
-  setValidity(flags?: ValidityStateFlags, message?: string, anchor?: HTMLElement | null): void;
-};
-
-type FormFieldOptions<T> = {
-  disabled?: ReadonlySignal<boolean> | Signal<boolean>;
-  toFormValue?: (v: T) => string | FormData | File | null;
-  value: Signal<T> | ReadonlySignal<T>;
-};
-
-type FormContextValue = {
-  register(handle: FormFieldHandle): void;
-  submit(e?: Event): Promise<void>;
-  unregister(handle: FormFieldHandle): void;
-};
-
-type LifecycleEventName = 'craft:connect' | 'craft:disconnect' | 'craft:error';
-
-type CraftitErrorKind = 'setup' | 'effect' | 'mount-callback' | 'cleanup';
-
-type CraftitRuntimeError = {
-  element: HTMLElement;
-  error: unknown;
-  kind: CraftitErrorKind;
-};
+type LifecycleEventName = 'craft:connect' | 'craft:disconnect';
 ```
 
 ## Errors
 
-| Error                    | Trigger                                          |
-| ------------------------ | ------------------------------------------------ |
-| `CraftitRuntimeError`    | Thrown by `reportRuntimeError()` when setup, effect, mount-callback, or cleanup fails. Dispatched as `craft:error` event on the host element. |
-| `createRuntimeError()`   | Factory to create a structured `CraftitRuntimeError`. |
-| `reportRuntimeError()`   | Reports an error to the host element via `craft:error` event and console. |
+`CraftitError` is thrown when component setup fails. It extends `Error` with:
+
+- `component: string` — the element's local name
+- `phase: ComponentPhase` — the lifecycle phase when the error occurred
+- `cause: Error` — the original error
+
+`reportRuntimeError(error, element)` dispatches `craft:error` on the host element (bubbles, composed) and logs to `console.error`.
+
+If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing.

@@ -34,6 +34,8 @@ export { configure, currentLocale, registerLocale, reset, useLocale, type Logger
 
 export { fromDescriptor } from './from-descriptor';
 
+export { descriptorToJsonSchema } from './json-schema';
+
 export {
   hasMaxLength,
   hasMinLength,
@@ -49,27 +51,6 @@ export {
   isPositive,
   isString,
   isInRange,
-  isValidBase64,
-  isValidBase64url,
-  isValidCuid,
-  isValidCuid2,
-  isValidDuration,
-  isValidEmail,
-  isValidEmoji,
-  isValidHex,
-  isValidHexColor,
-  isValidIp,
-  isValidIsoDate,
-  isValidIsoDateTime,
-  isValidJwt,
-  isValidNanoid,
-  isValidNumeric,
-  isValidSemver,
-  isValidSlug,
-  isValidTime,
-  isValidUlid,
-  isValidUrl,
-  isValidUuid,
 } from './validators';
 
 export {

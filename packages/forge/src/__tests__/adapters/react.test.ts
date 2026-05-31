@@ -1,4 +1,4 @@
-import { type UseSyncExternalStoreFn, createForgeHooks } from '../../adapters/react';
+import { createForgeHooks, type UseSyncExternalStoreFn } from '../../adapters/react';
 import { createForm } from '../../index';
 
 // Minimal synchronous mock: subscribes and immediately returns the snapshot.

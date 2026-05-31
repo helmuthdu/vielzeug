@@ -1,4 +1,4 @@
-import type { SourceMeta } from './types';
+import type { SourceError, SourceMeta } from './types';
 
 const clampInt = (value: number, minimum: number) => {
   const parsed = Math.trunc(value);
@@ -22,7 +22,7 @@ export const clampPage = (page: number, pages: number) => {
 };
 
 export const createMeta = (state: {
-  errorMessage: string | null;
+  error: SourceError | null;
   isLoading: boolean;
   isSearchPending: boolean;
   pageNumber: number;
@@ -33,19 +33,39 @@ export const createMeta = (state: {
   const safeTotal = clampInt(state.totalItems, 0);
   const pages = pageCount(safeTotal, safeLimit);
   const page = clampPage(state.pageNumber, pages);
-  const isEmpty = safeTotal === 0;
-  const start = isEmpty ? 0 : (page - 1) * safeLimit + 1;
-  const end = isEmpty ? 0 : Math.min(page * safeLimit, safeTotal);
 
   return {
-    errorMessage: state.errorMessage,
+    error: state.error,
     isLoading: state.isLoading,
     isSearchPending: state.isSearchPending,
-    itemEnd: end,
-    itemStart: start,
     pageCount: pages,
     pageNumber: page,
     pageSize: safeLimit,
     totalItems: safeTotal,
   };
 };
+
+/**
+ * Computes the 1-based display range of items on the current page.
+ * Returns `{ start: 0, end: 0 }` when there are no items.
+ *
+ * @example
+ * ```ts
+ * const { start, end } = itemRange(source.meta);
+ * // "Showing 11–20 of 50"
+ * console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
+ * ```
+ */
+export function itemRange(meta: Readonly<{ pageNumber: number; pageSize: number; totalItems: number }>): {
+  end: number;
+  start: number;
+} {
+  if (meta.totalItems === 0) return { end: 0, start: 0 };
+
+  const start = (meta.pageNumber - 1) * meta.pageSize + 1;
+
+  return {
+    end: Math.min(meta.pageNumber * meta.pageSize, meta.totalItems),
+    start,
+  };
+}

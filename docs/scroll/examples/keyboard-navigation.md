@@ -35,7 +35,7 @@ function paint(items = virt.items, totalSize = virt.totalSize) {
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
-  onChange: paint,
+  onChange: ({ items, totalSize }) => paint(items, totalSize),
 });
 
 scrollEl.addEventListener('keydown', (e) => {

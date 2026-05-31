@@ -1,5 +1,4 @@
-import type { AnySchema, InferOutput, Issue, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -31,11 +30,11 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     const branchErrors: Issue[][] = [];
 
     for (const schema of this.schemas) {
-      const result = schema.safeParse(value);
+      const result = schema._parseFullSync(value);
 
-      if (result.success) return { data: result.data, issues: [], typeOk: true };
+      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
 
-      branchErrors.push(result.error.issues);
+      branchErrors.push(result.issues);
     }
 
     return this._invalidUnionResult(value, branchErrors);
@@ -61,10 +60,6 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
 
       return this._invalidUnionResult(value, branchErrors);
     }
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { anyOf: this.schemas.map((s) => s.toJsonSchema()) };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

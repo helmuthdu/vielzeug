@@ -4,7 +4,7 @@ import '../icon/icon';
 import '../../inputs/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../shared/config';
+import { sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './pagination.css?inline';
 
@@ -178,12 +178,13 @@ define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
 
                 const pg = item as number;
                 const isCurrent = pg === (props.page.value || 1);
+                const pgLabel = `Page ${pg}`;
 
                 return isCurrent
-                  ? html`<button type="button" part="page-btn" aria-label="Page ${pg}" aria-current="page">
+                  ? html`<button type="button" part="page-btn" aria-label="${pgLabel}" aria-current="page">
                       ${pg}
                     </button>`
-                  : html`<button type="button" part="page-btn" aria-label="Page ${pg}">${pg}</button>`;
+                  : html`<button type="button" part="page-btn" aria-label="${pgLabel}">${pg}</button>`;
               })}
           </li>
           ${() =>

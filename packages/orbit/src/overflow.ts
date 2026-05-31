@@ -110,8 +110,8 @@ export function getPlacementOverflow(
   options: DetectOverflowOptions = {},
 ): SideObject {
   const { x, y } = baseCoords(placement, state.rects.reference, state.rects.floating);
-  const boundary = getBoundaryRect(options.boundary);
-  const padding = toSideObject(options.padding);
+  const boundary = getBoundaryRect(options.boundary ?? state.boundary);
+  const padding = toSideObject(options.padding ?? state.padding);
   const rect = { ...state.rects.floating, x, y };
 
   return detectOverflowAtRect(rect, boundary, padding);
@@ -119,8 +119,8 @@ export function getPlacementOverflow(
 
 /** Overflow of the floating element at its current position in the middleware pipeline. */
 export function detectOverflow(state: MiddlewareState, options: DetectOverflowOptions = {}): SideObject {
-  const boundary = getBoundaryRect(options.boundary);
-  const padding = toSideObject(options.padding);
+  const boundary = getBoundaryRect(options.boundary ?? state.boundary);
+  const padding = toSideObject(options.padding ?? state.padding);
 
   return detectOverflowAtRect(getFloatingRect(state), boundary, padding);
 }

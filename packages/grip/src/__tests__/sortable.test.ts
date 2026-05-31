@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { applyReorder, createSortable, createSortableScope } from '../sortable';
 import { endDrag, makeDragEvent, makeKeyEvent, makeList, startDrag } from './helpers';
 
+// makeList attaches elements to document.body; clean up after every test.
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
 describe('createSortableScope', () => {
   it('returns an object with the brand symbol', () => {
     const scope = createSortableScope();
@@ -456,25 +461,11 @@ describe('createSortable', () => {
   });
 
   describe('keyboard reordering', () => {
-    let container: HTMLElement;
-
-    beforeEach(() => {
-      container = document.createElement('div');
-      document.body.appendChild(container);
-    });
-
-    afterEach(() => {
-      container.remove();
-    });
-
     it('moves item forward with ArrowDown', () => {
       const {
         element,
         items: [, second],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -490,9 +481,6 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -508,9 +496,6 @@ describe('createSortable', () => {
         element,
         items: [, , third],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -526,9 +511,6 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -544,9 +526,6 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ axis: 'horizontal', element, onReorder });
 
@@ -562,9 +541,6 @@ describe('createSortable', () => {
         element,
         items: [first],
       } = makeList('a', 'b', 'c');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
 
@@ -580,9 +556,6 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ element, keyboard: false, onReorder });
 
@@ -601,7 +574,7 @@ describe('createSortable', () => {
       li.setAttribute('data-sort-id', 'a');
       li.append(input);
       element.append(li);
-      container.appendChild(element);
+      document.body.appendChild(element);
 
       const onReorder = vi.fn();
       const sortable = createSortable({ element, onReorder });
@@ -618,15 +591,185 @@ describe('createSortable', () => {
         element,
         items: [, second],
       } = makeList('a', 'b');
-
-      container.appendChild(element);
-
       const onReorder = vi.fn();
       const sortable = createSortable({ disabled: true, element, onReorder });
 
       second.dispatchEvent(makeKeyEvent('ArrowDown'));
 
       expect(onReorder).not.toHaveBeenCalled();
+
+      sortable.destroy();
+    });
+  });
+
+  describe('revert', () => {
+    it('calls the revert function returned by onReorder after a drag', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onRevert = vi.fn();
+      const onReorder = vi.fn().mockReturnValue(onRevert);
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      const sortable = createSortable({ element, onReorder });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      sortable.revert();
+
+      expect(onRevert).toHaveBeenCalledTimes(1);
+
+      sortable.destroy();
+    });
+
+    it('calls the revert function returned by onReorder after a keyboard move', () => {
+      const {
+        element,
+        items: [, second],
+      } = makeList('a', 'b', 'c');
+      const onRevert = vi.fn();
+      const onReorder = vi.fn().mockReturnValue(onRevert);
+      const sortable = createSortable({ element, onReorder });
+
+      second.dispatchEvent(makeKeyEvent('ArrowDown'));
+      sortable.revert();
+
+      expect(onRevert).toHaveBeenCalledTimes(1);
+
+      sortable.destroy();
+    });
+
+    it('is a no-op when onReorder returns undefined', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onReorder = vi.fn();
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      const sortable = createSortable({ element, onReorder });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      expect(() => sortable.revert()).not.toThrow();
+
+      sortable.destroy();
+    });
+
+    it('clears the revert function after first call', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onRevert = vi.fn();
+      const onReorder = vi.fn().mockReturnValue(onRevert);
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      const sortable = createSortable({ element, onReorder });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      sortable.revert();
+      sortable.revert(); // second call is a no-op
+
+      expect(onRevert).toHaveBeenCalledTimes(1);
+
+      sortable.destroy();
+    });
+  });
+
+  describe('onBeforeReorder', () => {
+    it('fires with from/to arrays before onReorder is called', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const callOrder: string[] = [];
+      const onBeforeReorder = vi.fn(() => callOrder.push('before'));
+      const onReorder = vi.fn(() => callOrder.push('reorder'));
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      const sortable = createSortable({ element, onBeforeReorder, onReorder });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b'], ['b', 'a']);
+      expect(callOrder).toEqual(['before', 'reorder']);
+
+      sortable.destroy();
+    });
+
+    it('is not called when the drag is cancelled', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a', 'b');
+      const onBeforeReorder = vi.fn();
+      const sortable = createSortable({ element, onBeforeReorder });
+
+      startDrag(first);
+      endDrag(first, 'none');
+
+      expect(onBeforeReorder).not.toHaveBeenCalled();
+
+      sortable.destroy();
+    });
+
+    it('is not called when order does not change', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a', 'b');
+      const onBeforeReorder = vi.fn();
+      const sortable = createSortable({ element, onBeforeReorder });
+
+      startDrag(first);
+      endDrag(first);
+
+      expect(onBeforeReorder).not.toHaveBeenCalled();
+
+      sortable.destroy();
+    });
+
+    it('fires with from/to arrays before onReorder for keyboard moves', () => {
+      const {
+        element,
+        items: [, second],
+      } = makeList('a', 'b', 'c');
+      const callOrder: string[] = [];
+      const onBeforeReorder = vi.fn(() => callOrder.push('before'));
+      const onReorder = vi.fn(() => callOrder.push('reorder'));
+      const sortable = createSortable({ element, onBeforeReorder, onReorder });
+
+      second.dispatchEvent(makeKeyEvent('ArrowDown'));
+
+      expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b', 'c'], ['a', 'c', 'b']);
+      expect(callOrder).toEqual(['before', 'reorder']);
 
       sortable.destroy();
     });

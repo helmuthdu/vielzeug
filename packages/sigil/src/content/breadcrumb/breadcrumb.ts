@@ -1,6 +1,7 @@
-import { define, prop, effect, html } from '@vielzeug/craft';
+import { define, effect, html, prop } from '@vielzeug/craft';
 
 import itemStyles from './breadcrumb-item.css?inline';
+import componentStyles from './breadcrumb.css?inline';
 
 export type BitBreadcrumbProps = {
   label?: string;
@@ -63,8 +64,6 @@ define<BitBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
 // ============================================
 // Breadcrumb Component
 // ============================================
-
-import componentStyles from './breadcrumb.css?inline';
 
 /**
  * Accessible breadcrumb navigation container.

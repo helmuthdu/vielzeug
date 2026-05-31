@@ -1,20 +1,17 @@
 // ── Lifecycle bridge ────────────────────────────────────────────────────────────
-export { toAbortSignal } from './scope';
+export { componentSignal } from './scope';
 
 // ── Field base ───────────────────────────────────────────────────────────────
-// NOTE: `FieldBaseOptions` is a deprecated alias for `FieldOptions`.
 export {
-  createAssistiveState,
+  createCounterState,
   createErrorHelperState,
   createField,
-  type AssistiveOptions,
-  type AssistiveState,
   type ControlValidationMode,
+  type CounterOptions,
   type CounterState,
   type ErrorHelperOptions,
   type ErrorHelperState,
   type FieldAriaState,
-  type FieldBaseOptions,
   type FieldHandle,
   type FieldOptions,
   type LabelPlacement,
@@ -61,9 +58,15 @@ export {
   type PlacementOptions,
 } from './option-list';
 
+// ── Paginated list ────────────────────────────────────────────────────────────
+export { createPaginatedList, type PaginatedListHandle, type PaginatedListOptions } from './paginated-list';
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 export {
   createListControl,
+  keymap,
+  keymapPresets,
+  type Keymap,
   type ListControl,
   type ListKeyAction,
   type ListNavigationAction,
@@ -113,25 +116,8 @@ export { createDialogFocusControl, type DialogFocusControl, type DialogFocusCont
 // ── Dev utilities ─────────────────────────────────────────────────────────────
 export { assert as devAssert } from '@vielzeug/arsenal';
 
-// ── Synced signal ─────────────────────────────────────────────────────────────
-export { syncedSignal } from './synced-signal';
-
-// ── Reactive bindings ─────────────────────────────────────────────────────────
-export {
-  createReactiveBindings,
-  type AttrMap,
-  type AttrValue,
-  type PropMap,
-  type PropValue,
-  type ReactiveBindings,
-  type ReactiveBindingsOptions,
-} from './a11y-host';
-
 // ── ID generation ────────────────────────────────────────────────────────────
-export { createStableId } from './id';
-
-// ── Composite control ─────────────────────────────────────────────────────────
-export { createComposite, type CompositeControlHandle, type CompositeOptions } from './composite';
+export { createStableId } from '@vielzeug/craft';
 
 // ── DOM utilities ─────────────────────────────────────────────────────────────
 export { setBooleanAttribute, setMaybeAttribute } from './attrs';

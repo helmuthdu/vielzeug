@@ -1,6 +1,6 @@
 import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, fail, resolveMessage } from '../core';
+import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import {
   isBase64,
   isBase64url,
@@ -379,23 +379,6 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
   uppercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    const ann = this._annotations;
-    const base: Record<string, unknown> = { type: 'string' };
-
-    if (ann.minLength !== undefined) base['minLength'] = ann.minLength;
-
-    if (ann.maxLength !== undefined) base['maxLength'] = ann.maxLength;
-
-    if (ann.pattern != null) base['pattern'] = ann.pattern;
-
-    if (ann.format !== undefined) base['format'] = ann.format;
-
-    if (ann.contentEncoding !== undefined) base['contentEncoding'] = ann.contentEncoding;
-
-    return base;
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {

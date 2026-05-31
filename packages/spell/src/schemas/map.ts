@@ -1,7 +1,6 @@
-import type { Issue, ParseResult, SchemaDescriptor } from '../core';
-import type { ParseValue } from '../core';
+import type { Issue, ParseResult, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, prependIssuePath } from '../core';
+import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
@@ -46,10 +45,15 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     let i = 0;
 
     for (const [key, val] of value) {
-      const keyResult = this.keySchema.safeParse(key);
-      const valResult = this.valueSchema.safeParse(val);
+      const keyResult = this.keySchema._parseFullSync(key);
+      const valResult = this.valueSchema._parseFullSync(val);
 
-      this._applyEntryResult(out, issues, i, keyResult, valResult);
+      if (keyResult.issues.length > 0) issues.push(...prependIssuePath(keyResult.issues, i));
+
+      if (valResult.issues.length > 0) issues.push(...prependIssuePath(valResult.issues, i));
+
+      if (keyResult.issues.length === 0 && valResult.issues.length === 0)
+        out.set(keyResult.data as K, valResult.data as V);
 
       i += 1;
     }
@@ -75,10 +79,6 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     }
 
     return { data: out, issues, typeOk: true };
-  }
-
-  protected override _toSchemaBase(): Record<string, unknown> {
-    return { $comment: 'Map<K,V> — no JSON Schema equivalent' };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

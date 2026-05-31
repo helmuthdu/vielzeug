@@ -1,4 +1,4 @@
-import { WILDCARD, createWard, matchesPattern } from '../index';
+import { createWard, matchesPattern, patternCovers, WILDCARD } from '../index';
 
 // ---------------------------------------------------------------------------
 // matchesPattern — hierarchical pattern matching (resources and actions)
@@ -80,5 +80,42 @@ describe('ward: hierarchical resource patterns in rules', () => {
     expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts:123')).toHaveLength(1);
     expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts:123')[0].resource).toBe('posts:*');
     expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'comments')).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// patternCovers
+// ---------------------------------------------------------------------------
+
+describe('patternCovers', () => {
+  it('global wildcard covers everything', () => {
+    expect(patternCovers(WILDCARD, 'posts')).toBe(true);
+    expect(patternCovers(WILDCARD, 'posts:*')).toBe(true);
+    expect(patternCovers(WILDCARD, WILDCARD)).toBe(true);
+  });
+
+  it('nothing covers global wildcard except itself', () => {
+    expect(patternCovers('posts', WILDCARD)).toBe(false);
+    expect(patternCovers('posts:*', WILDCARD)).toBe(false);
+  });
+
+  it('namespace wildcard covers exact IDs in same namespace', () => {
+    expect(patternCovers('posts:*', 'posts:123')).toBe(true);
+    expect(patternCovers('posts:*', 'posts:abc')).toBe(true);
+  });
+
+  it('namespace wildcard covers same namespace wildcard', () => {
+    expect(patternCovers('posts:*', 'posts:*')).toBe(true);
+  });
+
+  it('namespace wildcard does not cover different namespace', () => {
+    expect(patternCovers('posts:*', 'comments:123')).toBe(false);
+    expect(patternCovers('posts:*', 'comments:*')).toBe(false);
+  });
+
+  it('exact pattern covers only itself', () => {
+    expect(patternCovers('posts', 'posts')).toBe(true);
+    expect(patternCovers('posts', 'posts:123')).toBe(false);
+    expect(patternCovers('posts', 'comments')).toBe(false);
   });
 });

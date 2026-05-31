@@ -1,11 +1,13 @@
 import { isPlainObject } from '@vielzeug/arsenal';
 
+import { fail, resolveMessage, ValidationError } from './errors';
+import { descriptorToJsonSchema } from './json-schema';
 import { _messages } from './messages';
 import {
-  ErrorCode,
   type AnySchema,
   type CheckContext,
   type CheckFnResult,
+  ErrorCode,
   type FlatError,
   type FlatErrorFirst,
   type FormattedErrors,
@@ -129,7 +131,7 @@ export class Schema<Output = unknown, Input = Output> {
   /**
    * JSON Schema annotation fields set by constraint methods (min, max, pattern, etc.).
    * Subclasses narrow this type with `declare protected _annotations: XxxAnnotations`
-   * to get typed access in _toSchemaBase() and _toDescriptorImpl().
+   * to get typed access in `_toDescriptorImpl()`.
    */
   protected _annotations: Record<string, unknown> = {};
 
@@ -153,7 +155,7 @@ export class Schema<Output = unknown, Input = Output> {
       if (prepared.skip) return prepared.value as Output;
 
       const core = this._parseValueSync(prepared.value);
-      const validationIssues = core.typeOk ? this._runSyncValidators(core.data) : [];
+      const validationIssues = core.typeOk ? this._executeValidators(core.data) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
       if (allIssues.length) throw new ValidationError(allIssues);
@@ -210,7 +212,7 @@ export class Schema<Output = unknown, Input = Output> {
     if (prepared.skip) return { data: prepared.value, issues: [] };
 
     const core = this._parseValueSync(prepared.value);
-    const validationIssues = core.typeOk ? this._runSyncValidators(core.data) : [];
+    const validationIssues = core.typeOk ? this._executeValidators(core.data) : [];
     const allIssues = [...core.issues, ...validationIssues];
 
     if (allIssues.length > 0) {
@@ -247,15 +249,15 @@ export class Schema<Output = unknown, Input = Output> {
   /* -------------------- Validators -------------------- */
 
   check(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
-  check(fn: (value: Output, ctx: CheckContext) => CheckFnResult): this;
+  check(fn: (value: Output, ctx: CheckContext) => Exclude<CheckFnResult, Promise<any>>): this;
   check(
-    fn: ((value: Output, ctx: CheckContext) => CheckFnResult) | ((value: Output) => boolean),
+    fn: ((value: Output, ctx: CheckContext) => Exclude<CheckFnResult, Promise<any>>) | ((value: Output) => boolean),
     message?: MessageFn<{ value: Output }>,
   ): this {
     if (message !== undefined) {
       const predicate = fn as (value: Output) => boolean;
 
-      return this._addValidator((value) => {
+      return this._addConstraint((value) => {
         if (predicate(value as Output)) return null;
 
         return fail(ErrorCode.custom, resolveMessage(message, { value: value as Output }));
@@ -277,7 +279,7 @@ export class Schema<Output = unknown, Input = Output> {
       return normalizeCheckResult(result, ctxIssues);
     };
 
-    return this._addValidator(validator);
+    return this._addConstraint(validator);
   }
 
   checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this {
@@ -290,7 +292,7 @@ export class Schema<Output = unknown, Input = Output> {
       return fn(value as Output, ctx).then((r) => normalizeCheckResult(r, ctxIssues));
     };
 
-    return this._addValidator(validator);
+    return this._addConstraint(validator);
   }
 
   /* -------------------- Nullability / Optionality -------------------- */
@@ -333,6 +335,14 @@ export class Schema<Output = unknown, Input = Output> {
 
   /* -------------------- Transforms -------------------- */
 
+  /**
+   * Sets a default value used when the input is `undefined`.
+   *
+   * **Note:** For mutable default values (objects, arrays, class instances), prefer the
+   * factory form `.default(() => myValue)` to ensure each parse gets a fresh copy.
+   * The static form deep-clones `Date`, `Map`, `Set`, plain objects, and arrays automatically,
+   * but custom class instances are returned as-is (shared reference).
+   */
   default(defaultValue: Output | (() => Output)): this {
     const cloned = this._clone();
 
@@ -419,23 +429,51 @@ export class Schema<Output = unknown, Input = Output> {
 
   /**
    * Serializes this schema to a JSON Schema object (draft 2020-12 compatible).
-   * Note: not all spell constraints map cleanly to JSON Schema.
+   * Derived from `toDescriptor()` — no separate serialization path per schema.
    */
   toJsonSchema(): JsonSchema {
-    const base = this._toSchemaBase();
-    let result: JsonSchema = base;
+    return descriptorToJsonSchema(this.toDescriptor());
+  }
 
-    if (this.state.isNullable) result = { anyOf: [base, { type: 'null' }] };
+  /**
+   * Asserts that `value` matches this schema. Throws a `ValidationError` on failure.
+   * Unlike `parse()`, this method has no return value — it's an assertion only.
+   *
+   * ```ts
+   * schema.assert(value, 'userId');
+   * // throws: "userId: Expected string [invalid_type]"
+   * ```
+   *
+   * @param value The value to validate.
+   * @param label Optional name for the value used in error messages (default: 'value').
+   */
+  assert(value: unknown, label?: string): asserts value is Output {
+    const result = this._parseFullSync(value);
 
-    if (this.state.description) result = { ...result, description: this.state.description };
+    if (result.issues.length === 0) return;
 
-    return result;
+    const issues = label
+      ? result.issues.map((issue) => ({
+          ...issue,
+          message: issue.path.length === 0 ? `${label}: ${issue.message}` : issue.message,
+        }))
+      : result.issues;
+
+    throw new ValidationError(issues);
   }
 
   walk<R>(visitor: SchemaWalker<R>): R {
     return this._walk(visitor);
   }
 
+  /**
+   * Returns true if `other` describes the same schema shape.
+   *
+   * **Note:** `equals()` compares schema structure only: kind, constraints, annotations,
+   * `description`, `isOptional`, and `isNullable`. It does NOT compare preprocessors or
+   * postprocessors — function reference equality is not meaningful in this context.
+   * Two schemas with different `.preprocess()` / `.transform()` chains may return `true`.
+   */
   equals(other: AnySchema): boolean {
     if (other === this) return true;
 
@@ -448,6 +486,16 @@ export class Schema<Output = unknown, Input = Output> {
     if (other.description !== this.description) return false;
 
     return this._equalsImpl(other);
+  }
+
+  /**
+   * Returns the `kind` string for this schema instance.
+   * Subclasses expose their kind via `_toDescriptorImpl().kind`.
+   * Used as an extension point — custom subclasses can override `_toDescriptorImpl()`
+   * and `_walk()` to participate in the descriptor and walk system.
+   */
+  get kind(): string {
+    return this._toDescriptorImpl().kind;
   }
 
   /* -------------------- Protected helpers -------------------- */
@@ -480,9 +528,11 @@ export class Schema<Output = unknown, Input = Output> {
   }
 
   /**
-   * Adds a constraint validator and optionally updates _annotations atomically.
+   * Adds a constraint validator and optionally updates `_annotations` atomically.
+   * This is the single method for adding constraints — both plain validators and
+   * annotation-bearing ones use this path.
    *
-   * The mergeAnnotations callback receives the current annotations as
+   * The `mergeAnnotations` callback receives the current annotations as
    * `Record<string, unknown>`. Cast to your annotation type inside the callback:
    * ```ts
    * (ann) => { const a = ann as StringAnnotations; return { ...a, minLength: n }; }
@@ -492,21 +542,15 @@ export class Schema<Output = unknown, Input = Output> {
     validator: ValidateFn,
     mergeAnnotations?: (current: Record<string, unknown>) => Record<string, unknown>,
   ): this {
-    const next = this._addValidator(validator);
+    const next = this._clone();
+
+    next.state.validators.push(validator);
 
     if (mergeAnnotations) {
       next._annotations = mergeAnnotations({ ...next._annotations });
     }
 
     return next;
-  }
-
-  protected _addValidator(validator: ValidateFn): this {
-    const cloned = this._clone();
-
-    cloned.state.validators.push(validator);
-
-    return cloned;
   }
 
   protected _construct(state: SchemaState<any>): this {
@@ -525,10 +569,6 @@ export class Schema<Output = unknown, Input = Output> {
     target.state = cloneState(this.state);
 
     return target;
-  }
-
-  protected _toSchemaBase(): JsonSchema {
-    return {};
   }
 
   protected _walk<R>(visitor: SchemaWalker<R>): R {
@@ -599,7 +639,7 @@ export class Schema<Output = unknown, Input = Output> {
     return current;
   }
 
-  private _runSyncValidators(value: unknown): Issue[] {
+  private _executeValidators(value: unknown): Issue[] {
     if (this._typeValidator) {
       const typeResult = this._typeValidator(value);
 
@@ -654,8 +694,6 @@ export class Schema<Output = unknown, Input = Output> {
 
 /* -------------------- Re-export for schema files -------------------- */
 
-import { ValidationError, fail, resolveMessage } from './errors';
-
 /* -------------------- Type Aliases -------------------- */
 
 export type OptionalSchema<T extends AnySchema> = WrapperSchema<T, 'optional'>;
@@ -709,10 +747,6 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
     return result.issues.length > 0
       ? { data: value, issues: result.issues, typeOk: false }
       : { data: result.data, issues: [], typeOk: true };
-  }
-
-  protected override _toSchemaBase(): JsonSchema {
-    return this.inner.toJsonSchema();
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
@@ -772,10 +806,6 @@ export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
     return r2.issues.length > 0
       ? { data: r1.data, issues: r2.issues, typeOk: false }
       : { data: r2.data, issues: [], typeOk: true };
-  }
-
-  protected override _toSchemaBase(): JsonSchema {
-    return this.to.toJsonSchema();
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {

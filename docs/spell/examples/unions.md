@@ -28,6 +28,8 @@ const WithId = s.object({ id: s.number().int().positive() });
 const WithAudit = s.object({ createdAt: s.date() });
 
 const EntitySchema = s.intersect(WithId, WithAudit);
+// s.and() is a two-argument alias for s.intersect()
+const EntitySchema2 = s.and(WithId, WithAudit);
 
 const EventSchema = s.variant('type', {
   user_created: s.object({ userId: s.number().int().positive() }),

@@ -30,8 +30,8 @@ async function watchCart() {
 
 ### Pitfalls
 
-- `events()` starts listening when iteration begins (the first `next()` call), not when the generator object is created. Events emitted between construction and first iteration are lost.
-- Breaking out of the `for await` loop with `break` or `return` does not dispose the bus. Call `bus.dispose()` explicitly or wrap the loop in `try/finally`.
+- `events()` subscribes **eagerly** — when `events()` is called, not when iteration begins. Events emitted before the first `await` are buffered and will be yielded on the first iteration. There is no data loss between `events()` and the first iteration step.
+- Breaking out of the `for await` loop with `break` or `return` does not dispose the bus. Use `await using` around the stream or an `AbortSignal` for guaranteed cleanup.
 - If the bus is disposed while the generator is awaiting the next event, the generator **returns cleanly** — no exception is thrown. The `for await` loop simply exits. There is no need to wrap it in `try/catch` for disposal.
 
 ### Related

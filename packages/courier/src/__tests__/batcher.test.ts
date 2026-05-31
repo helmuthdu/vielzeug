@@ -150,4 +150,32 @@ describe('createBatcher', () => {
 
     expect(flushCount).toBe(0);
   });
+
+  it('dispose() cancels a pending setTimeout flush (window > 0)', async () => {
+    vi.useFakeTimers();
+
+    let flushCount = 0;
+
+    const batcher = createBatcher({
+      resolve: async (keys: number[]) => {
+        flushCount++;
+
+        return keys;
+      },
+      window: 100,
+    });
+
+    // Schedule a flush
+    batcher.load(1).catch(() => {});
+
+    // Dispose before the timer fires
+    batcher.dispose();
+
+    // Advance past the window — the timer must have been cleared, so no flush
+    vi.advanceTimersByTime(200);
+
+    expect(flushCount).toBe(0);
+
+    vi.useRealTimers();
+  });
 });

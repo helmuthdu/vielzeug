@@ -1,8 +1,11 @@
 // Public API — all exports for @vielzeug/ripple
-// Internal implementation files (tracking.ts, helpers.ts, scheduling.ts)
+// Internal implementation files (tracking.ts, reactive-base.ts, scheduling.ts)
 // are intentionally NOT exported to keep the surface stable.
 
 export type {
+  AsyncComputedOptions,
+  AsyncComputedSignal,
+  AsyncComputedState,
   AsyncEffectCallback,
   AsyncSubscription,
   BatchOptions,
@@ -19,6 +22,7 @@ export type {
   Signal,
   SignalOptions,
   Store,
+  StoreWithHistory,
   Subscription,
   WatchOptions,
 } from './types';
@@ -40,3 +44,13 @@ export { watch } from './watch';
 
 // Utilities
 export { isComputed, isSignal, isStore, readonly, untrack } from './utilities';
+
+// Async computed (F2)
+export { asyncComputed } from './async-computed';
+
+// Store with history / time-travel (F5)
+export { storeWithHistory } from './store-history';
+
+// DevTools (F3)
+export { getDevToolsHook, getSignalName, installDevTools } from './devtools';
+export type { RippleDevToolsHook } from './devtools';

@@ -1,5 +1,5 @@
 import { uuid } from '@vielzeug/arsenal';
-import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craft';
+import { computed, define, html, onMounted, prop, ref, signal } from '@vielzeug/craft';
 
 import type { SwipeControl } from '../../headless';
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';

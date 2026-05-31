@@ -8,7 +8,15 @@ import {
   type VirtualKey,
 } from './virtualizer';
 
-export type { MeasurementCache, Overscan, ScrollToIndexOptions, VirtualItem, VirtualizerState, VirtualKey };
+export type {
+  MeasurementCache,
+  Overscan,
+  ScrollToIndexOptions,
+  VirtualItem,
+  Virtualizer,
+  VirtualizerState,
+  VirtualKey,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,9 +26,6 @@ export type VirtualRenderItem<T> = VirtualItem & { readonly data: T };
 /**
  * Recycle a DOM node by key. If the pool has a live node for `key`, it is
  * returned and reused; otherwise `create()` is called to produce a new one.
- *
- * Honest return type — callers that need a narrower element type cast explicitly
- * (e.g. `recycle('k', () => document.createElement('button')) as HTMLButtonElement`).
  */
 export type RecycleFn = (key: VirtualKey, create: () => HTMLElement) => HTMLElement;
 
@@ -48,17 +53,21 @@ export type DomVirtualListOptions<T> = {
   scrollElement: HTMLElement | Window;
 };
 
-export type DomVirtualListController<T> = {
-  destroy: () => void;
-  invalidate: () => void;
-  measure: (index: number, size: number) => void;
-  measureBatch: (entries: Array<{ index: number; size: number }>) => void;
-  /** Attach a ResizeObserver to `el` and auto-measure `index` on resize. Returns disconnect fn. */
-  measureEl: (index: number, el: HTMLElement) => () => void;
-  /** Re-compute the visible range without clearing measurements. */
-  refresh: () => void;
-  scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
+/**
+ * R11: Controller extends Virtualizer so all methods (scrollToIndex, redraw,
+ * scrollToOffset, etc.) are accessible directly on the controller without
+ * needing to unwrap an inner virtualizer handle.
+ *
+ * `prepend` and `update` are omitted — use `setItems()` for item updates and
+ * there is no direct `prepend` concept in DomVirtualList.
+ */
+export type DomVirtualListController<T> = Omit<Virtualizer, 'prepend' | 'update'> & {
   setItems: (items: T[]) => void;
+};
+
+export type VirtualScrollerOptions<T> = Omit<DomVirtualListOptions<T>, 'listElement' | 'scrollElement'> & {
+  /** Additional CSS class names on the generated scroll container. */
+  containerClass?: string;
 };
 
 // ─── Node pool ────────────────────────────────────────────────────────────────
@@ -138,7 +147,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     if (item !== undefined && options.getItemKey) return options.getItemKey(index, item);
 
-    return index; // index as fallback — no itemKeyRevision (R3)
+    return index;
   }
 
   function resolveEstimate(index: number): number {
@@ -161,8 +170,20 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     }
   }
 
+  /**
+   * R10: Throw rather than silently produce `undefined as T`.
+   * This catches bugs where `vi.index` is out of range for `currentItems`.
+   */
   function toRenderItem(vi: VirtualItem): VirtualRenderItem<T> {
-    return { ...vi, data: currentItems[vi.index] as T };
+    const data = currentItems[vi.index];
+
+    if (data === undefined) {
+      throw new RangeError(
+        `[scroll] toRenderItem: index ${vi.index} is out of range (currentItems.length=${currentItems.length})`,
+      );
+    }
+
+    return { ...vi, data };
   }
 
   function handleChange(state: VirtualizerState): void {
@@ -170,15 +191,19 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     pool.beginCycle();
 
-    options.render({
-      items: state.items.map(toRenderItem),
-      listEl,
-      recycle: (key, create) => pool.acquire(key, create),
-      stickyItems: state.stickyItems.map(toRenderItem),
-      totalSize: state.totalSize,
-    });
-
-    pool.endCycle();
+    // R5: try/finally ensures endCycle() runs even if render() throws, keeping
+    // the pool in a consistent state.
+    try {
+      options.render({
+        items: state.items.map(toRenderItem),
+        listEl,
+        recycle: (key, create) => pool.acquire(key, create),
+        stickyItems: state.stickyItems.map(toRenderItem),
+        totalSize: state.totalSize,
+      });
+    } finally {
+      pool.endCycle();
+    }
   }
 
   function clearAndReset(): void {
@@ -213,6 +238,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   }
 
   return {
+    // ── Virtualizer passthrough (R11) ──────────────────────────────────────
+    get count() {
+      return virtualizer?.count ?? 0;
+    },
+
     destroy() {
       if (isDestroyed) return;
 
@@ -226,6 +256,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (isDestroyed) return;
 
       virtualizer?.invalidate();
+    },
+
+    get items() {
+      return virtualizer?.items ?? [];
     },
 
     measure(index, size) {
@@ -246,10 +280,20 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       return virtualizer?.measureEl(index, el) ?? (() => {});
     },
 
+    redraw() {
+      if (isDestroyed) return;
+
+      virtualizer?.redraw();
+    },
+
     refresh() {
       if (isDestroyed) return;
 
       virtualizer?.refresh();
+    },
+
+    get scrollOffset() {
+      return virtualizer?.scrollOffset ?? 0;
     },
 
     scrollToIndex(index, scrollOptions) {
@@ -258,6 +302,13 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       virtualizer?.scrollToIndex(index, scrollOptions);
     },
 
+    scrollToOffset(offset, scrollOptions) {
+      if (isDestroyed) return;
+
+      virtualizer?.scrollToOffset(offset, scrollOptions);
+    },
+
+    // ── DomVirtualList-specific ────────────────────────────────────────────
     setItems(items) {
       if (isDestroyed) return;
 
@@ -277,15 +328,100 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
         return;
       }
 
+      const countChanged = items.length !== virtualizer.count;
+
       // Only count needs explicit update — estimateSize and getItemKey are
       // closures that already reflect the latest currentItems automatically.
       virtualizer.update({ count: items.length });
 
-      if (options.getItemKey) {
-        virtualizer.refresh(); // stable keys: preserve measurements
-      } else {
-        virtualizer.invalidate(); // no stable keys: reset measurements
+      // When count changed, update() already triggered rebuild + computeVisible().
+      // Only force re-emission when count is unchanged (data changed, count same).
+      if (!countChanged) {
+        // R3: redraw() for stable keys (data changed, sizes preserved);
+        //     invalidate() when no stable keys (measurements indexed by position
+        //     are unreliable after items are replaced).
+        if (options.getItemKey) {
+          virtualizer.redraw();
+        } else {
+          virtualizer.invalidate();
+        }
+      } else if (!options.getItemKey) {
+        // Count changed AND no stable keys: position-based measurements are now
+        // stale. Clear them so the next render remeasures from fresh estimates.
+        virtualizer.invalidate();
       }
     },
+
+    get stickyItems() {
+      return virtualizer?.stickyItems ?? [];
+    },
+
+    [Symbol.dispose]() {
+      this.destroy();
+    },
+
+    get totalSize() {
+      return virtualizer?.totalSize ?? 0;
+    },
   };
+}
+
+// ─── F5: createVirtualScroller ────────────────────────────────────────────────
+
+/**
+ * High-level factory that creates the scroll container and inner list element,
+ * appends them to `container`, and returns a fully wired `DomVirtualListController`.
+ *
+ * @example
+ * ```ts
+ * const list = createVirtualScroller(document.getElementById('root')!, {
+ *   render({ items, listEl, recycle }) { … },
+ * });
+ * list.setItems(data);
+ * ```
+ */
+export function createVirtualScroller<T>(
+  container: HTMLElement,
+  options: VirtualScrollerOptions<T>,
+): DomVirtualListController<T> {
+  const scrollEl = document.createElement('div');
+
+  scrollEl.style.cssText = 'overflow: hidden auto; width: 100%; height: 100%;';
+
+  if (options.containerClass) scrollEl.className = options.containerClass;
+
+  const listEl = document.createElement('div');
+
+  scrollEl.appendChild(listEl);
+  container.appendChild(scrollEl);
+
+  let ctrl: DomVirtualListController<T>;
+
+  try {
+    ctrl = createDomVirtualList<T>({
+      ...options,
+      listElement: listEl,
+      scrollElement: scrollEl,
+    });
+  } catch (e) {
+    // Remove the scroll container if construction fails so we don't leak DOM nodes.
+    scrollEl.remove();
+    throw e;
+  }
+
+  // A Proxy is used instead of object spread so that live getter properties
+  // (count, items, totalSize, scrollOffset, stickyItems) remain live after
+  // construction. Spreading would snapshot those values at creation time.
+  return new Proxy(ctrl, {
+    get(target, prop, receiver) {
+      if (prop === 'destroy') {
+        return function destroy() {
+          (target as DomVirtualListController<T>).destroy();
+          scrollEl.remove();
+        };
+      }
+
+      return Reflect.get(target as object, prop, receiver);
+    },
+  });
 }

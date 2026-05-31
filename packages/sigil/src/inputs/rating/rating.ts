@@ -4,7 +4,7 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import { createSliderControl } from '../../headless';
 import '../../content/icon/icon';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared/config';
+import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './rating.css?inline';

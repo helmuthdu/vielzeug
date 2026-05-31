@@ -66,7 +66,16 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
     while (disposers.length > 0) disposers.pop()?.();
   };
 
-  if (autoCleanup) tryRegisterCleanup(cleanup);
+  if (autoCleanup) {
+    const registered = tryRegisterCleanup(cleanup);
+
+    if (!registered && import.meta.env.DEV) {
+      console.warn(
+        '[craft] syncAria() called with autoCleanup:true but no active setup context. ' +
+          'Effects will leak unless you call the returned cleanup function manually.',
+      );
+    }
+  }
 
   return cleanup;
 };

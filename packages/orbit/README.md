@@ -4,7 +4,7 @@ package: orbit
 category: ui-positioning
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
 related: [craft, sigil, grip]
-exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
+exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, compose, limitShift]
 ---
 
 # /orbit
@@ -18,7 +18,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 
 **Package:** `/orbit` &nbsp;·&nbsp; **Category:** Ui-positioning
 
-**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`
+**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`, `compose`, `limitShift`
 
 **When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
@@ -31,34 +31,49 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 ## Installation
 
 ```sh
-pnpm add /orbit
-npm install /orbit
-yarn add /orbit
+pnpm add @vielzeug/orbit
+npm install @vielzeug/orbit
+yarn add @vielzeug/orbit
 ```
 
 ## Quick Start
 
 ```ts
-import { arrow, autoUpdate, computePosition, flip, offset, shift } from '/orbit';
+import { arrow, float, flip, offset, shift } from '@vielzeug/orbit';
 
 const reference = document.querySelector<HTMLElement>('#trigger')!;
 const floating = document.querySelector<HTMLElement>('#tooltip')!;
 const arrowEl = floating.querySelector<HTMLElement>('.arrow')!;
 
-const cleanup = autoUpdate(reference, floating, () => {
-  const result = computePosition(reference, floating, {
-    placement: 'top',
-    middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl, padding: 6 })],
-  });
+const handle = float(reference, floating, {
+  placement: 'top',
+  middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl, padding: 6 })],
+  apply(result) {
+    floating.style.left = `${result.x}px`;
+    floating.style.top = `${result.y}px`;
 
-  floating.style.left = `${result.x}px`;
-  floating.style.top = `${result.y}px`;
-
-  floating.dataset.placement = result.placement;
+    if (result.middlewareData.arrow) {
+      const { x, y } = result.middlewareData.arrow;
+      arrowEl.style.left = x != null ? `${x}px` : '';
+      arrowEl.style.top  = y != null ? `${y}px` : '';
+    }
+  },
 });
 
-cleanup();
+// On teardown:
+handle.cleanup();
 ```
+
+## Sub-paths
+
+| Import | Purpose |
+|---|---|
+| `@vielzeug/orbit` | Core API, middleware, utilities, types |
+| `@vielzeug/orbit/presets` | Pre-configured middleware stacks |
+| `@vielzeug/orbit/inline` | `inline` middleware for multi-line references |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
+| `@vielzeug/orbit/debug` | Visual debug overlay (development only) |
+| `@vielzeug/orbit/ssr` | No-op stubs for server-side rendering |
 
 ## Documentation
 

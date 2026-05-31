@@ -7,12 +7,6 @@
 
 The `isArray` utility is a type guard that checks if a given value is an array. It provides reliable detection across different execution environments.
 
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isArray.ts
-:::
-
 ## Features
 
 - **Isomorphic**: Works in both Browser and Node.js.

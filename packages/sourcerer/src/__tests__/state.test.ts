@@ -1,8 +1,9 @@
 import { sourceState } from '../state';
+import { SourceError } from '../types';
 
-const makeSource = (isLoading: boolean, errorMessage: string | null, items: readonly number[]) => ({
+const makeSource = (isLoading: boolean, error: SourceError | null, items: readonly number[]) => ({
   current: items,
-  meta: { errorMessage, isLoading },
+  meta: { error, isLoading },
 });
 
 describe('sourceState', () => {
@@ -13,11 +14,17 @@ describe('sourceState', () => {
     expect(state).toEqual({ status: 'loading' });
   });
 
-  it('returns error state when errorMessage is set', () => {
-    const source = makeSource(false, 'Not found', []);
+  it('returns error state when error is set', () => {
+    const err = new SourceError('Not found');
+    const source = makeSource(false, err, []);
     const state = sourceState(source);
 
-    expect(state).toEqual({ message: 'Not found', status: 'error' });
+    expect(state.status).toBe('error');
+
+    if (state.status === 'error') {
+      expect(state.error).toBe(err);
+      expect(state.error.message).toBe('Not found');
+    }
   });
 
   it('returns data state with items when not loading and no error', () => {
@@ -35,8 +42,8 @@ describe('sourceState', () => {
   });
 
   it('loading takes priority over error', () => {
-    // Edge case: both isLoading and errorMessage set (e.g. retrying after an error)
-    const source = makeSource(true, 'Previous error', []);
+    const err = new SourceError('Previous error');
+    const source = makeSource(true, err, []);
     const state = sourceState(source);
 
     expect(state.status).toBe('loading');
@@ -47,8 +54,31 @@ describe('sourceState', () => {
     const state = sourceState(source);
 
     if (state.status === 'data') {
-      // TypeScript narrowing — items should be accessible
       expect(state.items[0]).toBe(10);
     }
+  });
+
+  it('SourceError carries message, cause, and query', () => {
+    const cause = new TypeError('network');
+    const err = new SourceError('Request failed', { cause, query: { page: 1 } });
+
+    expect(err.message).toBe('Request failed');
+    expect(err.cause).toBe(cause);
+    expect(err.query).toEqual({ page: 1 });
+    expect(err.name).toBe('SourceError');
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(SourceError);
+  });
+
+  it('SourceError defaults attempt to 0', () => {
+    const err = new SourceError('fail');
+
+    expect(err.attempt).toBe(0);
+  });
+
+  it('SourceError stores attempt number', () => {
+    const err = new SourceError('fail', { attempt: 3 });
+
+    expect(err.attempt).toBe(3);
   });
 });

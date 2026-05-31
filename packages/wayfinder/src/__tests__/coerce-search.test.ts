@@ -6,13 +6,13 @@ import { settle } from './test-utils';
 
 describe('coerceSearch', () => {
   it('transforms raw query params when coerceSearch is provided', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/search?q=hello&page=2'),
       routes: {
         search: {
           coerceSearch: (raw) => ({ page: Number(raw.page ?? 1), q: String(raw.q ?? '') }),
-          handler,
+          data,
           path: '/search',
         },
       },
@@ -20,25 +20,25 @@ describe('coerceSearch', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { page: 2, q: 'hello' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { page: 2, q: 'hello' } }));
     router.dispose();
   });
 
   it('leaves query as raw strings when coerceSearch is absent', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/page?x=1'),
-      routes: { page: { handler, path: '/page' } },
+      routes: { page: { data, path: '/page' } },
     });
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { x: '1' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { x: '1' } }));
     router.dispose();
   });
 
   it('falls back to the raw query when coerceSearch throws', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const onError = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/page?x=bad'),
@@ -48,7 +48,7 @@ describe('coerceSearch', () => {
           coerceSearch: () => {
             throw new Error('invalid');
           },
-          handler,
+          data,
           path: '/page',
         },
       },
@@ -56,13 +56,13 @@ describe('coerceSearch', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { x: 'bad' } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { x: 'bad' } }));
     expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'coerce-search' });
     router.dispose();
   });
 
   it('applies child coerceSearch for nested routes', async () => {
-    const handler = vi.fn();
+    const data = vi.fn();
     const router = createRouter({
       history: createMemoryHistory('/dashboard/settings?tab=3'),
       routes: {
@@ -70,7 +70,7 @@ describe('coerceSearch', () => {
           children: {
             settings: {
               coerceSearch: (raw) => ({ tab: Number(raw.tab ?? 0) }),
-              handler,
+              data,
               path: 'settings',
             },
           },
@@ -81,7 +81,7 @@ describe('coerceSearch', () => {
 
     await settle();
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { tab: 3 } }));
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { tab: 3 } }));
     router.dispose();
   });
 });

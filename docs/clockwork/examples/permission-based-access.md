@@ -18,7 +18,7 @@ Hardcoding permission logic in the machine makes it inflexible and hard to test 
 Use Ward as the source of truth for authorization, and call Ward predicates in Clockwork guards. The machine enforces the happy path, while Ward ensures users can only take allowed actions.
 
 ```ts
-import { assign, defineMachine, interpret, MachineError } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 import { createRBAC } from '@vielzeug/ward';
 
 type ApprovalEvent =
@@ -128,18 +128,18 @@ const canCancel = ({ context }: any) => {
     (context.userRole === 'admin' || context.userId === context.submitterId);
 };
 
-const recordSubmission = assign(({ event }) => ({
-  submission: (event as any).data || {},
-  denialReason: '', // Clear previous rejection
-}));
+const recordSubmission = ({ context, event }: any) => {
+  context.submission = event.data || {};
+  context.denialReason = ''; // Clear previous rejection
+};
 
-const recordApproval = assign(({ event }) => ({
-  reviewerNotes: (event as any).notes || '',
-}));
+const recordApproval = ({ context, event }: any) => {
+  context.reviewerNotes = event.notes || '';
+};
 
-const recordRejection = assign(({ event }) => ({
-  denialReason: (event as any).reason || '',
-}));
+const recordRejection = ({ context, event }: any) => {
+  context.denialReason = event.reason || '';
+};
 
 // Usage
 const machine = interpret(approvalMachine, {

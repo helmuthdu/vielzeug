@@ -14,7 +14,7 @@ You need to fetch remote data, show loading state while the request is in flight
 Use an `invoke` array in the `loading` state. The runtime passes an `AbortSignal` to `src` and cancels it when the state is exited, preventing stale responses from updating context.
 
 ```ts
-import { assign, defineMachine, interpret } from '@vielzeug/clockwork';
+import { defineMachine, interpret } from '@vielzeug/clockwork';
 
 type State = 'error' | 'idle' | 'loading';
 type Context = { data: string[]; error: string };
@@ -47,8 +47,8 @@ const fetcher = defineMachine<State, Context, Event>({
         },
       ],
       on: {
-        FAILURE: { actions: [assign(({ event }) => ({ error: event.message }))], target: 'error' },
-        SUCCESS: { actions: [assign(({ event }) => ({ data: event.items, error: '' }))], target: 'idle' },
+        FAILURE: { actions: [({ context, event }) => { context.error = event.message; }], target: 'error' },
+        SUCCESS: { actions: [({ context, event }) => { context.data = event.items; context.error = ''; }], target: 'idle' },
       },
     },
   },
@@ -61,10 +61,11 @@ m.send({ type: 'FETCH' }); // enters loading, invoke starts
 
 ### Pitfalls
 
-- **`onDone` receives the raw resolved value.** The return type of `src` is `Promise<unknown>`, so cast the result inside `onDone` before building the event object (`(result as MyType).data`).
+- **`onDone` receives the raw resolved value.** The return type of `src` is `Promise<unknown>`, so cast the result inside `onDone` before building the event object.
 - **`FAILURE` and `SUCCESS` events must be defined in `on`.** If they are missing, the dispatched event is silently ignored, leaving the machine stuck in `loading`.
 - **Multiple invokes race.** If you add more than one entry to the `invoke` array, all start concurrently and whichever resolves first dispatches. Use a single invoke unless you intentionally want a race.
 - **`signal` is only valid inside `src`.** Do not pass it to `onDone` or `onError` — those only receive the result/error.
+- **Context in `onDone`/`onError` args is captured at invoke start.** This prevents stale-context bugs when the machine transitions between invoke creation and resolution.
 
 ### Related
 

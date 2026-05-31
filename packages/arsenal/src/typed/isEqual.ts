@@ -66,14 +66,19 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
     return true;
   }
 
-  // Set comparison
+  // Set comparison — fast path for primitive values, deep for objects
   if (a instanceof Set && b instanceof Set) {
     if (a.size !== b.size) return false;
 
     const bItems = [...b];
 
     for (const v of a) {
-      if (!bItems.some((bv) => safeIsEqual(v, bv, visited))) return false;
+      // O(1) path for primitives — avoid the O(n) .some() scan
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null || v === undefined) {
+        if (!b.has(v)) return false;
+      } else if (!bItems.some((bv) => safeIsEqual(v, bv, visited))) {
+        return false;
+      }
     }
 
     return true;

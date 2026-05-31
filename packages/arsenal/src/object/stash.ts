@@ -1,6 +1,5 @@
-type CacheRecord<K, T, M> = {
+type CacheRecord<K, T> = {
   key: K;
-  meta: M | undefined;
   value: T;
 };
 
@@ -9,24 +8,19 @@ export type CacheOptions<K = string, T = unknown> = {
   onEvict?: (key: K, value: T) => void;
 };
 
-export type CacheSetOptions<M> = {
-  meta?: M;
+export type CacheSetOptions = {
   ttlMs?: number;
 };
 
-export type Stash<T, K = string, M = never> = {
-  cancelGc: (key: K) => void;
+export type Stash<T, K = string> = {
   clear: () => void;
   delete: (key: K) => boolean;
   entries: () => IterableIterator<[K, T]>;
   get: (key: K) => T | undefined;
-  getEntry: (key: K) => Readonly<{ meta: M | undefined; value: T }> | undefined;
-  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions<M>): Promise<T>;
-  getOrSet(key: K, factory: () => T, options?: CacheSetOptions<M>): T;
-  scheduleGc: (key: K, delayMs: number) => void;
-  set: (key: K, value: T, options?: CacheSetOptions<M>) => void;
+  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions): Promise<T>;
+  getOrSet(key: K, factory: () => T, options?: CacheSetOptions): T;
+  set: (key: K, value: T, options?: CacheSetOptions) => void;
   size: () => number;
-  touch: (key: K, ttlMs: number) => boolean;
 };
 
 /**
@@ -45,8 +39,8 @@ export type Stash<T, K = string, M = never> = {
  *
  * @template T - The type of values stored in the cache.
  */
-export function stash<T, K = string, M = never>(options: CacheOptions<K, T>): Stash<T, K, M> {
-  const store = new Map<string, CacheRecord<K, T, M>>();
+export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
+  const store = new Map<string, CacheRecord<K, T>>();
   const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const inFlight = new Map<string, Promise<T>>();
   const hash = options.hash;
@@ -73,42 +67,51 @@ export function stash<T, K = string, M = never>(options: CacheOptions<K, T>): St
     return true;
   }
 
+  function scheduleGcByHash(keyHash: string, delayMs: number): void {
+    cancelGcByHash(keyHash);
+
+    if (delayMs === Number.POSITIVE_INFINITY) return;
+
+    if (!Number.isFinite(delayMs)) {
+      throw new TypeError('stash: ttlMs must be a finite number or Infinity');
+    }
+
+    if (delayMs <= 0) {
+      deleteByHash(keyHash);
+
+      return;
+    }
+
+    if (!store.has(keyHash)) return;
+
+    const id = setTimeout(() => {
+      gcTimers.delete(keyHash);
+      deleteByHash(keyHash);
+    }, delayMs);
+
+    gcTimers.set(keyHash, id);
+  }
+
   function get(key: K): T | undefined {
     return store.get(hash(key))?.value;
   }
 
-  function getEntry(key: K): Readonly<{ meta: M | undefined; value: T }> | undefined {
-    const entry = store.get(hash(key));
-
-    if (!entry) return undefined;
-
-    return { meta: entry.meta, value: entry.value };
-  }
-
-  function set(key: K, value: T, opts?: CacheSetOptions<M>): void {
+  function set(key: K, value: T, opts?: CacheSetOptions): void {
     const keyHash = hash(key);
-    const existing = store.get(keyHash);
 
     cancelGcByHash(keyHash);
-    store.set(keyHash, {
-      key,
-      meta: opts && 'meta' in opts ? opts.meta : existing?.meta,
-      value,
-    });
+    store.set(keyHash, { key, value });
 
     if (opts?.ttlMs !== undefined) {
-      scheduleGc(key, opts.ttlMs);
+      scheduleGcByHash(keyHash, opts.ttlMs);
     }
   }
 
-  function getOrSet(key: K, factory: () => T | Promise<T>, opts?: CacheSetOptions<M>): T | Promise<T> {
-    const existing = getEntry(key);
-
-    if (existing) return existing.value;
-
+  function getOrSet(key: K, factory: () => T | Promise<T>, opts?: CacheSetOptions): T | Promise<T> {
     const keyHash = hash(key);
 
-    // Stampede prevention: return the in-flight promise if one exists
+    if (store.has(keyHash)) return store.get(keyHash)!.value;
+
     const pending = inFlight.get(keyHash);
 
     if (pending) return pending;
@@ -160,49 +163,6 @@ export function stash<T, K = string, M = never>(options: CacheOptions<K, T>): St
     return store.size;
   }
 
-  function scheduleGcByHash(keyHash: string, delayMs: number): void {
-    cancelGcByHash(keyHash);
-
-    if (delayMs === Number.POSITIVE_INFINITY) return;
-
-    if (!Number.isFinite(delayMs)) {
-      throw new TypeError('stash.scheduleGc expects a finite number or Infinity');
-    }
-
-    if (delayMs <= 0) {
-      deleteByHash(keyHash);
-
-      return;
-    }
-
-    if (!store.has(keyHash)) return;
-
-    const id = setTimeout(() => {
-      gcTimers.delete(keyHash);
-      deleteByHash(keyHash);
-    }, delayMs);
-
-    gcTimers.set(keyHash, id);
-  }
-
-  function scheduleGc(key: K, delayMs: number): void {
-    scheduleGcByHash(hash(key), delayMs);
-  }
-
-  function cancelGc(key: K): void {
-    cancelGcByHash(hash(key));
-  }
-
-  function touch(key: K, ttlMs: number): boolean {
-    const keyHash = hash(key);
-
-    if (!store.has(keyHash)) return false;
-
-    scheduleGcByHash(keyHash, ttlMs);
-
-    return true;
-  }
-
   function* entries(): IterableIterator<[K, T]> {
     for (const record of store.values()) {
       yield [record.key, record.value];
@@ -210,16 +170,12 @@ export function stash<T, K = string, M = never>(options: CacheOptions<K, T>): St
   }
 
   return {
-    cancelGc,
     clear,
     delete: del,
     entries,
     get,
-    getEntry,
-    getOrSet: getOrSet as Stash<T, K, M>['getOrSet'],
-    scheduleGc,
+    getOrSet: getOrSet as Stash<T, K>['getOrSet'],
     set,
     size,
-    touch,
   };
 }

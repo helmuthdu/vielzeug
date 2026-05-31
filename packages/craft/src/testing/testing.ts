@@ -12,17 +12,7 @@ import { cleanup } from './mount';
 export { fire, createPointerEvent } from './events';
 export { FLUSH_DEEP, flush, type FlushOptions } from './flush';
 export { user } from './interactions';
-export {
-  cleanup,
-  mock,
-  mount,
-  _mountedElements,
-  _componentTagCounter,
-  _resetCounters,
-  type Fixture,
-  type MountOptions,
-  type MountSetup,
-} from './mount';
+export { cleanup, mock, mount, type Fixture, type MountOptions, type MountSetup } from './mount';
 export { within, type QueryScope } from './query';
 export { waitFor, waitForEvent, type WaitOptions } from './wait';
 export { renderHook, type HookFixture } from './render-hook';

@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { TimeDiffResult, TimeDiffUnit, TimeInput, TimeOptions } from './types';
 
-import { inferSharedTimeZone, resolveInstant, resolveZoned } from './internal';
+import { inferSharedTimeZone, MS_PER_MONTH, toInstant, toZoned } from './internal';
 
 // ─── expires ─────────────────────────────────────────────────────────────────
 
@@ -30,9 +30,10 @@ export function expires<K extends string>(
   date: TimeInput,
   thresholds: Record<K, Temporal.DurationLike>,
   options: TimeOptions = {},
+  now = Temporal.Now.instant(),
 ): K | null {
-  const dateMs = resolveInstant(date, options).epochMilliseconds;
-  const nowMs = Temporal.Now.instant().epochMilliseconds;
+  const dateMs = toInstant(date, options).epochMilliseconds;
+  const nowMs = now.epochMilliseconds;
 
   // diff is positive for future dates, negative for past dates (date − now)
   const diffMs = dateMs - nowMs;
@@ -55,8 +56,8 @@ function durationToMs(duration: Temporal.DurationLike): number {
 
   // Use approximate conversions — thresholds are human-defined boundaries, not calendar-precise.
   return (
-    (d.years ?? 0) * 365.25 * 86_400_000 +
-    (d.months ?? 0) * 30.44 * 86_400_000 +
+    (d.years ?? 0) * 12 * MS_PER_MONTH +
+    (d.months ?? 0) * MS_PER_MONTH +
     (d.weeks ?? 0) * 7 * 86_400_000 +
     (d.days ?? 0) * 86_400_000 +
     (d.hours ?? 0) * 3_600_000 +
@@ -90,45 +91,25 @@ function durationToMs(duration: Temporal.DurationLike): number {
 export function timeDiff(a: TimeInput, b?: TimeInput, options: TimeOptions = {}): TimeDiffResult {
   const end: TimeInput = b ?? Temporal.Now.instant();
 
-  // Use the calendar-aware path when either input is non-Instant or a tz is provided.
-  const hasCalendarInput = !(a instanceof Temporal.Instant) || !(end instanceof Temporal.Instant);
-  const tz = hasCalendarInput || options.tz ? inferSharedTimeZone([a, end], options) : undefined;
+  // Fast path: when both inputs are Instant, use millisecond arithmetic treating 1 day = 86400 s.
+  // Temporal.Instant.since() supports largestUnit up to 'hour' only (no calendar units),
+  // so we compute day/week/month/year manually from the millisecond delta.
+  if (a instanceof Temporal.Instant && end instanceof Temporal.Instant) {
+    const diffMs = Math.abs(end.epochMilliseconds - a.epochMilliseconds);
 
-  if (tz) {
-    const zonedA = resolveZoned(a, { prefer: options.prefer, tz });
-    const zonedB = resolveZoned(end, { prefer: options.prefer, tz });
-
-    const duration =
-      Temporal.ZonedDateTime.compare(zonedA, zonedB) <= 0
-        ? zonedB.since(zonedA, { largestUnit: 'year' })
-        : zonedA.since(zonedB, { largestUnit: 'year' });
-
-    return pickLargestUnit(duration);
+    return instantDiff(diffMs);
   }
 
-  // Fast path: both are Instants, no calendar context — treat day as exactly 86400 s.
-  return instantDiff(a as Temporal.Instant, end as Temporal.Instant);
-}
+  const tz = inferSharedTimeZone([a, end], options);
+  const zonedA = toZoned(a, { prefer: options.prefer, tz });
+  const zonedB = toZoned(end, { prefer: options.prefer, tz });
 
-function instantDiff(a: Temporal.Instant, b: Temporal.Instant): TimeDiffResult {
-  const diffMs = Math.abs(a.epochMilliseconds - b.epochMilliseconds);
-  const days = Math.floor(diffMs / 86_400_000);
+  const duration =
+    Temporal.ZonedDateTime.compare(zonedA, zonedB) <= 0
+      ? zonedB.since(zonedA, { largestUnit: 'year' })
+      : zonedA.since(zonedB, { largestUnit: 'year' });
 
-  if (days >= 1) return { unit: 'day', value: days };
-
-  const hours = Math.floor(diffMs / 3_600_000);
-
-  if (hours >= 1) return { unit: 'hour', value: hours };
-
-  const minutes = Math.floor(diffMs / 60_000);
-
-  if (minutes >= 1) return { unit: 'minute', value: minutes };
-
-  const seconds = Math.floor(diffMs / 1_000);
-
-  if (seconds >= 1) return { unit: 'second', value: seconds };
-
-  return { unit: 'millisecond', value: diffMs };
+  return pickLargestUnit(duration);
 }
 
 // ─── classify ─────────────────────────────────────────────────────────────────
@@ -154,13 +135,51 @@ export function classify<K extends string>(
   thresholds: Record<K, Temporal.DurationLike>,
   options: TimeOptions = {},
 ): { diff: TimeDiffResult; key: K | null } {
+  const now = Temporal.Now.instant();
+
   return {
-    diff: timeDiff(date, undefined, options),
-    key: expires(date, thresholds, options),
+    diff: timeDiff(date, now, options),
+    key: expires(date, thresholds, options, now),
   };
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Computes a `TimeDiffResult` from an absolute millisecond delta, treating
+ * 1 day = 86400 s and using the same month approximation as `durationToMs`.
+ */
+function instantDiff(diffMs: number): TimeDiffResult {
+  const MS_PER_YEAR = 12 * MS_PER_MONTH;
+
+  if (diffMs === 0) return { unit: 'millisecond', value: 0 };
+
+  const years = Math.floor(diffMs / MS_PER_YEAR);
+
+  if (years > 0) return { unit: 'year', value: years };
+
+  const months = Math.floor(diffMs / MS_PER_MONTH);
+
+  if (months > 0) return { unit: 'month', value: months };
+
+  const days = Math.floor(diffMs / 86_400_000);
+
+  if (days > 0) return { unit: 'day', value: days };
+
+  const hours = Math.floor(diffMs / 3_600_000);
+
+  if (hours > 0) return { unit: 'hour', value: hours };
+
+  const minutes = Math.floor(diffMs / 60_000);
+
+  if (minutes > 0) return { unit: 'minute', value: minutes };
+
+  const seconds = Math.floor(diffMs / 1_000);
+
+  if (seconds > 0) return { unit: 'second', value: seconds };
+
+  return { unit: 'millisecond', value: diffMs };
+}
 
 const UNIT_ORDER: ReadonlyArray<{ field: keyof Temporal.Duration; unit: TimeDiffUnit }> = [
   { field: 'years', unit: 'year' },
@@ -181,4 +200,21 @@ function pickLargestUnit(duration: Temporal.Duration): TimeDiffResult {
   }
 
   return { unit: 'millisecond', value: 0 };
+}
+
+/**
+ * Converts a `TimeDiffResult` to a human-readable string.
+ * Uses the singular unit name when value is 1, plural (unit + 's') otherwise.
+ *
+ * @example
+ * ```ts
+ * humanize({ unit: 'day', value: 1 })  // '1 day'
+ * humanize({ unit: 'day', value: 3 })  // '3 days'
+ * humanize({ unit: 'millisecond', value: 0 }) // '0 milliseconds'
+ * ```
+ */
+export function humanize(diff: TimeDiffResult): string {
+  const { unit, value } = diff;
+
+  return `${value} ${value === 1 ? unit : `${unit}s`}`;
 }

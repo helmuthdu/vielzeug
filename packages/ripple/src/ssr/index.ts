@@ -17,7 +17,7 @@
  * ```
  */
 
-import { type TrackingHook, _installTrackingHook } from '../tracking';
+import { _installTrackingHook, type TrackingHook } from '../tracking';
 
 interface AsyncLocalStorageType<T> {
   getStore(): T | undefined;

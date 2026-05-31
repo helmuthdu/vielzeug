@@ -54,6 +54,8 @@ export function makeList(...ids: string[]): { element: HTMLElement; items: HTMLE
     element.append(li);
   }
 
+  document.body.appendChild(element);
+
   return { element, items };
 }
 
@@ -63,4 +65,14 @@ export function startDrag(el: HTMLElement): void {
 
 export function endDrag(el: HTMLElement, dropEffect: DataTransfer['dropEffect'] = 'move'): void {
   el.dispatchEvent(makeDragEvent('dragend', { dropEffect }));
+}
+
+export function makeClipboardEvent(files: File[]): Event {
+  // Use a plain Event — the handler only accesses e.clipboardData?.files,
+  // which we patch in. Avoids ClipboardEvent/DataTransfer availability gaps in jsdom.
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+
+  Object.defineProperty(event, 'clipboardData', { configurable: true, value: { files } });
+
+  return event;
 }

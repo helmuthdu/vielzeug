@@ -126,9 +126,12 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 
 - **`put(table, record, ttl?)`** / **`putAll(table, records, ttl?)`** — write one or many records; TTL enforced via the branded `TtlMs` type
 - **`get(table, key)`** / **`getAll(table)`** / **`getMany(table, keys)`** — point lookups and bulk fetch; preserves key order, missing keys yield `undefined`
+- **`keys(table)`** — return all primary key values without fetching records; useful for diffing and cache-invalidation
+- **`entries(table)`** — return all `[key, record]` pairs in a single call
 - **`has(table, key)`** / **`count(table)`** — existence check and live-record count
-- **`update(table, key, changes)`** — shallow-merge partial fields; returns merged record or `undefined`
+- **`update(table, key, changes)`** — shallow-merge partial fields; returns merged record or throws `VaultError` if the key does not exist
 - **`upsert(table, key, fn)`** — read-modify-write; callback receives current record (or `undefined`)
+- **`getOrDefault(table, key, defaultFn)`** — read-or-insert; available at the top-level adapter and inside `batch()`
 - **`delete(table, key)`** / **`deleteMany(table, keys)`** / **`clear(table)`** — single, bulk, or full-table deletion
 
 ### Query Builder
@@ -140,20 +143,21 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 
 ### Reactivity
 
-- **`observe(table, fn, { immediate? })`** — subscribe to table changes; returns an unsubscribe function
-- **`observeMany(tables, fn, { immediate? })`** — combined snapshot across multiple tables; coalesces batch writes into one callback
-- **`watch(table)`** — `AsyncIterable` that yields a fresh snapshot on every change, starting immediately; auto-cleans up on loop exit
+- **`observe(table, fn, { signal? })`** — subscribe to table changes; **always fires immediately** with the current snapshot, then on every mutation; returns an unsubscribe function
+- **`observeMany(tables, fn, { signal? })`** — combined snapshot across multiple tables; coalesces batch writes into one callback; `signal` cancels all observers at once
+- **`watch(table, { mode?, signal? })`** — `AsyncIterable` that yields a fresh snapshot on every change, starting immediately; auto-cleans up on loop exit; `mode: 'latest'` (default) drops intermediate snapshots; `signal` stops the loop from outside
+- **`watchStream(table, { mode?, signal? })`** — Web Standard `ReadableStream` of table snapshots; same `mode` semantics as `watch`; always cancel the stream when done
 
 ### Batch and Transactions
 
 - **`batch(tables, tx => ...)`** — deferred observer notifications on all adapters; atomic IDB transaction on IndexedDB
-- **`getOrDefault(table, key, defaultFn)`** — read-or-insert inside `batch()` only; atomic on IndexedDB
+- **`getOrDefault(table, key, defaultFn)`** — read-or-insert; available at the adapter level and inside `batch()`; atomic on IndexedDB inside `batch()`
 
 ### TTL and Pruning
 
 - **`ttl.ms / .seconds / .minutes / .hours / .days`** — branded duration helpers; raw numbers are rejected by the type system
-- **`pruneExpired()`** — sweep all tables, delete expired records, return count per table
-- **`scheduleExpiredPrune(db, { interval })`** — periodic pruning; returns a `stop` function
+- **`pruneExpired(tables?)`** — sweep specified tables (or all tables when omitted), delete expired records, return count per table
+- **`scheduleExpiredPrune(db, { interval })`** — periodic pruning; auto-stops on `VaultDisposedError`; returns a `stop` function
 
 ### Iteration
 

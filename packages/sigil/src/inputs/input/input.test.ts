@@ -35,7 +35,7 @@ describe('bit-input', () => {
       expect(fixture.query('slot[name="suffix"]')).toBeTruthy();
     });
 
-    it('renders outside label when label-placement is "outside"', async () => {
+    it('renders label when label-placement is "outside"', async () => {
       fixture = await mount('bit-input', {
         attrs: {
           label: 'Email',
@@ -43,10 +43,10 @@ describe('bit-input', () => {
         },
       });
 
-      expect(fixture.query('.label-outside')).toBeTruthy();
+      expect(fixture.query('.label')).toBeTruthy();
     });
 
-    it('renders inset label when label-placement is "inset"', async () => {
+    it('renders label when label-placement is "inset"', async () => {
       fixture = await mount('bit-input', {
         attrs: {
           label: 'Email',
@@ -54,7 +54,7 @@ describe('bit-input', () => {
         },
       });
 
-      expect(fixture.query('.label-inset')).toBeTruthy();
+      expect(fixture.query('.label')).toBeTruthy();
     });
 
     it('renders helper text when helper attribute is set', async () => {

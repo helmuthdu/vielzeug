@@ -1,8 +1,9 @@
-import { define, prop, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craft';
+import { computed, createContext, define, html, prop, provide, type ReadonlySignal, signal } from '@vielzeug/craft';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
 import { createListControl } from '../../headless';
+import styles from './accordion.css?inline';
 
 /** Context provided by bit-accordion to its bit-accordion-item children. */
 export type AccordionContext = {
@@ -13,8 +14,6 @@ export type AccordionContext = {
 };
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext');
-
-import styles from './accordion.css?inline';
 
 /** Accordion component properties */
 

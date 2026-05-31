@@ -1,4 +1,4 @@
-import { prefetchSource } from '../prefetch';
+import { prefetchSource, prefetchSourceWithSource } from '../prefetch';
 import { createRemoteSource } from '../remoteSource';
 
 describe('prefetchSource', () => {
@@ -37,13 +37,12 @@ describe('prefetchSource', () => {
     const fetch = vi.fn(async () => ({ items: ['hydrated'], total: 1 }));
     const snapshot = await prefetchSource({ fetch, limit: 5 });
 
-    // Client side: create source from snapshot — no loading flash.
     const clientSource = createRemoteSource({ autoFetch: false, fetch, limit: 5, snapshot });
 
     expect(clientSource.current).toEqual(['hydrated']);
     expect(clientSource.meta.totalItems).toBe(1);
     expect(clientSource.meta.isLoading).toBe(false);
-    expect(fetch).toHaveBeenCalledTimes(1); // only the server-side fetch
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('snapshot is JSON-serializable', async () => {
@@ -60,34 +59,58 @@ describe('prefetchSource', () => {
     expect(deserialized.total).toBe(1);
   });
 
-  describe('prefetchSource.withSource', () => {
-    it('returns both snapshot and live source', async () => {
-      const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
-      const { snapshot, source } = await prefetchSource.withSource({ fetch, limit: 10 });
-
-      expect(snapshot.items).toEqual(['a', 'b']);
-      expect(snapshot.total).toBe(2);
-      expect(source.current).toEqual(['a', 'b']);
+  it('throws a SourceError when the fetch fails', async () => {
+    const fetch = vi.fn(async () => {
+      throw new Error('network down');
     });
 
-    it('returned source is live and not disposed', async () => {
-      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
-      const { source } = await prefetchSource.withSource({ fetch });
+    await expect(prefetchSource({ fetch })).rejects.toThrow('network down');
+  });
+});
 
-      // Calling refresh on the live source should work
-      fetch.mockResolvedValueOnce({ items: ['y'], total: 1 });
-      await source.refresh();
+describe('prefetchSourceWithSource', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
 
-      expect(source.current).toEqual(['y']);
-      source.dispose();
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns both snapshot and live source', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
+    const { snapshot, source } = await prefetchSourceWithSource({ fetch, limit: 10 });
+
+    expect(snapshot.items).toEqual(['a', 'b']);
+    expect(snapshot.total).toBe(2);
+    expect(source.current).toEqual(['a', 'b']);
+
+    source.dispose();
+  });
+
+  it('returned source is live and not disposed', async () => {
+    const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+    const { source } = await prefetchSourceWithSource({ fetch });
+
+    fetch.mockResolvedValueOnce({ items: ['y'], total: 1 });
+    await source.refresh();
+
+    expect(source.current).toEqual(['y']);
+    source.dispose();
+  });
+
+  it('caller must dispose the source manually', async () => {
+    const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+    const { source } = await prefetchSourceWithSource({ fetch });
+
+    expect(() => source.dispose()).not.toThrow();
+  });
+
+  it('throws a SourceError and disposes source when the fetch fails', async () => {
+    const fetch = vi.fn(async () => {
+      throw new Error('upstream error');
     });
 
-    it('caller must dispose the source manually', async () => {
-      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
-      const { source } = await prefetchSource.withSource({ fetch });
-
-      // Should not throw; caller owns lifecycle
-      expect(() => source.dispose()).not.toThrow();
-    });
+    await expect(prefetchSourceWithSource({ fetch })).rejects.toThrow('upstream error');
   });
 });

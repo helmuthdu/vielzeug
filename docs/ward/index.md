@@ -5,7 +5,7 @@ package: ward
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, wayfinder, conduit]
-exports: [createWard, owns]
+exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createWard, owns]
 
 **Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createWard`, `owns`, `WILDCARD`, `ANONYMOUS`
+**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
 
@@ -72,6 +72,18 @@ const ward = createWard<'read' | 'update', { authorId: string }>([
 ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });
 
+// Full decision with deny reason
+const decision = ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' });
+if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+
+// Full decision trace — shows every matching candidate and why the winner was picked
+const trace = ward.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
+trace.candidates.forEach(c => console.log(c.rule.effect, c.score, c.won));
+
+// Detect policy conflicts at startup
+const conflicts = ward.detectConflicts();
+if (conflicts.length > 0) console.warn('Policy conflicts:', conflicts);
+
 const bound = ward.forUser({ id: 'u1', roles: ['editor'] });
 
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
@@ -113,13 +125,18 @@ bound.rulesInScope('posts');
 - One rule primitive: `WardRule` passed to `createWard(rules)`
 - **Multi-role rules**: `role` accepts a string or an array of strings (OR semantics)
 - Decision methods: `ward.can`, `ward.canAll`, `ward.canAny`, `ward.explain`
+- Full decision trace: `ward.trace(principal, resource, action, data?)` — see every matching candidate
 - Batch decisions: `ward.checkAll(principal, checks)`
 - Rule introspection: `ward.rulesInScope(principal, resource, data?)`
 - Action enumeration: `ward.allowedActions(principal, resource, knownActions, data?)`
+- Policy conflict detection: `ward.detectConflicts()`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
 - Ownership helper via `owns(attributeKey)`
+- Typed rule slice factory via `defineRules()`
 - Principal-bound API via `ward.forUser(principal)`
+- Fluent rule builder via `rule()` with `.priority()` support
+- Built-in Express and Hono middleware guards
 
 ## Compatibility
 

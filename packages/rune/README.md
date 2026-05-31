@@ -4,7 +4,7 @@ package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, herald, familiar]
-exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport]
+exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, pipe, isLevelEnabled]
 ---
 
 # @vielzeug/rune
@@ -18,7 +18,7 @@ exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTrans
 
 **Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
 
-**Key exports:** `createLogger`, `Rune`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
+**Key exports:** `createLogger`, `Rune`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`, `pipe`, `isLevelEnabled`
 
 **When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and a pluggable transport pipeline.
 
@@ -47,8 +47,8 @@ Rune.info({ port: 3000 }, 'server started');
 Rune.warn('cache stale');
 Rune.error(new Error('connection lost')); // auto-serializes Error
 
-// Namespaced scopes
-const api = Rune.scope('api');
+// Namespaced child loggers
+const api = createLogger('api');
 api.info({ method: 'GET', path: '/users' }, 'request');
 
 // Pinned bindings — lazy() evaluates only when the level passes
@@ -58,7 +58,7 @@ const reqLog = api.withBindings({
 });
 reqLog.debug('processing'); // diagnostics() called only here
 
-// Structured timing — emits { duration_ms } as a debug entry
+// Structured timing — label is the message; emits { duration_ms } in context
 const users = await reqLog.time('db.query', () => db.query('SELECT * FROM users'));
 
 // Custom transport pipeline
@@ -66,10 +66,13 @@ const log = createLogger({
   logLevel: 'info',
   namespace: 'server',
   transports: [
-    consoleTransport({ variant: 'symbol', timestamp: true }),
-    remoteTransport(async (type, data) => {
-      await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-    }, { level: 'error' }),
+    consoleTransport({ timestamp: true }),
+    remoteTransport({
+      handler: async (type, data) => {
+        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
+      },
+      level: 'error',
+    }),
   ],
 });
 
@@ -77,6 +80,13 @@ const log = createLogger({
 const nodeLog = createLogger({
   transports: [jsonTransport({ level: 'warn' })],
 });
+
+// Fan-out to multiple transports independently (errors in one don't block others)
+import { pipe } from '@vielzeug/rune';
+const fanout = pipe(consoleTransport(), remoteTransport({ handler, level: 'error' }));
+
+// Logger-level sampling — drop 90 % of debug entries before any transport runs
+const sampledLog = createLogger({ sample: 0.1, logLevel: 'debug' });
 ```
 
 ## Documentation

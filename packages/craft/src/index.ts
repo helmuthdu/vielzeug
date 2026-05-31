@@ -32,7 +32,6 @@ export {
 } from './registration';
 
 export { ComponentPhase } from './types';
-export type { ComponentPhase as ComponentPhaseType } from './types';
 
 export {
   createFormContext,

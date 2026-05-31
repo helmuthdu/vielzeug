@@ -221,3 +221,149 @@ describe('createBehaviorBus - bus API passthrough', () => {
     expect(bus.disposed).toBe(true);
   });
 });
+
+// F4: replay window
+describe('createBehaviorBus - replay window (options.replay)', () => {
+  it('replay: 2 replays the last two values to new subscribers', () => {
+    const bus = createBehaviorBus<TestEvents>({}, { replay: 2 });
+    const listener = vi.fn();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3); // drops 1, buffer is [2, 3]
+
+    bus.on('count', listener);
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenNthCalledWith(1, 2);
+    expect(listener).toHaveBeenNthCalledWith(2, 3);
+
+    bus.dispose();
+  });
+
+  it('replay: 3 replays up to three values in order', () => {
+    const bus = createBehaviorBus<TestEvents>({}, { replay: 3 });
+    const listener = vi.fn();
+
+    bus.emit('count', 10);
+    bus.emit('count', 20);
+
+    bus.on('count', listener);
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenNthCalledWith(1, 10);
+    expect(listener).toHaveBeenNthCalledWith(2, 20);
+
+    bus.dispose();
+  });
+
+  it('once() with replay > 1 fires only the latest value', () => {
+    const bus = createBehaviorBus<TestEvents>({}, { replay: 3 });
+    const listener = vi.fn();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3);
+
+    bus.once('count', listener);
+
+    // once() fires exactly once with the latest value only
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(3);
+
+    bus.dispose();
+  });
+
+  it('current() always returns the latest value regardless of replay window', () => {
+    const bus = createBehaviorBus<TestEvents>({}, { replay: 3 });
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3);
+
+    expect(bus.current('count')).toBe(3);
+
+    bus.dispose();
+  });
+
+  it('new subscriber after replay receives future emits normally', () => {
+    const bus = createBehaviorBus<TestEvents>({}, { replay: 2 });
+    const listener = vi.fn();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+
+    bus.on('count', listener);
+
+    // 2 replayed + 1 future
+    bus.emit('count', 3);
+
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(listener).toHaveBeenNthCalledWith(3, 3);
+
+    bus.dispose();
+  });
+});
+
+describe('createBehaviorBus - replay error handling', () => {
+  it('listener throws during replay: error propagates when no onError is configured', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 1 });
+
+    expect(() => {
+      bus.on('count', () => {
+        throw new Error('replay boom');
+      });
+    }).toThrow('replay boom');
+
+    bus.dispose();
+  });
+
+  it('listener throws during replay: error forwarded to onError when configured', () => {
+    const onError = vi.fn();
+    const bus = createBehaviorBus<TestEvents>({ count: 1 }, { onError });
+
+    expect(() => {
+      bus.on('count', () => {
+        throw new Error('replay boom');
+      });
+    }).not.toThrow();
+
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: expect.any(Error),
+        event: 'count',
+        payload: 1,
+        timestamp: expect.any(Number),
+      }),
+    );
+
+    bus.dispose();
+  });
+
+  it('on() with replay window: error on first replayed value forwarded, remaining values still replayed', () => {
+    const onError = vi.fn();
+    const bus = createBehaviorBus<TestEvents>({}, { onError, replay: 3 });
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3);
+
+    const received: number[] = [];
+    let callCount = 0;
+
+    bus.on('count', (n) => {
+      callCount++;
+
+      if (callCount === 1) throw new Error('first replay boom');
+
+      received.push(n);
+    });
+
+    // First replayed value (1) threw — forwarded to onError. Values 2 and 3 still replayed.
+    expect(onError).toHaveBeenCalledOnce();
+    expect(received).toEqual([2, 3]);
+
+    bus.dispose();
+  });
+});

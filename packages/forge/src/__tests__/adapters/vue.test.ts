@@ -1,4 +1,4 @@
-import { type OnScopeDisposeFn, type ShallowRefFn, createForgeComposables } from '../../adapters/vue';
+import { createForgeComposables, type OnScopeDisposeFn, type ShallowRefFn } from '../../adapters/vue';
 import { createForm } from '../../index';
 
 // Minimal shallowRef mock — plain mutable object, sufficient for tests.

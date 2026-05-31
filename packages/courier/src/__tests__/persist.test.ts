@@ -289,7 +289,7 @@ describe('hydrateQueryCache', () => {
     expect(onError.mock.calls[0][1]).toEqual(['settings']);
   });
 
-  it('calls onError when getItem rejects', async () => {
+  it('calls onError and continues when getItem rejects', async () => {
     const qc = createQuery();
     const onError = vi.fn();
     const failStorage: PersistStorage = {
@@ -299,6 +299,51 @@ describe('hydrateQueryCache', () => {
     };
 
     await hydrateQueryCache(qc, { keys: [['users', 1]], onError, storage: failStorage });
+
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onError for structurally malformed entries (missing updatedAt)', async () => {
+    const qc = createQuery();
+    const onError = vi.fn();
+    const storage = makeStorage({
+      // Parses as valid JSON but has no `updatedAt` field
+      'courier:["users",1]': JSON.stringify({ data: { id: 1 } }),
+    });
+
+    await hydrateQueryCache(qc, { keys: [['users', 1]], onError, storage });
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+    expect((onError.mock.calls[0][0] as Error).message).toMatch(/Malformed/i);
+    // Entry must NOT be written to the cache
+    expect(qc.get(['users', 1])).toBeUndefined();
+  });
+
+  it('calls onError for structurally malformed entries (missing data)', async () => {
+    const qc = createQuery();
+    const onError = vi.fn();
+    const storage = makeStorage({
+      'courier:["users",1]': JSON.stringify({ updatedAt: Date.now() }),
+    });
+
+    await hydrateQueryCache(qc, { keys: [['users', 1]], onError, storage });
+
+    // `data` is technically present (undefined) but `updatedAt` is a number, so
+    // validation passes — confirm it proceeds without calling onError here
+    // (the serialised JSON actually has no `data` key, so `parsed.data` is undefined,
+    //  but `'data' in parsed` is false, triggering the malformed path).
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onError for entries that are not objects (e.g. stored as a plain string)', async () => {
+    const qc = createQuery();
+    const onError = vi.fn();
+    const storage = makeStorage({
+      'courier:["users",1]': JSON.stringify('just a string'),
+    });
+
+    await hydrateQueryCache(qc, { keys: [['users', 1]], onError, storage });
 
     expect(onError).toHaveBeenCalledTimes(1);
   });

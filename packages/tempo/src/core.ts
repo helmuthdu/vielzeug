@@ -1,8 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { DifferenceOptions, TimeInput, TimeOptions, TimeOptionsWithTz } from './types';
+import type { DifferenceOptions, TimeInput, TimeOptions } from './types';
 
-import { CALENDAR_UNITS, fail, inferSharedTimeZone, inferTimeZone, resolveInstant, resolveZoned } from './internal';
+import { CALENDAR_UNITS, fail, inferSharedTimeZone, inferTimeZone, toInstant, toZoned } from './internal';
 
 /**
  * Returns the current date and time in the given timezone.
@@ -53,32 +53,6 @@ export function parseInstant(input: string): Temporal.Instant {
 }
 
 /**
- * Converts any {@link TimeInput} to an absolute `Instant`.
- * Requires `options.tz` when input is a `PlainDate` or `PlainDateTime`.
- *
- * @example
- * ```ts
- * toInstant(parseLocal('2026-03-21T11:00:00'), { tz: 'Europe/Berlin' })
- * ```
- */
-export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
-  return resolveInstant(input, options);
-}
-
-/**
- * Projects any {@link TimeInput} into a specific timezone as a `ZonedDateTime`.
- *
- * @example
- * ```ts
- * toZoned(parseInstant('2026-03-21T10:00:00Z'), { tz: 'Europe/Berlin' })
- * // 2026-03-21T11:00:00+01:00[Europe/Berlin]
- * ```
- */
-export function toZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime {
-  return resolveZoned(input, options);
-}
-
-/**
  * DST-safe date arithmetic. Adds `duration` to `input` and returns the result as a
  * `ZonedDateTime`. Handles spring-forward and fall-back correctly.
  *
@@ -95,7 +69,7 @@ export function shift(
 ): Temporal.ZonedDateTime {
   const tz = inferTimeZone(input, options);
 
-  return resolveZoned(input, { prefer: options.prefer, tz }).add(duration);
+  return toZoned(input, { prefer: options.prefer, tz }).add(duration);
 }
 
 /**
@@ -128,8 +102,74 @@ export function difference(start: TimeInput, end: TimeInput, options: Difference
 
   const tz = inferSharedTimeZone([start, end], options);
 
-  return resolveZoned(end, { prefer: options.prefer, tz }).since(
-    resolveZoned(start, { prefer: options.prefer, tz }),
+  return toZoned(end, { prefer: options.prefer, tz }).since(
+    toZoned(start, { prefer: options.prefer, tz }),
     roundingOptions,
+  );
+}
+
+/**
+ * Parses any ISO 8601 date/time string into the most specific `TimeInput` type possible.
+ * Tries ZonedDateTime → Instant → PlainDateTime → PlainDate in order.
+ * Throws a descriptive `TypeError` if none match.
+ *
+ * @example
+ * ```ts
+ * parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]') // ZonedDateTime
+ * parseAny('2026-03-21T10:00:00Z')                     // Instant
+ * parseAny('2026-03-21T10:00:00')                      // PlainDateTime
+ * parseAny('2026-03-21')                               // PlainDate
+ * ```
+ */
+export function parseAny(input: string): TimeInput {
+  try {
+    return Temporal.ZonedDateTime.from(input);
+  } catch {
+    /* try next format */
+  }
+
+  try {
+    return Temporal.Instant.from(input);
+  } catch {
+    /* try next format */
+  }
+
+  // Try PlainDateTime before PlainDate — a date-only string (no 'T') will also
+  // be accepted by PlainDateTime.from(), producing midnight, so we check the
+  // string to pick the most specific type.
+  if (input.includes('T')) {
+    try {
+      return Temporal.PlainDateTime.from(input);
+    } catch {
+      /* fall through to error */
+    }
+  } else {
+    try {
+      return Temporal.PlainDate.from(input);
+    } catch {
+      /* fall through to error */
+    }
+  }
+
+  fail(
+    `Unable to parse date/time string: "${input}". Expected ISO 8601 ZonedDateTime, Instant, PlainDateTime, or PlainDate.`,
+  );
+}
+
+/**
+ * Type guard that checks whether `value` is a valid `TimeInput`.
+ *
+ * @example
+ * ```ts
+ * isValid(Temporal.Instant.from('2026-03-21T10:00:00Z')) // true
+ * isValid('2026-03-21')                                  // false
+ * ```
+ */
+export function isValid(value: unknown): value is TimeInput {
+  return (
+    value instanceof Temporal.Instant ||
+    value instanceof Temporal.ZonedDateTime ||
+    value instanceof Temporal.PlainDateTime ||
+    value instanceof Temporal.PlainDate
   );
 }

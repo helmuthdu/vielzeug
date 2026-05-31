@@ -1,5 +1,5 @@
 import { isNil } from './isNil';
-import { isObject } from './isObject';
+import { isPlainObject } from './isPlainObject';
 
 /**
  * Checks if the given argument is empty.
@@ -29,7 +29,7 @@ export function isEmpty(arg: any): boolean {
 
   if (arg instanceof Map || arg instanceof Set) return arg.size === 0;
 
-  if (isObject(arg)) return Object.keys(arg).length === 0;
+  if (isPlainObject(arg)) return Object.keys(arg).length === 0;
 
   return false;
 }

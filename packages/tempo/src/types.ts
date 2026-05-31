@@ -70,10 +70,14 @@ export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
 
 // ─── Recurrence types ─────────────────────────────────────────────────────────
 
-export interface RecurrenceRule {
-  count?: number;
+type RecurrenceBase = {
   frequency: 'daily' | 'monthly' | 'weekly' | 'yearly';
   interval?: number;
-  until?: TimeInput;
-  weekStartsOn?: WeekStartDay;
-}
+};
+
+/**
+ * Rule governing {@link recurrence} generation.
+ * Either `count` or `until` (or both) must be provided — enforced at the type level.
+ */
+export type RecurrenceRule = RecurrenceBase &
+  ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });

@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/ripple",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

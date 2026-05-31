@@ -145,7 +145,7 @@ describe('createBus - subscription lifecycle', () => {
     const listener = vi.fn();
     const controller = new AbortController();
 
-    bus.once('count', listener, controller.signal);
+    bus.once('count', listener, { signal: controller.signal });
     controller.abort();
     bus.emit('count', 1);
 
@@ -248,6 +248,21 @@ describe('createBus - subscription lifecycle', () => {
 
     expect(bus.listenerCount('count')).toBe(1);
     expect(bus.listenerCount()).toBe(2);
+  });
+
+  // R8: per-event count includes wildcard listeners (they fire on every emission).
+  it('listenerCount(event) includes wildcard listeners', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.onAny(vi.fn());
+    bus.onAny(vi.fn());
+
+    expect(bus.listenerCount('count')).toBe(3); // 1 specific + 2 wildcards
+    expect(bus.listenerCount('greet')).toBe(2); // 0 specific + 2 wildcards
+    expect(bus.listenerCount()).toBe(3); // 1 specific + 2 wildcards (wildcards counted once)
+
+    bus.dispose();
   });
 });
 
@@ -400,13 +415,13 @@ describe('createBus - wait', () => {
 
     controller.abort(new Error('cancelled'));
 
-    await expect(bus.wait('count', controller.signal)).rejects.toThrow('cancelled');
+    await expect(bus.wait('count', { signal: controller.signal })).rejects.toThrow('cancelled');
   });
 
   it('rejects with signal reason when signal aborts while waiting', async () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
-    const pending = bus.wait('count', controller.signal);
+    const pending = bus.wait('count', { signal: controller.signal });
 
     controller.abort(new Error('cancelled'));
 
@@ -416,7 +431,7 @@ describe('createBus - wait', () => {
   it('stays resolved if signal aborts after completion', async () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
-    const pending = bus.wait('count', controller.signal);
+    const pending = bus.wait('count', { signal: controller.signal });
 
     bus.emit('count', 7);
 
@@ -458,13 +473,13 @@ describe('createBus - waitAny', () => {
 
     controller.abort(new Error('cancelled'));
 
-    await expect(bus.waitAny(['count', 'greet'], controller.signal)).rejects.toThrow('cancelled');
+    await expect(bus.waitAny(['count', 'greet'], { signal: controller.signal })).rejects.toThrow('cancelled');
   });
 
   it('rejects with signal reason when signal aborts while waiting', async () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
-    const pending = bus.waitAny(['count', 'greet'], controller.signal);
+    const pending = bus.waitAny(['count', 'greet'], { signal: controller.signal });
 
     controller.abort(new Error('cancelled'));
 
@@ -673,7 +688,7 @@ describe('createBus - onAny (wildcard listener)', () => {
     const listener = vi.fn();
     const controller = new AbortController();
 
-    bus.onAny(listener, controller.signal);
+    bus.onAny(listener, { signal: controller.signal });
     bus.emit('count', 1);
     controller.abort();
     bus.emit('count', 2);
@@ -687,7 +702,33 @@ describe('createBus - onAny (wildcard listener)', () => {
     const controller = new AbortController();
 
     controller.abort();
-    bus.onAny(listener, controller.signal);
+    bus.onAny(listener, { signal: controller.signal });
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('fires exactly once when { once: true } is passed', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+
+    bus.onAny(listener, { once: true });
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('greet', { name: 'Alice' });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith('count', 1);
+  });
+
+  it('{ once: true } with signal cancels before firing when signal aborts', () => {
+    const bus = createBus<TestEvents>();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    bus.onAny(listener, { once: true, signal: controller.signal });
+    controller.abort();
     bus.emit('count', 1);
 
     expect(listener).not.toHaveBeenCalled();
@@ -729,13 +770,14 @@ describe('createBus - onAny (wildcard listener)', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it('counts toward listenerCount() total', () => {
+  it('counts toward listenerCount() total and per-event counts', () => {
     const bus = createBus<TestEvents>();
 
     bus.onAny(vi.fn());
     bus.onAny(vi.fn());
 
     expect(bus.listenerCount()).toBe(2);
+    expect(bus.listenerCount('count')).toBe(2); // wildcards fire for every event
   });
 
   it('errors forwarded to onError and remaining wildcard listeners continue', () => {
@@ -1034,5 +1076,406 @@ describe('createBus - pipe()', () => {
 
     source.dispose();
     target.dispose();
+  });
+});
+
+// F5: emit() return value
+describe('createBus - emit() return value', () => {
+  it('returns 0 when there are no listeners', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(bus.emit('count', 1)).toBe(0);
+
+    bus.dispose();
+  });
+
+  it('returns the number of specific listeners dispatched to', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+
+    expect(bus.emit('count', 1)).toBe(2);
+
+    bus.dispose();
+  });
+
+  it('includes wildcard listeners in the dispatched count', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn()); // 1 specific
+    bus.onAny(vi.fn()); // 1 wildcard
+
+    expect(bus.emit('count', 1)).toBe(2);
+
+    bus.dispose();
+  });
+
+  it('returns 0 when the bus is disposed', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.dispose();
+
+    expect(bus.emit('count', 1)).toBe(0);
+  });
+
+  it('returns 0 when middleware blocks dispatch', () => {
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_event, _payload, _next) => {
+          /* do not call next() */
+        },
+      ],
+    });
+
+    bus.on('count', vi.fn());
+
+    expect(bus.emit('count', 1)).toBe(0);
+
+    bus.dispose();
+  });
+});
+
+// F6: Middleware pipeline
+describe('createBus - middleware', () => {
+  it('middleware runs before listeners', () => {
+    const order: string[] = [];
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (event, payload, next) => {
+          order.push('middleware');
+          next();
+        },
+      ],
+    });
+
+    bus.on('count', () => order.push('listener'));
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['middleware', 'listener']);
+
+    bus.dispose();
+  });
+
+  it('multiple middleware run in order before listeners', () => {
+    const order: string[] = [];
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_e, _p, next) => {
+          order.push('mw1');
+          next();
+        },
+        (_e, _p, next) => {
+          order.push('mw2');
+          next();
+        },
+      ],
+    });
+
+    bus.on('count', () => order.push('listener'));
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['mw1', 'mw2', 'listener']);
+
+    bus.dispose();
+  });
+
+  it('middleware receives event name and payload', () => {
+    const captured: Array<{ event: string; payload: unknown }> = [];
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (event, payload, next) => {
+          captured.push({ event, payload });
+          next();
+        },
+      ],
+    });
+
+    bus.on('count', vi.fn());
+    bus.emit('count', 42);
+
+    expect(captured).toEqual([{ event: 'count', payload: 42 }]);
+
+    bus.dispose();
+  });
+
+  it('middleware can block dispatch by not calling next()', () => {
+    const listener = vi.fn();
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_event, _payload, _next) => {
+          /* omit next() */
+        },
+      ],
+    });
+
+    bus.on('count', listener);
+    bus.emit('count', 1);
+
+    expect(listener).not.toHaveBeenCalled();
+
+    bus.dispose();
+  });
+
+  it('middleware does not run on a disposed bus', () => {
+    const mw = vi.fn((_e: string, _p: unknown, next: () => void) => next());
+    const bus = createBus<TestEvents>({ middleware: [mw] });
+
+    bus.dispose();
+    bus.emit('count', 1);
+
+    expect(mw).not.toHaveBeenCalled();
+  });
+
+  it('onDispatch still fires when middleware calls next()', () => {
+    const onDispatch = vi.fn();
+    const bus = createBus<TestEvents>({
+      middleware: [(_e, _p, next) => next()],
+      onDispatch,
+    });
+
+    bus.emit('count', 7);
+
+    expect(onDispatch).toHaveBeenCalledWith('count', 7);
+
+    bus.dispose();
+  });
+
+  it('a throwing middleware propagates out of emit()', () => {
+    const bus = createBus<TestEvents>({
+      middleware: [
+        () => {
+          throw new Error('mw boom');
+        },
+      ],
+    });
+
+    bus.on('count', vi.fn());
+
+    expect(() => bus.emit('count', 1)).toThrow('mw boom');
+
+    bus.dispose();
+  });
+});
+
+// F7: validatePayload hook
+describe('createBus - validatePayload', () => {
+  it('allows emission when validator does not throw', () => {
+    const listener = vi.fn();
+    const bus = createBus<TestEvents>({
+      validatePayload: (event, payload) => {
+        if (event === 'count' && typeof payload !== 'number') throw new Error('must be number');
+      },
+    });
+
+    bus.on('count', listener);
+    bus.emit('count', 5);
+
+    expect(listener).toHaveBeenCalledWith(5);
+
+    bus.dispose();
+  });
+
+  it('blocks emission and rethrows when validator throws (no onError)', () => {
+    const listener = vi.fn();
+    const bus = createBus<TestEvents>({
+      validatePayload: () => {
+        throw new Error('invalid');
+      },
+    });
+
+    bus.on('count', listener);
+
+    expect(() => bus.emit('count', 1)).toThrow('invalid');
+    expect(listener).not.toHaveBeenCalled();
+
+    bus.dispose();
+  });
+
+  it('blocks emission and forwards to onError when validator throws (with onError)', () => {
+    const onError = vi.fn();
+    const listener = vi.fn();
+    const bus = createBus<TestEvents>({
+      onError,
+      validatePayload: () => {
+        throw new Error('invalid');
+      },
+    });
+
+    bus.on('count', listener);
+
+    const count = bus.emit('count', 1);
+
+    expect(count).toBe(0);
+    expect(listener).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: expect.any(Error),
+        event: 'count',
+        payload: 1,
+      }),
+    );
+
+    bus.dispose();
+  });
+
+  it('runs before middleware', () => {
+    const order: string[] = [];
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_e, _p, next) => {
+          order.push('middleware');
+          next();
+        },
+      ],
+      validatePayload: () => {
+        order.push('validate');
+      },
+    });
+
+    bus.on('count', () => order.push('listener'));
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['validate', 'middleware', 'listener']);
+
+    bus.dispose();
+  });
+});
+
+// F1: EventStream filter/map operators
+describe('createBus - events().filter() and events().map()', () => {
+  it('filter() yields only values that pass the predicate', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count').filter((n) => n % 2 === 0);
+    const results: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of stream) {
+        results.push(n);
+
+        if (results.length === 2) break;
+      }
+    })();
+
+    bus.emit('count', 1); // filtered out
+    bus.emit('count', 2); // passes
+    bus.emit('count', 3); // filtered out
+    bus.emit('count', 4); // passes
+
+    await consume;
+
+    expect(results).toEqual([2, 4]);
+  });
+
+  it('map() transforms each yielded value', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count').map((n) => n * 10);
+    const results: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of stream) {
+        results.push(n);
+
+        if (results.length === 2) break;
+      }
+    })();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+
+    await consume;
+
+    expect(results).toEqual([10, 20]);
+  });
+
+  it('filter().map() chains work correctly', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus
+      .events('count')
+      .filter((n) => n > 0)
+      .map((n) => `n=${n}`);
+    const results: string[] = [];
+
+    const consume = (async () => {
+      for await (const s of stream) {
+        results.push(s);
+
+        if (results.length === 2) break;
+      }
+    })();
+
+    bus.emit('count', -1); // filtered
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+
+    await consume;
+
+    expect(results).toEqual(['n=1', 'n=2']);
+  });
+
+  it('Symbol.asyncDispose on filtered stream unsubscribes from the bus', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count').filter((n) => n > 0);
+
+    expect(bus.listenerCount('count')).toBe(1);
+
+    await stream[Symbol.asyncDispose]();
+
+    expect(bus.listenerCount('count')).toBe(0);
+  });
+
+  it('Symbol.asyncDispose on mapped stream unsubscribes from the bus', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count').map((n) => n * 2);
+
+    expect(bus.listenerCount('count')).toBe(1);
+
+    await stream[Symbol.asyncDispose]();
+
+    expect(bus.listenerCount('count')).toBe(0);
+  });
+
+  it('bus disposal terminates a filtered stream', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of bus.events('count').filter((n) => n > 0)) {
+        collected.push(n);
+      }
+    })();
+
+    bus.emit('count', 1);
+    await new Promise((r) => setTimeout(r, 0));
+    bus.dispose();
+
+    await consume;
+
+    expect(collected).toEqual([1]);
+  });
+
+  it('sibling streams from the same base share the subscription and disposal handle', async () => {
+    // Two .filter() calls on the same base both iterate `gen`, which uses one subscription.
+    const bus = createBus<TestEvents>();
+    const base = bus.events('count');
+    const evens = base.filter((n) => n % 2 === 0);
+    const odds = base.filter((n) => n % 2 !== 0);
+
+    // One subscription registered for both siblings.
+    expect(bus.listenerCount('count')).toBe(1);
+
+    // Disposing one sibling disposes the shared subscription — the other is also terminated.
+    await evens[Symbol.asyncDispose]();
+
+    expect(bus.listenerCount('count')).toBe(0);
+
+    // odds generator should be done because the underlying gen is closed.
+    const result = await odds.next();
+
+    expect(result.done).toBe(true);
+
+    bus.dispose();
   });
 });

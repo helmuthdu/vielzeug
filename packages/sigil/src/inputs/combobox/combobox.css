@@ -1,14 +1,14 @@
 @layer sigil.base {
   :host {
-    --_font-size: var(--combobox-font-size, var(--text-sm));
-    --_gap: var(--combobox-gap, var(--size-2));
-    --_field-height: var(--combobox-height, var(--size-10));
+    --_font-size: var(--bit-combobox-font-size, var(--text-sm));
+    --_gap: var(--bit-combobox-gap, var(--size-2));
+    --_field-height: var(--bit-combobox-height, var(--size-10));
     --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
-    --_padding: var(--combobox-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--combobox-radius, var(--rounded-lg));
-    --_placeholder: var(--combobox-placeholder-color, var(--color-contrast-500));
-    --_bg: var(--combobox-bg, var(--color-contrast-100));
-    --_border-color: var(--combobox-border-color, var(--color-contrast-300));
+    --_padding: var(--bit-combobox-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--bit-combobox-radius, var(--rounded-lg));
+    --_placeholder: var(--bit-combobox-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--bit-combobox-bg, var(--color-contrast-100));
+    --_border-color: var(--bit-combobox-border-color, var(--color-contrast-300));
 
     display: inline-flex;
     flex-direction: column;
@@ -31,7 +31,7 @@
        Label
        ======================================== */
 
-  .label-inset {
+  .label {
     margin-bottom: 2px;
     font-size: var(--text-xs);
     font-weight: var(--font-medium);
@@ -42,14 +42,29 @@
     transition: color var(--transition-fast);
   }
 
-  .label-outside {
+  /* Outside placement overrides */
+  :host([label-placement='outside']) .label {
+    margin-bottom: 0;
     font-size: var(--text-sm);
-    font-weight: var(--font-medium);
     line-height: var(--leading-none);
-    color: var(--color-contrast-500);
-    cursor: pointer;
-    user-select: none;
-    transition: color var(--transition-fast);
+  }
+
+  /* Inset placement (default): label floats over the top of the field using absolute positioning */
+  :host(:not([label-placement='outside'])) .combobox-wrapper {
+    position: relative;
+  }
+
+  :host(:not([label-placement='outside'])) .label {
+    position: absolute;
+    inset-block-start: var(--size-2);
+    inset-inline-start: var(--size-3);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  :host(:not([label-placement='outside'])) .combobox-wrapper:has(.label:not([hidden])) .field {
+    height: auto;
+    padding-block-start: calc(var(--size-2) + 1lh + 2px);
   }
 
   /* ========================================
@@ -83,9 +98,8 @@
     );
   }
 
-  /* Expand height for multi-select chips or inset label */
-  :host([multiple]) .field,
-  .field:has(.label-inset:not([hidden])) {
+  /* Expand height for multi-select chips */
+  :host([multiple]) .field {
     height: auto;
   }
 
@@ -393,9 +407,8 @@
     transform: translateY(-1px);
   }
 
-  :host(:not([disabled])) .field:focus-within .label-inset,
-  :host(:not([disabled])) .field:focus-within .label-outside,
-  :host([open]:not([disabled])) .label-inset {
+  :host(:not([disabled])) .combobox-wrapper:has(.field:focus-within) .label,
+  :host([open]:not([disabled])) .label {
     color: var(--_theme-focus);
   }
 
@@ -408,8 +421,7 @@
     box-shadow: var(--color-error-focus-shadow);
   }
 
-  :host([error]:not([error=''])) .label-inset,
-  :host([error]:not([error=''])) .label-outside {
+  :host([error]:not([error=''])) .label {
     color: var(--color-error);
   }
 }

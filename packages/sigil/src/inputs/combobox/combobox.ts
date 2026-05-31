@@ -4,13 +4,14 @@ import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
 import {
-  createComposite,
+  componentSignal,
+  createChoiceField,
   createInteraction,
-  toAbortSignal,
+  createOptionList,
   type DialogCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
-import { FIELD_SIZE_PRESET } from '../../shared/config';
+import { FIELD_SIZE_PRESET } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -21,7 +22,6 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { connectFormField } from '../shared/use-field';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
 import componentStyles from './combobox.css?inline';
@@ -106,47 +106,59 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
 
-    const abortSignal = toAbortSignal(onCleanup);
-    const { choice, optionList } = createComposite<ComboboxOptionItem>({
-      field: {
-        disabled: fCtxProps.disabled,
-        error: props.error,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        multiple: props.multiple,
-        prefix: 'combobox',
-        validateOn: formCtx?.validateOn,
-        value: props.value,
+    const abortSignal = componentSignal(onCleanup);
+    const choice = createChoiceField({
+      disabled: fCtxProps.disabled,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      multiple: props.multiple,
+      prefix: 'combobox',
+      validateOn: formCtx?.validateOn,
+      value: props.value,
+    });
+
+    // filteredOptions signal declared before optionList so the getItems getter
+    // captures the live signal reference rather than needing a factory indirection.
+    const filteredOptions = signal<ComboboxOptionItem[]>([]);
+
+    const optionList = createOptionList<ComboboxOptionItem>({
+      behavior: {
+        isDisabled: () => choice.disabled.value,
+        manageAriaExpanded: false,
+        restoreFocus: false,
       },
-      listFactory: (c) => ({
+      dom: {
         getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
-        getItems: () => filteredOptions.value,
-        getOptionId: (index) => `${c.fieldId}-opt-${index}`,
         getPanel: () => dropdownEl,
         getReference: () => fieldEl,
         getTrigger: () => inputEl,
-        isDisabled: () => c.disabled.value,
-        manageAriaExpanded: false,
+      },
+      items: {
+        getItems: () => filteredOptions.value,
+        getOptionId: (index) => `${choice.fieldId}-opt-${index}`,
+      },
+      on: {
         onClose: (reason) => {
           emit('close', { reason });
 
           if (!abortSignal.aborted) restoreQueryFromSelection();
 
-          c.triggerValidation('blur');
+          choice.triggerValidation('blur');
         },
         onOpen: (reason) => emit('open', { reason }),
-        restoreFocus: false,
-      }),
+      },
       signal: abortSignal,
     });
 
     const { assistiveId, disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
-    const labelInsetId = choice.label.inset.id;
-    const labelOutsideId = choice.label.outside.id;
+    const labelId = choice.label.id;
 
-    connectFormField(choice, defineField, choice.formValue, (v) => v);
+    choice.bindFormField(
+      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
+    );
 
     const { focusedIndex, isOpen, positioner, scrollFocusedIntoView } = optionList;
     // ── State ────────────────────────────────────────────────────────────────
@@ -154,8 +166,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     const isCreatable = () => Boolean(props.creatable.value);
     const isNoFilter = () => Boolean(props['no-filter'].value);
     const hasLabel = () => !!props.label.value;
-    const insetLabelHidden = () => !choice.label.inset.show.value;
-    const outsideLabelHidden = () => !choice.label.outside.show.value;
+    const labelHidden = () => !choice.label.show.value;
 
     bind({
       attr: {
@@ -251,8 +262,6 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
 
     // Initialize from light DOM immediately; onMounted/observer keep this in sync afterwards.
     readOptions();
-
-    const filteredOptions = signal<ComboboxOptionItem[]>([]);
 
     effect(() => {
       const nextOptions = filterOptions(allOptions.value, query.value, isNoFilter());
@@ -673,7 +682,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     return html`
       <slot></slot>
       <div class="combobox-wrapper" part="wrapper">
-        <label class="label-outside" for="${comboId}" id="${labelOutsideId}" ?hidden=${outsideLabelHidden} part="label">
+        <label class="label" for="${comboId}" id="${labelId}" ?hidden=${labelHidden} part="label">
           ${props.label}
         </label>
         <div
@@ -682,9 +691,6 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
           @click="${(e: MouseEvent) => {
             fieldPress.handleClick(e);
           }}">
-          <label class="label-inset" for="${comboId}" id="${labelInsetId}" ?hidden=${insetLabelHidden} part="label">
-            ${props.label}
-          </label>
           <div class="field-row">
             <div class="chips-row">
               <!-- Keep chip list diffing isolated so input node identity stays stable. -->
@@ -733,7 +739,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
                 :aria-expanded="${() => String(isOpen.value)}"
                 :aria-describedby="${choice.aria.describedBy}"
                 :aria-invalid="${choice.aria.invalid}"
-                :aria-labelledby="${() => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null)}"
+                :aria-labelledby="${() => (hasLabel() ? labelId : null)}"
                 :disabled="${isDisabled}"
                 @input=${handleInput}
                 @keydown=${handleKeydown}

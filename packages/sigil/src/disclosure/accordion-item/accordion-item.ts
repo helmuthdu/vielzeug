@@ -1,4 +1,4 @@
-import { define, effect, html, inject, prop, ref, onMounted } from '@vielzeug/craft';
+import { define, effect, html, inject, onMounted, prop, ref } from '@vielzeug/craft';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
