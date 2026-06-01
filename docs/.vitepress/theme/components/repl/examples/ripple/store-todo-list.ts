@@ -1,4 +1,34 @@
 export const storeTodoListExample = {
-  code: "import { store, computed } from '/ripple'\n\ntype Todo = { id: number; text: string; done: boolean }\n\nconst todos = store<{ items: Todo[]; filter: 'all' | 'active' | 'done' }>({\n  items: [],\n  filter: 'all',\n})\n\nconst visible = computed(() =>\n  todos.value.filter === 'active' ? todos.value.items.filter((t) => !t.done)\n  : todos.value.filter === 'done' ? todos.value.items.filter((t) => t.done)\n  : todos.value.items\n)\n\n// Add todos\ntodos.update((s) => ({\n  ...s,\n  items: [\n    { id: 1, text: 'Learn ripple', done: false },\n    { id: 2, text: 'Build app', done: false },\n    { id: 3, text: 'Deploy', done: true },\n  ],\n}))\n\nconsole.log('All:', visible.value.map((t) => t.text))\n\ntodos.patch({ filter: 'active' })\nconsole.log('Active:', visible.value.map((t) => t.text))\n\ntodos.patch({ filter: 'done' })\nconsole.log('Done:', visible.value.map((t) => t.text))\n\nvisible.dispose()",
+  code: `import { store, computed } from '@vielzeug/ripple'
+
+const todos = store({
+  items: [],
+  filter: 'all', // 'all' | 'active' | 'done'
+})
+
+const visible = computed(() =>
+  todos.value.filter === 'active' ? todos.value.items.filter((t) => !t.done)
+  : todos.value.filter === 'done' ? todos.value.items.filter((t) => t.done)
+  : todos.value.items
+)
+
+todos.replace((s) => ({
+  ...s,
+  items: [
+    { id: 1, text: 'Learn ripple', done: false },
+    { id: 2, text: 'Build app', done: false },
+    { id: 3, text: 'Deploy', done: true },
+  ],
+}))
+
+console.log('All:', visible.value.map((t) => t.text))
+
+todos.patch({ filter: 'active' })
+console.log('Active:', visible.value.map((t) => t.text))
+
+todos.patch({ filter: 'done' })
+console.log('Done:', visible.value.map((t) => t.text))
+
+visible.dispose()`,
   name: 'Store - Todo List',
 };

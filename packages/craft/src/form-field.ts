@@ -1,7 +1,7 @@
 import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { effect, getCurrentElement } from './runtime';
+import { effect, getCurrentElement, onCleanup } from './runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
@@ -28,9 +28,14 @@ export const defineField = <T = unknown>(options: FormFieldOptions<T>): FormFiel
     throw new Error(CRAFTIT_ERRORS.defineFieldRequiresFormAssociated(host.localName));
   }
 
-  const internals = internalsRegistry.get(host) ?? host.attachInternals();
+  if (internalsRegistry.has(host)) {
+    throw new Error(`defineField() was already called on <${host.localName}>. Call it only once per component.`);
+  }
+
+  const internals = host.attachInternals();
 
   internalsRegistry.set(host, internals);
+  onCleanup(() => internalsRegistry.delete(host));
 
   const toFormValue =
     options.toFormValue ??

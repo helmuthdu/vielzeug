@@ -223,7 +223,7 @@ export function createQuery(opts?: QueryClientOptions) {
         key,
         lastConfig: undefined,
         observers: new Set(),
-        segmentHashes: key.map(stableStringify),
+        segmentHashes: key.map((k) => stableStringify(k)),
         status: 'idle',
         updatedAt: undefined,
       };
@@ -434,7 +434,7 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function invalidate(key: QueryKey) {
-    const prefixHash = key.map(stableStringify);
+    const prefixHash = key.map((k) => stableStringify(k));
 
     for (const entry of [...entries.values()]) {
       if (isKeyOrPrefix(entry, prefixHash)) {
@@ -603,7 +603,7 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function refetchStale() {
-    for (const [, entry] of entries) {
+    for (const entry of [...entries.values()]) {
       if (isStaleAndRevalidatable(entry)) {
         startFetch(entry, entry.lastConfig as FetchConfig<unknown>).catch(() => {});
       }

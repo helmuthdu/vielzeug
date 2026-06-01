@@ -1,36 +1,45 @@
 export const expiresAndDateRangeExample = {
-  code: `import { dateRange, expires, timeDiff } from '/tempo'
+  code: `import { classify, dateRange, expires, humanize, now, nowInstant, parseInstant, parseZoned, recurrence, shift, timeDiff } from '@vielzeug/tempo'
 
 // --- expires() ---
-const past    = Temporal.Now.instant().subtract({ hours: 1 })
-const soon    = Temporal.Now.instant().add({ hours: 48 })
-const later   = Temporal.Now.instant().add({ days: 30 })
-const forever = Temporal.Instant.from('9999-12-31T00:00:00Z')
+const THRESHOLDS = {
+  longExpired: { days: -30 },
+  expired:     { days: 0 },
+  critical:    { days: 3 },
+  warning:     { days: 14 },
+  safe:        { years: 100 },
+}
 
-console.log('past:',    expires(past))    // EXPIRED
-console.log('soon:',    expires(soon))    // SOON   (within default 7-day window)
-console.log('later:',   expires(later))   // LATER
-console.log('forever:', expires(forever)) // NEVER
+// Use tempo helpers — no Temporal.* needed
+const past  = shift(now('UTC'), { hours: -1 }).toInstant()
+const soon  = shift(now('UTC'), { hours: 48 }).toInstant()
+const later = shift(now('UTC'), { days: 10 }).toInstant()
 
-// Custom window: anything beyond 1 day is LATER
-console.log('soon with 1d window:', expires(soon, 1)) // LATER
+console.log('past:',  expires(past, THRESHOLDS))   // 'expired'
+console.log('soon:',  expires(soon, THRESHOLDS))   // 'critical'
+console.log('later:', expires(later, THRESHOLDS))  // 'warning'
+
+// --- classify() = expires() + timeDiff() in one call ---
+const { key, diff } = classify(soon, THRESHOLDS)
+console.log('key:', key, '|', humanize(diff)) // 'critical | 2 days'
 
 // --- timeDiff() ---
-const a = Temporal.Instant.from('2026-01-01T00:00:00Z')
-const b = Temporal.Instant.from('2027-06-15T00:00:00Z')
-const diff = timeDiff(a, b)
-console.log('timeDiff:', diff.value, diff.unit) // 1 year
+const a = parseInstant('2026-01-01T00:00:00Z')
+const b = parseInstant('2027-06-15T00:00:00Z')
+console.log('timeDiff:', timeDiff(a, b).value, timeDiff(a, b).unit) // 1 year
 
-// --- dateRange() ---
-const days = dateRange(
-  Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]'),
-  Temporal.ZonedDateTime.from('2026-03-05T00:00:00[UTC]'),
-  { days: 1 },
-  { tz: 'UTC' },
-)
+// --- dateRange() — tz inferred from ZonedDateTime, no options needed ---
+const start = parseZoned('2026-03-01T00:00:00[America/New_York]')
+const end   = parseZoned('2026-03-05T00:00:00[America/New_York]')
 
-for (const day of days) {
-  console.log(day.toPlainDate().toString())
+for (const day of dateRange(start, end, { days: 1 })) {
+  console.log(day.toPlainDate().toString(), day.timeZoneId)
+}
+
+// --- recurrence() — tz inferred from ZonedDateTime start ---
+const weekly = recurrence(start, { frequency: 'weekly', count: 3 })
+for (const date of weekly) {
+  console.log('weekly:', date.toPlainDate().toString())
 }`,
   name: 'Expires & Date Range',
 };

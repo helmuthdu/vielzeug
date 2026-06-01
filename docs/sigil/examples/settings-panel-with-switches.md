@@ -5,15 +5,13 @@ description: 'Settings Panel with Switches examples for block.'
 
 ## Settings Panel with Switches
 
-## Problem
+### Problem
 
-Implement settings panel with switches in a production-friendly way with `@vielzeug/sigil` while keeping setup and cleanup explicit.
+You need a settings panel where each toggle takes effect immediately. The switch state must stay in sync with a reactive data model across React, Vue, and Svelte.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/sigil` installed.
-
-Toggle switches are perfect for settings that take effect immediately.
+Bind `checked` to your component's state and listen to the `change` event. Toggle switches are perfect for settings that take effect immediately.
 
 ::: code-group
 
@@ -194,18 +192,7 @@ const handleToggle = (key: keyof typeof settings) => {
 
 :::
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Common Patterns](./common-patterns.md)
 - [Guideline-Oriented Recipes](./guideline-oriented-recipes.md)

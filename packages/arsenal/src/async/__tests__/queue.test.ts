@@ -44,7 +44,7 @@ describe('queue', () => {
     expect(result).toBe(42);
   });
 
-  it('tracks pending and size', async () => {
+  it('tracks active, pending and size', async () => {
     const q = queue({ concurrency: 1 });
     let resolve!: () => void;
 
@@ -53,12 +53,14 @@ describe('queue', () => {
 
     await new Promise((r) => setTimeout(r, 0)); // let drain start
 
+    expect(q.active).toBe(1);
     expect(q.pending).toBe(1);
-    expect(q.size).toBe(1);
+    expect(q.size).toBe(2);
 
     resolve();
     await q.onIdle();
 
+    expect(q.active).toBe(0);
     expect(q.pending).toBe(0);
     expect(q.size).toBe(0);
   });

@@ -14,9 +14,9 @@ import { withTracking } from './tracking';
  * `prev = undefined`.
  *
  * The callback may return a cleanup function that is called before the next invocation
- * or when the watcher is stopped. Non-function truthy return values are silently ignored
- * (unlike `effect()` which throws on them — watch callbacks commonly return `Array.push`
- * results etc.).
+ * or when the watcher is stopped. Non-function truthy return values throw a `StateError`
+ * with code `INVALID_CLEANUP` — consistent with `effect()`. Return `undefined` or a cleanup
+ * function; do not return other values (e.g. `Array.push` results).
  *
  * @example
  * ```ts
@@ -45,8 +45,6 @@ export const watch = <T>(
 
     const returned = withTracking(null, () => callback(next, p));
 
-    // R6: throw on non-function truthy returns — consistent with effect().
-    // Do not return values from watch callbacks unless returning a cleanup function.
     if (returned !== undefined && typeof returned !== 'function') {
       throw new StateError(
         'INVALID_CLEANUP',

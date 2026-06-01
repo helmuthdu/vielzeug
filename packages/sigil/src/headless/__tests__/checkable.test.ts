@@ -324,4 +324,29 @@ describe('createCheckable', () => {
       expect(options.host.hasAttribute('aria-disabled')).toBe(false);
     });
   });
+
+  describe('cleanup / signal teardown', () => {
+    it('cleanup() is idempotent — calling twice does not throw', () => {
+      const { options } = makeOptions();
+      const ctrl = createCheckable(options);
+
+      expect(() => {
+        ctrl.cleanup();
+        ctrl.cleanup();
+      }).not.toThrow();
+    });
+
+    it('aborting the signal tears down reactivity (same as cleanup())', () => {
+      const localController = new AbortController();
+      const checked = signal(false);
+      const { options } = makeOptions({ checked, signal: localController.signal });
+
+      createCheckable(options);
+
+      localController.abort();
+
+      checked.value = true;
+      expect(options.host.getAttribute('aria-checked')).toBe('false');
+    });
+  });
 });

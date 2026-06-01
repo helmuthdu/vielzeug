@@ -6,6 +6,7 @@ import { hasAndSyncExample } from './has-and-sync';
 import { lifetimesExample } from './lifetimes';
 import { scopedExecutionExample } from './scoped-execution';
 import { testingExample } from './testing';
+import { validateExample } from './validate';
 
 export const conduitExamples = {
   'basic-container': basicContainerExample,
@@ -16,4 +17,5 @@ export const conduitExamples = {
   lifetimes: lifetimesExample,
   'scoped-execution': scopedExecutionExample,
   testing: testingExample,
+  validate: validateExample,
 };

@@ -192,6 +192,17 @@ describe('object — field-level transforms', () => {
   });
 });
 
+describe('ObjectSchema unsafe field names', () => {
+  it('writes declared constructor and prototype fields as own data properties', () => {
+    const schema = s.object({ constructor: s.string(), prototype: s.number() });
+    const result = schema.parse({ constructor: 'safe', prototype: 1 }) as Record<string, unknown>;
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(result, 'constructor')?.value).toBe('safe');
+    expect(Object.getOwnPropertyDescriptor(result, 'prototype')?.value).toBe(1);
+  });
+});
+
 describe('ObjectSchema optional/nullable guards', () => {
   it('parse(undefined) returns undefined when optional', () => {
     expect(s.object({ a: s.string() }).optional().parse(undefined)).toBeUndefined();
@@ -218,6 +229,71 @@ describe('ObjectSchema optional/nullable guards', () => {
         .catch(fallback)
         .parse('not-an-object' as any),
     ).toEqual(fallback);
+  });
+});
+
+describe('ObjectSchema.keyof()', () => {
+  it('validates keys of a simple object', () => {
+    const schema = s.object({ id: s.number(), name: s.string() });
+    const keys = schema.keyof();
+
+    expect(keys.parse('id')).toBe('id');
+    expect(keys.parse('name')).toBe('name');
+    expect(() => keys.parse('unknown')).toThrow();
+  });
+
+  it('infers the correct union type', () => {
+    const schema = s.object({ a: s.string(), b: s.number(), c: s.boolean() });
+    const keys = schema.keyof();
+
+    expect(keys.parse('a')).toBe('a');
+    expect(keys.parse('b')).toBe('b');
+    expect(keys.parse('c')).toBe('c');
+    expect(() => keys.parse('d')).toThrow();
+  });
+
+  it('keyof() kind is union', () => {
+    const schema = s.object({ x: s.string() });
+
+    expect(schema.keyof().kind).toBe('union');
+  });
+});
+
+describe('ObjectSchema.extend() preserves relaxed mode', () => {
+  it('extend() on a relaxed schema stays relaxed', () => {
+    const schema = s.object({ a: s.string() }).relaxed().extend({ b: s.number() });
+
+    expect(schema.parse({ a: 'hello', b: 1, extra: true })).toMatchObject({ a: 'hello', b: 1, extra: true });
+  });
+
+  it('extend() on a strict schema stays strict', () => {
+    const schema = s.object({ a: s.string() }).extend({ b: s.number() });
+
+    expect(schema.safeParse({ a: 'hello', b: 1, extra: true }).success).toBe(false);
+  });
+});
+
+describe('ObjectSchema.relaxed() preserves fluent chain', () => {
+  it('allows .pick() after .relaxed() — confirms .pick() is callable', () => {
+    const schema = s.object({ a: s.string(), b: s.number() }).relaxed();
+    const picked = schema.pick('a');
+
+    expect(picked.parse({ a: 'hello' })).toEqual({ a: 'hello' });
+    expect(picked.parse({ a: 'hello', extra: true })).toMatchObject({ a: 'hello' });
+  });
+
+  it('allows .omit() after .relaxed()', () => {
+    const schema = s.object({ a: s.string(), b: s.number() }).relaxed();
+    const omitted = schema.omit('b');
+
+    expect(omitted.parse({ a: 'hello', extra: 'yes' })).toEqual({ a: 'hello', extra: 'yes' });
+  });
+
+  it('allows .partial() after .relaxed()', () => {
+    const schema = s.object({ a: s.string() }).relaxed();
+    const partial = schema.partial();
+
+    expect(partial.parse({ extra: 1 })).toEqual({ extra: 1 });
   });
 });
 

@@ -37,7 +37,6 @@ export type CheckableHandle = {
   /** The stable `id` for the assistive-text region (used for `aria-describedby`). */
   assistiveId: string;
   bindFormField: (field: { reportValidity(): void }) => void;
-  /** Used by checkable components to bind the native form field. */
   /** The form submission value: null when unchecked/indeterminate, the value string when checked. */
   checkableFormValue: ReadonlySignal<string | null>;
   checked: Signal<boolean>;
@@ -193,7 +192,12 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     if (helperElRef && !helperElRef.id) helperElRef.id = assistiveId;
   });
 
+  let isCleaned = false;
+
   const cleanup = (): void => {
+    if (isCleaned) return;
+
+    isCleaned = true;
     checkedSub.dispose();
     indeterminateSub?.dispose();
     ariaEffect.dispose();

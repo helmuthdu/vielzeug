@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter]
+exports: [createI18n, createFormatter, validateCatalog]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createI18n, createFormatter]
 
 **Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** I18n
 
-**Key exports:** `createI18n` · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
+**Key exports:** `createI18n` · `TpOptions` · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
 
 **When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, partial catalog merging, and reactive subscriptions.
 

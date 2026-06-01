@@ -4,6 +4,10 @@ import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class DateSchema<Input = Date> extends Schema<Date, Input> {
+  protected override get _kind(): string {
+    return 'date';
+  }
+
   constructor() {
     super((value) =>
       value instanceof Date && !Number.isNaN(value.getTime())

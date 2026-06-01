@@ -1,3 +1,4 @@
+import { resolveEstimateFn } from './utils';
 import {
   createVirtualizer,
   DEFAULT_ESTIMATE_SIZE,
@@ -5,7 +6,9 @@ import {
   type MeasurementCache,
   type Overscan,
   type ScrollTarget,
+  type ScrollToIndexOptions,
   type VirtualItem,
+  type Virtualizer,
   type VirtualizerState,
   type VirtualKey,
 } from './virtualizer';
@@ -46,20 +49,13 @@ export interface GroupVirtualizerOptions<T> {
   onChange?: (state: GroupVirtualizerState<T>) => void;
   overscan?: Overscan;
   sections: Array<GroupSection<T>>;
-  target: ScrollTarget;
 }
 
-export interface GroupVirtualizer<T> {
-  destroy: () => void;
-  scrollToItem: (
-    sectionIndex: number,
-    itemIndex: number,
-    options?: { align?: 'auto' | 'center' | 'end' | 'start'; behavior?: ScrollBehavior },
-  ) => void;
-  scrollToSection: (sectionIndex: number, options?: { behavior?: ScrollBehavior }) => void;
+export type GroupVirtualizer<T> = Omit<Virtualizer, 'prepend' | 'update'> & {
+  scrollToItem: (sectionIndex: number, itemIndex: number, options?: ScrollToIndexOptions) => void;
+  scrollToSection: (sectionIndex: number, options?: ScrollToIndexOptions) => void;
   update: (sections: Array<GroupSection<T>>) => void;
-  [Symbol.dispose]: () => void;
-}
+};
 
 // ─── Flat entry map ───────────────────────────────────────────────────────────
 
@@ -89,28 +85,47 @@ function buildFlatEntries<T>(sections: Array<GroupSection<T>>): FlatEntry<T>[] {
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 
-export function createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>): GroupVirtualizer<T> {
+export function createGroupedVirtualizer<T>(
+  target: ScrollTarget,
+  options: GroupVirtualizerOptions<T>,
+): GroupVirtualizer<T> {
   let sections = options.sections;
   let flat = buildFlatEntries(sections);
 
   const estimateHeader =
     typeof options.estimateHeaderSize === 'function'
-      ? options.estimateHeaderSize
-      : () => (typeof options.estimateHeaderSize === 'number' ? options.estimateHeaderSize : DEFAULT_ESTIMATE_SIZE);
+      ? (index: number) => {
+          const entry = flat[index]!;
 
-  const estimateItem =
-    typeof options.estimateItemSize === 'function'
-      ? options.estimateItemSize
-      : () => (typeof options.estimateItemSize === 'number' ? options.estimateItemSize : DEFAULT_ESTIMATE_SIZE);
+          return (options.estimateHeaderSize as (section: GroupSection<T>, sectionIndex: number) => number)(
+            sections[entry.sectionIndex]!,
+            entry.sectionIndex,
+          );
+        }
+      : resolveEstimateFn(
+          typeof options.estimateHeaderSize === 'number' ? options.estimateHeaderSize : undefined,
+          DEFAULT_ESTIMATE_SIZE,
+        );
+
+  const estimateItemFn: ((item: T, itemIndex: number, sectionIndex: number) => number) | null =
+    typeof options.estimateItemSize === 'function' ? options.estimateItemSize : null;
+  const estimateItemFixed = estimateItemFn
+    ? null
+    : resolveEstimateFn(
+        typeof options.estimateItemSize === 'number' ? options.estimateItemSize : undefined,
+        DEFAULT_ESTIMATE_SIZE,
+      );
 
   function estimateFn(globalIndex: number): number {
     const entry = flat[globalIndex];
 
     if (!entry) return DEFAULT_ESTIMATE_SIZE;
 
-    if (entry.isHeader) return estimateHeader(sections[entry.sectionIndex]!, entry.sectionIndex);
+    if (entry.isHeader) return (estimateHeader as (i: number) => number)(globalIndex);
 
-    return estimateItem(entry.item as T, entry.itemIndex, entry.sectionIndex);
+    if (estimateItemFn) return estimateItemFn(entry.item as T, entry.itemIndex, entry.sectionIndex);
+
+    return estimateItemFixed!(globalIndex);
   }
 
   function getItemKey(globalIndex: number): VirtualKey {
@@ -154,14 +169,14 @@ export function createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>)
     return { headers, items, stickyHeader, totalSize: state.totalSize };
   }
 
-  const virtualizer = createVirtualizer(options.target, {
+  const virtualizer = createVirtualizer(target, {
     count: flat.length,
     estimateSize: estimateFn,
     getItemKey,
     horizontal: options.horizontal,
     measurementCache: options.measurementCache,
     onChange: options.onChange ? (state) => options.onChange!(mapState(state)) : undefined,
-    overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
+    overscan: options.overscan ?? DEFAULT_OVERSCAN,
     sticky: (i) => flat[i]?.isHeader ?? false,
   });
 
@@ -186,10 +201,42 @@ export function createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>)
   }
 
   return {
+    get count() {
+      return virtualizer.count;
+    },
     destroy() {
       virtualizer.destroy();
     },
-
+    invalidate() {
+      virtualizer.invalidate();
+    },
+    get items() {
+      return virtualizer.items;
+    },
+    measure(index: number, size: number) {
+      virtualizer.measure(index, size);
+    },
+    measureBatch(entries: Array<{ index: number; size: number }>) {
+      virtualizer.measureBatch(entries);
+    },
+    measureEl(index: number, el: HTMLElement) {
+      return virtualizer.measureEl(index, el);
+    },
+    redraw() {
+      virtualizer.redraw();
+    },
+    refresh() {
+      virtualizer.refresh();
+    },
+    get scrollOffset() {
+      return virtualizer.scrollOffset;
+    },
+    scrollToBottom(opts?: { behavior?: ScrollBehavior }) {
+      virtualizer.scrollToBottom(opts);
+    },
+    scrollToIndex(index: number, opts?: ScrollToIndexOptions) {
+      virtualizer.scrollToIndex(index, opts);
+    },
     scrollToItem(sectionIndex, itemIndex, opts = {}) {
       const globalIndex = flatIndexOf(sectionIndex, itemIndex);
 
@@ -197,7 +244,9 @@ export function createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>)
 
       virtualizer.scrollToIndex(globalIndex, opts);
     },
-
+    scrollToOffset(offset: number, opts?: { behavior?: ScrollBehavior }) {
+      virtualizer.scrollToOffset(offset, opts);
+    },
     scrollToSection(sectionIndex, opts = {}) {
       const globalIndex = flatIndexOf(sectionIndex);
 
@@ -205,11 +254,18 @@ export function createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>)
 
       virtualizer.scrollToIndex(globalIndex, opts);
     },
-
+    scrollToTop(opts?: { behavior?: ScrollBehavior }) {
+      virtualizer.scrollToTop(opts);
+    },
+    get stickyItems() {
+      return virtualizer.stickyItems;
+    },
     [Symbol.dispose]() {
       virtualizer.destroy();
     },
-
+    get totalSize() {
+      return virtualizer.totalSize;
+    },
     update(nextSections) {
       sections = nextSections;
       flat = buildFlatEntries(sections);

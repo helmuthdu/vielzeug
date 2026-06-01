@@ -1,4 +1,4 @@
-import { truncate } from '../truncate';
+import { type TruncateOptions, truncate } from '../truncate';
 
 describe('truncate', () => {
   it('should return the original string if it is shorter than the limit', () => {
@@ -39,5 +39,11 @@ describe('truncate', () => {
 
   it('should handle strings with only spaces', () => {
     expect(truncate('     ', 3)).toBe('…');
+  });
+
+  it('accepts a TruncateOptions object as a typed variable', () => {
+    const opts: TruncateOptions = { completeWords: true, ellipsis: '...' };
+
+    expect(truncate('Hello World truncated text', 12, opts)).toBe('Hello World...');
   });
 });

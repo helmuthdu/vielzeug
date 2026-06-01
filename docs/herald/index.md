@@ -5,7 +5,7 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, pipeEvents, createTestBus]
+exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, createTestBus, debugBus]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createBus, pipeEvents, createTestBus]
 
 **Package:** `@vielzeug/herald` &nbsp;·&nbsp; **Category:** Events
 
-**Key exports:** `createBus`, `pipeEvents`, `createTestBus`
+**Key exports:** `createBus`, `createBehaviorBus`, `pipeEvents`, `combineSignals`, `createTestBus`
 
 **When to use:** Decoupled inter-module communication via a typed event bus. Supports subscribe/emit, one-time await, async iteration, event piping, and AbortSignal lifecycle management.
 
@@ -153,9 +153,11 @@ for await (const event of bus.events('cart:updated')) {
 - **Payload validation** via `createBus({ validatePayload: ... })` — schema-level guards applied before middleware
 - **Disposal signal** via `bus.disposalSignal` — use as an `AbortSignal` to tie external lifecycles to the bus
 - **Leak detection** via `maxListeners` — warn when a single event accumulates too many listeners
-- **Debug mode** via `createBus({ debug: true })` — logs subscribe/emit/dispose activity to `console.debug`
+- **Debug logging** via `logger.debug` or `debugBus()` (`@vielzeug/herald/debug`) — logs subscribe/emit/dispose activity with `[herald:*]` prefixes; `debugBus()` wires `console.debug` automatically and is tree-shaken from production bundles
 - **Abort-aware APIs** for lifecycle-safe teardown
-- **`onDispatch` and `onError` hooks** for logging and resilience
+- **`onAny()` wildcard listener** for bus-wide observability (logging, analytics, tracing)
+- **Custom logger** via `createBus({ logger: { debug, warn } })` — route or suppress debug and warn output
+- **`onError` hook** for listener-error isolation and resilience
 - **`dispose` and `[Symbol.dispose]`** for deterministic cleanup
 - **Testing helper** via `@vielzeug/herald/test`
 - **Zero dependencies** — <PackageInfo package="herald" type="size" /> gzipped, <PackageInfo package="herald" type="dependencies" /> dependencies

@@ -139,41 +139,44 @@ export async function hydrateQueryCache(
 ): Promise<void> {
   const { include, keys, maxAge, onError, prefix = 'courier:', storage } = opts;
 
-  for (const key of keys) {
-    if (include && !include(key)) continue;
+  const eligibleKeys = include ? keys.filter((key) => include(key)) : keys;
 
-    try {
-      const raw = await storage.getItem(`${prefix}${stableStringify(key)}`);
+  await Promise.all(
+    eligibleKeys.map(async (key) => {
+      try {
+        const raw = await storage.getItem(`${prefix}${stableStringify(key)}`);
 
-      if (!raw) continue;
+        if (!raw) return;
 
-      // Use the caller's key — not any key embedded in stored JSON — so the correct
-      // cache entry is populated regardless of JSON serialisation edge cases.
-      const parsed: unknown = JSON.parse(raw);
+        // Use the caller's key — not any key embedded in stored JSON — so the correct
+        // cache entry is populated regardless of JSON serialisation edge cases.
+        const parsed: unknown = JSON.parse(raw);
 
-      // Validate structure before use to guard against schema migrations,
-      // corrupt storage, or entries written by older versions of the app.
-      if (
-        typeof parsed !== 'object' ||
-        parsed === null ||
-        !('data' in parsed) ||
-        typeof (parsed as { updatedAt?: unknown }).updatedAt !== 'number'
-      ) {
-        onError?.(new Error('[courier] Malformed persisted entry'), key);
-        continue;
+        // Validate structure before use to guard against schema migrations,
+        // corrupt storage, or entries written by older versions of the app.
+        if (
+          typeof parsed !== 'object' ||
+          parsed === null ||
+          !('data' in parsed) ||
+          typeof (parsed as { updatedAt?: unknown }).updatedAt !== 'number'
+        ) {
+          onError?.(new Error('[courier] Malformed persisted entry'), key);
+
+          return;
+        }
+
+        const entry = parsed as SerializedEntry;
+
+        // Skip entries that exceed the caller's maximum age threshold.
+        if (maxAge !== undefined && Date.now() - entry.updatedAt > maxAge) return;
+
+        // Restore the original updatedAt so staleTime checks after hydration are
+        // accurate — data hydrated from a 55-second-old entry should be considered
+        // almost stale, not brand-new.
+        qc.set(key, entry.data, { updatedAt: entry.updatedAt });
+      } catch (err) {
+        onError?.(err, key);
       }
-
-      const entry = parsed as SerializedEntry;
-
-      // Skip entries that exceed the caller's maximum age threshold.
-      if (maxAge !== undefined && Date.now() - entry.updatedAt > maxAge) continue;
-
-      // Restore the original updatedAt so staleTime checks after hydration are
-      // accurate — data hydrated from a 55-second-old entry should be considered
-      // almost stale, not brand-new.
-      qc.set(key, entry.data, { updatedAt: entry.updatedAt });
-    } catch (err) {
-      onError?.(err, key);
-    }
-  }
+    }),
+  );
 }

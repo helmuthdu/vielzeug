@@ -170,7 +170,11 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
     const { assistiveId, checked, disabled, labelId, toggle } = checkable;
 
     checkable.bindFormField(
-      defineField<string>({ disabled: checkable.disabled, toFormValue: (v) => v, value: checkable.checkableFormValue }),
+      defineField<string | null>({
+        disabled: checkable.disabled,
+        toFormValue: (v) => v,
+        value: checkable.checkableFormValue,
+      }),
     );
 
     bind({

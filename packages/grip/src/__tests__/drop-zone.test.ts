@@ -309,6 +309,31 @@ describe('createDropZone', () => {
   });
 
   describe('disabled', () => {
+    it('does not call preventDefault on dragenter/dragover/drop when disabled', () => {
+      const element = document.createElement('div');
+      const zone = createDropZone({ disabled: true, element });
+
+      const enterEvent = makeDragEvent('dragenter');
+      const enterPD = vi.spyOn(enterEvent, 'preventDefault');
+
+      element.dispatchEvent(enterEvent);
+      expect(enterPD).not.toHaveBeenCalled();
+
+      const overEvent = makeDragEvent('dragover');
+      const overPD = vi.spyOn(overEvent, 'preventDefault');
+
+      element.dispatchEvent(overEvent);
+      expect(overPD).not.toHaveBeenCalled();
+
+      const dropEvent = makeDragEvent('drop', { files: [new File([''], 'a.txt')] });
+      const dropPD = vi.spyOn(dropEvent, 'preventDefault');
+
+      element.dispatchEvent(dropEvent);
+      expect(dropPD).not.toHaveBeenCalled();
+
+      zone.destroy();
+    });
+
     it('ignores drag events when disabled: true', () => {
       const element = document.createElement('div');
       const onDrop = vi.fn();
@@ -399,7 +424,7 @@ describe('createDropZone', () => {
       const onDrop = vi.fn();
 
       {
-        using zone = createDropZone({ element, onDrop });
+        createDropZone({ element, onDrop });
       }
 
       element.dispatchEvent(makeDragEvent('drop', { files: [new File([''], 'a.txt')] }));
@@ -616,6 +641,63 @@ describe('createDropZone', () => {
 
       zone.destroy();
       element.remove();
+    });
+  });
+
+  describe('state after destroy', () => {
+    it('zone.files and zone.rejected retain last values after destroy', () => {
+      const element = document.createElement('div');
+      const zone = createDropZone({ accept: ['image/*'], element });
+      const accepted = new File(['img'], 'a.png', { type: 'image/png' });
+      const rejected = new File(['txt'], 'b.txt', { type: 'text/plain' });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [accepted, rejected] }));
+
+      expect(zone.files).toEqual([accepted]);
+      expect(zone.rejected).toEqual([rejected]);
+
+      zone.destroy();
+
+      expect(zone.files).toEqual([accepted]);
+      expect(zone.rejected).toEqual([rejected]);
+    });
+  });
+
+  describe('reactive accept at dragenter time', () => {
+    it('evaluates accept getter on first dragenter of each drag', () => {
+      const element = document.createElement('div');
+      let accept = ['image/*'];
+      const onHoverChange = vi.fn();
+      const zone = createDropZone({ accept: () => accept, element, onHoverChange });
+
+      element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'image/png' }] }));
+      expect(zone.hovered).toBe(true);
+
+      element.dispatchEvent(makeDragEvent('dragleave'));
+      expect(zone.hovered).toBe(false);
+
+      accept = ['text/plain'];
+      element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'image/png' }] }));
+      expect(zone.hovered).toBe(false);
+
+      zone.destroy();
+    });
+  });
+
+  describe('sequential drags reset acceptance state', () => {
+    it('resets dragAccepted between drags so a second accepted drag shows hover', () => {
+      const element = document.createElement('div');
+      const zone = createDropZone({ accept: ['image/*'], element });
+
+      element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'text/plain' }] }));
+      expect(zone.hovered).toBe(false);
+      element.dispatchEvent(makeDragEvent('dragleave'));
+
+      element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'image/png' }] }));
+      expect(zone.hovered).toBe(true);
+      element.dispatchEvent(makeDragEvent('dragleave'));
+
+      zone.destroy();
     });
   });
 });

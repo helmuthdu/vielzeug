@@ -34,7 +34,7 @@ export type DecodeQueryOptions = Readonly<{
  * Parses URL query params into a `Partial<RemoteSourceQuery>`.
  * Accepts either a plain `Record<string, string | string[] | undefined>` or a `URLSearchParams` instance.
  *
- * - `filter` and `sort` are JSON-parsed; malformed values are silently dropped (or throw in `strict` mode).
+ * - `filter` and `sort` are JSON-parsed and cast to `TFilter`/`TSort` without runtime validation — callers should treat these as `unknown` and validate before use.
  * - `search` is omitted from the result when the param is absent (rather than defaulting to `''`).
  * - `limit` and `page` are parsed as positive integers; invalid values fall back to defaults.
  */

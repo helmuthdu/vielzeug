@@ -13,6 +13,10 @@ interface ArrayAnnotations extends Record<string, unknown> {
 export class ArraySchema<T> extends Schema<T[]> {
   readonly itemSchema: Schema<T, any>;
 
+  protected override get _kind(): string {
+    return 'array';
+  }
+
   constructor(itemSchema: Schema<T, any>) {
     super();
     this.itemSchema = itemSchema;
@@ -84,10 +88,14 @@ export class ArraySchema<T> extends Schema<T[]> {
           min: length,
         });
       },
-      (ann) => ({
-        ...ann,
-        minItems: ann.minItems === undefined ? length : Math.max(ann.minItems, length),
-      }),
+      (current) => {
+        const ann = current as ArrayAnnotations;
+
+        return {
+          ...ann,
+          minItems: ann.minItems === undefined ? length : Math.max(ann.minItems, length),
+        };
+      },
     );
   }
 
@@ -103,10 +111,14 @@ export class ArraySchema<T> extends Schema<T[]> {
           max: length,
         });
       },
-      (ann) => ({
-        ...ann,
-        maxItems: ann.maxItems === undefined ? length : Math.min(ann.maxItems, length),
-      }),
+      (current) => {
+        const ann = current as ArrayAnnotations;
+
+        return {
+          ...ann,
+          maxItems: ann.maxItems === undefined ? length : Math.min(ann.maxItems, length),
+        };
+      },
     );
   }
 
@@ -139,7 +151,7 @@ export class ArraySchema<T> extends Schema<T[]> {
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    const ann = this._annotations;
+    const ann = this._annotations as ArrayAnnotations;
 
     return {
       ...this._describeBase(),
@@ -163,10 +175,13 @@ export class ArraySchema<T> extends Schema<T[]> {
 
     const o = other as ArraySchema<any>;
 
+    const annotations = this._annotations as ArrayAnnotations;
+    const otherAnnotations = other._annotations as ArrayAnnotations;
+
     return (
       this.itemSchema.equals(o.itemSchema as import('../core').AnySchema) &&
-      this._annotations.minItems === other._annotations.minItems &&
-      this._annotations.maxItems === other._annotations.maxItems
+      annotations.minItems === otherAnnotations.minItems &&
+      annotations.maxItems === otherAnnotations.maxItems
     );
   }
 }

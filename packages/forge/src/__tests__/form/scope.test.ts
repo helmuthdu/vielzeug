@@ -408,6 +408,38 @@ describe('form.scope()', () => {
   });
 });
 
+describe('scoped snapshot / restore', () => {
+  test('snapshot() on a scoped form captures the full form state', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    address.set('city', 'Miami');
+
+    const snap = address.snapshot();
+
+    expect(snap.store['address.city']).toBe('Miami');
+    expect(snap.store['name']).toBe('Alice');
+  });
+
+  test('restore() on a scoped form restores full form state round-trip', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    form.set('address.city', 'Miami');
+    form.touch('address.city');
+
+    const snap = form.scope('address').snapshot();
+
+    form.set('address.city', 'Dallas');
+    form.set('name', 'Bob');
+
+    form.scope('address').restore(snap);
+
+    expect(form.get('address.city')).toBe('Miami');
+    expect(form.get('name')).toBe('Alice');
+    expect(form.field('address.city').touched).toBe(true);
+  });
+});
+
 describe('subscribeScoped — change filtering', () => {
   test('non-scoped field changes do NOT fire the scoped listener', () => {
     const form = createForm({ defaultValues: defaults });
@@ -457,5 +489,66 @@ describe('subscribeScoped — change filtering', () => {
 
     expect(captured).toBeDefined();
     expect((captured as { touchedFields: string[] }).touchedFields).toContain('city');
+  });
+
+  test('isValid in subscribeScoped reflects only scoped fields, not unrelated errors', async () => {
+    const form = createForm({
+      defaultValues: defaults,
+      validators: {
+        name: (v: unknown) => (!v ? 'Required' : undefined),
+      },
+    });
+
+    const address = form.scope('address');
+
+    const states: boolean[] = [];
+
+    address.subscribeScoped((s) => states.push(s.isValid));
+
+    // Validate only the unrelated 'name' field — address scope should still be valid.
+    form.setError('name', 'Required');
+
+    expect(states.at(-1)).toBe(true);
+
+    // Now add an error inside the address scope.
+    form.setError('address.city', 'Required');
+
+    expect(states.at(-1)).toBe(false);
+  });
+
+  test('isDirty in subscribeScoped is true only when a scoped field is dirty', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+    const states: boolean[] = [];
+
+    address.subscribeScoped((s) => states.push(s.isDirty));
+
+    // Dirty an unrelated field — scoped isDirty must remain false.
+    form.set('name', 'Changed');
+
+    expect(states.at(-1)).toBe(false);
+
+    // Dirty a scoped field — now isDirty must be true.
+    form.set('address.city', 'Miami');
+
+    expect(states.at(-1)).toBe(true);
+  });
+
+  test('isTouched in subscribeScoped is true only when a scoped field is touched', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+    const states: boolean[] = [];
+
+    address.subscribeScoped((s) => states.push(s.isTouched));
+
+    // Touch an unrelated field — scoped isTouched must remain false.
+    form.touch('name');
+
+    expect(states.at(-1)).toBe(false);
+
+    // Touch a scoped field — now isTouched must be true.
+    form.touch('address.city');
+
+    expect(states.at(-1)).toBe(true);
   });
 });

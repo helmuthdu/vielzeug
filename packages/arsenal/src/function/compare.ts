@@ -1,12 +1,14 @@
 /**
- * Compares two values and returns:
- * - 0 if they are equal
- * - 1 if the first value is greater
- * - -1 if the second value is greater
+ * Compares two values and returns a number suitable for use as a sort comparator.
+ *
+ * - Numbers and Dates: returns `0`, `1`, or `-1`.
+ * - Strings: delegates to `String.prototype.localeCompare`, which may return any integer
+ *   (not just `0`, `1`, `-1`) depending on locale and engine.
+ * - `null` sorts before all non-null values; `undefined` sorts last.
  *
  * @example
  * ```ts
- * compare('a', 'b'); // -1
+ * compare('a', 'b'); // negative (locale-dependent)
  * compare(1, 2); // -1
  * compare(new Date('2023-01-01'), new Date('2023-01-02')); // -1
  * compare('a', 'a'); // 0
@@ -17,7 +19,7 @@
  * @param a - The first value to compare.
  * @param b - The second value to compare.
  *
- * @returns 0 if equal, 1 if the first value is greater, -1 if the second value is greater.
+ * @returns A negative number, zero, or a positive number.
  */
 export const compare = (a: unknown, b: unknown): number => {
   if (a === b) return 0;

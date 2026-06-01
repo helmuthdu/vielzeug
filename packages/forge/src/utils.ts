@@ -1,9 +1,4 @@
-export {
-  isPlainObject,
-  UNSAFE_PATH_SEGMENTS as UNSAFE_KEY_SEGMENTS,
-  flattenPaths as flattenValues,
-  unflattenPaths as unflattenValues,
-} from '@vielzeug/arsenal';
+export { isPlainObject, flattenPaths as flattenValues, unflattenPaths as unflattenValues } from '@vielzeug/arsenal';
 
 export { isSafePath as isSafeKey } from '@vielzeug/arsenal';
 
@@ -12,8 +7,7 @@ export { isSafePath as isSafeKey } from '@vielzeug/arsenal';
  * Nullish values are silently ignored.
  * Returns `undefined` when no non-null signals are provided.
  *
- * @internal Inlined here because @vielzeug/arsenal does not currently re-export
- * this utility from its barrel. Remove once the arsenal export is restored.
+ * @internal Inlined here — `anySignal` was removed from `@vielzeug/arsenal`.
  */
 export function anySignal(...signals: ReadonlyArray<AbortSignal | null | undefined>): AbortSignal | undefined {
   const active = signals.filter((s): s is AbortSignal => s != null);

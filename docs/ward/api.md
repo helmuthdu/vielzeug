@@ -24,16 +24,18 @@ description: Complete API reference for @vielzeug/ward.
 | `ward.rulesInScope(principal, resource, data?)` | Rules in scope for introspection; no logger | Sync | Without `data`, predicate rules appear unfiltered |
 | `ward.detectConflicts()` | Lazily detect and cache policy conflicts | Sync | O(n²); predicate-gated rules excluded from static analysis |
 | `ward.forUser(principal)` | Create a principal-bound ward view | Sync | Principal is deep-snapshotted at bind time |
-| `guardRequest(ward, …)` | Framework-agnostic async guard helper | Async | Two overloads: direct principal, or request + extractor |
+| `guardRequest(ward, principal, resource, action, data?)` | Framework-agnostic async guard — direct principal | Async | Use `guardRequestWith` when the principal must be extracted from a request object |
+| `guardRequestWith(ward, req, extractPrincipal, resource, action, data?)` | Framework-agnostic async guard — request + extractor | Async | Extractor may be async (e.g. JWT verification) |
 | `createExpressGuard(ward, extractPrincipal, resource, action, options?)` | Express middleware guard factory | Sync/Async | Calls `next()` on allow, `403` on deny; supports `options.data` |
 | `createHonoGuard(ward, extractPrincipal, resource, action, options?)` | Hono middleware guard factory | Async | Extractor errors propagate to `app.onError`; supports `options.data` |
 | `owns(attributeKey)` | Create an ownership predicate helper | Sync | Returns `false` when `data` is absent or not an object |
 
-## Package Entry Point
+## Package Entry Points
 
-| Import             | Purpose                |
-| ------------------ | ---------------------- |
-| `@vielzeug/ward` | Main exports and types |
+| Import                    | Purpose                                          |
+| ------------------------- | ------------------------------------------------ |
+| `@vielzeug/ward`          | Main exports and types                           |
+| `@vielzeug/ward/debug`    | `debugWard` — decision logger (dev only)         |
 
 ## Constants
 
@@ -280,7 +282,7 @@ ward.trace(
 ): WardTrace<TAction, TData>
 ```
 
-Returns the complete decision trace: every rule that matched before the winner was selected, plus the final `WardDecision`. Each candidate exposes `priority`, `score`, `denyBonus`, and a `won` flag.
+Returns the complete decision trace: every rule that matched before the winner was selected, plus the final `WardDecision`. Each candidate exposes `priority`, `score`, `rule`, and a `won` flag.
 
 ::: tip Audit-safe
 `trace()` fires the logger with the same context as `explain()`. Switching from `explain` to `trace` for richer diagnostics does not silently drop audit records.
@@ -297,8 +299,8 @@ const { decision, candidates } = ward.trace(
   'read',
 );
 
-candidates.forEach(({ rule, priority, score, denyBonus, won }) => {
-  console.log(rule.effect, priority, score, denyBonus, won ? '← winner' : '');
+candidates.forEach(({ rule, priority, score, won }) => {
+  console.log(rule.effect, priority, score, won ? '← winner' : '');
 });
 ```
 
@@ -407,6 +409,19 @@ Returns a predicate that allows the action when `principal.id === data[attribute
 ::: warning ANONYMOUS
 `owns()` must only be used with rules that require authentication (non-`ANONYMOUS` role). Predicates are skipped for unauthenticated requests — pairing `owns` with `ANONYMOUS` produces a rule that can never match.
 :::
+
+**Example:**
+
+```ts
+import { owns, rule } from '@vielzeug/ward';
+
+rule<'update', { authorId: string }>()
+  .allow('editor').on('posts:*').to('update').when(owns('authorId')).build();
+```
+
+---
+
+### `rule()`
 
 ```ts
 rule<TAction extends string = string, TData = unknown>(): {
@@ -520,7 +535,6 @@ patternCovers('posts',   'posts:*');   // false
 #### `guardRequest()`
 
 ```ts
-// Overload 1: direct principal
 guardRequest<TAction, TData>(
   ward: Ward<TAction, TData>,
   principal: Principal,
@@ -528,9 +542,36 @@ guardRequest<TAction, TData>(
   action: TAction,
   data?: TData,
 ): Promise<GuardResult<TAction, TData>>
+```
 
-// Overload 2: request + extractor
-guardRequest<TAction, TData, TReq>(
+Framework-agnostic async guard for a known principal. Returns a `GuardResult`:
+
+```ts
+type GuardResult =
+  | { granted: true; principal: Principal }
+  | { granted: false; decision: WardDecision; principal: Principal; reason: 'explicit-deny' | 'no-matching-rule' };
+```
+
+Use `guardRequestWith` when the principal must be resolved asynchronously from a request object.
+
+**Example:**
+
+```ts
+import { guardRequest } from '@vielzeug/ward';
+
+const result = await guardRequest(ward, principal, 'posts', 'update');
+
+if (!result.granted) {
+  return response.status(403).json({ reason: result.reason });
+}
+```
+
+---
+
+#### `guardRequestWith()`
+
+```ts
+guardRequestWith<TAction, TData, TReq>(
   ward: Ward<TAction, TData>,
   req: TReq,
   extractPrincipal: (req: TReq) => Principal | Promise<Principal>,
@@ -540,22 +581,14 @@ guardRequest<TAction, TData, TReq>(
 ): Promise<GuardResult<TAction, TData>>
 ```
 
-Framework-agnostic async guard helper. Returns a `GuardResult`:
-
-```ts
-type GuardResult =
-  | { granted: true; principal: Principal }
-  | { granted: false; decision: WardDecision; principal: Principal; reason: 'explicit-deny' | 'no-matching-rule' };
-```
+Framework-agnostic async guard that first extracts the principal from a request object. The extractor may be async (e.g. to verify a JWT). Use `guardRequest` when the principal is already resolved.
 
 **Example:**
 
 ```ts
-// Direct principal
-const result = await guardRequest(ward, principal, 'posts', 'update');
+import { guardRequestWith } from '@vielzeug/ward';
 
-// With extractor
-const result = await guardRequest(ward, req, (req) => req.user ?? null, 'posts', 'update');
+const result = await guardRequestWith(ward, req, (req) => req.user ?? null, 'posts', 'update');
 
 if (!result.granted) {
   return response.status(403).json({ reason: result.reason });
@@ -798,11 +831,10 @@ type WardConflict<TAction extends string = string, TData = unknown> = {
 
 ```ts
 type WardTraceCandidate<TAction extends string = string, TData = unknown> = {
-  denyBonus: 0 | 1;
-  priority:  number;
-  rule:      WardRule<TAction, TData>;
-  score:     number;
-  won:       boolean;
+  priority: number;
+  rule:     WardRule<TAction, TData>;
+  score:    number;
+  won:      boolean;
 };
 
 type WardTrace<TAction extends string = string, TData = unknown> = {
@@ -810,6 +842,26 @@ type WardTrace<TAction extends string = string, TData = unknown> = {
   decision:   WardDecision<TAction, TData>;
 };
 ```
+
+## `debugWard(rules, options?)` <Badge type="tip" text="@vielzeug/ward/debug" />
+
+```ts
+import { debugWard } from '@vielzeug/ward/debug';
+
+const permit = debugWard(rules);
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+// [ward:decision] allow             viewer  posts  read
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
+// [ward:decision] no-matching-rule  viewer  posts  delete
+```
+
+Wraps `createWard()` with a `logger` pre-wired to `console.debug`. Returns the same `Ward` instance — all methods are identical to `createWard()`.
+
+Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
+
+Accepts the same `options` as `createWard()` except `logger`, which is reserved for the debug output. All other options (`maxConflicts`, `onConflict`) pass through unchanged.
 
 ### `Ward` / `BoundWard`
 

@@ -11,6 +11,7 @@ export type {
   BatchOptions,
   CleanupFn,
   ComputedSignal,
+  EffectAsyncOptions,
   EffectCallback,
   EffectOptions,
   EffectScheduler,
@@ -37,7 +38,7 @@ export { store } from './store';
 
 // Effect system
 export { batch } from './scheduling';
-export { asyncScope, effect, effectAsync, onCleanup, scope, traceEffect } from './effect';
+export { asyncScope, effect, effectAsync, onCleanup, scope } from './effect';
 
 // Watch
 export { watch } from './watch';

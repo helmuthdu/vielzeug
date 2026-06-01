@@ -6,6 +6,10 @@ export class LazySchema<T> extends Schema<T> {
   private readonly _getter: () => Schema<T, any>;
   private _resolved?: Schema<T, any>;
 
+  protected override get _kind(): string {
+    return 'lazy';
+  }
+
   constructor(getter: () => Schema<T, any>) {
     super();
     this._getter = getter;

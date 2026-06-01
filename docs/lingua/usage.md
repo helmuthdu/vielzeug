@@ -34,7 +34,8 @@ All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `re
 ```ts
 i18n.t('greeting', { name: 'Alice' });
 i18n.tp('inbox', 3);
-i18n.tp('position', 2, undefined, true); // ordinal
+i18n.tp('position', 2, { ordinal: true }); // ordinal
+i18n.tp('position', 1, { vars: { name: 'Alice' }, ordinal: true }); // ordinal with vars
 ```
 
 `t()` resolves leaf keys. `tp()` resolves plural branch keys (`.zero`, then CLDR category, then `.other`).
@@ -42,14 +43,15 @@ i18n.tp('position', 2, undefined, true); // ordinal
 
 ## Scoped Helpers
 
-`scope(prefix)` returns a `{ t, tp, has }` helper bound to a key prefix. Use it inside a component or module
+`scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix. Use it inside a component or module
 to avoid repeating the same key segment.
 
 ```ts
 const nav = i18n.scope('nav');
-nav.t('home');          // resolves 'nav.home'
-nav.t('menu.settings'); // resolves 'nav.menu.settings'
-nav.has('logout');      // checks 'nav.logout'
+nav.t('home');           // resolves 'nav.home'
+nav.t('menu.settings');  // resolves 'nav.menu.settings'
+nav.has('logout');       // checks 'nav.logout'
+nav.fmt.number(1234);    // same as i18n.fmt.number(1234)
 ```
 
 `scope()` creates a new object on each call — do not compare references.
@@ -320,10 +322,10 @@ router.subscribe(() => {
 - Set `fallback` to a locale that has 100% coverage so missing keys degrade gracefully.
 - Register additional locales with `register()` at runtime rather than including them in the initial catalogs.
 - Use `registerNamespace` + `loadNamespace` for per-route key sets instead of calling `merge()` manually.
-- Use `watch({ signal })` for lifecycle-safe subscriptions in components; use `subscribe()` when you need the `Unsubscribe` return value.
+- Use `subscribe({ signal })` for lifecycle-safe subscriptions in components; use `subscribe()` when you need the `Unsubscribe` return value.
 - Use `getState()` / `restoreState()` for SSR hydration instead of re-fetching catalogs on the client.
 - Enable `compile: true` for hot render paths (e.g. high-frequency reactive lists) where regex overhead is measurable.
-- Use `tp()` for pluralizable branch keys — `count` is injected automatically. Pass the fourth argument `true` for ordinals.
+- Use `tp()` for pluralizable branch keys — `count` is injected automatically. Pass `{ ordinal: true }` for ordinal plural forms.
 - Use `onMissingKey` and `onMissingVar` in development to surface untranslated keys early; omit them in production.
 - Import `validateCatalog` from `@vielzeug/lingua/validate` in CI scripts; never import it in application code.
 - Share one `i18n` instance per app entry point; avoid creating separate instances per component.
@@ -365,7 +367,7 @@ Output is identical to non-compile mode. The flag is transparent — switch it o
 
 ## Using subscribe() with AbortController
 
-Pass `{ signal }` to `subscribe()` to unsubscribe automatically when an `AbortController` fires:
+Pass `{ signal }` to `subscribe()` to unsubscribe automatically when an `AbortController` fires. If the signal is already aborted at call time, no subscription is created and the callback is never invoked:
 
 ```ts
 // React

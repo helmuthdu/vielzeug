@@ -75,11 +75,12 @@ function getRouteByName<TMeta, TComponent>(
 function resolveTarget<TMeta, TComponent>(
   target: { path: string } | { hash?: string; name: string; params?: RouteParams; query?: ResolvedQueryParams },
   routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>,
+  base = '/',
 ): string {
   if ('path' in target) return target.path;
 
   const route = getRouteByName(target.name, routesByName);
-  const path = buildUrl('/', route.path, target.params, target.query);
+  const path = buildUrl(base, route.path, target.params, target.query);
 
   return target.hash ? `${path}#${target.hash}` : path;
 }
@@ -149,6 +150,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   #navigationId = 0;
   // F2: waitFor pending subscribers
   readonly #waiters = new Set<(state: RouteState<TMeta, TComponent>) => boolean>();
+  // Maps each waiter check function to its promise's reject callback for dispose-time cleanup.
+  readonly #waiterRejects = new WeakMap<(state: RouteState<TMeta, TComponent>) => boolean, (reason: unknown) => void>();
   // F5: compiled notFound fallback record
   readonly #notFoundRecord: RouteRecord<TMeta, TComponent> | null;
 
@@ -271,7 +274,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   /** Returns true when the current location matches the named route by prefix (default) or exactly. */
   isActive<Name extends RouteName<TRoutes>>(name: Name, options: IsActiveOptions = {}): boolean {
     const route = getRouteByName(name, this.#routesByName);
-    const pathname = stripBase(normalizePath(this.#history.location.pathname), this.#base);
+    const pathname = this.#currentState.location.pathname;
     const exact = options.exact ?? false;
 
     return exact ? matchRouteFor(pathname, [route]).record != null : matchesPrefix(pathname, route);
@@ -341,6 +344,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * F2: Returns a Promise that resolves the next time the router reaches `status: 'idle'`
    * and the active matches include a route named `name`.
    * Rejects immediately when the router is already in `status: 'error'`.
+   * Rejects with an Error when the router is disposed while the promise is pending.
    */
   waitFor(name: RouteName<TRoutes>): Promise<RouteState<TMeta, TComponent>> {
     this.#assertNotDisposed();
@@ -374,6 +378,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         return false;
       };
 
+      this.#waiterRejects.set(check, reject);
       this.#waiters.add(check);
     });
   }
@@ -390,7 +395,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     params?: PathParams<RoutePathByName<TRoutes, Name>>,
   ): Promise<void> {
     const route = getRouteByName(name, this.#routesByName);
-    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams);
+    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams, undefined);
 
     const inflight = this.#preload.getInflight(cacheKey);
 
@@ -448,6 +453,14 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#navigationId++;
     this.#beforeLeaveBlockers.clear();
     this.#listeners.clear();
+
+    // Reject all pending waitFor promises before clearing so callers are notified.
+    const disposeError = new Error('[wayfinder] Router is disposed');
+
+    for (const check of this.#waiters) {
+      this.#waiterRejects.get(check)?.(disposeError);
+    }
+
     this.#waiters.clear();
     this.#abortController?.abort();
     this.#abortController = null;
@@ -481,9 +494,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   async #handleHistoryNavigation(newHref: string, previousHref: string): Promise<void> {
     const activeMatchNames = this.#currentState.matches.map((m) => m.name);
     const parsed = new URL(newHref, 'http://localhost');
+    const destPathname = stripBase(parsed.pathname, this.#base);
+    const { params: destParams, record: destRecord } = matchRouteFor(destPathname, this.#records);
     const dest: NavigationDestination = {
-      params: {},
-      pathname: stripBase(parsed.pathname, this.#base),
+      name: destRecord?.leaf.name,
+      params: destParams,
+      pathname: destPathname,
       query: parseQuery(parsed.search),
     };
     const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
@@ -719,7 +735,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
     const results = await this.#loadData(defs, context, effectiveSignal, 'drain');
 
-    this.#preload.set(buildPreloadKey(this.#base, record.path, params), results);
+    this.#preload.set(buildPreloadKey(this.#base, record.path, params, location.query), results);
   }
 
   // ─── Private: route preparation ───────────────────────────────────────────
@@ -735,7 +751,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       return {
         location,
         params,
-        redirectTo: resolveTarget(record.redirect, this.#routesByName),
+        redirectTo: resolveTarget(record.redirect, this.#routesByName, this.#base),
         type: 'redirect',
       };
     }
@@ -825,7 +841,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     let dataResults: unknown[] = defs.map(() => undefined);
 
     if (hasData) {
-      const preloadKey = buildPreloadKey(this.#base, record.path, params);
+      const preloadKey = buildPreloadKey(this.#base, record.path, params, location.query);
       const cached = this.#preload.consume(preloadKey);
 
       if (cached) {
@@ -1067,9 +1083,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const prevLastHref = this.#lastHref;
     const activeMatchNames = this.#currentState.matches.map((m) => m.name);
     const parsed = new URL(destination, 'http://localhost');
+    const destPathname = stripBase(parsed.pathname, this.#base);
+    const { params: destParams, record: destRecord } = matchRouteFor(destPathname, this.#records);
     const dest: NavigationDestination = {
-      params: {},
-      pathname: stripBase(parsed.pathname, this.#base),
+      name: destRecord?.leaf.name,
+      params: destParams,
+      pathname: destPathname,
       query: parseQuery(parsed.search),
     };
     const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
@@ -1103,8 +1122,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
  * @example
  * const router = createRouter({
  *   routes: {
- *     home: { path: '/', handler: () => renderHome() },
- *     userDetail: { path: '/users/:id', data: fetchUser, handler: renderUser },
+ *     home: { path: '/' },
+ *     userDetail: { path: '/users/:id', data: fetchUser },
  *   },
  * });
  */

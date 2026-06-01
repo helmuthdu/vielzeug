@@ -1,10 +1,9 @@
-import type { DetectOverflowOptions, Middleware, SizeData } from '../types';
+import type { DetectOverflowOptions, Middleware, SizeData, TypedMiddleware } from '../types';
 
 import { getBoundaryRect } from '../overflow';
 import { getSide, tagMiddleware, toSideObject } from '../utils';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SizeOptions extends DetectOverflowOptions {}
+export type SizeOptions = DetectOverflowOptions;
 
 /**
  * Reports the available space between the reference and boundary edges.
@@ -24,7 +23,7 @@ export interface SizeOptions extends DetectOverflowOptions {}
  * });
  * ```
  */
-export function size(options: SizeOptions = {}): Middleware {
+export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeData> {
   return tagMiddleware(function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const boundary = getBoundaryRect(options.boundary ?? state.boundary);
     const padding = toSideObject(options.padding ?? state.padding);

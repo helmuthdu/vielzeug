@@ -1,4 +1,4 @@
-import { exponentialBackoff, getOrCreate, sleep } from '@vielzeug/arsenal';
+import { backoff, getOrCreate, sleep } from '@vielzeug/arsenal';
 
 import type { Params } from './url';
 
@@ -70,7 +70,7 @@ export type SseSource<TEvents extends Record<string, unknown> = Record<string, s
 };
 
 function defaultReconnectDelay(attempt: number): number {
-  return Math.random() * exponentialBackoff(attempt);
+  return Math.random() * backoff(attempt);
 }
 
 /** Parse a raw SSE data string: try JSON, fall back to raw string. */
@@ -432,7 +432,13 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
             if (done) {
               const remaining = buffer.trim();
 
-              if (remaining) yield JSON.parse(remaining) as T;
+              if (remaining) {
+                try {
+                  yield JSON.parse(remaining) as T;
+                } catch {
+                  throw new Error(`[courier] NDJSON: failed to parse line: ${remaining.slice(0, 200)}`);
+                }
+              }
 
               break;
             }
@@ -446,7 +452,13 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
               buffer = buffer.slice(nlIdx + 1);
 
-              if (line) yield JSON.parse(line) as T;
+              if (line) {
+                try {
+                  yield JSON.parse(line) as T;
+                } catch {
+                  throw new Error(`[courier] NDJSON: failed to parse line: ${line.slice(0, 200)}`);
+                }
+              }
             }
           }
         } else {

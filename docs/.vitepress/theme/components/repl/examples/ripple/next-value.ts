@@ -1,5 +1,5 @@
 export const nextValueExample = {
-  code: `import { signal, watch, untrack } from '/ripple'
+  code: `import { signal, watch, untrack } from '@vielzeug/ripple'
 
 // Bridge reactive state into async code with watch()
 function waitFor(get, predicate) {
@@ -13,7 +13,7 @@ function waitFor(get, predicate) {
 
     const stop = watch(get, (next) => {
       if (predicate(next)) {
-        stop()
+        stop.dispose()
         resolve(next)
       }
     })

@@ -13,6 +13,10 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   readonly items: T;
   readonly restSchema: R;
 
+  protected override get _kind(): string {
+    return 'tuple';
+  }
+
   constructor(items: T, restSchema: R = null as R) {
     super();
     this.items = items;

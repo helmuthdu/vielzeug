@@ -262,6 +262,34 @@ describe('Navigation', () => {
       expect(() => router.subscribe(vi.fn())).toThrow('[wayfinder] Router is disposed');
       await expect(router.navigate({ name: 'home' })).rejects.toThrow('[wayfinder] Router is disposed');
     });
+
+    it('waitFor() rejects when the router is disposed while the promise is pending', async () => {
+      const history = createMemoryHistory('/');
+      const router = createRouter({
+        history,
+        routes: {
+          home: { path: '/' },
+          slow: {
+            data: () =>
+              new Promise<void>(() => {
+                /* never resolves */
+              }),
+            path: '/slow',
+          },
+        },
+      });
+
+      await settle();
+
+      // Start a navigation to /slow (data never resolves), then wait for 'slow' to settle.
+      void router.navigate({ path: '/slow' });
+
+      const waiting = router.waitFor('slow');
+
+      router.dispose();
+
+      await expect(waiting).rejects.toThrow('[wayfinder] Router is disposed');
+    });
   });
 
   describe('State & subscribers', () => {

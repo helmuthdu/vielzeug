@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from '../virtualizer';
+import { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from '../virtualizer';
 import { flushMicrotasks, makeContainer, makeWindow } from './test-utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -927,9 +927,122 @@ describe('createVirtualizer – lifecycle', () => {
       v.prepend(3);
       v.scrollToIndex(0);
       v.scrollToOffset(0);
+      v.scrollToTop();
+      v.scrollToBottom();
     }).not.toThrow();
 
     await flushMicrotasks();
+  });
+});
+
+// ─── Overscan number shorthand ────────────────────────────────────────────────
+
+describe('createVirtualizer – overscan number shorthand', () => {
+  it('treats overscan as a number and applies symmetrically', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20, overscan: 2 });
+
+    expect(v.items[0].index).toBeLessThanOrEqual(2);
+    v.destroy();
+  });
+
+  it('overscan: 0 renders only the visible window', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20, overscan: 0 });
+
+    const firstIndex = v.items[0]?.index ?? 0;
+    const lastIndex = v.items.at(-1)?.index ?? 0;
+
+    expect(firstIndex).toBe(0);
+    expect(lastIndex).toBeLessThanOrEqual(4); // 100px / 20px = 5 items
+    v.destroy();
+  });
+
+  it('update({overscan: number}) works as number shorthand', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20, overscan: { end: 5, start: 5 } });
+
+    v.update({ overscan: 1 });
+    expect(v.items[0].index).toBeLessThanOrEqual(1);
+    v.destroy();
+  });
+});
+
+// ─── scrollToTop / scrollToBottom ──────────────────────────────────────────────
+
+describe('createVirtualizer – scrollToTop / scrollToBottom', () => {
+  it('scrollToTop scrolls to offset 0', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
+
+    v.scrollToBottom();
+    v.scrollToTop();
+    expect(el.scrollTop).toBe(0);
+    v.destroy();
+  });
+
+  it('scrollToBottom scrolls to the end of the list', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
+
+    v.scrollToBottom();
+    expect(el.scrollTop).toBeGreaterThan(0);
+    v.destroy();
+  });
+});
+
+// ─── createMeasurementCache ───────────────────────────────────────────────────
+
+describe('createMeasurementCache', () => {
+  it('returns a new empty Map', () => {
+    const cache = createMeasurementCache();
+
+    expect(cache).toBeInstanceOf(Map);
+    expect(cache.size).toBe(0);
+  });
+
+  it('two calls return independent instances', () => {
+    const a = createMeasurementCache();
+    const b = createMeasurementCache();
+
+    a.set('k', 42);
+    expect(b.has('k')).toBe(false);
+  });
+
+  it('shared cache preserves measurements across two virtualizers', async () => {
+    const cache = createMeasurementCache();
+    const el = makeContainer({ clientHeight: 300 });
+    const v1 = createVirtualizer(el, { count: 5, estimateSize: 20, measurementCache: cache });
+
+    v1.measure(0, 99);
+    await flushMicrotasks();
+
+    const el2 = makeContainer({ clientHeight: 300 });
+    const v2 = createVirtualizer(el2, { count: 5, estimateSize: 20, measurementCache: cache });
+
+    expect(v2.items.find((i) => i.index === 0)?.size).toBe(99);
+    v1.destroy();
+    v2.destroy();
+  });
+});
+
+// ─── Infinity guard (security) ────────────────────────────────────────────────
+
+describe('createVirtualizer – Infinity estimate guard', () => {
+  it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize returns Infinity', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 3, estimateSize: () => Infinity });
+
+    expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
+    v.destroy();
+  });
+
+  it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize is a huge number (> 1e7)', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 3, estimateSize: 2e7 });
+
+    expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
+    v.destroy();
   });
 });
 

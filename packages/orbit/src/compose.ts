@@ -1,30 +1,15 @@
 import type { Middleware } from './types';
 
-import { MIDDLEWARE_NAME, MIDDLEWARE_ORDER_RULES } from './utils';
-
-function validateOrder(names: Array<string | null>): void {
-  for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
-    const beforeIdx = names.indexOf(before);
-    const afterIdx = names.indexOf(after);
-
-    if (beforeIdx !== -1 && afterIdx !== -1 && beforeIdx < afterIdx) {
-      throw new Error(
-        `[orbit] compose(): "${before}" must come after "${after}". ` +
-          `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
-      );
-    }
-  }
-
-  if (names.includes('flip') && names.includes('autoPlacement')) {
-    throw new Error('[orbit] compose(): use either flip() or autoPlacement(), not both.');
-  }
-}
+import { MIDDLEWARE_NAME, validateMiddlewareNames } from './utils';
 
 /**
  * Validates middleware ordering and returns them as a typed array.
  *
- * Throws at call time (not at compute time) if middleware are in a known-bad order.
- * Filters out falsy entries.
+ * This is the **single validation gate** for middleware ordering. In development, it throws
+ * at call time if middleware are in a known-bad order. Prefer `compose()` over passing a raw
+ * array to get early, descriptive errors rather than silent misbehaviour.
+ *
+ * Filters out falsy entries (`null`, `undefined`, `false`).
  *
  * @example
  * ```ts
@@ -36,9 +21,12 @@ function validateOrder(names: Array<string | null>): void {
  */
 export function compose(...middleware: Array<Middleware | null | undefined | false>): Middleware[] {
   const mws = middleware.filter(Boolean) as Middleware[];
-  const names = mws.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
 
-  validateOrder(names);
+  if (import.meta.env.DEV) {
+    const names = mws.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
+
+    validateMiddlewareNames(names, 'compose()');
+  }
 
   return mws;
 }

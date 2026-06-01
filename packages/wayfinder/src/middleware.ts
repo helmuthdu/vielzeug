@@ -4,6 +4,9 @@ import type { Middleware, NamedNavigationTarget, NavigateOptions, RawNavigationT
  * Middleware helper that redirects navigation to another route.
  * Attach to a route's `middleware` array for declarative redirect patterns.
  *
+ * Note: `next()` is intentionally not called — this middleware blocks the chain
+ * and immediately navigates to the target.
+ *
  * @example
  * // Redirect /old → /new
  * routes: {

@@ -1,8 +1,8 @@
 export const hasAndSyncExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const Config = createToken('Config')
-const Telemetry = createToken('Telemetry')
+const Config = token('Config')
+const Telemetry = token('Telemetry')
 
 const container = createContainer()
 container.factory(Config, async () => ({ apiUrl: 'https://api.example.com', retries: 3 }))

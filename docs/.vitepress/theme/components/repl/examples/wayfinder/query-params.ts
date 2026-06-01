@@ -1,4 +1,44 @@
 export const queryParamsExample = {
-  code: "import { createMemoryHistory, createRouter } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst router = createRouter({\n  history: createMemoryHistory('/'),\n  routes: {\n    search: {\n      path: '/search',\n      coerceSearch: (raw) => ({\n        page: Math.max(1, Number(raw.page ?? 1)),\n        q: String(raw.q ?? ''),\n        tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : []\n      }),\n      handler: ({ query }) => {\n        console.log('🔍 Search page')\n        console.log('   Query:', query.q)\n        console.log('   Page:', query.page)\n        console.log('   Tags:', query.tags)\n      }\n    },\n    userPosts: {\n      path: '/users/:id/posts',\n      handler: ({ params, query }) => {\n        console.log('📝 User posts')\n        console.log('   User ID:', params.id)\n        console.log('   Status:', query.status)\n        console.log('   Limit:', query.limit || '10')\n      }\n    }\n  }\n})\n\nawait router.navigate({\n  name: 'search',\n  query: { page: '2', q: 'wayfinder', tags: ['docs', 'routing'] }\n})\n\nawait router.navigate({\n  name: 'userPosts',\n  params: { id: '42' },\n  query: { status: 'published', limit: '20' }\n})",
-  name: 'Query Parameters - Coercion and URL State',
+  code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
+
+// coerceSearch normalises raw URL strings into typed values before data() runs.
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: {
+    home: { path: '/' },
+    search: {
+      path: '/search',
+      coerceSearch: (raw) => ({
+        page: Math.max(1, Number(raw.page ?? 1)),
+        q:    String(raw.q ?? ''),
+        tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : [],
+      }),
+      data: async ({ query }) => ({
+        // ctx.query here is the coerced result, not raw URL strings.
+        results: \`searched "\${query.q}" page \${query.page} tags:\${query.tags}\`,
+      }),
+    },
+    userPosts: {
+      path: '/users/:id/posts',
+      data: async ({ params, query }) => ({
+        userId: params.id,
+        status: query.status ?? 'all',
+        limit:  Number(query.limit ?? 10),
+      }),
+    },
+  },
+})
+
+await router.navigate({ name: 'search', query: { page: 2, q: 'wayfinder', tags: ['docs', 'routing'] } })
+console.log('search data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
+
+await router.navigate({ name: 'userPosts', params: { id: '42' }, query: { status: 'published', limit: 20 } })
+console.log('posts data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
+
+// Raw URL query is always string values; coerced values live in ctx.query.
+const loc = router.getSnapshot().location
+console.log('raw location.query:', JSON.stringify(loc.query))
+
+router.dispose()`,
+  name: 'Query Parameters — Coercion and URL State',
 };

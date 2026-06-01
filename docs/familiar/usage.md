@@ -630,7 +630,7 @@ This also works with worker pools:
 `createTestWorker` supports `[Symbol.dispose]` as well:
 
 ```ts
-import { createTestWorker } from '@vielzeug/familiar/test';
+import { createTestWorker } from '@vielzeug/familiar/testing';
 
 {
   using worker = createTestWorker<number, number>((n) => n * 3);
@@ -643,7 +643,7 @@ import { createTestWorker } from '@vielzeug/familiar/test';
 Use `createTestWorker` from the `/test` subpath to run tasks in-process with call recording. Workers never spawn, so tests run in any environment (Node, jsdom, etc.) without additional setup.
 
 ```ts
-import { createTestWorker } from '@vielzeug/familiar/test';
+import { createTestWorker } from '@vielzeug/familiar/testing';
 import { describe, expect, it } from 'vitest';
 
 type Input = { a: number; b: number };

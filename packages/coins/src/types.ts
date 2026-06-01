@@ -39,7 +39,7 @@ export type FormatOptions = {
   locale?: string;
   maximumFractionDigits?: number;
   minimumFractionDigits?: number;
-  style?: 'code' | 'name' | 'symbol';
+  style?: 'code' | 'name' | 'narrowSymbol' | 'symbol';
 };
 
 /**

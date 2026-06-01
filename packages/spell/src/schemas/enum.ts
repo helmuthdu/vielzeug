@@ -18,6 +18,10 @@ function buildEnumValidator(values: readonly unknown[]): ValidateFn {
 export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
   readonly values: T;
 
+  protected override get _kind(): string {
+    return 'enum';
+  }
+
   constructor(values: T) {
     super(buildEnumValidator(values));
     this.values = values;

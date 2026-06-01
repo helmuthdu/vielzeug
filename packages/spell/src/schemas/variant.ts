@@ -2,6 +2,7 @@ import type { AnySchema, Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
+import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { type InferObject, ObjectSchema, type ObjectShape } from './object';
 
@@ -16,15 +17,28 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
   private readonly _map: Map<string, ObjectSchema<any>>;
   private readonly _discriminator: K;
 
+  protected override get _kind(): string {
+    return 'variant';
+  }
+
   constructor(discriminator: K, variantMap: M) {
     const map = new Map<string, ObjectSchema<any>>();
 
     for (const [tag, schema] of Object.entries(variantMap)) {
+      const discriminatorSchema = new LiteralSchema(tag);
+      const existingDiscriminator = schema.shape[discriminator];
+
+      if (existingDiscriminator && !existingDiscriminator.equals(discriminatorSchema)) {
+        throw new Error(
+          `[@vielzeug/spell] s.variant(): branch "${tag}" defines a conflicting discriminator schema for "${discriminator}".`,
+        );
+      }
+
       const discriminatorShape = {
-        [discriminator]: new LiteralSchema(tag),
+        [discriminator]: discriminatorSchema,
       } as unknown as Record<K, AnySchema>;
 
-      map.set(tag, schema.extend(discriminatorShape));
+      map.set(tag, existingDiscriminator ? schema : schema.extend(discriminatorShape));
     }
 
     super();
@@ -104,14 +118,14 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     const branches: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of this._map.entries()) {
-      branches[key] = schema.toDescriptor();
+      defineOwnProperty(branches, key, schema.toDescriptor());
     }
 
     return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
-    const branches = Object.fromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
+    const branches = objectFromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.variant) return visitor.variant(this, branches);
 

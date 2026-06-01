@@ -1,4 +1,49 @@
 export const middlewareChainExample = {
-  code: "import { createMemoryHistory, createRouter } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst logger = async (ctx, next) => {\n  console.log('📝 Global middleware:', ctx.pathname)\n  await next()\n  console.log('✅ Global middleware: complete')\n}\n\nconst auth = async (ctx, next) => {\n  console.log('  🔐 Route middleware: loading user')\n  ctx.locals.user = { id: 1, name: 'Alice', role: 'admin' }\n  await next()\n}\n\nconst requireAdmin = async (ctx, next) => {\n  console.log('    👮 Route middleware: checking permissions')\n  if (ctx.locals.user?.role !== 'admin') {\n    console.log('    ❌ Permission denied')\n    return\n  }\n  await next()\n}\n\nconst router = createRouter({\n  history: createMemoryHistory('/'),\n  middleware: [logger],\n  routes: {\n    adminPanel: {\n      path: '/admin/panel',\n      middleware: [auth, requireAdmin],\n      data: async () => {\n        console.log('      📦 data(): loading admin data')\n        return { loaded: true, timestamp: Date.now() }\n      },\n      handler: (ctx) => {\n        console.log('        🎯 Handler: Admin panel')\n        console.log('        User:', ctx.locals.user?.name)\n        console.log('        Data loaded:', ctx.data)\n      }\n    }\n  }\n})\n\nconsole.log('Execution order:')\nconsole.log('Global middleware → Route middleware → data() → handler\\n')\nawait router.navigate({ name: 'adminPanel' })",
-  name: 'Middleware Chain - Execution Flow',
+  code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
+
+// Execution order is always: global middleware → route middleware → data().
+const logger = async (ctx, next) => {
+  console.log('[global]  entering', ctx.pathname)
+  await next()
+  console.log('[global]  leaving', ctx.pathname)
+}
+
+const loadUser = async (ctx, next) => {
+  console.log('[route]   loading user')
+  ctx.locals.user = { id: 1, name: 'Alice', role: 'admin' }
+  await next()
+}
+
+const requireAdmin = async (ctx, next) => {
+  console.log('[route]   checking role:', ctx.locals.user?.role)
+  if (ctx.locals.user?.role !== 'admin') {
+    console.log('[route]   permission denied — aborting navigation')
+    return // do not call next(); cancels the navigation
+  }
+  await next()
+}
+
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  middleware: [logger],
+  routes: {
+    home:  { path: '/' },
+    admin: {
+      path: '/admin',
+      middleware: [loadUser, requireAdmin],
+      data: async (ctx) => {
+        console.log('[data()]  fetching panel data for', ctx.locals.user.name)
+        return { loaded: true, user: ctx.locals.user.name }
+      },
+    },
+  },
+})
+
+await router.waitFor('home')
+console.log('--- navigate to /admin ---')
+await router.navigate({ name: 'admin' })
+console.log('data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
+
+router.dispose()`,
+  name: 'Middleware Chain — Execution Flow',
 };

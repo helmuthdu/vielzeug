@@ -45,11 +45,11 @@ export type VaultCodec = {
 /* -------------------- Duration helpers -------------------- */
 
 export const ttl = {
-  days: (n: number) => (assertTtlMs(n, 'ttl.days') * 86_400_000) as TtlMs,
-  hours: (n: number) => (assertTtlMs(n, 'ttl.hours') * 3_600_000) as TtlMs,
-  minutes: (n: number) => (assertTtlMs(n, 'ttl.minutes') * 60_000) as TtlMs,
+  days: (n: number) => assertTtlMs(assertTtlMs(n, 'ttl.days') * 86_400_000, 'ttl.days (result)'),
+  hours: (n: number) => assertTtlMs(assertTtlMs(n, 'ttl.hours') * 3_600_000, 'ttl.hours (result)'),
+  minutes: (n: number) => assertTtlMs(assertTtlMs(n, 'ttl.minutes') * 60_000, 'ttl.minutes (result)'),
   ms: (n: number) => assertTtlMs(n, 'ttl.ms'),
-  seconds: (n: number) => (assertTtlMs(n, 'ttl.seconds') * 1000) as TtlMs,
+  seconds: (n: number) => assertTtlMs(assertTtlMs(n, 'ttl.seconds') * 1000, 'ttl.seconds (result)'),
 } as const;
 
 /* -------------------- Storage record -------------------- */

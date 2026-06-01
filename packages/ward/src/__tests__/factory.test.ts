@@ -449,6 +449,19 @@ describe('ward: rulesInScope', () => {
     ]);
   });
 
+  it('includes predicate-gated rules when data is omitted (predicate skip)', () => {
+    const neverTrue: WardPredicate<{ authorId: string }> = () => false;
+    const permit = createWard<'update', { authorId: string }>([
+      { action: 'update', effect: 'allow', resource: 'posts', role: 'editor', when: neverTrue },
+    ]);
+
+    const withoutData = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts');
+    const withData = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'other' });
+
+    expect(withoutData).toHaveLength(1);
+    expect(withData).toHaveLength(0);
+  });
+
   it('includes multi-role rules when principal holds any matching role', () => {
     const permit = createWard<'read'>([
       { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] },
@@ -1172,7 +1185,7 @@ describe('ward: trace', () => {
     expect(trace.decision).toEqual({ allowed: false, reason: 'explicit-deny', rule: winner?.rule });
   });
 
-  it('trace candidates include priority, score, and denyBonus', () => {
+  it('trace candidates include priority, score, rule, and won', () => {
     const permit = createWard<'read'>([
       { action: 'read', effect: 'allow', priority: 5, resource: 'posts', role: 'viewer' },
     ]);
@@ -1181,7 +1194,8 @@ describe('ward: trace', () => {
 
     expect(trace.candidates[0].priority).toBe(5);
     expect(typeof trace.candidates[0].score).toBe('number');
-    expect(trace.candidates[0].denyBonus).toBe(0);
+    expect(trace.candidates[0].won).toBe(true);
+    expect(trace.candidates[0].rule.effect).toBe('allow');
   });
 
   it('is available on bound views', () => {

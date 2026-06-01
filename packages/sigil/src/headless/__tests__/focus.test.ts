@@ -139,5 +139,20 @@ describe('createFocusManager', () => {
 
       expect(document.activeElement).toBe(document.body);
     });
+
+    it('does not throw when selector is an invalid CSS string', async () => {
+      const host = makeHost();
+      const manager = createFocusManager({
+        getInitialFocusSelector: () => '[invalid',
+        getReturnFocus: () => true,
+        host,
+      });
+
+      // Must not throw — malformed selector is swallowed
+      expect(() => manager.applyInitialFocus()).not.toThrow();
+      await vi.runAllTimersAsync();
+
+      expect(document.activeElement).toBe(document.body);
+    });
   });
 });

@@ -156,6 +156,33 @@ describe('createCourier', () => {
     expect(log).toEqual(['intercepted', 'intercepted']);
   });
 
+  it('dispose() marks the client as disposed and api/stream throw thereafter', async () => {
+    const client = createCourier();
+
+    expect(client.disposed).toBe(false);
+    client.dispose();
+    expect(client.disposed).toBe(true);
+
+    await expect(client.api.get('/test')).rejects.toThrow(/disposed/i);
+  });
+
+  it('[Symbol.dispose] delegates to dispose()', () => {
+    const client = createCourier();
+
+    client[Symbol.dispose]();
+    expect(client.disposed).toBe(true);
+  });
+
+  it('headers() and getHeaders() round-trip on the shared transport', async () => {
+    const client = createCourier({ headers: { 'x-app': 'v1' } });
+
+    expect(client.api.getHeaders()['x-app']).toBe('v1');
+
+    client.headers({ 'x-app': 'v2' });
+
+    expect(client.api.getHeaders()['x-app']).toBe('v2');
+  });
+
   it('cancelAll() aborts both transport requests and in-flight query cache fetches', async () => {
     const aborted: string[] = [];
     const localFetch = vi.fn().mockImplementation(

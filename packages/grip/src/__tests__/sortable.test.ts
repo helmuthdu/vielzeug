@@ -773,6 +773,23 @@ describe('createSortable', () => {
 
       sortable.destroy();
     });
+
+    it('fires onBeforeReorder for keyboard moves on horizontal axis', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a', 'b', 'c');
+      const onBeforeReorder = vi.fn();
+      const onReorder = vi.fn();
+      const sortable = createSortable({ axis: 'horizontal', element, onBeforeReorder, onReorder });
+
+      first.dispatchEvent(makeKeyEvent('ArrowRight'));
+
+      expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b', 'c'], ['b', 'a', 'c']);
+      expect(onReorder).toHaveBeenCalledWith(['b', 'a', 'c']);
+
+      sortable.destroy();
+    });
   });
 
   describe('connected lists (scope)', () => {
@@ -936,6 +953,14 @@ describe('applyReorder', () => {
     const result = applyReorder([], ['a', 'b'], (i: { id: string }) => i.id);
 
     expect(result).toEqual([]);
+  });
+
+  it('handles duplicate IDs in the ids array — first occurrence wins, second is ignored', () => {
+    const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+
+    const result = applyReorder(items, ['b', 'b', 'a'], (i) => i.id);
+
+    expect(result.map((i) => i.id)).toEqual(['b', 'a', 'c']);
   });
 });
 

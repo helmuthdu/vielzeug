@@ -33,7 +33,7 @@ const createComponentState = (): ComponentState => ({
 // ─── BaseElement ──────────────────────────────────────────────────────────────
 
 export class BaseElement extends HTMLElement {
-  static _definition: ComponentDefinition<Record<never, never>, Record<string, never>, string>;
+  static _definition: ComponentDefinition<any, any, any>;
   static _normalizedPropDefs: PropsDef<Record<never, never>> | undefined;
   static formAssociated = false;
   static observedAttributes: string[] = [];
@@ -241,18 +241,33 @@ export class BaseElement extends HTMLElement {
     queueMicrotask(() => {
       if (!this.isConnected || token !== this._component.mountToken) return;
 
-      for (const callback of this._component.mountCallbacks) {
+      // Snapshot callbacks so in-loop registrations don't extend this iteration.
+      const batch = this._component.mountCallbacks.splice(0);
+
+      for (const callback of batch) {
         try {
+          const nestedCtx = { element: this, mountCallbacks: [] as typeof this._component.mountCallbacks };
+
           this._component.scope.run(() => {
-            withRuntimeContext({ element: this, mountCallbacks: [] }, () => {
+            withRuntimeContext(nestedCtx, () => {
               const cleanup = callback();
 
               if (typeof cleanup === 'function') _onCleanup(cleanup);
             });
           });
+
+          if (nestedCtx.mountCallbacks.length > 0) {
+            this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
+          }
         } catch (error) {
           this._handleSetupError(error, 'mountedCallback');
         }
+      }
+
+      // If nested onMounted calls registered new callbacks, schedule them with
+      // a fresh token check in the next microtask.
+      if (this._component.mountCallbacks.length > 0) {
+        this._scheduleMountCallbacks();
       }
     });
   }

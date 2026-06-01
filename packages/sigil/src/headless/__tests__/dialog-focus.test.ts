@@ -60,6 +60,7 @@ describe('createDialogFocusControl', () => {
 
       expect(document.activeElement).toBe(target);
 
+      ctrl.deactivate();
       document.body.removeChild(trigger);
       vi.useRealTimers();
     });
@@ -110,6 +111,36 @@ describe('createDialogFocusControl', () => {
       document.body.removeChild(trigger);
       document.body.removeChild(other);
       vi.useRealTimers();
+    });
+  });
+
+  describe('trapEnabled option', () => {
+    it('does not intercept Tab when trapEnabled returns false', () => {
+      const container = document.createElement('div');
+      const btn1 = document.createElement('button');
+      const btn2 = document.createElement('button');
+
+      container.appendChild(btn1);
+      container.appendChild(btn2);
+      document.body.appendChild(container);
+
+      const ctrl = createDialogFocusControl(makeOptions({ getContainer: () => container, trapEnabled: () => false }));
+
+      ctrl.activate();
+      btn2.focus();
+
+      // Dispatch from btn2 so event.target is btn2 (the last focusable element).
+      // Without trapEnabled, this would trigger a wrap — but with trapEnabled = false
+      // the handler returns early without calling preventDefault().
+      const tabEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Tab' });
+
+      btn2.dispatchEvent(tabEvent);
+
+      // Tab was NOT intercepted — event not prevented
+      expect(tabEvent.defaultPrevented).toBe(false);
+
+      ctrl.deactivate();
+      document.body.removeChild(container);
     });
   });
 

@@ -1,5 +1,5 @@
 import { sourceState } from '../state';
-import { SourceError } from '../types';
+import { SourceError, SourceTimeoutError } from '../types';
 
 const makeSource = (isLoading: boolean, error: SourceError | null, items: readonly number[]) => ({
   current: items,
@@ -27,18 +27,18 @@ describe('sourceState', () => {
     }
   });
 
-  it('returns data state with items when not loading and no error', () => {
+  it('returns success state with items when not loading and no error', () => {
     const source = makeSource(false, null, [1, 2, 3]);
     const state = sourceState(source);
 
-    expect(state).toEqual({ items: [1, 2, 3], status: 'data' });
+    expect(state).toEqual({ items: [1, 2, 3], status: 'success' });
   });
 
-  it('returns data state with empty items when no error', () => {
+  it('returns success state with empty items when no error', () => {
     const source = makeSource(false, null, []);
     const state = sourceState(source);
 
-    expect(state).toEqual({ items: [], status: 'data' });
+    expect(state).toEqual({ items: [], status: 'success' });
   });
 
   it('loading takes priority over error', () => {
@@ -53,7 +53,7 @@ describe('sourceState', () => {
     const source = makeSource(false, null, [10, 20]);
     const state = sourceState(source);
 
-    if (state.status === 'data') {
+    if (state.status === 'success') {
       expect(state.items[0]).toBe(10);
     }
   });
@@ -80,5 +80,14 @@ describe('sourceState', () => {
     const err = new SourceError('fail', { attempt: 3 });
 
     expect(err.attempt).toBe(3);
+  });
+
+  it('SourceTimeoutError is instanceof Error and SourceTimeoutError', () => {
+    const err = new SourceTimeoutError(500);
+
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(SourceTimeoutError);
+    expect(err.name).toBe('SourceTimeoutError');
+    expect(err.message).toBe('Source.ready() timed out after 500ms');
   });
 });

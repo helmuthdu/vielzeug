@@ -210,7 +210,7 @@ export type FormOptions<TValues extends Record<string, unknown> = Record<string,
    * Initial form values. May be a static object or an async factory function.
    * While a factory is pending, `form.isLoading` is `true` and the form is read-only.
    */
-  defaultValues?: TValues | (() => Promise<TValues>);
+  defaultValues?: { [K in keyof TValues]: TValues[K] } | (() => Promise<{ [K in keyof TValues]: TValues[K] }>);
   /**
    * Form-level validator. Accepts either:
    * - A `FormValidator` function
@@ -359,7 +359,7 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   /** Validate a single field. Preserves other fields' errors. Does not run the form-level validator. */
   validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
   /** Validate specific fields. Preserves other fields' errors. Does not run the form-level validator. */
-  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
+  validateFields(fields: string[], signal?: AbortSignal): Promise<ValidateResult>;
   /**
    * Streaming validation — yields each field result as soon as its validator resolves.
    * The final item in the stream is the form-level validator result (field: '_form'), if configured.

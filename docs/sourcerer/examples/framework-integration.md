@@ -1,9 +1,19 @@
 ---
-title: Framework Integration
-description: Sourcerer integration examples for React, Vue, and Svelte.
+title: 'Sourcerer Examples — Framework Integration'
+description: Integrate createLocalSource and createRemoteSource with React, Vue, and Svelte.
 ---
 
-## Local source example
+## Framework Integration
+
+### Problem
+
+You are using React, Vue, or Svelte and need to wire a Sourcerer source into your component's render cycle — subscribing to changes, triggering initial loads, and cleaning up on unmount.
+
+### Solution
+
+Subscribe to the source in the appropriate component lifecycle hook for your framework. The source exposes a `subscribe()` method that returns an unsubscribe function. Call `refresh()` explicitly for remote sources to trigger the first fetch.
+
+#### Local source
 
 ::: code-group
 
@@ -62,7 +72,7 @@ onUnmounted(stop);
 
 :::
 
-## Remote source example
+#### Remote source
 
 ::: code-group
 
@@ -133,3 +143,9 @@ onUnmounted(stop);
 ```
 
 :::
+
+### Related
+
+- [Local Pagination and Filtering](./local-pagination-and-filtering.md)
+- [Remote Search with URL State](./remote-search-with-url-state.md)
+- [Reactive Controls with Ripple](./sourcerer-with-ripple.md)

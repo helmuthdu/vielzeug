@@ -4,6 +4,10 @@ import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class NeverSchema extends Schema<never> {
+  protected override get _kind(): string {
+    return 'never';
+  }
+
   constructor() {
     super((_value) => [{ code: ErrorCode.invalid_type, message: _messages().never.invalid(), path: [] }]);
   }

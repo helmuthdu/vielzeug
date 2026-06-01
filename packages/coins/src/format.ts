@@ -1,11 +1,13 @@
+import { cache } from '@vielzeug/arsenal';
+
 import type { FormatOptions, Money, MoneyFormatPart } from './types';
 
-import { applyRounding, getCurrencyDecimals, lruCache, pow10 } from './utils';
+import { applyRounding, getCurrencyDecimals, pow10 } from './utils';
 
 // Template cache key: locale × currency × style × sign — 512 prevents thrashing in multi-locale apps.
-const currencyTemplateCache = lruCache<string, Intl.NumberFormatPart[]>(512);
+const currencyTemplateCache = cache<string, Intl.NumberFormatPart[]>(512);
 // Locale-only key — 32 covers virtually every realistic multi-locale deployment.
-const integerFormatterCache = lruCache<string, Intl.NumberFormat>(32);
+const integerFormatterCache = cache<string, Intl.NumberFormat>(32);
 
 /**
  * Resolves and validates all formatting parameters, performs scaling, and
@@ -25,7 +27,11 @@ function resolveFormatState(m: Money, options: FormatOptions): FormatState {
 
   const decimalPlaces = getCurrencyDecimals(m.currency);
   const maxFrac = validateFractionDigits('maximumFractionDigits', maximumFractionDigits, decimalPlaces);
-  const minFrac = validateFractionDigits('minimumFractionDigits', minimumFractionDigits, decimalPlaces);
+  const minFrac = validateFractionDigits(
+    'minimumFractionDigits',
+    minimumFractionDigits,
+    Math.min(decimalPlaces, maxFrac),
+  );
 
   if (minFrac > maxFrac) {
     throw new RangeError('minimumFractionDigits must be less than or equal to maximumFractionDigits');

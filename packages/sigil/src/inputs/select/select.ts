@@ -204,6 +204,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       labelPlacement: props['label-placement'],
       multiple: props.multiple,
       prefix: 'select',
+      signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });

@@ -27,6 +27,11 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 /* -------------------- Messages -------------------- */
 
+/**
+ * A validation message — either a static string or a function that receives context and returns a string.
+ * **Note:** Static string values are used verbatim with no interpolation. Use the function form
+ * for context-dependent messages (e.g. `(ctx) => \`Must be at least ${ctx.min}\``).
+ */
 export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 
 /* -------------------- JSON Schema -------------------- */
@@ -188,6 +193,37 @@ export type SchemaDescriptor = BaseDescriptor &
     | { branches: SchemaDescriptor[]; kind: 'union' | 'intersect' }
     | { branches: Record<string, SchemaDescriptor>; discriminator: string; kind: 'variant' }
     | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
+  );
+
+export type ReconstructibleSchemaDescriptor = BaseDescriptor &
+  (
+    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' }
+    | {
+        contentEncoding?: string;
+        format?: string;
+        kind: 'string';
+        maxLength?: number;
+        minLength?: number;
+        pattern?: string | null;
+      }
+    | {
+        exclusiveMaximum?: number;
+        exclusiveMinimum?: number;
+        kind: 'number';
+        maximum?: number;
+        minimum?: number;
+        multipleOf?: number;
+        typeHint?: 'integer';
+      }
+    | { kind: 'literal'; value: string | number | boolean | null | undefined }
+    | { kind: 'enum'; values: readonly (string | number)[] }
+    | { items: ReconstructibleSchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number }
+    | { items: ReconstructibleSchemaDescriptor[]; kind: 'tuple'; rest: ReconstructibleSchemaDescriptor | null }
+    | { fields: Record<string, ReconstructibleSchemaDescriptor>; kind: 'object'; strict: boolean }
+    | { key: ReconstructibleSchemaDescriptor; kind: 'record'; value: ReconstructibleSchemaDescriptor }
+    | { items: ReconstructibleSchemaDescriptor; kind: 'set' }
+    | { key: ReconstructibleSchemaDescriptor; kind: 'map'; value: ReconstructibleSchemaDescriptor }
+    | { branches: ReconstructibleSchemaDescriptor[]; kind: 'union' | 'intersect' }
   );
 
 export type WrapperMode = 'nullable' | 'nullish' | 'optional';

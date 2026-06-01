@@ -1,4 +1,24 @@
 export const nestedObjectsExample = {
-  code: "import { s } from '/spell'\n\nconst addressSchema = s.object({\n  street: s.string(),\n  city: s.string(),\n  zipCode: s.string().regex(/^\\d{5}$/),\n  country: s.string()\n})\n\nconst userSchema = s.object({\n  name: s.string(),\n  email: s.string().email(),\n  address: addressSchema,\n  settings: s.object({\n    theme: s.union('light', 'dark'),\n    notifications: s.boolean()\n  })\n})\n\nconst validUser = {\n  name: 'Alice',\n  email: 'alice@example.com',\n  address: {\n    street: '123 Main St',\n    city: 'New York',\n    zipCode: '10001',\n    country: 'USA'\n  },\n  settings: {\n    theme: 'dark',\n    notifications: true\n  }\n}\n\nconst result = userSchema.safeParse(validUser)\nconsole.log('Valid:', result.success)\nif (result.success) {\n  console.log('Validated user:', result.data.name)\n  console.log('City:', result.data.address.city)\n  console.log('Theme:', result.data.settings.theme)\n}",
-  name: 'Nested Object Validation',
+  code: `// Model an API response with a discriminator instead of a loose union.
+import { s } from '@vielzeug/spell'
+
+const SearchResponse = s.variant('status', {
+  error: s.object({
+    message: s.string().min(1),
+    status: s.literal('error'),
+  }),
+  success: s.object({
+    results: s.array(s.object({ id: s.string().uuid(), title: s.string().min(1) })).default(() => []),
+    status: s.literal('success'),
+  }),
+})
+
+console.log('Success branch:', SearchResponse.parse({
+  status: 'success',
+  results: [{ id: '550e8400-e29b-41d4-a716-446655440000', title: 'Spell docs' }],
+}))
+
+const invalid = SearchResponse.safeParse({ status: 'success', message: 'no results here' })
+console.log('Invalid branch accepted:', invalid.success)`,
+  name: 'Variant Responses',
 };

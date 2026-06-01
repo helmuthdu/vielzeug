@@ -115,6 +115,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       labelPlacement: props['label-placement'],
       multiple: props.multiple,
       prefix: 'combobox',
+      signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });

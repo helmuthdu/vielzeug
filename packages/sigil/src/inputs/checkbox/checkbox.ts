@@ -124,7 +124,11 @@ define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
     const { assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = checkable;
 
     checkable.bindFormField(
-      defineField<string>({ disabled: checkable.disabled, toFormValue: (v) => v, value: checkable.checkableFormValue }),
+      defineField<string | null>({
+        disabled: checkable.disabled,
+        toFormValue: (v) => v,
+        value: checkable.checkableFormValue,
+      }),
     );
 
     applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown, indeterminate });

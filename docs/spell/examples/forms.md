@@ -1,69 +1,50 @@
 ---
-title: 'Spell Examples — Form Validation'
-description: 'Form validation example for @vielzeug/spell.'
+title: 'Spell Examples — Form-Safe Parsing'
+description: 'Use spell schemas to turn browser-like form values into typed application input.'
 ---
 
-## Form Validation
+## Form-Safe Parsing
 
 ### Problem
 
-Validate a registration form, normalize browser values, and expose errors in a shape that maps directly into field-level UI.
+Form submissions often arrive as strings, optional fields, and checkboxes. You need typed output without repeating conversion code for every field.
 
 ### Solution
 
-Use `s.object()` combined with `.check()`, `s.coerce.boolean()`, and `flattenFirst()` to normalize browser form values and map validation errors to field-level UI.
+Use coercion, wrappers, and formatted errors to normalize the form payload in one step.
 
 ```ts
-import { s, type Infer } from '@vielzeug/spell';
+import { ValidationError, s, sCoerce } from '@vielzeug/spell';
 
-const RegistrationSchema = s
-  .object({
-    name: s.string().min(1, 'Name is required'),
-    email: s.string().trim().email('Invalid email address'),
-    password: s
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .check((value) => /[A-Z]/.test(value) || 'Add at least one uppercase letter')
-      .check((value) => /\d/.test(value) || 'Add at least one number'),
-    confirmPassword: s.string(),
-    newsletter: s.boolean().default(false),
-  })
-  .check((value) => value.password === value.confirmPassword || 'Passwords must match');
-
-export type Registration = Infer<typeof RegistrationSchema>;
-
-const payload: unknown = {
-  confirmPassword: 'Secret123',
-  email: 'ada@example.com',
-  name: 'Ada',
-  newsletter: 'true',
-  password: 'Secret123',
-};
-
-const FormInputSchema = RegistrationSchema.extend({
-  newsletter: s.coerce.boolean().default(false),
+const SignupForm = s.object({
+  age: sCoerce.number().int().min(18),
+  email: s.string().email(),
+  marketing: sCoerce.boolean().default(false),
+  referralCode: s.string().trim().optional().nullable().required(),
 });
 
-const parsed = FormInputSchema.safeParse(payload);
+const result = SignupForm.safeParse({
+  age: '29',
+  email: 'ada@example.com',
+  marketing: 'true',
+  referralCode: null,
+});
 
-if (parsed.success) {
-  console.log(parsed.data);
-} else {
-  const { fieldErrors, formErrors } = parsed.error.flattenFirst();
-
-  console.log(fieldErrors);
-  console.log(formErrors);
+if (result.success) {
+  console.log(result.data.referralCode);
+} else if (ValidationError.is(result.error)) {
+  console.log(result.error.format());
 }
 ```
 
 ### Pitfalls
 
-- Validating raw form payloads with `s.boolean()` instead of `s.coerce.boolean()`.
-- Expecting cross-field object refinements to appear under a field key instead of `formErrors`.
-- Using `flatten()` when the UI only needs the first message per field.
+- `.required()` removes `undefined` but keeps `null`. That matters after `.optional().nullable()` chains.
+- `sCoerce.boolean()` is for loosely typed input at the boundary. Keep your app state typed after parsing.
+- Call `safeParseAsync()` if any nested field uses `checkAsync()`.
 
 ### Related
 
-- [API](./api.md)
-- [Async](./async.md)
-- [Unions](./unions.md)
+- [Usage Guide](../usage.md)
+- [Async Business Rules](./async.md)
+- [Forge](/forge/)

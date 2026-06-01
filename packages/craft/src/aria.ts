@@ -5,12 +5,13 @@
  * Static values are applied once; getter functions are tracked as reactive effects.
  */
 
-import { effect as rawEffect } from '@vielzeug/ripple';
+import { effect as rawEffect, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
 
-type AriaValue = string | number | boolean | null | undefined | (() => string | number | boolean | null | undefined);
+type AriaScalar = string | number | boolean | null | undefined;
+type AriaValue = AriaScalar | (() => AriaScalar) | ReadonlySignal<AriaScalar>;
 
 type AriaConfig = Record<string, AriaValue>;
 
@@ -48,18 +49,22 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
     const key = normalizeAriaKey(rawKey);
 
     if (typeof rawValue === 'function') {
-      const getter = rawValue as () => string | number | boolean | null | undefined;
-
-      const sub = rawEffect(() => {
-        setA11yAttr(target, key, getter());
-      });
+      const sub = rawEffect(() => setA11yAttr(target, key, rawValue()));
 
       disposers.push(() => sub.dispose());
 
       continue;
     }
 
-    setA11yAttr(target, key, rawValue as string | number | boolean | null | undefined);
+    if (isSignal(rawValue)) {
+      const sub = rawEffect(() => setA11yAttr(target, key, rawValue.value as AriaScalar));
+
+      disposers.push(() => sub.dispose());
+
+      continue;
+    }
+
+    setA11yAttr(target, key, rawValue);
   }
 
   const cleanup = () => {
@@ -69,7 +74,7 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
   if (autoCleanup) {
     const registered = tryRegisterCleanup(cleanup);
 
-    if (!registered && import.meta.env.DEV) {
+    if (!registered) {
       console.warn(
         '[craft] syncAria() called with autoCleanup:true but no active setup context. ' +
           'Effects will leak unless you call the returned cleanup function manually.',

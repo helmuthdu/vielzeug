@@ -25,15 +25,15 @@ type FirstReturnType<T extends readonly Fn[]> = T extends [infer First extends F
  *
  * @returns A new function that is the composition of the input functions.
  */
+export function compose(): never;
 export function compose<T extends readonly [Fn, ...Fn[]]>(
   ...fns: T
-): (...args: LastParameters<T>) => FirstReturnType<T> {
+): (...args: LastParameters<T>) => FirstReturnType<T>;
+export function compose(...fns: Fn[]): Fn {
   assert(fns.length > 0, 'compose requires at least one function');
 
   const lastFn = fns[fns.length - 1];
   const restFns = fns.slice(0, -1);
 
-  return ((...args: LastParameters<T>) => restFns.reduceRight((prev, fn) => fn(prev), lastFn(...args))) as (
-    ...args: LastParameters<T>
-  ) => FirstReturnType<T>;
+  return (...args: unknown[]) => restFns.reduceRight((prev: unknown, fn) => fn(prev), lastFn(...args));
 }

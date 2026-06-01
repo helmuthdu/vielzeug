@@ -1,14 +1,15 @@
 export { decodeQuery, encodeQuery } from './codecs';
 export type { DecodeQueryOptions } from './codecs';
-export { createSourceCore } from './core';
-export type { SourceCore } from './core';
 export { createCursorSource } from './cursorSource';
+export { deriveSource } from './derive';
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
+export { mergeSource } from './merge';
 export { composeFetch } from './middleware';
 export type { FetchMiddleware } from './middleware';
-export { clampPage, itemRange, pageCount } from './pagination';
+export { itemRange } from './pagination';
 export { prefetchSource, prefetchSourceWithSource } from './prefetch';
+export { filterContains, filterEquals, filterRange, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { toSignals } from './signals';
 export { sourceState } from './state';
@@ -31,6 +32,7 @@ export type {
   QueryParamsInput,
   ReactiveSource,
   RemoteConfig,
+  RemoteFetchQuery,
   RemoteSource,
   RemoteSourceQuery,
   RetryConfig,
@@ -41,4 +43,4 @@ export type {
   SourceSnapshot,
   SourceState,
 } from './types';
-export { SourceError } from './types';
+export { SourceError, SourceTimeoutError } from './types';

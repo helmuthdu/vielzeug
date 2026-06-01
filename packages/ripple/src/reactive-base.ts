@@ -1,5 +1,6 @@
 import type { Subscriber } from './types';
 
+import { registerSignal } from './devtools';
 import { IS_COMPUTED, IS_SIGNAL } from './symbols';
 
 // ── Global FinalizationRegistry (F1) ──────────────────────────────────────────
@@ -38,6 +39,8 @@ export abstract class ReactiveBase<T> {
 
   constructor(name?: string) {
     this.name = name;
+
+    if (name !== undefined) registerSignal(this, name);
   }
 
   /**

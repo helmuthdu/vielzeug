@@ -3,6 +3,11 @@
   "version": "3.0.1",
   "type": "module",
   "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
+  "exports": {
+    ".": "./dist/index.js",
+    "./data": "./dist/data.js",
+    "./generator": "./dist/generator.js"
+  },
   "bin": {
     "vielzeug-mcp": "./dist/cli.js"
   },

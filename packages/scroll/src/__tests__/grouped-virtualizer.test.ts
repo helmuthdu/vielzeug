@@ -19,12 +19,11 @@ describe('createGroupedVirtualizer – initial state', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     expect(onChange).toHaveBeenCalled();
@@ -41,12 +40,11 @@ describe('createGroupedVirtualizer – initial state', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     const state = onChange.mock.calls.at(-1)?.[0];
@@ -59,12 +57,11 @@ describe('createGroupedVirtualizer – initial state', () => {
     const el = makeContainer({ clientHeight: 1000 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 2), makeSection('B', 3)],
-      target: el,
     });
 
     const state = onChange.mock.calls.at(-1)?.[0];
@@ -82,14 +79,13 @@ describe('createGroupedVirtualizer – item and header shape', () => {
     const sections = [makeSection('A', 3)];
     const captured: unknown[] = [];
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange: (s) => {
         captured.push(...s.items);
       },
       sections,
-      target: el,
     });
 
     const first = captured[0] as { data: Item; itemIndex: number; sectionIndex: number };
@@ -103,12 +99,11 @@ describe('createGroupedVirtualizer – item and header shape', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('SectionA', 3)],
-      target: el,
     });
 
     const state = onChange.mock.calls.at(-1)?.[0];
@@ -124,12 +119,11 @@ describe('createGroupedVirtualizer – item and header shape', () => {
     const el = makeContainer({ clientHeight: 200 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 5)],
-      target: el,
     });
 
     const state = onChange.mock.calls.at(-1)?.[0];
@@ -147,11 +141,10 @@ describe('createGroupedVirtualizer – navigation', () => {
     // Section B: header(40) + 3 items(3×30) = 130px
     // Total = 230px, max scroll = 230 - 100 = 130px > 100, so target is not clamped.
     const el = makeContainer({ clientHeight: 100 });
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       sections: [makeSection('A', 2), makeSection('B', 3)],
-      target: el,
     });
 
     // align: 'start' → scrollTop = start offset of section B header = 100.
@@ -163,11 +156,10 @@ describe('createGroupedVirtualizer – navigation', () => {
 
   it('scrollToSection silently no-ops for out-of-bounds index', () => {
     const el = makeContainer({ clientHeight: 200 });
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     expect(() => gv.scrollToSection(-1)).not.toThrow();
@@ -178,11 +170,10 @@ describe('createGroupedVirtualizer – navigation', () => {
 
   it('scrollToItem silently no-ops for out-of-bounds sectionIndex', () => {
     const el = makeContainer({ clientHeight: 200 });
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     expect(() => gv.scrollToItem(-1, 0)).not.toThrow();
@@ -198,12 +189,11 @@ describe('createGroupedVirtualizer – update', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();
 
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     const callsBefore = onChange.mock.calls.length;
@@ -223,7 +213,7 @@ describe('createGroupedVirtualizer – update', () => {
     const el = makeContainer({ clientHeight: 500 });
     const renderedSizes: number[] = [];
 
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       getItemKey: (item) => item.id,
@@ -231,7 +221,6 @@ describe('createGroupedVirtualizer – update', () => {
         for (const it of s.items) renderedSizes[it.itemIndex] = it.size;
       },
       sections: [makeSection('A', 5)],
-      target: el,
     });
 
     // Measure the first item (flat index 1 = section 0, item 0)
@@ -249,12 +238,11 @@ describe('createGroupedVirtualizer – update', () => {
     const el = makeContainer({ clientHeight: 1000 });
     const onChange = vi.fn();
 
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       onChange,
       sections: [makeSection('A', 2)],
-      target: el,
     });
 
     // Add a second section
@@ -275,13 +263,12 @@ describe('createGroupedVirtualizer – getItemKey', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();
 
-    createGroupedVirtualizer({
+    createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       getItemKey: (item) => `item-${item.id}`,
       onChange,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     await flushMicrotasks();
@@ -290,16 +277,109 @@ describe('createGroupedVirtualizer – getItemKey', () => {
   });
 });
 
+// ─── Function estimate callbacks ──────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – function estimate callbacks', () => {
+  it('estimateHeaderSize function receives section and sectionIndex', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const headerSizes: number[] = [];
+    const onChange = vi.fn();
+
+    createGroupedVirtualizer(el, {
+      estimateHeaderSize: (section, sectionIndex) => {
+        headerSizes[sectionIndex] = sectionIndex === 0 ? 32 : 48;
+
+        return headerSizes[sectionIndex]!;
+      },
+      estimateItemSize: 20,
+      onChange,
+      sections: [makeSection('A', 2), makeSection('B', 2)],
+    });
+
+    const state = onChange.mock.calls.at(-1)?.[0];
+
+    expect(state.totalSize).toBe(32 + 2 * 20 + 48 + 2 * 20);
+  });
+
+  it('estimateItemSize function receives item, itemIndex, sectionIndex', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const sections = [makeSection('A', 3)];
+
+    createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: (item, itemIndex) => (itemIndex === 0 ? 60 : 30),
+      onChange,
+      sections,
+    });
+
+    const state = onChange.mock.calls.at(-1)?.[0];
+
+    // 1 header (40) + first item (60) + 2 items (2×30) = 160
+    expect(state.totalSize).toBe(40 + 60 + 2 * 30);
+  });
+});
+
+// ─── Virtualizer passthrough ───────────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – Virtualizer passthrough', () => {
+  it('exposes count, totalSize, scrollOffset, items, stickyItems', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 3)],
+    });
+
+    expect(typeof gv.count).toBe('number');
+    expect(typeof gv.totalSize).toBe('number');
+    expect(typeof gv.scrollOffset).toBe('number');
+    expect(Array.isArray(gv.items)).toBe(true);
+    expect(Array.isArray(gv.stickyItems)).toBe(true);
+    gv.destroy();
+  });
+
+  it('scrollToTop and scrollToBottom do not throw', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const gv = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 10)],
+    });
+
+    expect(() => gv.scrollToTop()).not.toThrow();
+    expect(() => gv.scrollToBottom()).not.toThrow();
+    gv.destroy();
+  });
+
+  it('measure and refresh do not throw and update totalSize', async () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 3)],
+    });
+
+    expect(() => {
+      gv.measure(0, 60);
+      gv.refresh();
+      gv.invalidate();
+      gv.redraw();
+    }).not.toThrow();
+
+    gv.destroy();
+  });
+});
+
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 describe('createGroupedVirtualizer – lifecycle', () => {
   it('destroy is idempotent', () => {
     const el = makeContainer({ clientHeight: 300 });
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     expect(() => {
@@ -310,11 +390,10 @@ describe('createGroupedVirtualizer – lifecycle', () => {
 
   it('Symbol.dispose delegates to destroy', () => {
     const el = makeContainer({ clientHeight: 300 });
-    const gv = createGroupedVirtualizer({
+    const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
       estimateItemSize: 30,
       sections: [makeSection('A', 3)],
-      target: el,
     });
 
     expect(() => gv[Symbol.dispose]()).not.toThrow();

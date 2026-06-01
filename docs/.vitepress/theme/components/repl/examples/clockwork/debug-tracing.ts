@@ -1,12 +1,12 @@
 export const debugTracingExample = {
-  code: `import { defineMachine, interpret, assign, resolveTransition } from '/clockwork'
+  code: `import { defineMachine, interpret, resolveTransition } from '@vielzeug/clockwork'
 
 const orderMachine = defineMachine({
   initial: 'pending',
   context: { cancelledAt: null },
   states: {
-    pending:   { on: { SUBMIT: { target: 'confirmed' }, CANCEL: { target: 'cancelled', actions: [assign(() => ({ cancelledAt: Date.now() }))] } } },
-    confirmed: { on: { PAY:    { target: 'paid'      }, CANCEL: { target: 'cancelled', actions: [assign(() => ({ cancelledAt: Date.now() }))] } } },
+    pending:   { on: { SUBMIT: { target: 'confirmed' }, CANCEL: { target: 'cancelled', actions: [({ context }) => { context.cancelledAt = Date.now() }] } } },
+    confirmed: { on: { PAY:    { target: 'paid'      }, CANCEL: { target: 'cancelled', actions: [({ context }) => { context.cancelledAt = Date.now() }] } } },
     paid:      { on: { SHIP:    { target: 'shipped'   } } },
     shipped:   { on: { DELIVER: { target: 'delivered' } } },
     delivered: {},
@@ -15,8 +15,8 @@ const orderMachine = defineMachine({
 })
 
 const m = interpret(orderMachine, {
-  traceLimit: 50,
   debug: {
+    traceLimit: 50,
     onTransitionSkipped: ({ from, event }) =>
       console.log('Skipped in ' + from + ': ' + event.type),
   },

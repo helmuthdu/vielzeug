@@ -8,7 +8,7 @@ const DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../data/viel
 
 const REGEN_CMD = 'pnpm --dir packages/codex run prepare:data';
 
-function validate(raw: unknown): BundledData {
+export function validateBundledData(raw: unknown): BundledData {
   if (
     typeof raw !== 'object' ||
     raw === null ||
@@ -66,7 +66,7 @@ export function loadData(): BundledData {
     });
   }
 
-  return validate(parsed);
+  return validateBundledData(parsed);
 }
 
 export function packageMeta(pkg: BundledPackage): PackageMeta {

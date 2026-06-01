@@ -12,7 +12,7 @@ You want to unit-test the logic inside a worker task function without spawning r
 ### Solution
 
 ```ts
-import { createTestWorker } from '@vielzeug/familiar/test';
+import { createTestWorker } from '@vielzeug/familiar/testing';
 import { describe, expect, it } from 'vitest';
 
 type Input = { a: number; b: number };

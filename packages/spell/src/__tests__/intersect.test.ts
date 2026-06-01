@@ -43,6 +43,18 @@ describe('s.intersect()', () => {
     expect((result as any).nested.b).toBe(42);
   });
 
+  it('deep-merges declared constructor fields without mutating the result prototype', () => {
+    const left = s.object({ constructor: s.object({ left: s.boolean() }).relaxed() }).relaxed();
+    const right = s.object({ constructor: s.object({ right: s.boolean() }).relaxed() }).relaxed();
+    const result = s.intersect(left, right).parse({ constructor: { left: true, right: true } }) as Record<
+      string,
+      unknown
+    >;
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(result, 'constructor')?.value).toEqual({ left: true, right: true });
+  });
+
   it('accepts raw literal values as shorthand for s.literal()', () => {
     const schema = s.intersect('hello', 'hello');
 

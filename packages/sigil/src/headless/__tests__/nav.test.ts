@@ -98,7 +98,27 @@ describe('createListControl', () => {
     expect(nav.prev()).toBe(-1);
   });
 
-  it('set clamps into range and returns no-enabled-item when clamped index is disabled', () => {
+  it('set(-1) clears focus (same as reset) and returns -1', () => {
+    const items = [{ disabled: false }, { disabled: false }];
+    let activeIndex = 0;
+    const nav = createListControl({
+      getIndex: () => activeIndex,
+      getItems: () => items,
+      setIndex: (index) => {
+        activeIndex = index;
+      },
+    });
+
+    nav.set(1);
+    expect(activeIndex).toBe(1);
+
+    const result = nav.set(-1);
+
+    expect(result).toBe(-1);
+    expect(activeIndex).toBe(-1);
+  });
+
+  it('set clamps out-of-bounds index to the last enabled item', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
     let activeIndex = 0;
     const nav = createListControl({
@@ -110,7 +130,26 @@ describe('createListControl', () => {
     });
 
     expect(nav.set(99)).toBe(2);
-    expect(nav.set(1)).toBe(2);
+  });
+
+  it('set returns -1 when the target index is a disabled item', () => {
+    const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
+    let activeIndex = 0;
+    const nav = createListControl({
+      getIndex: () => activeIndex,
+      getItems: () => items,
+      setIndex: (index) => {
+        activeIndex = index;
+      },
+    });
+
+    nav.set(0);
+
+    const result = nav.set(1);
+
+    expect(result).toBe(-1);
+    // Index should remain unchanged when set fails
+    expect(activeIndex).toBe(0);
   });
 
   it('supports custom isItemDisabled predicate', () => {
@@ -335,5 +374,25 @@ describe('createListControl typeahead', () => {
 
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
     expect(activeIndex).toBe(-1);
+  });
+
+  it('cleanup() resets the type buffer — subsequent keystrokes start a fresh search', () => {
+    const { activeIndex, nav } = makeNav([
+      { disabled: false, label: 'Apple' },
+      { disabled: false, label: 'Avocado' },
+      { disabled: false, label: 'Banana' },
+    ]);
+
+    // Type 'av' — should land on 'Avocado' (index 1).
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'v' }));
+    expect(activeIndex()).toBe(1);
+
+    // cleanup() resets the buffer without waiting for the 500 ms timeout.
+    nav.cleanup();
+
+    // Now type 'a' again — buffer is cleared so it's a fresh 'a' search from index 2 → wraps → 'Apple' at 0.
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
+    expect(activeIndex()).toBe(0);
   });
 });

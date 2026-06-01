@@ -486,7 +486,9 @@ class ContainerImpl implements Container {
 
       const reg = this.#getRegistration(tok);
 
-      if (reg?.kind === 'factory') {
+      if (reg === undefined) throw new ProviderNotFoundError(tok, this.name);
+
+      if (reg.kind === 'factory') {
         for (const dep of reg.deps) {
           visit(dep, [...path, tok]);
         }

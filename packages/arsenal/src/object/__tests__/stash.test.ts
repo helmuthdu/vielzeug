@@ -14,20 +14,20 @@ describe('stash', () => {
   });
 
   it('should store and retrieve values', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     c.set(['user', 1], 'Alice');
     expect(c.get(['user', 1])).toBe('Alice');
   });
 
   it('should return undefined for missing keys', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     expect(c.get(['missing'])).toBeUndefined();
   });
 
   it('should delete values', () => {
-    const c = stash<number>({ hash });
+    const c = stash<number, readonly unknown[]>({ hash });
 
     c.set(['count'], 42);
     expect(c.delete(['count'])).toBe(true);
@@ -35,32 +35,32 @@ describe('stash', () => {
   });
 
   it('should return false when deleting non-existent key', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     expect(c.delete(['nonexistent'])).toBe(false);
   });
 
   it('should clear all values', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     c.set(['a'], 'A');
     c.set(['b'], 'B');
-    expect(c.size()).toBe(2);
+    expect(c.size).toBe(2);
     c.clear();
-    expect(c.size()).toBe(0);
+    expect(c.size).toBe(0);
   });
 
   it('should track cache size', () => {
-    const c = stash<number>({ hash });
+    const c = stash<number, readonly unknown[]>({ hash });
 
-    expect(c.size()).toBe(0);
+    expect(c.size).toBe(0);
     c.set(['one'], 1);
     c.set(['two'], 2);
-    expect(c.size()).toBe(2);
+    expect(c.size).toBe(2);
   });
 
   it('should expire entries with ttlMs', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     c.set(['temp'], 'data', { ttlMs: 1000 });
 
@@ -70,7 +70,7 @@ describe('stash', () => {
   });
 
   it('should not evict when ttl is Infinity', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     c.set(['k'], 'v', { ttlMs: Number.POSITIVE_INFINITY });
     vi.advanceTimersByTime(1_000_000);
@@ -78,7 +78,7 @@ describe('stash', () => {
   });
 
   it('should throw for non-finite ttl values except Infinity', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     c.set(['k'], 'v');
 
@@ -87,7 +87,7 @@ describe('stash', () => {
   });
 
   it('should handle complex keys', () => {
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
     const key = ['user', { id: 1, role: 'admin' }, [1, 2, 3]];
 
     c.set(key, 'complex');
@@ -104,7 +104,7 @@ describe('stash', () => {
   });
 
   it('should support getOrSet()', () => {
-    const c = stash<number>({ hash });
+    const c = stash<number, readonly unknown[]>({ hash });
 
     const first = c.getOrSet(['k'], () => 1);
     const second = c.getOrSet(['k'], () => 2);
@@ -115,7 +115,7 @@ describe('stash', () => {
   });
 
   it('should expose entries() iterator', () => {
-    const c = stash<number>({ hash });
+    const c = stash<number, readonly unknown[]>({ hash });
 
     c.set(['a'], 1);
     c.set(['b'], 2);
@@ -134,7 +134,7 @@ describe('stash', () => {
           resolveFactory = r;
         }),
     );
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     const p1 = c.getOrSet(['k'], factory);
     const p2 = c.getOrSet(['k'], factory); // concurrent call — same in-flight
@@ -161,7 +161,7 @@ describe('stash', () => {
       )
       .mockResolvedValueOnce('ok');
 
-    const c = stash<string>({ hash });
+    const c = stash<string, readonly unknown[]>({ hash });
 
     const p1 = c.getOrSet(['k'], factory);
 
@@ -208,7 +208,7 @@ describe('stash', () => {
 
   it('getOrSet() caches undefined values — factory is called only once', () => {
     const factory = vi.fn(() => undefined);
-    const c = stash<undefined>({ hash });
+    const c = stash<undefined, readonly unknown[]>({ hash });
 
     c.getOrSet(['k'], factory);
     c.getOrSet(['k'], factory);
@@ -226,7 +226,7 @@ describe('stash', () => {
           resolve = r;
         }),
     );
-    const c = stash<undefined>({ hash });
+    const c = stash<undefined, readonly unknown[]>({ hash });
 
     const p1 = c.getOrSet(['k'], factory);
     const p2 = c.getOrSet(['k'], factory); // in-flight dedup
@@ -241,5 +241,31 @@ describe('stash', () => {
 
     expect(sync).toBeUndefined();
     expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  it('clear() during in-flight does not re-populate the store after the promise resolves', async () => {
+    vi.useRealTimers();
+
+    let resolve!: (v: string) => void;
+    const c = stash<string>({ hash: (k: string) => k });
+    const factory = vi.fn(
+      () =>
+        new Promise<string>((r) => {
+          resolve = r;
+        }),
+    );
+
+    const p = c.getOrSet('key', factory);
+
+    expect(c.size).toBe(0); // not yet resolved
+
+    c.clear(); // clear before resolve
+
+    resolve('hello');
+    await p; // promise still resolves for caller
+
+    // Store must remain empty — clear() happened before resolve
+    expect(c.size).toBe(0);
+    expect(c.get('key')).toBeUndefined();
   });
 });

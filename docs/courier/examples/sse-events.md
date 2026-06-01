@@ -28,7 +28,7 @@ const stream = createStream({
 
 const source = stream.sse<Events>('/events', {
   query: { roomId: 'general' },
-  reconnect: { maxAttempts: 5 },
+  reconnect: { times: 5 },
   onError: (error) => {
     console.error('SSE closed permanently:', error.message);
   },

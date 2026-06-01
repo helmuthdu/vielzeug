@@ -15,6 +15,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./debug": {
+      "source": "./src/debug.ts",
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js",
+      "require": "./dist/debug.cjs"
+    },
     "./test": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing.d.ts",

@@ -80,6 +80,14 @@ describe('HTTP Client', () => {
 
       expect(fetchMock).toHaveBeenCalledWith('https://api.example.com', expect.any(Object));
     });
+
+    it('throws when a path param is null (prevents silent "null" in URLs)', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      await expect(http.get('/users/{id}', { params: { id: null as unknown as string } })).rejects.toThrow(
+        /unresolved path param \{id\}/,
+      );
+    });
   });
 
   describe('Methods & Body', () => {
@@ -163,6 +171,20 @@ describe('HTTP Client', () => {
   });
 
   describe('Headers & Interceptors', () => {
+    it('getHeaders() returns a snapshot — mutations do not corrupt global headers', async () => {
+      const http = createApi({ headers: { 'x-app': 'test' } });
+
+      const snap = http.getHeaders() as Record<string, string>;
+
+      snap['x-app'] = 'mutated';
+
+      fetchMock.mockResolvedValue(jsonResponse({}));
+
+      await http.get('/test');
+
+      expect(fetchMock.mock.calls[0][1].headers['x-app']).toBe('test');
+    });
+
     it('updates headers at runtime', async () => {
       const http = createApi({ headers: { Authorization: 'Bearer old', 'x-trace': 'abc' } });
 

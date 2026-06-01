@@ -1,21 +1,8 @@
+import { cache } from '@vielzeug/arsenal';
+
 import type { CurrencyCode, RoundingMode } from './types';
 
-// Inline bounded FIFO cache — no external dependency required.
-// Evicts the oldest entry when the size limit is reached (Map insertion-order iteration).
-export function lruCache<K, V>(maxSize: number): { get(k: K): V | undefined; set(k: K, v: V): void } {
-  const map = new Map<K, V>();
-
-  return {
-    get: (k) => map.get(k),
-    set: (k, v) => {
-      if (map.size >= maxSize) map.delete(map.keys().next().value as K);
-
-      map.set(k, v);
-    },
-  };
-}
-
-const currencyDecimalsCache = lruCache<string, number>(512);
+const currencyDecimalsCache = cache<string, number>(512);
 
 /**
  * Returns the number of minor-unit decimal places for a given ISO 4217 currency code.
@@ -73,24 +60,68 @@ export function pow10(exponent: number): bigint {
 
 /** Regex for valid decimal strings accepted by `parseRational`. */
 const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
+/** Regex matching JavaScript scientific-notation strings, e.g. `'1e-7'`, `'-3.14E+5'`. */
+const SCIENTIFIC_RE = /^(-?\d+\.?\d*)[eE]([+-]?\d+)$/;
+
+/**
+ * Expands a scientific-notation decimal string into a plain decimal string.
+ * `'1e-7'` → `'0.0000001'`, `'1.23e+5'` → `'123000'`.
+ * Only called when `SCIENTIFIC_RE` already matched — no extra validation.
+ */
+function expandScientific(s: string): string {
+  const match = SCIENTIFIC_RE.exec(s)!;
+  const coeff = match[1]!;
+  const exp = parseInt(match[2]!, 10);
+  const isNeg = coeff.startsWith('-');
+  const absCoeff = isNeg ? coeff.slice(1) : coeff;
+  const dotIndex = absCoeff.indexOf('.');
+  const digits = dotIndex === -1 ? absCoeff : absCoeff.replace('.', '');
+  const fracLen = dotIndex === -1 ? 0 : absCoeff.length - dotIndex - 1;
+  const newExp = exp - fracLen; // where the decimal point sits relative to end of digits
+
+  let result: string;
+
+  if (newExp >= 0) {
+    // All digits are to the left of the decimal — append trailing zeros
+    result = digits + '0'.repeat(newExp);
+  } else {
+    const intLen = digits.length + newExp; // digits before the decimal point
+
+    if (intLen <= 0) {
+      // Pure fraction: '0.' + leading zeros + digits
+      result = '0.' + '0'.repeat(-intLen) + digits;
+    } else {
+      result = digits.slice(0, intLen) + '.' + digits.slice(intLen);
+    }
+  }
+
+  return isNeg ? `-${result}` : result;
+}
 
 /**
  * Parses a decimal string into a rational `{ numerator, denominator, negative }`.
  * The denominator is always a power of 10 and the numerator is always non-negative.
  * Throws `RangeError` for non-numeric input.
  *
+ * Accepts standard decimal strings and JavaScript scientific notation
+ * (e.g. `'1e-7'`, `'1.23E+5'`) — the latter is automatically expanded before parsing.
+ *
  * @example
- * parseRational('1.5')  → { numerator: 15n, denominator: 10n, negative: false }
- * parseRational('-0.5') → { numerator: 5n,  denominator: 10n, negative: true  }
- * parseRational('3')    → { numerator: 3n,  denominator: 1n,  negative: false }
+ * parseRational('1.5')   → { numerator: 15n, denominator: 10n, negative: false }
+ * parseRational('-0.5')  → { numerator: 5n,  denominator: 10n, negative: true  }
+ * parseRational('3')     → { numerator: 3n,  denominator: 1n,  negative: false }
+ * parseRational('1e-7')  → { numerator: 1n,  denominator: 10000000n, negative: false }
  */
 export function parseRational(str: string): { denominator: bigint; negative: boolean; numerator: bigint } {
-  if (!DECIMAL_RE.test(str)) {
+  // Expand scientific notation (e.g. from String(1e-7) = '1e-7') before validation.
+  const normalized = SCIENTIFIC_RE.test(str) ? expandScientific(str) : str;
+
+  if (!DECIMAL_RE.test(normalized)) {
     throw new RangeError(`Invalid decimal string: "${str}"`);
   }
 
-  const negative = str.startsWith('-');
-  const absStr = negative ? str.slice(1) : str;
+  const negative = normalized.startsWith('-');
+  const absStr = negative ? normalized.slice(1) : normalized;
   const dotIndex = absStr.indexOf('.');
   const intStr = dotIndex === -1 ? absStr : absStr.slice(0, dotIndex);
   const fracStr = dotIndex === -1 ? '' : absStr.slice(dotIndex + 1);

@@ -15,6 +15,10 @@ interface NumberAnnotations extends Record<string, unknown> {
 }
 
 export class NumberSchema<Input = number> extends Schema<number, Input> {
+  protected override get _kind(): string {
+    return 'number';
+  }
+
   constructor() {
     super((value) =>
       typeof value === 'number' && !Number.isNaN(value)
@@ -35,10 +39,14 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
           min: minimum,
         });
       },
-      (ann) => ({
-        ...ann,
-        minimum: ann.minimum === undefined ? minimum : Math.max(ann.minimum, minimum),
-      }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return {
+          ...ann,
+          minimum: ann.minimum === undefined ? minimum : Math.max(ann.minimum, minimum),
+        };
+      },
     );
   }
 
@@ -54,10 +62,14 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
           max: maximum,
         });
       },
-      (ann) => ({
-        ...ann,
-        maximum: ann.maximum === undefined ? maximum : Math.min(ann.maximum, maximum),
-      }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return {
+          ...ann,
+          maximum: ann.maximum === undefined ? maximum : Math.min(ann.maximum, maximum),
+        };
+      },
     );
   }
 
@@ -82,10 +94,14 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
           min: 0,
         });
       },
-      (ann) => ({
-        ...ann,
-        exclusiveMinimum: ann.exclusiveMinimum === undefined ? 0 : Math.max(ann.exclusiveMinimum, 0),
-      }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return {
+          ...ann,
+          exclusiveMinimum: ann.exclusiveMinimum === undefined ? 0 : Math.max(ann.exclusiveMinimum, 0),
+        };
+      },
     );
   }
 
@@ -99,10 +115,14 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
           max: 0,
         });
       },
-      (ann) => ({
-        ...ann,
-        exclusiveMaximum: ann.exclusiveMaximum === undefined ? 0 : Math.min(ann.exclusiveMaximum, 0),
-      }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return {
+          ...ann,
+          exclusiveMaximum: ann.exclusiveMaximum === undefined ? 0 : Math.min(ann.exclusiveMaximum, 0),
+        };
+      },
     );
   }
 
@@ -113,7 +133,11 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
         return fail(ErrorCode.too_small, resolveMessage(message, { value: value as number }), { min: 0 });
       },
-      (ann) => ({ ...ann, minimum: ann.minimum === undefined ? 0 : Math.max(ann.minimum, 0) }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return { ...ann, minimum: ann.minimum === undefined ? 0 : Math.max(ann.minimum, 0) };
+      },
     );
   }
 
@@ -124,7 +148,11 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
 
         return fail(ErrorCode.too_big, resolveMessage(message, { value: value as number }), { max: 0 });
       },
-      (ann) => ({ ...ann, maximum: ann.maximum === undefined ? 0 : Math.min(ann.maximum, 0) }),
+      (current) => {
+        const ann = current as NumberAnnotations;
+
+        return { ...ann, maximum: ann.maximum === undefined ? 0 : Math.min(ann.maximum, 0) };
+      },
     );
   }
 
@@ -165,7 +193,7 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    const ann = this._annotations;
+    const ann = this._annotations as NumberAnnotations;
 
     return {
       ...this._describeBase(),

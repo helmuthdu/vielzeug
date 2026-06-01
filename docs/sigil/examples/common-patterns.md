@@ -5,15 +5,15 @@ description: 'Common Patterns examples for block.'
 
 ## Common Patterns
 
-## Problem
+### Problem
 
-Implement common patterns in a production-friendly way with `@vielzeug/sigil` while keeping setup and cleanup explicit.
+You need ready-to-use Sigil component patterns for common UI scenarios: form actions, confirmation dialogs, pagination, toolbars, loading states, and button groups.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/sigil` installed.
+Compose Sigil components with standard HTML layout. Each snippet below is a self-contained, copy-paste runnable example.
 
-### Form Actions
+#### Form Actions
 
 <ComponentPreview>
 
@@ -34,7 +34,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Confirmation Dialog
+#### Confirmation Dialog
 
 <ComponentPreview>
 
@@ -53,7 +53,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Pagination
+#### Pagination
 
 <ComponentPreview>
 
@@ -73,7 +73,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Toolbar
+#### Toolbar
 
 <ComponentPreview>
 
@@ -100,7 +100,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Loading States
+#### Loading States
 
 <ComponentPreview>
 
@@ -116,7 +116,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Button Group
+#### Button Group
 
 <ComponentPreview>
 
@@ -130,18 +130,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Guideline-Oriented Recipes](./guideline-oriented-recipes.md)
 - [Settings Panel with Switches](./settings-panel-with-switches.md)

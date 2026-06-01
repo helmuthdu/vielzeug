@@ -67,4 +67,14 @@ describe('validateCatalog()', () => {
 
     expect(warnings).toEqual([]);
   });
+
+  test('returns an empty array for an empty catalog', () => {
+    expect(validateCatalog({}, 'en')).toEqual([]);
+  });
+
+  test('returns an empty array for a catalog with only flat string keys (no plural branches)', () => {
+    const warnings = validateCatalog({ greeting: 'Hello', title: 'App' }, 'en');
+
+    expect(warnings).toEqual([]);
+  });
 });

@@ -5,15 +5,15 @@ description: 'Guideline-Oriented Recipes examples for block.'
 
 ## Guideline-Oriented Recipes
 
-## Problem
+### Problem
 
-Implement guideline-oriented recipes in a production-friendly way with `@vielzeug/sigil` while keeping setup and cleanup explicit.
+You want to apply Sigil's design intensity guidelines (onboard, bolder, quieter, delight) in real component compositions.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/sigil` installed.
+Use component variants and semantic color tokens together with layout primitives. Each recipe below demonstrates one design intensity pattern.
 
-### Onboard: First-Run Empty State
+#### Onboard: First-Run Empty State
 
 <ComponentPreview vertical>
 
@@ -51,7 +51,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Bolder: High-Impact Primary Action
+#### Bolder: High-Impact Primary Action
 
 <ComponentPreview>
 
@@ -96,7 +96,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-### Delight: Friendly Completion Moment
+#### Delight: Friendly Completion Moment
 
 <ComponentPreview vertical>
 
@@ -138,18 +138,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 </ComponentPreview>
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Common Patterns](./common-patterns.md)
 - [Settings Panel with Switches](./settings-panel-with-switches.md)

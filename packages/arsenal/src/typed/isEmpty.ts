@@ -22,7 +22,7 @@ import { isPlainObject } from './isPlainObject';
  *
  * @returns `true` if all arguments are `null`, `undefined`, `{}`, `[]`, or empty strings. Otherwise, it returns `false`.
  */
-export function isEmpty(arg: any): boolean {
+export function isEmpty(arg: unknown): boolean {
   if (isNil(arg) || arg === '') return true;
 
   if (Array.isArray(arg)) return arg.length === 0;

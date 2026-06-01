@@ -1,8 +1,8 @@
 export const scopedExecutionExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const RequestId = createToken('RequestId')
-const Handler = createToken('Handler')
+const RequestId = token('RequestId')
+const Handler = token('Handler')
 
 const container = createContainer()
 container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'scoped' })

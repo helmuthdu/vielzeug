@@ -1,5 +1,7 @@
 import type { JsonSchema, SchemaDescriptor } from './types';
 
+import { defineOwnProperty } from './safe-object';
+
 /**
  * Converts a `SchemaDescriptor` to a JSON Schema object (draft 2020-12 compatible).
  *
@@ -96,7 +98,7 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
       const required: string[] = [];
 
       for (const [key, fieldDescriptor] of Object.entries(d.fields)) {
-        properties[key] = descriptorToJsonSchema(fieldDescriptor);
+        defineOwnProperty(properties, key, descriptorToJsonSchema(fieldDescriptor));
 
         if (!fieldDescriptor.isOptional) required.push(key);
       }

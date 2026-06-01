@@ -34,11 +34,7 @@ const defineComponent = <
 
   // Named class for DevTools and error messages
   const ComponentClass = class extends BaseElement {
-    static override _definition = definition as unknown as ComponentDefinition<
-      Record<never, never>,
-      Record<string, never>,
-      string
-    >;
+    static override _definition = definition as ComponentDefinition<any, any, any>;
     static override _normalizedPropDefs = normalizedPropDefs as PropsDef<Record<never, never>> | undefined;
     static override formAssociated = definition.formAssociated ?? false;
     static override observedAttributes = observedAttrs;

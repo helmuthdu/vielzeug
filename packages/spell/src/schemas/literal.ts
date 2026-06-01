@@ -6,6 +6,10 @@ import { _messages } from '../messages';
 export class LiteralSchema<T extends string | number | boolean | null | undefined> extends Schema<T> {
   readonly value: T;
 
+  protected override get _kind(): string {
+    return 'literal';
+  }
+
   constructor(value: T) {
     super((val) =>
       val === value

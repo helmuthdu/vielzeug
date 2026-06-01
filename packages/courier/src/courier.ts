@@ -5,8 +5,13 @@ import { createStream, type StreamClient } from './stream';
 import { createTransportCore, type Interceptor, type TransportOptions } from './transport';
 
 export type CourierOptions = TransportOptions & {
-  /** Default options merged into every `mutation()` call. */
-  mutationDefaults?: MutationOptions;
+  /**
+   * Default options merged into every `mutation()` call.
+   * Only retry/callback-error options are meaningful here — lifecycle callbacks
+   * (`onSuccess`, `onError`, `onSettled`) should be provided per-mutation since
+   * they receive typed variables that differ per mutation.
+   */
+  mutationDefaults?: Pick<MutationOptions, 'delay' | 'onCallbackError' | 'shouldRetry' | 'times'>;
   /** Options specific to the query cache (staleTime, gcTime, refetch policies, etc.). */
   query?: QueryClientOptions;
 };
@@ -25,7 +30,7 @@ export interface Courier {
   /** Create a mutation instance with optional lifecycle callbacks. */
   mutation<TData, TVariables = void>(
     fn: MutationFn<TData, TVariables>,
-    opts?: MutationOptions<TData>,
+    opts?: MutationOptions<TData, TVariables>,
   ): Mutation<TData, TVariables>;
   /** Query / cache client. */
   query: QueryClient;
@@ -94,9 +99,9 @@ export function createCourier(opts?: CourierOptions): Courier {
 
     mutation<TData, TVariables = void>(
       fn: MutationFn<TData, TVariables>,
-      mutOpts?: MutationOptions<TData>,
+      mutOpts?: MutationOptions<TData, TVariables>,
     ): Mutation<TData, TVariables> {
-      return createMutation(fn, { ...mutationDefaults, ...mutOpts } as MutationOptions<TData>);
+      return createMutation(fn, { ...mutationDefaults, ...mutOpts });
     },
 
     query: queryClient,

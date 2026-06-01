@@ -1,5 +1,5 @@
 export const storeBasicsExample = {
-  code: `import { store, computed, watch } from '/ripple'
+  code: `import { store, computed, watch } from '@vielzeug/ripple'
 
 // Create an object-state store
 const user = store({ name: 'Alice', age: 30, email: 'alice@example.com' })
@@ -10,9 +10,9 @@ console.log('Initial:', user.value)
 user.patch({ age: 31 })
 console.log('After patch:', user.value)
 
-// Derive next state via updater
-user.update((s) => ({ ...s, name: 'Alice Smith' }))
-console.log('After update:', user.value)
+// Derive next state via function
+user.replace((s) => ({ ...s, name: 'Alice Smith' }))
+console.log('After replace:', user.value)
 
 // lens() — writable Signal scoped to a path
 const nameLens = user.lens('name')

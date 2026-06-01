@@ -60,7 +60,6 @@ describe('toFormData adapter', () => {
   test('appends each file in a FileList as a separate entry', () => {
     const fileA = new File(['a'], 'a.txt');
     const fileB = new File(['bb'], 'b.txt');
-    const files = [fileA, fileB];
 
     // jsdom does not expose FileList as a constructible class, so we stub it for this test.
     class FakeFileList {

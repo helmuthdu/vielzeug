@@ -5,9 +5,24 @@ description: Concepts, patterns, and best practices for @vielzeug/ripple — sig
 
 [[toc]]
 
-::: tip New to Ripple?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
-:::
+## Basic Usage
+
+```ts
+import { signal, computed, effect } from '@vielzeug/ripple';
+
+const count = signal(0);
+const doubled = computed(() => count.value * 2);
+
+const sub = effect(() => {
+  console.log('doubled:', doubled.value);
+});
+// → logs "doubled: 0" immediately
+
+count.value = 5; // → logs "doubled: 10"
+
+sub.dispose();
+doubled.dispose();
+```
 
 ## Signals
 
@@ -153,7 +168,7 @@ effect(
 | `name`           | `string`                                        | —          | Shown in error messages                                              |
 | `maxIterations`  | `number`                                        | `100`      | Loop guard threshold for this effect                                 |
 
-For debugging which deps trigger re-runs, use `traceEffect()` instead of `effect()` — see [traceEffect](#traceeffect) below.
+For debugging which deps trigger re-runs, use `debugEffect()` instead of `effect()` — see [debugEffect](#debugeffect) below.
 
 ### `untrack`
 
@@ -378,14 +393,14 @@ const s = await asyncScope(async () => {
 s.dispose();
 ```
 
-## `traceEffect`
+## `debugEffect`
 
-`traceEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
+`debugEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
 
 ```ts
-import { traceEffect } from '@vielzeug/ripple';
+import { debugEffect } from '@vielzeug/ripple/debug';
 
-const stop = traceEffect(
+const stop = debugEffect(
   () => renderUser(userId.value, name.value),
   { name: 'renderUser' },
 );
@@ -433,7 +448,7 @@ user.dispose();      // cancel and detach
 
 ## Store History / Time-Travel
 
-`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Every `.patch()`, `.replace()`, or `.reset()` pushes a snapshot. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
+`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Every `.patch()`, `.replace()`, `.reset()`, and `lens()` write pushes a snapshot. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
 
 ```ts
 import { storeWithHistory } from '@vielzeug/ripple';
@@ -459,7 +474,7 @@ All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`, `map`, `filter`, `w
 
 A `Store<T>` adds structured state helpers on top of a `.value` getter. Every signal primitive (`computed`, `effect`, `watch`, `batch`, `untrack`) works on stores directly.
 
-## Creating a Store
+### Creating a Store
 
 ```ts
 import { store } from '@vielzeug/ripple';
@@ -467,7 +482,7 @@ import { store } from '@vielzeug/ripple';
 const s = store({ count: 0, user: null as User | null });
 ```
 
-## Reading State
+### Reading State
 
 ```ts
 const state = s.value; // { count: 0, user: null }
@@ -476,9 +491,9 @@ const count = s.value.count; // 0
 
 `.value` is a synchronous getter — no method call needed.
 
-## Writing State
+### Writing State
 
-### Partial Patch
+#### Partial Patch
 
 Shallow-merges the patch into the current state:
 
@@ -487,7 +502,7 @@ s.patch({ count: 1 });
 // Equivalent to: { ...current, count: 1 }
 ```
 
-### Updater Function
+#### Updater Function
 
 Receives the current state; return value replaces it:
 
@@ -497,7 +512,7 @@ s.replace((current) => ({ ...current, count: current.count + 1 }));
 
 `patch()` and `replace()` are no-ops when the resulting state passes the `equals` check configured on the store (default: `Object.is`).
 
-## Resetting State
+### Resetting State
 
 ```ts
 // Restore to the state passed to store()
@@ -508,7 +523,7 @@ s.reset();
 is defensively copied at construction time — external mutations to the original
 object cannot corrupt `reset()`.
 
-## Derived Slices
+### Derived Slices
 
 ### Via `computed()`
 
@@ -578,9 +593,9 @@ watch(count, (n, prev) => console.log('count:', prev, '→', n));
 count.dispose();
 ```
 
-## Watching State
+### Watching State
 
-### Full-State Watch
+#### Full-State Watch
 
 ```ts
 // Does not fire immediately — use { immediate: true } to opt in
@@ -612,7 +627,7 @@ const stop = watch(s, (curr) => {
 });
 ```
 
-### Slice Watch
+#### Slice Watch
 
 Use a getter source to watch a slice — only fires when the derived value changes:
 
@@ -627,7 +642,7 @@ watch(countSignal, (count, prev) => console.log('count changed to', count), {
 });
 ```
 
-## Batching
+### Batching Store Mutations
 
 `batch()` groups multiple writes into a single notification:
 
@@ -646,7 +661,7 @@ const result = batch(() => {
 
 Nested `batch()` calls merge into the outermost — only one notification fires when the outermost batch completes.
 
-## Narrowing to Read-Only
+### Narrowing to Read-Only
 
 To expose a store at API boundaries where consumers should observe but not mutate, wrap it with `readonly()`:
 
@@ -837,12 +852,6 @@ function useSignalValue<T>(source: ReadonlySignal<T>) {
 ```
 
 :::
-
-### Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
 
 ## Working with Other Vielzeug Libraries
 

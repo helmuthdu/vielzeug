@@ -33,20 +33,17 @@ const URL_ATTRS = new Set([
 
 /**
  * Schemes that execute JavaScript or can embed arbitrary HTML. Blocked
- * unconditionally in URL-accepting attributes — no DEV-only guard.
- * `data:` URIs are intentionally not blocked; they are safe in img/video src
- * and only dangerous in href/action/formaction (not commonly misused in templates).
+ * unconditionally in URL-accepting attributes.
+ * Covers: javascript:, vbscript:, blob:, and data: variants that carry HTML/XML.
+ * Plain data: image URIs (e.g. data:image/png) are intentionally allowed.
  */
-const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript):/i;
+const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript|data:(?:[^,]*\/html|application\/(?:xhtml|xml))|blob):/i;
 
 export const setAttr = (el: Element, name: string, val: unknown): void => {
   if (/^on[a-z]/i.test(name)) {
-    if (import.meta.env.DEV) {
-      console.warn(
-        `[craft] Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
-      );
-    }
-
+    console.warn(
+      `[craft] Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
+    );
     el.removeAttribute(name);
 
     return;
@@ -61,12 +58,9 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
   const strVal = val === true ? 'true' : String(val);
 
   if (URL_ATTRS.has(name.toLowerCase()) && DANGEROUS_SCHEME_RE.test(strVal)) {
-    if (import.meta.env.DEV) {
-      console.warn(
-        `[craft] Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
-      );
-    }
-
+    console.warn(
+      `[craft] Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
+    );
     el.removeAttribute(name);
 
     return;
@@ -78,12 +72,12 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 export const listen = (
   el: EventTarget | null | undefined,
   name: string,
-  handler: (e: any) => void,
+  handler: EventListener,
   options?: AddEventListenerOptions,
 ): (() => void) => {
   if (!el) return () => {};
 
-  const listener: EventListener = handler as EventListener;
+  const listener: EventListener = handler;
 
   el.addEventListener(name, listener, options);
 

@@ -4,6 +4,10 @@ import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
+  protected override get _kind(): string {
+    return 'bigint';
+  }
+
   constructor() {
     super((value) => (typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, _messages().bigint.type())));
   }

@@ -13,13 +13,20 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `createRemoteSource()` | Async server-backed collection with page navigation | Fetches on creation; set `autoFetch: false` to delay |
 | `createCursorSource()` | Async collection navigated by cursor tokens | `next()`/`prev()` are no-ops when the cursor is absent |
 | `createInfiniteSource()` | Async append-mode (infinite scroll) collection | `loadMore()` is a no-op once `meta.hasMore` is `false` |
+| `deriveSource()` | Create a reactive projection of another source | Derived source disposes automatically when parent disposes |
+| `mergeSource()` | Combine multiple sources into one reactive source | All sources must share the same item type |
 | `toSignals()` | Wrap any source in Ripple computed signals | Must call `dispose()` or signals leak |
 | `SourceError` | Structured error class with `message`, `cause`, `query`, `attempt` | Extends `Error`; access context via getters, not object spread |
-| `sourceState()` | Derive a discriminated union (`loading`/`error`/`data`) from any source | — |
+| `SourceTimeoutError` | Error thrown when `ready()` times out | Extends `Error`; check with `instanceof SourceTimeoutError` |
+| `sourceState()` | Derive a discriminated union (`loading`/`error`/`success`) from any source | — |
 | `itemRange()` | Compute 1-based display range from `SourceMeta` | Returns `{ start: 0, end: 0 }` when `totalItems === 0` |
 | `prefetchSource()` | SSR: fetch first page, return serialisable snapshot | **Throws `SourceError`** if fetch fails |
 | `prefetchSourceWithSource()` | SSR: fetch first page, return both snapshot and live source | Caller must call `source.dispose()` |
 | `composeFetch()` | Layer middleware around a `fetch`-shaped function | Middlewares execute left-to-right (first = outermost) |
+| `filterContains()` | Preset predicate: case-insensitive substring match | Matches against a getter's string value |
+| `filterEquals()` | Preset predicate: strict equality match | Uses `Object.is` semantics |
+| `filterRange()` | Preset predicate: inclusive min/max range | Works with numbers and Dates |
+| `sortBy()` | Preset comparator: sort by a getter value | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates |
 | `encodeQuery()` | Serialize source query to URL params | Filter and sort are JSON-stringified |
 | `decodeQuery()` | Deserialize URL params (or `URLSearchParams`) to a source query | Malformed JSON is silently dropped by default |
 
@@ -45,6 +52,7 @@ createLocalSource<T>(
 ```ts
 type LocalConfig<T> = {
   debounceMs?: number;   // default: 300
+  initialData?: readonly T[];  // alternative to positional data arg; takes precedence when both are provided
   filter?: Predicate<T>;
   filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
   limit?: number;        // default: 20
@@ -175,10 +183,14 @@ type InfiniteConfig<T> = {
   autoFetch?: boolean;   // default: true
   debounceMs?: number;   // default: 300
   fetch: (
-    q: { limit: number; page: number; search?: string },
+    q: InfiniteSourceQuery,
     signal: AbortSignal,
   ) => Promise<{ items: readonly T[]; total: number }>;
   limit?: number;        // default: 20
+  onFetch?: (event: FetchEvent<InfiniteSourceQuery>) => void;
+  queryKey?: (q: InfiniteSourceQuery) => string;  // custom deduplication key
+  refreshInterval?: number;
+  retry?: RetryConfig;
 };
 ```
 
@@ -213,9 +225,10 @@ All methods return `Promise<void>` unless noted.
 | `flush()` | Flush pending debounced search and apply immediately |
 | `goTo(page)` | Navigate to the given page number |
 | `goToLast()` | Navigate to the last page |
-| `hydrate(state)` | Apply a partial `SourceQuery` snapshot; no-op if nothing changed |
+| `restoreQuery(state)` | Apply a partial `SourceQuery` snapshot; no-op if nothing changed |
 | `next()` | Navigate to the next page (no-op at last page) |
 | `prev()` | Navigate to the previous page (no-op at first page) |
+| `ready(timeout?)` | Resolve when no async computation is pending; optional timeout rejects with `SourceTimeoutError` |
 | `reset()` | Restore initial config and return to page 1 |
 | `search(query)` | Debounced search — sets `meta.isSearchPending` until fired |
 | `searchNow(query)` | Immediate search, cancels any pending debounce |
@@ -238,11 +251,11 @@ All methods return `Promise<void>` except `optimisticUpdate` and `subscribe`.
 | `flush()` | Flush pending debounced search |
 | `goTo(page)` | Navigate to page and fetch |
 | `goToLast()` | Navigate to the last page based on current `total` |
-| `hydrate(state)` | Apply a partial `RemoteSourceQuery` snapshot and fetch if changed |
+| `restoreQuery(state)` | Apply a partial `RemoteSourceQuery` snapshot and fetch if changed |
 | `next()` | Next page (no-op at last page) |
 | `optimisticUpdate(mutator, options?)` | Apply instant UI update; returns rollback function |
 | `prev()` | Previous page (no-op at first page) |
-| `ready(timeout?)` | Resolve when no requests are pending and no debounce is active; optional timeout rejects with an error |
+| `ready(timeout?)` | Resolve when no requests are pending and no debounce is active; optional timeout rejects with `SourceTimeoutError` |
 | `refresh()` | Re-fetch the current query |
 | `reset()` | Restore initial config and refetch |
 | `search(query)` | Debounced search |
@@ -280,6 +293,7 @@ optimisticUpdate(
 | `ready(timeout?)` | Resolve when idle; optional timeout |
 | `refresh()` | Re-fetch current cursor position |
 | `reset()` | Clear cursors and fetch from the start |
+| `restoreQuery(patch)` | Apply a partial `CursorSourceQuery` snapshot; no-op if nothing changed |
 | `search(query)` | Debounced search (resets cursor position) |
 | `searchNow(query)` | Immediate search (resets cursor position) |
 | `setLimit(limit)` | Set page size (resets cursor position) |
@@ -381,7 +395,7 @@ Derives a discriminated union from any source:
 type SourceState<T> =
   | { readonly status: 'loading' }
   | { readonly error: SourceError; readonly status: 'error' }
-  | { readonly items: readonly T[]; readonly status: 'data' };
+  | { readonly items: readonly T[]; readonly status: 'success' };
 ```
 
 **Example:**
@@ -393,7 +407,7 @@ const state = sourceState(source);
 switch (state.status) {
   case 'loading': return renderSpinner();
   case 'error':   return renderError(state.error.message);
-  case 'data':    return renderList(state.items);
+  case 'success': return renderList(state.items);
 }
 ```
 
@@ -559,32 +573,12 @@ import { decodeQuery } from '@vielzeug/sourcerer';
 
 // Pass URLSearchParams directly
 const query = decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 });
-await source.hydrate(query);
+await source.restoreQuery(query);
 ```
 
 ---
 
 ## Pagination Utilities
-
-### `clampPage`
-
-```ts
-clampPage(page: number, pageCount: number): number
-```
-
-Returns `page` clamped to `[1, pageCount]`. Returns `1` when `pageCount === 0`.
-
----
-
-### `pageCount`
-
-```ts
-pageCount(totalItems: number, limit: number): number
-```
-
-Returns `Math.ceil(totalItems / limit)`.
-
----
 
 ### `itemRange`
 
@@ -601,8 +595,16 @@ type Sorter<T> = (a: T, b: T) => number;
 // search is OPTIONAL — omitted when no search is active
 type SourceQuery = Readonly<{ limit: number; page: number; search?: string }>;
 
-type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = SourceQuery &
-  Readonly<{ filter?: TFilter; sort?: TSort }>;
+type RemoteFetchQuery<TFilter = unknown, TSort = unknown> = Readonly<{
+  filter?: TFilter;
+  limit: number;
+  page: number;
+  search?: string;
+  sort?: TSort;
+}>;
+
+// Alias of RemoteFetchQuery — the shape returned by toQuery() on RemoteSource
+type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = RemoteFetchQuery<TFilter, TSort>;
 
 type SourceMeta = Readonly<{
   error: SourceError | null;    // null when healthy
@@ -630,6 +632,7 @@ type InfiniteMeta = Readonly<{
   isLoading: boolean;
   isLoadingMore: boolean;   // true only during loadMore() — not during reset()
   isSearchPending: boolean;
+  loadedPages: number;      // number of pages currently accumulated in current[]
   pageSize: number;
   totalItems: number;
 }>;
@@ -643,7 +646,7 @@ type ReactiveSource<T, TMeta> = {
 type SourceState<T> =
   | { readonly status: 'loading' }
   | { readonly error: SourceError; readonly status: 'error' }
-  | { readonly items: readonly T[]; readonly status: 'data' };
+  | { readonly items: readonly T[]; readonly status: 'success' };
 
 type QueryParams = Record<string, string>;
 type QueryParamsInput = Record<string, string | string[] | undefined>;
@@ -660,9 +663,39 @@ type RetryConfig = {
   delay?: number | ((attempt: number) => number);
 };
 
-type FetchEvent<TFilter = unknown, TSort = unknown> = {
-  query: RemoteSourceQuery<TFilter, TSort>;
-  result: 'error' | 'success';
+type FetchEvent<TQuery = unknown> = Readonly<{
   durationMs: number;
-};
+  error?: SourceError;  // only present when status === 'error'
+  query: TQuery;
+  status: 'error' | 'success';
+}>;
+```
+
+## Errors
+
+### `SourceError`
+
+See [Error Utilities > `SourceError`](#sourceerror) above.
+
+### `SourceTimeoutError`
+
+```ts
+class SourceTimeoutError extends Error {
+  readonly name = 'SourceTimeoutError';
+  // message: 'Source.ready() timed out after Nms'
+}
+```
+
+Thrown by `ready(timeout)` when the source has not become idle within the specified `timeout` milliseconds. Check with `instanceof SourceTimeoutError` for typed catch blocks:
+
+```ts
+import { SourceTimeoutError } from '@vielzeug/sourcerer';
+
+try {
+  await source.ready(5000);
+} catch (err) {
+  if (err instanceof SourceTimeoutError) {
+    console.warn('Source did not load in time:', err.message);
+  }
+}
 ```

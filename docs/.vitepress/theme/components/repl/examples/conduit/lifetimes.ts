@@ -1,11 +1,11 @@
 export const lifetimesExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
 let singletonCount = 0
 let transientCount = 0
 
-const SingletonT = createToken('Singleton')
-const TransientT = createToken('Transient')
+const SingletonT = token('Singleton')
+const TransientT = token('Transient')
 
 const container = createContainer()
 container.factory(SingletonT, () => ({ id: ++singletonCount }))

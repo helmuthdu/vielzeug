@@ -1,6 +1,6 @@
 import { clamp } from '@vielzeug/arsenal';
 
-import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject } from './types';
+import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject, TypedMiddleware } from './types';
 
 export { clamp };
 
@@ -61,6 +61,29 @@ export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
 ];
 
 /**
+ * Validates a list of middleware names for known-bad orderings.
+ * Throws a descriptive error in dev mode if an invalid ordering is detected.
+ * @internal
+ */
+export function validateMiddlewareNames(names: Array<string | null>, caller: string): void {
+  for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
+    const beforeIdx = names.indexOf(before);
+    const afterIdx = names.indexOf(after);
+
+    if (beforeIdx !== -1 && afterIdx !== -1 && beforeIdx < afterIdx) {
+      throw new Error(
+        `[orbit] ${caller}: "${before}" must come after "${after}". ` +
+          `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
+      );
+    }
+  }
+
+  if (names.includes('flip') && names.includes('autoPlacement')) {
+    throw new Error(`[orbit] ${caller}: use either flip() or autoPlacement(), not both.`);
+  }
+}
+
+/**
  * Unique symbol used to tag middleware with a name for dev-mode ordering validation.
  * Using a Symbol avoids collisions with any `__name` property set by transpilers or wrappers.
  * @internal
@@ -68,11 +91,19 @@ export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
 export const MIDDLEWARE_NAME = Symbol.for('@vielzeug/orbit/name');
 
 /**
- * Tags a middleware function with a name used for dev-mode ordering validation.
+ * Tags a middleware function with a name for dev-mode ordering validation and brands it
+ * as a `TypedMiddleware<K, D>` for compile-time `middlewareData` inference.
  * @internal
  */
-export function tagMiddleware<F extends Middleware>(fn: F, name: string): F & { [MIDDLEWARE_NAME]: string } {
-  return Object.assign(fn, { [MIDDLEWARE_NAME]: name });
+export function tagMiddleware<K extends string, D, F extends Middleware>(
+  fn: F,
+  name: K,
+): F & TypedMiddleware<K, D> & { [MIDDLEWARE_NAME]: string } {
+  return Object.assign(fn, {
+    __middlewareData: undefined as unknown as D,
+    __middlewareKey: name as K,
+    [MIDDLEWARE_NAME]: name,
+  });
 }
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

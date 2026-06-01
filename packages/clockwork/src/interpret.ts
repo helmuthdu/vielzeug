@@ -87,6 +87,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const maxTransitionsPerFlush = options.maxTransitionsPerFlush ?? 1_000;
   const clone = options.clone ?? structuredClone;
   const onDebug = debugOpts?.onDebug;
+  const states = definition.states as unknown as Record<string, StateNode<string, Ctx, Ev>>;
   const onTransition = debugOpts?.onTransition;
   const middlewares = options.middleware ?? [];
   const persistedSnapshot = options.snapshot ?? options.persistence?.load();
@@ -116,7 +117,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   // Resolve initial state to leaf
   const resolvedInitial = persistedSnapshot
     ? persistedSnapshot.state
-    : (resolveLeaf(definition.states, definition.initial) as State);
+    : (resolveLeaf(states, definition.initial) as State);
 
   const initialContext = persistedSnapshot
     ? clone(persistedSnapshot.context)
@@ -145,13 +146,6 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
   const activeTimers = new Set<ReturnType<typeof setTimeout>>();
 
-  let pendingAfter: {
-    actions: Array<(args: { context: Ctx; event?: unknown }) => void>;
-    afterEvent: { readonly delay: number; readonly type: '$after' };
-    from: State;
-    target: State;
-  } | null = null;
-
   const pushTrace = (entry: TransitionTraceEntry<State, Ev>): void => {
     if (!traceBuffer) return;
 
@@ -164,7 +158,15 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
   };
 
-  type QueueItem = { event: Ev; invokeId?: number };
+  type AfterQueueItem = {
+    actions: Array<(args: { context: Ctx; event?: unknown }) => void>;
+    afterEvent: { readonly delay: number; readonly type: '$after' };
+    from: State;
+    isAfter: true;
+    target: State;
+  };
+
+  type QueueItem = { event: Ev; invokeId?: number } | AfterQueueItem;
 
   const queue: QueueItem[] = [];
 
@@ -236,13 +238,13 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     const draft = clone(context_.value);
 
     for (const path of exitPaths) {
-      getNodeAtPath(definition.states, path)?.exit?.({ context: draft, event });
+      getNodeAtPath(states, path)?.exit?.({ context: draft, event });
     }
 
     for (const fn of actions) fn({ context: draft, event });
 
     for (const path of entryPaths) {
-      getNodeAtPath(definition.states, path)?.entry?.({ context: draft, event });
+      getNodeAtPath(states, path)?.entry?.({ context: draft, event });
     }
 
     assertContext(draft, 'transition');
@@ -267,7 +269,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     const ancestors = getAncestorPaths(state_.value);
 
     for (const path of ancestors) {
-      const node = getNodeAtPath(definition.states, path) as StateNode<State, Ctx, Ev> | undefined;
+      const node = getNodeAtPath(states, path) as StateNode<State, Ctx, Ev> | undefined;
 
       if (!node?.invoke?.length) continue;
 
@@ -340,7 +342,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     const ancestors = getAncestorPaths(currentState);
 
     for (const path of ancestors) {
-      const node = getNodeAtPath(definition.states, path) as StateNode<State, Ctx, Ev> | undefined;
+      const node = getNodeAtPath(states, path) as StateNode<State, Ctx, Ev> | undefined;
 
       if (!node?.after?.length) continue;
 
@@ -352,13 +354,16 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
           if (afterDef.guard && !afterDef.guard({ context: context_.value })) return;
 
-          const resolvedTarget = resolveLeaf(definition.states, afterDef.target) as State;
+          const resolvedTarget = resolveLeaf(states, afterDef.target) as State;
           const afterEvent = { delay: afterDef.delay, type: '$after' } as const;
 
-          queue.push({ event: afterEvent as unknown as Ev });
-
-          // Temporarily store the after transition details for processAfterEvent
-          pendingAfter = { actions: afterDef.actions ?? [], afterEvent, from: currentState, target: resolvedTarget };
+          queue.push({
+            actions: (afterDef.actions ?? []) as Array<(args: { context: Ctx; event?: unknown }) => void>,
+            afterEvent,
+            from: currentState,
+            isAfter: true,
+            target: resolvedTarget,
+          });
           drainQueue();
         }, afterDef.delay);
 
@@ -372,12 +377,8 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const processEvent = (item: QueueItem): boolean => {
     if (disposed) return false;
 
-    // Handle after-transition events via pendingAfter (Issue 1: unified drain path)
-    if (item.event.type === '$after' && pendingAfter) {
-      const { actions, afterEvent, from, target } = pendingAfter;
-
-      pendingAfter = null;
-      executeTransition(from, target, actions, afterEvent as unknown as Ev);
+    if ('isAfter' in item) {
+      executeTransition(item.from, item.target, item.actions, item.afterEvent as unknown as Ev);
 
       return true;
     }
@@ -397,7 +398,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
       return false;
     }
 
-    const resolvedTarget = resolveLeaf(definition.states, transition.target) as State;
+    const resolvedTarget = resolveLeaf(states, transition.target) as State;
     const actions = (transition.actions ?? []) as Array<(args: { context: Ctx; event?: unknown }) => void>;
 
     executeTransition(from, resolvedTarget, actions, item.event);
@@ -405,27 +406,31 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     return true;
   };
 
+  const drainQueueInner = (): void => {
+    let processed = 0;
+
+    while (queue.length > 0) {
+      if (++processed > maxTransitionsPerFlush) {
+        throw new MachineError(
+          'MACHINE_TRANSITION_LOOP_GUARD',
+          '[machine] transition queue exceeded maxTransitionsPerFlush',
+          {
+            maxTransitionsPerFlush,
+          },
+        );
+      }
+
+      processEvent(queue.shift()!);
+    }
+  };
+
   const drainQueue = (): void => {
     if (draining) return;
 
     draining = true;
 
-    let processed = 0;
-
     try {
-      while (queue.length > 0) {
-        if (++processed > maxTransitionsPerFlush) {
-          throw new MachineError(
-            'MACHINE_TRANSITION_LOOP_GUARD',
-            '[machine] transition queue exceeded maxTransitionsPerFlush',
-            {
-              maxTransitionsPerFlush,
-            },
-          );
-        }
-
-        processEvent(queue.shift()!);
-      }
+      drainQueueInner();
     } finally {
       draining = false;
     }
@@ -462,9 +467,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     try {
       const result = dispatch();
 
-      while (queue.length > 0) {
-        processEvent(queue.shift()!);
-      }
+      drainQueueInner();
 
       return result;
     } finally {
@@ -522,13 +525,13 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     scheduleAfterTransitions(resolvedInitial);
   } else {
     const initPaths = getAncestorPaths(resolvedInitial);
-    const hasEntry = initPaths.some((p) => getNodeAtPath(definition.states, p)?.entry);
+    const hasEntry = initPaths.some((p) => getNodeAtPath(states, p)?.entry);
 
     if (hasEntry) {
       const initDraft = clone(context_.value);
 
       for (const p of initPaths) {
-        getNodeAtPath(definition.states, p)?.entry?.({ context: initDraft, event: INIT_EVENT });
+        getNodeAtPath(states, p)?.entry?.({ context: initDraft, event: INIT_EVENT });
       }
 
       assertContext(initDraft, 'init');

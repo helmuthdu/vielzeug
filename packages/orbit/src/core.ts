@@ -9,7 +9,7 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { baseCoords, MIDDLEWARE_NAME, MIDDLEWARE_ORDER_RULES, toRect } from './utils';
+import { baseCoords, toRect } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
@@ -34,29 +34,30 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
   };
 }
 
-// ── Dev-mode middleware ordering validation ───────────────────────────────────
-
-function validateMiddlewareOrder(middleware: Middleware[]): void {
-  const names = middleware.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
-
-  for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
-    const beforeIdx = names.indexOf(before);
-    const afterIdx = names.indexOf(after);
-
-    if (beforeIdx !== -1 && afterIdx !== -1 && beforeIdx < afterIdx) {
-      throw new Error(
-        `[orbit] computePosition(): "${before}" must come after "${after}". ` +
-          `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
-      );
-    }
-  }
-
-  if (names.includes('flip') && names.includes('autoPlacement')) {
-    throw new Error('[orbit] computePosition(): use either flip() or autoPlacement(), not both.');
-  }
-}
-
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Deferred one-shot position computation. Runs `computePosition` in a microtask and returns
+ * a `Promise<ComputePositionResult>`.
+ *
+ * Useful for async component lifecycles (e.g. after `await nextTick()`) where layout is not
+ * yet stable when the component mounts but the synchronous `computePosition` would read stale
+ * DOM measurements.
+ *
+ * @example
+ * ```ts
+ * const result = await computeOnce(reference, floating, { placement: 'top' });
+ * floating.style.left = `${result.x}px`;
+ * floating.style.top  = `${result.y}px`;
+ * ```
+ */
+export function computeOnce(
+  reference: ReferenceElement,
+  floating: HTMLElement,
+  options?: ComputePositionOptions,
+): Promise<ComputePositionResult> {
+  return Promise.resolve().then(() => computePosition(reference, floating, options));
+}
 
 /**
  * Runs the middleware pipeline and returns the final position.
@@ -88,8 +89,6 @@ export function computePosition(
           '(or absolute for scoped stacking contexts).',
       );
     }
-
-    validateMiddlewareOrder(middleware.filter(Boolean) as Middleware[]);
   }
 
   const mws = middleware.filter(Boolean) as Middleware[];

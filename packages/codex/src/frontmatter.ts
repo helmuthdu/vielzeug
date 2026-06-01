@@ -29,6 +29,12 @@ export function parseFrontmatter(markdown: string): Record<string, string | stri
     }
 
     const key = line.slice(0, colonIdx).trim();
+
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      i++;
+      continue;
+    }
+
     const rest = line.slice(colonIdx + 1).trim();
 
     // Inline array: keywords: [mcp, ai-agent, claude]

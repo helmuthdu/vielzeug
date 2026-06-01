@@ -1,4 +1,27 @@
 export const basicSchemaExample = {
-  code: "import { s } from '/spell'\n\nconst userSchema = s.object({\n  name: s.string().min(1).max(100),\n  email: s.string().email(),\n  age: s.number().min(0).max(150)\n})\n\n// Valid data\nconst result1 = userSchema.safeParse({\n  name: 'John Doe',\n  email: 'john@example.com',\n  age: 30\n})\n\nconsole.log('Valid:', result1.success)\nif (result1.success) {\n  console.log('Data:', result1.data)\n}\n\n// Invalid data\nconst result2 = userSchema.safeParse({\n  name: '',\n  email: 'invalid-email',\n  age: 200\n})\n\nconsole.log('\\nInvalid:', result2.success)\nif (!result2.success) {\n  console.log('Errors:', result2.error.issues)\n}",
+  code: `// Validate a signup payload before it enters application state.
+import { errorsAt, s } from '@vielzeug/spell'
+
+const Signup = s.object({
+  email: s.string().email(),
+  password: s.string().min(12),
+  referralCode: s.string().optional(),
+})
+
+console.log('Accepted:', Signup.parse({
+  email: 'ada@example.com',
+  password: 'horse-battery-staple',
+}))
+
+const invalid = Signup.safeParse({
+  email: 'not-an-email',
+  password: 'short',
+})
+
+if (!invalid.success) {
+  const formatted = invalid.error.format()
+  console.log('Email errors:', errorsAt(formatted, 'email'))
+  console.log('Password errors:', errorsAt(formatted, 'password'))
+}`,
   name: 'Basic Schema Validation',
 };

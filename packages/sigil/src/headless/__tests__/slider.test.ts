@@ -1,4 +1,5 @@
 import { signal } from '@vielzeug/ripple';
+import { vi } from 'vitest';
 
 import { createSliderControl } from '../slider';
 
@@ -55,6 +56,26 @@ describe('createSliderControl', () => {
     });
 
     expect(collapsed.toPercent(10)).toBe(0);
+  });
+
+  it('handleKeydown returns false when disabled or readonly', () => {
+    const disabledControl = createSliderControl({ disabled: signal(true) });
+    const readonlyControl = createSliderControl({ readonly: signal(true) });
+    const onCommit = vi.fn();
+
+    expect(disabledControl.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }), 50, onCommit)).toBe(
+      false,
+    );
+    expect(readonlyControl.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }), 50, onCommit)).toBe(
+      false,
+    );
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('fromClientX returns snapped min when rect width is zero', () => {
+    const control = createSliderControl({ max: signal(100), min: signal(0), step: signal(10) });
+
+    expect(control.fromClientX(50, { left: 0, width: 0 })).toBe(0);
   });
 
   it('falls back safely for non-finite values', () => {

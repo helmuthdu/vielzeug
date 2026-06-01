@@ -1,4 +1,4 @@
-import { exponentialBackoff } from '@vielzeug/arsenal';
+import { backoff } from '@vielzeug/arsenal';
 
 /** A single attempt with no retries — use as the default `attempts` value. */
 export const NO_RETRY = 1;
@@ -21,7 +21,7 @@ export type RetryOptions = {
 };
 
 function getDefaultRetryDelay(attempt: number): number {
-  return Math.random() * exponentialBackoff(attempt);
+  return Math.random() * backoff(attempt);
 }
 
 /** Compute the inter-attempt delay from a courier RetryOptions configuration. */

@@ -1,50 +1,35 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~1.2KB-success" alt="Size">
-</div>
-
 # attempt
 
-Execute an async function with retry + timeout handling and receive a discriminated result.
+Executes an async function and returns an `AttemptResult` — never throws. On success returns `{ ok: true, value }`, on failure returns `{ ok: false, error }`.
 
 ## Signature
 
-```typescript
-type AttemptOptions = {
-  onError?: (err: unknown) => void;
-  timeout?: number;
-  times?: number;
-};
+```ts
+type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
 
-type AttemptResult<R> = { ok: true; value: R } | { error: unknown; ok: false };
-
-function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(fn: T, options?: AttemptOptions): Promise<AttemptResult<R>>;
+async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>
 ```
 
 ## Parameters
 
-- `fn` - Function to execute.
-- `options.times` - Total attempts including the first (default: `3`).
-- `options.timeout` - Per-attempt timeout in ms (default: `7000`).
-- `options.onError` - Called once when all attempts fail.
+- `fn` — Async function to execute.
 
 ## Returns
 
-A promise that resolves to:
-
+A promise that always resolves to:
 - `{ ok: true, value }` on success
-- `{ ok: false, error }` on failure
+- `{ error, ok: false }` on failure — never rejects
 
 ## Examples
 
 ### Basic usage
 
-```typescript
+```ts
 import { attempt } from '@vielzeug/arsenal';
 
 const result = await attempt(async () => {
-  if (Math.random() < 0.7) throw new Error('Random failure');
-  return 'Success!';
+  const res = await fetch('/api/user');
+  return res.json();
 });
 
 if (result.ok) {
@@ -54,23 +39,45 @@ if (result.ok) {
 }
 ```
 
-### Retry + timeout
+### Combine with retry
 
-```typescript
+```ts
+import { attempt, retry } from '@vielzeug/arsenal';
+
+const result = await attempt(() =>
+  retry(() => fetch('/api/user').then((r) => r.json()), {
+    times: 3,
+    delay: 500,
+  }),
+);
+
+if (result.ok) {
+  console.log('user:', result.value);
+} else {
+  console.warn('all retries exhausted:', result.error);
+}
+```
+
+### Replace try/catch in async flows
+
+```ts
 import { attempt } from '@vielzeug/arsenal';
 
-const user = await attempt(() => fetch('/api/user').then((r) => r.json()), {
-  times: 5,
-  timeout: 10_000,
-  onError: (err) => console.error('user fetch failed', err),
-});
+async function loadDashboard() {
+  const [users, stats] = await Promise.all([
+    attempt(() => fetchUsers()),
+    attempt(() => fetchStats()),
+  ]);
 
-if (user.ok) {
-  console.log(user.value);
+  return {
+    users: users.ok ? users.value : [],
+    stats: stats.ok ? stats.value : null,
+  };
 }
 ```
 
 ## Related
 
-- [retry](./retry.md) - Retry async operations with backoff
-- [race](./race.md) - Enforce minimum loading durations
+- [retry](./retry.md) — Retry async operations with backoff
+- [abortable](./abortable.md) — Wrap a promise to reject on signal fire
+- [waitFor](./waitFor.md) — Poll until a condition is met

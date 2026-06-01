@@ -389,7 +389,7 @@ anchor.addEventListener('mouseenter', () => {
 });
 ```
 
-Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route; subsequent navigations run the loaders fresh.
+Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route+query combination; a navigation with different query params runs the loaders fresh.
 
 ### Leave Guards
 
@@ -506,7 +506,7 @@ const state = await router.waitFor('userDetail');
 const user = state.matches.at(-1)?.data;
 ```
 
-`waitFor` rejects immediately if the router is already in `status: 'error'`. Resolves immediately if the named route is already active and idle.
+`waitFor` rejects immediately if the router is already in `status: 'error'`, and also rejects if `router.dispose()` is called while the promise is pending. Resolves immediately if the named route is already active and idle.
 
 ## Scroll Restoration
 
@@ -697,6 +697,38 @@ router.subscribe((state) => {
   currentRoute.value = state.matches.at(-1)?.name ?? '';
 });
 ```
+
+## Debug Mode
+
+Import `debugRouter` from the dedicated sub-path to create a router with navigation logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
+
+```ts
+import { debugRouter } from '@vielzeug/wayfinder/debug';
+
+const router = debugRouter({
+  routes: {
+    home: { path: '/' },
+    dashboard: { path: '/dashboard', data: () => fetchDashboard() },
+  },
+});
+
+// Initial snapshot is logged immediately:
+// [wayfinder:nav] idle      /         [home]
+
+// On navigate({ name: 'dashboard' }):
+// [wayfinder:nav] loading   /dashboard
+// [wayfinder:nav] idle      /dashboard [dashboard]
+```
+
+The router returned is identical to `createRouter()` — all methods (`navigate`, `subscribe`, `waitFor`, etc.) work the same way.
+
+Errors are logged with the error object appended:
+
+```ts
+// [wayfinder:nav] error     /dashboard [dashboard]  Error: fetch failed
+```
+
+Debug logging has no effect on behavior and should not be enabled in production.
 
 ## Best Practices
 

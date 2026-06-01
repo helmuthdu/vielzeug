@@ -165,6 +165,16 @@ export function float(
     reference instanceof HTMLElement &&
     isCssAnchorPositioningSupported();
 
+  if (import.meta.env.DEV && preferCssAnchor && !useCssAnchor) {
+    if (hasMiddleware) {
+      console.warn('[orbit] preferCssAnchor is ignored when middleware is provided. Falling back to JS positioning.');
+    } else if (apply != null) {
+      console.warn(
+        '[orbit] preferCssAnchor is ignored when a custom apply callback is provided. Falling back to JS positioning.',
+      );
+    }
+  }
+
   if (useCssAnchor) {
     const cleanup = setupCssAnchorPositioning(reference, floating, placement);
 

@@ -52,7 +52,7 @@ stop();
 ### Pitfalls
 
 - Calling `setLocale()` without `preload()` first still works — `setLocale` loads if needed — but the locale switch happens after the download, which may produce a visible loading gap on slow connections.
-- `getSupportedLocales()` returns locales in insertion order. Pass `{ sorted: true }` if you need alphabetical order for the picker.
+- `getSupportedLocales()` returns locales in insertion order. Pass `true` to `getSupportedLocales(true)` for alphabetical order in the picker.
 - Storing the selected locale in a URL param (e.g. `?lang=de`) rather than `localStorage` makes the locale shareable and bookmarkable.
 
 ### Related

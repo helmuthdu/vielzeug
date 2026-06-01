@@ -261,7 +261,10 @@ declare module '/spell' {
   export type Messages = Record<string, unknown>;
   export function configure(opts: { logger?: ((msg: string) => void) | null; messages?: Record<string, unknown> }): void;
   export function reset(): void;
-  export function withMessages<T>(patch: Record<string, unknown>, fn: () => T): T;
+  export function registerLocale(locale: string, messages: Record<string, unknown>): void;
+  export function useLocale(locale: string): void;
+  export function currentLocale(): string;
+  export function fromDescriptor(descriptor: SchemaDescriptor): Schema<any>;
 
   export const s: {
     any(): Schema<any>;
@@ -301,5 +304,9 @@ declare module '/spell' {
       bigint(): BigIntSchema<unknown>;
     };
   };
+}
+
+declare module '@vielzeug/spell' {
+  export * from '/spell';
 }
 `;

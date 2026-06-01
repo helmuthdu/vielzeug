@@ -155,6 +155,12 @@ export type JsonTransportOptions = {
   level?: LogLevel;
   /** Custom output function. Default: process.stdout.write. */
   output?: (line: string) => void;
+  /**
+   * Replace circular references with `'[Circular]'` instead of throwing a TypeError.
+   * Useful in environments where log payloads may contain complex object graphs.
+   * Default: false.
+   */
+  safe?: boolean;
 };
 
 export type BatchTransport = Transport & {
@@ -169,6 +175,13 @@ export type BatchTransportOptions = {
   interval?: number;
   /** Minimum level to buffer. Default: 'debug'. */
   level?: LogLevel;
+  /**
+   * Hard limit on the in-memory buffer size. When the buffer exceeds this value,
+   * the oldest entries are dropped to prevent unbounded memory growth.
+   * Unlike `maxSize`, this does NOT trigger a flush — it silently drops.
+   * Default: unbounded.
+   */
+  maxBuffer?: number;
   /** Maximum buffer size before an early flush. Default: 50. */
   maxSize?: number;
   /**
@@ -202,7 +215,11 @@ export type SampleTransportOptions = {
 };
 
 export type RedactTransportOptions = {
-  /** Field names to replace at any depth in bindings and context. */
+  /**
+   * Field names to replace at any depth in bindings and context.
+   * Matched by exact field name — dot-path notation (e.g. `'user.password'`) is NOT supported.
+   * A key like `'password'` will redact every field named `'password'` at any nesting level.
+   */
   keys: string[];
   /** Replacement value for redacted fields. Default: '[REDACTED]'. */
   replacement?: string;
@@ -296,10 +313,21 @@ export type Logger = {
   groupCollapsed: <T>(label: string, fn: () => T) => T;
   info: LogMethod;
   /**
-   * Measure execution time and emit a structured entry with duration_ms and label in context.
-   * @param level - Log level for the timing entry. Default: 'debug'.
+   * Restore the log level to the value set at construction time, undoing any `setLevel()` calls.
    */
-  time: <T>(label: string, fn: () => T, level?: LogType) => T;
+  resetLevel: () => void;
+  /**
+   * Mutate the log level threshold in-place. Affects this logger instance immediately.
+   * Useful for toggling debug mode at runtime without recreating logger instances.
+   * Note: children created via `child()` after this call inherit the new level;
+   * children created before retain their own independent snapshot.
+   */
+  setLevel: (level: LogLevel) => void;
+  /**
+   * Measure execution time and emit a structured entry with duration_ms in context and label as the message.
+   * @param opts - Log level for the timing entry. Default: 'debug'. Accepts a `LogType` string or `{ level?: LogType }`.
+   */
+  time: <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }) => T;
   /** Add a middleware function to the pipeline for this logger. Returns a new logger. */
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;

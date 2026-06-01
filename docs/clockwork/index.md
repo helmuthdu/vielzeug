@@ -5,7 +5,7 @@ package: clockwork
 category: state
 keywords: [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, middleware]
 related: [ripple, herald, ward]
-exports: [defineMachine, interpret, resolveTransition, MachineError]
+exports: [defineMachine, interpret, resolveTransition, MachineError, debugInterpret]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -145,11 +145,18 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 - **Middleware** — Composable event interception pipeline
 - **Persistence** — Snapshot save/load adapter
 - **Tracing** — Ring buffer of transitions for debugging
-- **Debug events** — Discriminated union callback with zero overhead when omitted
+- **Debug events** — Discriminated union callback with zero overhead when omitted; use `debugInterpret()` from `@vielzeug/clockwork/debug` for pre-wired console logging
 - **Event queue** — FIFO processing with configurable infinite-loop guard
 - **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure
 - **Subscribe** — Change-detection subscription without direct ripple dependency
 - **Pure resolver** — Test transition logic independently with `resolveTransition()`
+
+## Sub-paths
+
+| Import | Purpose |
+|---|---|
+| `@vielzeug/clockwork` | All exports and types |
+| `@vielzeug/clockwork/debug` | `debugInterpret` — pre-wired console logging (dev only) |
 
 ## Compatibility
 

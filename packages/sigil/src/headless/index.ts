@@ -113,12 +113,12 @@ export { createFocusManager, type FocusManager, type FocusManagerOptions } from 
 // ── Dialog focus ─────────────────────────────────────────────────────────────
 export { createDialogFocusControl, type DialogFocusControl, type DialogFocusControlOptions } from './dialog-focus';
 
-// ── Dev utilities ─────────────────────────────────────────────────────────────
-export { assert as devAssert } from '@vielzeug/arsenal';
-
 // ── ID generation ────────────────────────────────────────────────────────────
 export { createStableId } from '@vielzeug/craft';
 
 // ── DOM utilities ─────────────────────────────────────────────────────────────
 export { setBooleanAttribute, setMaybeAttribute } from './attrs';
 export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
+
+// ── Number utilities ──────────────────────────────────────────────────────────
+export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';

@@ -14,11 +14,12 @@ description: Complete API reference for Machine.
 | `resolveTransition()` | Pure transition resolver for testing | Sync | Does not fire debug hooks; returns `TransitionDef` directly |
 | `MachineError` | Typed error for all validation failures | — | Check `.code`, not `.message` |
 
-## Package Entry Point
+## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/clockwork` | All exports and types |
+| `@vielzeug/clockwork/debug` | `debugInterpret` — debug wrapper (dev only) |
 
 ---
 
@@ -36,7 +37,7 @@ function defineMachine<
 
 **Validates at call time:**
 - `initial` state exists in `states`
-- All transition `target` values exist in `states`
+- All transition `target` values exist in `states` — full nested paths (e.g. `loading.fetching`) are validated, not just the root segment
 - Transition arrays are non-empty
 - Compound states have `initial` pointing to a valid child
 - `after` delays are non-negative
@@ -573,7 +574,7 @@ class MachineError extends Error {
 | `MACHINE_INVALID_VALIDATE_CONTEXT` | Context fails `validateContext` |
 | `MACHINE_MISSING_COMPOUND_INITIAL` | A compound state (has `states`) is missing `initial` |
 | `MACHINE_TRANSITION_LOOP_GUARD` | `maxTransitionsPerFlush` exceeded in one flush |
-| `MACHINE_UNKNOWN_TARGET` | A transition `target` does not exist in `states` |
+| `MACHINE_UNKNOWN_TARGET` | A transition `target` does not exist in `states` — thrown for both unknown root states and unknown nested paths (e.g. `loading.nonexistent`) |
 
 ```ts
 import { MachineError } from '@vielzeug/clockwork';

@@ -1,4 +1,25 @@
 export const disposalSignalExample = {
-  code: "import { createBus } from '/herald'\n\ntype AppEvents = {\n  'data:update': { value: number }\n  'tick': number\n}\n\nconst mainBus = createBus<AppEvents>()\nconst childBus = createBus<AppEvents>()\n\n// Pass disposalSignal so the child listener is removed when mainBus disposes\n// — no manual unsub() or second dispose() call needed\nchildBus.on('data:update', ({ value }) => {\n  console.log('child received:', value)\n}, mainBus.disposalSignal)\n\nconsole.log('child listeners before dispose:', childBus.listenerCount())\n\nchildBus.emit('data:update', { value: 10 })  // fires — listener is active\n\nmainBus.dispose()  // signals disposalSignal — child listener auto-removed\n\nconsole.log('child listeners after mainBus.dispose():', childBus.listenerCount())\n\nchildBus.emit('data:update', { value: 20 })  // no output — listener is gone\nconsole.log('mainBus.disposed:', mainBus.disposed)\nconsole.log('disposalSignal aborted:', mainBus.disposalSignal.aborted)",
+  code: `import { createBus } from '@vielzeug/herald'
+
+// disposalSignal ties an external subscription's lifetime to this bus
+const mainBus = createBus()
+const childBus = createBus()
+
+// Pass disposalSignal so the child listener is removed when mainBus disposes
+childBus.on('data:update', ({ value }) => {
+  console.log('child received:', value)
+}, { signal: mainBus.disposalSignal })
+
+console.log('child listeners before dispose:', childBus.listenerCount())
+
+childBus.emit('data:update', { value: 10 })  // fires — listener is active
+
+mainBus.dispose()  // disposalSignal fires — child listener auto-removed
+
+console.log('child listeners after mainBus.dispose():', childBus.listenerCount())
+
+childBus.emit('data:update', { value: 20 })  // no output — listener is gone
+console.log('mainBus.disposed:', mainBus.disposed)
+console.log('disposalSignal aborted:', mainBus.disposalSignal.aborted)`,
   name: 'disposalSignal',
 };

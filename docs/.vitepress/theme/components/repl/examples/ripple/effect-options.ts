@@ -1,5 +1,5 @@
 export const effectOptionsExample = {
-  code: `import { signal, effect, batch } from '/ripple'
+  code: `import { signal, effect, batch } from '@vielzeug/ripple'
 
 const count = signal(0)
 
@@ -30,7 +30,7 @@ batch(() => {
 })
 // → logs "[sync] count: 20" once
 
-stopSync()
-stop()`,
+stopSync.dispose()
+stop.dispose()`,
   name: 'Effect Options — scheduler',
 };

@@ -1,6 +1,5 @@
 import type { ComputedSignal, ReactiveOptions, ReadonlySignal } from './types';
 
-import { computed } from './computed';
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
 import { untrack } from './tracking';
 
@@ -29,19 +28,16 @@ export { untrack };
  * ```
  */
 export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
+  if (isComputed(source)) return source as ComputedSignal<T>;
+
   const disposeSource = () => (source as Partial<{ dispose(): void }>).dispose?.();
 
   return {
     dispose: disposeSource,
-    filter: (pred: (value: T) => boolean) =>
-      computed(() => {
-        const v = source.value;
-
-        return pred(v) ? v : undefined;
-      }),
+    filter: (pred: (value: T) => boolean) => source.filter(pred as (value: T) => boolean),
     [IS_COMPUTED]: true as const,
     [IS_SIGNAL]: true as const,
-    map: <U>(fn: (v: T) => U, opts?: ReactiveOptions<U>) => computed(() => fn(source.value), opts),
+    map: <U>(fn: (v: T) => U, opts?: ReactiveOptions<U>) => source.map(fn, opts),
     peek: () => source.peek(),
     subscribe: (l: () => void) => source.subscribe(l),
     [Symbol.dispose]: disposeSource,

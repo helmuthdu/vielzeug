@@ -128,5 +128,9 @@ docs/.vitepress/.temp/
 # Junie
 .junie
 
+# Windsurf
+.windsurf/
+!.windsurf/workflows/
+
 # Codex generated bundled data
 packages/codex/data/

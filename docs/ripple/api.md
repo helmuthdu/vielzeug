@@ -20,9 +20,9 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | Returns `ComputedSignal<T>`; dispose it when done                   |
 | `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO            |
 | `asyncScope()`       | Async variant of `scope()` for async setup     | Async          | `onCleanup()` only works before the first `await`                   |
-| `traceEffect()`      | Effect that logs changed sources before re-run | Sync           | Use for debugging; identical API to `effect()`                      |
+| `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/debug`; tree-shaken from production |
 | `store()`            | Create object-like state container             | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()` |
-| `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Snapshots are shallow copies; `maxHistory` caps the buffer          |
+| `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer       |
 | `installDevTools()`  | Install global DevTools observation hook       | Sync           | Pass `null` to uninstall                                            |
 | `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                     |
 | `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                        |
@@ -187,7 +187,7 @@ See also: [`EffectOptions`](#effectoptions), [`EffectScheduler`](#effectschedule
 ### `effectAsync`
 
 ```ts
-function effectAsync(fn: AsyncEffectCallback, options?: { onError?: (error: unknown) => void }): Subscription;
+function effectAsync(fn: AsyncEffectCallback, options?: EffectAsyncOptions): AsyncSubscription;
 ```
 
 Like `effect()`, but the callback is async and receives an `AbortSignal` that fires when the effect re-runs or is disposed. Read reactive dependencies **synchronously** before the first `await` to register them as tracked.
@@ -212,7 +212,7 @@ const stop = effectAsync(async (signal) => {
 });
 
 userId.value = 'u2'; // aborts in-flight fetch, starts a new one
-stop(); // aborts current fetch, calls cleanup
+stop.dispose(); // aborts current fetch, calls cleanup
 ```
 
 **Parameters**
@@ -224,6 +224,8 @@ stop(); // aborts current fetch, calls cleanup
 
 **Returns** — `AsyncSubscription` (extends `Subscription` with `disposeAsync(): Promise<void>`)
 
+See also: [`EffectAsyncOptions`](#effectasyncoptions), [`AsyncEffectCallback`](#asynceffectcallback), [`AsyncSubscription`](#asyncsubscription)
+
 ---
 
 ### `watch`
@@ -231,12 +233,12 @@ stop(); // aborts current fetch, calls cleanup
 ```ts
 function watch<T>(
   source: ReadonlySignal<T> | (() => T),
-  cb: (value: T, prev: T) => void,
+  cb: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
 ): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, pass a getter function or use the `.map()` combinator.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, pass a getter function or use the `.map()` combinator. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `StateError` with code `INVALID_CLEANUP`.
 
 ```ts
 // Plain watch
@@ -257,7 +259,7 @@ watch(nameLens, (name) => console.log('name:', name));
 | Parameter           | Type                                  | Description                                               |
 | ------------------- | ------------------------------------- | --------------------------------------------------------- |
 | `source`            | `ReadonlySignal<T>` or `() => T`      | The signal, store, or getter to watch                     |
-| `cb`                | `(value: T, prev: T) => void`         | Called on each change with new and previous values        |
+| `cb`                | `(value: T, prev: T \| undefined) => CleanupFn \| void` | Called on each change; may return a cleanup function |
 | `options.immediate` | `boolean`                             | Fire once immediately on subscription. Default `false`    |
 | `options.equals`    | `EqualityFn<T>`                       | Custom equality for change detection. Default `Object.is` |
 
@@ -468,10 +470,14 @@ See also: [`AsyncComputedState<T>`](#asynccomputedstate), [`AsyncComputedOptions
 
 ---
 
-### `traceEffect`
+### `debugEffect`
+
+::: info Sub-path import
+`debugEffect` is exported from `@vielzeug/ripple/debug`, not the main entry point. This keeps it tree-shaken from production bundles.
+:::
 
 ```ts
-function traceEffect(fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription;
+function debugEffect(fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription;
 ```
 
 Like `effect()`, but logs the reactive sources that changed before each re-run to the console using `console.group`. Does not log on the initial run.
@@ -479,11 +485,13 @@ Like `effect()`, but logs the reactive sources that changed before each re-run t
 Use instead of `effect()` when debugging unexpected re-renders — the output shows which source triggered the re-run and how its version advanced.
 
 ```ts
-const stop = traceEffect(
+import { debugEffect } from '@vielzeug/ripple/debug';
+
+const stop = debugEffect(
   () => renderUser(userId.value, name.value),
   { name: 'renderUser' },
 );
-// On re-run: console.group '[ripple:trace] "renderUser" re-running — changed sources:'
+// On re-run: console.group '[ripple:debug] "renderUser" re-running — changed sources:'
 // → userId (v1 -> v2)
 ```
 
@@ -549,7 +557,7 @@ function storeWithHistory<T extends object>(
 ): StoreWithHistory<T>;
 ```
 
-Creates a `Store<T>` augmented with snapshot-based undo/redo history. Every call to `.patch()`, `.replace()`, or `.reset()` pushes a new snapshot. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
+Creates a `Store<T>` augmented with snapshot-based undo/redo history. Every call to `.patch()`, `.replace()`, `.reset()`, or a `lens()` write pushes a new snapshot. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
 
 Snapshots are shallow copies (structural sharing). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
 
@@ -906,7 +914,7 @@ type EffectOptions = {
 };
 ```
 
-All fields are optional. `name` is used in `StateError` messages. For debugging, use `traceEffect()` instead of `{ trace: true }`. `scheduler` accepts either a built-in string or a custom function.
+All fields are optional. `name` is used in `StateError` messages. For debugging, use `debugEffect()` instead of `{ trace: true }`. `scheduler` accepts either a built-in string or a custom function.
 
 ---
 
@@ -944,6 +952,18 @@ type BatchOptions = {
 ```
 
 Options for `batch()`. Only the outermost batch's options apply when batches are nested.
+
+---
+
+### `EffectAsyncOptions`
+
+```ts
+type EffectAsyncOptions = {
+  onError?: (error: unknown) => void;
+};
+```
+
+Options for `effectAsync()`. Provide `onError` to handle unhandled async errors from effect runs; defaults to `console.error` with a `[ripple]` prefix.
 
 ---
 

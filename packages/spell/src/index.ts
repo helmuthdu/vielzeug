@@ -22,15 +22,24 @@ export {
   type NullishSchema,
   type OptionalSchema,
   type ParseResult,
+  type ReconstructibleSchemaDescriptor,
   type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
   type WrapperMode,
   prependIssuePath,
-  resolveMessage,
 } from './core';
 
-export { configure, currentLocale, registerLocale, reset, useLocale, type Logger, type Messages } from './messages';
+export {
+  configure,
+  currentLocale,
+  registerLocale,
+  reset,
+  useLocale,
+  type DeepPartial,
+  type Logger,
+  type Messages,
+} from './messages';
 
 export { fromDescriptor } from './from-descriptor';
 
@@ -77,32 +86,4 @@ export {
   isUuid,
 } from './formats';
 
-export {
-  s,
-  sAnd,
-  sAny,
-  sArray,
-  sBigint,
-  sBoolean,
-  sCoerce,
-  sDate,
-  sEnum,
-  sInstanceof,
-  sIntersect,
-  sLazy,
-  sLiteral,
-  sMap,
-  sNever,
-  sNull,
-  sNumber,
-  sObject,
-  sOr,
-  sRecord,
-  sSet,
-  sString,
-  sTuple,
-  sUndefined,
-  sUnion,
-  sUnknown,
-  sVariant,
-} from './s';
+export { s } from './s';

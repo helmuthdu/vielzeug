@@ -143,7 +143,7 @@ const reconcileItems = <T>(
  *
  * @example
  * ```ts
- * html`${each(items, (item) => item.id, (item) => html`<li>${item}</li>`)}`
+ * html`${each(items, (item) => item.id, (item) => html`<li>${() => item.value.name}</li>`)}`
  * ```
  */
 export function each<T>(
@@ -153,11 +153,7 @@ export function each<T>(
   fallback?: () => HTMLResult,
 ): DirectiveResult {
   const listSignal = Array.isArray(list)
-    ? ({
-        get value() {
-          return list as T[];
-        },
-      } as ReadonlySignal<T[]>)
+    ? signal(list as T[])
     : typeof list === 'function'
       ? computed(list as () => T[])
       : list;

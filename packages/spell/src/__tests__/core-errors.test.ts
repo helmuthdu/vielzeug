@@ -114,6 +114,26 @@ describe('ValidationError message and shaping', () => {
     expect(errorsAt(tree)).toEqual(['Root error']);
   });
 
+  it('format() uses null-prototype nodes for unsafe path segments', () => {
+    const error = new ValidationError([{ code: 'custom', message: 'Blocked', path: ['__proto__', 'polluted'] }]);
+    const tree = error.format();
+
+    expect(Object.getPrototypeOf(tree)).toBeNull();
+    expect(errorsAt(tree, '__proto__', 'polluted')).toEqual(['Blocked']);
+    expect(({} as { polluted?: string }).polluted).toBeUndefined();
+  });
+
+  it('format() safely stores constructor/prototype path segments', () => {
+    const error = new ValidationError([
+      { code: 'custom', message: 'Blocked', path: ['constructor', 'prototype', 'polluted'] },
+    ]);
+    const tree = error.format();
+
+    expect(Object.getPrototypeOf(tree)).toBeNull();
+    expect(errorsAt(tree, 'constructor', 'prototype', 'polluted')).toEqual(['Blocked']);
+    expect(({} as { polluted?: string }).polluted).toBeUndefined();
+  });
+
   it('ValidationError.is() narrows unknown errors', () => {
     const result = s.string().safeParse(42);
 
@@ -123,5 +143,43 @@ describe('ValidationError message and shaping', () => {
       expect(ValidationError.is(result.error)).toBe(true);
       expect(ValidationError.is(new Error('plain'))).toBe(false);
     }
+  });
+});
+
+describe('ValidationError.bestMatch()', () => {
+  it('returns null when no invalid_union issue exists', () => {
+    const result = s.string().safeParse(42);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.bestMatch()).toBeNull();
+    }
+  });
+
+  it('returns the branch with the deepest path (closest match) from a union', () => {
+    const schema = s.union(
+      s.object({ type: s.literal('a'), value: s.string() }),
+      s.object({ type: s.literal('b'), value: s.number() }),
+    );
+
+    const result = schema.safeParse({ type: 'a', value: 123 });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const best = result.error.bestMatch();
+
+      expect(best).not.toBeNull();
+      expect(best![0].path).toEqual(['value']);
+    }
+  });
+
+  it('returns null when invalid_union has zero branches', () => {
+    const error = new ValidationError([
+      { code: 'invalid_union', message: 'no match', params: { errors: [] }, path: [] },
+    ]);
+
+    expect(error.bestMatch()).toBeNull();
   });
 });

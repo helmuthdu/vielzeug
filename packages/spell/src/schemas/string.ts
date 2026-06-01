@@ -42,6 +42,10 @@ type UrlOptions = {
 };
 
 export class StringSchema<Input = string> extends Schema<string, Input> {
+  protected override get _kind(): string {
+    return 'string';
+  }
+
   constructor() {
     super((value) => (typeof value === 'string' ? null : fail(ErrorCode.invalid_type, _messages().string.type())));
   }
@@ -55,10 +59,14 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
           min: length,
         });
       },
-      (ann) => ({
-        ...ann,
-        minLength: ann.minLength === undefined ? length : Math.max(ann.minLength, length),
-      }),
+      (current) => {
+        const ann = current as StringAnnotations;
+
+        return {
+          ...ann,
+          minLength: ann.minLength === undefined ? length : Math.max(ann.minLength, length),
+        };
+      },
     );
   }
 
@@ -71,10 +79,14 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
           max: length,
         });
       },
-      (ann) => ({
-        ...ann,
-        maxLength: ann.maxLength === undefined ? length : Math.min(ann.maxLength, length),
-      }),
+      (current) => {
+        const ann = current as StringAnnotations;
+
+        return {
+          ...ann,
+          maxLength: ann.maxLength === undefined ? length : Math.min(ann.maxLength, length),
+        };
+      },
     );
   }
 
@@ -99,7 +111,11 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
         return fail(ErrorCode.too_small, resolveMessage(message, { min: 1, value: value as string }), { min: 1 });
       },
-      (ann) => ({ ...ann, minLength: Math.max(ann.minLength ?? 0, 1) }),
+      (current) => {
+        const ann = current as StringAnnotations;
+
+        return { ...ann, minLength: Math.max(ann.minLength ?? 0, 1) };
+      },
     );
   }
 
@@ -138,21 +154,36 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     });
   }
 
+  /**
+   * Validates that the string matches the given regular expression.
+   *
+   * **Security note:** Stateful `/g` and `/y` flags are stripped automatically to prevent
+   * `lastIndex`-based bugs. However, caller-supplied patterns with catastrophic backtracking
+   * (e.g. `/(a+)+$/`) are a ReDoS risk when validating untrusted input in server-side contexts.
+   * Prefer well-tested, bounded patterns for user-facing validation.
+   */
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string.regex(ctx)): this {
+    const safePattern = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''));
+
     return this._addConstraint(
       (value) => {
-        if (pattern.test(value as string)) return null;
+        // Caller-supplied regexes still run against untrusted strings; spell can
+        // neutralize stateful /g and /y flags but cannot make arbitrary patterns
+        // immune to catastrophic backtracking without breaking the API.
+        if (safePattern.test(value as string)) return null;
 
         return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-          pattern: pattern.source,
+          pattern: safePattern.source,
         });
       },
-      (ann) => {
+      (current) => {
+        const ann = current as StringAnnotations;
+
         if (ann.pattern === null) return ann; // already ambiguous
 
-        if (ann.pattern === undefined) return { ...ann, pattern: pattern.source };
+        if (ann.pattern === undefined) return { ...ann, pattern: safePattern.source };
 
-        if (ann.pattern !== pattern.source) {
+        if (ann.pattern !== safePattern.source) {
           _warn(
             '[spell] Multiple .regex() constraints detected on a single string schema. ' +
               'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from toJsonSchema() output.',
@@ -388,7 +419,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    const ann = this._annotations;
+    const ann = this._annotations as StringAnnotations;
 
     return {
       ...this._describeBase(),

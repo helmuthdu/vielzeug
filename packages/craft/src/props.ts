@@ -32,7 +32,7 @@ export const prop: PropFactory = {
 
     return {
       default: def,
-      parse: (value) => value === '' || value === 'true',
+      parse: (value) => value !== null && value !== 'false',
       reflect: true,
     };
   },

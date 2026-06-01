@@ -38,7 +38,7 @@ export async function parallel<T, R>(
   const { limit = Infinity, signal } = options;
 
   if (limit < 1) {
-    throw new Error('Limit must be at least 1');
+    throw new RangeError(`parallel: limit must be at least 1, got ${limit}`);
   }
 
   if (signal?.aborted) {

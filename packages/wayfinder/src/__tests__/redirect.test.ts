@@ -93,4 +93,22 @@ describe('declarative redirect', () => {
     expect(data).toHaveBeenCalled();
     router.dispose();
   });
+
+  it('resolves a named redirect target relative to the router base', async () => {
+    const data = vi.fn();
+    const history = createMemoryHistory('/app/old');
+    const router = createRouter({
+      base: '/app',
+      history,
+      routes: {
+        current: { data, path: '/current' },
+        legacy: { path: '/old', redirect: { name: 'current' } },
+      },
+    });
+
+    await settle();
+    expect(router.getSnapshot().location.pathname).toBe('/current');
+    expect(data).toHaveBeenCalled();
+    router.dispose();
+  });
 });

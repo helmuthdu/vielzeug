@@ -29,7 +29,8 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `db.getOrDefault(table, key, fn)` | Read-or-insert at the adapter level | Async | Not atomic on memory/WebStorage; wrap in `batch()` on IDB for atomicity |
 | `db.query(table)` | Start a lazy query pipeline | Sync (lazy) | `count()` respects `limit`/`offset`; use `totalCount()` for the full set size |
 | `db.batch(tables, fn)` | Multi-table write with deferred notifications | Async | On IDB, the callback throwing aborts the whole transaction |
-| `db.observe(table, fn)` | Subscribe to table changes — fires immediately on registration | Sync | Returns an unsubscribe function — forgetting to call it leaks listeners |
+| `db.isEmpty(table)` | Returns `true` when the table has no live records | Async | Treats TTL-expired records as absent — consistent with `count()` |
+| `db.observe(table, fn)` | Subscribe to table changes — fires immediately on registration | Sync | Returns `Unsubscribe` — forgetting to call it leaks listeners |
 | `db.watch(table, opts?)` | Async iterable of table snapshots | Async | Always yields an initial snapshot; use `signal` to stop externally |
 | `db.watchStream(table, opts?)` | `ReadableStream` of table snapshots | Sync | `cancel()` stops the observer — always cancel the stream when done |
 | `db.iterate(table)` | Cursor-based async iteration — IDB only | Async | Not available on memory or web storage adapters |
@@ -40,7 +41,7 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 
 **Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
 
-**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `VaultCodec`, `VaultLogger`
+**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `BatchDeps`, `BatchImpl`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `StorageBackend`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
 
 ---
 
@@ -92,7 +93,7 @@ ttl.days(n: number): TtlMs
 
 `TtlMs` is a branded `number` type. Raw numeric literals are rejected by the type checker — always use these helpers.
 
-All helpers throw synchronously if `n` is not a finite non-negative number. Passing an invalid `TtlMs` value directly to a write method also throws.
+All helpers throw synchronously if `n` is not a finite positive number (zero is rejected because it would create an immediately-expired record). Values that overflow to `Infinity` after multiplication are also rejected. Passing an invalid `TtlMs` value directly to a write method also throws.
 
 ---
 
@@ -139,6 +140,8 @@ createLocalStorage<S extends AnySchema>(options: {
 ```
 
 `onQuotaExceeded` is called when a `setItem` throws a `QuotaExceededError`. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
+
+> **Note:** If the underlying storage is unavailable (e.g. private browsing, sandboxed iframe), the factory throws a `VaultError` synchronously.
 
 ### `createSessionStorage`
 
@@ -284,6 +287,9 @@ interface Adapter<S extends AnySchema> {
 
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
+  /** Returns `true` when the table has no live (non-expired) records. Equivalent to `(await count(table)) === 0`. */
+  isEmpty<K extends keyof S>(table: K): Promise<boolean>;
+
   /** Return all primary key values in the table without fetching records. Expired records are excluded. */
   keys<K extends keyof S>(table: K): Promise<KeyOf<S, K>[]>;
 
@@ -299,20 +305,20 @@ interface Adapter<S extends AnySchema> {
     table: K,
     listener: Observer<RecordOf<S, K>>,
     options?: { signal?: AbortSignal },
-  ): () => void;
+  ): Unsubscribe;
 
   /**
    * Subscribe to multiple tables at once. Fires a combined snapshot `{ [tableName]: records[] }`
    * once all tables have delivered their initial state, then fires again whenever any observed
    * table changes. Multiple tables mutated inside a single `batch()` coalesce into one callback.
    * Throws `VaultScopeError` when `tables` is empty.
-   * Returns an unsubscribe function — call it on teardown.
+   * Returns an `Unsubscribe` function — call it on teardown.
    */
   observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
     options?: { signal?: AbortSignal },
-  ): () => void;
+  ): Unsubscribe;
 
   /**
    * Explicitly delete TTL-expired records from the specified tables (or all tables when
@@ -380,7 +386,7 @@ interface Adapter<S extends AnySchema> {
 | --- | --- | --- |
 | `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener |
 
-Returns an unsubscribe function. Calling it and aborting the signal both cancel the observer — either approach works.
+Returns an `Unsubscribe` function. Calling it and aborting the signal both cancel the observer — either approach works.
 
 ### `observeMany` behavior
 
@@ -419,7 +425,7 @@ The full method set (for reference):
 
 ```ts
 // clear, count, delete, deleteMany, entries, get, getAll, getMany,
-// getOrDefault, has, keys, put, putAll, query, update, upsert
+// getOrDefault, has, isEmpty, keys, put, putAll, query, update, upsert
 ```
 
 `batch()` scopes all operations to the tables declared in its first argument. Accessing any other table at runtime throws `VaultScopeError`. The first argument must not be empty.

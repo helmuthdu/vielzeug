@@ -1,4 +1,19 @@
 export const optionalNullableExample = {
-  code: "import { s } from '/spell'\n\nconst schema = s.object({\n  required: s.string(),\n  optional: s.string().optional(),\n  nullable: s.string().nullable(),\n  nullish: s.string().nullish(),\n  withDefault: s.string().default('default value')\n})\n\n// Valid with minimum explicit nullable value\nconst result1 = schema.safeParse({\n  required: 'value',\n  nullable: null\n})\nconsole.log('Nullable + defaults:', result1.success)\nif (result1.success) {\n  console.log('Data:', result1.data)\n}\n\n// Valid with optional, nullable, and nullish present\nconst result2 = schema.safeParse({\n  required: 'value',\n  optional: 'optional value',\n  nullable: 'set',\n  nullish: undefined\n})\nconsole.log('\\nWith optional/nullish:', result2.success)\n\n// Missing required and nullable fields\nconst result3 = schema.safeParse({\n  optional: 'value'\n})\nconsole.log('Missing required fields:', result3.success)",
+  code: `// Preserve defaults and validators while tightening undefined away with required().
+import { s } from '@vielzeug/spell'
+
+const DisplayName = s.string().trim().min(2).optional().default('Guest').nullable()
+const RequiredDisplayName = DisplayName.required()
+
+console.log('default for undefined:', DisplayName.parse(undefined))
+console.log('null stays null:', DisplayName.parse(null))
+
+const short = RequiredDisplayName.safeParse('A')
+console.log('short name accepted:', short.success)
+
+const missing = RequiredDisplayName.safeParse(undefined)
+console.log('undefined accepted after required():', missing.success)
+
+console.log('null accepted after required():', RequiredDisplayName.parse(null))`,
   name: 'Optional and Nullable Fields',
 };

@@ -231,13 +231,14 @@ await address.submit((vals) => vals);    // validates and submits only address.*
 
 ### Scoped Subscriptions
 
-`subscribeScoped` delivers form state filtered to the scope's prefix — `errors`, `touchedFields`, and `validatingFields` use relative keys, and the listener **only fires when the scoped projection changes**:
+`subscribeScoped` delivers form state filtered to the scope's prefix. `errors`, `touchedFields`, and `validatingFields` use relative keys. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. The listener **only fires when the scoped projection changes** — mutations outside the prefix are suppressed.
 
 ```ts
 const address = form.scope('address');
 
 address.subscribeScoped((state) => {
   // state.errors → { city: 'Required' }  (not 'address.city')
+  // state.isDirty → true only when an address.* field is dirty
   // does not fire when form.set('name', 'Alice') is called
   renderAddressErrors(state.errors);
 });
@@ -324,8 +325,8 @@ form.batch(() => {
 ## Reset, Replace, and Patch
 
 ```ts
-form.reset();                           // restore all values to baseline; clear errors/touched/dirty
-form.replace({ email: '', name: '' });  // replace values and baseline together
+form.reset();                           // restore all values to baseline; clear errors/touched/dirty/submitCount
+form.replace({ email: '', name: '' });  // replace values and baseline; also resets submitCount
 form.patch({ name: 'Alice' });          // merge specific fields into store and baseline (marks them clean)
 form.resetField('email');               // restore single field to baseline
 form.removeField('coupon');             // drop field entirely (value, touched, error, validator)

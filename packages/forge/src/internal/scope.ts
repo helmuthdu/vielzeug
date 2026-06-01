@@ -24,6 +24,7 @@ import { flattenValues, unflattenValues } from '../utils';
 /**
  * R3: Slim ScopeContext — delegates simple operations through `root: Form<TValues>`.
  * Only the Maps/Sets needed for bulk scoped operations are passed directly.
+ * @internal
  */
 export interface ScopeContext<TValues extends Record<string, unknown> = Record<string, unknown>> {
   /** The fully-featured root form — used for all simple one-field delegations. */
@@ -173,17 +174,18 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     ctx.ensureNotDisposed();
 
     const flat = flattenValues(partial);
+    const changedKeys: string[] = [];
 
-    ctx.root.batch(() => {
-      for (const [key, value] of Object.entries(flat)) {
-        const full = pre(key);
+    for (const [key, value] of Object.entries(flat)) {
+      const full = pre(key);
 
-        ctx.baseline.set(full, value);
-        ctx.store.set(full, value);
-        ctx.dirty.delete(full);
-        ctx.requestNotify(full);
-      }
-    });
+      ctx.baseline.set(full, value);
+      ctx.store.set(full, value);
+      ctx.dirty.delete(full);
+      changedKeys.push(full);
+    }
+
+    ctx.requestNotify(changedKeys);
   }
 
   function scopedResetErrors(
@@ -275,12 +277,13 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   }
 
   /**
-   * F3: Subscribe filtered to scoped fields only.
+   * Subscribe filtered to scoped fields only.
    * Errors, touchedFields, and validatingFields are remapped to relative paths.
-   * All other FormState flags (isDirty, isValid, isSubmitting, etc.) reflect the full form.
+   * `isValid`, `isDirty`, and `isTouched` reflect only fields within this scope's prefix.
+   * `isSubmitting`, `isLoading`, `isValidating`, and `submitCount` reflect the full form.
    *
-   * The listener is only called when the scoped projection changes — changes to unrelated
-   * fields outside this scope's prefix do not fire the listener.
+   * The listener fires only when the scoped projection changes — mutations outside this
+   * prefix do not fire the listener.
    */
   function subscribeScoped(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
     // Track the previous scoped projection for equality comparison.
@@ -301,15 +304,21 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       const touchedFields = state.touchedFields.filter(isScopedKey).map(unscope);
       const validatingFields = state.validatingFields.filter(isScopedKey).map(unscope);
 
+      // Compute scoped-only boolean flags.
+      const isValid = Object.keys(errors).length === 0;
+      const isDirty = [...ctx.dirty].some(isScopedKey);
+      const isTouched = [...ctx.touched].some(isScopedKey);
+      const isValidating = validatingFields.length > 0;
+
       // Skip if no scoped-relevant state has changed.
       if (prevFlags) {
         const flagsMatch =
-          state.isDirty === prevFlags.isDirty &&
+          isDirty === prevFlags.isDirty &&
           state.isLoading === prevFlags.isLoading &&
           state.isSubmitting === prevFlags.isSubmitting &&
-          state.isTouched === prevFlags.isTouched &&
-          state.isValid === prevFlags.isValid &&
-          state.isValidating === prevFlags.isValidating &&
+          isTouched === prevFlags.isTouched &&
+          isValid === prevFlags.isValid &&
+          isValidating === prevFlags.isValidating &&
           state.submitCount === prevFlags.submitCount;
 
         const errKeys = Object.keys(errors);
@@ -330,18 +339,22 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       prevTouched = touchedFields;
       prevValidating = validatingFields;
       prevFlags = {
-        isDirty: state.isDirty,
+        isDirty,
         isLoading: state.isLoading,
         isSubmitting: state.isSubmitting,
-        isTouched: state.isTouched,
-        isValid: state.isValid,
-        isValidating: state.isValidating,
+        isTouched,
+        isValid,
+        isValidating,
         submitCount: state.submitCount,
       };
 
       listener({
         ...state,
         errors: Object.freeze(errors) as FormState['errors'],
+        isDirty,
+        isTouched,
+        isValid,
+        isValidating,
         touchedFields: Object.freeze(touchedFields) as readonly string[],
         validatingFields: Object.freeze(validatingFields) as readonly string[],
       });

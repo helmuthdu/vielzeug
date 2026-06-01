@@ -99,7 +99,6 @@ export type WardConflict<TAction extends string = string, TData = unknown> = {
 
 /** One candidate entry in a `WardTrace` — shows why it won or lost. */
 export type WardTraceCandidate<TAction extends string = string, TData = unknown> = {
-  denyBonus: 0 | 1;
   priority: number;
   rule: WardRule<TAction, TData>;
   score: number;
@@ -115,11 +114,6 @@ export type WardTrace<TAction extends string = string, TData = unknown> = {
   candidates: WardTraceCandidate<TAction, TData>[];
   decision: WardDecision<TAction, TData>;
 };
-
-// ---------------------------------------------------------------------------
-// Helper for deriving BoundWard: drops the first Principal param from each method.
-// ---------------------------------------------------------------------------
-type DropPrincipal<T> = T extends (p: Principal, ...args: infer R) => infer Ret ? (...args: R) => Ret : T;
 
 export type Ward<TAction extends string = string, TData = unknown> = {
   /**
@@ -138,6 +132,11 @@ export type Ward<TAction extends string = string, TData = unknown> = {
   detectConflicts(): WardConflict<TAction, TData>[];
   explain(principal: Principal, resource: string, action: TAction, data?: TData): WardDecision<TAction, TData>;
   forUser(principal: UserPrincipal): BoundWard<TAction, TData>;
+  /**
+   * Returns all rules whose role, resource, and action patterns match `principal` and `resource`.
+   * When `data` is omitted, predicate-gated rules are **included** without evaluating their `when`
+   * condition — useful for introspection. Pass `data` to apply predicates and get the runtime-accurate set.
+   */
   rulesInScope(principal: Principal, resource: string, data?: TData): WardRule<TAction, TData>[];
   /** Returns the full decision trace showing all matching candidates and why the winner was selected. */
   trace(principal: Principal, resource: string, action: TAction, data?: TData): WardTrace<TAction, TData>;
@@ -149,12 +148,43 @@ export type Ward<TAction extends string = string, TData = unknown> = {
  * `forUser` and `detectConflicts` are not available on a bound view.
  */
 export type BoundWard<TAction extends string = string, TData = unknown> = {
-  [K in Exclude<keyof Ward<TAction, TData>, 'detectConflicts' | 'forUser'>]: DropPrincipal<Ward<TAction, TData>[K]>;
+  /**
+   * Returns allowed concrete actions for this principal on a resource.
+   * Pass `knownActions` to resolve wildcard-action rules.
+   *
+   * @remarks Side-effect-free enumeration helper — does **not** invoke the logger.
+   * Use `checkAll` if you need an auditable batch decision.
+   */
+  allowedActions(resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
+  /** Returns `true` if this principal is allowed to perform `action` on `resource`. */
+  can(resource: string, action: TAction, data?: TData): boolean;
+  /** Returns `true` if this principal is allowed to perform **all** of the given `actions` on `resource`. */
+  canAll(resource: string, actions: readonly TAction[], data?: TData): boolean;
+  /** Returns `true` if this principal is allowed to perform **any** of the given `actions` on `resource`. */
+  canAny(resource: string, actions: readonly TAction[], data?: TData): boolean;
+  /** Evaluates multiple checks in a single call and returns one `WardDecision` per check. */
+  checkAll(checks: readonly WardCheck<TAction, TData>[]): WardDecision<TAction, TData>[];
+  /** Returns the full `WardDecision` for this principal on the given resource and action. */
+  explain(resource: string, action: TAction, data?: TData): WardDecision<TAction, TData>;
+  /**
+   * Returns all rules whose role, resource, and action patterns match this principal and resource.
+   * When `data` is omitted, predicate-gated rules are included without evaluating their `when` condition.
+   */
+  rulesInScope(resource: string, data?: TData): WardRule<TAction, TData>[];
+  /** Returns the full decision trace showing all matching candidates and why the winner was selected. */
+  trace(resource: string, action: TAction, data?: TData): WardTrace<TAction, TData>;
 };
 
 /**
  * Discriminated logger context — mirrors `WardDecision` so `rule` can be
  * narrowed without a separate null check.
+ *
+ * @remarks
+ * The `decision` string values intentionally differ from `WardDecision`:
+ * `decision: 'allow'` here corresponds to `WardDecision.allowed === true`,
+ * and `decision: 'explicit-deny'` / `'no-matching-rule'` correspond to
+ * `WardDecision.reason` on the deny branch. String literals are used here
+ * to enable exhaustive `switch` narrowing without an extra `.allowed` check.
  *
  * @example
  * ```ts

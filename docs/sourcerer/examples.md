@@ -12,3 +12,4 @@ description: Practical examples and recipes for sourcerer.
 - [Reactive Controls with Ripple](./examples/sourcerer-with-ripple.md)
 - [Remote Data with Courier](./examples/sourcerer-with-courier.md)
 - [URL-Synced List with Wayfinder](./examples/sourcerer-with-wayfinder.md)
+- [Framework Integration](./examples/framework-integration.md)

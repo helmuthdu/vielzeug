@@ -394,7 +394,7 @@ class Slot<TInput, TOutput> {
       }
 
       clearTimeout(pending.timer);
-      clearInterval(pending.heartbeatWatchdog);
+      clearTimeout(pending.heartbeatWatchdog);
       this.pending = null;
 
       if ('error' in event.data) {

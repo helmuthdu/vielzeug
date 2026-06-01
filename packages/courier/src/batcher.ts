@@ -129,6 +129,10 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
         }
       });
     },
+
+    [Symbol.dispose](): void {
+      this.dispose();
+    },
   };
 }
 

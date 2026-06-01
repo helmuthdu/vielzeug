@@ -13,6 +13,6 @@
  * @param [options.type] - Error class to throw (default: `Error`).
  * @throws {Error} If `condition` is false.
  */
-export function assert(condition: boolean, message = 'Assertion failed', options?: { type?: ErrorConstructor }): void {
-  if (!condition) throw new (options?.type ?? Error)(message);
+export function assert(condition: boolean, message?: string, options?: { type?: ErrorConstructor }): asserts condition {
+  if (!condition) throw new (options?.type ?? Error)(message ?? 'Assertion failed');
 }

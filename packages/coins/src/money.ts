@@ -71,6 +71,20 @@ function parseToMinorUnits(str: string, decimals: number): bigint {
   return negative ? -result : result;
 }
 
+/**
+ * Creates a `Money` value with a zero amount for the given currency.
+ * Equivalent to `money(0n, currency)` but more expressive.
+ *
+ * @example
+ * ```ts
+ * zero('USD')  // { amount: 0n, currency: 'USD' }
+ * zero('JPY')  // { amount: 0n, currency: 'JPY' }
+ * ```
+ */
+export function zero(currency: string): Money {
+  return money(0n, currency);
+}
+
 // ─── Arithmetic ──────────────────────────────────────────────────────────────
 
 /** Adds two `Money` values. Throws if their currencies differ. */
@@ -147,7 +161,7 @@ export function divide(m: Money, divisor: number | string, mode: RoundingMode = 
  * then any remainder units are assigned one-by-one to the shares with the largest
  * fractional parts, breaking ties by original index (stable, left-to-right).
  *
- * Throws if `ratios` is empty, contains negative values, or sums to zero.
+ * Throws if `ratios` is empty, contains negative values (including negative strings like `'-0.5'`), or sums to zero.
  *
  * @example
  * ```ts
@@ -158,7 +172,7 @@ export function divide(m: Money, divisor: number | string, mode: RoundingMode = 
  * // → [$3.00, $7.00]
  * ```
  */
-export function allocate(m: Money, ratios: readonly (number | string)[]): Money[] {
+export function allocate(m: Money, ratios: readonly (number | string)[]): [Money, ...Money[]] {
   if (ratios.length === 0) throw new RangeError('allocate requires at least one ratio');
 
   const parsedRatios = ratios.map((r) => parseRational(String(r)));
@@ -203,7 +217,7 @@ export function allocate(m: Money, ratios: readonly (number | string)[]): Money[
     result[indices[i]!]! += 1n;
   }
 
-  return result.map((amount) => ({ amount: negative ? -amount : amount, currency: m.currency }));
+  return result.map((amount) => ({ amount: negative ? -amount : amount, currency: m.currency })) as [Money, ...Money[]];
 }
 
 // ─── Aggregates ──────────────────────────────────────────────────────────────
@@ -258,7 +272,7 @@ export function max(first: Money, ...rest: Money[]): Money {
  * // → [$3.34, $3.33, $3.33]
  * ```
  */
-export function splitEvenly(m: Money, parts: number): Money[] {
+export function splitEvenly(m: Money, parts: number): [Money, ...Money[]] {
   if (!Number.isInteger(parts) || parts <= 0) {
     throw new RangeError('splitEvenly requires a positive integer number of parts');
   }
@@ -267,6 +281,27 @@ export function splitEvenly(m: Money, parts: number): Money[] {
     m,
     Array.from({ length: parts }, () => 1),
   );
+}
+
+/**
+ * Clamps `m` to the inclusive range `[lower, upper]`.
+ * Throws `TypeError` on currency mismatch. Throws `RangeError` if `lower > upper`.
+ *
+ * @example
+ * ```ts
+ * clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD'))  // $5.00
+ * clamp(money('0.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD'))  // $1.00
+ * clamp(money('15.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD')) // $10.00
+ * ```
+ */
+export function clamp(m: Money, lower: Money, upper: Money): Money {
+  if (compare(lower, upper) > 0) {
+    throw new RangeError(
+      `clamp: lower (${toDecimal(lower)} ${lower.currency}) must be <= upper (${toDecimal(upper)} ${upper.currency})`,
+    );
+  }
+
+  return max(lower, min(m, upper));
 }
 
 // ─── Unary ───────────────────────────────────────────────────────────────────
@@ -377,7 +412,7 @@ export function fromJSON(json: MoneyJSON): Money {
   try {
     amount = BigInt(json.amount);
   } catch {
-    throw new SyntaxError(`Invalid money amount in JSON: "${json.amount}"`);
+    throw new SyntaxError(`Invalid money amount in JSON: "${json.amount}" (expected an integer string, e.g. '123456')`);
   }
 
   return { amount, currency: validCurrency };

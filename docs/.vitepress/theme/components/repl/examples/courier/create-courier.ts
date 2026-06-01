@@ -1,5 +1,5 @@
 export const createCourierExample = {
-  code: `import { createCourier, withBearerAuth, withLogging } from '/courier'
+  code: `import { createCourier, withBearerAuth, withLogging } from '@vielzeug/courier'
 
 // Single shared transport — interceptors, headers, and timeout apply to both api and stream
 const client = createCourier({

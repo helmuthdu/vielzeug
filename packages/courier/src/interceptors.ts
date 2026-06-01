@@ -58,6 +58,10 @@ export function withRequestId(opts?: { generate?: () => string; header?: string 
  *
  * Defaults to `console.debug`. Supply a custom `logger` for structured logging.
  *
+ * **Security note:** The full URL is logged, including any query parameters.
+ * If your URLs may contain sensitive data (tokens, PII), provide a custom
+ * `logger` that sanitizes the URL before writing to persistent logs.
+ *
  * @example
  * ```ts
  * client.use(withLogging());

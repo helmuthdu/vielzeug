@@ -8,16 +8,18 @@ export type { TtlMs, VaultCodec };
 
 /* -------------------- Schema types -------------------- */
 
+/** @internal Unique symbol used as a phantom type brand — never appears at runtime. */
+declare const schemaEntryBrand: unique symbol;
+
 /**
  * Schema entry for a single table.
  * `T` is the record type; `Key` is the primary key field name.
  *
- * `_record` is a phantom field that holds `T` in a directly inferable position so TypeScript
- * can recover `T` in `RecordOf` conditional types. It is never set at runtime.
+ * The phantom brand `[schemaEntryBrand]` holds `T` in a directly inferable position so
+ * TypeScript can recover `T` in `RecordOf` conditional types. It uses a unique symbol key
+ * so it is invisible in IDE autocompletion and cannot be set accidentally.
  */
 export type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T & string = keyof T & string> = {
-  /** @internal Phantom field — enables TypeScript to infer T. Never has a runtime value. */
-  readonly _record?: T;
   defaultTtl?: TtlMs;
   /**
    * Secondary index field names. The IndexedDB adapter creates an IDB index for each field,
@@ -33,6 +35,8 @@ export type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T &
    */
   indexes?: readonly (keyof T & string)[];
   key: Key;
+  /** @internal Phantom brand — enables TypeScript to infer T. Never has a runtime value. */
+  readonly [schemaEntryBrand]?: T;
 };
 
 /** A schema is any record of `SchemaEntry`-compatible values. Checked structurally so that
@@ -174,6 +178,9 @@ export type TableSignals<S extends AnySchema> = {
 
 export type Observer<T> = (records: T[]) => void;
 
+/** A function that cancels an active subscription. Returned by `observe()` and `observeMany()`. */
+export type Unsubscribe = () => void;
+
 /* -------------------- Shared adapter options -------------------- */
 
 /**
@@ -281,6 +288,8 @@ type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & s
     ttl?: TtlMs,
   ): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /** Returns `true` if the table contains no live records. Equivalent to `(await count(table)) === 0`. */
+  isEmpty<T extends K>(table: T): Promise<boolean>;
   /**
    * Returns the primary key of every live record in the table without fetching the full records.
    * Useful for existence checks, diffing, and cache-invalidation.
@@ -364,7 +373,7 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
        */
       signal?: AbortSignal;
     },
-  ): () => void;
+  ): Unsubscribe;
   /**
    * Observe multiple tables simultaneously. The listener receives a combined snapshot
    * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
@@ -380,7 +389,7 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
     options?: { signal?: AbortSignal },
-  ): () => void;
+  ): Unsubscribe;
   /**
    * Explicitly delete all TTL-expired records from the specified tables (or all tables when
    * no filter is provided). Returns the number of records pruned per table.

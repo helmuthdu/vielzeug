@@ -1,5 +1,5 @@
 export const namespacesExample = {
-  code: `import { createI18n } from '/lingua'
+  code: `import { createI18n } from '@vielzeug/lingua'
 
 const i18n = createI18n({
   locale: 'en',

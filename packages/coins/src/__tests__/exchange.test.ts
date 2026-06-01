@@ -33,6 +33,12 @@ describe('exchange', () => {
 
       expect(result).toEqual({ amount: 100000n, currency: 'USD' });
     });
+
+    it('rate of 0 produces zero amount', () => {
+      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '0', to: eur });
+
+      expect(result).toEqual({ amount: 0n, currency: 'EUR' });
+    });
   });
 
   describe('precision', () => {
@@ -56,6 +62,14 @@ describe('exchange', () => {
 
       // 100000 × 847532 / 1000000 = 84753.2 → rounds to 84753
       expect(result).toEqual({ amount: 84753n, currency: 'EUR' });
+    });
+
+    it('accepts a rate string in scientific notation', () => {
+      // ExchangeRate.rate is a string — scientific notation should be handled
+      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '1e-2', to: eur });
+
+      // 100000 × 1 / 100 = 1000 EUR cents = €10.00
+      expect(result).toEqual({ amount: 1000n, currency: 'EUR' });
     });
   });
 
@@ -119,6 +133,13 @@ describe('exchange', () => {
 
     it('throws RangeError for invalid rate string', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: 'not-a-number', to: eur })).toThrow(RangeError);
+    });
+
+    it('throws RangeError for negative exchange rate', () => {
+      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(
+        'Exchange rate must be non-negative',
+      );
     });
   });
 

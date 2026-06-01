@@ -1,7 +1,7 @@
 export const childContainersExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const Token = createToken('Value')
+const Token = token('Value')
 const root = createContainer().value(Token, 'root-value')
 
 const child = root.createChild()

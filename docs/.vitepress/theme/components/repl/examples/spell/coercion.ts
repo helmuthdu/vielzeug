@@ -1,4 +1,22 @@
 export const coercionExample = {
-  code: "import { s } from '/spell'\n\nconst schema = s.object({\n  age: s.coerce.number(),\n  active: s.coerce.boolean(),\n  createdAt: s.coerce.date()\n})\n\n// Input with string types\nconst input = {\n  age: '25',\n  active: 'true',\n  createdAt: '2024-01-15'\n}\n\nconst result = schema.safeParse(input)\nconsole.log('Success:', result.success)\nif (result.success) {\n  console.log('Coerced data:', result.data)\n  console.log('Age type:', typeof result.data.age)\n  console.log('Active type:', typeof result.data.active)\n  console.log('Date type:', result.data.createdAt instanceof Date)\n}",
+  code: `// Coerce query params into typed search options with safe defaults.
+import { s } from '@vielzeug/spell'
+
+const SearchQuery = s.object({
+  draft: s.coerce.boolean().default(false),
+  limit: s.coerce.number().int().positive().default(20),
+  page: s.coerce.number().int().positive().default(1),
+  q: s.coerce.string().trim().min(1).optional(),
+})
+
+const parsed = SearchQuery.parse({
+  draft: 'true',
+  limit: '50',
+  page: '2',
+  q: '  vielzeug  ',
+})
+
+console.log(parsed)
+console.log('limit type:', typeof parsed.limit)`,
   name: 'Type Coercion',
 };

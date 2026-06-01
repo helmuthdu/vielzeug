@@ -2,6 +2,7 @@ import type {
   BehaviorBus,
   BehaviorBusOptions,
   BehaviorInitial,
+  Bus,
   BusOptions,
   EmissionErrorContext,
   EventKey,
@@ -39,11 +40,10 @@ export function createBehaviorBus<T extends EventMap>(
   initial?: BehaviorInitial<T>,
   options?: BehaviorBusOptions<T>,
 ): BehaviorBus<T> {
-  // F4: replay window — number of most-recent values replayed to new subscribers.
+  // Replay window — number of most-recent values replayed to new subscribers.
   const replayCount = options?.replay ?? 1;
 
-  // R4: Pass options through to createBus unchanged (no onDispatch interception).
-  // Capture values by wrapping emit() instead.
+  // Pass options through to createBus unchanged. Capture values by wrapping emit() instead.
   const { replay: _replay, ...busOptions } = options ?? {};
   const bus = createBus<T>(busOptions as BusOptions<T>);
 
@@ -77,7 +77,7 @@ export function createBehaviorBus<T extends EventMap>(
 
     buffers.set(event as string, buf);
 
-    return bus.emit(event, ...(args as []));
+    return (bus.emit as (event: EventKey<T>, payload?: unknown) => number)(event, (args as unknown[])[0]);
   }
 
   function getCurrent<K extends EventKey<T>>(event: K): T[K] | undefined {
@@ -118,13 +118,18 @@ export function createBehaviorBus<T extends EventMap>(
     return on(event, listener, { once: true, signal: opts?.signal });
   }
 
+  function reset(event?: EventKey<T>): void {
+    if (event !== undefined) buffers.delete(event as string);
+    else buffers.clear();
+  }
+
   function dispose(): void {
     bus.dispose();
     buffers.clear();
   }
 
-  // R5: Use makeBusDelegate to avoid enumerating every Bus<T> method.
-  // Override only the four methods that differ from the underlying bus.
+  // Use makeBusDelegate to avoid enumerating every Bus<T> method.
+  // Override only the methods that differ from the underlying bus.
   const delegate = makeBusDelegate<T>(bus) as BehaviorBus<T>;
 
   delegate.current = getCurrent;
@@ -132,6 +137,7 @@ export function createBehaviorBus<T extends EventMap>(
   delegate.emit = emit as Bus<T>['emit'];
   delegate.on = on;
   delegate.once = once;
+  delegate.reset = reset;
   delegate[Symbol.dispose] = dispose;
 
   return delegate;

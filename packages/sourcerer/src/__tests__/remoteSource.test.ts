@@ -1,6 +1,7 @@
 import { decodeQuery, encodeQuery } from '../codecs';
 import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
+import { SourceTimeoutError } from '../types';
 
 describe('createRemoteSource', () => {
   beforeEach(() => {
@@ -97,14 +98,14 @@ describe('createRemoteSource', () => {
   });
 
   describe('query updates and navigation', () => {
-    it('hydrate applies multiple fields and performs one fetch', async () => {
+    it('restoreQuery applies multiple fields and performs one fetch', async () => {
       const fetch = vi.fn(async ({ limit, page, search }: { limit: number; page: number; search?: string }) => ({
         items: [`${limit}-${page}-${search ?? ''}`],
         total: 50,
       }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.hydrate({ limit: 5, page: 3, search: 'x' });
+      await source.restoreQuery({ limit: 5, page: 3, search: 'x' });
 
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(source.toQuery().limit).toBe(5);
@@ -112,17 +113,17 @@ describe('createRemoteSource', () => {
       expect(source.current).toEqual(['5-3-x']);
     });
 
-    it('hydrate preserves page when limit changes (no implicit reset)', async () => {
+    it('restoreQuery preserves page when limit changes (no implicit reset)', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 20 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 5 });
 
       await source.goTo(3);
-      await source.hydrate({ limit: 10 });
+      await source.restoreQuery({ limit: 10 });
 
       expect(source.toQuery().page).toBe(2);
     });
 
-    it('hydrate is a no-op when nothing changes', async () => {
+    it('restoreQuery is a no-op when nothing changes', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
@@ -131,7 +132,7 @@ describe('createRemoteSource', () => {
       const callsBefore = fetch.mock.calls.length;
 
       // Empty search and current page — should be a no-op.
-      await source.hydrate({ limit: 10, page: 1, search: '' });
+      await source.restoreQuery({ limit: 10, page: 1, search: '' });
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
@@ -306,7 +307,7 @@ describe('createRemoteSource', () => {
       const params = encodeQuery(source.toQuery());
       const restored = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await restored.hydrate(decodeQuery(params, { defaultLimit: 10 }));
+      await restored.restoreQuery(decodeQuery(params, { defaultLimit: 10 }));
 
       expect(restored.toQuery()).toEqual({
         filter: { active: true },
@@ -316,11 +317,11 @@ describe('createRemoteSource', () => {
       });
     });
 
-    it('hydrate with no changes does not fetch', async () => {
+    it('restoreQuery with no changes does not fetch', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 2 });
 
-      await source.hydrate({ limit: 2, page: 1, search: '' });
+      await source.restoreQuery({ limit: 2, page: 1, search: '' });
       await Promise.resolve();
 
       expect(fetch).not.toHaveBeenCalled();
@@ -414,6 +415,63 @@ describe('createRemoteSource', () => {
 
       expect(source.meta.isLoading).toBe(false);
       expect(source.current).toEqual(['page3']);
+    });
+  });
+
+  describe('reset()', () => {
+    it('restores filter and sort to config defaults on reset()', async () => {
+      const fetch = vi.fn(async ({ filter, sort }: { filter?: unknown; sort?: unknown }) => ({
+        items: [JSON.stringify({ filter, sort })],
+        total: 1,
+      }));
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch,
+        filter: { active: true },
+        sort: { by: 'name' },
+      });
+
+      await source.setFilter({ active: false });
+      await source.setSort({ by: 'age' });
+      await source.reset();
+
+      expect(source.toQuery()).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
+    });
+
+    it('reset() resets search and page to defaults', async () => {
+      const fetch = vi.fn(async () => ({ items: Array.from({ length: 10 }, (_, i) => i), total: 30 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.refresh();
+      await source.goTo(3);
+      await source.searchNow('hello');
+      await source.reset();
+
+      expect(source.toQuery()).toMatchObject({ page: 1 });
+      expect(source.toQuery().search).toBeUndefined();
+    });
+  });
+
+  describe('goTo() clamping', () => {
+    it('clamps goTo() to valid page range after data is loaded', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 30 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.refresh();
+
+      await source.goTo(999);
+
+      expect(source.toQuery().page).toBe(3);
+    });
+
+    it('clamps goTo() to page 1 minimum', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 30 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.refresh();
+      await source.goTo(-5);
+
+      expect(source.toQuery().page).toBe(1);
     });
   });
 
@@ -629,9 +687,70 @@ describe('createRemoteSource', () => {
       const p = source.ready(100);
 
       vi.advanceTimersByTime(101);
-      await expect(p).rejects.toThrow('timed out');
+      await expect(p).rejects.toBeInstanceOf(SourceTimeoutError);
 
       resolveHang();
+    });
+  });
+
+  describe('optimisticUpdate()', () => {
+    it('applies optimistic update immediately and rollback restores state', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      await source.refresh();
+
+      const rollback = source.optimisticUpdate((items) => [...items, 'c'], { total: 3 });
+
+      expect(source.current).toEqual(['a', 'b', 'c']);
+      expect(source.meta.totalItems).toBe(3);
+
+      rollback();
+
+      expect(source.current).toEqual(['a', 'b']);
+      expect(source.meta.totalItems).toBe(2);
+    });
+
+    it('throws when a second optimistic update is started while one is active', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      await source.refresh();
+      source.optimisticUpdate((items) => [...items, 'b']);
+
+      expect(() => source.optimisticUpdate((items) => [...items, 'c'])).toThrow('already active');
+    });
+  });
+
+  describe('refreshInterval', () => {
+    it('re-fetches at the configured interval', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, refreshInterval: 1000 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(1001);
+
+      expect(fetch.mock.calls.length).toBeGreaterThan(1);
+
+      source.dispose();
+    });
+
+    it('stops re-fetching after dispose()', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, refreshInterval: 500 });
+
+      await source.refresh();
+
+      source.dispose();
+
+      const callsBefore = fetch.mock.calls.length;
+
+      vi.advanceTimersByTime(2000);
+      await vi.runAllTimersAsync();
+
+      expect(fetch.mock.calls.length).toBe(callsBefore);
     });
   });
 

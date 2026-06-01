@@ -218,23 +218,6 @@ for (const item of virt.items) {
 }
 ```
 
-## Reacting to Individual Size Changes
-
-Use `onMeasure` when you need to know exactly which item changed size and by how much — for example, to sync an external size cache or to animate a row expansion.
-
-```ts
-const virt = createVirtualizer(scrollEl, {
-  count: rows.length,
-  estimateSize: 40,
-  onMeasure: (index, oldSize, newSize) => {
-    console.log(`item ${index}: ${oldSize ?? 'unmeasured'} → ${newSize}px`);
-  },
-  onChange: render,
-});
-```
-
-`onMeasure` fires once per item per distinct size change.
-
 ## Overscan
 
 `overscan` controls how many extra items render outside the visible viewport on each side. Higher values reduce the chance of blank rows during fast scrolling; lower values keep the DOM smaller.
@@ -243,7 +226,7 @@ const virt = createVirtualizer(scrollEl, {
 createVirtualizer(scrollEl, {
   count: 1_000,
   estimateSize: 36,
-  overscan: { start: 5, end: 5 }, // render 5 extra items above and below (default: 3)
+  overscan: 5, // symmetric shorthand — same as { start: 5, end: 5 } (default: 3)
   onChange: () => {
     /* ... */
   },
@@ -382,6 +365,53 @@ if (savedOffset) virt.scrollToOffset(Number(savedOffset));
 scrollEl.addEventListener('scroll', () => {
   sessionStorage.setItem('scrollOffset', String(scrollEl.scrollTop));
 });
+```
+
+### `scrollToTop(options?)` / `scrollToBottom(options?)`
+
+Convenience wrappers to jump directly to the start or end of the list.
+
+```ts
+// Jump to the top
+virt.scrollToTop();
+
+// Jump to the bottom with smooth scroll
+virt.scrollToBottom({ behavior: 'smooth' });
+```
+
+## Shared Measurement Cache
+
+When the same items are displayed across multiple virtualizer instances (e.g. a list and a detail panel that share row heights), pass a shared `MeasurementCache` created by `createMeasurementCache()`. Measurements recorded by one virtualizer are immediately available to all others using the same cache.
+
+```ts
+import { createMeasurementCache, createVirtualizer } from '@vielzeug/scroll';
+
+const cache = createMeasurementCache();
+
+const listVirt = createVirtualizer(listScrollEl, {
+  count: rows.length,
+  estimateSize: 36,
+  measurementCache: cache,
+  onChange: renderList,
+});
+
+const previewVirt = createVirtualizer(previewScrollEl, {
+  count: rows.length,
+  estimateSize: 36,
+  measurementCache: cache,
+  onChange: renderPreview,
+});
+
+// A measurement on listVirt is reflected in previewVirt immediately.
+listVirt.measure(0, 72);
+```
+
+The cache is a plain `Map<VirtualKey, number>` — you can pre-populate it from server data or persist it across sessions.
+
+```ts
+// Pre-populate from server-sent sizes
+const cache = createMeasurementCache();
+for (const { id, height } of serverSizes) cache.set(id, height);
 ```
 
 ## Invalidating Measurements

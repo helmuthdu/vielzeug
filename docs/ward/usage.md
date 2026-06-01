@@ -218,8 +218,8 @@ const { decision, candidates } = ward.trace(
   'read',
 );
 
-candidates.forEach(({ rule, priority, score, denyBonus, won }) => {
-  console.log(rule.effect, priority, score, denyBonus, won ? '← winner' : '');
+candidates.forEach(({ rule, priority, score, won }) => {
+  console.log(rule.effect, priority, score, won ? '← winner' : '');
 });
 ```
 
@@ -570,14 +570,16 @@ Errors from the principal extractor propagate to Hono's `app.onError` handler. W
 
 ### Framework-agnostic guard
 
-Use `guardRequest` to wire Ward into any async middleware pattern. It has two overloads:
+Use `guardRequest` or `guardRequestWith` to wire Ward into any async middleware pattern.
 
 ```ts
-// Overload 1: provide principal directly
+import { guardRequest, guardRequestWith } from '@vielzeug/ward';
+
+// Principal is already resolved (e.g. from session)
 const result = await guardRequest(ward, principal, 'posts', 'update');
 
-// Overload 2: provide a request object and extractor
-const result = await guardRequest(ward, req, getPrincipal, 'posts', 'update');
+// Principal must be extracted from a request object (e.g. verify JWT)
+const result = await guardRequestWith(ward, req, getPrincipal, 'posts', 'update');
 
 if (!result.granted) {
   return new Response(JSON.stringify({ reason: result.reason }), { status: 403 });
@@ -631,6 +633,40 @@ const ward = createWard([/* rules */], {
   logger: (decision) => log.info('access decision', decision),
 });
 ```
+
+## Debug Mode
+
+Import `debugWard` from the dedicated sub-path to create a ward with decision logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
+
+```ts
+import { debugWard } from '@vielzeug/ward/debug';
+
+const permit = debugWard([
+  { role: 'viewer', resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+]);
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+// [ward:decision] allow             viewer  posts  read
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update');
+// [ward:decision] no-matching-rule  viewer  posts  update
+
+permit.can(null, 'posts', 'read');
+// [ward:decision] no-matching-rule  anonymous  posts  read
+```
+
+The ward returned is identical to `createWard()` — all methods (`can`, `canAll`, `explain`, `forUser`, etc.) work the same way.
+
+Alternatively, pass a custom `logger` directly to `createWard()` to route decisions to a structured logger:
+
+```ts
+const permit = createWard(rules, {
+  logger: (ctx) => myLogger.debug('access decision', ctx),
+});
+```
+
+Debug logging fires on `can`, `canAll`, `canAny`, `checkAll`, and `trace`. It does **not** fire on side-effect-free helpers (`allowedActions`, `rulesInScope`, `detectConflicts`).
 
 ## Best Practices
 

@@ -79,7 +79,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
         const startTime = Date.now();
 
         try {
-          const result = await retry((sig) => cfg.fetch(q, sig), {
+          const result = await retry((sig) => cfg.fetch(q, sig!), {
             delay: retryDelay,
             signal,
             times: retryAttempts + 1,
@@ -174,9 +174,40 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     reset() {
+      core.cancelTimer();
       search = '';
       afterCursor = undefined;
       beforeCursor = undefined;
+
+      return doUpdate();
+    },
+
+    restoreQuery(patch) {
+      let changed = false;
+
+      if (patch.limit !== undefined) {
+        const n = Math.max(1, Math.trunc(patch.limit));
+
+        if (n !== limit) {
+          limit = n;
+          afterCursor = undefined;
+          beforeCursor = undefined;
+          changed = true;
+        }
+      }
+
+      if ('search' in patch) {
+        const s = patch.search ?? '';
+
+        if (s !== search) {
+          search = s;
+          afterCursor = undefined;
+          beforeCursor = undefined;
+          changed = true;
+        }
+      }
+
+      if (!changed) return Promise.resolve();
 
       return doUpdate();
     },

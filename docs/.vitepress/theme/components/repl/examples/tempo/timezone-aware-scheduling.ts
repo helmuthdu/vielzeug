@@ -1,7 +1,7 @@
 export const timezoneAwareSchedulingExample = {
-  code: `import { format, formatZoned, parseLocal, toInstant, toZoned } from '/tempo'
+  code: `import { format, formatZoned, parsePlainDateTime, toInstant, toZoned } from '@vielzeug/tempo'
 
-const meetingUtc = toInstant(parseLocal('2026-04-15T14:00:00'), { tz: 'UTC' })
+const meetingUtc = toInstant(parsePlainDateTime('2026-04-15T14:00:00'), { tz: 'UTC' })
 const attendees = [
   { name: 'Alice', tz: 'America/New_York' },
   { name: 'Bruno', tz: 'Europe/Berlin' },

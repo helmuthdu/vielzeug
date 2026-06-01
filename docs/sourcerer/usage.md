@@ -69,15 +69,15 @@ await source.setData(newUsers); // replace entire dataset
 await source.reset();           // restore initial filter/sort, reset to page 1
 ```
 
-### Hydrating from URL state
+### Restoring from URL state
 
-Use `hydrate()` to apply URL-decoded state in one operation — only fields that changed trigger a recompute.
+Use `restoreQuery()` to apply URL-decoded state in one operation — only fields that changed trigger a recompute.
 
 ```ts
 import { decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
-await source.hydrate(query);
+await source.restoreQuery(query);
 ```
 
 ---
@@ -161,16 +161,16 @@ await source.reset();     // restore initial config and refetch
 await source.refresh();   // re-fetch current query
 ```
 
-### Hydrating from URL state
+### Restoring from URL state
 
 ```ts
 import { decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await source.hydrate(query);
+await source.restoreQuery(query);
 ```
 
-`hydrate()` is a no-op when no field has changed — safe to call on every page load.
+`restoreQuery()` is a no-op when no field has changed — safe to call on every page load.
 
 ### Optimistic updates
 
@@ -299,7 +299,7 @@ const state = sourceState(source);
 switch (state.status) {
   case 'loading': return renderSpinner();
   case 'error':   return renderError(state.error.message);
-  case 'data':    return renderList(state.items);
+  case 'success': return renderList(state.items);
 }
 ```
 
@@ -428,7 +428,7 @@ const params = encodeQuery(source.toQuery());
 
 // Restore from URLSearchParams directly
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await source.hydrate(query);
+await source.restoreQuery(query);
 ```
 
 `decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
@@ -613,6 +613,6 @@ effect(() => { void source.searchNow(controls.value.query); });
 - Pass the `AbortSignal` from the `fetch` callback to your HTTP client so superseded requests are cancelled.
 - Call `ready()` in server-side rendering or test setup — not in every render cycle.
 - Always call `dispose()` on signal adapters returned by `toSignals()` when the UI is torn down.
-- For URL sync, prefer `decodeQuery()` + `hydrate()` over manually reconstructing source state from params.
+- For URL sync, prefer `decodeQuery()` + `restoreQuery()` over manually reconstructing source state from params.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.

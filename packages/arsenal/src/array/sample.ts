@@ -1,5 +1,6 @@
 /**
- * Picks up to n unique random values from an array.
+ * Picks up to n unique random values from an array using a cryptographically
+ * random shuffle (Fisher-Yates via `crypto.getRandomValues`).
  */
 export function sample<T>(array: T[], n: number): T[] {
   const count = Math.max(0, Math.min(array.length, Math.floor(n)));
@@ -11,11 +12,11 @@ export function sample<T>(array: T[], n: number): T[] {
   const copy = [...array];
 
   for (let index = copy.length - 1; index > 0; index--) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
+    const randomIndex = Math.floor((crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000) * (index + 1));
     const temp = copy[index];
 
-    copy[index] = copy[randomIndex];
-    copy[randomIndex] = temp;
+    copy[index] = copy[randomIndex]!;
+    copy[randomIndex] = temp!;
   }
 
   return copy.slice(0, count);

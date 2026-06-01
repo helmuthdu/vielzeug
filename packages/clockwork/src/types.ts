@@ -188,7 +188,7 @@ export interface MachineInstance<State extends string, Ctx extends object, Ev ex
   can(event: Ev): boolean;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-  matches(...states: NoInfer<State>[]): boolean;
+  matches(...states: string[]): boolean;
   send(event: Ev): boolean;
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;

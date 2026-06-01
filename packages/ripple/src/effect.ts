@@ -1,8 +1,8 @@
-import type { DepEntry } from './tracking';
 import type {
   AsyncEffectCallback,
   AsyncSubscription,
   CleanupFn,
+  EffectAsyncOptions,
   EffectCallback,
   EffectOptions,
   Scope,
@@ -14,7 +14,7 @@ import { getDevToolsHook } from './devtools';
 import { collectErrors, rethrowWith, runAll, StateError } from './error';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
-import { getTracking, withSourceObserver, withTracking } from './tracking';
+import { getTracking, withTracking } from './tracking';
 
 /**
  * Wraps a core `run` function with a scheduler that coalesces rapid re-runs.
@@ -190,10 +190,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
  * await stop.disposeAsync();
  * ```
  */
-export const effectAsync = (
-  fn: AsyncEffectCallback,
-  options?: { onError?: (error: unknown) => void },
-): AsyncSubscription => {
+export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOptions): AsyncSubscription => {
   let controller: AbortController | null = null;
   let asyncCleanup: CleanupFn | null = null;
   let currentRunPromise: Promise<void> | null = null;
@@ -237,61 +234,6 @@ export const effectAsync = (
 
     if (runningPromise) await runningPromise;
   });
-};
-
-/**
- * Wraps `effect()` and logs which reactive sources changed between re-runs.
- * Produces a `console.group` before each re-run listing sources whose version
- * has advanced since the last run. Does NOT log on the initial run.
- *
- * Use instead of `effect()` when debugging unexpected re-renders (R11).
- *
- * @example
- * ```ts
- * const stop = traceEffect(() => {
- *   renderUser(userId.value, name.value);
- * }, { name: 'renderUser' });
- * ```
- */
-export const traceEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription => {
-  const label = options?.name ?? 'anonymous';
-
-  // Track versions seen on the last run so we can diff on the next run.
-  let prevDeps: DepEntry[] = [];
-
-  const wrappedFn = (): CleanupFn | void => {
-    const currentDeps: DepEntry[] = [];
-
-    // Log changed sources on every run after the first.
-    if (prevDeps.length > 0) {
-      const changed = prevDeps.filter((d) => d.source.version !== d.version);
-
-      if (changed.length > 0) {
-        console.group(`[ripple:trace] "${label}" re-running — changed sources:`);
-
-        for (const dep of changed) {
-          console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} -> v${dep.source.version})`);
-        }
-
-        console.groupEnd();
-      }
-    }
-
-    // R4: Run the effect body while observing accessed sources.
-    // Only record sources accessed directly by the effect (ctx.kind === 'effect'),
-    // not sources accessed during nested computed recomputes triggered inside the body.
-    const result = withSourceObserver((source) => {
-      if (getTracking()?.kind === 'effect') {
-        currentDeps.push({ source, version: source.version });
-      }
-    }, fn);
-
-    prevDeps = currentDeps;
-
-    return result;
-  };
-
-  return effect(wrappedFn, options);
 };
 
 export const onCleanup = (fn: CleanupFn): void => {

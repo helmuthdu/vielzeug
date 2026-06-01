@@ -8,7 +8,9 @@ import { listen } from '../utils/dom';
  * Syncs the signal value to the element's DOM value and back.
  *
  * Supports `type="text"` (default), `type="number"`, `type="range"`,
- * and `type="checkbox"`. The signal type should match the input type.
+ * `type="checkbox"`, and `<select>` (single-select). The signal type should
+ * match the input type. Note: `<select multiple>` is not supported — only the
+ * first selected value is read.
  *
  * @example
  * ```ts

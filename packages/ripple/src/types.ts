@@ -53,6 +53,10 @@ export type BatchOptions = {
   maxIterations?: number;
 };
 
+export type EffectAsyncOptions = {
+  onError?: (error: unknown) => void;
+};
+
 // ── Subscription (R9) ────────────────────────────────────────────────────────
 //
 // Subscription is now a plain object interface — no longer callable.

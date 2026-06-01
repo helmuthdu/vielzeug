@@ -28,5 +28,8 @@ export function composeFetch<TQuery, TResult>(
   core: (q: TQuery, signal: AbortSignal) => Promise<TResult>,
   ...fns: ReadonlyArray<FetchMiddleware<TQuery, TResult>>
 ): (q: TQuery, signal: AbortSignal) => Promise<TResult> {
-  return fns.reduceRight((next, mw) => (q, signal) => mw(q, signal, next), core);
+  return fns.reduceRight<(q: TQuery, signal: AbortSignal) => Promise<TResult>>(
+    (next, mw) => (q, signal) => mw(q, signal, next),
+    core,
+  );
 }

@@ -428,6 +428,19 @@ The callback fires only when `state` or `context` reference changes — not on e
 
 ## Debugging and Tracing
 
+For quick console-based debugging, use `debugInterpret` from the dedicated sub-path. It pre-wires `onDebug` and `onTransition` to `console.debug`/`console.group` and is tree-shaken from production bundles.
+
+```ts
+import { debugInterpret } from '@vielzeug/clockwork/debug';
+
+const m = debugInterpret(machine);
+m.send({ type: 'START' });
+// [clockwork:transition] START: idle → active
+// [clockwork:guard] START: idle → active — passed
+```
+
+For custom handling, pass `debug` options directly to `interpret()`.
+
 ### Debug events
 
 The `onDebug` callback receives a discriminated union of debug events:

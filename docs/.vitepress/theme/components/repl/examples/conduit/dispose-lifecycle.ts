@@ -1,8 +1,8 @@
 export const disposeLifecycleExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const DbPool = createToken('DbPool')
-const Cache = createToken('Cache')
+const DbPool = token('DbPool')
+const Cache = token('Cache')
 
 const container = createContainer()
 

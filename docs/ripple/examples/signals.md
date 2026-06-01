@@ -7,11 +7,13 @@ description: 'Signals examples for ripple.'
 
 ### Problem
 
-You want to understand the core Ripple primitive: `signal()`. This is the starting point for the reactivity model before computed values, effects, or stores.
+You need to create reactive values that automatically notify dependents when they change, derive computed values from them, and run side effects — without a framework.
 
 ### Solution
 
-### Counter with `computed` and `effect`
+Use `signal()` for reactive atoms, `computed()` for derived values, and `effect()` for side effects.
+
+#### Counter with `computed` and `effect`
 
 A self-contained reactive counter — no framework required:
 
@@ -37,7 +39,7 @@ isEven.dispose();
 
 ---
 
-### Updating Signal Values
+#### Updating Signal Values
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -52,7 +54,7 @@ tags.update((value) => [...value, 'tsx']); // ['ts', 'js', 'tsx']
 
 ---
 
-### Async Loading State with Signals
+#### Async Loading State with Signals
 
 Manage loading, data, and error state reactively:
 
@@ -88,7 +90,7 @@ async function fetchItems() {
 
 ---
 
-### One-Time Watch with Explicit Stop
+#### One-Time Watch with Explicit Stop
 
 Subscribe to the first change only, then auto-unsubscribe:
 
@@ -105,7 +107,7 @@ const stop = watch(authToken, (token) => {
 
 ---
 
-### `using` Declarations — Automatic Disposal
+#### `using` Declarations — Automatic Disposal
 
 With the TC39 explicit resource management proposal (`using`), disposables are cleaned up automatically when their block exits:
 
@@ -125,7 +127,7 @@ const count = signal(0);
 
 ---
 
-### Signal Combinators — `map` and `filter`
+#### Signal Combinators — `map` and `filter`
 
 Every signal type exposes `.map()` and `.filter()` combinators that create a `ComputedSignal` without needing to call `computed()` directly:
 

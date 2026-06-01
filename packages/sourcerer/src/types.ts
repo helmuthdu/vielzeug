@@ -18,11 +18,15 @@ export type SourceQuery = Readonly<{
   search?: string;
 }>;
 
-export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = SourceQuery &
-  Readonly<{
-    filter?: TFilter;
-    sort?: TSort;
-  }>;
+export type RemoteFetchQuery<TFilter = unknown, TSort = unknown> = Readonly<{
+  filter?: TFilter;
+  limit: number;
+  page: number;
+  search?: string;
+  sort?: TSort;
+}>;
+
+export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = RemoteFetchQuery<TFilter, TSort>;
 
 export type CursorSourceQuery<TCursor = string> = Readonly<{
   after?: TCursor;
@@ -48,26 +52,42 @@ export type InfiniteSourceQuery = Readonly<{
  * }
  * ```
  */
+export class SourceTimeoutError extends Error {
+  override readonly name = 'SourceTimeoutError';
+
+  constructor(timeoutMs: number) {
+    super(`Source.ready() timed out after ${timeoutMs}ms`);
+  }
+}
+
 export class SourceError extends Error {
   override readonly name = 'SourceError';
 
+  readonly #opts: {
+    readonly attempt?: number;
+    readonly cause?: unknown;
+    readonly query?: unknown;
+  };
+
   constructor(
     message: string,
-    private readonly _opts: {
+    opts: {
       readonly attempt?: number;
       readonly cause?: unknown;
       readonly query?: unknown;
     } = {},
   ) {
-    super(message, _opts.cause !== undefined ? { cause: _opts.cause } : undefined);
+    super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
+    this.#opts = opts;
   }
 
   get attempt(): number {
-    return this._opts.attempt ?? 0;
+    return this.#opts.attempt ?? 0;
   }
 
+  /** The query that triggered the error. May contain user-supplied values (search terms, filters) — sanitise before logging in production. */
   get query(): unknown {
-    return this._opts.query;
+    return this.#opts.query;
   }
 }
 
@@ -125,7 +145,7 @@ export type SourceSnapshot<T> = Readonly<{
  */
 export type SourceState<T> =
   | { readonly error: SourceError; readonly status: 'error' }
-  | { readonly items: readonly T[]; readonly status: 'data' }
+  | { readonly items: readonly T[]; readonly status: 'success' }
   | { readonly status: 'loading' };
 
 // ── Reactive source interface ─────────────────────────────────────────────────
@@ -156,6 +176,11 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   goToLast(): Promise<void>;
   next(): Promise<void>;
   prev(): Promise<void>;
+  /**
+   * Resolves when the source is idle (no pending async computation).
+   * Rejects with `SourceTimeoutError` after `timeout` ms if still busy.
+   */
+  ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
   search(query: string): void;
   searchNow(query: string): Promise<void>;
@@ -164,10 +189,10 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
 
 /**
  * Full interface for local (in-memory) page-based sources.
- * `hydrate(patch)` applies URL-decoded state without resetting page.
+ * `restoreQuery(patch)` applies URL-decoded state without resetting page.
  */
 export type Source<T> = PageNavigator<T> & {
-  hydrate(patch: Partial<SourceQuery & { filter?: Predicate<T>; sort?: Sorter<T> }>): Promise<void>;
+  restoreQuery(patch: Partial<SourceQuery & { filter?: Predicate<T>; sort?: Sorter<T> }>): Promise<void>;
   setFilter(filter?: Predicate<T>): Promise<void>;
   setSort(sort?: Sorter<T>): Promise<void>;
   toQuery(): SourceQuery;
@@ -182,7 +207,6 @@ export type LocalSource<T> = Source<T> & {
  * `optimisticUpdate(mutator)` throws if a concurrent update is already pending.
  */
 export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<T> & {
-  hydrate(patch: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
   /**
    * Applies an optimistic update immediately before a fetch settles.
    * Returns a rollback function. The optimistic state is automatically cleared
@@ -193,6 +217,7 @@ export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<
   optimisticUpdate(mutator: (current: readonly T[]) => readonly T[], options?: { total?: number }): () => void;
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
+  restoreQuery(patch: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
   setFilter(filter?: TFilter): Promise<void>;
   setSort(sort?: TSort): Promise<void>;
   toQuery(): RemoteSourceQuery<TFilter, TSort>;
@@ -209,6 +234,8 @@ export type LocalConfig<T> = Readonly<{
    * The signal is aborted when a new computation supersedes this one.
    */
   filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
+  /** Initial data to populate the source. When provided, pass `[]` as the first arg of `createLocalSource`. */
+  initialData?: readonly T[];
   limit?: number;
   /**
    * Custom search function. Default: case-insensitive JSON substring match.
@@ -229,7 +256,7 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
   /** Debounce delay in ms for `search()` calls. Default: `300`. */
   debounceMs?: number;
   fetch: (
-    q: Readonly<{ filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort }>,
+    q: RemoteFetchQuery<TFilter, TSort>,
     signal: AbortSignal,
   ) => Promise<Readonly<{ items: readonly T[]; total: number }>>;
   filter?: TFilter;
@@ -238,10 +265,8 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
    * Called after each fetch attempt settles (success or failure).
    * Useful for logging, telemetry, and debugging.
    */
-  onFetch?: (
-    event: FetchEvent<Readonly<{ filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort }>>,
-  ) => void;
-  queryKey?: (q: Readonly<{ filter?: TFilter; limit: number; page: number; search?: string; sort?: TSort }>) => string;
+  onFetch?: (event: FetchEvent<RemoteFetchQuery<TFilter, TSort>>) => void;
+  queryKey?: (q: RemoteFetchQuery<TFilter, TSort>) => string;
   /**
    * Automatically re-fetch at this interval in ms. The timer is cancelled on `dispose()`.
    * Useful for live dashboards and real-time data displays.
@@ -283,6 +308,7 @@ export type CursorSource<T, TCursor = string> = ReactiveSource<T, CursorMeta> & 
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
   reset(): Promise<void>;
+  restoreQuery(patch: Partial<CursorSourceQuery<TCursor>>): Promise<void>;
   search(query: string): void;
   searchNow(query: string): Promise<void>;
   setLimit(limit: number): Promise<void>;
@@ -293,13 +319,13 @@ export type CursorConfig<T, TCursor = string> = Readonly<{
   autoFetch?: boolean;
   debounceMs?: number;
   fetch: (
-    q: Readonly<{ after?: TCursor; before?: TCursor; limit: number; search?: string }>,
+    q: CursorSourceQuery<TCursor>,
     signal: AbortSignal,
   ) => Promise<Readonly<{ items: readonly T[]; nextCursor?: TCursor; prevCursor?: TCursor; total?: number }>>;
   limit?: number;
   /** Called after each fetch attempt settles. Useful for logging and telemetry. */
   onFetch?: (event: FetchEvent<CursorSourceQuery<TCursor>>) => void;
-  queryKey?: (q: Readonly<{ after?: TCursor; before?: TCursor; limit: number; search?: string }>) => string;
+  queryKey?: (q: CursorSourceQuery<TCursor>) => string;
   /** Automatically re-fetch at this interval in ms. Cancelled on `dispose()`. */
   refreshInterval?: number;
   retry?: RetryConfig;
@@ -314,6 +340,8 @@ export type InfiniteMeta = Readonly<{
   /** `true` only during `loadMore()` fetches — distinct from the initial load. */
   isLoadingMore: boolean;
   isSearchPending: boolean;
+  /** Number of pages appended so far. Resets to 0 on `reset()` or `search*()`. */
+  loadedPages: number;
   pageSize: number;
   totalItems: number;
 }>;
@@ -337,13 +365,12 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
 export type InfiniteConfig<T> = Readonly<{
   autoFetch?: boolean;
   debounceMs?: number;
-  fetch: (
-    q: Readonly<{ limit: number; page: number; search?: string }>,
-    signal: AbortSignal,
-  ) => Promise<Readonly<{ items: readonly T[]; total: number }>>;
+  fetch: (q: InfiniteSourceQuery, signal: AbortSignal) => Promise<Readonly<{ items: readonly T[]; total: number }>>;
   limit?: number;
   /** Called after each fetch attempt settles. Useful for logging and telemetry. */
   onFetch?: (event: FetchEvent<InfiniteSourceQuery>) => void;
+  /** Custom cache key function. Used to deduplicate in-flight requests. Default: stable JSON stringify. */
+  queryKey?: (q: InfiniteSourceQuery) => string;
   /** Automatically re-fetch (reset to page 1) at this interval in ms. Cancelled on `dispose()`. */
   refreshInterval?: number;
   retry?: RetryConfig;

@@ -10,7 +10,7 @@ export default defineConfig(
   getConfig(__dirname, {
     entry: {
       'src/index': resolve(__dirname, 'src/index.ts'),
-      'src/test': resolve(__dirname, 'src/test/index.ts'),
+      'src/testing': resolve(__dirname, 'src/testing/index.ts'),
     },
     name: 'familiar',
   }),

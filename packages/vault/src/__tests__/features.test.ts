@@ -10,7 +10,15 @@
 
 import type { ReactiveSignal } from '../index';
 
-import { createLocalStorage, createMemory, scheduleExpiredPrune, table, ttl } from '../index';
+import {
+  createLocalStorage,
+  createMemory,
+  createSessionStorage,
+  scheduleExpiredPrune,
+  table,
+  ttl,
+  VaultError,
+} from '../index';
 
 type User = { id: number; name: string };
 type Post = { id: number; title: string };
@@ -729,6 +737,89 @@ describe('top-level getOrDefault()', () => {
   });
 });
 
+/* -------------------- getOrDefault key-mismatch -------------------- */
+
+describe('getOrDefault — key verification', () => {
+  test('throws when defaultFn returns a record with mismatched key', async () => {
+    const db = createMemory({ schema });
+
+    await expect(db.getOrDefault('users', 42, () => ({ id: 99, name: 'Wrong key' }))).rejects.toThrow(
+      'key field "id" must be "42"',
+    );
+  });
+
+  test('throws inside batch when defaultFn key is wrong', async () => {
+    const db = createMemory({ schema });
+
+    await expect(
+      db.batch(['users'], async (tx) => tx.getOrDefault('users', 1, () => ({ id: 2, name: 'Bad' }))),
+    ).rejects.toThrow('key field "id" must be "1"');
+  });
+});
+
+/* -------------------- Custom VaultCodec -------------------- */
+
+describe('custom VaultCodec', () => {
+  test('encode/decode cycle with compact codec works for put/get', async () => {
+    const compactCodec = {
+      decode: <T>(raw: unknown) => {
+        if (typeof raw !== 'object' || raw === null || !('v' in raw)) return undefined;
+
+        const { e, v } = raw as { e?: unknown; v: unknown };
+
+        return { expiresAt: typeof e === 'number' ? e : undefined, value: v as T };
+      },
+      encode: <T>(value: T, expiresAt?: number) =>
+        expiresAt !== undefined ? { e: expiresAt, v: value } : { v: value },
+    };
+
+    const db = createMemory({ codec: compactCodec, schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('TTL works with custom codec', async () => {
+    vi.useFakeTimers();
+
+    const compactCodec = {
+      decode: <T>(raw: unknown) => {
+        if (typeof raw !== 'object' || raw === null || !('v' in raw)) return undefined;
+
+        const { e, v } = raw as { e?: unknown; v: unknown };
+
+        return { expiresAt: typeof e === 'number' ? e : undefined, value: v as T };
+      },
+      encode: <T>(value: T, expiresAt?: number) =>
+        expiresAt !== undefined ? { e: expiresAt, v: value } : { v: value },
+    };
+
+    const db = createMemory({ codec: compactCodec, schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+
+    vi.advanceTimersByTime(2000);
+    expect(await db.get('users', 1)).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  test('codec that returns undefined for decode treats data as corrupt/missing', async () => {
+    const brokenCodec = {
+      decode: () => undefined,
+      encode: <T>(value: T) => ({ value }),
+    };
+
+    const db = createMemory({ codec: brokenCodec, schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.getAll('users')).toEqual([]);
+  });
+});
+
 /* -------------------- scheduleExpiredPrune auto-stop on dispose -------------------- */
 
 describe('scheduleExpiredPrune — auto-stop on VaultDisposedError', () => {
@@ -764,5 +855,112 @@ describe('scheduleExpiredPrune — auto-stop on VaultDisposedError', () => {
     expect(callCount).toBe(2); // no more ticks — auto-stopped
 
     vi.useRealTimers();
+  });
+});
+
+/* -------------------- isEmpty() -------------------- */
+
+describe('isEmpty()', () => {
+  test('returns true for an empty table', async () => {
+    const db = createMemory({ schema });
+
+    expect(await db.isEmpty('users')).toBe(true);
+  });
+
+  test('returns false when table has records', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.isEmpty('users')).toBe(false);
+  });
+
+  test('returns true after all records are deleted', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.delete('users', 1);
+
+    expect(await db.isEmpty('users')).toBe(true);
+  });
+
+  test('returns true after clear()', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    await db.clear('users');
+
+    expect(await db.isEmpty('users')).toBe(true);
+  });
+
+  test('works inside batch() transaction', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await db.batch(['users'], async (tx) => tx.isEmpty('users'));
+
+    expect(result).toBe(false);
+  });
+
+  test('returns true when all records are TTL-expired', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(500));
+
+    vi.advanceTimersByTime(1000);
+
+    expect(await db.isEmpty('users')).toBe(true);
+
+    vi.useRealTimers();
+  });
+});
+
+/* -------------------- WebStorage construction failure -------------------- */
+
+describe('WebStorage construction failure', () => {
+  test('createLocalStorage throws VaultError when storage is unavailable', () => {
+    expect(() => createLocalStorage({ name: 'test', schema })).not.toThrow(); // sanity: normal creation succeeds in jsdom
+
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('Access denied', 'SecurityError');
+      },
+    });
+
+    try {
+      expect(() => createLocalStorage({ name: 'test', schema })).toThrow(VaultError);
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(window, 'localStorage', descriptor);
+      }
+    }
+  });
+
+  test('createSessionStorage throws VaultError when storage is unavailable', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'sessionStorage');
+
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('Access denied', 'SecurityError');
+      },
+    });
+
+    try {
+      expect(() => createSessionStorage({ name: 'test', schema })).toThrow(VaultError);
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(window, 'sessionStorage', descriptor);
+      }
+    }
   });
 });

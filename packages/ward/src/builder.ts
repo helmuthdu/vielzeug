@@ -98,20 +98,6 @@ function buildRules<TAction extends string, TData>(
 }
 
 /**
- * Fluent rule builder entry point.
- *
- * @example
- * ```ts
- * import { createWard, rule } from '@vielzeug/ward';
- *
- * const ward = createWard([
- *   ...rule<'read' | 'update'>().allow('viewer').on('posts').to('read').build(),
- *   ...rule<'read' | 'update'>().allow('editor').on('posts').to('read', 'update').build(),
- *   ...rule<'read' | 'update'>().allow('editor').on('posts').to('update').when(owns('authorId')).build(),
- * ]);
- * ```
- */
-/**
  * Returns a `WardPredicate` that checks whether the data object's `attributeKey` field
  * matches the principal's `id`. Use to express ownership constraints.
  *
@@ -129,9 +115,11 @@ export function owns<TData = unknown>(attributeKey: keyof TData & string): WardP
   return ({ data, principal }) => {
     if (!data || typeof data !== 'object') return false;
 
-    const value = (data as Record<string, unknown>)[attributeKey];
+    const record = data as Record<string, unknown>;
 
-    return value === principal.id;
+    if (!Object.prototype.hasOwnProperty.call(record, attributeKey)) return false;
+
+    return record[attributeKey] === principal.id;
   };
 }
 
@@ -154,6 +142,20 @@ export function defineRules<TAction extends string = string, TData = unknown>(
   return rules;
 }
 
+/**
+ * Fluent rule builder entry point.
+ *
+ * @example
+ * ```ts
+ * import { createWard, rule } from '@vielzeug/ward';
+ *
+ * const ward = createWard([
+ *   ...rule<'read' | 'update'>().allow('viewer').on('posts').to('read').build(),
+ *   ...rule<'read' | 'update'>().allow('editor').on('posts').to('read', 'update').build(),
+ *   ...rule<'read' | 'update'>().allow('editor').on('posts').to('update').when(owns('authorId')).build(),
+ * ]);
+ * ```
+ */
 export function rule<TAction extends string = string, TData = unknown>(): {
   allow(role: string | readonly string[]): RoleStep<TAction, TData>;
   deny(role: string | readonly string[]): RoleStep<TAction, TData>;

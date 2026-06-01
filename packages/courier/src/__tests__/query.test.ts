@@ -907,5 +907,31 @@ describe('Query Client', () => {
 
       expect(spyRefetch).toHaveBeenCalledTimes(1);
     });
+
+    it('bindRefetch() is safe in SSR environments where document/window are undefined', () => {
+      const origDocument = globalThis.document;
+      const origWindow = globalThis.window;
+
+      try {
+        // Simulate SSR by removing browser globals
+        Object.defineProperty(globalThis, 'document', { configurable: true, value: undefined });
+        Object.defineProperty(globalThis, 'window', { configurable: true, value: undefined });
+
+        const qc = createQuery();
+        const spyRefetch = vi.spyOn(qc, 'refetchStale');
+
+        let unbind!: () => void;
+
+        expect(() => {
+          unbind = bindRefetch(qc);
+        }).not.toThrow();
+
+        expect(() => unbind()).not.toThrow();
+        expect(spyRefetch).not.toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(globalThis, 'document', { configurable: true, value: origDocument });
+        Object.defineProperty(globalThis, 'window', { configurable: true, value: origWindow });
+      }
+    });
   });
 });

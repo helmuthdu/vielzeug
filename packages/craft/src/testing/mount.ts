@@ -4,9 +4,10 @@
 
 import type { ReadonlySignal } from '@vielzeug/ripple';
 
+import { type ComponentDefinition, type SetupContextBag } from '../component-types';
+import { define } from '../define';
 import { _resetLiveSignals } from '../directives/live';
 import { _resetRawSanitizer } from '../directives/raw';
-import { type ComponentDefinition, define, type SetupContextBag } from '../registration';
 import { type HTMLResult } from '../types/bindings';
 import { _clearStylesheetCache } from '../utils/css';
 import { _resetIdCounter } from '../utils/id';

@@ -1,26 +1,26 @@
 import { vi } from 'vitest';
 
-import { createExpressGuard, createHonoGuard, createWard, guardRequest } from '../index';
+import { createExpressGuard, createHonoGuard, createWard, guardRequest, guardRequestWith } from '../index';
 
 // ---------------------------------------------------------------------------
 // guardRequest — framework-agnostic guard
 // ---------------------------------------------------------------------------
 
-describe('ward: guardRequest', () => {
+describe('ward: guardRequestWith', () => {
   const ward = createWard<'read' | 'update'>([
     { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
     { action: 'update', effect: 'deny', resource: 'posts', role: 'viewer' },
   ]);
 
   it('returns granted: true when principal is allowed', async () => {
-    const result = await guardRequest(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
+    const result = await guardRequestWith(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
 
     expect(result.granted).toBe(true);
     expect(result.principal).toEqual({ id: 'u1', roles: ['viewer'] });
   });
 
   it('returns granted: false with decision when denied', async () => {
-    const result = await guardRequest(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'update');
+    const result = await guardRequestWith(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'update');
 
     expect(result.granted).toBe(false);
 
@@ -30,13 +30,13 @@ describe('ward: guardRequest', () => {
   });
 
   it('supports async principal extractor', async () => {
-    const result = await guardRequest(ward, {}, async () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
+    const result = await guardRequestWith(ward, {}, async () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
 
     expect(result.granted).toBe(true);
   });
 
   it('returns granted: false for no-matching-rule', async () => {
-    const result = await guardRequest(
+    const result = await guardRequestWith(
       ward,
       {},
       () => null, // anonymous
@@ -176,6 +176,33 @@ describe('ward: createHonoGuard', () => {
 
     expect(body).toEqual({ reason: 'explicit-deny' });
   });
+
+  it('calls onDenied when provided', async () => {
+    const onDenied = vi.fn(async () => new Response('forbidden', { status: 403 }));
+    const guard = createHonoGuard(ward, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'update', { onDenied });
+    const next = vi.fn();
+    const ctx = makeCtx();
+
+    await guard(ctx as any, next);
+
+    expect(onDenied).toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('propagates extractor errors to the caller', async () => {
+    const guard = createHonoGuard(
+      ward,
+      () => {
+        throw new Error('auth failed');
+      },
+      'posts',
+      'read',
+    );
+    const next = vi.fn();
+    const ctx = makeCtx();
+
+    await expect(guard(ctx as any, next)).rejects.toThrow('auth failed');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -207,6 +234,28 @@ describe('guardRequest: simple principal overload', () => {
     const result = await guardRequest(ward, null, 'posts', 'read');
 
     expect(result.granted).toBe(false);
+  });
+
+  it('forwards data to the ward predicate', async () => {
+    const dataWard = createWard<'update', { authorId: string }>([
+      {
+        action: 'update',
+        effect: 'allow',
+        resource: 'posts',
+        role: 'editor',
+        when: ({ data, principal }) => data?.authorId === principal.id,
+      },
+    ]);
+
+    const allowed = await guardRequest(dataWard, { id: 'u1', roles: ['editor'] }, 'posts', 'update', {
+      authorId: 'u1',
+    });
+    const denied = await guardRequest(dataWard, { id: 'u1', roles: ['editor'] }, 'posts', 'update', {
+      authorId: 'u2',
+    });
+
+    expect(allowed.granted).toBe(true);
+    expect(denied.granted).toBe(false);
   });
 });
 

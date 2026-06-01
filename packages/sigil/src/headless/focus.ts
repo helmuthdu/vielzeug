@@ -1,7 +1,12 @@
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type FocusManagerOptions = {
-  /** Returns the CSS selector for the element that should receive focus on open. */
+  /**
+   * Returns the CSS selector for the element that should receive focus on open.
+   *
+   * **Security note:** this value is passed directly to `querySelector`. It must
+   * come from trusted developer-controlled configuration, never from raw user input.
+   */
   getInitialFocusSelector: () => string | undefined;
   /**
    * Returns whether focus should be restored to the previously focused element
@@ -40,7 +45,15 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
         // Query the shadow root first (all sigil components render into Shadow DOM),
         // falling back to the host's light-DOM tree for non-Shadow contexts.
         const root = options.host.shadowRoot ?? options.host;
-        const target = root.querySelector<HTMLElement>(selector);
+
+        let target: HTMLElement | null = null;
+
+        try {
+          target = root.querySelector<HTMLElement>(selector);
+        } catch {
+          // Malformed selector (SyntaxError) — skip initial focus rather than throw.
+          return;
+        }
 
         if (target) requestAnimationFrame(() => target.focus());
       }

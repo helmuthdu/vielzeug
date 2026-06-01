@@ -122,6 +122,14 @@ const pairs = await db.entries('users'); // [number, User][]
 
 Both are also available inside `batch()` callbacks.
 
+`isEmpty(table)` returns `true` when a table has no live records — equivalent to `(await db.count(table)) === 0`, including TTL-expired records being treated as absent.
+
+```ts
+if (await db.isEmpty('users')) {
+  await db.putAll('users', defaultUsers);
+}
+```
+
 ## Bulk Key Lookup
 
 `getMany(table, keys)` fetches multiple records in a single call. Missing keys return `undefined`. The result array preserves the input key order.

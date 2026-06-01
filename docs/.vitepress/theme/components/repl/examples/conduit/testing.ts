@@ -1,8 +1,8 @@
 export const testingExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const Repo = createToken('Repo')
-const Svc = createToken('Svc')
+const Repo = token('Repo')
+const Svc = token('Svc')
 
 const app = createContainer()
 app.value(Repo, { list: () => ['prod'] })

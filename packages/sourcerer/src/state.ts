@@ -20,5 +20,5 @@ export function sourceState<T>(source: {
 
   if (source.meta.error) return { error: source.meta.error, status: 'error' };
 
-  return { items: source.current, status: 'data' };
+  return { items: source.current, status: 'success' };
 }

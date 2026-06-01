@@ -77,6 +77,26 @@ describe('codecs', () => {
     expect(params.page).toBe('1');
   });
 
+  it('uses first value when param is an array', () => {
+    const decoded = decodeQuery({ limit: ['5', '10'], page: ['2', '3'] }, { defaultLimit: 20 });
+
+    expect(decoded.limit).toBe(5);
+    expect(decoded.page).toBe(2);
+  });
+
+  it('uses first value when search is an array', () => {
+    const decoded = decodeQuery({ limit: '10', page: '1', search: ['hello', 'world'] }, { defaultLimit: 10 });
+
+    expect(decoded.search).toBe('hello');
+  });
+
+  it('falls back to defaults for non-positive or non-integer limit/page', () => {
+    const decoded = decodeQuery({ limit: '0', page: '-1' }, { defaultLimit: 15 });
+
+    expect(decoded.limit).toBe(15);
+    expect(decoded.page).toBe(1);
+  });
+
   it('accepts URLSearchParams as input', () => {
     const sp = new URLSearchParams({ limit: '5', page: '2', search: 'hello' });
     const decoded = decodeQuery(sp, { defaultLimit: 10 });

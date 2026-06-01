@@ -1,4 +1,42 @@
 export const routeContextExample = {
-  code: "import { createMemoryHistory, createRouter } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst router = createRouter({\n  history: createMemoryHistory('/'),\n  routes: {\n    postDetail: {\n      path: '/users/:userId/posts/:postId',\n      meta: {\n        title: 'Post Detail',\n        requiresAuth: true,\n        breadcrumbs: ['Home', 'Users', 'Posts']\n      },\n      middleware: [\n        async (ctx, next) => {\n          ctx.locals.startTime = Date.now()\n          ctx.locals.user = {\n            id: Number(ctx.params.userId),\n            name: 'Alice'\n          }\n          await next()\n          const elapsed = Date.now() - Number(ctx.locals.startTime)\n          console.log(`\\n⏱️ Took ${elapsed}ms`)\n        }\n      ],\n      data: async ({ params }) => ({\n        postId: params.postId,\n        summary: 'Route-local data loader result'\n      }),\n      handler: (ctx) => {\n        console.log('📄 Route Context:')\n        console.log('   Pathname:', ctx.pathname)\n        console.log('   Params:', ctx.params)\n        console.log('   Query:', ctx.query)\n        console.log('   History state:', ctx.historyState)\n        console.log('   Leaf meta:', ctx.matches.at(-1)?.meta)\n        console.log('   Data:', ctx.data)\n        console.log('   User (from middleware):', ctx.locals.user)\n      }\n    }\n  }\n})\n\nawait router.navigate({\n  name: 'postDetail',\n  params: { userId: '42', postId: '123' },\n  query: { sort: 'recent', tab: 'comments' }\n}, {\n  state: { from: 'feed' }\n})",
-  name: 'Route Context - Full Context Access',
+  code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
+
+// RouteContext is the full object available in middleware and data().
+// Middleware receives ctx without a 'data' property; data() adds the signal.
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: {
+    home: { path: '/' },
+    postDetail: {
+      path: '/users/:userId/posts/:postId',
+      meta: { title: 'Post Detail', breadcrumbs: ['Home', 'Users', 'Posts'] },
+      middleware: [
+        async (ctx, next) => {
+          // Middleware can read params, query, hash, historyState, locals, navigate.
+          ctx.locals.user = { id: Number(ctx.params.userId), name: 'Alice' }
+          console.log('middleware | pathname:', ctx.pathname)
+          console.log('middleware | params:  ', JSON.stringify(ctx.params))
+          console.log('middleware | query:   ', JSON.stringify(ctx.query))
+          console.log('middleware | state:   ', JSON.stringify(ctx.historyState))
+          await next()
+        },
+      ],
+      data: async (ctx) => {
+        // data() gets the same context plus an AbortSignal for cancellation.
+        console.log('data()     | user from locals:', ctx.locals.user.name)
+        console.log('data()     | leaf meta:', JSON.stringify(ctx.matches.at(-1)?.meta))
+        return { postId: ctx.params.postId, author: ctx.locals.user.name }
+      },
+    },
+  },
+})
+
+await router.navigate(
+  { name: 'postDetail', params: { userId: '42', postId: '123' }, query: { tab: 'comments' } },
+  { state: { from: 'feed' } },
+)
+
+console.log('snapshot data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
+router.dispose()`,
+  name: 'Route Context — Full Context Access',
 };

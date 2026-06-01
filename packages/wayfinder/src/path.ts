@@ -104,9 +104,13 @@ export function matchRecord<TMeta = unknown, TComponent = unknown>(
   const params: RouteParams = {};
 
   record.matcher.paramNames.forEach((name, index) => {
-    const value = match[index + 1];
+    const value = match[index + 1] ?? '';
 
-    params[name] = decodeURIComponent(value ?? '');
+    try {
+      params[name] = decodeURIComponent(value);
+    } catch {
+      params[name] = value;
+    }
   });
 
   return params;

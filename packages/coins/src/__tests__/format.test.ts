@@ -61,6 +61,24 @@ describe('format', () => {
       expect(result).toContain('1,000.00');
       expect(result.toLowerCase()).toMatch(/us dollar/);
     });
+
+    it('formats with narrowSymbol style', () => {
+      const result = format(money('1000.00', 'USD'), { style: 'narrowSymbol' });
+
+      expect(result).toContain('1,000.00');
+      expect(result).toContain('$');
+    });
+
+    it('formatParts narrowSymbol joined equals format() output', () => {
+      const m = money('1000.00', 'USD');
+      const opts = { style: 'narrowSymbol' as const };
+
+      expect(
+        formatParts(m, opts)
+          .map((p) => p.value)
+          .join(''),
+      ).toBe(format(m, opts));
+    });
   });
 
   describe('zero-decimal currencies', () => {
@@ -102,6 +120,16 @@ describe('format', () => {
       const result = format(money('100.99', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 
       expect(result).toBe('$101');
+    });
+
+    it('accepts maximumFractionDigits alone without throwing (regression: minFrac defaulted to currency decimals)', () => {
+      expect(() => format(money('100.99', 'USD'), { maximumFractionDigits: 0 })).not.toThrow();
+      expect(format(money('100.99', 'USD'), { maximumFractionDigits: 0 })).toBe('$101');
+    });
+
+    it('accepts maximumFractionDigits: 1 alone on a 2-decimal currency', () => {
+      expect(format(money('1.50', 'USD'), { maximumFractionDigits: 1 })).toBe('$1.5');
+      expect(format(money('1.55', 'USD'), { maximumFractionDigits: 1 })).toBe('$1.6');
     });
 
     it('trims trailing zeros down to minimumFractionDigits', () => {
@@ -182,5 +210,34 @@ describe('formatParts', () => {
         .map((p) => p.value)
         .join(''),
     ).toBe(format(m, opts));
+  });
+
+  it('string-joined parts equal format() with non-default locale', () => {
+    const m = money('1234.56', 'EUR');
+    const opts = { locale: 'de-DE' };
+
+    expect(
+      formatParts(m, opts)
+        .map((p) => p.value)
+        .join(''),
+    ).toBe(format(m, opts));
+  });
+});
+
+describe('format — additional edge cases', () => {
+  it('formats negative zero-decimal currency (JPY)', () => {
+    expect(format(money(-1234n, 'JPY'))).toContain('1,234');
+    expect(format(money(-1234n, 'JPY'))).toContain('-');
+    expect(format(money(-1234n, 'JPY'))).not.toContain('.');
+  });
+
+  it('string-joined parts equal format() for negative JPY', () => {
+    const m = money(-1234n, 'JPY');
+
+    expect(
+      formatParts(m)
+        .map((p) => p.value)
+        .join(''),
+    ).toBe(format(m));
   });
 });

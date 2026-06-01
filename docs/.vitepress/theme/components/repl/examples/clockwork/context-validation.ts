@@ -1,5 +1,5 @@
 export const contextValidationExample = {
-  code: `import { defineMachine, interpret, assign, MachineError } from '/clockwork'
+  code: `import { defineMachine, interpret, MachineError } from '@vielzeug/clockwork'
 
 // Context validator — called on init and after every transition
 function isValidProfile(ctx) {
@@ -21,11 +21,11 @@ const profileMachine = defineMachine({
       on: {
         UPDATE: {
           target: 'idle',
-          actions: [assign(({ event }) => ({
-            username: event.username ?? 'guest',
-            age:      event.age      ?? 0,
-            tags:     event.tags     ?? [],
-          }))],
+          actions: [({ context, event }) => {
+            context.username = event.username ?? 'guest'
+            context.age      = event.age      ?? 0
+            context.tags     = event.tags     ?? []
+          }],
         },
         ACTIVATE: { target: 'active', guard: ({ context }) => context.username !== 'guest' },
       },
@@ -51,14 +51,14 @@ const activated = guest.send({ type: 'ACTIVATE' })
 console.log('Guest activated?', activated)          // false — guard blocked it
 console.log('State still:', guest.state.value)      // 'idle'
 
-// Validator catches bad snapshots on restore
+// validateContext also runs when restoring a snapshot — bad context throws
 try {
   interpret(profileMachine, {
     snapshot: { state: 'idle', context: { username: 123, age: -1, tags: null } },
-    validateSnapshot: isValidProfile,
   })
 } catch (err) {
   console.log('Snapshot rejected:', err instanceof MachineError, err.code)
+  // MachineError: MACHINE_INVALID_VALIDATE_CONTEXT
 }`,
   name: 'Context Validation',
 };

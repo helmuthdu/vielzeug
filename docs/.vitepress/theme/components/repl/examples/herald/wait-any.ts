@@ -1,4 +1,28 @@
 export const waitAnyExample = {
-  code: "import { createBus } from '/herald'\n\ntype SessionEvents = {\n  'user:login': { userId: string; email: string }\n  'user:logout': void\n  'session:expired': { reason: string }\n}\n\nconst bus = createBus<SessionEvents>()\n\nasync function watchNextSessionEvent() {\n  console.log('Waiting for first session event...')\n\n  // waitAny resolves with { event, payload } — the event key is narrowed to a literal\n  const result = await bus.waitAny(['user:login', 'user:logout', 'session:expired'] as const)\n\n  if (result.event === 'user:login') {\n    console.log('Login:', result.payload.email, '(id:', result.payload.userId + ')')\n  } else if (result.event === 'session:expired') {\n    console.log('Session expired:', result.payload.reason)\n  } else {\n    console.log('User logged out')\n  }\n}\n\nvoid watchNextSessionEvent()\n\nsetTimeout(() => {\n  bus.emit('user:login', { email: 'alice@example.com', userId: '42' })\n  // these fire after waitAny has already resolved — only the first one wins\n  bus.emit('user:logout')\n}, 30)",
+  code: `import { createBus } from '@vielzeug/herald'
+
+// waitAny resolves with { event, payload } for whichever event fires first
+const bus = createBus()
+
+async function watchNextSessionEvent() {
+  console.log('waiting for first session event...')
+
+  const result = await bus.waitAny(['user:login', 'user:logout', 'session:expired'])
+
+  if (result.event === 'user:login') {
+    console.log('login:', result.payload.email, '(id:', result.payload.userId + ')')
+  } else if (result.event === 'session:expired') {
+    console.log('session expired:', result.payload.reason)
+  } else {
+    console.log('user logged out')
+  }
+}
+
+void watchNextSessionEvent()
+
+setTimeout(() => {
+  bus.emit('user:login', { email: 'alice@example.com', userId: '42' })
+  bus.emit('user:logout') // ignored — waitAny already resolved
+}, 30)`,
   name: 'waitAny()',
 };

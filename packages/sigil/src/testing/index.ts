@@ -179,21 +179,34 @@ import type { Fixture } from '@vielzeug/craft/testing';
 
 import { mount } from '@vielzeug/craft/testing';
 
+import type { BitButtonGroupProps } from '../inputs/button-group/button-group';
+import type { BitButtonProps } from '../inputs/button/button';
 import type { BitCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
 import type { BitCheckboxProps } from '../inputs/checkbox/checkbox';
 import type { BitComboboxProps } from '../inputs/combobox/combobox.types';
+import type { BitFileInputProps } from '../inputs/file-input/file-input';
+import type { BitFormProps } from '../inputs/form/form';
 import type { BitInputProps } from '../inputs/input/input';
+import type { BitNumberInputProps } from '../inputs/number-input/number-input';
+import type { BitOtpInputProps } from '../inputs/otp-input/otp-input';
 import type { BitRadioGroupProps } from '../inputs/radio-group/radio-group';
 import type { BitRadioProps } from '../inputs/radio/radio';
+import type { BitRatingProps } from '../inputs/rating/rating';
 import type { BitSelectProps } from '../inputs/select/select';
+import type { BitSliderProps } from '../inputs/slider/slider';
 import type { BitSwitchProps } from '../inputs/switch/switch';
 import type { BitTextareaProps } from '../inputs/textarea/textarea';
 
 /**
  * Serializes an attribute map to an HTML attribute string fragment.
  * Values are HTML-escaped to prevent attribute injection.
+ *
+ * @example
+ * ```ts
+ * attrsToHtml({ disabled: '', label: 'Name' }); // → 'disabled label="Name"'
+ * ```
  */
-const attrsToHtml = (attrs: Record<string, string>): string =>
+export const attrsToHtml = (attrs: Record<string, string>): string =>
   Object.entries(attrs)
     .map(([key, value]) => (value === '' ? key : `${key}="${value.replace(/"/g, '&quot;')}"`))
     .join(' ');
@@ -206,8 +219,14 @@ const attrsToHtml = (attrs: Record<string, string>): string =>
  *   use `opts.innerHTML` with slotted elements instead)
  * - Array of primitives → comma-joined string
  * - everything else → stringified
+ *
+ * @example
+ * ```ts
+ * propsToAttrs({ disabled: true, label: 'Name', value: undefined });
+ * // → { disabled: '', label: 'Name' }
+ * ```
  */
-const propsToAttrs = (props: Record<string, unknown> = {}): Record<string, string> => {
+export const propsToAttrs = (props: Record<string, unknown> = {}): Record<string, string> => {
   const attrs: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(props)) {
@@ -265,3 +284,35 @@ export const mountBitRadioGroup = (props?: Partial<BitRadioGroupProps>, opts?: M
 /** Typed mount wrapper for `<bit-switch>`. */
 export const mountBitSwitch = (props?: Partial<BitSwitchProps>, opts?: MountOptions): Promise<Fixture> =>
   mount(`<bit-switch ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-switch>`);
+
+/** Typed mount wrapper for `<bit-button>`. */
+export const mountBitButton = (props?: Partial<BitButtonProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-button ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-button>`);
+
+/** Typed mount wrapper for `<bit-button-group>`. */
+export const mountBitButtonGroup = (props?: Partial<BitButtonGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-button-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-button-group>`);
+
+/** Typed mount wrapper for `<bit-file-input>`. */
+export const mountBitFileInput = (props?: Partial<BitFileInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-file-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-file-input>`);
+
+/** Typed mount wrapper for `<bit-form>`. */
+export const mountBitForm = (props?: Partial<BitFormProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-form ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-form>`);
+
+/** Typed mount wrapper for `<bit-number-input>`. */
+export const mountBitNumberInput = (props?: Partial<BitNumberInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-number-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-number-input>`);
+
+/** Typed mount wrapper for `<bit-otp-input>`. */
+export const mountBitOtpInput = (props?: Partial<BitOtpInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-otp-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-otp-input>`);
+
+/** Typed mount wrapper for `<bit-rating>`. */
+export const mountBitRating = (props?: Partial<BitRatingProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-rating ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-rating>`);
+
+/** Typed mount wrapper for `<bit-slider>`. */
+export const mountBitSlider = (props?: Partial<BitSliderProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<bit-slider ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-slider>`);

@@ -4,7 +4,6 @@ import {
   type CounterState,
   createCounterState,
   createField,
-  type ErrorHelperState,
   type FieldHandle,
   type FieldOptions,
   type ValidationTrigger,

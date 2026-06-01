@@ -2,6 +2,7 @@ import {
   abs,
   add,
   allocate,
+  clamp,
   compare,
   divide,
   fromJSON,
@@ -25,6 +26,7 @@ import {
   toDecimal,
   toJSON,
   toNumber,
+  zero,
 } from '../money';
 
 describe('toCurrencyCode factory', () => {
@@ -57,6 +59,23 @@ describe('money factory', () => {
 
     it('throws RangeError for empty string amount', () => {
       expect(() => money('', 'USD')).toThrow(RangeError);
+    });
+  });
+
+  describe('special number inputs', () => {
+    it('throws RangeError for NaN', () => {
+      expect(() => money(NaN, 'USD')).toThrow(RangeError);
+      expect(() => money(NaN, 'USD')).toThrow('Invalid decimal string');
+    });
+
+    it('throws RangeError for Infinity', () => {
+      expect(() => money(Infinity, 'USD')).toThrow(RangeError);
+      expect(() => money(Infinity, 'USD')).toThrow('Invalid decimal string');
+    });
+
+    it('throws RangeError for -Infinity', () => {
+      expect(() => money(-Infinity, 'USD')).toThrow(RangeError);
+      expect(() => money(-Infinity, 'USD')).toThrow('Invalid decimal string');
     });
   });
 
@@ -98,6 +117,17 @@ describe('money factory', () => {
 
     it('parses integer', () => {
       expect(money(100, 'USD')).toEqual({ amount: 10000n, currency: 'USD' });
+    });
+
+    it('handles very small numbers that produce scientific notation via String()', () => {
+      // String(1e-7) === '1e-7' — parseRational must expand it before parsing
+      // 1e-7 USD = $0.0000001, rounds to $0.00 (0 minor units)
+      expect(money(1e-7, 'USD')).toEqual({ amount: 0n, currency: 'USD' });
+    });
+
+    it('handles very large numbers that produce scientific notation via String()', () => {
+      // String(1e21) === '1e+21' — expanded to '1000000000000000000000'
+      expect(money(1e21, 'JPY')).toEqual({ amount: 1000000000000000000000n, currency: 'JPY' });
     });
   });
 
@@ -141,6 +171,80 @@ describe('money factory', () => {
     it('BHD stores three decimal places', () => {
       expect(money('123.456', 'BHD')).toEqual({ amount: 123456n, currency: 'BHD' });
     });
+  });
+});
+
+describe('zero', () => {
+  it('creates a zero Money for USD', () => {
+    expect(zero('USD')).toEqual({ amount: 0n, currency: 'USD' });
+  });
+
+  it('creates a zero Money for JPY (zero-decimal)', () => {
+    expect(zero('JPY')).toEqual({ amount: 0n, currency: 'JPY' });
+  });
+
+  it('creates a zero Money for KWD (three-decimal)', () => {
+    expect(zero('KWD')).toEqual({ amount: 0n, currency: 'KWD' });
+  });
+
+  it('throws RangeError for invalid currency', () => {
+    expect(() => zero('FAKE')).toThrow(RangeError);
+  });
+
+  it('is recognized as zero by isZero()', () => {
+    expect(isZero(zero('USD'))).toBe(true);
+  });
+});
+
+describe('clamp', () => {
+  const lower = money('1.00', 'USD');
+  const upper = money('10.00', 'USD');
+
+  it('returns m unchanged when within bounds', () => {
+    expect(clamp(money('5.00', 'USD'), lower, upper)).toEqual({ amount: 500n, currency: 'USD' });
+  });
+
+  it('clamps to lower when m < lower', () => {
+    expect(clamp(money('0.50', 'USD'), lower, upper)).toEqual({ amount: 100n, currency: 'USD' });
+  });
+
+  it('clamps to upper when m > upper', () => {
+    expect(clamp(money('15.00', 'USD'), lower, upper)).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('returns lower when m equals lower', () => {
+    expect(clamp(lower, lower, upper)).toEqual(lower);
+  });
+
+  it('returns upper when m equals upper', () => {
+    expect(clamp(upper, lower, upper)).toEqual(upper);
+  });
+
+  it('works when lower === upper (degenerate range)', () => {
+    expect(clamp(money('5.00', 'USD'), lower, lower)).toEqual(lower);
+  });
+
+  it('handles negative amounts within range', () => {
+    const lo = money('-10.00', 'USD');
+    const hi = money('-1.00', 'USD');
+
+    expect(clamp(money('-5.00', 'USD'), lo, hi)).toEqual({ amount: -500n, currency: 'USD' });
+    expect(clamp(money('-15.00', 'USD'), lo, hi)).toEqual({ amount: -1000n, currency: 'USD' });
+    expect(clamp(money('0.00', 'USD'), lo, hi)).toEqual({ amount: -100n, currency: 'USD' });
+  });
+
+  it('throws RangeError when lower > upper', () => {
+    expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow(RangeError);
+    expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow('clamp');
+  });
+
+  it('throws TypeError on currency mismatch (m vs bounds)', () => {
+    expect(() => clamp(money('5.00', 'EUR'), lower, upper)).toThrow(TypeError);
+    expect(() => clamp(money('5.00', 'EUR'), lower, upper)).toThrow('Currency mismatch');
+  });
+
+  it('throws TypeError on currency mismatch (lower vs upper)', () => {
+    expect(() => clamp(money('5.00', 'USD'), lower, money('10.00', 'EUR'))).toThrow(TypeError);
   });
 });
 
@@ -201,6 +305,18 @@ describe('multiply', () => {
 
   it('handles zero factor', () => {
     expect(multiply(money('100.00', 'USD'), 0)).toEqual({ amount: 0n, currency: 'USD' });
+  });
+
+  it('handles very small number factors in scientific notation', () => {
+    // String(1e-7) === '1e-7' — must not throw; 10000 * 1e-7 = 0.001 cents → rounds to 0
+    expect(multiply(money('100.00', 'USD'), 1e-7)).toEqual({ amount: 0n, currency: 'USD' });
+    // 100 cents * 0.01 = 1 cent
+    expect(multiply(money('1.00', 'USD'), 1e-2)).toEqual({ amount: 1n, currency: 'USD' });
+  });
+
+  it('handles very large number factors in scientific notation', () => {
+    // String(1e21) === '1e+21' — must not throw
+    expect(multiply(money(1n, 'USD'), 1e21)).toEqual({ amount: 1000000000000000000000n, currency: 'USD' });
   });
 
   describe('rounding modes', () => {
@@ -288,6 +404,18 @@ describe('divide', () => {
     expect(() => divide(money('100.00', 'USD'), '0.0')).toThrow(RangeError);
   });
 
+  it('handles very small number divisors in scientific notation', () => {
+    // String(1e-7) === '1e-7' — must expand before parsing.
+    // $1.00 / 1e-7 = $10,000,000 = 1,000,000,000 cents
+    expect(divide(money('1.00', 'USD'), 1e-7)).toEqual({ amount: 1000000000n, currency: 'USD' });
+  });
+
+  it('handles very large number divisors in scientific notation', () => {
+    // String(1e21) === '1e+21' — must not throw
+    // 10000 / 1e21 rounds to 0
+    expect(divide(money('100.00', 'USD'), 1e21)).toEqual({ amount: 0n, currency: 'USD' });
+  });
+
   describe('rounding modes', () => {
     // 10000 / 3 = 3333.33...
     it("'down' truncates toward zero (default-equivalent when positive)", () => {
@@ -336,6 +464,15 @@ describe('divide', () => {
 });
 
 describe('allocate', () => {
+  describe('single ratio', () => {
+    it('returns the full amount when given one ratio', () => {
+      const m = money('10.00', 'USD');
+
+      expect(allocate(m, [1])).toEqual([m]);
+      expect(allocate(m, [99])).toEqual([m]);
+    });
+  });
+
   describe('equal splits', () => {
     it('distributes evenly when divisible', () => {
       expect(allocate(money('9.00', 'USD'), [1, 1, 1])).toEqual([
@@ -457,6 +594,11 @@ describe('allocate', () => {
 
     it('throws when all ratios are zero', () => {
       expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow(RangeError);
+    });
+
+    it('throws on negative string ratios (e.g. "-0.5")', () => {
+      expect(() => allocate(money('10.00', 'USD'), ['-0.5', '1'])).toThrow(RangeError);
+      expect(() => allocate(money('10.00', 'USD'), ['-0.5', '1'])).toThrow('non-negative');
     });
   });
 });
@@ -717,6 +859,11 @@ describe('toJSON / fromJSON', () => {
   it('throws SyntaxError for invalid amount string in fromJSON', () => {
     expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(SyntaxError);
   });
+
+  it('throws SyntaxError for decimal (float) amount string in fromJSON', () => {
+    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(SyntaxError);
+    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow('expected an integer string');
+  });
 });
 
 describe('toDecimal', () => {
@@ -772,5 +919,12 @@ describe('toNumber', () => {
 
   it('handles zero-decimal currencies', () => {
     expect(toNumber(money(1234n, 'JPY'))).toBe(1234);
+  });
+
+  it('returns Infinity for amounts that exceed Number.MAX_VALUE', () => {
+    // bigint amounts larger than Number.MAX_VALUE lose precision — documented lossy behavior
+    const huge = money(BigInt('9'.repeat(400)), 'USD');
+
+    expect(toNumber(huge)).toBe(Infinity);
   });
 });

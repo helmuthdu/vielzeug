@@ -1,4 +1,5 @@
 import { createForm } from '../../index';
+import type { Form } from '../../types';
 
 describe('array field helpers', () => {
   test('append adds an item to existing array', () => {
@@ -58,13 +59,13 @@ describe('array field helpers', () => {
   });
 
   test.each([
-    ['insert', (form: ReturnType<typeof createForm>) => form.array('x').insert(0, 'v')],
-    ['move', (form: ReturnType<typeof createForm>) => form.array('x').move(0, 1)],
-    ['remove', (form: ReturnType<typeof createForm>) => form.array('x').remove(0)],
-    ['replace', (form: ReturnType<typeof createForm>) => form.array('x').replace(0, 'v')],
-    ['swap', (form: ReturnType<typeof createForm>) => form.array('x').swap(0, 1)],
+    ['insert', (form: Form<Record<string, unknown>>) => form.array('x').insert(0, 'v')],
+    ['move', (form: Form<Record<string, unknown>>) => form.array('x').move(0, 1)],
+    ['remove', (form: Form<Record<string, unknown>>) => form.array('x').remove(0)],
+    ['replace', (form: Form<Record<string, unknown>>) => form.array('x').replace(0, 'v')],
+    ['swap', (form: Form<Record<string, unknown>>) => form.array('x').swap(0, 1)],
   ])('%s is a no-op when target field is not an array', (_, operation) => {
-    const form = createForm({ defaultValues: { x: 1 } });
+    const form = createForm({ defaultValues: { x: 1 } }) as unknown as Form<Record<string, unknown>>;
 
     expect(() => operation(form)).not.toThrow();
     expect(form.get('x')).toBe(1);

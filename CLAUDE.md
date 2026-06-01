@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Vielzeug** (German for "many tools") is a monorepo of 22 independent, zero-dependency, tree-shakeable TypeScript utility packages published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
+**Vielzeug** (German for "many tools") is a monorepo of 23 independent, zero-dependency, tree-shakeable TypeScript utility packages published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
 
 ## Commands
 
@@ -65,13 +65,14 @@ All other packages are fully independent.
 
 ### Package Categories
 
-| Category | Packages |
-|---|---|
-| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines) |
-| HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API) |
-| UI Primitives | `sigil` (accessible web components built on craft), `orbit` (tooltip/popover positioning), `grip` (drag-and-drop), `scroll` (virtual list engine) |
-| Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization) |
+| Category | Packages                                                                                                                                                                                                                                  |
+|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines)                                                                                    |
+| HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API)                                                                                                                                               |
+| UI Primitives | `sigil` (accessible web components), `orbit` (tooltip/popover positioning), `grip` (drag-and-drop), `scroll` (virtual list engine)                                                                                         |
+| Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization)                                                                                                                                                            |
 | Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `codex` (AI/MCP server) |
+| Finance | `coins` (precise monetary arithmetic)                                                                                                                                                                                                     |
 
 ### Standard Package Layout
 

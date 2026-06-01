@@ -125,14 +125,13 @@ import { createGroupedVirtualizer } from '@vielzeug/scroll';
 
 type Contact = { id: number; name: string };
 
-const virt = createGroupedVirtualizer<Contact>({
+const virt = createGroupedVirtualizer<Contact>(scrollEl, {
   estimateHeaderSize: 32,
   estimateItemSize: 48,
   sections: [
     { label: 'A', items: [{ id: 1, name: 'Alice' }] },
     { label: 'B', items: [{ id: 2, name: 'Bob' }] },
   ],
-  target: scrollEl,
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     // render headers and items from a flat offset table
   },

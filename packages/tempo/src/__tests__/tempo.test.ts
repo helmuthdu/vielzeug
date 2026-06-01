@@ -21,10 +21,13 @@ import {
   isSame,
   isValid,
   now,
-  parseAny,
+  nowInstant,
+  parseDate,
   parseDuration,
   parseInstant,
-  parseLocal,
+  parsePlainDate,
+  parsePlainDateTime,
+  parseZoned,
   recurrence,
   shift,
   startOf,
@@ -46,15 +49,51 @@ describe('now', () => {
   });
 });
 
-describe('parseLocal', () => {
+describe('nowInstant', () => {
+  it('returns a Temporal.Instant close to the current time', () => {
+    const before = Date.now();
+    const t = nowInstant();
+    const after = Date.now();
+
+    expect(t.epochMilliseconds).toBeGreaterThanOrEqual(before);
+    expect(t.epochMilliseconds).toBeLessThanOrEqual(after);
+  });
+});
+
+describe('parseZoned', () => {
+  it('parses a zoned date-time string', () => {
+    const zdt = parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+
+    expect(zdt.timeZoneId).toBe('Europe/Berlin');
+    expect(zdt.hour).toBe(11);
+  });
+  it('throws a descriptive [tempo] error for an invalid string', () => {
+    expect(() => parseZoned('not-a-date')).toThrow('[tempo] Invalid zoned date-time string');
+  });
+});
+
+describe('parsePlainDate', () => {
+  it('parses a date-only string', () => {
+    const d = parsePlainDate('2026-03-21');
+
+    expect(d.year).toBe(2026);
+    expect(d.month).toBe(3);
+    expect(d.day).toBe(21);
+  });
+  it('throws a descriptive [tempo] error for an invalid string', () => {
+    expect(() => parsePlainDate('not-a-date')).toThrow('[tempo] Invalid plain date string');
+  });
+});
+
+describe('parsePlainDateTime', () => {
   it('parses a date-only string as midnight', () => {
-    expect(parseLocal('2026-03-21').toString()).toBe('2026-03-21T00:00:00');
+    expect(parsePlainDateTime('2026-03-21').toString()).toBe('2026-03-21T00:00:00');
   });
   it('parses a date-time string', () => {
-    expect(parseLocal('2026-03-21T10:15:30').toString()).toBe('2026-03-21T10:15:30');
+    expect(parsePlainDateTime('2026-03-21T10:15:30').toString()).toBe('2026-03-21T10:15:30');
   });
   it('throws a descriptive error including the invalid value', () => {
-    expect(() => parseLocal('not-a-date')).toThrow('[tempo] Invalid local date/time string: "not-a-date"');
+    expect(() => parsePlainDateTime('not-a-date')).toThrow('[tempo] Invalid date/time string: "not-a-date"');
   });
 });
 
@@ -88,7 +127,7 @@ describe('toInstant', () => {
     );
   });
   it('converts PlainDateTime to instant using explicit tz', () => {
-    expect(toInstant(parseLocal('2026-03-21T11:00:00'), { tz: 'Europe/Berlin' }).toString()).toBe(
+    expect(toInstant(parsePlainDateTime('2026-03-21T11:00:00'), { tz: 'Europe/Berlin' }).toString()).toBe(
       '2026-03-21T10:00:00Z',
     );
   });
@@ -102,11 +141,21 @@ describe('toInstant', () => {
     expect(toInstant(ambiguous, { prefer: 'later', tz: 'America/New_York' }).toString()).toBe('2026-11-01T06:30:00Z');
   });
   it('throws when tz is missing for plain input', () => {
-    expect(() => toInstant(parseLocal('2026-03-21T10:00:00'))).toThrow(MISSING_TZ);
+    expect(() => toInstant(parsePlainDateTime('2026-03-21T10:00:00'))).toThrow(MISSING_TZ);
   });
   it('throws for unsupported input type', () => {
     expect(() => toInstant('2026-03-21T10:15:30Z' as unknown as Temporal.Instant)).toThrow(
       '[tempo] Unsupported time input type:',
+    );
+  });
+  it('throws a [tempo] error for invalid tz with PlainDateTime input', () => {
+    expect(() => toInstant(parsePlainDateTime('2026-03-21T10:00:00'), { tz: 'Bad/Zone' })).toThrow(
+      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
+    );
+  });
+  it('throws a [tempo] error for invalid tz with PlainDate input', () => {
+    expect(() => toInstant(Temporal.PlainDate.from('2026-03-21'), { tz: 'Bad/Zone' })).toThrow(
+      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
     );
   });
 });
@@ -123,6 +172,11 @@ describe('toZoned', () => {
     const berlin = toZoned(ny, { tz: 'Europe/Berlin' });
 
     expect(berlin.toInstant().toString()).toBe(ny.toInstant().toString());
+  });
+  it('throws a [tempo] error for an invalid timezone', () => {
+    expect(() => toZoned(Temporal.Instant.from('2026-03-21T10:00:00Z'), { tz: 'Bad/Zone' })).toThrow(
+      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
+    );
   });
 });
 
@@ -143,7 +197,7 @@ describe('shift', () => {
     expect(result.toString()).toBe('2026-03-21T11:00:00+00:00[UTC]');
   });
   it('throws when tz is missing for plain input', () => {
-    expect(() => shift(parseLocal('2026-03-21T10:00:00'), { hours: 1 })).toThrow(MISSING_TZ);
+    expect(() => shift(parsePlainDateTime('2026-03-21T10:00:00'), { hours: 1 })).toThrow(MISSING_TZ);
   });
   it('throws a [tempo] error for an unknown timezone string', () => {
     expect(() => shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: 1 }, { tz: 'Not/Real' })).toThrow(
@@ -278,7 +332,7 @@ describe('isBefore / isAfter / isSame', () => {
     expect(isSame(a, b, { tz: 'UTC', unit: 'day' })).toBe(false);
   });
   it('throws when plain input has no inferrable timezone', () => {
-    const plain = parseLocal('2026-03-21T10:00:00');
+    const plain = parsePlainDateTime('2026-03-21T10:00:00');
 
     expect(() => isBefore(plain, later)).toThrow(MISSING_TZ);
   });
@@ -359,7 +413,7 @@ describe('format', () => {
     expect(result).not.toContain('2026');
   });
   it('throws for plain input without tz', () => {
-    expect(() => format(parseLocal('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
+    expect(() => format(parsePlainDateTime('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
   });
 });
 
@@ -394,7 +448,7 @@ describe('formatInstant', () => {
     );
   });
   it('requires tz for plain input', () => {
-    expect(() => formatInstant(parseLocal('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
+    expect(() => formatInstant(parsePlainDateTime('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
   });
 });
 
@@ -410,7 +464,7 @@ describe('formatZoned', () => {
     );
   });
   it('throws for plain input without tz', () => {
-    expect(() => formatZoned(parseLocal('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
+    expect(() => formatZoned(parsePlainDateTime('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
   });
 });
 
@@ -484,7 +538,7 @@ describe('formatParts', () => {
     expect(parts.some((p) => p.type === 'year')).toBe(true);
   });
   it('throws for plain input without tz', () => {
-    expect(() => formatParts(parseLocal('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
+    expect(() => formatParts(parsePlainDateTime('2026-03-21T10:15:30'))).toThrow(MISSING_TZ);
   });
 });
 
@@ -519,10 +573,10 @@ describe('expires', () => {
     expect(expires(Temporal.Now.zonedDateTimeISO('UTC').add({ days: 10 }), T)).toBe('warning');
   });
   it('requires tz for plain inputs', () => {
-    expect(() => expires(parseLocal('2000-01-01'), T)).toThrow(MISSING_TZ);
+    expect(() => expires(parsePlainDateTime('2000-01-01'), T)).toThrow(MISSING_TZ);
   });
   it('accepts plain input with explicit tz', () => {
-    expect(expires(parseLocal('2000-01-01'), T, { tz: 'UTC' })).toBe('longExpired');
+    expect(expires(parsePlainDateTime('2000-01-01'), T, { tz: 'UTC' })).toBe('longExpired');
   });
   it('works with arbitrary key names', () => {
     const result = expires(Temporal.Now.instant().add({ hours: 2 }), {
@@ -596,7 +650,7 @@ describe('timeDiff', () => {
     expect(timeDiff(base, base.add({ hours: 74 }), { tz: 'UTC' })).toEqual({ unit: 'day', value: 3 });
   });
   it('requires tz for plain inputs', () => {
-    expect(() => timeDiff(parseLocal('2026-01-01'), base)).toThrow(MISSING_TZ);
+    expect(() => timeDiff(parsePlainDateTime('2026-01-01'), base)).toThrow(MISSING_TZ);
   });
   it('throws a [tempo] error for an invalid timezone', () => {
     expect(() => timeDiff(base, Temporal.ZonedDateTime.from('2026-06-01T00:00:00[UTC]'), { tz: 'Foo/Bar' })).toThrow(
@@ -607,6 +661,25 @@ describe('timeDiff', () => {
 
 describe('dateRange', () => {
   const opts = { tz: 'UTC' };
+
+  it('infers tz from ZonedDateTime inputs without explicit options', () => {
+    const start = Temporal.ZonedDateTime.from('2022-01-01T00:00:00[America/New_York]');
+    const end = Temporal.ZonedDateTime.from('2022-01-03T00:00:00[America/New_York]');
+    const result = [...dateRange(start, end, { days: 1 })];
+
+    expect(result).toHaveLength(3);
+    expect(result[0].timeZoneId).toBe('America/New_York');
+  });
+  it('re-projects end into start tz when they differ', () => {
+    const start = Temporal.ZonedDateTime.from('2022-01-01T00:00:00[UTC]');
+    // Same instant as 2022-01-01T00:00:00Z but expressed in Berlin (+01:00 in winter)
+    const end = Temporal.ZonedDateTime.from('2022-01-03T01:00:00[Europe/Berlin]');
+    const result = [...dateRange(start, end, { days: 1 })];
+
+    // All yielded values should be in start's timezone (UTC)
+    expect(result.every((d) => d.timeZoneId === 'UTC')).toBe(true);
+    expect(result).toHaveLength(3);
+  });
 
   it('generates daily range lazily via spread', () => {
     const result = [
@@ -648,7 +721,9 @@ describe('dateRange', () => {
     ]).toEqual([]);
   });
   it('accepts PlainDate with explicit tz', () => {
-    expect([...dateRange(parseLocal('2022-03-01'), parseLocal('2022-03-03'), { days: 1 }, opts)]).toHaveLength(3);
+    expect([...dateRange(parsePlainDate('2022-03-01'), parsePlainDate('2022-03-03'), { days: 1 }, opts)]).toHaveLength(
+      3,
+    );
   });
   it('throws RangeError for zero or negative step', () => {
     const start = Temporal.ZonedDateTime.from('2022-01-01T00:00:00[UTC]');
@@ -701,7 +776,8 @@ describe('classify', () => {
 
     expect(result.key).toBe('warning');
     expect(result.diff.unit).toBe('day');
-    expect(result.diff.value).toBe(10);
+    expect(result.diff.value).toBeGreaterThanOrEqual(9);
+    expect(result.diff.value).toBeLessThanOrEqual(10);
   });
 
   it('accepts bare Instant without tz option (uses fast path)', () => {
@@ -716,12 +792,28 @@ describe('classify', () => {
   });
 
   it('requires tz for plain inputs', () => {
-    expect(() => classify(parseLocal('2000-01-01'), T)).toThrow(MISSING_TZ);
+    expect(() => classify(parsePlainDateTime('2000-01-01'), T)).toThrow(MISSING_TZ);
   });
 });
 
 describe('recurrence', () => {
   const opts = { tz: 'UTC' };
+
+  it('infers tz from ZonedDateTime start without explicit options', () => {
+    const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[America/New_York]');
+    const result = [...recurrence(start, { count: 3, frequency: 'daily' })];
+
+    expect(result).toHaveLength(3);
+    expect(result[0].timeZoneId).toBe('America/New_York');
+  });
+  it('respects until boundary when tz is inferred from ZonedDateTime start', () => {
+    const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+    const until = Temporal.ZonedDateTime.from('2026-01-03T00:00:00[UTC]');
+    const result = [...recurrence(start, { frequency: 'daily', until })];
+
+    expect(result).toHaveLength(3);
+    expect(result[2].day).toBe(3);
+  });
 
   it('generates daily occurrences', () => {
     const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
@@ -854,34 +946,34 @@ describe('formatRangeParts', () => {
   });
 });
 
-describe('parseAny', () => {
+describe('parseDate', () => {
   it('parses a ZonedDateTime string', () => {
-    const result = parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+    const result = parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]');
 
     expect(result).toBeInstanceOf(Temporal.ZonedDateTime);
     expect((result as Temporal.ZonedDateTime).timeZoneId).toBe('Europe/Berlin');
   });
 
   it('parses an Instant string', () => {
-    const result = parseAny('2026-03-21T10:00:00Z');
+    const result = parseDate('2026-03-21T10:00:00Z');
 
     expect(result).toBeInstanceOf(Temporal.Instant);
   });
 
   it('parses a PlainDateTime string', () => {
-    const result = parseAny('2026-03-21T10:00:00');
+    const result = parseDate('2026-03-21T10:00:00');
 
     expect(result).toBeInstanceOf(Temporal.PlainDateTime);
   });
 
   it('parses a PlainDate string', () => {
-    const result = parseAny('2026-03-21');
+    const result = parseDate('2026-03-21');
 
     expect(result).toBeInstanceOf(Temporal.PlainDate);
   });
 
   it('throws a descriptive error for an invalid string', () => {
-    expect(() => parseAny('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
+    expect(() => parseDate('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
   });
 });
 

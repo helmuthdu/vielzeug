@@ -1,4 +1,4 @@
-import { computed, effect as rawEffect, isSignal, type ReadonlySignal, signal, untrack } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, type ReadonlySignal, untrack } from '@vielzeug/ripple';
 
 import type { RegisterCleanup } from '../template-bindings';
 
@@ -40,12 +40,20 @@ export function when(
   truthy: () => WhenRenderable,
   falsy?: () => WhenRenderable,
 ): DirectiveResult {
-  const conditionSignal =
-    typeof condition === 'function'
-      ? computed(condition as () => boolean)
-      : isSignal(condition)
-        ? condition
-        : signal(condition as boolean);
+  if (typeof condition !== 'function' && !isSignal(condition)) {
+    return createDirectiveResult((anchor, registerCleanup) => {
+      const branch = condition ? truthy() : falsy ? falsy() : null;
+
+      if (!branch || !isHtmlResult(branch)) return;
+
+      const parent = anchor.parentNode!;
+      const nodes = mountBranch(branch, parent, anchor, registerCleanup);
+
+      registerCleanup(() => removeNodes(nodes));
+    });
+  }
+
+  const conditionSignal = typeof condition === 'function' ? computed(condition as () => boolean) : condition;
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode!;

@@ -5,6 +5,7 @@ import { effectOptionsExample } from './effect-options';
 import { nextValueExample } from './next-value';
 import { scopeExample } from './scope-cleanup';
 import { storeBasicsExample } from './store-basics';
+import { storeHistoryExample } from './store-history';
 import { storeTodoListExample } from './store-todo-list';
 import { watchAndSubscribeExample } from './watch-and-subscribe';
 
@@ -16,6 +17,7 @@ export const rippleExamples = {
   'next-value': nextValueExample,
   'scope-cleanup': scopeExample,
   'store-basics': storeBasicsExample,
+  'store-history': storeHistoryExample,
   'store-todo-list': storeTodoListExample,
   'watch-and-subscribe': watchAndSubscribeExample,
 };

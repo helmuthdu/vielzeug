@@ -1,14 +1,14 @@
 ---
 title: Spell — Examples
-description: Practical examples and recipes for @vielzeug/spell.
+description: Practical examples and recipes for spell.
 ---
 
 [[toc]]
 
 ## Examples
 
-- [API and Response Validation](./examples/api.md)
-- [Async Validation](./examples/async.md)
-- [Form Validation](./examples/forms.md)
-- [Schema Introspection](./examples/introspection.md)
-- [Unions, Intersects, and Variants](./examples/unions.md)
+- [Validating API Payloads](./examples/api.md)
+- [Form-Safe Parsing](./examples/forms.md)
+- [Async Business Rules](./examples/async.md)
+- [Schema Introspection and Round-Trips](./examples/introspection.md)
+- [Unions, Intersections, and Variants](./examples/unions.md)

@@ -102,7 +102,9 @@ describe('parallel', () => {
 
   describe('error handling', () => {
     it('should throw if limit is less than 1', async () => {
-      await expect(parallel([1, 2, 3], async (n) => n, { limit: 0 })).rejects.toThrow('Limit must be at least 1');
+      await expect(parallel([1, 2, 3], async (n) => n, { limit: 0 })).rejects.toThrow(
+        'parallel: limit must be at least 1, got 0',
+      );
     });
 
     it('should propagate errors from the callback', async () => {

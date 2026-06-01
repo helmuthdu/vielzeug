@@ -2,10 +2,15 @@ import type { Issue, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
+import { isUnsafeObjectKey } from '../safe-object';
 
 export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
   readonly keySchema: Schema<K, any>;
   readonly valueSchema: Schema<V, any>;
+
+  protected override get _kind(): string {
+    return 'record';
+  }
 
   constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
     super();
@@ -42,7 +47,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
 
       // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
       // prototype mutation on the output object.
-      if (parsedKey === '__proto__' || parsedKey === 'constructor' || parsedKey === 'prototype') continue;
+      if (isUnsafeObjectKey(parsedKey)) continue;
 
       const valResult = this.valueSchema._parseFullSync(obj[key]);
 
@@ -102,7 +107,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
 
         // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
         // prototype mutation on the output object.
-        if (parsedKey === '__proto__' || parsedKey === 'constructor' || parsedKey === 'prototype') continue;
+        if (isUnsafeObjectKey(parsedKey)) continue;
 
         Object.defineProperty(output, parsedKey, {
           configurable: true,

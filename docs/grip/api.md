@@ -15,6 +15,7 @@ description: Complete API reference for Grip.
 | `applyReorder()`          | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended            |
 | `DropZoneOptions.accept`  | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly    |
 | `DropZoneOptions.maxFiles`| Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called   |
+| `matchesAccept()`         | Test a single `File` against an accept list  | Sync           | Extension patterns are case-insensitive; empty list accepts all      |
 
 ## Package Entry Point
 
@@ -129,7 +130,7 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | `accept`         | `string[] \| (() => string[])`                             | `[]`      | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
 | `maxFiles`       | `number`                                                   | —         | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                   |
 | `onValidate`     | `(files: File[]) => boolean \| Promise<boolean>`           | —         | Optional async gating step. Called after type/`accept`/`maxFiles` filtering, before `onDrop`. Return or resolve `false` to reject all accepted files. `zone.validating` is `true` while a promise is pending. Only receives type-accepted files. |
-| `disabled`       | `boolean \| (() => boolean)`                               | —         | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault`, so underlying elements receive the events. |
+| `disabled`       | `boolean \| (() => boolean)`                               | —         | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally. |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`                     | `'copy'`  | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
 | `onDrop`         | `(files: File[], event: DragEvent) => void`                | —         | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
 | `onDropRejected` | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —      | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`. The event is a `ClipboardEvent` for paste rejections. |
@@ -346,6 +347,28 @@ Grip reads and writes the following DOM attributes:
 | -------------------- | ---------------------------- | ------------------------------------------------------------- |
 | `grip-placeholder` | `<div>` inserted by sortable | While an item is being dragged, in the placeholder's position |
 
+## `matchesAccept()`
+
+```ts
+declare function matchesAccept(file: File, accept: string[]): boolean;
+```
+
+Tests whether a `File` matches an accept pattern list. Each pattern can be:
+
+- A MIME type: `'image/png'`
+- A MIME wildcard: `'image/*'`
+- A file extension: `'.pdf'`
+
+An empty list accepts everything. Extension matching is case-insensitive.
+
+```ts
+import { matchesAccept } from '@vielzeug/grip';
+
+matchesAccept(file, ['image/*', '.pdf']); // true or false
+```
+
+---
+
 ## `applyReorder()`
 
 ```ts
@@ -356,6 +379,7 @@ Applies a DOM reorder result (`orderedIds`) to your backing array.
 
 - IDs missing from `items` are ignored.
 - Items not listed in `ids` are appended in original order.
+- Duplicate IDs in `ids` — first occurrence wins, subsequent occurrences are ignored.
 
 ```ts
 const next = applyReorder(items, orderedIds, (item) => item.id);

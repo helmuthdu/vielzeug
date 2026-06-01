@@ -1,5 +1,5 @@
 export const scopeExample = {
-  code: `import { signal, effect, scope, onCleanup } from '/ripple'
+  code: `import { signal, effect, scope, onCleanup } from '@vielzeug/ripple'
 
 // scope() groups teardown without tying it to an effect
 const s = scope()

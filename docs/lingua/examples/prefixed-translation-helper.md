@@ -30,7 +30,7 @@ const i18n = createI18n({
   },
 });
 
-// scope() returns { t, tp, has } bound to 'auth'
+// scope() returns { fmt, t, tp, has } bound to 'auth'
 const auth = i18n.scope('auth');
 
 auth.t('login');                      // i18n.t('auth.login')
@@ -49,4 +49,4 @@ auth.has('login');                    // i18n.has('auth.login')
 ### Related
 
 - [Shared Instance Setup](./shared-instance-setup.md)
-- [Prefixed Translation Helper](./prefixed-translation-helper.md)
+- [Route-based Merge](./route-based-merge.md)

@@ -15,6 +15,7 @@ description: Practical examples and recipes for courier.
 - [Query Callbacks](./examples/query-callbacks.md)
 - [File Uploads](./examples/file-uploads.md)
 - [Mutation Cancel](./examples/mutation-cancel.md)
+- [Mutation Variables in Callbacks](./examples/mutation-variables.md)
 - [Optimistic Updates](./examples/optimistic-updates.md)
 - [Real-time Events](./examples/sse-events.md)
 - [AI Token Stream](./examples/ai-token-stream.md)

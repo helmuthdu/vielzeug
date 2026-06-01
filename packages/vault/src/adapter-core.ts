@@ -250,6 +250,11 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
 
       return core.has(table, key);
     },
+    async isEmpty(table) {
+      checkScope(table);
+
+      return (await core.count(table)) === 0;
+    },
     async keys(table) {
       checkScope(table);
 
@@ -486,6 +491,10 @@ export function buildAdapterOps<S extends AnySchema>(
 
     async has(table, key) {
       return timed(table, 'has', () => txCtx.has(table, key));
+    },
+
+    async isEmpty(table) {
+      return (await getCachedCount(table)) === 0;
     },
 
     async keys(table) {

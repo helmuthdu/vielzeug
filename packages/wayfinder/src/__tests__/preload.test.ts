@@ -7,13 +7,12 @@ import { settle } from './test-utils';
 describe('preload', () => {
   it('calls data loaders without navigating', async () => {
     const dataFn = vi.fn(async () => ({ prefetched: true }));
-    const handler = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: { path: '/' },
-        page: { data: dataFn, handler, path: '/page' },
+        page: { data: dataFn, path: '/page' },
       },
     });
 
@@ -21,8 +20,6 @@ describe('preload', () => {
     await router.preload('page');
 
     expect(dataFn).toHaveBeenCalledTimes(1);
-    // handler must NOT have been called – we didn't navigate
-    expect(handler).not.toHaveBeenCalled();
     expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
   });
@@ -118,6 +115,35 @@ describe('preload', () => {
     // Data loader must NOT be called again — preloaded result was reused.
     expect(callCount).toBe(1);
     expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
+    router.dispose();
+  });
+
+  it('navigation with a different query than the preloaded key re-runs the data loader', async () => {
+    let callCount = 0;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        search: {
+          data: async () => {
+            callCount++;
+
+            return callCount;
+          },
+          path: '/search',
+        },
+      },
+    });
+
+    await settle();
+    // Preload with no query; navigate with ?q=hello — different key, loader must run again.
+    await router.preload('search');
+    expect(callCount).toBe(1);
+
+    await router.navigate({ name: 'search', query: { q: 'hello' } });
+
+    expect(callCount).toBe(2);
     router.dispose();
   });
 });

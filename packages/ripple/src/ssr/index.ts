@@ -19,6 +19,9 @@
 
 import { _installTrackingHook, type TrackingHook } from '../tracking';
 
+// eslint-disable-next-line no-var
+declare var require: (id: string) => unknown;
+
 interface AsyncLocalStorageType<T> {
   getStore(): T | undefined;
   run<R>(store: T, callback: () => R): R;
@@ -67,7 +70,7 @@ export const setTrackingProvider = (provider: TrackingProvider | null): void => 
  * ```
  */
 export const createAsyncProvider = (): TrackingProvider => {
-  // Dynamic import so this module can be bundled for environments without AsyncLocalStorage.
+  // Dynamic require so this module can be bundled for environments without AsyncLocalStorage.
   // In browser builds, this code path should never be reached.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { AsyncLocalStorage } = require('async_hooks') as { AsyncLocalStorage: new <T>() => AsyncLocalStorageType<T> };
@@ -99,15 +102,15 @@ export const runWithProvider = <T>(provider: TrackingProvider, fn: () => T): T =
  */
 export const withProvider = <T>(provider: TrackingProvider, fn: () => T): T => {
   const prevProvider = _currentProvider;
-  const hadHook = prevProvider !== null;
 
   _currentProvider = provider;
-  _installTrackingHook(syncHook);
+
+  const prevHook = _installTrackingHook(syncHook);
 
   try {
     return provider.run(null, fn);
   } finally {
     _currentProvider = prevProvider;
-    _installTrackingHook(hadHook ? syncHook : null);
+    _installTrackingHook(prevHook);
   }
 };

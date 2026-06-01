@@ -77,7 +77,7 @@ const virt = createVirtualizer(scrollEl, {
 | `measurementCache` | `MeasurementCache`                                    | —                      | Shared external cache for scroll restoration or SSR pre-measurement |
 | `onChange`         | `(state: VirtualizerState) => void`                   | —                      | Called when the visible window changes                         |
 | `onRangeChange`    | `(first: number, last: number) => void`               | —                      | Zero-allocation alternative: fires with first/last indices only. When used **without** `onChange`, `v.items` stays empty |
-| `overscan`         | `{ start?: number; end?: number }`                    | `{ start: 3, end: 3 }` | Extra items rendered outside the viewport on each side         |
+| `overscan`         | `number \| { start?: number; end?: number }`          | `3`                    | Extra items outside the viewport; number = symmetric on both sides |
 | `sticky`           | `(index: number) => boolean`                          | —                      | Mark an item as a sticky header (pinned at viewport top)       |
 
 `onChange` and `onRangeChange` are fixed at construction — they cannot be changed via `update()`.
@@ -119,6 +119,8 @@ interface VirtualizerState {
 | `prepend`          | `(additionalCount: number) => void`                                     | Add items at the top; adjusts scroll offset to keep viewport stable    |
 | `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`               | Scroll to an item; out-of-range indices are clamped                    |
 | `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void`     | Scroll to a raw pixel offset                                           |
+| `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                     | Scroll to offset `0`                                                   |
+| `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                     | Scroll to the end of the list                                          |
 | `invalidate`       | `() => void`                                                            | Clear all measurements and rebuild from estimates                      |
 | `destroy`          | `() => void`                                                            | Detach listeners; idempotent                                           |
 | `[Symbol.dispose]` | `() => void`                                                            | Delegates to `destroy()` — enables `using` declarations                |
@@ -253,7 +255,7 @@ ctrl.destroy();
 | `getItemKey`       | `(index, item) => string \| number`            | —                      | Stable key; keeps measurements across `setItems()` calls |
 | `horizontal`       | `boolean`                                      | `false`                | Virtualize along X axis                                 |
 | `measurementCache` | `MeasurementCache`                             | —                      | External measurement cache                              |
-| `overscan`         | `{ start?: number; end?: number }`             | `{ start: 3, end: 3 }` | Extra items rendered outside the viewport               |
+| `overscan`         | `number \| { start?: number; end?: number }`   | `3`                    | Extra items outside the viewport; number = symmetric   |
 | `clear`            | `(listEl: HTMLElement) => void`                | —                      | Custom teardown for listEl; defaults to `textContent = ''` |
 
 Without `getItemKey`, each `setItems()` call drops cached measurements.
@@ -334,10 +336,10 @@ list.destroy(); // also removes the generated scroll container
 
 ---
 
-## `createGroupedVirtualizer(options)`
+## `createGroupedVirtualizer(target, options)`
 
 ```ts
-createGroupedVirtualizer<T>(options: GroupVirtualizerOptions<T>): GroupVirtualizer<T>;
+createGroupedVirtualizer<T>(target: ScrollTarget, options: GroupVirtualizerOptions<T>): GroupVirtualizer<T>;
 ```
 
 Virtualizes a sectioned list. Headers are automatically sticky (pinned at viewport top while the section is in view).
@@ -347,14 +349,13 @@ import { createGroupedVirtualizer } from '@vielzeug/scroll';
 
 type Contact = { id: number; name: string };
 
-const virt = createGroupedVirtualizer<Contact>({
+const virt = createGroupedVirtualizer<Contact>(scrollEl, {
   estimateHeaderSize: 32,
   estimateItemSize: 48,
   sections: [
     { label: 'A', items: [{ id: 1, name: 'Alice' }] },
     { label: 'B', items: [{ id: 2, name: 'Bob' }] },
   ],
-  target: scrollEl,
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
@@ -391,7 +392,6 @@ virt.destroy();
 
 | Option               | Type                                                                    | Default                | Description                                     |
 | -------------------- | ----------------------------------------------------------------------- | ---------------------- | ----------------------------------------------- |
-| `target`             | `ScrollTarget`                                                          | required               | Scroll container                                |
 | `sections`           | `Array<GroupSection<T>>`                                                | required               | Initial sections                                |
 | `onChange`           | `(state: GroupVirtualizerState<T>) => void`                             | —                      | Called when the visible window changes          |
 | `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                           | `36`                   | Header height estimate                          |
@@ -399,7 +399,7 @@ virt.destroy();
 | `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey`      | —                      | Stable key for measurement cache                |
 | `horizontal`         | `boolean`                                                               | `false`                | Virtualize along X axis                         |
 | `measurementCache`   | `MeasurementCache`                                                      | —                      | External measurement cache                      |
-| `overscan`           | `{ start?: number; end?: number }`                                      | `{ start: 3, end: 3 }` | Overscan on each side                           |
+| `overscan`           | `number \| { start?: number; end?: number }`                            | `3`                    | Overscan on each side (number = symmetric)      |
 
 ### `GroupSection<T>`
 
@@ -440,15 +440,23 @@ interface GroupVirtualHeader extends VirtualItem {
 
 ### `GroupVirtualizer<T>` — methods
 
+`GroupVirtualizer<T>` extends `Virtualizer` (minus `prepend` and `update`), so all core methods are available directly.
+
 | Method                           | Description                                                                    |
 | -------------------------------- | ------------------------------------------------------------------------------ |
 | `update(sections)`               | Replace sections; rebuilds flat index, preserves cached measurements           |
 | `scrollToSection(i, options?)`   | Scroll to section header at index `i`. Out-of-range is a no-op                |
 | `scrollToItem(s, i, options?)`   | Scroll to item `i` in section `s`. Out-of-range is a no-op                    |
+| `scrollToIndex(i, options?)`     | Scroll to flat index `i` (from underlying virtualizer)                        |
+| `scrollToTop(options?)`          | Scroll to offset `0`                                                           |
+| `scrollToBottom(options?)`       | Scroll to the end of the list                                                  |
+| `measure(index, size)`           | Record a measurement for a flat index                                          |
+| `invalidate()`                   | Clear all measurements and rebuild                                             |
+| `refresh()`                      | Rebuild offset table without clearing measurements                             |
 | `destroy()`                      | Teardown; idempotent                                                           |
 | `[Symbol.dispose]()`             | Delegates to `destroy()`                                                       |
 
-Both scroll methods accept an optional `{ align?: 'auto' | 'center' | 'end' | 'start'; behavior?: ScrollBehavior }` object.
+All scroll methods accept an optional `ScrollToIndexOptions` object (`{ align?, behavior?, onComplete? }`).
 
 ---
 
@@ -657,6 +665,16 @@ type ScrollTarget = HTMLElement | Window;
 
 ```ts
 type MeasurementCache = Map<VirtualKey, number>;
+```
+
+Use `createMeasurementCache()` to create an empty cache:
+
+```ts
+import { createMeasurementCache } from '@vielzeug/scroll';
+
+const cache = createMeasurementCache();
+const virt1 = createVirtualizer(el1, { count: 100, measurementCache: cache });
+const virt2 = createVirtualizer(el2, { count: 100, measurementCache: cache });
 ```
 
 ### `RecycleFn`

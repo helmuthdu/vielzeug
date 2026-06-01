@@ -10,7 +10,16 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { configure, reset, s } from '../index';
+import {
+  configure,
+  currentLocale,
+  descriptorToJsonSchema,
+  fromDescriptor,
+  registerLocale,
+  reset,
+  s,
+  useLocale,
+} from '../index';
 
 // ---------------------------------------------------------------------------
 // Prototype mutation — relaxed ObjectSchema
@@ -118,6 +127,90 @@ describe('prototype mutation — RecordSchema', () => {
 // BigInt coercion DoS guard
 // ---------------------------------------------------------------------------
 
+describe('prototype mutation — descriptor-driven object schemas', () => {
+  it('parses declared __proto__ fields without mutating the output prototype', () => {
+    const schema = fromDescriptor(
+      JSON.parse('{"kind":"object","strict":true,"fields":{"safe":{"kind":"string"},"__proto__":{"kind":"string"}}}'),
+    );
+    const input = JSON.parse('{"safe":"ok","__proto__":"declared"}');
+
+    const result = schema.parse(input) as Record<string, unknown>;
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(result, '__proto__')?.value).toBe('declared');
+    expect(result.safe).toBe('ok');
+  });
+
+  it('serializes descriptor fields named __proto__ without mutating schema output objects', () => {
+    const jsonSchema = descriptorToJsonSchema(
+      JSON.parse('{"kind":"object","strict":true,"fields":{"__proto__":{"kind":"string"}}}'),
+    ) as Record<string, unknown>;
+    const properties = jsonSchema.properties as Record<string, unknown>;
+
+    expect(Object.getPrototypeOf(properties)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(properties, '__proto__')?.value).toEqual({ type: 'string' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prototype mutation — IntersectSchema merge
+// ---------------------------------------------------------------------------
+
+describe('prototype mutation — IntersectSchema merge', () => {
+  it('deep-merges declared __proto__ branches without mutating the result prototype', () => {
+    const left = fromDescriptor(
+      JSON.parse(
+        '{"kind":"object","strict":true,"fields":{"safe":{"kind":"string"},"__proto__":{"kind":"object","strict":false,"fields":{"left":{"kind":"boolean"}}}}}',
+      ),
+    );
+    const right = fromDescriptor(
+      JSON.parse(
+        '{"kind":"object","strict":true,"fields":{"safe":{"kind":"string"},"__proto__":{"kind":"object","strict":false,"fields":{"right":{"kind":"boolean"}}}}}',
+      ),
+    );
+    const schema = s.intersect(left, right);
+    const input = JSON.parse('{"safe":"ok","__proto__":{"left":true,"right":true}}');
+
+    const result = schema.parse(input) as Record<string, unknown>;
+    const protoField = Object.getOwnPropertyDescriptor(result, '__proto__')?.value as Record<string, unknown>;
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(protoField).toEqual({ left: true, right: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RegExp validator hardening
+// ---------------------------------------------------------------------------
+
+describe('RegExp validator hardening', () => {
+  it('does not let stateful global regexes bypass repeated validation', () => {
+    const schema = s.string().regex(/^a$/g);
+
+    expect(schema.safeParse('a').success).toBe(true);
+    expect(schema.safeParse('a').success).toBe(true);
+    expect(schema.safeParse('b').success).toBe(false);
+  });
+
+  it('does not let stateful sticky regexes bypass repeated validation', () => {
+    const schema = s.string().regex(/^a$/y);
+
+    expect(schema.safeParse('a').success).toBe(true);
+    expect(schema.safeParse('a').success).toBe(true);
+    expect(schema.safeParse('b').success).toBe(false);
+  });
+
+  it('wraps invalid descriptor patterns in a stable error message', () => {
+    expect(() => fromDescriptor({ kind: 'string', pattern: '[' } as any)).toThrow(
+      '[@vielzeug/spell] fromDescriptor(): invalid string pattern in descriptor.',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BigInt coercion DoS guard
+// ---------------------------------------------------------------------------
+
 describe('BigInt coercion DoS guard', () => {
   it('coerces normally-sized digit strings', () => {
     expect(s.coerce.bigint().parse('12345')).toBe(12345n);
@@ -191,6 +284,81 @@ describe('configure() logger option', () => {
     expect(captured[0]).toContain('Multiple .regex() constraints');
   });
 
+  it('ignores unsafe message override keys without mutating global prototypes', () => {
+    const captured: string[] = [];
+
+    configure({ logger: (msg) => captured.push(msg) });
+    configure({ messages: JSON.parse('{"__proto__":{"polluted":true}}') as any });
+
+    try {
+      expect((Object.prototype as { polluted?: boolean }).polluted).toBeUndefined();
+      expect(s.string().email().safeParse('bad').success).toBe(false);
+    } finally {
+      reset();
+    }
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]).toContain('Ignoring unsafe message override key');
+  });
+
+  it('ignores constructor and prototype message override keys without mutating global prototypes', () => {
+    const captured: string[] = [];
+    const unsafeMessages = JSON.parse('{"constructor":{"polluted":true},"prototype":{"polluted":true}}') as NonNullable<
+      Parameters<typeof configure>[0]['messages']
+    >;
+
+    configure({ logger: (msg) => captured.push(msg) });
+    configure({ messages: unsafeMessages });
+
+    try {
+      expect((Object.prototype as { polluted?: boolean }).polluted).toBeUndefined();
+
+      const result = s.string().email().safeParse('bad');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) expect(result.error.issues[0]!.message).toBe('Invalid email address');
+    } finally {
+      reset();
+    }
+
+    expect(captured).toHaveLength(2);
+    expect(captured).toEqual(
+      expect.arrayContaining([expect.stringContaining('"constructor"'), expect.stringContaining('"prototype"')]),
+    );
+  });
+
+  it('composes message overrides across multiple configure() calls', () => {
+    configure({
+      messages: {
+        string: {
+          min: () => 'custom min',
+        },
+      },
+    });
+    configure({
+      messages: {
+        string: {
+          max: () => 'custom max',
+        },
+      },
+    });
+
+    try {
+      const minResult = s.string().min(2).safeParse('');
+      const maxResult = s.string().max(1).safeParse('ab');
+
+      expect(minResult.success).toBe(false);
+      expect(maxResult.success).toBe(false);
+
+      if (!minResult.success) expect(minResult.error.issues[0]!.message).toBe('custom min');
+
+      if (!maxResult.success) expect(maxResult.error.issues[0]!.message).toBe('custom max');
+    } finally {
+      reset();
+    }
+  });
+
   it('silences warnings when logger is null', () => {
     const spy = vi.spyOn(console, 'warn');
 
@@ -220,5 +388,33 @@ describe('configure() logger option', () => {
 
     expect(spy).toHaveBeenCalledOnce();
     spy.mockRestore();
+  });
+
+  it('reset() restores the active locale to en without clearing the registry', () => {
+    registerLocale('pirate', {
+      string: {
+        email: () => 'Arrr, bad email',
+      },
+    });
+    useLocale('pirate');
+
+    expect(currentLocale()).toBe('pirate');
+
+    reset();
+
+    try {
+      expect(currentLocale()).toBe('en');
+
+      const defaultResult = s.string().email().safeParse('bad');
+
+      expect(defaultResult.success).toBe(false);
+
+      if (!defaultResult.success) expect(defaultResult.error.issues[0]!.message).toBe('Invalid email address');
+
+      useLocale('pirate');
+      expect(currentLocale()).toBe('pirate');
+    } finally {
+      reset();
+    }
   });
 });

@@ -1,5 +1,5 @@
 export const guardsAndActionsExample = {
-  code: `import { defineMachine, interpret, assign } from '/clockwork'
+  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
 
 const SECRET_KEY = 'vielzeug'
 
@@ -25,13 +25,13 @@ const doorMachine = defineMachine({
             // Correct key: unlock and reset counter
             guard: ({ event }) => event.key === SECRET_KEY,
             target: 'closed',
-            actions: [assign(() => ({ accessAttempts: 0 }))],
+            actions: [({ context }) => { context.accessAttempts = 0 }],
           },
           {
             // Wrong key: stay locked, record attempt
             guard: ({ event }) => event.key !== SECRET_KEY,
             target: 'locked',
-            actions: [assign(({ context }) => ({ accessAttempts: context.accessAttempts + 1 }))],
+            actions: [({ context }) => { context.accessAttempts += 1 }],
           },
         ],
       },

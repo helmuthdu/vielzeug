@@ -966,6 +966,26 @@ describe('Container — validate()', () => {
     expect(() => child.validate()).toThrow(CircularDependencyError);
   });
 
+  it('throws ProviderNotFoundError when a declared dep has no registration', () => {
+    const Missing = token<string>('MissingDep');
+    const Consumer = token<string>('Consumer');
+    const c = createContainer();
+
+    c.factory(Consumer, (m) => m, { deps: [Missing] });
+
+    expect(() => c.validate()).toThrow(ProviderNotFoundError);
+  });
+
+  it('ProviderNotFoundError from validate() contains the missing token name', () => {
+    const Missing = token<string>('TheUnknownService');
+    const Consumer = token<string>('Consumer');
+    const c = createContainer();
+
+    c.factory(Consumer, (m) => m, { deps: [Missing] });
+
+    expect(() => c.validate()).toThrow('TheUnknownService');
+  });
+
   it('supports method chaining', () => {
     const A = token<string>('A');
     const c = createContainer();
@@ -1630,5 +1650,146 @@ describe('Container — resolveSync', () => {
 
     expect(singletonErr.message).toContain('not been resolved yet');
     expect(transientErr.message).toContain('transient');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryResolve — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe('Container — tryResolve() edge cases', () => {
+  it('returns { ok: false, error: CircularDependencyError } for a circular dep', async () => {
+    const A = token('A');
+    const B = token('B');
+    const c = createContainer();
+
+    c.factory(A, (b) => b, { deps: [B] });
+    c.factory(B, (a) => a, { deps: [A] });
+
+    const result = await c.tryResolve(A);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect(result.error).toBeInstanceOf(CircularDependencyError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Named scope — disposal hooks
+// ---------------------------------------------------------------------------
+
+describe('Container — named scope disposal hooks', () => {
+  it('calls dispose hook for a resolved named-scope instance when the scope container is disposed', async () => {
+    const log: string[] = [];
+    const RequestScope = scope('request');
+    const T = token<object>('T');
+    const root = createContainer();
+
+    root.factory(T, () => ({}), { dispose: () => void log.push('scope-disposed'), lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    await scopeContainer.resolve(T);
+    await scopeContainer.dispose();
+
+    expect(log).toEqual(['scope-disposed']);
+  });
+
+  it('does not call the dispose hook when the named-scope instance was never resolved', async () => {
+    const log: string[] = [];
+    const RequestScope = scope('request');
+    const T = token<object>('T');
+    const root = createContainer();
+
+    root.factory(T, () => ({}), { dispose: () => void log.push('should-not-run'), lifetime: RequestScope });
+
+    const scopeContainer = root.createScope(RequestScope);
+
+    await scopeContainer.dispose();
+
+    expect(log).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inspect() — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe('Container — inspect() edge cases', () => {
+  it('value nodes do not have a lifetime field', () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'v');
+
+    const { nodes } = c.inspect();
+
+    expect(nodes[0].lifetime).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveMany() — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveMany() edge cases', () => {
+  it('resolves an empty array to an empty tuple', async () => {
+    const c = createContainer();
+
+    const result = await c.resolveMany([] as const);
+
+    expect(result).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveSync() — cross-container warm path
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveSync() cross-container warm path', () => {
+  it('resolves parent singleton synchronously after child resolveAll()', async () => {
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.factory(T, () => 'warmed-via-child');
+
+    const child = root.createChild();
+
+    await child.resolveAll();
+
+    expect(child.resolveSync(T)).toBe('warmed-via-child');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// on() — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe('Container — on() additional edge cases', () => {
+  it('listener receives no further events after the container is disposed', async () => {
+    const events: string[] = [];
+    const c = createContainer();
+
+    c.on((e) => events.push(e.type));
+    await c.dispose(); // fires 'dispose'
+
+    // After dispose, value/factory registration throws ContainerDisposedError
+    // and no register event should fire — confirm listener count stays at 1
+    expect(events).toEqual(['dispose']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createScope() — disposed parent
+// ---------------------------------------------------------------------------
+
+describe('Container — createScope() post-disposal', () => {
+  it('throws ContainerDisposedError when called on a disposed container', async () => {
+    const RequestScope = scope('request');
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => c.createScope(RequestScope)).toThrow(ContainerDisposedError);
   });
 });

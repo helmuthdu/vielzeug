@@ -738,4 +738,72 @@ describe('createVirtualScroller', () => {
     expect(scrollEl.className).toBe('my-scroller');
     ctrl.destroy();
   });
+
+  it('uses overflow: hidden auto for vertical mode (default)', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    const scrollEl = container.children[0] as HTMLElement;
+
+    expect(scrollEl.style.overflow).toBe('hidden auto');
+    ctrl.destroy();
+  });
+
+  it('uses overflow: auto hidden for horizontal mode (P1 regression)', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientWidth', { configurable: true, get: () => 300 });
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 300 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      horizontal: true,
+      render: () => {},
+    });
+
+    const scrollEl = container.children[0] as HTMLElement;
+
+    expect(scrollEl.style.overflow).toBe('auto hidden');
+    ctrl.destroy();
+  });
+
+  it('scrollToTop scrolls to offset 0', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 100 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    ctrl.setItems(makeRows(100));
+
+    const scrollEl = container.children[0] as HTMLElement;
+
+    Object.defineProperty(scrollEl, 'scrollTop', { configurable: true, get: () => 300, set: () => {} });
+    expect(() => ctrl.scrollToTop()).not.toThrow();
+    ctrl.destroy();
+  });
+
+  it('scrollToBottom scrolls to the end of the list', () => {
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, get: () => 100 });
+
+    const ctrl = createVirtualScroller<Row>(container, {
+      estimateSize: 30,
+      render: () => {},
+    });
+
+    ctrl.setItems(makeRows(50));
+    expect(() => ctrl.scrollToBottom()).not.toThrow();
+    ctrl.destroy();
+  });
 });

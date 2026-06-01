@@ -1,4 +1,46 @@
 export const middlewareAuthExample = {
-  code: "import { createMemoryHistory, createRouter, redirectTo } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst authService = {\n  currentUser: null\n}\n\nconst requireAuth = async (ctx, next) => {\n  if (!authService.currentUser) {\n    console.log('\u274C Not authenticated, redirecting to login')\n    await ctx.navigate({ name: 'login' }, { replace: true })\n    return\n  }\n\n  ctx.locals.user = authService.currentUser\n  console.log('\u2705 Authenticated as:', ctx.locals.user.name)\n  await next()\n}\n\nconst router = createRouter({\n  history: createMemoryHistory('/'),\n  routes: {\n    login: {\n      path: '/login',\n      handler: () => console.log('\uD83D\uDCDD Login page')\n    },\n    dashboard: {\n      path: '/dashboard',\n      middleware: [requireAuth],\n      handler: (ctx) => console.log('\uD83D\uDCCA Dashboard - Welcome,', ctx.locals.user.name)\n    },\n    profile: {\n      path: '/profile',\n      middleware: [requireAuth],\n      handler: (ctx) => {\n        console.log('\uD83D\uDC64 Profile for:', ctx.locals.user.name)\n        console.log('   User ID:', ctx.locals.user.id)\n        console.log('   Roles:', ctx.locals.user.roles)\n      }\n    },\n    logout: {\n      path: '/logout',\n      middleware: [redirectTo({ name: 'login' }, { replace: true })]\n    }\n  }\n})\n\nconsole.log('--- Unauthenticated dashboard ---')\nawait router.navigate({ name: 'dashboard' })\nconsole.log('Current wayfinder:', router.getSnapshot().matches.at(-1)?.name)\n\nauthService.currentUser = { id: 1, name: 'Alice', roles: ['admin'] }\n\nconsole.log('\\n--- Redirect helper via /logout ---')\nawait router.navigate({ name: 'logout' })",
-  name: 'Guards and Redirects - Auth Flows',
+  code: `import { createMemoryHistory, createRouter, redirectTo } from '@vielzeug/wayfinder'
+
+// Middleware runs before data(); use it for auth checks, redirects, and analytics.
+const session = { currentUser: null }
+
+const requireAuth = async (ctx, next) => {
+  if (!session.currentUser) {
+    console.log('not authenticated — redirecting to /login')
+    await ctx.navigate({ name: 'login' }, { replace: true })
+    return // do not call next(); cancels navigation to the protected route
+  }
+  ctx.locals.user = session.currentUser
+  await next()
+}
+
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: {
+    login:     { path: '/login' },
+    dashboard: {
+      path: '/dashboard',
+      middleware: [requireAuth],
+      data: (ctx) => ({ welcome: 'Hello, ' + ctx.locals.user.name }),
+    },
+    // redirectTo() is shorthand for an unconditional redirect middleware.
+    legacy:    { path: '/old-dashboard', middleware: [redirectTo({ name: 'dashboard' }, { replace: true })] },
+  },
+})
+
+console.log('--- unauthenticated ---')
+await router.navigate({ name: 'dashboard' })
+console.log('location after blocked nav:', router.getSnapshot().location.pathname)
+
+session.currentUser = { name: 'Alice' }
+console.log('--- authenticated ---')
+await router.navigate({ name: 'dashboard' })
+console.log('data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
+
+console.log('--- legacy redirect ---')
+await router.navigate({ path: '/old-dashboard' })
+console.log('location after redirect:', router.getSnapshot().location.pathname)
+
+router.dispose()`,
+  name: 'Guards and Redirects — Auth Flows',
 };

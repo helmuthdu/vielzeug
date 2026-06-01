@@ -1,6 +1,7 @@
 import type { Fn } from '../types';
 
 import { LruMap } from '../typed/_lruMap';
+import { isPromise } from '../typed/isPromise';
 
 type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;
@@ -16,6 +17,7 @@ type CacheEntry<T> = {
 export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & {
   clear(): void;
   invalidate(...args: Parameters<T>): void;
+  readonly size: number;
 };
 
 const UNDEFINED_SENTINEL = '\x00undefined\x00';
@@ -32,12 +34,6 @@ const defaultKey = (args: unknown[]): string => {
     );
   }
 };
-
-const isPromise = (value: unknown): value is Promise<unknown> =>
-  typeof value === 'object' &&
-  value !== null &&
-  'then' in value &&
-  typeof (value as Promise<unknown>).then === 'function';
 
 /**
  * Creates a function that memoizes the result of the provided function.
@@ -69,6 +65,7 @@ export function memo<T extends Fn>(
 ): Memoized<T> {
   const cache = new LruMap<PropertyKey, CacheEntry<ReturnType<T>>>(maxSize);
   const inFlight = new Set<PropertyKey>();
+  const revisions = new Map<PropertyKey, number>();
 
   const resolveKey = (...args: Parameters<T>): PropertyKey => (key ? key(...args) : defaultKey(args));
 
@@ -90,12 +87,19 @@ export function memo<T extends Fn>(
     cache.set(cacheKey, entry);
 
     if (isPromise(result)) {
+      const rev = (revisions.get(cacheKey) ?? 0) + 1;
+
+      revisions.set(cacheKey, rev);
       inFlight.add(cacheKey);
       void (result as Promise<unknown>)
-        .then(() => inFlight.delete(cacheKey))
+        .then(() => {
+          if (revisions.get(cacheKey) === rev) inFlight.delete(cacheKey);
+        })
         .catch(() => {
-          inFlight.delete(cacheKey);
-          cache.delete(cacheKey);
+          if (revisions.get(cacheKey) === rev) {
+            inFlight.delete(cacheKey);
+            cache.delete(cacheKey);
+          }
         });
     }
 
@@ -107,13 +111,22 @@ export function memo<T extends Fn>(
     return result as ReturnType<T>;
   };
 
-  return Object.assign(memoized, {
+  const result = Object.assign(memoized, {
     clear: () => {
       cache.clear();
       inFlight.clear();
+      revisions.clear();
     },
     invalidate: (...args: Parameters<T>): void => {
-      cache.delete(resolveKey(...args));
+      const cacheKey = resolveKey(...args);
+
+      cache.delete(cacheKey);
+      inFlight.delete(cacheKey);
+      revisions.delete(cacheKey);
     },
   });
+
+  Object.defineProperty(result, 'size', { get: () => cache.size });
+
+  return result as Memoized<T>;
 }

@@ -17,21 +17,72 @@ export function now(tz: string): Temporal.ZonedDateTime {
 }
 
 /**
+ * Returns the current absolute instant (UTC point in time).
+ * Use this instead of `Temporal.Now.instant()` to avoid importing Temporal directly.
+ *
+ * @example
+ * ```ts
+ * timeDiff(nowInstant()) // { unit: 'millisecond', value: 0 } (compared to now)
+ * expires(nowInstant(), { expired: { days: 0 }, safe: { years: 100 } }) // 'safe'
+ * ```
+ */
+export function nowInstant(): Temporal.Instant {
+  return Temporal.Now.instant();
+}
+
+/**
+ * Parses a full ISO 8601 zoned date-time string into a `ZonedDateTime`.
+ * Use this instead of `Temporal.ZonedDateTime.from()` to avoid importing Temporal directly.
+ *
+ * @example
+ * ```ts
+ * parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]')
+ * parseZoned('2026-03-21T00:00:00[UTC]')
+ * ```
+ */
+export function parseZoned(input: string): Temporal.ZonedDateTime {
+  try {
+    return Temporal.ZonedDateTime.from(input);
+  } catch {
+    fail(
+      `Invalid zoned date-time string: "${input}". Expected an ISO 8601 string with offset and timezone (e.g. 2026-03-21T10:00:00+01:00[Europe/Berlin]).`,
+    );
+  }
+}
+
+/**
+ * Parses an ISO 8601 date-only string into a timezone-free `PlainDate`.
+ * Use this instead of `Temporal.PlainDate.from()` to avoid importing Temporal directly.
+ *
+ * @example
+ * ```ts
+ * parsePlainDate('2026-03-21') // 2026-03-21
+ * ```
+ */
+export function parsePlainDate(input: string): Temporal.PlainDate {
+  try {
+    return Temporal.PlainDate.from(input);
+  } catch {
+    fail(`Invalid plain date string: "${input}". Expected an ISO 8601 date string (e.g. YYYY-MM-DD).`);
+  }
+}
+
+/**
  * Parses an ISO 8601 string into a timezone-free `PlainDateTime` (wall-clock time).
  * Use {@link toInstant} or {@link toZoned} to attach a timezone when needed.
  *
  * @example
  * ```ts
- * parseLocal('2026-03-21')             // 2026-03-21T00:00:00
- * parseLocal('2026-03-21T10:15:30')    // 2026-03-21T10:15:30
+ * parsePlainDateTime('2026-03-21')             // 2026-03-21T00:00:00
+ * parsePlainDateTime('2026-03-21T10:15:30')    // 2026-03-21T10:15:30
  * ```
  */
-export function parseLocal(input: string): Temporal.PlainDateTime {
+export function parsePlainDateTime(input: string): Temporal.PlainDateTime {
   try {
     return Temporal.PlainDateTime.from(input);
   } catch {
     fail(
-      `Invalid local date/time string: "${input}". Expected an ISO 8601 date or date-time string (e.g. YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss).`,
+      `Invalid date/time string: "${input}". Expected an ISO 8601 date or date-time string (e.g. YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss).`,
     );
   }
 }
@@ -56,10 +107,17 @@ export function parseInstant(input: string): Temporal.Instant {
  * DST-safe date arithmetic. Adds `duration` to `input` and returns the result as a
  * `ZonedDateTime`. Handles spring-forward and fall-back correctly.
  *
+ * **Always returns a `ZonedDateTime`**, regardless of the input type.
+ * If you need an `Instant` back, call `.toInstant()` on the result.
+ * Requires `options.tz` when input is an `Instant`, `PlainDate`, or `PlainDateTime`.
+ *
  * @example
  * ```ts
  * shift(Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]'), { hours: 1 })
  * // 2026-03-08T03:30:00-04:00[America/New_York]  (skipped the missing hour)
+ *
+ * // Instant input — tz required, result is ZonedDateTime
+ * shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: 2 }, { tz: 'UTC' }).toInstant()
  * ```
  */
 export function shift(
@@ -115,13 +173,13 @@ export function difference(start: TimeInput, end: TimeInput, options: Difference
  *
  * @example
  * ```ts
- * parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]') // ZonedDateTime
- * parseAny('2026-03-21T10:00:00Z')                     // Instant
- * parseAny('2026-03-21T10:00:00')                      // PlainDateTime
- * parseAny('2026-03-21')                               // PlainDate
+ * parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]') // ZonedDateTime
+ * parseDate('2026-03-21T10:00:00Z')                     // Instant
+ * parseDate('2026-03-21T10:00:00')                      // PlainDateTime
+ * parseDate('2026-03-21')                               // PlainDate
  * ```
  */
-export function parseAny(input: string): TimeInput {
+export function parseDate(input: string): TimeInput {
   try {
     return Temporal.ZonedDateTime.from(input);
   } catch {

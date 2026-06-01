@@ -1,4 +1,4 @@
-import type { DetectOverflowOptions, HideData, Middleware } from '../types';
+import type { DetectOverflowOptions, HideData, Middleware, TypedMiddleware } from '../types';
 
 import { detectOverflowAtRect, getBoundaryRect, getFloatingRect, isFullyClipped } from '../overflow';
 import { tagMiddleware, toSideObject } from '../utils';
@@ -18,7 +18,7 @@ export interface HideOptions extends DetectOverflowOptions {
  * Writes `{ referenceHidden, referenceHiddenOffsets, escaped, escapedOffsets }` to
  * `middlewareData.hide`.
  */
-export function hide(options: HideOptions = {}): Middleware {
+export function hide(options: HideOptions = {}): TypedMiddleware<'hide', HideData> {
   const strategy = options.strategy ?? 'both';
 
   return tagMiddleware(function hideMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {

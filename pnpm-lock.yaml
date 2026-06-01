@@ -129,6 +129,10 @@ importers:
         version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@8.0.15(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
 
   packages/coins:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.9.1
@@ -5445,9 +5449,9 @@ snapshots:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
 
-  postcss-sorting@10.0.0(postcss@8.5.14):
+  postcss-sorting@10.0.0(postcss@8.5.15):
     dependencies:
-      postcss: 8.5.14
+      postcss: 8.5.15
 
   postcss-value-parser@4.2.0: {}
 
@@ -5753,8 +5757,8 @@ snapshots:
 
   stylelint-order@8.1.1(stylelint@17.12.0(typescript@6.0.3)):
     dependencies:
-      postcss: 8.5.14
-      postcss-sorting: 10.0.0(postcss@8.5.14)
+      postcss: 8.5.15
+      postcss-sorting: 10.0.0(postcss@8.5.15)
       stylelint: 17.12.0(typescript@6.0.3)
 
   stylelint-use-logical-spec@5.0.1(stylelint@17.12.0(typescript@6.0.3)):

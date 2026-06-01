@@ -8,8 +8,8 @@ import { MachineError } from './errors.js';
  * Resolves a target state to its deepest initial leaf.
  * For compound states (those with `states` + `initial`), recursively descends.
  */
-export const resolveLeaf = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  topLevelStates: Record<string, StateNode<State, Ctx, Ev>>,
+export const resolveLeaf = <Ctx extends object, Ev extends MachineEvent>(
+  topLevelStates: Record<string, StateNode<string, Ctx, Ev>>,
   target: string,
 ): string => {
   const segments = target.split('.');
@@ -38,8 +38,8 @@ export const resolveLeaf = <State extends string, Ctx extends object, Ev extends
 /**
  * Returns the node at a given dot-path.
  */
-export const getNodeAtPath = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  topLevelStates: Record<string, StateNode<State, Ctx, Ev>>,
+export const getNodeAtPath = <Ctx extends object, Ev extends MachineEvent>(
+  topLevelStates: Record<string, StateNode<string, Ctx, Ev>>,
   path: string,
 ): StateNode<string, Ctx, Ev> | undefined => {
   const segments = path.split('.');
@@ -114,6 +114,14 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
           { eventType, path, target: tr.target },
         );
       }
+
+      if (tr.target.includes('.') && !getNodeAtPath(allTopLevel, tr.target)) {
+        throw new MachineError(
+          'MACHINE_UNKNOWN_TARGET',
+          `[machine] state "${path}" event "${eventType}" targets unknown nested state "${tr.target}"`,
+          { eventType, path, target: tr.target },
+        );
+      }
     }
   }
 
@@ -133,6 +141,14 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
       throw new MachineError(
         'MACHINE_UNKNOWN_TARGET',
         `[machine] state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
+        { delay: afterDef.delay, path, target: afterDef.target },
+      );
+    }
+
+    if (afterDef.target.includes('.') && !getNodeAtPath(allTopLevel, afterDef.target)) {
+      throw new MachineError(
+        'MACHINE_UNKNOWN_TARGET',
+        `[machine] state "${path}" after[${afterDef.delay}ms] targets unknown nested state "${afterDef.target}"`,
         { delay: afterDef.delay, path, target: afterDef.target },
       );
     }

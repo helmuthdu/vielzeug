@@ -109,6 +109,66 @@ export interface MiddlewareResult {
 
 export type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
 
+/**
+ * A middleware tagged with the key and data shape it writes to `middlewareData`.
+ *
+ * All built-in middleware return a `TypedMiddleware` so that `TypedComputePositionResult`
+ * can infer the exact `middlewareData` shape from the pipeline tuple.
+ *
+ * Custom middleware can use this type to participate in inference:
+ * ```ts
+ * const snap = (grid: number): TypedMiddleware<'snap', { grid: number }> =>
+ *   Object.assign(({ x, y }: MiddlewareState) => ({
+ *     data: { snap: { grid } },
+ *     x: Math.round(x / grid) * grid,
+ *     y: Math.round(y / grid) * grid,
+ *   }), { __middlewareKey: 'snap' as const, __middlewareData: undefined as unknown as { grid: number } });
+ * ```
+ */
+export type TypedMiddleware<K extends string, D> = Middleware & {
+  readonly __middlewareData: D;
+  readonly __middlewareKey: K;
+};
+
+/**
+ * Infers the `middlewareData` shape produced by a tuple of middleware.
+ *
+ * For each `TypedMiddleware<K, D>` in the tuple, the resulting type includes `{ [K]: D }`.
+ * Untyped (plain `Middleware`) entries contribute `{ [key: string]: unknown }` as a fallback.
+ *
+ * @example
+ * ```ts
+ * const mws = [flip(), shift(), arrow({ element: arrowEl })] as const;
+ * type Data = InferMiddlewareData<typeof mws>;
+ * // { flip?: FlipData; shift: ShiftData; arrow: ArrowData; [key: string]: unknown }
+ * ```
+ */
+export type InferMiddlewareData<M extends readonly Middleware[]> = {
+  [K in Extract<M[number], TypedMiddleware<string, unknown>>['__middlewareKey']]?: Extract<
+    M[number],
+    TypedMiddleware<K, unknown>
+  >['__middlewareData'];
+} & { [key: string]: unknown };
+
+/**
+ * Like `ComputePositionResult` but with `middlewareData` typed precisely to the middleware
+ * pipeline `M`. Prefer this over `ComputePositionResult` when using `computePosition` directly
+ * and you want full type safety on `middlewareData`.
+ *
+ * @example
+ * ```ts
+ * const mws = [flip(), shift()] as const;
+ * const result: TypedComputePositionResult<typeof mws> = computePosition(ref, el, { middleware: [...mws] });
+ * result.middlewareData.flip?.skippedPlacements; // typed as Placement[] | undefined
+ * ```
+ */
+export interface TypedComputePositionResult<M extends readonly Middleware[]> {
+  x: number;
+  y: number;
+  placement: Placement;
+  middlewareData: InferMiddlewareData<M>;
+}
+
 // ── Public API types ──────────────────────────────────────────────────────────
 
 export interface ComputePositionResult {
@@ -150,8 +210,13 @@ export interface ComputePositionOptions {
  * - `cssAnchor` — `true` when the browser is handling positioning natively via CSS Anchor
  *   Positioning; `getPosition()` always returns `null` in this mode.
  * - `update()` — manually trigger a position recalculation.
- * - `getPosition()` — returns the most recently computed position, or `null` before the
- *   first calculation completes (always `null` when `cssAnchor` is `true`).
+ * - `getPosition()` — returns the most recently computed position.
+ *   - When `autoUpdate: false`, the position is computed synchronously during `float()`, so
+ *     `getPosition()` is **never `null`** immediately after `float()` returns.
+ *   - When using the `autoUpdate` loop (default), `getPosition()` returns `null` only before
+ *     the very first update fires, which happens synchronously on construction.
+ *   - Always returns `null` when `cssAnchor` is `true` (browser manages position natively).
+ *   - Always returns `null` in SSR environments (via `@vielzeug/orbit/ssr`).
  */
 export interface FloatHandle {
   /** `true` when position is managed natively by CSS Anchor Positioning (JS data unavailable). */

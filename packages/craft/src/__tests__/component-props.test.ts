@@ -150,6 +150,32 @@ describe('component props', () => {
     expect(query('.value')?.textContent).toBe('');
   });
 
+  it('prop.bool parses attribute value "false" as false', async () => {
+    const fixture = await mount((props) => html`<div class="out">${() => String(props.active.value)}</div>`, {
+      attrs: { active: 'false' },
+      componentOptions: { props: { active: prop.bool(false) } },
+    });
+
+    expect(fixture.query('.out')?.textContent).toBe('false');
+  });
+
+  it('prop.bool parses empty string attribute as true', async () => {
+    const fixture = await mount((props) => html`<div class="out">${() => String(props.active.value)}</div>`, {
+      attrs: { active: '' },
+      componentOptions: { props: { active: prop.bool(false) } },
+    });
+
+    expect(fixture.query('.out')?.textContent).toBe('true');
+  });
+
+  it('prop.bool parses absent attribute as false', async () => {
+    const fixture = await mount((props) => html`<div class="out">${() => String(props.active.value)}</div>`, {
+      componentOptions: { props: { active: prop.bool(false) } },
+    });
+
+    expect(fixture.query('.out')?.textContent).toBe('false');
+  });
+
   it('rejects structured defaults with reflect:true at define time', () => {
     const objectTag = uniqueTag('test-reflect-structured-object');
     const arrayTag = uniqueTag('test-reflect-structured-array');

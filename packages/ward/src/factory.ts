@@ -570,7 +570,6 @@ export function createWard<TAction extends string = string, TData = unknown>(
     }
 
     const candidates: WardTraceCandidate<TAction, TData>[] = matching.map((entry) => ({
-      denyBonus: entry.denyBonus,
       priority: entry.priority,
       rule: entry.rule,
       score: entry.score,

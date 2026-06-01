@@ -115,12 +115,16 @@ export type DirectiveResult = RuntimeDirective;
 
 const DIRECTIVE_BRAND: unique symbol = Symbol.for('craft:directive');
 
+type BrandedDirective = RuntimeDirective & { readonly [DIRECTIVE_BRAND]: true };
+
 /**
  * Creates a registered DirectiveResult. All directive factories must use this
  * function — only objects created here pass `isDirectiveResult()`.
  */
 export const createDirectiveResult = (mount: RuntimeDirective['mount']): DirectiveResult => {
-  return { [DIRECTIVE_BRAND]: true, mount } as DirectiveResult;
+  const result: BrandedDirective = { [DIRECTIVE_BRAND]: true, mount };
+
+  return result;
 };
 
 export const isDirectiveResult = (value: unknown): value is DirectiveResult =>
@@ -135,12 +139,16 @@ export type SpreadObject = {
 
 const SPREAD_BRAND: unique symbol = Symbol.for('craft:spread');
 
+type BrandedSpread = SpreadObject & { readonly [SPREAD_BRAND]: true };
+
 /**
  * Creates a registered SpreadObject. Used by model() to attach multiple bindings
  * (value sync + input event) to an element via a single template expression.
  */
 export const createSpreadObject = (apply: SpreadObject['apply']): SpreadObject => {
-  return { apply, [SPREAD_BRAND]: true } as SpreadObject;
+  const result: BrandedSpread = { apply, [SPREAD_BRAND]: true };
+
+  return result;
 };
 
 export const isSpreadObject = (value: unknown): value is SpreadObject =>
@@ -167,6 +175,8 @@ export interface HTMLResult {
   apply(registerCleanup: (fn: () => void) => void): void;
 }
 
+type BrandedHtmlResult = HTMLResult & { readonly [HTML_RESULT_BRAND]: true };
+
 export const isHtmlResult = (value: unknown): value is HTMLResult =>
   typeof value === 'object' && value !== null && HTML_RESULT_BRAND in (value as object);
 
@@ -174,5 +184,7 @@ export function createHtmlResult(
   fragment: DocumentFragment,
   applyFn: (registerCleanup: (fn: () => void) => void) => void,
 ): HTMLResult {
-  return { apply: applyFn, fragment, [HTML_RESULT_BRAND]: true } as HTMLResult;
+  const result: BrandedHtmlResult = { apply: applyFn, fragment, [HTML_RESULT_BRAND]: true };
+
+  return result;
 }

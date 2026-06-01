@@ -90,7 +90,8 @@ export type OptionListOptions<T extends BaseOptionItem> = {
 export type OptionListHandle<T extends BaseOptionItem> = {
   cleanup(): void;
   close(reason?: DialogCloseReason): void;
-  first(): void;
+  /** Navigate to the first enabled item. Returns the resolved index, or -1 if none. */
+  first(): number;
   /**
    * Focused item index (read-only). Write via `set(index)` to update through
    * the list control — this ensures scroll-into-view and disabled-item checks.
@@ -100,15 +101,26 @@ export type OptionListHandle<T extends BaseOptionItem> = {
   handleKeydown(event: KeyboardEvent): boolean;
   /** Open state (read-only). Mutate via `open()`, `close()`, or `toggle()`. */
   readonly isOpen: ReadonlySignal<boolean>;
-  last(): void;
-  next(): void;
+  /** Navigate to the last enabled item. Returns the resolved index, or -1 if none. */
+  last(): number;
+  /** Navigate to the next enabled item. Returns the resolved index, or -1 if none. */
+  next(): number;
   open(reason?: OverlayOpenReason): void;
-  /** The dropdown positioner — needed by components that have custom overlay anchoring. */
+  /**
+   * The underlying dropdown positioner. Exposed as an escape hatch for components
+   * that need to imperatively trigger a position update (e.g. `combobox` after
+   * filtering options changes the list height).
+   */
   readonly positioner: OverlayPositioner;
-  prev(): void;
+  /** Navigate to the previous enabled item. Returns the resolved index, or -1 if none. */
+  prev(): number;
   reset(): void;
   scrollFocusedIntoView(): void;
-  set(index: number): void;
+  /**
+   * Set focus to the item at `index`. Returns the resolved index.
+   * Pass a negative index to clear focus (same as `reset()`).
+   */
+  set(index: number): number;
   /**
    * Toggles open state.
    * - Opens with `openReason` (default `'click'`).
@@ -223,6 +235,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
     // have written to the trigger element so a disconnected trigger does not
     // retain a stale "aria-expanded=true" or "aria-activedescendant" value.
     ariaEffects.dispose();
+    list.cleanup();
 
     const trigger = options.dom.getTrigger?.();
 
@@ -241,7 +254,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
 
   return {
     cleanup,
-    close: (reason) => overlay.close(reason ?? 'programmatic'),
+    close: (reason) => overlay.close(reason),
     first: list.first,
     focusedIndex,
     getActiveItem: list.getActiveItem,
@@ -249,7 +262,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
     isOpen,
     last: list.last,
     next: list.next,
-    open: (reason) => overlay.open(reason ?? 'programmatic'),
+    open: (reason) => overlay.open(reason),
     positioner,
     prev: list.prev,
     reset: list.reset,

@@ -36,7 +36,7 @@ const retryingQc = createQuery();
 await retryingQc.fetch({
   key: ['config'],
   fn: ({ signal }) => api.get('/config', { signal }),
-  maxAttempts: 3,
+  times: 3,
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```

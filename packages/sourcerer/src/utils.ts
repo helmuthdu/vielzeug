@@ -1,4 +1,4 @@
-import { exponentialBackoff, retry, stableStringify } from '@vielzeug/arsenal';
+import { backoff, retry, stableStringify } from '@vielzeug/arsenal';
 
 export { retry };
 
@@ -15,4 +15,4 @@ export const extractError = (reason: unknown): string => {
 };
 
 /** Default exponential backoff: 1 s, 2 s, 4 s, … capped at 30 s. Receives a 0-indexed failure count. */
-export const defaultRetryDelay = (attempt: number): number => exponentialBackoff(attempt);
+export const defaultRetryDelay = (attempt: number): number => backoff(attempt);

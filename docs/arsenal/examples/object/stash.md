@@ -12,44 +12,40 @@
 
 - **Type-safe**: Generic typing for values, keys, and metadata.
 - **Explicit hashing**: You provide `hash(key)` to control key stability.
-- **TTL support**: Set TTL inline (`set(..., { ttlMs })`) or later with `scheduleGc`.
-- **Metadata support**: Optional metadata per key.
-- **Ergonomic helpers**: `has`, `getOrSet`, `touch`, `entries`, `keys`, `values`.
+- **TTL support**: Set TTL inline (`set(..., { ttlMs: 5000 })`).
+- **Stampede prevention**: `getOrSet` with async factories deduplicates concurrent calls.
+- **Eviction callback**: Optional `onEvict(key, value)` when entries are removed.
 
 ## API
 
 ```ts
-type CacheOptions<K extends readonly unknown[]> = {
+type CacheOptions<K, T> = {
   hash: (key: K) => string;
-  onError?: (error: unknown) => void;
+  onEvict?: (key: K, value: T) => void;
 };
 
-type CacheSetOptions<M> = {
+type CacheSetOptions = {
   ttlMs?: number; // finite number or Infinity
-  meta?: M;
 };
 
-declare function stash<T, K extends readonly unknown[] = readonly unknown[], M = never>(
-  options: CacheOptions<K>,
-): {
-  get: (key: K) => T | undefined;
-  set: (key: K, value: T, options?: CacheSetOptions<M>) => void;
-  getOrSet: (key: K, factory: () => T, options?: CacheSetOptions<M>) => T;
-  touch: (key: K, ttlMs: number) => boolean;
-  delete: (key: K) => boolean;
-  clear: () => void;
-  size: () => number;
-  scheduleGc: (key: K, delayMs: number) => void;
-  cancelGc: (key: K) => void;
-  getEntry: (key: K) => { value: T; meta: M | undefined } | undefined;
-  entries: () => IterableIterator<[K, T]>;
+type Stash<T, K> = {
+  get(key: K): T | undefined;
+  set(key: K, value: T, options?: CacheSetOptions): void;
+  getOrSet(key: K, factory: () => T, options?: CacheSetOptions): T;
+  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions): Promise<T>;
+  delete(key: K): boolean;
+  clear(): void;
+  readonly size: number;
+  entries(): IterableIterator<[K, T]>;
 };
+
+function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K>
 ```
 
 ### Parameters
 
 - `options.hash` (required): deterministic hash function for your key type.
-- `options.onError` (optional): called when scheduler task submission fails for non-abort reasons.
+- `options.onEvict` (optional): called whenever an entry is removed (delete, clear, or TTL expiry).
 
 ## Examples
 
@@ -66,39 +62,21 @@ userCache.set(['user', 123], { name: 'Alice', email: 'alice@example.com' });
 
 const user = userCache.get(['user', 123]);
 console.log(user?.name); // 'Alice'
-console.log(userCache.size()); // 1
+console.log(userCache.size); // 1
 ```
 
-### TTL + GC
+### TTL-based expiry
 
 ```ts
 import { stash } from '@vielzeug/arsenal';
 
 const sessionCache = stash<string>({
   hash: (key) => JSON.stringify(key),
+  onEvict: (key, value) => console.log(`evicted: ${String(key)}`),
 });
 
 sessionCache.set(['session', 'abc123'], 'user-data', { ttlMs: 5 * 60 * 1000 });
-
-// Extend the TTL if still active
-sessionCache.touch(['session', 'abc123'], 10 * 60 * 1000);
-```
-
-### Metadata
-
-```ts
-import { stash } from '@vielzeug/arsenal';
-
-type QueryMeta = { staleTime: number; gcTime: number; enabled: boolean };
-
-const apiCache = stash<unknown, readonly unknown[], QueryMeta>({
-  hash: (key) => JSON.stringify(key),
-});
-
-apiCache.set(['api', '/users'], { data: [] }, { meta: { staleTime: 60000, gcTime: 300000, enabled: true } });
-
-const meta = apiCache.getEntry(['api', '/users'])?.meta;
-console.log(meta?.staleTime); // 60000
+// Entry is automatically removed after 5 minutes
 ```
 
 ### Lazy Creation
@@ -136,4 +114,4 @@ for (const [key, value] of c.entries()) {
 ## See Also
 
 - [memo](../function/memo.md): Memoize function results.
-- [deepClone](./deepClone.md): Clone cached values before mutating them.
+- [getOrCreate](./getOrCreate.md): Lazy-initialise a Map entry.

@@ -3,10 +3,12 @@ import type { IndexedDbAdapter } from '../adapters/indexeddb';
 import {
   type Adapter,
   createIndexedDB,
+  defineMigration,
   type MetricsEvent,
   table,
   ttl,
   VaultDisposedError,
+  VaultError,
   VaultScopeError,
 } from '../index';
 
@@ -576,17 +578,17 @@ describe('IndexedDB adapter — iterate()', () => {
 });
 
 describe('createIndexedDB input validation', () => {
-  test('throws RangeError for version = 0', () => {
-    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 0 })).toThrow(RangeError);
+  test('throws VaultError for version = 0', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 0 })).toThrow(VaultError);
     expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 0 })).toThrow('positive integer');
   });
 
-  test('throws RangeError for negative version', () => {
-    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: -1 })).toThrow(RangeError);
+  test('throws VaultError for negative version', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: -1 })).toThrow(VaultError);
   });
 
-  test('throws RangeError for non-integer version', () => {
-    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 1.5 })).toThrow(RangeError);
+  test('throws VaultError for non-integer version', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 1.5 })).toThrow(VaultError);
   });
 
   test('accepts version = 1 (default)', () => {
@@ -599,6 +601,37 @@ describe('createIndexedDB input validation', () => {
     const adapter = createIndexedDB({ name: 'good-version-2', schema: userSchema, version: 2 });
 
     adapter.dispose();
+  });
+});
+
+describe('isEmpty() — IndexedDB adapter', () => {
+  test('returns true for an empty table', async () => {
+    const db = createIndexedDB({ name: 'isEmpty-empty', schema: userSchema });
+
+    expect(await db.isEmpty('users')).toBe(true);
+
+    db.dispose();
+  });
+
+  test('returns false when table has records', async () => {
+    const db = createIndexedDB({ name: 'isEmpty-populated', schema: userSchema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.isEmpty('users')).toBe(false);
+
+    db.dispose();
+  });
+
+  test('returns true after clear()', async () => {
+    const db = createIndexedDB({ name: 'isEmpty-after-clear', schema: userSchema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.clear('users');
+
+    expect(await db.isEmpty('users')).toBe(true);
+
+    db.dispose();
   });
 });
 
@@ -674,5 +707,107 @@ describe('Secondary indexes (F5)', () => {
 
   test('table().index() chaining creates correct schema entry', () => {
     expect(indexedSchema.products.indexes).toEqual(['category', 'name']);
+  });
+});
+
+/* -------------------- defineMigration -------------------- */
+
+describe('defineMigration', () => {
+  test('addTable creates a new object store', async () => {
+    const migrate = defineMigration([{ name: 'sessions', type: 'addTable' }]);
+
+    const schema2 = { sessions: table<{ token: string }>('token'), users: table<User>('id') };
+    const db2 = createIndexedDB({ migrate, name: 'Migration-addTable', schema: schema2, version: 1 });
+
+    await db2.put('sessions', { token: 'abc' });
+    expect(await db2.get('sessions', 'abc')).toEqual({ token: 'abc' });
+
+    db2.dispose();
+  });
+
+  test('addTable is idempotent — does not throw if store already exists', async () => {
+    const migrate = defineMigration([{ name: 'users', type: 'addTable' }]);
+    const db2 = createIndexedDB({ migrate, name: 'Migration-idempotent', schema: userSchema, version: 1 });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+
+    db2.dispose();
+  });
+
+  test('removeTable deletes an existing object store', async () => {
+    const migrate1 = defineMigration([{ name: 'legacy', type: 'addTable' }]);
+
+    createIndexedDB({
+      migrate: migrate1,
+      name: 'Migration-remove',
+      schema: { legacy: table<{ id: number }>('id'), users: table<User>('id') },
+      version: 1,
+    }).dispose();
+
+    const migrate2 = defineMigration([{ name: 'legacy', type: 'removeTable' }]);
+    const db2 = createIndexedDB({ migrate: migrate2, name: 'Migration-remove', schema: userSchema, version: 2 });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+
+    db2.dispose();
+  });
+
+  test('removeTable is idempotent — does not throw if store does not exist', async () => {
+    const migrate = defineMigration([{ name: 'nonexistent', type: 'removeTable' }]);
+    const db2 = createIndexedDB({ migrate, name: 'Migration-remove-safe', schema: userSchema, version: 1 });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+
+    db2.dispose();
+  });
+
+  test('addIndex creates an index on the object store', async () => {
+    type Product = { category: string; id: number };
+
+    const migrate = defineMigration([
+      { name: 'products', type: 'addTable' },
+      { field: 'category', table: 'products', type: 'addIndex' },
+    ]);
+
+    const schema2 = { products: table<Product>('id').index('category') };
+    const db2 = createIndexedDB({ migrate, name: 'Migration-addIndex', schema: schema2, version: 1 });
+
+    await db2.putAll('products', [
+      { category: 'A', id: 1 },
+      { category: 'B', id: 2 },
+      { category: 'A', id: 3 },
+    ]);
+
+    const results = await db2.query('products').equals('category', 'A').toArray();
+
+    expect(results).toHaveLength(2);
+
+    db2.dispose();
+  });
+
+  test('removeIndex removes an index without affecting data', async () => {
+    type Item = { id: number; tag: string };
+
+    const migrate1 = defineMigration([
+      { name: 'items', type: 'addTable' },
+      { field: 'tag', table: 'items', type: 'addIndex' },
+    ]);
+
+    const schema1 = { items: table<Item>('id').index('tag') };
+    const db1 = createIndexedDB({ migrate: migrate1, name: 'Migration-removeIndex', schema: schema1, version: 1 });
+
+    await db1.put('items', { id: 1, tag: 'x' });
+    db1.dispose();
+
+    const migrate2 = defineMigration([{ field: 'tag', table: 'items', type: 'removeIndex' }]);
+    const schema2 = { items: table<Item>('id') };
+    const db2 = createIndexedDB({ migrate: migrate2, name: 'Migration-removeIndex', schema: schema2, version: 2 });
+
+    expect(await db2.get('items', 1)).toEqual({ id: 1, tag: 'x' });
+
+    db2.dispose();
   });
 });

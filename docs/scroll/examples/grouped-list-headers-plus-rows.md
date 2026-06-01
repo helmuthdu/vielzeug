@@ -24,11 +24,10 @@ const sections = [
   { label: 'C', items: [{ id: 4, name: 'Carol' }, { id: 5, name: 'Chris' }] },
 ];
 
-const virt = createGroupedVirtualizer<Contact>({
+const virt = createGroupedVirtualizer<Contact>(scrollEl, {
   estimateHeaderSize: 32,
   estimateItemSize: 44,
   sections,
-  target: scrollEl,
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';

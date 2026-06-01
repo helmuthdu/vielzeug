@@ -25,6 +25,7 @@ description: Complete API reference for the current Arsenal surface.
 | `uniq(array, selector?)` | Deduplicate by value or key | Sync | Uses deep equality without a selector |
 | `parallel(array, fn, options?)` | Bounded async fan-out | Async | `limit` defaults to unbounded |
 | `queue(options?)` | Serialise async jobs with concurrency cap | Async | `.onIdle()` resolves when queue drains |
+| `attempt(fn)` | Run an async function and return `AttemptResult` — never throws | Async | Returns `{ ok: true, value }` or `{ ok: false, error }` |
 | `retry(fn, options?)` | Retry a throwing async function with timeout and signal | Async | Rethrows on exhaustion; `shouldRetry` receives `(error, failureIndex)` — not called on the final attempt |
 | `allOf(...predicates)` | AND combinator — all must pass | Sync | Zero predicates → vacuous truth (always `true`) |
 | `anyOf(...predicates)` | OR combinator — at least one must pass | Sync | Zero predicates → vacuous falsity (always `false`) |
@@ -32,7 +33,7 @@ description: Complete API reference for the current Arsenal surface.
 | `debounce(fn, delay?)` | Delay execution until input settles | Sync | Returns a new function; reuse it across renders |
 | `memo(fn, options?)` | Memoize with optional TTL and LRU size cap | Sync | Pass a `key` function when arguments are objects |
 | `partial(fn, ...args)` | Bind leading arguments | Sync | Type-safe — remaining params are inferred |
-| `assert(condition, message?, options?)` | Throw if condition is falsy | Sync | Accepts `{ type: ErrorConstructor }` for custom error class |
+| `assert(condition, message?, options?)` | Throw if condition is falsy; narrows type via `asserts condition` | Sync | Accepts `{ type: ErrorConstructor }` for custom error class |
 | `diff(before?, after?)` | Structural diff between two objects | Sync | Returns `DELETED` symbol for removed keys |
 | `parseJSON(json, options?)` | Safe JSON parse with fallback | Sync | Accepts `string \| null \| undefined`; returns `undefined` on failure |
 | `stash(options)` | TTL-aware key-value cache with stampede prevention | Sync | Use `store.has()` semantics — correctly handles `undefined` values |
@@ -41,7 +42,7 @@ description: Complete API reference for the current Arsenal surface.
 | `deepMerge(...items)` | Recursive object merge | Sync | Arrays are replaced by default; use `deepMergeWith` for concat strategy |
 | `isMatch(object, source)` | Partial deep structural comparison | Sync | `Map` and `Set` sources are never matched by key iteration — use `isEqual` for those |
 | `isEqual(a, b, options?)` | Deep or shallow equality | Sync | `depth: 'shallow'` compares one level by reference |
-| `exponentialBackoff(attempt, maxMs?)` | Compute backoff delay for retry loops | Sync | Returns `min(1000 × 2ⁿ, maxMs)` — multiply by `Math.random()` for full-jitter |
+| `backoff(attempt, maxMs?)` | Compute backoff delay for retry loops | Sync | Returns `min(1000 × 2ⁿ, maxMs)` — multiply by `Math.random()` for full-jitter |
 
 <!-- markdownlint-enable MD060 -->
 
@@ -98,10 +99,11 @@ type ScoredResult<T> = { item: T; score: number };
 - `abortable(promise, signal)` — reject a promise when a signal fires
 - `abortError(signal?)` — extract the abort reason or construct a `DOMException('AbortError')`
 - `parallel(array, callback, options?)` — bounded concurrent fan-out; `options.limit` caps concurrency
-- `queue(options?)` — serialised promise queue; `options.concurrency` defaults to 1
+- `queue(options?)` — serialised promise queue; `options.concurrency` defaults to 1; returned object exposes `.active` (running), `.pending` (queued), `.size` (total), `.add()`, `.clear()`, `.onIdle()`
 - `retry(fn, options?)` — see [retry options](#retry)
 - `sleep(ms, signal?)` — delay that respects an AbortSignal
-- `waitFor(condition, options?)` — poll until condition returns `true` or timeout fires
+- `attempt(fn)` — wrap an async function; returns `{ ok: true, value } | { ok: false, error }` — never throws
+- `waitFor(condition, options?)` — poll until `condition(signal)` returns `true` or timeout fires; condition receives the merged `AbortSignal`
 
 ### retry
 
@@ -125,15 +127,15 @@ retry(
 
 - `allOf(...predicates)` — AND combinator
 - `anyOf(...predicates)` — OR combinator
-- `assert(condition, message?, options?)` — `options.type` sets the error class (e.g. `RangeError`)
-- `compare(a, b)` — general-purpose comparator (numbers, strings, dates)
+- `assert(condition, message?, options?)` — throws if `condition` is false; narrows the TypeScript type via `asserts condition`; `options.type` sets the error class (e.g. `RangeError`)
+- `compare(a, b)` — general-purpose comparator (numbers, strings, dates); **string comparison uses `localeCompare`** and may return values other than `−1/0/1`
 - `compareBy(selectors)` — multi-key comparator factory
 - `compose(...fns)` — right-to-left function composition
 - `constant(value)` — returns a function that always returns the same value
 - `curry(fn, arity?)` — auto-curried wrapper
 - `debounce(fn, delay?)` — trailing-edge debounce; returns `.cancel()`, `.flush()`, `.pending()`
 - `identity(value)` — returns its argument unchanged
-- `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function
+- `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function; returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size` (number of cached entries)
 - `noneOf(...predicates)` — NOR combinator
 - `once(fn)` — run once; returns `.reset()` to allow re-invocation
 - `partial(fn, ...args)` — bind leading arguments
@@ -148,7 +150,7 @@ retry(
 - `allocate(amount, ratiosOrParts)`
 - `average(array, callback?)`
 - `clamp(n, min, max)`
-- `exponentialBackoff(attempt, maxMs?)` — `min(1000 × 2ⁿ, maxMs)` for retry delay loops
+- `backoff(attempt, maxMs?)` — `min(1000 × 2ⁿ, maxMs)` for retry delay loops
 - `gcd(a, b)`
 - `lcm(a, b)`
 - `lerp(a, b, t)`
@@ -159,7 +161,7 @@ retry(
 - `mod(a, b)`
 - `normalize(value, min, max)`
 - `percent(value, total)`
-- `range(start, stop, step)`
+- `range(stop)` / `range(start, stop)` / `range(start, stop, step)`
 - `round(value, precision?, parser?)`
 - `standardDeviation(array, callback?)`
 - `sum(array, callback?)`
@@ -174,7 +176,7 @@ retry(
 - `deepMergeWith(options)` — `{ arrayStrategy: 'concat' }` to concatenate
 - `entries(obj)`
 - `filterValues(obj, predicate)`
-- `flattenPaths(obj)` — flatten nested object to `{ 'a.b': value }` map
+- `flattenPaths(obj)` — flatten nested object to `{ 'a.b': value }` map; throws `RangeError` if nesting exceeds 10 levels
 - `fromEntries(input)`
 - `getOrCreate(cache, key, build)` — lazy-initialise a `Map` entry
 - `getPath(item, path, defaultValue?, options?)` — see [getPath](#getpath)
@@ -232,7 +234,7 @@ type Stash<T, K> = {
   set(key: K, value: T, options?: { ttlMs?: number }): void;
   delete(key: K): boolean;
   clear(): void;
-  size(): number;
+  readonly size: number;
   entries(): IterableIterator<[K, T]>;
   // Sync factory — caches result (including undefined) and returns it
   getOrSet(key: K, factory: () => T, options?: { ttlMs?: number }): T;
@@ -256,7 +258,7 @@ type Stash<T, K> = {
 - `kebabCase(str)`
 - `pad(str, targetLength, fillString?)`
 - `pascalCase(str)`
-- `similarity(str1, str2)` — returns 0–1 trigram similarity
+- `similarity(str1, str2)` — returns 0–1 Levenshtein similarity; throws `RangeError` if either input exceeds 10 000 characters
 - `snakeCase(str)`
 - `startsWith(value, prefix)`
 - `titleCase(str)`
@@ -269,6 +271,7 @@ type Stash<T, K> = {
 All predicates are standalone named exports. There is no `is` namespace.
 
 - `isAbortError(value)` — `Error` with `name === 'AbortError'`
+- `isArray(value, itemGuard?)` — true if `value` is an array; optionally narrows item type when `itemGuard` is provided
 - `isBoolean(value)`
 - `isDate(value)`
 - `isDefined(value)` — not `undefined`
@@ -284,6 +287,7 @@ All predicates are standalone named exports. There is no `is` namespace.
 - `isPromise(value)`
 - `isRegex(value)`
 - `isString(value)`
+- `not(predicate)` — exported from the `function` domain; negates a predicate
 
 ## Types
 
@@ -294,7 +298,9 @@ export type Fn<Args extends unknown[] = unknown[], Result = unknown> = (...args:
 export type Obj = Record<string, unknown>;
 export type Primitive = string | number | boolean;
 export type Unsubscribe = () => void;
-export type AttemptResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
+export type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
+export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & { clear(): void; invalidate(...args: Parameters<T>): void; readonly size: number };
+export type TruncateOptions = { completeWords?: boolean; ellipsis?: string };
 export type DeepMergeOptions = { arrayStrategy?: 'concat' | 'replace' };
 export type ScoredResult<T> = { item: T; score: number };
 export type SearchOptions<T> = { fields?: ReadonlyArray<keyof T & string>; mode?: 'filter' | 'scored'; threshold?: number };

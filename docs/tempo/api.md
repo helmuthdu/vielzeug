@@ -10,9 +10,12 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 | Symbol                                    | Purpose                                              | Common gotcha                                                 |
 | ----------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------- |
 | `now(tz)`                                 | Current zoned date/time                              | Requires a valid IANA timezone string                         |
-| `parseLocal(input)`                       | Parse a wall-clock string to `PlainDateTime`         | No timezone attached — use `toInstant()` to pin it            |
+| `nowInstant()`                            | Current UTC instant                                  | Use instead of `Temporal.Now.instant()`                       |
 | `parseInstant(input)`                     | Parse a UTC ISO string to `Instant`                  | Input must end in `Z` or include an offset                    |
-| `parseAny(input)`                         | Parse any ISO 8601 string to the most specific type  | Tries ZonedDateTime → Instant → PlainDateTime → PlainDate     |
+| `parseZoned(input)`                       | Parse a zoned ISO string to `ZonedDateTime`          | Must include offset and timezone (`[Region/City]`)            |
+| `parsePlainDateTime(input)`                       | Parse a wall-clock string to `PlainDateTime`         | No timezone attached — use `toInstant()` to pin it            |
+| `parsePlainDate(input)`                   | Parse a date-only string to `PlainDate`              | Use instead of `Temporal.PlainDate.from()`                    |
+| `parseDate(input)`                         | Parse any ISO 8601 string to the most specific type  | Tries ZonedDateTime → Instant → PlainDateTime → PlainDate     |
 | `isValid(value)`                          | Type guard for any `TimeInput`                       | Returns `false` for strings, numbers, and `null`              |
 | `toInstant(input, options?)`              | Normalize any input to a UTC instant                 | Plain inputs require `options.tz`                             |
 | `toZoned(input, options)`                 | Project a time into a specific timezone              | `options.tz` is required                                      |
@@ -38,8 +41,8 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 | `classify(date, thresholds, options?)`    | `expires` + `timeDiff` in one call                   | Returns `{ key, diff }` — `key` is `null` when no match      |
 | `timeDiff(a, b?, options?)`               | Largest-unit difference as `{ unit, value }`         | No `tz` needed when both inputs are `Instant`                 |
 | `humanize(diff)`                          | `TimeDiffResult` → human-readable string             | Singular/plural handled automatically                         |
-| `dateRange(start, end, step, options)`    | Lazy generator of `ZonedDateTime` values             | `step` must advance time forward; `options.tz` required       |
-| `recurrence(start, rule, options)`        | Lazy generator for repeating dates                   | `count` or `until` required (enforced at compile time)        |
+| `dateRange(start, end, step, options?)`   | Lazy generator of `ZonedDateTime` values             | `step` must advance time forward; `tz` inferred from `ZonedDateTime`, required otherwise |
+| `recurrence(start, rule, options?)`       | Lazy generator for repeating dates                   | `count` or `until` required; `tz` inferred from `ZonedDateTime` start                   |
 
 ## Package Entry Point
 
@@ -66,10 +69,13 @@ import {
   isSame,
   isValid,
   now,
-  parseAny,
+  nowInstant,
+  parseDate,
   parseDuration,
   parseInstant,
-  parseLocal,
+  parsePlainDateTime,
+  parsePlainDate,
+  parseZoned,
   recurrence,
   shift,
   startOf,
@@ -80,7 +86,8 @@ import {
 } from '@vielzeug/tempo';
 ```
 
-`Temporal` is re-exported directly — consumers never need to import `@js-temporal/polyfill` themselves.
+`Temporal` is re-exported directly — consumers never need to import `@js-temporal/polyfill` themselves. The parse helpers (`parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`) cover all common Temporal constructor patterns so you rarely need to access `Temporal.*` directly.
+
 
 ## Core Functions
 
@@ -104,10 +111,72 @@ now('Asia/Tokyo');
 
 ---
 
-### `parseLocal(input): Temporal.PlainDateTime`
+### `nowInstant(): Temporal.Instant`
 
 ```ts
-parseLocal(input: string): Temporal.PlainDateTime;
+nowInstant(): Temporal.Instant;
+```
+
+Returns the current absolute instant (UTC point in time). Use this instead of `Temporal.Now.instant()` so your code only imports from `@vielzeug/tempo`.
+
+**Example:**
+
+```ts
+import { expires, nowInstant, timeDiff } from '@vielzeug/tempo';
+
+// Snapshot the current instant
+const t = nowInstant();
+
+timeDiff(t); // { unit: 'millisecond', value: 0 }
+expires(t, { expired: { days: 0 }, safe: { years: 100 } }); // 'safe'
+```
+
+---
+
+### `parseZoned(input): Temporal.ZonedDateTime`
+
+```ts
+parseZoned(input: string): Temporal.ZonedDateTime;
+```
+
+Parses a full ISO 8601 zoned date-time string (must include both offset and `[Region/City]` identifier) into a `ZonedDateTime`. Throws a descriptive `[tempo]` error on invalid input. Use instead of `Temporal.ZonedDateTime.from()`.
+
+**Example:**
+
+```ts
+import { parseZoned } from '@vielzeug/tempo';
+
+parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+parseZoned('2026-03-21T00:00:00[UTC]');
+```
+
+---
+
+### `parsePlainDate(input): Temporal.PlainDate`
+
+```ts
+parsePlainDate(input: string): Temporal.PlainDate;
+```
+
+Parses an ISO 8601 date-only string into a timezone-free `PlainDate`. Use this instead of `Temporal.PlainDate.from()`. Pair with `toInstant()` or `toZoned()` when a timezone is needed.
+
+**Example:**
+
+```ts
+import { parsePlainDate, toZoned } from '@vielzeug/tempo';
+
+parsePlainDate('2026-03-21'); // 2026-03-21
+
+// Attach a timezone when needed
+toZoned(parsePlainDate('2026-03-21'), { tz: 'America/New_York' });
+```
+
+---
+
+### `parsePlainDateTime(input): Temporal.PlainDateTime`
+
+```ts
+parsePlainDateTime(input: string): Temporal.PlainDateTime;
 ```
 
 Parses an ISO 8601 date or date-time string into a timezone-free `PlainDateTime`. Use this at the boundary where user input or database values arrive as wall-clock strings.
@@ -115,10 +184,10 @@ Parses an ISO 8601 date or date-time string into a timezone-free `PlainDateTime`
 **Example:**
 
 ```ts
-import { parseLocal } from '@vielzeug/tempo';
+import { parsePlainDateTime } from '@vielzeug/tempo';
 
-parseLocal('2026-03-21');             // 2026-03-21T00:00:00
-parseLocal('2026-03-21T10:15:30');   // 2026-03-21T10:15:30
+parsePlainDateTime('2026-03-21');             // 2026-03-21T00:00:00
+parsePlainDateTime('2026-03-21T10:15:30');   // 2026-03-21T10:15:30
 ```
 
 ---
@@ -142,10 +211,10 @@ parseInstant('2026-03-21T11:15:30+01:00');
 
 ---
 
-### `parseAny(input): TimeInput`
+### `parseDate(input): TimeInput`
 
 ```ts
-parseAny(input: string): TimeInput;
+parseDate(input: string): TimeInput;
 ```
 
 Parses any ISO 8601 string into the most specific `TimeInput` type, trying in order: `ZonedDateTime` → `Instant` → `PlainDateTime` → `PlainDate`. Throws a descriptive `TypeError` if none match.
@@ -153,12 +222,12 @@ Parses any ISO 8601 string into the most specific `TimeInput` type, trying in or
 **Example:**
 
 ```ts
-import { parseAny } from '@vielzeug/tempo';
+import { parseDate } from '@vielzeug/tempo';
 
-parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
-parseAny('2026-03-21T10:00:00Z');                     // Instant
-parseAny('2026-03-21T10:00:00');                      // PlainDateTime
-parseAny('2026-03-21');                               // PlainDate
+parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
+parseDate('2026-03-21T10:00:00Z');                     // Instant
+parseDate('2026-03-21T10:00:00');                      // PlainDateTime
+parseDate('2026-03-21');                               // PlainDate
 ```
 
 ---
@@ -201,12 +270,12 @@ Normalizes any `TimeInput` to an absolute `Temporal.Instant`.
 **Example:**
 
 ```ts
-import { parseLocal, toInstant } from '@vielzeug/tempo';
+import { parsePlainDateTime, toInstant } from '@vielzeug/tempo';
 
 toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
-toInstant(parseLocal('2026-03-21T10:15:30'), { tz: 'America/New_York' });
+toInstant(parsePlainDateTime('2026-03-21T10:15:30'), { tz: 'America/New_York' });
 // DST fall-back: pick the earlier occurrence of the ambiguous hour
-toInstant(parseLocal('2026-11-01T01:30:00'), { tz: 'America/New_York', prefer: 'earlier' });
+toInstant(parsePlainDateTime('2026-11-01T01:30:00'), { tz: 'America/New_York', prefer: 'earlier' });
 ```
 
 ---
@@ -842,18 +911,20 @@ humanize(timeDiff(publishedAt)); // '3 days'
 
 ## Range and Recurrence
 
-### `dateRange(start, end, step, options): Generator<Temporal.ZonedDateTime>`
+### `dateRange(start, end, step, options?): Generator<Temporal.ZonedDateTime>`
 
 ```ts
 dateRange(
   start: TimeInput,
   end: TimeInput,
   step: Temporal.DurationLike,
-  options: TimeOptionsWithTz,
+  options?: TimeOptions,
 ): Generator<Temporal.ZonedDateTime>;
 ```
 
 Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive), advancing by `step`. Returns a generator — use `for...of` for lazy consumption or spread (`[...dateRange(...)]`) to collect into an array. Returns nothing when `start > end`. Throws `RangeError` if `step` does not advance the date forward.
+
+When `start` is a `ZonedDateTime`, `options.tz` is inferred from it automatically. If `end` is in a different timezone it is silently re-projected into `start`'s timezone. Pass `options.tz` explicitly to override. For plain inputs, `options.tz` is required.
 
 **Example:**
 
@@ -863,32 +934,35 @@ import { dateRange } from '@vielzeug/tempo';
 const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
 const end   = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
 
-// Lazy — safe for large ranges
-for (const day of dateRange(start, end, { days: 1 }, { tz: 'UTC' })) {
+// ZonedDateTime inputs — tz inferred, no need to pass options
+for (const day of dateRange(start, end, { days: 1 })) {
   render(day);
   if (someCondition) break; // safe to break early
 }
 
 // Collect to array
-const days = [...dateRange(start, end, { days: 1 }, { tz: 'UTC' })];
+const days = [...dateRange(start, end, { days: 1 })];
 // [Mar 1, Mar 2, ..., Mar 31]
+
+// Plain inputs still require tz
+const days = [...dateRange(Temporal.PlainDate.from('2026-03-01'), Temporal.PlainDate.from('2026-03-31'), { days: 1 }, { tz: 'UTC' })];
 ```
 
 ---
 
-### `recurrence(start, rule, options): Generator<Temporal.ZonedDateTime>`
+### `recurrence(start, rule, options?): Generator<Temporal.ZonedDateTime>`
 
 ```ts
 recurrence(
   start: TimeInput,
   rule: RecurrenceRule,
-  options: TimeOptionsWithTz,
+  options?: TimeOptions,
 ): Generator<Temporal.ZonedDateTime>;
 ```
 
 Lazily generates `ZonedDateTime` occurrences according to a recurrence rule. Supports `daily`, `weekly`, `monthly`, and `yearly` frequencies.
 
-Either `count` or `until` (or both) **must** be provided — this is enforced at compile time by the `RecurrenceRule` type and validated eagerly at call time for JavaScript callers.
+Either `count` or `until` (or both) **must** be provided — this is enforced at compile time by the `RecurrenceRule` type and validated eagerly at call time for JavaScript callers. When `start` is a `ZonedDateTime`, `options.tz` is inferred automatically.
 
 **Parameters — `RecurrenceRule`:**
 
@@ -906,17 +980,21 @@ import { recurrence } from '@vielzeug/tempo';
 
 const start = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
 
-// Every Monday for 4 weeks
-const mondays = [...recurrence(start, { frequency: 'weekly', count: 4 }, { tz: 'Europe/Berlin' })];
+// ZonedDateTime start — tz inferred, no options needed
+const mondays = [...recurrence(start, { frequency: 'weekly', count: 4 })];
 
 // Bi-weekly meetings until a deadline
 const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
-for (const meeting of recurrence(start, { frequency: 'weekly', interval: 2, until: deadline }, { tz: 'Europe/Berlin' })) {
+for (const meeting of recurrence(start, { frequency: 'weekly', interval: 2, until: deadline })) {
   schedule(meeting);
 }
 
-// Every 3 months, 6 times
-const quarters = [...recurrence(start, { frequency: 'monthly', interval: 3, count: 6 }, { tz: 'UTC' })];
+// Plain input — tz required
+const quarters = [...recurrence(
+  Temporal.Instant.from('2026-01-05T09:00:00Z'),
+  { frequency: 'monthly', interval: 3, count: 6 },
+  { tz: 'UTC' },
+)];
 ```
 
 ## Types

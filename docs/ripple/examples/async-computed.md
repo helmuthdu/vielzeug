@@ -1,13 +1,17 @@
 ---
-title: Ripple — Async Computed Example
-description: Reactive async data fetching with asyncComputed.
+title: 'Ripple Examples — Async Computed'
+description: 'Async Computed example for @vielzeug/ripple.'
 ---
 
-# Async Computed
+## Async Computed
 
-`asyncComputed` tracks reactive dependencies and re-runs an async factory whenever they change. The in-flight request is automatically aborted when the factory supersedes itself or is disposed.
+### Problem
 
-## Basic User Fetching
+You need to fetch data reactively — re-running the fetch whenever a reactive dependency changes, automatically cancelling the in-flight request, and tracking loading/error/fulfilled state.
+
+### Solution
+
+Use `asyncComputed()` to wrap an async factory. Dependencies read synchronously before the first `await` are tracked. The factory receives an `AbortSignal` that fires when it is superseded or disposed.
 
 ```ts
 import { signal, effect, asyncComputed } from '@vielzeug/ripple';
@@ -37,17 +41,16 @@ effect(() => {
   }
 });
 
-// Change the dep — aborts the in-flight fetch and re-runs
-userId.value = 'u2';
-
-// Dispose when done
-user.dispose();
+userId.value = 'u2'; // aborts the in-flight fetch and re-runs
+user.dispose();      // cancel and detach
 ```
 
-## With an Initial Loading Value
+#### With an Initial Loading Value
+
+Provide `initialValue` to show a placeholder while the factory runs for the first time:
 
 ```ts
-import { asyncComputed } from '@vielzeug/ripple';
+import { signal, asyncComputed } from '@vielzeug/ripple';
 
 const q = signal('ripple');
 
@@ -61,13 +64,14 @@ const results = asyncComputed(
 );
 ```
 
-## Status Lifecycle
+### Pitfalls
 
-```
-'idle'       → first read before any run starts
-'pending'    → factory running (value is initialValue or last resolved value)
-'fulfilled'  → factory resolved; value is the result
-'error'      → factory threw or fetch was not ok; error is the caught exception
-```
+- Dependencies must be read **synchronously** before the first `await`. Reads inside `await` expressions are not tracked.
+- When a dep changes while a fetch is in flight, the old `AbortSignal` fires and status immediately returns to `'pending'`. Always pass the `signal` argument to `fetch()` to respect cancellation.
+- `asyncComputed` does not retry on error. Handle retries inside the factory by catching and re-throwing after a delay.
 
-When a dep changes while a fetch is in flight, the old request is aborted via `AbortSignal` and the status returns to `'pending'` immediately.
+### Related
+
+- [Usage Guide — Async Computed](../usage.md#async-computed)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)
+- [Signals](./signals.md)

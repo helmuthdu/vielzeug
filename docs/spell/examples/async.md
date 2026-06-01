@@ -1,70 +1,59 @@
 ---
-title: 'Spell Examples — Async Validation'
-description: 'Async validation example for @vielzeug/spell.'
+title: 'Spell Examples — Async Business Rules'
+description: 'Attach asynchronous business checks to spell schemas and parse them safely.'
 ---
 
-## Async Validation
+## Async Business Rules
 
 ### Problem
 
-Validate values that depend on asynchronous checks such as uniqueness, account state, or external policy rules.
+A value can be structurally valid but still fail business rules such as uniqueness or reserved names. Those checks usually need async I/O.
 
 ### Solution
 
-Use `.checkAsync()` on any schema combined with `safeParseAsync()` or `parseAsync()` to run async validators such as database lookups or external policy checks.
+Keep structural checks in the schema and move async business rules into `checkAsync()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const UsernameSchema = s
-  .string()
-  .min(3)
-  .checkAsync(async (value) => {
-    const exists = await db.users.exists({ username: value });
-    return !exists || 'Username already taken';
-  });
+const takenEmails = new Set(['ada@example.com']);
+const bannedDomains = new Set(['example.org']);
 
-const result = await UsernameSchema.safeParseAsync(input.username);
+async function isEmailAvailable(value: string) {
+  return !takenEmails.has(value);
+}
 
-const CompanyEmailSchema = s
-  .string()
-  .email()
-  .checkAsync(async (value) => {
+const Account = s.object({
+  email: s.string().email().checkAsync(async (value, ctx) => {
     const domain = value.split('@')[1] ?? '';
-    return allowedDomains.has(domain.toLowerCase()) || `${value} is not an allowed company email`;
-  });
 
-const InviteSchema = s
-  .object({
-    workspaceId: s.string().uuid(),
-    email: s.string().email(),
-  })
-  .checkAsync(async ({ workspaceId, email }) => {
-    return !(await db.invites.exists({ workspaceId, email })) || 'Invite already exists for this user and workspace';
-  });
+    if (bannedDomains.has(domain)) {
+      ctx.addIssue('custom', 'Email domain is blocked');
+    }
 
-await InviteSchema.parseAsync(payload);
+    if (!(await isEmailAvailable(value))) {
+      ctx.addIssue('custom', 'Email is already in use');
+    }
+  }),
+  password: s.string().min(12),
+});
 
-const TeamSlugSchema = s
-  .string()
-  .min(3)
-  .regex(/^[a-z0-9-]+$/)
-  .checkAsync(async (value) => {
-    const exists = await db.teams.exists({ slug: value });
-    return !exists || 'Slug already in use';
-  });
+const result = await Account.safeParseAsync({
+  email: 'grace@example.com',
+  password: 'horse-battery-staple',
+});
 
-await TeamSlugSchema.parseAsync('platform-team');
+console.log(result.success);
 ```
 
 ### Pitfalls
 
-- Calling `.parse()` or `.safeParse()` on schemas with `checkAsync()` functions.
-- Running side effects inside async `check()` functions that are not safe to retry.
-- Forgetting to debounce or batch high-volume availability checks in UI code.
+- Async checks require `parseAsync()` or `safeParseAsync()`. The synchronous APIs cannot await nested rules.
+- Keep I/O inside `checkAsync()`, not inside `transform()`. Validation failures should stay in the issue model.
+- If you need multiple issues, call `ctx.addIssue()` more than once instead of throwing early.
 
 ### Related
 
-- [API](./api.md)
-- [Forms](./forms.md)
-- [Unions](./unions.md)
+- [Usage Guide](../usage.md)
+- [API Reference](../api.md)
+- [Validating API Payloads](./api.md)

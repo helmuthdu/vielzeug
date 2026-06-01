@@ -2,7 +2,18 @@
 export { Temporal } from '@js-temporal/polyfill';
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
-export { difference, isValid, now, parseAny, parseInstant, parseLocal, shift } from './core';
+export {
+  difference,
+  isValid,
+  now,
+  nowInstant,
+  parseDate,
+  parseInstant,
+  parsePlainDate,
+  parsePlainDateTime,
+  parseZoned,
+  shift,
+} from './core';
 
 // ─── Internal utilities (public API) ─────────────────────────────────────────
 export { toInstant, toZoned } from './internal';

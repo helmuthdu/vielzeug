@@ -38,7 +38,7 @@ export type OverlayControlOptions = {
   onOpen?: (reason: OverlayOpenReason) => void;
   positioner?: OverlayPositioner;
   restoreFocus?: boolean | (() => boolean);
-  setOpen: ((next: true, reason: OverlayOpenReason) => void) & ((next: false, reason: DialogCloseReason) => void);
+  setOpen: (next: boolean, reason: OverlayOpenReason | DialogCloseReason) => void;
   /**
    * Optional `AbortSignal`. When provided, `cleanup()` is called automatically
    * on abort (closes the overlay, removes all listeners).
@@ -117,7 +117,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     options.onOpen?.(reason);
   };
 
-  const close = (reason: DialogCloseReason = 'programmatic', restoreFocus?: boolean): void => {
+  const close = (reason: DialogCloseReason = 'programmatic', restoreFocus?: boolean, silent = false): void => {
     if (!options.isOpen()) return;
 
     options.setOpen(false, reason);
@@ -132,7 +132,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
     if (restore) options.getTrigger?.()?.focus();
 
-    options.onClose?.(reason);
+    if (!silent) options.onClose?.(reason);
   };
 
   const toggle = (openReason: OverlayOpenReason = 'click', closeReason: DialogCloseReason = 'trigger'): void => {
@@ -144,8 +144,8 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
   };
 
   const cleanup = (): void => {
-    // Close first so onClose fires and callers can react.
-    if (options.isOpen()) close('programmatic', false);
+    // Close silently — teardown should not fire onClose callbacks.
+    if (options.isOpen()) close('programmatic', false, true);
 
     registerClickListener(false);
 

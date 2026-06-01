@@ -15,11 +15,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./test": {
-      "source": "./src/test/test.ts",
-      "types": "./dist/test.d.ts",
-      "import": "./dist/test.js",
-      "require": "./dist/test.cjs"
+    "./testing": {
+      "source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     }
   },
   "scripts": {

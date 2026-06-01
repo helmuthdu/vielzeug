@@ -16,14 +16,19 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 | `list-components` | Sigil component tag list | Sync | `isError: true` if Sigil CEM not in snapshot |
 | `get-component` | Single Sigil CEM declaration | Sync | `isError: true` lists available tags on miss |
 | `createServer()` | Programmatic server factory | Sync | Requires pre-loaded `BundledData` — call `loadData()` first |
+| `loadData()` | Load and validate bundled snapshot | Sync | Throws with an actionable message on missing or malformed data |
+| `packageMeta()` | Strip heavy fields from a `BundledPackage` | Sync | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
+| `validateBundledData()` | Validate raw JSON against `BundledData` shape | Sync | Use when loading data from a custom path |
 
 ## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/codex` | Programmatic API (`createServer`) |
+| `@vielzeug/codex` | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, and all types |
+| `@vielzeug/codex/data` | `loadData`, `packageMeta`, `validateBundledData` (subpath import) |
+| `@vielzeug/codex/generator` | `generateBundledData` (build-time use only) |
 
-The CLI binary (`vielzeug-mcp`) is the primary runtime interface; direct imports are for custom server wiring only.
+The CLI binary (`vielzeug-mcp`) is the primary runtime interface; direct imports are for custom server wiring.
 
 ## Tools
 
@@ -109,6 +114,7 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
 | --- | --- | --- |
 | 3 | `"metadata"` | `name`, `description`, `category` |
 | 2 | `"keywords"` | `keywords` array |
+| 2 | `"exports"` | `exports` array (exported symbol names) |
 | 1 | `"docs"` | All doc pages and `src/index.ts` (`matchedPages` lists which) |
 
 Results are sorted by `score` descending, then `slug` ascending. Multiple categories can match simultaneously.
@@ -192,31 +198,89 @@ Resources follow the MCP `resources/list` and `resources/read` protocol.
 ### `createServer()`
 
 ```ts
-import { createServer } from '@vielzeug/codex';
-import { loadData } from '@vielzeug/codex/data';
-
 createServer(data: BundledData): Server;
 ```
 
-Creates and returns an MCP `Server` instance with all tools and resources registered. Call `loadData()` to obtain `BundledData` before passing it in.
+Creates and returns an MCP `Server` instance with all tools and resources registered.
 
 **Parameters:**
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `data` | `BundledData` | Validated bundled snapshot loaded via `loadData()` |
+| `data` | `BundledData` | Validated bundled snapshot — call `loadData()` to obtain it |
 
 **Returns:** `Server` from `@modelcontextprotocol/sdk`
 
 **Example:**
 
 ```ts
-import { createServer } from '@vielzeug/codex';
-import { loadData } from '@vielzeug/codex/data';
+import { createServer, loadData } from '@vielzeug/codex';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = createServer(loadData());
 await server.connect(new StdioServerTransport());
+```
+
+---
+
+### `loadData()`
+
+```ts
+loadData(): BundledData;
+```
+
+Reads and validates the bundled snapshot from disk. Throws synchronously with an actionable error message if the file is missing, malformed, or fails schema validation.
+
+**Returns:** `BundledData`
+
+**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed.
+
+---
+
+### `packageMeta()`
+
+```ts
+packageMeta(pkg: BundledPackage): PackageMeta;
+```
+
+Strips `docs`, `apiSource`, and `components` from a `BundledPackage` and adds `hasSource`. Use this to produce lightweight metadata for tool responses.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `pkg` | `BundledPackage` | Full package record from `BundledData.packages` |
+
+**Returns:** `PackageMeta`
+
+---
+
+### `validateBundledData()`
+
+```ts
+validateBundledData(raw: unknown): BundledData;
+```
+
+Validates that `raw` conforms to the top-level `BundledData` shape (checks `version: string`, `packages: array`, and `slug`/`name` per entry). Use when loading data from a custom path instead of `loadData()`.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `raw` | `unknown` | Parsed JSON to validate |
+
+**Returns:** `BundledData` (cast after validation)
+
+**Throws:** `Error` with a descriptive message on schema failure.
+
+**Example:**
+
+```ts
+import { validateBundledData } from '@vielzeug/codex';
+import { readFileSync } from 'node:fs';
+
+const raw = JSON.parse(readFileSync('./my-snapshot.json', 'utf8'));
+const data = validateBundledData(raw); // throws if invalid
 ```
 
 ---
@@ -271,7 +335,7 @@ Result shape for `search-packages`.
 
 ```ts
 interface SearchHit {
-  matchedIn: Array<'docs' | 'keywords' | 'metadata'>;
+  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata'>;
   matchedPages?: string[];
   name: string;
   score: number;

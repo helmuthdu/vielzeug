@@ -129,6 +129,13 @@ describe('owns', () => {
 
     expect(pred({ data: 'hello', principal: { id: 'u1', roles: [] } })).toBe(false);
   });
+
+  it('returns false when the attribute is inherited (not own property)', () => {
+    const pred = owns<{ toString: string }>('toString');
+    const data = Object.create({ toString: 'u1' }) as { toString: string };
+
+    expect(pred({ data, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

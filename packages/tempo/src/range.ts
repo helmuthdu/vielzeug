@@ -1,8 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { RecurrenceRule, TimeInput, TimeOptionsWithTz } from './types';
+import type { RecurrenceRule, TimeInput, TimeOptions } from './types';
 
-import { toInstant, toZoned } from './internal';
+import { inferTimeZone, toInstant, toZoned } from './internal';
 
 /**
  * Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive),
@@ -13,6 +13,10 @@ import { toInstant, toZoned } from './internal';
  *
  * @throws {RangeError} when `step` does not advance the date forward.
  *
+ * When `start` is a `ZonedDateTime`, the timezone is inferred from it. If `end` is in a
+ * different timezone, it is silently re-projected into `start`'s timezone. Pass `options.tz`
+ * explicitly to override.
+ *
  * @example
  * ```ts
  * // Lazy — safe for large ranges
@@ -22,11 +26,15 @@ import { toInstant, toZoned } from './internal';
  *
  * // Collect to array
  * const days = [...dateRange(start, end, { days: 1 }, { tz: 'UTC' })];
+ *
+ * // ZonedDateTime inputs — tz is inferred, no need to pass options
+ * const days = [...dateRange(zdtStart, zdtEnd, { days: 1 })];
  * ```
  */
-export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options: TimeOptionsWithTz) {
-  const startZoned = toZoned(start, options);
-  const endZoned = toZoned(end, options);
+export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options: TimeOptions = {}) {
+  const tz = inferTimeZone(start, options);
+  const startZoned = toZoned(start, { ...options, tz });
+  const endZoned = toZoned(end, { ...options, tz });
 
   if (Temporal.ZonedDateTime.compare(startZoned.add(step), startZoned) <= 0) {
     throw new RangeError('dateRange: step must advance the date forward');
@@ -57,12 +65,17 @@ export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.Dura
  * for (const date of recurrence(start, { frequency: 'weekly', interval: 2, until: deadline }, { tz: 'UTC' })) {
  *   schedule(date);
  * }
+ *
+ * // ZonedDateTime start — tz is inferred, no need to pass options
+ * for (const date of recurrence(zdtStart, { frequency: 'daily', count: 7 })) {
+ *   schedule(date);
+ * }
  * ```
  */
 export function recurrence(
   start: TimeInput,
   rule: RecurrenceRule,
-  options: TimeOptionsWithTz,
+  options: TimeOptions = {},
 ): Generator<Temporal.ZonedDateTime> {
   const { count, frequency, interval = 1, until } = rule;
 
@@ -70,6 +83,8 @@ export function recurrence(
   if (count === undefined && until === undefined) {
     throw new RangeError('recurrence: either count or until must be specified to prevent unbounded generation');
   }
+
+  const tz = inferTimeZone(start, options);
 
   const step: Temporal.DurationLike =
     frequency === 'daily'
@@ -80,20 +95,27 @@ export function recurrence(
           ? { months: interval }
           : { years: interval };
 
-  const endInstant = until !== undefined ? toInstant(until, options) : undefined;
+  const endInstant = until !== undefined ? toInstant(until, { ...options, tz }) : undefined;
 
-  return (function* () {
-    let current = toZoned(start, options);
-    let emitted = 0;
+  return recurrenceGenerator(toZoned(start, { ...options, tz }), step, count, endInstant);
+}
 
-    while (true) {
-      if (count !== undefined && emitted >= count) break;
+function* recurrenceGenerator(
+  start: Temporal.ZonedDateTime,
+  step: Temporal.DurationLike,
+  count: number | undefined,
+  endInstant: Temporal.Instant | undefined,
+): Generator<Temporal.ZonedDateTime> {
+  let current = start;
+  let emitted = 0;
 
-      if (endInstant !== undefined && Temporal.Instant.compare(current.toInstant(), endInstant) > 0) break;
+  while (true) {
+    if (count !== undefined && emitted >= count) break;
 
-      yield current;
-      emitted++;
-      current = current.add(step);
-    }
-  })();
+    if (endInstant !== undefined && Temporal.Instant.compare(current.toInstant(), endInstant) > 0) break;
+
+    yield current;
+    emitted++;
+    current = current.add(step);
+  }
 }

@@ -34,13 +34,13 @@ export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal
   if (input instanceof Temporal.PlainDateTime) {
     if (!options.tz) fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.');
 
-    return input.toZonedDateTime(options.tz, { disambiguation: options.prefer }).toInstant();
+    return input.toZonedDateTime(validateTz(options.tz), { disambiguation: options.prefer }).toInstant();
   }
 
   if (input instanceof Temporal.PlainDate) {
     if (!options.tz) fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.');
 
-    return input.toZonedDateTime({ timeZone: options.tz }).toInstant();
+    return input.toZonedDateTime({ timeZone: validateTz(options.tz) }).toInstant();
   }
 
   fail(`Unsupported time input type: ${String(input)}`);
@@ -50,17 +50,19 @@ export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal
  * Projects any {@link TimeInput} into a specific timezone as a `ZonedDateTime`.
  */
 export function toZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime {
-  if (input instanceof Temporal.ZonedDateTime) return input.withTimeZone(options.tz);
+  const tz = validateTz(options.tz);
+
+  if (input instanceof Temporal.ZonedDateTime) return input.withTimeZone(tz);
 
   if (input instanceof Temporal.PlainDateTime) {
-    return input.toZonedDateTime(options.tz, { disambiguation: options.prefer });
+    return input.toZonedDateTime(tz, { disambiguation: options.prefer });
   }
 
   if (input instanceof Temporal.PlainDate) {
-    return input.toZonedDateTime({ timeZone: options.tz });
+    return input.toZonedDateTime({ timeZone: tz });
   }
 
-  if (input instanceof Temporal.Instant) return input.toZonedDateTimeISO(options.tz);
+  if (input instanceof Temporal.Instant) return input.toZonedDateTimeISO(tz);
 
   fail(`Unsupported time input type: ${String(input)}`);
 }

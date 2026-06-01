@@ -309,7 +309,7 @@ address.submit((vals) => save(vals)); // validates and submits only address.* sc
 **Characteristics:**
 
 - `dispose()` on a scoped form is a no-op. Call `parentForm.dispose()` to tear down.
-- `state` is shared — `state.errors`, `state.isValid`, `state.touchedFields`, and `state.isDirty` reflect the **entire** form, not just the scoped fields. Use `scope.validate()` or `scope.submit()` for scoped validity.
+- `scope.state` reflects the **entire** form — `state.isDirty`, `state.isValid`, etc. are not scoped. Use `scope.validate()` or `scope.submit()` for scoped validity, or use `scope.subscribeScoped()` for a projected state where `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only the scope's fields.
 - `validate()` and `submit()` return errors with relative keys (no prefix) and a `valid` flag reflecting only the scoped fields.
 - `validateFields([...])` on a scoped form also returns relative keys and a scoped `valid` flag.
 
@@ -346,7 +346,7 @@ Subscriptions fire synchronously whenever the form mutates. Because state snapsh
 
 `subscribeScoped` is available on both root forms and scoped forms:
 
-- **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. All other state flags (`isDirty`, `isValid`, `isSubmitting`, …) reflect the full form.
+- **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
 - **On a root form** — behaves identically to `subscribe`; no filtering is applied.
 
 ```ts
@@ -380,6 +380,8 @@ type ArrayField = {
 `form.array(name)` returns a cached helper — the same object is returned on repeated calls with the same name.
 
 ---
+
+## Snapshot / Restore
 
 ```ts
 snapshot(): FormSnapshot<TValues>
@@ -452,8 +454,8 @@ resetField(name: FlatKeyOf<TValues>): void
 removeField(name: FlatKeyOf<TValues>): void
 ```
 
-- `reset()` — restore all values to the current baseline; clear errors, touched, and dirty state. Aborts in-flight validation.
-- `replace(newValues)` — replace values **and** the baseline in one operation. Aborts in-flight validation.
+- `reset()` — restore all values to the current baseline; clear errors, touched, dirty, and `submitCount`. Aborts in-flight validation.
+- `replace(newValues)` — replace values **and** the baseline in one operation; resets `submitCount` to `0`. Aborts in-flight validation.
 - `patch(partial)` — merge specific fields into the store and baseline; those fields become clean.
 - `resetField(name)` — restore one field to its baseline value; clear its error, touched, and dirty state.
 - `removeField(name)` — drop a field entirely: value, dirty, touched, error, and validator.

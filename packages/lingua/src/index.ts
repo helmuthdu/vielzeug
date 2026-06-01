@@ -21,6 +21,7 @@ export type {
   NamespaceFactory,
   ScopedI18n,
   SubscribeOptions,
+  TpOptions,
   TranslateVars,
   Unsubscribe,
   ValidationWarning,

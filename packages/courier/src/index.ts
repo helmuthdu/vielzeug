@@ -15,7 +15,8 @@ export type {
   Unsubscribe,
 } from './types';
 
-// Retry options (type only)
+// Retry options and delay resolver
+export { NO_RETRY, resolveRetryDelay } from './retry';
 export type { RetryOptions } from './retry';
 
 // URL / request config
@@ -24,8 +25,9 @@ export type { CourierRequestConfig, HttpRequestConfig, ParamValue, Params, PathC
 // Response parsing
 export type { ResponseType } from './response';
 
-// Transport interceptor types (TransportCore/TransportOptions are internal plumbing)
-export type { FetchContext, Interceptor } from './transport';
+// Transport — shared pipeline exposed for advanced use
+export { createTransportCore } from './transport';
+export type { FetchContext, Interceptor, TransportCore, TransportOptions } from './transport';
 
 // API client
 export { createApi } from './api';

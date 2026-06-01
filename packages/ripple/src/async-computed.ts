@@ -41,6 +41,7 @@ export const asyncComputed = <T>(
 
   const state = signal<AsyncComputedState<T>>(initialState);
   let controller: AbortController | null = null;
+  let disposed = false;
 
   const stop = effect(() => {
     // Abort any previous run
@@ -65,11 +66,11 @@ export const asyncComputed = <T>(
       try {
         const result = await factory(abortSignal);
 
-        if (!abortSignal.aborted) {
+        if (!abortSignal.aborted && !disposed) {
           state.value = { error: undefined, status: 'fulfilled', value: result };
         }
       } catch (err) {
-        if (!abortSignal.aborted) {
+        if (!abortSignal.aborted && !disposed) {
           state.value = {
             error: err,
             status: 'error',
@@ -85,9 +86,11 @@ export const asyncComputed = <T>(
   const disposeView = view.dispose.bind(view);
 
   const dispose = (): void => {
+    disposed = true;
     controller?.abort();
     stop.dispose();
     disposeView();
+    state.dispose();
   };
 
   return Object.assign(view, { dispose, [Symbol.dispose]: dispose }) as unknown as AsyncComputedSignal<T>;

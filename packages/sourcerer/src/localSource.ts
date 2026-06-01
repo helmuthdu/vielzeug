@@ -21,7 +21,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
   const hasAsync = !!(cfg.filterAsync ?? cfg.sortAsync);
 
   // ── Mutable state ───────────────────────────────────────────────────────────
-  let rawData: readonly T[] = data;
+  let rawData: readonly T[] = cfg.initialData ?? data;
   let filterFn: ((item: T, index: number, arr: readonly T[]) => boolean) | undefined = cfg.filter;
   let sortFn: Sorter<T> | undefined = cfg.sort;
   let query = '';
@@ -183,7 +183,45 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
       return Promise.resolve();
     },
 
-    hydrate(patch) {
+    get meta() {
+      return cachedMeta;
+    },
+
+    next() {
+      const pages = pageCount(view.length, limit);
+
+      if (page >= pages) return Promise.resolve();
+
+      page++;
+      commit();
+
+      return Promise.resolve();
+    },
+
+    prev() {
+      if (page <= 1) return Promise.resolve();
+
+      page--;
+      commit();
+
+      return Promise.resolve();
+    },
+
+    ready(timeout) {
+      return core.ready(() => !isLoading && !core.isScheduled, timeout);
+    },
+
+    reset() {
+      core.cancelTimer();
+      query = '';
+      page = 1;
+      filterFn = cfg.filter;
+      sortFn = cfg.sort;
+
+      return emit();
+    },
+
+    restoreQuery(patch) {
       let changed = false;
 
       if (patch.limit !== undefined) {
@@ -226,39 +264,6 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
       }
 
       if (!changed) return Promise.resolve();
-
-      return emit();
-    },
-
-    get meta() {
-      return cachedMeta;
-    },
-
-    next() {
-      const pages = pageCount(view.length, limit);
-
-      if (page >= pages) return Promise.resolve();
-
-      page++;
-      commit();
-
-      return Promise.resolve();
-    },
-
-    prev() {
-      if (page <= 1) return Promise.resolve();
-
-      page--;
-      commit();
-
-      return Promise.resolve();
-    },
-
-    reset() {
-      query = '';
-      page = 1;
-      filterFn = cfg.filter;
-      sortFn = cfg.sort;
 
       return emit();
     },

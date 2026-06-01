@@ -18,7 +18,7 @@ exports: [createServer]
 
 **Package:** `@vielzeug/codex` &nbsp;·&nbsp; **Category:** AI Tooling
 
-**Key exports:** `createServer`
+**Key exports:** `createServer`, `loadData`, `packageMeta`, `validateBundledData`
 
 **When to use:** You want AI clients to query Vielzeug docs and package metadata through a compact MCP tool set.
 
@@ -87,8 +87,7 @@ The server also exposes MCP Resources readable by URI:
 `createServer(data)` is exported for custom runtime wiring.
 
 ```ts
-import { createServer } from '@vielzeug/codex';
-import { loadData } from '@vielzeug/codex/data';
+import { createServer, loadData } from '@vielzeug/codex';
 
 const server = createServer(loadData());
 ```

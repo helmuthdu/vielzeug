@@ -157,6 +157,66 @@ describe('beforeLeave', () => {
   });
 });
 
+describe('NavigationDestination', () => {
+  it('passes destination pathname, params, query, and name to the blocker', async () => {
+    let captured: import('../').NavigationDestination | undefined;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        userDetail: { path: '/users/:id' },
+      },
+    });
+
+    await settle();
+    router.beforeLeave(async (dest) => {
+      captured = dest;
+
+      return true;
+    });
+    await router.navigate({ name: 'userDetail', params: { id: '42' } });
+
+    expect(captured).toMatchObject({
+      name: 'userDetail',
+      params: { id: '42' },
+      pathname: '/users/42',
+    });
+    router.dispose();
+  });
+
+  it('passes destination params to blockers on popstate navigation', async () => {
+    let captured: import('../').NavigationDestination | undefined;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        userDetail: { path: '/users/:id' },
+      },
+    });
+
+    await settle();
+    router.beforeLeave(async (dest) => {
+      captured = dest;
+
+      return true;
+    });
+
+    history.push('/users/99');
+    history.push('/somewhere');
+    history.back(); // triggers history listener → navigates to /users/99
+    await settle();
+
+    expect(captured).toMatchObject({
+      name: 'userDetail',
+      params: { id: '99' },
+      pathname: '/users/99',
+    });
+    router.dispose();
+  });
+});
+
 describe('beforeLeave with route scope', () => {
   it('fires only when navigating away from the specified route', async () => {
     const blocker = vi.fn(async () => false);

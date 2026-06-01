@@ -4,6 +4,7 @@ import { multiRoleRulesExample } from './multi-role-rules';
 import { permissionChecksExample } from './permission-checks';
 import { permissionManagementExample } from './permission-management';
 import { roleHierarchyExample } from './role-hierarchy';
+import { traceDecisionExample } from './trace-decision';
 import { wildcardPermissionsExample } from './wildcard-permissions';
 
 export const wardExamples = {
@@ -13,5 +14,6 @@ export const wardExamples = {
   'permission-checks': permissionChecksExample,
   'permission-management': permissionManagementExample,
   'role-hierarchy': roleHierarchyExample,
+  'trace-decision': traceDecisionExample,
   'wildcard-permissions': wildcardPermissionsExample,
 };

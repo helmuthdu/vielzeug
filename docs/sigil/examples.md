@@ -1,13 +1,11 @@
 ---
 title: Sigil — Examples
-description: Practical examples and recipes for block.
+description: Practical examples and recipes for @vielzeug/sigil.
 ---
-
-# Sigil Examples
 
 [[toc]]
 
-## Examples Overview
+## Examples
 
 - [Guideline-Oriented Recipes](./examples/guideline-oriented-recipes.md)
 - [Common Patterns](./examples/common-patterns.md)

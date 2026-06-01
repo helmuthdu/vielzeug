@@ -1,7 +1,7 @@
 export const timezoneConversionExample = {
-  code: `import { formatInstant, formatRange, formatZoned, toZoned } from '/tempo'
+  code: `import { formatInstant, formatRange, formatZoned, parseInstant, toZoned } from '@vielzeug/tempo'
 
-const utc = Temporal.Instant.from('2026-03-21T10:15:30Z')
+const utc = parseInstant('2026-03-21T10:15:30Z')
 const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' })
 const berlin = toZoned(utc, { tz: 'Europe/Berlin' })
 

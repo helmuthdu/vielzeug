@@ -32,6 +32,57 @@ describe('optional nullable nullish required', () => {
     expect(schema.parse('hello')).toBe('hello');
   });
 
+  it('required() preserves nullability while removing undefined', () => {
+    const nullable = s.string().nullable().required();
+    const nullish = s.string().nullish().required();
+
+    expect(nullable.parse(null)).toBeNull();
+    expect(nullable.safeParse(undefined).success).toBe(false);
+    expect(nullish.parse(null)).toBeNull();
+    expect(nullish.safeParse(undefined).success).toBe(false);
+  });
+
+  it('mode merges preserve wrapper-level state', () => {
+    const schema = s
+      .string()
+      .optional()
+      .default('fallback')
+      .check((value) => value !== 'bad' || 'Bad')
+      .label('Field')
+      .nullable();
+
+    expect(schema.description).toBe('Field');
+    expect(schema.parse(undefined)).toBe('fallback');
+    expect(schema.parse(null)).toBeNull();
+
+    const result = schema.safeParse('bad');
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) expect(result.error.issues[0]!.message).toBe('Bad');
+  });
+
+  it('required() preserves wrapper defaults, labels, and checks across mode merges', () => {
+    const schema = s
+      .number()
+      .optional()
+      .default(42)
+      .check((value) => value !== 0 || 'Zero')
+      .label('Answer')
+      .required()
+      .nullable();
+
+    expect(schema.description).toBe('Answer');
+    expect(schema.parse(undefined)).toBe(42);
+    expect(schema.parse(null)).toBeNull();
+
+    const result = schema.safeParse(0);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) expect(result.error.issues[0]!.message).toBe('Zero');
+  });
+
   it('modifier inference remains correct', () => {
     const schema = s.number().nullish();
 
@@ -212,6 +263,60 @@ describe('assert()', () => {
       expect(e).toBeInstanceOf(ValidationError);
       expect((e as ValidationError).issues[0].message).not.toMatch(/^undefined:/);
     }
+  });
+});
+
+describe('equals()', () => {
+  it('returns true for structurally identical primitive schemas', () => {
+    expect(s.string().equals(s.string())).toBe(true);
+    expect(s.number().min(1).equals(s.number().min(1))).toBe(true);
+  });
+
+  it('returns false for different schema kinds', () => {
+    expect(s.string().equals(s.number())).toBe(false);
+  });
+
+  it('returns false when annotations differ', () => {
+    expect(s.string().min(3).equals(s.string().min(5))).toBe(false);
+  });
+
+  it('returns true for identical optional wrappers', () => {
+    expect(s.string().optional().equals(s.string().optional())).toBe(true);
+  });
+
+  it('returns false when wrapper modes differ', () => {
+    expect(s.string().optional().equals(s.string().nullable())).toBe(false);
+  });
+
+  it('returns true for identical object schemas', () => {
+    const a = s.object({ id: s.number(), name: s.string() });
+    const b = s.object({ id: s.number(), name: s.string() });
+
+    expect(a.equals(b)).toBe(true);
+  });
+
+  it('returns false when object shapes differ', () => {
+    expect(s.object({ a: s.string() }).equals(s.object({ b: s.string() }))).toBe(false);
+  });
+
+  it('returns false when description differs', () => {
+    expect(s.string().label('A').equals(s.string().label('B'))).toBe(false);
+  });
+
+  it('returns false when isOptional differs', () => {
+    expect(s.string().optional().equals(s.string())).toBe(false);
+  });
+});
+
+describe('walk() fallback', () => {
+  it('throws when no handler matches and no unknown fallback is provided', () => {
+    expect(() => s.string().walk({})).toThrow('[@vielzeug/spell]');
+  });
+
+  it('calls the unknown fallback when no specific handler matches', () => {
+    const result = s.string().walk({ unknown: () => 'caught' });
+
+    expect(result).toBe('caught');
   });
 });
 

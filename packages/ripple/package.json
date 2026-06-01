@@ -16,6 +16,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./debug": {
+      "source": "./src/debug.ts",
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js",
+      "require": "./dist/debug.cjs"
+    },
     "./ssr": {
       "source": "./src/ssr/index.ts",
       "types": "./dist/ssr/index.d.ts",

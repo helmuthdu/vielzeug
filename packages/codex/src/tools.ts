@@ -1,5 +1,5 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 
@@ -19,13 +19,15 @@ function error(message: string): CallToolResult {
   return { content: [{ text: message, type: 'text' }], isError: true };
 }
 
-/** Extract a non-empty trimmed string arg or return null. */
+const MAX_ARG_LENGTH = 500;
+
+/** Extract a non-empty trimmed string arg (max 500 chars) or return null. */
 function str(args: Record<string, unknown>, key: string): string | null {
   const value = args[key];
 
   if (typeof value !== 'string') return null;
 
-  const trimmed = value.trim();
+  const trimmed = value.trim().slice(0, MAX_ARG_LENGTH);
 
   return trimmed.length > 0 ? trimmed : null;
 }
@@ -48,7 +50,7 @@ interface ToolContext {
 
 interface ToolDefinition {
   description: string;
-  inputSchema: Record<string, unknown>;
+  inputSchema: Tool['inputSchema'];
   name: string;
   run: (args: Record<string, unknown>, context: ToolContext) => CallToolResult;
 }
@@ -265,6 +267,6 @@ export function registerTools(server: Server, data: BundledData): void {
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
     }
 
-    return tool.run((request.params.arguments ?? {}) as Record<string, unknown>, context);
+    return tool.run(request.params.arguments ?? {}, context);
   });
 }

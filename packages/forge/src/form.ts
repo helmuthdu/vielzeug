@@ -73,6 +73,14 @@ function resolveFormValidator<TValues extends Record<string, unknown>>(
 
 /* -------------------- createForm -------------------- */
 
+export function createForm<TInit extends object>(
+  init: Omit<FormOptions<TInit & Record<string, unknown>>, 'defaultValues'> & {
+    defaultValues: TInit | (() => Promise<TInit>);
+  },
+): Form<TInit & Record<string, unknown>>;
+export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
+  init?: FormOptions<TValues>,
+): Form<TValues>;
 export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
   init: FormOptions<TValues> = {},
 ): Form<TValues> {
@@ -861,6 +869,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     fieldErrors.clear();
     touched.clear();
     dirty.clear();
+    submitCount = 0;
     invalidateErrors();
 
     for (const [name, value] of Object.entries(flat)) {
@@ -958,9 +967,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     type Item = { error: string | undefined; field: string };
     type Resolver = (result: IteratorResult<Item, undefined>) => void;
+    type Rejecter = (err: unknown) => void;
 
     const queue: Item[] = [];
     let waitingResolve: Resolver | null = null;
+    let waitingReject: Rejecter | null = null;
     let done = false;
 
     function enqueue(item: Item): void {
@@ -968,9 +979,23 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         const resolve = waitingResolve;
 
         waitingResolve = null;
+        waitingReject = null;
         resolve({ done: false, value: item });
       } else {
         queue.push(item);
+      }
+    }
+
+    function fail(err: unknown): void {
+      done = true;
+      ctrl.abort();
+
+      if (waitingReject) {
+        const reject = waitingReject;
+
+        waitingResolve = null;
+        waitingReject = null;
+        reject(err);
       }
     }
 
@@ -984,6 +1009,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         const resolve = waitingResolve;
 
         waitingResolve = null;
+        waitingReject = null;
         resolve({ done: true, value: undefined });
       }
     }
@@ -998,8 +1024,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
           const error = await runFieldValidator(f, combined);
 
           if (!combined.aborted) enqueue({ error, field: f });
-        } catch {
-          // aborted or disposed — stop streaming
+        } catch (err) {
+          if (!isAbortError(err)) throw err;
+
+          // aborted or disposed — skip this field
         }
       }),
     )
@@ -1016,6 +1044,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
           }
         }
       })
+      .catch((err) => {
+        if (!isAbortError(err)) fail(err);
+      })
       .finally(() => finish());
 
     return {
@@ -1024,8 +1055,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
         if (done) return Promise.resolve({ done: true, value: undefined });
 
-        return new Promise<IteratorResult<Item, undefined>>((resolve) => {
+        return new Promise<IteratorResult<Item, undefined>>((resolve, reject) => {
           waitingResolve = resolve;
+          waitingReject = reject;
         });
       },
 

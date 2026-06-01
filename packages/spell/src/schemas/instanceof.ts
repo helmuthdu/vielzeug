@@ -4,6 +4,10 @@ import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class InstanceOfSchema<T> extends Schema<T> {
+  protected override get _kind(): string {
+    return 'instanceof';
+  }
+
   constructor(cls: new (...args: any[]) => T) {
     super((value) =>
       value instanceof cls

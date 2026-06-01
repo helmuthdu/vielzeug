@@ -17,10 +17,10 @@ export type Stash<T, K = string> = {
   delete: (key: K) => boolean;
   entries: () => IterableIterator<[K, T]>;
   get: (key: K) => T | undefined;
-  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions): Promise<T>;
   getOrSet(key: K, factory: () => T, options?: CacheSetOptions): T;
+  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions): Promise<T>;
   set: (key: K, value: T, options?: CacheSetOptions) => void;
-  size: () => number;
+  readonly size: number;
 };
 
 /**
@@ -45,6 +45,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
   const inFlight = new Map<string, Promise<T>>();
   const hash = options.hash;
   const onEvict = options.onEvict;
+  let generation = 0;
 
   function cancelGcByHash(keyHash: string): void {
     const id = gcTimers.get(keyHash);
@@ -119,10 +120,12 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
     const value = factory();
 
     if (value instanceof Promise) {
+      const capturedGeneration = generation;
       const promise = value
         .then((resolved) => {
           inFlight.delete(keyHash);
-          set(key, resolved, opts);
+
+          if (generation === capturedGeneration) set(key, resolved, opts);
 
           return resolved;
         })
@@ -146,6 +149,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
   }
 
   function clear(): void {
+    generation++;
     for (const id of gcTimers.values()) clearTimeout(id);
 
     if (onEvict) {
@@ -159,7 +163,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
     inFlight.clear();
   }
 
-  function size(): number {
+  function getSize(): number {
     return store.size;
   }
 
@@ -176,6 +180,8 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
     get,
     getOrSet: getOrSet as Stash<T, K>['getOrSet'],
     set,
-    size,
+    get size() {
+      return getSize();
+    },
   };
 }

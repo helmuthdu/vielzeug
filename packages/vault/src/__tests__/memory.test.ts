@@ -603,6 +603,31 @@ describe('Memory adapter', () => {
         db2.dispose();
       }
     });
+
+    test('put message with mismatched key/record primary key is discarded', async () => {
+      const db1 = createMemory({ name: 'sec-key-mismatch', schema: userSchema });
+      const db2 = createMemory({ name: 'sec-key-mismatch', schema: userSchema });
+
+      try {
+        const attacker = new BroadcastChannel('vault-memory:sec-key-mismatch');
+
+        // key claims to be "1" but value has id: 99 — key/value mismatch should be rejected
+        attacker.postMessage({
+          key: '1',
+          stored: { value: { id: 99, name: 'Injected' } },
+          table: 'users',
+          type: 'put',
+        });
+        attacker.close();
+
+        await Promise.resolve();
+
+        expect(await db2.count('users')).toBe(0);
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
   });
 
   describe('observeMany', () => {

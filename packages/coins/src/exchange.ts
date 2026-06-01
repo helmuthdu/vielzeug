@@ -28,7 +28,10 @@ export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'hal
   }
 
   const { denominator, negative: rateNegative, numerator } = parseRational(rate.rate);
-  const negative = m.amount < 0n !== rateNegative;
+
+  if (rateNegative) throw new RangeError('Exchange rate must be non-negative');
+
+  const negative = m.amount < 0n;
   const absAmount = m.amount < 0n ? -m.amount : m.amount;
   const raw = absAmount * numerator;
   const quotient = raw / denominator;

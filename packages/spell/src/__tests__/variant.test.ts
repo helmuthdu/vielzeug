@@ -34,6 +34,30 @@ describe('s.variant()', () => {
 
     expect(schema.parse(ok)).toEqual(ok);
   });
+
+  it('throws for conflicting discriminator fields in a branch', () => {
+    expect(() =>
+      s.variant('type', {
+        ok: s.object({ data: s.string(), type: s.string() }),
+      }),
+    ).toThrow(/discriminator/i);
+  });
+
+  it('throws for mismatched discriminator literals in a branch', () => {
+    expect(() =>
+      s.variant('type', {
+        ok: s.object({ data: s.string(), type: s.literal('error') }),
+      }),
+    ).toThrow(/discriminator/i);
+  });
+
+  it('allows matching discriminator literals defined explicitly in a branch', () => {
+    const explicit = s.variant('type', {
+      ok: s.object({ data: s.string(), type: s.literal('ok') }),
+    });
+
+    expect(explicit.parse({ data: 'yes', type: 'ok' })).toEqual({ data: 'yes', type: 'ok' });
+  });
 });
 
 describe('s.variant() — async', () => {

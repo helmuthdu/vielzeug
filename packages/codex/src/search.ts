@@ -6,13 +6,13 @@ import type { BundledPackage } from './types.js';
 
 export interface SearchHit {
   /** All categories in which the term was found. */
-  matchedIn: Array<'docs' | 'keywords' | 'metadata'>;
+  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata'>;
   /** Doc pages (and/or "source") where the term appeared. Present when matchedIn includes "docs". */
   matchedPages?: string[];
   name: string;
   /**
    * Ranking score: 3 = metadata match (name/description/category),
-   * 2 = keywords match, 1 = docs/source match.
+   * 2 = keywords or exports match, 1 = docs/source match.
    * Multiple matches return the highest category score.
    */
   score: number;
@@ -39,6 +39,11 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
   if (pkg.keywords.some(has)) {
     score = Math.max(score, 2);
     matchedIn.push('keywords');
+  }
+
+  if (pkg.exports.some(has)) {
+    score = Math.max(score, 2);
+    matchedIn.push('exports');
   }
 
   for (const page of pkg.availableDocPages) {

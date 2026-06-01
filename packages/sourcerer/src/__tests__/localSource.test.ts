@@ -11,6 +11,21 @@ describe('createLocalSource', () => {
     vi.restoreAllMocks();
   });
 
+  describe('initialData config option', () => {
+    it('uses cfg.initialData when positional data is empty', () => {
+      const source = createLocalSource([], { initialData: [1, 2, 3], limit: 2 });
+
+      expect(source.current).toEqual([1, 2]);
+      expect(source.meta.totalItems).toBe(3);
+    });
+
+    it('cfg.initialData takes precedence over positional data when both are provided', () => {
+      const source = createLocalSource([10, 20], { initialData: [1, 2, 3] });
+
+      expect(source.meta.totalItems).toBe(3);
+    });
+  });
+
   describe('basic pagination', () => {
     it('paginates data with default limit of 20', () => {
       const data = Array.from({ length: 25 }, (_, i) => i + 1);
@@ -214,8 +229,8 @@ describe('createLocalSource', () => {
     });
   });
 
-  describe('serialization and hydration', () => {
-    it('roundtrips through encodeQuery + hydrate', async () => {
+  describe('serialization and restoreQuery', () => {
+    it('roundtrips through encodeQuery + restoreQuery', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 2 });
 
       await source.searchNow('2');
@@ -223,17 +238,17 @@ describe('createLocalSource', () => {
       const serialized = encodeQuery(source.toQuery());
       const restored = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 10 });
 
-      await restored.hydrate(decodeQuery(serialized, { defaultLimit: 10 }));
+      await restored.restoreQuery(decodeQuery(serialized, { defaultLimit: 10 }));
 
       expect(restored.toQuery()).toEqual({ limit: 2, page: 1, search: '2' });
     });
 
-    it('hydrate with no changes is a no-op', async () => {
+    it('restoreQuery with no changes is a no-op', async () => {
       const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
       const listener = vi.fn();
 
       source.subscribe(listener);
-      await source.hydrate({ limit: 2, page: 1, search: '' });
+      await source.restoreQuery({ limit: 2, page: 1, search: '' });
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -285,6 +300,75 @@ describe('createLocalSource', () => {
       await source.searchNow('hello');
 
       expect(source.toQuery()).toEqual({ limit: 10, page: 1, search: 'hello' });
+    });
+  });
+
+  describe('ready()', () => {
+    it('resolves immediately when source is idle', async () => {
+      const source = createLocalSource([1, 2, 3]);
+
+      await expect(source.ready()).resolves.toBeUndefined();
+    });
+
+    it('resolves after async filterAsync completes', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], {
+        filterAsync: async (items) => items.filter((x) => x > 2),
+      });
+
+      const p = source.setData([1, 2, 3, 4, 5]);
+      const readyP = source.ready();
+
+      await vi.runAllTimersAsync();
+      await p;
+      await readyP;
+
+      expect(source.meta.isLoading).toBe(false);
+      expect(source.current).toEqual([3, 4, 5]);
+    });
+
+    it('rejects with SourceTimeoutError on timeout', async () => {
+      const { SourceTimeoutError } = await import('../types');
+      const source = createLocalSource([1, 2, 3], {
+        filterAsync: () => new Promise(() => {}),
+      });
+
+      void source.setData([1, 2, 3]);
+
+      const p = source.ready(100);
+
+      vi.advanceTimersByTime(101);
+
+      await expect(p).rejects.toBeInstanceOf(SourceTimeoutError);
+    });
+
+    it('rejects when source is disposed while waiting', async () => {
+      const source = createLocalSource([1, 2, 3], {
+        filterAsync: () => new Promise(() => {}),
+      });
+
+      void source.setData([1, 2, 3]);
+
+      const readyP = source.ready();
+
+      source.dispose();
+
+      await expect(readyP).rejects.toThrow('disposed');
+    });
+  });
+
+  describe('reset() cancels pending debounce', () => {
+    it('cancels a pending search debounce before resetting', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
+
+      source.search('3');
+
+      expect(source.meta.isSearchPending).toBe(true);
+
+      await source.reset();
+
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.toQuery().search).toBeUndefined();
+      expect(source.current).toEqual([1, 2, 3, 4, 5]);
     });
   });
 

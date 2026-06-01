@@ -7,6 +7,10 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
   readonly keySchema: Schema<K, any>;
   readonly valueSchema: Schema<V, any>;
 
+  protected override get _kind(): string {
+    return 'map';
+  }
+
   constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
     super();
     this.keySchema = keySchema;

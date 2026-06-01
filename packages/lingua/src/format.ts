@@ -14,7 +14,7 @@
  * const fmt = createFormatter('en-US');
  *
  * // Reactive — always reads the current locale from the i18n instance
- * const fmt = createFormatter(i18n);
+ * const fmt = createFormatter(() => i18n.locale);
  *
  * fmt.number(1_234.56);
  * fmt.currency(9.99, 'USD');
@@ -179,6 +179,8 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const IntlExt = Intl as typeof Intl & { DurationFormat?: DurationFormatterCtor };
 
       if (!IntlExt.DurationFormat) return durationLabeled(value);
+
+      if (DURATION_UNITS.every((u) => value[u] === undefined)) return '';
 
       return getOrCreate(
         durationCache,

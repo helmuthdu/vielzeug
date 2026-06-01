@@ -191,7 +191,8 @@ function applyFileFilters(
 export function createDropZone(options: DropZoneOptions): DropZone {
   const { disabled, dropEffect = 'copy', element, maxFiles, onDrop, onDropRejected, onHoverChange } = options;
 
-  const getAccept: () => string[] = typeof options.accept === 'function' ? options.accept : () => options.accept ?? [];
+  const { accept } = options;
+  const getAccept: () => string[] = typeof accept === 'function' ? accept : () => accept ?? [];
 
   let dragCounter = 0;
   // Whether the *current* drag's payload passes the accept filter.
@@ -284,9 +285,9 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   const handleDragEnter = (e: DragEvent): void => {
-    e.preventDefault();
-
     if (resolveDisabled(disabled)) return;
+
+    e.preventDefault();
 
     // Evaluate the filter once per drag (on first entry) — the payload is
     // constant for the lifetime of a drag operation.
@@ -307,9 +308,9 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   const handleDragOver = (e: DragEvent): void => {
-    e.preventDefault();
-
     if (resolveDisabled(disabled)) return;
+
+    e.preventDefault();
 
     if (e.dataTransfer) e.dataTransfer.dropEffect = dragAccepted ? dropEffect : 'none';
   };
@@ -321,10 +322,11 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   const handleDrop = (e: DragEvent): void => {
-    e.preventDefault();
     resetCounter();
 
     if (resolveDisabled(disabled)) return;
+
+    e.preventDefault();
 
     const raw = e.dataTransfer?.files;
 

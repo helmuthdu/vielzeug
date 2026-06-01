@@ -5,7 +5,7 @@ package: coins
 category: utilities
 keywords: [money, currency, exchange rate, formatting, bigint, locale, arithmetic, allocation]
 related: [arsenal, tempo]
-exports: [money, toCurrencyCode, add, subtract, multiply, divide, allocate, splitEvenly, format, formatParts, exchange]
+exports: [money, zero, toCurrencyCode, add, subtract, multiply, divide, allocate, splitEvenly, clamp, format, formatParts, exchange]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [money, toCurrencyCode, add, subtract, multiply, divide, allocate, spli
 
 **Package:** `@vielzeug/coins` &nbsp;·&nbsp; **Category:** Utilities
 
-**Key exports:** `money`, `toCurrencyCode`, `add`, `subtract`, `multiply`, `divide`, `allocate`, `format`, `formatParts`, `exchange`
+**Key exports:** `money`, `zero`, `toCurrencyCode`, `add`, `subtract`, `multiply`, `divide`, `allocate`, `clamp`, `format`, `formatParts`, `exchange`
 
 **When to use:** Precise monetary arithmetic — creation, arithmetic, allocation, locale-aware formatting, and exchange rate conversion without floating-point drift.
 
@@ -120,9 +120,9 @@ a.amount + b.amount + c.amount === price.amount;  // true — always
 - `toCurrencyCode()` — brand and cache ISO 4217 codes; result is type-safe in `ExchangeRate`
 - Arithmetic — `add`, `subtract`, `multiply`, `divide`, `abs`, `negate`; all throw `TypeError` on currency mismatch
 - Allocation — `allocate` (weighted) and `splitEvenly` (equal); Largest Remainder Method guarantees exact totals
-- Aggregates — `sum`, `min`, `max`
+- Aggregates — `sum`, `min`, `max`, `clamp`
 - Comparison — `compare`, `isEqual`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`
-- `format()` — `Intl.NumberFormat`-powered string output with symbol / code / name styles
+- `format()` — `Intl.NumberFormat`-powered string output with symbol / code / name / narrowSymbol styles
 - `formatParts()` — typed part array for custom UI rendering (superscript cents, coloured symbols, etc.)
 - `exchange()` — currency conversion using string rates; rounding mode configurable
 - Serialization — `toDecimal`, `toNumber`, `toJSON`, `fromJSON`; safe `bigint` round-trip through JSON

@@ -189,6 +189,69 @@ describe('createCursorSource', () => {
     });
   });
 
+  describe('setLimit()', () => {
+    it('changes page size and re-fetches, resetting cursors', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a', 'b'], nextCursor: 'n1', total: 10 }));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await source.setLimit(10);
+
+      expect(source.toQuery().limit).toBe(10);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op when limit does not change', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.refresh();
+
+      const callsBefore = fetch.mock.calls.length;
+
+      await source.setLimit(10);
+
+      expect(fetch.mock.calls.length).toBe(callsBefore);
+    });
+  });
+
+  describe('restoreQuery()', () => {
+    it('restores limit from patch', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], nextCursor: 'n1', total: 6 }));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 2 });
+
+      await source.restoreQuery({ limit: 3 });
+
+      expect(source.toQuery().limit).toBe(3);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('restores search from patch and resets cursors', async () => {
+      const fetch = vi.fn(async ({ search }: { search?: string }) => ({
+        items: search ? [`found-${search}`] : ['all'],
+        nextCursor: undefined,
+        total: 1,
+      }));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.restoreQuery({ search: 'hello' });
+
+      expect(source.toQuery().search).toBe('hello');
+      expect(source.current).toEqual(['found-hello']);
+    });
+
+    it('is a no-op when nothing changes', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.restoreQuery({ limit: 10 });
+
+      expect(fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('retry', () => {
     it('retries on failure and resolves on success', async () => {
       const fetch = vi

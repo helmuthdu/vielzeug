@@ -1,5 +1,5 @@
 export const basicMachineExample = {
-  code: `import { defineMachine, interpret, assign } from '/clockwork'
+  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
 
 const trafficMachine = defineMachine({
   initial: 'red',
@@ -11,7 +11,7 @@ const trafficMachine = defineMachine({
       on: {
         NEXT: {
           target: 'red',
-          actions: [assign(({ context }) => ({ cycles: context.cycles + 1 }))],
+          actions: [({ context }) => { context.cycles += 1 }],
         },
       },
     },

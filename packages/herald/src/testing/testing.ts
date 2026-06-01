@@ -7,28 +7,35 @@ import { makeBusDelegate } from '../_delegate';
 export type TestBus<T extends EventMap> = Bus<T> & {
   /** Snapshot of all payloads emitted for the given event key, in order. */
   emitted<K extends EventKey<T>>(event: K): T[K][];
+  /** Number of times the given event has been emitted. Shorthand for `emitted(event).length`. */
+  emittedCount<K extends EventKey<T>>(event: K): number;
   /** Clear emitted records without disposing the bus. */
   reset(): void;
 };
 
 export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const userOnDispatch = options?.onDispatch;
+  const bus = createBus<T>(options);
 
-  const bus = createBus<T>({
-    ...options,
-    onDispatch(event: EventKey<T>, payload: unknown) {
-      const list = records.get(event);
+  function record(event: EventKey<T>, payload: unknown): void {
+    const list = records.get(event);
 
-      if (list) list.push(payload);
-      else records.set(event, [payload]);
+    if (list) list.push(payload);
+    else records.set(event, [payload]);
+  }
 
-      userOnDispatch?.(event, payload);
-    },
-  });
+  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number {
+    if (!bus.disposed) record(event, (args as unknown[])[0]);
+
+    return (bus.emit as (event: EventKey<T>, payload?: unknown) => number)(event, (args as unknown[])[0]);
+  }
 
   function emitted<K extends EventKey<T>>(event: K): T[K][] {
     return [...(records.get(event) ?? [])] as T[K][];
+  }
+
+  function emittedCount<K extends EventKey<T>>(event: K): number {
+    return records.get(event)?.length ?? 0;
   }
 
   function dispose(): void {
@@ -36,12 +43,13 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     records.clear();
   }
 
-  // R5: Use makeBusDelegate to eliminate the 14-line explicit delegation boilerplate.
-  // Override only dispose (also clears records) and add the test-specific methods.
+  // Use makeBusDelegate to avoid enumerating every Bus<T> method. Override only what differs.
   const delegate = makeBusDelegate<T>(bus) as TestBus<T>;
 
   delegate.dispose = dispose;
+  delegate.emit = emit as Bus<T>['emit'];
   delegate.emitted = emitted;
+  delegate.emittedCount = emittedCount;
   delegate.reset = () => records.clear();
   delegate[Symbol.dispose] = dispose;
 

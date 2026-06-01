@@ -82,10 +82,10 @@ export const _installTrackingHook = (hook: TrackingHook | null): TrackingHook | 
 
 // ── Source observer ───────────────────────────────────────────────────────────
 //
-// Allows traceEffect to intercept each reactive source read during an effect run
-// without coupling the trace logic into effect() itself.
+// Allows debugEffect to intercept each reactive source read during an effect run
+// without coupling the debug logic into effect() itself.
 //
-// R2: effect() no longer checks getSourceObserver(). traceEffect wraps its fn
+// R2: effect() no longer checks getSourceObserver(). debugEffect wraps its fn
 // with withSourceObserver before passing it to effect(), so the observer is
 // already installed by the time fn() runs.
 
@@ -93,7 +93,7 @@ let _sourceObserver: SourceObserver | null = null;
 
 /**
  * Runs `fn` while calling `observer` for every reactive source that is accessed.
- * Used by `traceEffect` to detect which sources changed between runs.
+ * Used by `debugEffect` to detect which sources changed between runs.
  */
 export const withSourceObserver = <T>(observer: SourceObserver, fn: () => T): T => {
   const prev = _sourceObserver;

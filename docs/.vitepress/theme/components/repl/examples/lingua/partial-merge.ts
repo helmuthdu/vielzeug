@@ -1,5 +1,5 @@
 export const partialMergeExample = {
-  code: `import { createI18n } from '/lingua'
+  code: `import { createI18n } from '@vielzeug/lingua'
 
 // Base catalog loaded at startup
 const i18n = createI18n({

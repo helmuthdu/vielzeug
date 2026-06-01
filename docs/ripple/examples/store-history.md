@@ -1,13 +1,17 @@
 ---
-title: Ripple — Store History (Undo/Redo)
-description: Time-travel state management with storeWithHistory.
+title: 'Ripple Examples — Store History (Undo/Redo)'
+description: 'Time-travel state management with storeWithHistory for @vielzeug/ripple.'
 ---
 
-# Store History — Undo/Redo
+## Store History — Undo/Redo
 
-`storeWithHistory` wraps a store with snapshot-based history. Every mutation pushes a snapshot; `undo()` and `redo()` navigate the buffer without re-running any logic.
+### Problem
 
-## Text Editor
+You need undo/redo support for structured state without implementing your own snapshot buffer. Use `storeWithHistory()` to wrap any `store()` with automatic snapshot tracking across `patch()`, `replace()`, `reset()`, and `lens()` writes.
+
+### Solution
+
+Use `storeWithHistory()` in place of `store()` and call `undo()` / `redo()` to navigate the snapshot buffer.
 
 ```ts
 import { storeWithHistory, effect } from '@vielzeug/ripple';
@@ -39,37 +43,44 @@ editor.redo();
 console.log(editor.value.text);     // 'He'
 ```
 
-## Branching History
+#### With lens writes
 
-Writing after an undo discards the redo stack (no branch-divergence support):
+Lens writes also push snapshots and are individually undoable:
+
+```ts
+import { storeWithHistory, watch } from '@vielzeug/ripple';
+
+const doc = storeWithHistory({ title: 'Draft', content: '' });
+const titleLens = doc.lens('title');
+
+titleLens.value = 'Published'; // snapshot pushed
+
+console.log(doc.historyLength); // 2
+doc.undo();
+console.log(doc.value.title);   // 'Draft'
+```
+
+#### With branching history
+
+Writing after an undo discards the redo stack — no branch-divergence support:
 
 ```ts
 const s = storeWithHistory({ n: 0 });
 s.patch({ n: 1 });
 s.patch({ n: 2 });
-s.undo();          // n = 1
+s.undo();           // n = 1
 
-s.patch({ n: 99 }); // branches from 1 — redo to 2 no longer possible
+s.patch({ n: 99 }); // redo to 2 is no longer possible
 console.log(s.historyLength); // 3: [0, 1, 99]
 ```
 
-## Full Store API Still Works
+### Pitfalls
 
-`StoreWithHistory<T>` extends `Store<T>`, so all store methods are available:
+- Snapshots are **shallow copies** — nested objects are cloned one level deep via `structuredClone`. Deep mutations inside nested objects are not individually tracked.
+- `maxHistory` is a ring buffer; oldest snapshots are evicted silently when the cap is reached.
+- Lens writes each push a separate snapshot — batch multiple lens writes inside `batch()` if you want a single undo step.
 
-```ts
-const doc = storeWithHistory({ title: 'Draft', content: '' });
+### Related
 
-// lenses, map, filter, watch all work
-const titleLens = doc.lens('title');
-titleLens.value = 'Published';   // snapshot pushed
-
-const titleSignal = doc.map((d) => d.title);
-
-import { watch } from '@vielzeug/ripple';
-const stop = watch(doc, (curr) => console.log('doc changed:', curr.title));
-
-doc.reset();  // restores initial state, pushes snapshot
-stop.dispose();
-titleSignal.dispose();
-```
+- [Stores](./stores.md)
+- [Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)

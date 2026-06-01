@@ -4,7 +4,8 @@ description: Tree-shakeable, zero-dependency utility library for arrays, async c
 package: arsenal
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
-exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stableStringify, search, getPath]
+exports: [chunk, debounce, throttle, allOf, clamp, isEqual, attempt, retry, sleep, stableStringify, search, getPath]
+related: [tempo, sourcerer, spell, coins]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -20,9 +21,9 @@ exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stable
 
 **Package:** `@vielzeug/arsenal` &nbsp;·&nbsp; **Category:** Utilities
 
-**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `retry`, `sleep`, `stableStringify`, `search`, `getPath`
+**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `attempt`, `retry`, `sleep`, `stableStringify`, `search`, `getPath`
 
-**When to use:** 75+ tree-shakeable utility functions for arrays, objects, strings, async control, math, and typed checks. Import only what you use.
+**When to use:** 80+ tree-shakeable utility functions for arrays, objects, strings, async control, math, and typed checks. Import only what you use.
 
 **Related:** [Tempo](/tempo/) · [Sourcerer](/sourcerer/) · [Spell](/spell/) · [Coins](/coins/)
 
@@ -102,10 +103,10 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 ## Features
 
 - **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `search`, `take/drop`, `union/intersection`, `zip/unzip`, and more
-- **Async**: `abortable`, `abortError`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
+- **Async**: `abortable`, `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
 - **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `defaults`, `deepMerge`, `deepMergeWith`, `parseJSON`, `getPath`, `stash`, `stableStringify`, `flattenPaths`, `cache`, `getOrCreate`
 - **Function**: `partial`, `allOf`, `anyOf`, `noneOf`, `tap`, `identity`, `constant`, `assert`, `runAll`, compose, memoization, and rate limiting
-- **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, `exponentialBackoff`, plus numeric helpers
+- **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, `backoff`, plus numeric helpers
 - **Random**: `draw`, `random`, `shuffle`, `uuid`
 - **Typed predicates**: `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isError`, `isFunction`, `isMatch`, `isNil`, `isNumber`, `isPlainObject`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isAbortError`
 

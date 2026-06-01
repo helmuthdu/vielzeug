@@ -1,10 +1,19 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { loadData } from './data.js';
 import { startHttpServer } from './http.js';
 import { createServer } from './index.js';
+import { resolvePort } from './port.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG_VERSION: string = String(
+  (JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as { version?: string }).version ?? '0.0.0',
+);
 
 function printUsage(): void {
   process.stderr.write(
@@ -14,21 +23,9 @@ function printUsage(): void {
       'Options:',
       '  --port <number>   Run streamable HTTP transport on the specified port.',
       '  -h, --help        Show this help message.',
-      '  -v, --version     Print bundled data version.',
+      '  -v, --version     Print package version.',
     ].join('\n') + '\n',
   );
-}
-
-function resolvePort(raw: string | undefined): number | null {
-  if (raw === undefined) return null;
-
-  const n = Number.parseInt(raw, 10);
-
-  if (!Number.isFinite(n) || n < 1 || n > 65535) {
-    throw new Error(`Invalid --port value: "${raw}". Expected an integer between 1 and 65535.`);
-  }
-
-  return n;
 }
 
 async function main(): Promise<void> {
@@ -40,20 +37,19 @@ async function main(): Promise<void> {
     return;
   }
 
-  const data = loadData();
-
   if (argv.includes('--version') || argv.includes('-v')) {
-    process.stderr.write(`${data.version}\n`);
+    process.stderr.write(`${PKG_VERSION}\n`);
 
     return;
   }
 
+  const data = loadData();
   const { values } = parseArgs({
     options: { port: { type: 'string' } },
     strict: true,
   });
 
-  const port = resolvePort(values.port as string | undefined);
+  const port = resolvePort(values.port);
   const mcpServer = createServer(data);
 
   if (port !== null) {

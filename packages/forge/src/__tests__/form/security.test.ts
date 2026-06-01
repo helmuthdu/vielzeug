@@ -4,7 +4,7 @@ describe('prototype chain safety', () => {
   test('set() throws for a top-level __proto__ key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('__proto__' as never, 'x')).toThrow(
+    expect(() => form.set('__proto__' as never, 'x' as never)).toThrow(
       "[forge] Unsafe key '__proto__': segments __proto__, constructor, and prototype are reserved.",
     );
   });
@@ -12,19 +12,19 @@ describe('prototype chain safety', () => {
   test('set() throws for __proto__ as an inner dot-notation segment', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('a.__proto__.b' as never, 'x')).toThrow('[forge] Unsafe key');
+    expect(() => form.set('a.__proto__.b' as never, 'x' as never)).toThrow('[forge] Unsafe key');
   });
 
   test('set() throws for a top-level constructor key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('constructor' as never, 'x')).toThrow('[forge] Unsafe key');
+    expect(() => form.set('constructor' as never, 'x' as never)).toThrow('[forge] Unsafe key');
   });
 
   test('set() throws for a top-level prototype key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('prototype' as never, 'x')).toThrow('[forge] Unsafe key');
+    expect(() => form.set('prototype' as never, 'x' as never)).toThrow('[forge] Unsafe key');
   });
 
   test('setError() throws for an unsafe key', () => {

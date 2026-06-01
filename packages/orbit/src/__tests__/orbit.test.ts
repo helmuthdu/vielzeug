@@ -8,6 +8,7 @@ import {
   autoPlacement,
   autoUpdate,
   compose,
+  computeOnce,
   computePosition,
   detectOverflow,
   flip,
@@ -16,11 +17,11 @@ import {
   getSide,
   hide,
   limitShift,
-  MIDDLEWARE_NAME,
   offset,
   shift,
   size,
 } from '../index';
+import { MIDDLEWARE_NAME } from '../utils';
 import { createDomRect, makeArrow, makeElements, makeVirtualReference, setViewport, withState } from './helpers';
 
 // ─── computePosition ──────────────────────────────────────────────────────────
@@ -689,6 +690,34 @@ describe('float', () => {
   });
 });
 
+// ─── computeOnce ─────────────────────────────────────────────────────────────
+
+describe('computeOnce', () => {
+  beforeEach(() => setViewport());
+
+  it('resolves with the same result as computePosition', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const sync = computePosition(reference, floating, { placement: 'bottom' });
+    const async_ = await computeOnce(reference, floating, { placement: 'bottom' });
+
+    expect(async_.x).toBe(sync.x);
+    expect(async_.y).toBe(sync.y);
+    expect(async_.placement).toBe(sync.placement);
+  });
+
+  it('resolves after the current microtask', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    let resolved = false;
+    const promise = computeOnce(reference, floating).then(() => {
+      resolved = true;
+    });
+
+    expect(resolved).toBe(false);
+    await promise;
+    expect(resolved).toBe(true);
+  });
+});
+
 // ─── Custom middleware ────────────────────────────────────────────────────────
 
 describe('custom middleware', () => {
@@ -820,6 +849,23 @@ describe('presets', () => {
     setViewport();
 
     expect(() => computePosition(reference, floating, { ...tooltip() })).not.toThrow();
+  });
+
+  it.each([
+    ['tooltip', tooltip()],
+    ['dropdown', dropdown()],
+    ['popover', popover()],
+    ['contextMenu', contextMenu()],
+  ] as const)('%s() produces finite x/y coordinates and a valid placement', (_, preset) => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    setViewport();
+
+    const result = computePosition(reference, floating, preset);
+
+    expect(Number.isFinite(result.x)).toBe(true);
+    expect(Number.isFinite(result.y)).toBe(true);
+    expect(result.placement).toMatch(/^(top|bottom|left|right)(-start|-end)?$/);
   });
 });
 
@@ -1257,12 +1303,12 @@ describe('SSR shim', () => {
     expect(() => cleanup()).not.toThrow();
   });
 
-  it('float returns a FloatHandle with no-op methods', async () => {
+  it('float returns a FloatHandle with no-op methods and null position', async () => {
     const { float: ssrFloat } = await import('../ssr');
     const handle = ssrFloat({} as Element, {} as HTMLElement, { placement: 'right' });
 
     expect(handle.cssAnchor).toBe(false);
-    expect(handle.getPosition()?.placement).toBe('right');
+    expect(handle.getPosition()).toBeNull();
     expect(() => handle.update()).not.toThrow();
     expect(() => handle.cleanup()).not.toThrow();
   });

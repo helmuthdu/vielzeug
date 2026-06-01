@@ -230,7 +230,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       horizontal: options.horizontal,
       measurementCache: options.measurementCache,
       onChange: handleChange,
-      overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
+      overscan: options.overscan ?? DEFAULT_OVERSCAN,
     });
 
     listEl.style.position = 'relative';
@@ -296,6 +296,12 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       return virtualizer?.scrollOffset ?? 0;
     },
 
+    scrollToBottom(scrollOptions) {
+      if (isDestroyed) return;
+
+      virtualizer?.scrollToBottom(scrollOptions);
+    },
+
     scrollToIndex(index, scrollOptions) {
       if (isDestroyed) return;
 
@@ -306,6 +312,12 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (isDestroyed) return;
 
       virtualizer?.scrollToOffset(offset, scrollOptions);
+    },
+
+    scrollToTop(scrollOptions) {
+      if (isDestroyed) return;
+
+      virtualizer?.scrollToTop(scrollOptions);
     },
 
     // ── DomVirtualList-specific ────────────────────────────────────────────
@@ -386,7 +398,9 @@ export function createVirtualScroller<T>(
 ): DomVirtualListController<T> {
   const scrollEl = document.createElement('div');
 
-  scrollEl.style.cssText = 'overflow: hidden auto; width: 100%; height: 100%;';
+  scrollEl.style.cssText = options.horizontal
+    ? 'overflow: auto hidden; width: 100%; height: 100%;'
+    : 'overflow: hidden auto; width: 100%; height: 100%;';
 
   if (options.containerClass) scrollEl.className = options.containerClass;
 
@@ -409,19 +423,62 @@ export function createVirtualScroller<T>(
     throw e;
   }
 
-  // A Proxy is used instead of object spread so that live getter properties
-  // (count, items, totalSize, scrollOffset, stickyItems) remain live after
-  // construction. Spreading would snapshot those values at creation time.
-  return new Proxy(ctrl, {
-    get(target, prop, receiver) {
-      if (prop === 'destroy') {
-        return function destroy() {
-          (target as DomVirtualListController<T>).destroy();
-          scrollEl.remove();
-        };
-      }
-
-      return Reflect.get(target as object, prop, receiver);
+  return {
+    get count() {
+      return ctrl.count;
     },
-  });
+    destroy() {
+      ctrl.destroy();
+      scrollEl.remove();
+    },
+    invalidate() {
+      ctrl.invalidate();
+    },
+    get items() {
+      return ctrl.items;
+    },
+    measure(index: number, size: number) {
+      ctrl.measure(index, size);
+    },
+    measureBatch(entries: Array<{ index: number; size: number }>) {
+      ctrl.measureBatch(entries);
+    },
+    measureEl(index: number, el: HTMLElement) {
+      return ctrl.measureEl(index, el);
+    },
+    redraw() {
+      ctrl.redraw();
+    },
+    refresh() {
+      ctrl.refresh();
+    },
+    get scrollOffset() {
+      return ctrl.scrollOffset;
+    },
+    scrollToBottom(scrollOptions?: { behavior?: ScrollBehavior }) {
+      ctrl.scrollToBottom(scrollOptions);
+    },
+    scrollToIndex(index: number, scrollOptions?: ScrollToIndexOptions) {
+      ctrl.scrollToIndex(index, scrollOptions);
+    },
+    scrollToOffset(offset: number, scrollOptions?: { behavior?: ScrollBehavior }) {
+      ctrl.scrollToOffset(offset, scrollOptions);
+    },
+    scrollToTop(scrollOptions?: { behavior?: ScrollBehavior }) {
+      ctrl.scrollToTop(scrollOptions);
+    },
+    setItems(items: T[]) {
+      ctrl.setItems(items);
+    },
+    get stickyItems() {
+      return ctrl.stickyItems;
+    },
+    [Symbol.dispose]() {
+      ctrl.destroy();
+      scrollEl.remove();
+    },
+    get totalSize() {
+      return ctrl.totalSize;
+    },
+  };
 }

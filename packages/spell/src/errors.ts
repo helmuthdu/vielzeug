@@ -56,6 +56,14 @@ function formatIssues(issues: Issue[]): string {
 export type FlatError = { messages: string[]; path: (string | number)[] };
 export type FlatErrorFirst = { message: string; path: (string | number)[] };
 
+function createFormattedErrors(): FormattedErrors {
+  const node = Object.create(null) as FormattedErrors;
+
+  node._errors = [];
+
+  return node;
+}
+
 export class ValidationError extends Error {
   readonly issues: Issue[];
 
@@ -130,7 +138,7 @@ export class ValidationError extends Error {
   }
 
   format(): FormattedErrors {
-    const root: FormattedErrors = { _errors: [] };
+    const root = createFormattedErrors();
 
     for (const issue of this.issues) {
       if (issue.path.length === 0) {
@@ -143,7 +151,9 @@ export class ValidationError extends Error {
       for (const segment of issue.path) {
         const key = String(segment);
 
-        if (!node[key]) node[key] = { _errors: [] };
+        if (!Object.hasOwn(node, key)) {
+          node[key] = createFormattedErrors();
+        }
 
         node = node[key] as FormattedErrors;
       }

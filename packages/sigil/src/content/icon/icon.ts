@@ -189,7 +189,7 @@ define<BitIconProps>(ICON_TAG, {
       return `<svg ${svgAttrs}>${nodes}</svg>`;
     });
 
-    return html`${() => raw(markup.value)}`;
+    return html`${raw(markup)}`;
   },
   styles: [styles],
 });

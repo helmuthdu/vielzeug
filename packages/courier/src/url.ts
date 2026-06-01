@@ -55,7 +55,7 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
   pathClean = pathClean.replace(/\{([^}]+)\}/g, (_, key: string) => {
     const val = params?.[key];
 
-    if (val === undefined) throw new Error(`[courier] unresolved path param {${key}} in '${path}'`);
+    if (val === undefined || val === null) throw new Error(`[courier] unresolved path param {${key}} in '${path}'`);
 
     return encodeURIComponent(String(val));
   });

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
 import { createCounterState, createErrorHelperState } from '../field-base';
+import { componentSignal } from '../scope';
 import { createTextField } from '../text-field';
 
 describe('field controls', () => {
@@ -574,6 +575,125 @@ describe('field controls', () => {
     });
   });
 
+  describe('createTextField() signal option', () => {
+    it('disposes the value-sync watcher when the signal is aborted', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      let externalValue!: ReturnType<typeof signal<string>>;
+      const controller = new AbortController();
+
+      await mount(
+        () => {
+          externalValue = signal('initial');
+          handle = createTextField({
+            prefix: 'signal-test',
+            signal: controller.signal,
+            value: externalValue,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.value.value).toBe('initial');
+
+      // Abort the lifecycle — disposes the watcher
+      controller.abort();
+
+      // External value changes should no longer sync into the local handle
+      externalValue.value = 'after-abort';
+      expect(handle.value.value).toBe('initial');
+    });
+  });
+
+  describe('createTextField() clear()', () => {
+    it('resets value to empty and fires onInput + onChange with empty string', async () => {
+      const inputSpy = vi.fn();
+      const changeSpy = vi.fn();
+      let handle!: ReturnType<typeof createTextField>;
+
+      await mount(
+        () => {
+          handle = createTextField({
+            onChange: changeSpy,
+            onInput: inputSpy,
+            prefix: 'clear-test',
+            value: signal('hello'),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.clear();
+
+      expect(handle.value.value).toBe('');
+      expect(inputSpy).toHaveBeenCalledOnce();
+      expect(inputSpy).toHaveBeenCalledWith(expect.any(Event), '');
+      expect(changeSpy).toHaveBeenCalledOnce();
+      expect(changeSpy).toHaveBeenCalledWith(expect.any(Event), '');
+    });
+  });
+
+  describe('createChoiceField() teardown', () => {
+    it('disposes watch subscriptions when signal is aborted', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      let valueSignal!: ReturnType<typeof signal<string>>;
+      const controller = new AbortController();
+
+      await mount(
+        () => {
+          valueSignal = signal('a');
+          handle = createChoiceField({
+            prefix: 'choice-teardown',
+            signal: controller.signal,
+            value: valueSignal,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.selectedValue.value).toBe('a');
+
+      controller.abort();
+
+      // After abort, value changes should no longer sync into selectedValues
+      valueSignal.value = 'b';
+      expect(handle.selectedValue.value).toBe('a');
+    });
+
+    it('manual cleanup() disposes subscriptions and is idempotent', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      let valueSignal!: ReturnType<typeof signal<string>>;
+
+      await mount(
+        () => {
+          valueSignal = signal('x');
+          handle = createChoiceField({
+            prefix: 'choice-manual-cleanup',
+            value: valueSignal,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.selectedValue.value).toBe('x');
+
+      handle.cleanup();
+
+      valueSignal.value = 'y';
+      expect(handle.selectedValue.value).toBe('x');
+
+      // Second call must not throw
+      expect(() => handle.cleanup()).not.toThrow();
+    });
+  });
+
   describe('createTextField() wire() — double-detach guard', () => {
     it('calling the returned detach function more than once is a no-op', async () => {
       const changeSpy = vi.fn();
@@ -640,5 +760,44 @@ describe('field controls', () => {
       // Listener was removed — no call
       expect(changeSpy).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('componentSignal()', () => {
+  it('returns an AbortSignal that is not yet aborted', () => {
+    const sig = componentSignal(() => {});
+
+    expect(sig.aborted).toBe(false);
+  });
+
+  it('aborts the signal when the onCleanup callback is invoked', () => {
+    let cleanup!: () => void;
+    const sig = componentSignal((fn) => {
+      cleanup = fn;
+    });
+
+    expect(sig.aborted).toBe(false);
+    cleanup();
+    expect(sig.aborted).toBe(true);
+  });
+
+  it('each call returns an independent signal', () => {
+    let cleanup1!: () => void;
+    let cleanup2!: () => void;
+
+    const sig1 = componentSignal((fn) => {
+      cleanup1 = fn;
+    });
+    const sig2 = componentSignal((fn) => {
+      cleanup2 = fn;
+    });
+
+    cleanup1();
+
+    expect(sig1.aborted).toBe(true);
+    expect(sig2.aborted).toBe(false);
+
+    cleanup2();
+    expect(sig2.aborted).toBe(true);
   });
 });

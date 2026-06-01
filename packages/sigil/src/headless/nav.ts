@@ -114,6 +114,8 @@ export type ListNavigationOptions<T> = {
 };
 
 export type ListControl<T> = {
+  /** Cancels any pending typeahead timer. Call on list cleanup to prevent post-disposal timer fires. */
+  cleanup(): void;
   first(): number;
   getActiveItem(): T | undefined;
   handleKeydown(event: KeyboardEvent): boolean;
@@ -168,14 +170,20 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   };
 
   const set = (index: number): number => {
+    if (index < 0) {
+      reset();
+
+      return -1;
+    }
+
     const items = options.getItems();
 
     if (!items.length) return -1;
 
-    const clamped = Math.min(Math.max(index, 0), items.length - 1);
+    const clamped = Math.min(index, items.length - 1);
 
     if (isDisabled(items[clamped], clamped)) {
-      return options.getIndex();
+      return -1;
     }
 
     return commitIndex(clamped);
@@ -324,6 +332,7 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   };
 
   return {
+    cleanup: resetTypeBuffer,
     first,
     getActiveItem,
     handleKeydown,

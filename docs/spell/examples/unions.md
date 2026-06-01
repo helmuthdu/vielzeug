@@ -1,69 +1,57 @@
 ---
-title: 'Spell Examples — Unions, Intersects, and Variants'
-description: 'Union, intersect, and variant example for @vielzeug/spell.'
+title: 'Spell Examples — Unions, Intersections, and Variants'
+description: 'Compose multiple spell schemas with unions, intersects, and discriminated variants.'
 ---
 
-## Unions, Intersects, and Variants
+## Unions, Intersections, and Variants
 
 ### Problem
 
-Model polymorphic payloads, IDs that can arrive in multiple formats, and discriminated events without losing runtime validation or output typing.
+A domain model may have multiple valid shapes. You need to express those branches while keeping accurate errors and typed output.
 
 ### Solution
 
-Use `s.union()` for value-level branching, `s.intersect()` to merge multiple object shapes, and `s.variant()` for discriminated-union dispatch on a known tag field.
+Use unions for alternative shapes, intersections for merged constraints, and variants for discriminated object unions.
 
 ```ts
-import { s } from '@vielzeug/spell';
+import { ValidationError, s } from '@vielzeug/spell';
 
-const IdSchema = s.union(s.coerce.number().int().positive(), s.string().uuid());
-
-IdSchema.parse('42');
-// => 42 (number) because the first branch succeeds
-
-const RoleSchema = s.union('admin', 'editor', 'viewer');
-RoleSchema.parse('admin');
-
-const WithId = s.object({ id: s.number().int().positive() });
-const WithAudit = s.object({ createdAt: s.date() });
-
-const EntitySchema = s.intersect(WithId, WithAudit);
-// s.and() is a two-argument alias for s.intersect()
-const EntitySchema2 = s.and(WithId, WithAudit);
-
-const EventSchema = s.variant('type', {
-  user_created: s.object({ userId: s.number().int().positive() }),
-  user_deleted: s.object({ userId: s.number().int().positive(), reason: s.string() }),
+const Timestamped = s.object({
+  createdAt: s.date(),
 });
 
-EventSchema.parse({ type: 'user_created', userId: 10 });
-EventSchema.parse({ type: 'user_deleted', userId: 10, reason: 'requested' });
-
-const ActionSchema = s.variant('type', {
-  create: s.object({ name: s.string() }),
-  remove: s.object({ id: s.number().int().positive() }),
+const DraftArticle = s.object({
+  kind: s.literal('draft'),
+  title: s.string().min(3),
 });
 
-ActionSchema.safeParse({ type: 'create', name: 'A', extra: true }); // fails (strict object mode)
+const PublishedArticle = s.object({
+  kind: s.literal('published'),
+  slug: s.string().slug(),
+  title: s.string().min(3),
+});
 
-// TypeScript enum — extract values into a tuple for s.enum()
-enum Status {
-  Draft = 'draft',
-  Published = 'published',
+const Article = s.variant('kind', {
+  draft: DraftArticle,
+  published: PublishedArticle,
+});
+
+const AuditedArticle = s.and(Article, Timestamped);
+const result = AuditedArticle.safeParse({ kind: 'published', title: 'Docs', createdAt: new Date() });
+
+if (!result.success && ValidationError.is(result.error)) {
+  console.log(result.error.bestMatch());
 }
-
-const StatusSchema = s.enum(Object.values(Status) as [string, ...string[]]);
-StatusSchema.parse(Status.Draft);
 ```
 
 ### Pitfalls
 
-- Ordering permissive union branches before strict branches.
-- Assuming intersection merges incompatible values automatically.
-- Using `variant` maps where branch values are not object schemas.
+- Prefer `s.variant()` over `s.union()` when one field can discriminate the branches. Errors are smaller and branch selection is deterministic.
+- Intersections merge outputs deeply. Keep overlapping property names compatible across both sides.
+- `bestMatch()` is useful for union failures because it surfaces the branch that got closest to passing.
 
 ### Related
 
-- [API](./api.md)
-- [Async](./async.md)
-- [Forms](./forms.md)
+- [Usage Guide](../usage.md)
+- [API Reference](../api.md)
+- [Schema Introspection and Round-Trips](./introspection.md)

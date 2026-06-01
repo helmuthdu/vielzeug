@@ -4,6 +4,26 @@ import type { TimeDiffResult, TimeDiffUnit, TimeInput, TimeOptions } from './typ
 
 import { inferSharedTimeZone, MS_PER_MONTH, toInstant, toZoned } from './internal';
 
+// ─── Threshold sort cache ─────────────────────────────────────────────────────
+
+type SortedThreshold<K extends string> = { key: K; ms: number }[];
+
+const THRESHOLD_SORT_CACHE = new WeakMap<object, SortedThreshold<string>>();
+
+function getSortedThresholds<K extends string>(thresholds: Record<K, Temporal.DurationLike>): SortedThreshold<K> {
+  const cached = THRESHOLD_SORT_CACHE.get(thresholds);
+
+  if (cached) return cached as SortedThreshold<K>;
+
+  const sorted = (Object.keys(thresholds) as K[])
+    .map((key) => ({ key, ms: durationToMs(thresholds[key]) }))
+    .sort((a, b) => a.ms - b.ms);
+
+  THRESHOLD_SORT_CACHE.set(thresholds, sorted);
+
+  return sorted;
+}
+
 // ─── expires ─────────────────────────────────────────────────────────────────
 
 /**
@@ -38,12 +58,7 @@ export function expires<K extends string>(
   // diff is positive for future dates, negative for past dates (date − now)
   const diffMs = dateMs - nowMs;
 
-  // Pre-compute ms values and sort once, smallest (most negative) first.
-  const sorted = (Object.keys(thresholds) as K[])
-    .map((key) => ({ key, ms: durationToMs(thresholds[key]) }))
-    .sort((a, b) => a.ms - b.ms);
-
-  for (const { key, ms } of sorted) {
+  for (const { key, ms } of getSortedThresholds(thresholds)) {
     if (diffMs <= ms) return key;
   }
 

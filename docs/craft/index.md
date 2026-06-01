@@ -5,7 +5,7 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when]
+exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when, syncAria, defineField, createFormContext]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -133,15 +133,17 @@ define('my-counter', {
 - Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
 - Directives: `each`, `classMap`, `styleMap`, `when`, `live`, `raw`
 - Host bindings via `bind({ attr, class, style, prop, on })` from setup context
-- Form-associated helpers with `defineField()`
+- Form-associated helpers with `defineField()` and `createFormContext()` (with reactive `error` signal for submit errors)
 - Observers (`@vielzeug/craft/observers`)
-- Testing utilities (`@vielzeug/craft/testing`)
+- Testing utilities (`@vielzeug/craft/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
+- Debug utilities (`@vielzeug/craft/debug`) — `debugFlush()` for diagnosing update timing
 
 ## Package Entry Points
 
 | Import                        | Purpose                                                    |
 | ----------------------------- | ---------------------------------------------------------- |
 | `@vielzeug/craft`           | Core component API, directives, utilities, ripple re-exports |
+| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics (dev only) |
 | `@vielzeug/craft/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers |
 

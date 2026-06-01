@@ -105,6 +105,23 @@ describe('createFormatter', () => {
       expect(createFormatter('en').duration({ hours: 1, minutes: 5 })).toBeTruthy();
     });
 
+    test('returns an empty string for an empty DurationValue', () => {
+      expect(createFormatter('en').duration({})).toBe('');
+    });
+
+    test('fallback returns empty string for an empty DurationValue when Intl.DurationFormat is unavailable', () => {
+      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
+      const original = IntlExt.DurationFormat;
+
+      IntlExt.DurationFormat = undefined;
+
+      try {
+        expect(createFormatter('en').duration({})).toBe('');
+      } finally {
+        IntlExt.DurationFormat = original;
+      }
+    });
+
     test('fallback uses unambiguous unit labels when Intl.DurationFormat is unavailable', () => {
       const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
       const original = IntlExt.DurationFormat;

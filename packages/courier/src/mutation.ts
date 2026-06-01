@@ -24,22 +24,31 @@ function createPendingState<TData>(): MutationState<TData> {
   };
 }
 
-export type MutationOptions<TData = unknown> = RetryOptions & {
-  /** Called when a lifecycle callback throws. Does not affect mutate() result. Optional for development/debugging. */
+export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
+  /**
+   * Called when a lifecycle callback (`onSuccess`, `onError`, or `onSettled`) throws.
+   * Does not affect the `mutate()` result or re-throw. Optional — for development/debugging.
+   */
   onCallbackError?: (error: Error) => void;
-  /** Called after a failed run, before `mutate()` rejects. */
-  onError?: (error: Error) => void | Promise<void>;
-  /** Called after every run regardless of outcome. */
-  onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
+  /**
+   * Called after a failed run, before `mutate()` rejects.
+   * Not called when the mutation was aborted (use `onSettled` if you need abort awareness).
+   */
+  onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+  /**
+   * Called after every run regardless of outcome, including aborts.
+   * `error` is `null` for both success and abort; `data` is `undefined` for error and abort.
+   */
+  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void | Promise<void>;
   /** Called after a successful run, before `mutate()` resolves. */
-  onSuccess?: (data: TData) => void | Promise<void>;
+  onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
-  mutOpts?: MutationOptions<TData>,
+  mutOpts?: MutationOptions<TData, TVariables>,
 ): Mutation<TData, TVariables> {
   let snap: MutationState<TData> = IDLE_STATE as MutationState<TData>;
   let currentRun = 0;
@@ -65,8 +74,8 @@ export function createMutation<TData, TVariables = void>(
     }
   }
 
-  async function fireSettled(data: TData | undefined, error: Error | null): Promise<void> {
-    await safeCall(() => mutOpts?.onSettled?.(data, error));
+  async function fireSettled(data: TData | undefined, error: Error | null, variables: TVariables): Promise<void> {
+    await safeCall(() => mutOpts?.onSettled?.(data, error, variables));
   }
 
   return {
@@ -83,9 +92,18 @@ export function createMutation<TData, TVariables = void>(
       return snap;
     },
 
+    /**
+     * Execute the mutation with the given variables.
+     *
+     * Concurrent calls are allowed. State updates (`isFetching`, `data`, `error`) always
+     * reflect the **latest** `mutate()` call. Lifecycle callbacks (`onSuccess`, `onError`,
+     * `onSettled`) fire for **every** call independently — not just the last one.
+     * Cancel earlier calls via `mutation.cancel()` if you need only-last-wins callback semantics.
+     */
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
       const localController = new AbortController();
 
+      // Both callOpts.signal and localController.signal are defined, so anySignal always returns AbortSignal (not undefined).
       const signal = callOpts?.signal ? anySignal(callOpts.signal, localController.signal)! : localController.signal;
       const run = ++currentRun;
 
@@ -106,9 +124,9 @@ export function createMutation<TData, TVariables = void>(
             notify();
           }
 
-          await safeCall(() => mutOpts?.onSuccess?.(data));
+          await safeCall(() => mutOpts?.onSuccess?.(data, variables));
 
-          await fireSettled(data, null);
+          await fireSettled(data, null, variables);
 
           return data;
         } catch (err) {
@@ -123,10 +141,10 @@ export function createMutation<TData, TVariables = void>(
           }
 
           if (!isAborted) {
-            await safeCall(() => mutOpts?.onError?.(error));
+            await safeCall(() => mutOpts?.onError?.(error, variables));
           }
 
-          await fireSettled(undefined, isAborted ? null : error);
+          await fireSettled(undefined, isAborted ? null : error, variables);
 
           throw error;
         } finally {

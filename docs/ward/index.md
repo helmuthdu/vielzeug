@@ -5,7 +5,7 @@ package: ward
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, wayfinder, conduit]
-exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS]
+exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, guardRequestWith, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS, debugWard]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, gu
 
 **Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
+**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `guardRequestWith`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
 
@@ -136,7 +136,8 @@ bound.rulesInScope('posts');
 - Typed rule slice factory via `defineRules()`
 - Principal-bound API via `ward.forUser(principal)`
 - Fluent rule builder via `rule()` with `.priority()` support
-- Built-in Express and Hono middleware guards
+- Built-in Express and Hono middleware guards via `createExpressGuard`, `createHonoGuard`, `guardRequest`, and `guardRequestWith`
+- **Debug logging** via `debugWard()` (`@vielzeug/ward/debug`) — logs every `can()` decision with `[ward:decision]` prefixes; tree-shaken from production bundles
 
 ## Compatibility
 

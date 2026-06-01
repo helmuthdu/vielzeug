@@ -1,3 +1,5 @@
+import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
+
 export type Messages = {
   array: {
     length: (ctx: { exact: number; value: unknown[] }) => string;
@@ -252,17 +254,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPartial<T>): T {
-  const out = { ...base } as Record<string, unknown>;
+  const out = cloneRecord(base) as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
 
+    if (isUnsafeObjectKey(key)) {
+      _warn(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
+      continue;
+    }
+
     const baseValue = out[key];
 
     if (isRecord(baseValue) && isRecord(value)) {
-      out[key] = mergeMessages(baseValue, value as DeepPartial<typeof baseValue>);
+      defineOwnProperty(out, key, mergeMessages(baseValue, value as DeepPartial<typeof baseValue>));
     } else {
-      out[key] = value;
+      defineOwnProperty(out, key, value);
     }
   }
 
@@ -274,14 +281,15 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
  * Pass `logger: null` to silence all internal warnings.
  */
 export function configure(opts: { logger?: Logger | null; messages?: DeepPartial<Messages> }): void {
-  if (opts.messages) _activeMessages = mergeMessages(_defaultMessages, opts.messages);
+  if (opts.messages) _activeMessages = mergeMessages(_activeMessages, opts.messages);
 
   if ('logger' in opts) _logger = opts.logger ?? (() => {});
 }
 
-/** Reset all messages and the logger to defaults. */
+/** Reset all messages, the active locale, and the logger to defaults. */
 export function reset(): void {
   _activeMessages = _defaultMessages;
+  _activeLocale = 'en';
   _logger = (msg) => console.warn(msg);
 }
 

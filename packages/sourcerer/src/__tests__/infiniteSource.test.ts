@@ -154,6 +154,162 @@ describe('createInfiniteSource', () => {
     });
   });
 
+  describe('loadMore concurrency', () => {
+    it('ignores a second concurrent loadMore() call while one is in-flight', async () => {
+      let resolvePage2!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi.fn((q: { page: number }) => {
+        if (q.page === 1) return Promise.resolve({ items: ['a'], total: 3 });
+
+        return new Promise<{ items: string[]; total: number }>((resolve) => {
+          resolvePage2 = resolve;
+        });
+      });
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+
+      const p1 = source.loadMore();
+      const p2 = source.loadMore();
+
+      resolvePage2({ items: ['b'], total: 3 });
+      await Promise.all([p1, p2]);
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('loadedPages meta', () => {
+    it('starts at 0 before any fetch', () => {
+      const source = createInfiniteSource({ autoFetch: false, fetch: vi.fn() });
+
+      expect(source.meta.loadedPages).toBe(0);
+    });
+
+    it('increments loadedPages with each loadMore()', async () => {
+      const fetch = vi.fn(async ({ page }: { page: number }) => ({
+        items: [`p${page}`],
+        total: 5,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+      expect(source.meta.loadedPages).toBe(1);
+
+      await source.loadMore();
+      expect(source.meta.loadedPages).toBe(2);
+
+      await source.loadMore();
+      expect(source.meta.loadedPages).toBe(3);
+    });
+
+    it('resets loadedPages to 0 after reset()', async () => {
+      const fetch = vi.fn(async ({ page }: { page: number }) => ({
+        items: [`p${page}`],
+        total: 3,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+      await source.loadMore();
+      expect(source.meta.loadedPages).toBe(2);
+
+      await source.reset();
+      expect(source.meta.loadedPages).toBe(1);
+    });
+
+    it('resets loadedPages to 0 after searchNow()', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 3 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+      await source.loadMore();
+      expect(source.meta.loadedPages).toBe(2);
+
+      await source.searchNow('q');
+      expect(source.meta.loadedPages).toBe(1);
+    });
+  });
+
+  describe('race safety (FetchManager)', () => {
+    it('deduplicates concurrent reset() calls with identical query key', async () => {
+      let resolveFetch!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi.fn(
+        () =>
+          new Promise<{ items: string[]; total: number }>((resolve) => {
+            resolveFetch = resolve;
+          }),
+      );
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
+
+      const p1 = source.reset();
+      const p2 = source.reset();
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      resolveFetch({ items: ['result'], total: 10 });
+      await Promise.all([p1, p2]);
+
+      expect(source.current).toEqual(['result']);
+    });
+
+    it('ignores stale response when searchNow() supersedes an in-flight reset()', async () => {
+      let callCount = 0;
+      const resolvers: Array<(v: { items: string[]; total: number }) => void> = [];
+      const fetch = vi.fn(() => {
+        callCount++;
+
+        return new Promise<{ items: string[]; total: number }>((resolve) => {
+          resolvers.push(resolve);
+        });
+      });
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
+
+      const p1 = source.reset();
+      const p2 = source.searchNow('hello');
+
+      expect(callCount).toBe(2);
+
+      resolvers[0]({ items: ['stale'], total: 10 });
+      await p1;
+
+      expect(source.current).not.toEqual(['stale']);
+
+      resolvers[1]({ items: ['fresh'], total: 10 });
+      await p2;
+
+      expect(source.current).toEqual(['fresh']);
+    });
+  });
+
+  describe('setLimit()', () => {
+    it('changes page size and re-fetches from page 1', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 5 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+      await source.reset();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await source.setLimit(5);
+
+      expect(source.toQuery().limit).toBe(5);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op when limit does not change', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.reset();
+
+      const callsBefore = fetch.mock.calls.length;
+
+      await source.setLimit(10);
+
+      expect(fetch.mock.calls.length).toBe(callsBefore);
+    });
+  });
+
   describe('reset', () => {
     it('clears accumulated items and refetches from page 1', async () => {
       const fetch = vi.fn(async ({ page }: { page: number }) => ({

@@ -11,7 +11,7 @@ You need to create, read, update, and delete typed records in browser storage ac
 
 ### Solution
 
-Use `put`, `get`, `getAll`, `update`, `delete`, `clear`, `has`, and `count` for single-record operations. For bulk operations, use `putAll`, `getMany`, and `deleteMany`. All methods work identically across all four adapters.
+Use `put`, `get`, `getAll`, `update`, `delete`, `clear`, `has`, `count`, and `isEmpty` for single-record operations. For bulk operations, use `putAll`, `getMany`, and `deleteMany`. All methods work identically across all four adapters.
 
 ```ts
 import { createMemory, table } from '@vielzeug/vault';
@@ -33,6 +33,7 @@ const alice = await db.get('users', 1);         // User | undefined
 const all   = await db.getAll('users');          // User[]
 const count = await db.count('users');           // 3
 const live  = await db.has('users', 1);          // true
+const empty = await db.isEmpty('users');          // false — table has records
 
 // bulk read — preserves key order; missing keys yield undefined
 const [a, missing, c] = await db.getMany('users', [1, 99, 3]);
@@ -52,13 +53,14 @@ await db.delete('users', 1);                    // true if it existed
 await db.deleteMany('users', [2, 3, 99]);        // count of deleted records
 await db.clear('users');                         // removes all records
 
-void alice, all, count, live, missing, a, c, updated;
+void alice, all, count, live, empty, missing, a, c, updated;
 ```
 
 ### Pitfalls
 
 - `update()` throws `VaultError` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
+- `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0` — useful for seeding default data on first run.
 - `count()` returns only live (non-expired) records. If you have many TTL-expired records that have not been pruned, `count()` may be lower than `getAll()` would suggest at first glance — both exclude expired records, but expired records still occupy storage until pruned.
 - `putAll()` writes all records in a single atomic IDB transaction on IndexedDB. On LocalStorage and Memory adapters, each record is written individually — a failure mid-array does not roll back earlier writes.
 

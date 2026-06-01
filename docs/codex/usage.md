@@ -108,6 +108,28 @@ list-components                              → enumerate available tag names
 get-component { tagName: "bit-input" }       → full CEM declaration
 ```
 
+## Programmatic Usage
+
+Use `createServer` with `loadData` to embed the MCP server in a custom Node.js application.
+
+```ts
+import { createServer, loadData } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+const server = createServer(loadData());
+await server.connect(new StdioServerTransport());
+```
+
+To load data from a custom snapshot file, use `validateBundledData`:
+
+```ts
+import { validateBundledData } from '@vielzeug/codex';
+import { readFileSync } from 'node:fs';
+
+const raw = JSON.parse(readFileSync('./my-snapshot.json', 'utf8'));
+const data = validateBundledData(raw);
+```
+
 ## Monorepo Development
 
 Use this mode only when developing `@vielzeug/codex` itself.

@@ -1,5 +1,5 @@
 export const derivedSignalsExample = {
-  code: `import { signal, computed } from '/ripple'
+  code: `import { signal, computed } from '@vielzeug/ripple'
 
 const price = signal(100)
 const quantity = signal(2)

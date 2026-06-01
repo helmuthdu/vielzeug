@@ -1,5 +1,5 @@
 export const queryClientSubscriptionsExample = {
-  code: `import { createQuery, createApi } from '/courier'
+  code: `import { createQuery, createApi } from '@vielzeug/courier'
 
 const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 const queryClient = createQuery({ staleTime: 5_000 })

@@ -1,4 +1,4 @@
-type TruncateOptions = {
+export type TruncateOptions = {
   completeWords?: boolean;
   ellipsis?: string;
 };

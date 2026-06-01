@@ -79,11 +79,32 @@ function cfgToOpts(cfg: RuneConfig, ownBindings: Bindings): RuneOptions {
   };
 }
 
+/* --- Namespace joining --- */
+
+/**
+ * Joins a parent namespace with a child namespace using '.' as the separator.
+ * If `child` starts with '/' it is treated as an absolute namespace (the leading slash is stripped).
+ * Examples:
+ *   joinNamespace('api', 'auth')   → 'api.auth'
+ *   joinNamespace('', 'api')       → 'api'
+ *   joinNamespace('api', '/root')  → 'root'
+ */
+function joinNamespace(parent: string, child: string): string {
+  if (child.startsWith('/')) return child.slice(1);
+
+  if (!parent) return child;
+
+  if (!child) return parent;
+
+  return `${parent}.${child}`;
+}
+
 /* --- createLogger --- */
 
 export function createLogger(initial: RuneOptions | string = {}): Logger {
   const initialOpts: RuneOptions = typeof initial === 'string' ? { namespace: initial } : initial;
   const cfg = resolveConfig(initialOpts);
+  const initialLogLevel = cfg.logLevel;
   const ownBindings: Bindings = { ...(initialOpts.bindings ?? {}) };
 
   // R5: Resolve theme once per logger instance — theme is immutable after construction.
@@ -135,7 +156,8 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     });
   };
 
-  const timeImpl = <T>(label: string, fn: () => T, level: LogType = 'debug'): T => {
+  const timeImpl = <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }): T => {
+    const level: LogType = typeof opts === 'string' ? opts : (opts?.level ?? 'debug');
     const start = performance.now();
 
     // R7: label is the human message; duration_ms goes into context (not the other way around)
@@ -193,6 +215,9 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
         ...cfgToOpts(cfg, ownBindings),
         ...overrides,
         bindings: { ...ownBindings, ...(overrides.bindings ?? {}) },
+        // namespace dot-joins parent.child unless child starts with '/' (absolute)
+        namespace:
+          overrides.namespace !== undefined ? joinNamespace(cfg.namespace, overrides.namespace) : cfg.namespace,
         // theme merges rather than replaces — child can extend parent overrides
         theme: overrides.theme !== undefined ? { ...cfg.theme, ...overrides.theme } : cfg.theme,
       }),
@@ -215,6 +240,14 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
 
     info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
+
+    resetLevel: (): void => {
+      cfg.logLevel = initialLogLevel;
+    },
+
+    setLevel: (level: LogLevel): void => {
+      cfg.logLevel = level;
+    },
 
     time: timeImpl,
 

@@ -4,6 +4,7 @@ export {
   abs,
   add,
   allocate,
+  clamp,
   compare,
   divide,
   fromJSON,
@@ -27,6 +28,7 @@ export {
   toJSON,
   toCurrencyCode,
   toNumber,
+  zero,
 } from './money';
 export type {
   CurrencyCode,

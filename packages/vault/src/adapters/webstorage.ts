@@ -1,7 +1,7 @@
 import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
-import { VaultQuotaError } from '../errors';
+import { VaultError, VaultQuotaError } from '../errors';
 import {
   decodeStorageTableFromKey,
   encodeDbPrefix,
@@ -46,9 +46,12 @@ function createWebStorageAdapter<S extends AnySchema>(
 
   try {
     resolvedStorage = getStorage();
-  } catch {
-    throw new Error(
-      `[vault] ${storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
+  } catch (cause) {
+    throw new VaultError(
+      `${storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
+      {
+        cause,
+      },
     );
   }
 
@@ -58,7 +61,7 @@ function createWebStorageAdapter<S extends AnySchema>(
   const getPrefix = (table: string): string => {
     const cached = prefixMap.get(table);
 
-    if (!cached) throw new Error(`[vault] table "${table}" not in schema`);
+    if (!cached) throw new VaultError(`table "${table}" not in schema`);
 
     return cached;
   };

@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, debugRouter]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -69,10 +69,7 @@ const router = createRouter({
       },
     },
   },
-  notFound: {
-    component: NotFoundPage,
-    },
-  },
+  notFound: { component: NotFoundPage },
 });
 
 await router.navigate({ name: 'dashboard.settings' });
@@ -133,7 +130,7 @@ router.subscribe((state) => {
 | Error in state                | ✅                                            | ❌      | ❌      |
 | History state in context      | ✅                                            | ❌      | ❌      |
 | Leave guards                  | ✅                                            | ❌      | ❌      |
-| Wayfinder prefetching             | ✅                                            | ❌      | ❌      |
+| Hover prefetching (`preload()`)   | ✅                                            | ❌      | ❌      |
 | Scroll restoration            | ✅                                            | ❌      | ❌      |
 | View Transition API           | ✅                                            | ❌      | ❌      |
 | Zero dependencies             | ✅                                            | ✅      | ✅      |
@@ -161,6 +158,7 @@ router.subscribe((state) => {
 - Wildcard routes for catch-all cases
 - Base-path support for app subdirectories
 - View Transition API with per-navigation override
+- **Debug logging** via `debugRouter()` (`@vielzeug/wayfinder/debug`) — logs every navigation phase change with `[wayfinder:nav]` prefixes; tree-shaken from production bundles
 
 ## Compatibility
 
@@ -179,8 +177,8 @@ router.subscribe((state) => {
 
 ## See Also
 
-- [Ripple](/ripple/)
-- [Ward](/ward/)
-- [Herald](/herald/)
+- [Ripple](/ripple/) — reactive signals; sync router state to a signal for framework-agnostic reactivity
+- [Ward](/ward/) — permission guards; use inside Wayfinder middleware to protect routes
+- [Herald](/herald/) — event bus; dispatch route-change events to decouple navigation side effects
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

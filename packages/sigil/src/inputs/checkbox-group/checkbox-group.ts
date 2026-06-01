@@ -6,6 +6,7 @@ import {
   effect,
   html,
   inject,
+  onCleanup,
   prop,
   provide,
   type ReadonlySignal,
@@ -17,6 +18,7 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
   type ChoiceChangeDetail,
+  componentSignal,
   createChoiceField,
   createStableId,
   getChoiceLabel,
@@ -133,6 +135,7 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       helper: props.helper,
       multiple: signal(true),
       prefix: 'checkbox-group',
+      signal: componentSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.values,
     });

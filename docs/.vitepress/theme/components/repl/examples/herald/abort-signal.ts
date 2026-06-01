@@ -1,4 +1,33 @@
 export const abortSignalExample = {
-  code: "import { createBus, BusDisposedError } from '/herald'\n\ntype AppEvents = {\n  message: string\n}\n\nconst bus = createBus<AppEvents>()\n\nconst controller = new AbortController()\nconst { signal } = controller\n\nbus.on('message', (msg) => {\n  console.log('Listener with signal:', msg)\n}, signal)\n\nbus.emit('message', 'First message')\nbus.emit('message', 'Second message')\n\ncontroller.abort()\n\nbus.emit('message', 'Third message')\nconsole.log('After abort, the third message is ignored')\n\nconst bus2 = createBus<AppEvents>()\n\nvoid bus2.wait('message').catch((err) => {\n  if (err instanceof BusDisposedError) {\n    console.log('Caught BusDisposedError:', err.message)\n  }\n})\n\nbus2.dispose()",
+  code: `import { createBus, BusDisposedError } from '@vielzeug/herald'
+
+// Demonstrate AbortSignal auto-unsubscribe and BusDisposedError
+const bus = createBus()
+
+const controller = new AbortController()
+const { signal } = controller
+
+bus.on('message', (msg) => {
+  console.log('listener received:', msg)
+}, { signal })
+
+bus.emit('message', 'first')   // fires
+bus.emit('message', 'second')  // fires
+
+controller.abort()             // removes the listener
+
+bus.emit('message', 'third')   // ignored — no listeners
+console.log('listeners after abort:', bus.listenerCount())
+
+// BusDisposedError: pending wait() rejects when bus is disposed
+const bus2 = createBus()
+
+void bus2.wait('done').catch((err) => {
+  if (err instanceof BusDisposedError) {
+    console.log('BusDisposedError caught:', err.message)
+  }
+})
+
+bus2.dispose()`,
   name: 'AbortSignal & BusDisposedError',
 };

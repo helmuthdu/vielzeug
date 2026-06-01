@@ -243,7 +243,7 @@ import { createQuery } from '@vielzeug/courier';
 const qc = createQuery({
   staleTime: 0,      // ms to serve from cache before refetching (default: 0 = always stale)
   gcTime: 300_000,   // ms before an unobserved entry is GC'd (default: 5 min)
-  maxAttempts: 1,    // 1 = one try with no retries
+  times: 1,          // 1 = one try with no retries
 });
 ```
 
@@ -256,7 +256,7 @@ const user = await qc.fetch({
   key: ['users', userId],
   fn: ({ key, signal }) => api.get<User>('/users/{id}', { params: { id: key[1] as number }, signal }),
   staleTime: 5_000,
-  maxAttempts: 3,
+  times: 3,
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
@@ -267,8 +267,8 @@ const user = await qc.fetch({
 | `fn`           | `(ctx: QueryFnContext) => Promise<T>` | required             | Data-fetching function; receives `{ key, signal }`                              |
 | `staleTime`    | `number`                              | `0`                  | ms served from cache before the next `fetch()` call refetches                   |
 | `gcTime`       | `number`                              | `300000`             | ms before an unobserved entry is GC'd while unobserved                          |
-| `maxAttempts`  | `number`                              | query-client default | Total attempts for this specific fetch                                          |
-| `retryDelay`   | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific fetch                                          |
+| `times`        | `number`                              | query-client default | Total attempts for this specific fetch; `1` means one try with no retries      |
+| `delay`        | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific fetch                                          |
 | `shouldRetry`  | `(error, attempt) => boolean`         | query-client default | Retry predicate for this specific fetch                                         |
 | `enabled`      | `boolean`                             | `true`               | Skip the fetch when `false`; existing cached data is returned                   |
 | `initialData`  | `T \| () => T \| undefined`           | —                    | Pre-seed the cache as a successful entry when no data exists                    |
@@ -276,7 +276,7 @@ const user = await qc.fetch({
 Per-fetch retry options override `createQuery()` defaults when provided.
 
 ::: tip Retry semantics
-`maxAttempts: 3` means **3 total attempts**. `maxAttempts: 1` means one try with no retries.
+`times: 3` means **3 total attempts**. `times: 1` means one try with no retries.
 :::
 
 ### Conditional Fetching
@@ -560,6 +560,8 @@ const loader = createBatcher({
 
 // Dispose — rejects all queued promises and prevents further use
 loader.dispose();
+// or use the explicit resource management syntax:
+// using loader = createBatcher(...);
 ```
 
 ::: warning Result ordering
@@ -574,13 +576,14 @@ When using `createCourier()`, create mutations directly from the client — no e
 const createUser = client.mutation(
   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
   {
-    maxAttempts: 2,
-    onSuccess: (user) => {
+    times: 2,
+    onSuccess: (user, variables) => {
       client.query.set(['users', user.id], user);
       client.query.invalidate(['users']);
+      console.log('Created:', variables.name);
     },
-    onError: (err) => toast.error(err.message),
-    onSettled: () => hideSpinner(),
+    onError: (err, variables) => toast.error(`Failed to create ${variables.name}: ${err.message}`),
+    onSettled: (_data, _error, variables) => hideSpinner(variables),
   },
 );
 
@@ -596,19 +599,23 @@ import { createMutation } from '@vielzeug/courier';
 
 const createUser = createMutation(
   (input: NewUser, signal: AbortSignal) => api.post<User>('/users', { body: input, signal }),
-  { maxAttempts: 2 },
+  { times: 2 },
 );
 ```
 
 ### Lifecycle Callbacks
 
-Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run.
+Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run. Every callback receives the original `variables` passed to `mutate()`.
 
-| Callback    | Signature                                 | Called when                           |
-| ----------- | ----------------------------------------- | ------------------------------------- |
-| `onSuccess` | `(data: TData) => void \| Promise<void>`  | The run succeeds                      |
-| `onError`   | `(error: Error) => void \| Promise<void>` | The run fails (not aborted)           |
-| `onSettled` | `(data, error) => void \| Promise<void>`  | After every run regardless of outcome |
+| Callback    | Signature                                                           | Called when                                      |
+| ----------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| `onSuccess` | `(data: TData, variables: TVariables) => void \| Promise<void>`    | The run succeeds                                 |
+| `onError`   | `(error: Error, variables: TVariables) => void \| Promise<void>`   | The run fails; **not** called on abort           |
+| `onSettled` | `(data, error, variables: TVariables) => void \| Promise<void>`    | After every run including abort (`error` is `null` for success and abort) |
+
+::: tip Concurrent mutations
+When multiple `mutate()` calls run simultaneously, state reflects the **latest** call. Each callback fires for its own call independently. Use `mutation.cancel()` before a new `mutate()` for last-call-wins semantics.
+:::
 
 ### Cancellation
 
@@ -643,13 +650,13 @@ source.on('ping', () => {});
 source.close();
 ```
 
-`reconnect: true` uses full-jitter exponential backoff with a default budget of 5 reconnects. You can customize that budget with `maxAttempts`.
+`reconnect: true` uses full-jitter exponential backoff with a default budget of 5 reconnects after the first failure.
 
 ```ts
 const source = stream.sse('/events', {
   reconnect: {
-    maxAttempts: 2,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+    times: 2,
+    delay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
   },
 });
 ```
@@ -702,7 +709,7 @@ try {
   } else if (HttpError.is(err)) {
     console.log(err.status, err.method, err.url);
     console.log(err.data);
-    console.log(err.response);
+    console.log(err.headers?.get('x-request-id'));
   }
 }
 ```
@@ -768,8 +775,8 @@ The built-in default uses full-jitter exponential backoff. Override it per query
 
 ```ts
 const retryingQc = createQuery({
-  maxAttempts: 4,
-  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
+  times: 4,
+  delay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 
@@ -781,7 +788,7 @@ await retryingQc.fetch({
 
 ### Pitfalls
 
-- `maxAttempts: 1` means one try and no retries.
+- `times: 1` means one try and no retries.
 - Use `dedupe: false` when method + URL + response type are the same but you explicitly want separate requests.
 - `subscribe()` does **not** emit immediately; call `getState(key)` for the current snapshot first.
 - `watch()` does **not** emit immediately; call `peek()` for the initial snapshot.
@@ -930,7 +937,7 @@ effect(() => console.log('user:', userStore.value.user?.name));
 ## Best Practices
 
 - Prefer `createCourier()` when your app needs REST, streams, shared interceptors, and one place to manage headers. Use `client.mutation()` for mutations — no separate import needed.
-- Use `maxAttempts` consistently: `1` means one try and no retries.
+- Use `times` consistently: `1` (or `NO_RETRY`) means one try and no retries.
 - Set `staleTime` on `createQuery` to match your data's freshness requirements; default is `0`.
 - Use `qc.invalidate([prefix])` after successful mutations to refresh related cached data.
 - Always pass the `signal` from query and mutation functions to the underlying request.

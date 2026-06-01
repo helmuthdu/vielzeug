@@ -33,11 +33,11 @@ export type MaybePromise<T> = T | Promise<T>;
  */
 export type DataStream<T = unknown> = AsyncGenerator<T, T>;
 
-/** Navigation status for the whole router. */
+/** Navigation status for the whole router and per-route match status (F1). */
 export type NavigationStatus = 'error' | 'idle' | 'loading' | 'streaming';
 
 /** Per-route match status (F1). Reflects whether this specific branch node is still loading. */
-export type MatchStatus = 'error' | 'idle' | 'loading' | 'streaming';
+export type MatchStatus = NavigationStatus;
 
 export type IsActiveOptions = {
   /** Require an exact pathname match. Defaults to prefix matching. */
@@ -133,7 +133,10 @@ export type RouteContext<Params extends RouteParams = RouteParams, TRoutes exten
   readonly hash: string;
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
-  /** Mutable bag for passing values between middleware functions in a navigation. */
+  /**
+   * Mutable bag for passing values between middleware functions in a navigation.
+   * Reset to an empty object at the start of every navigation.
+   */
   locals: Record<string, unknown>;
   /** Matched branch for the current navigation. Leaf node is the active route. */
   readonly matches: RouteMatchBranch;

@@ -18,7 +18,7 @@ Use `db.observe(table, fn)` for callback-based subscriptions, `db.watch(table)` 
 `observe` **always fires immediately** with the current table state on registration, then fires again on every mutation. There is no deferred-first-call mode.
 
 ```ts
-import { createMemory, table } from '@vielzeug/vault';
+import { createMemory, table, type Unsubscribe } from '@vielzeug/vault';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
@@ -26,7 +26,7 @@ const schema = { users: table<User>('id') };
 const db = createMemory({ schema });
 
 // Fires immediately with current state, then on every change
-const stop = db.observe('users', (rows) => {
+const stop: Unsubscribe = db.observe('users', (rows) => {
   console.log('users snapshot:', rows.length);
 });
 
@@ -154,7 +154,7 @@ await db.put('users', { id: 1, name: 'Alice' }); // → effect re-runs
 ### Pitfalls
 
 - `observe()` always fires immediately on registration — there is no deferred-first-call mode. If you need to skip the initial state, check a flag in your callback on the first invocation.
-- `observe()` returns an unsubscribe function — forgetting to call it on teardown leaks listeners. Use `watch()` or `watchStream()` for loops where cleanup needs to be automatic.
+- `observe()` returns an `Unsubscribe` function — forgetting to call it on teardown leaks listeners. Use `watch()` or `watchStream()` for loops where cleanup needs to be automatic.
 - `observeMany()` throws `VaultScopeError` when passed an empty `tables` array. Always provide at least one table name.
 - Writes to multiple tables inside a single `batch()` call trigger `observeMany` exactly once, not once per dirty table. Writes outside a `batch()` trigger separate callbacks per table.
 - For `watch()` and `watchStream()`, the default `mode: 'latest'` silently drops intermediate snapshots when the consumer lags. Use `mode: 'all'` if every intermediate state matters.

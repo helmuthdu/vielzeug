@@ -15,10 +15,12 @@ export type Throttled<T extends Fn> = ((...args: Parameters<T>) => void) & {
  * Throttles a function. By default, only the leading edge fires.
  * Pass `{ trailing: true }` to also invoke at the end of the throttle window.
  *
- * Example:
- * const fn = () => ...
+ * @example
+ * ```ts
+ * const fn = () => { ... };
  * const t = throttle(fn, 700);
  * const withTrailing = throttle(fn, 700, { trailing: true });
+ * ```
  */
 export function throttle<T extends Fn>(
   fn: T,

@@ -1,4 +1,4 @@
-import { ErrorCode, s } from '../index';
+import { ErrorCode, ValidationError, s } from '../index';
 
 describe('check() sync', () => {
   it('accepts boolean/string style checks', () => {
@@ -107,6 +107,20 @@ describe('checkAsync()', () => {
     );
   });
 
+  it('throws ValidationError (not raw Error) when check() returns a Promise', () => {
+    const schema = s.string().check(async () => true);
+
+    let caught: unknown;
+
+    try {
+      schema.parse('x');
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ValidationError);
+  });
+
   it('checkAsync() works with parseAsync()', async () => {
     const schema = s.object({ confirm: s.string(), password: s.string() }).check((d) => {
       return d.password === d.confirm || 'Passwords must match';
@@ -117,6 +131,57 @@ describe('checkAsync()', () => {
       password: 'abc',
     });
     await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
+  });
+});
+
+describe('refine() alias', () => {
+  it('behaves identically to check(predicate, message)', () => {
+    const schema = s.number().refine(
+      (n) => n > 0,
+      () => 'Must be positive',
+    );
+
+    expect(schema.parse(1)).toBe(1);
+    expect(() => schema.parse(-1)).toThrow('Must be positive');
+  });
+
+  it('works without a message (uses default custom message)', () => {
+    const schema = s.string().refine((v) => v.length > 2);
+
+    expect(schema.parse('abc')).toBe('abc');
+    expect(() => schema.parse('ab')).toThrow();
+  });
+
+  it('can chain multiple refine() calls', () => {
+    const schema = s
+      .string()
+      .refine(
+        (v) => v.includes('@'),
+        () => 'Must contain @',
+      )
+      .refine(
+        (v) => v.includes('.'),
+        () => 'Must contain .',
+      );
+
+    expect(schema.parse('a@b.c')).toBe('a@b.c');
+
+    const result = schema.safeParse('nope');
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues).toHaveLength(2);
+    }
+  });
+
+  it('is chainable on any schema type', () => {
+    const schema = s.object({ n: s.number() }).refine(
+      (v) => v.n > 0,
+      () => 'n must be positive',
+    );
+
+    expect(() => schema.parse({ n: -1 })).toThrow('n must be positive');
   });
 });
 

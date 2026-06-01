@@ -1,4 +1,33 @@
 export const basicRoutingExample = {
-  code: "import { createMemoryHistory, createRouter } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst history = createMemoryHistory('/')\n\nconst router = createRouter({\n  history,\n  routes: {\n    home: {\n      path: '/',\n      handler: () => console.log('\uD83C\uDFE0 Home page')\n    },\n    about: {\n      path: '/about',\n      handler: () => console.log('\u2139\uFE0F About page')\n    },\n    userDetail: {\n      path: '/users/:id',\n      handler: ({ params }) => console.log('\uD83D\uDC64 User page - ID:', params.id)\n    },\n    notFound: {\n      path: '*',\n      handler: () => console.log('Not found')\n    }\n  }\n})\n\nconsole.log('Initial pathname:', router.getSnapshot().location.pathname)\n\nawait router.navigate({ name: 'about' })\nconsole.log('Active route after /about:', router.getSnapshot().matches.at(-1)?.name)\n\nawait router.navigate({ name: 'userDetail', params: { id: '123' } })\nconsole.log('Current pathname:', router.getSnapshot().location.pathname)\nconsole.log('Leaf params:', router.getSnapshot().matches.at(-1)?.params)",
-  name: 'Basic Routing - Route State and Navigation',
+  code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
+
+// Named routes, typed params, and subscribe() for reactive rendering.
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: {
+    home:       { path: '/' },
+    about:      { path: '/about', data: async () => ({ title: 'About Us' }) },
+    userDetail: { path: '/users/:id', data: async ({ params }) => ({ id: params.id, name: 'User ' + params.id }) },
+  },
+  notFound: {},
+})
+
+// React to every state change — the router notifies on navigate and load.
+router.subscribe((state) => {
+  const leaf = state.matches.at(-1)
+  if (state.status === 'idle') {
+    console.log('route:', leaf?.name, '| data:', JSON.stringify(leaf?.data))
+  }
+})
+
+console.log('Initial pathname:', router.getSnapshot().location.pathname)
+
+await router.navigate({ name: 'about' })
+await router.navigate({ name: 'userDetail', params: { id: '42' } })
+
+console.log('Current pathname:', router.getSnapshot().location.pathname)
+console.log('Params:', router.getSnapshot().matches.at(-1)?.params)
+
+router.dispose()`,
+  name: 'Basic Routing — Route State and Navigation',
 };

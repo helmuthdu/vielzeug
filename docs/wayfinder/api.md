@@ -17,19 +17,20 @@ description: Complete API reference for Wayfinder.
 | `router.getSnapshot()` | Return the current immutable route state | Sync | Does not subscribe — call `subscribe()` to react to changes |
 | `router.subscribe(listener)` | Register a listener for state changes | Sync (returns unsub) | Listener is **not** called immediately with current state |
 | `router.url(name, params?, query?)` | Build a URL for a named route | Sync | Throws if the route name is unknown |
-| `router.isActive(name, options?)` | Check if a named route matches the current URL | Sync | Reads `history.location` directly, not from snapshot |
+| `router.isActive(name, options?)` | Check if a named route matches the current URL | Sync | Compares against the current snapshot pathname, not `history.location` directly |
 | `router.resolve(pathname)` | Resolve a pathname to a branch without side effects | Sync | Returns `null` for redirect routes |
 | `router.match(url, options?)` | Resolve a URL to a full state including data loaders | Async | Lazy modules are resolved as a side effect |
-| `router.preload(name, params?)` | Eagerly run data loaders without navigating | Async | Results are discarded on the next navigation |
+| `router.preload(name, params?)` | Eagerly run data loaders without navigating | Async | Results are consumed on the first matching navigation; different query params use a separate cache entry |
 | `router.waitFor(name)` | Wait for the router to settle on a named route | Async | Rejects immediately if `status === 'error'` |
 | `router.beforeLeave(blocker, options?)` | Register a global leave guard | Sync (returns unsub) | Scoped to specific routes via `options.routes` |
 | `router.dispose()` | Remove listeners and shut down the router | Sync | Idempotent — safe to call multiple times |
 
-## Package Entry Point
+## Package Entry Points
 
-| Import                | Purpose                |
-| --------------------- | ---------------------- |
-| `@vielzeug/wayfinder`   | Main exports and types |
+| Import                        | Purpose                                       |
+| ----------------------------- | --------------------------------------------- |
+| `@vielzeug/wayfinder`         | Main exports and types                        |
+| `@vielzeug/wayfinder/debug`   | `debugRouter` — navigation logger (dev only)  |
 
 ## `createRouter(options)`
 
@@ -243,7 +244,6 @@ const state = await router.match('/users/42');
 const controller = new AbortController();
 const state = await router.match('/dashboard', { signal: controller.signal });
 ```
-```
 
 Resolve a full URL to a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
 
@@ -267,7 +267,7 @@ const router = createRouter({ history, routes });
 const state = await router.waitFor('dashboard');
 ```
 
-Waits for the router to reach `status: 'idle'` with the named route active in the matched branch. Rejects immediately if `status === 'error'`. Resolves immediately if the router is already idle on the target route.
+Waits for the router to reach `status: 'idle'` with the named route active in the matched branch. Rejects immediately if `status === 'error'`. Resolves immediately if the router is already idle on the target route. Also rejects if `router.dispose()` is called while the promise is pending.
 
 **Returns:** `Promise<RouteState>`
 
@@ -282,7 +282,7 @@ anchor.addEventListener('mouseenter', () => {
 });
 ```
 
-Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same route+params are deduplicated. Results are discarded; a subsequent `navigate()` will run the loaders again with a fresh `AbortSignal`.
+Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route; a second navigation (or a navigation with different query params) runs the loaders fresh with a new `AbortSignal`.
 
 **Returns:** `Promise<void>`
 
@@ -566,12 +566,6 @@ type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQueryValu
 
 Represents the query object after optional `coerceSearch` normalization.
 
-### `RouteMatchBranch`
-
-```ts
-type RouteMatchBranch = readonly RouteMatch[];
-```
-
 ### `NavigationStatus`
 
 ```ts
@@ -583,10 +577,28 @@ Top-level status of the router. `'streaming'` means at least one active data loa
 ### `MatchStatus`
 
 ```ts
-type MatchStatus = 'error' | 'idle' | 'loading' | 'streaming';
+type MatchStatus = NavigationStatus;
 ```
 
-Per-node status on each `RouteMatch`. Useful for nested layouts that want to show per-slot loading indicators.
+Per-node status on each `RouteMatch`. Alias of `NavigationStatus`; useful for nested layouts that want to show per-slot loading indicators.
+
+### `RouteMiddleware<Path, TRoutes>`
+
+```ts
+type RouteMiddleware<Path extends string = string, TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<PathParams<Path>, TRoutes>,
+  next: () => Promise<void>,
+) => void | Promise<void>;
+```
+
+Typed variant of `Middleware` scoped to a route path. Provides typed `ctx.params` matching the path pattern.
+
+```ts
+const guard: RouteMiddleware<'/users/:id'> = (ctx, next) => {
+  console.log(ctx.params.id); // string
+  return next();
+};
+```
 
 ### `BeforeLeaveBlocker`
 
@@ -686,6 +698,28 @@ Wayfinder does not export custom `Error` subclasses. All errors are thrown as na
 | `/docs/*`                      | `/docs/guide/intro` | Wildcard suffix without a named capture     |
 | `/files/:rest*`                | `/files/a/b/c`      | Wildcard suffix captured as one named param |
 | `*`                            | anything            | Global catch-all                            |
+
+## `debugRouter(options)` <Badge type="tip" text="@vielzeug/wayfinder/debug" />
+
+```ts
+import { debugRouter } from '@vielzeug/wayfinder/debug';
+
+const router = debugRouter({ routes });
+// [wayfinder:nav] idle      /         [home]
+// [wayfinder:nav] loading   /dashboard
+// [wayfinder:nav] idle      /dashboard [dashboard.index]
+```
+
+Wraps `createRouter()` and attaches a `subscribe` listener that logs every navigation state change to `console.debug`. Returns the same `Router` instance — all methods are identical to `createRouter()`.
+
+Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
+
+| Log format | When |
+| --- | --- |
+| `[wayfinder:nav] idle      /path  [routeName]` | Navigation settled |
+| `[wayfinder:nav] loading   /path` | Data loaders in flight |
+| `[wayfinder:nav] streaming /path  [routeName]` | Streaming loader emitting partial data |
+| `[wayfinder:nav] error     /path  [routeName]  <Error>` | Navigation error |
 
 ## Design Notes
 

@@ -87,7 +87,7 @@ import '@vielzeug/sigil';
 
 Component registration happens through side-effect imports such as `@vielzeug/sigil/button` and `@vielzeug/sigil/dialog`.
 
-For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craft/controls`.
+Headless widget controllers (`createTextField`, `createListControl`, `createOverlayControl`, and others) are exported directly from `@vielzeug/sigil` alongside component types.
 
 ### Components
 

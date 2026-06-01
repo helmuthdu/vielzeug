@@ -20,14 +20,21 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `provide/inject`   | Context API for parent-to-descendant sharing   | Sync           | `inject()` throws if called outside setup             |
 | `ref()`            | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                 |
 | `createContext()`  | Create a typed injection key                   | Sync           | Context is scoped to the component tree               |
+| `syncAria()`       | Reactively sync ARIA attributes to an element  | Sync           | Effects leak if called without a setup context and no cleanup |
+| `each()`           | Keyed list rendering with DOM diffing          | Sync           | Every item must have a unique key at all times        |
+| `when()`           | Conditional branch rendering                   | Sync           | Static boolean fast-path skips reactive subscription  |
+| `createFormContext()` | Coordinate form state across child fields   | Sync           | Submit errors are captured in `error` signal, not thrown |
+| `defineField()`    | Wire a form-associated element to internals    | Sync           | Requires `formAssociated: true`; call once per component |
+| `resetIdCounter()` | Reset `createStableId` counter to 1           | Sync           | Use in `beforeEach` for deterministic test IDs        |
 
 ## Package Entry Points
 
 | Import                        | Purpose                                            |
 | ----------------------------- | -------------------------------------------------- |
-| `@vielzeug/craft`           | Core authoring/runtime API plus ripple re-exports |
+| `@vielzeug/craft`           | Core authoring/runtime API plus ripple re-exports   |
+| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics  |
 | `@vielzeug/craft/observers` | Resize, intersection, mutation, and media observers |
-| `@vielzeug/craft/testing`   | DOM-oriented test helpers                          |
+| `@vielzeug/craft/testing`   | DOM-oriented test helpers                           |
 
 ## Core Component API
 
@@ -125,7 +132,7 @@ Runs `callback` when a `ref()` resolves to an element and re-runs when that elem
 | Helper                              | Signature          | Notes                                     |
 | ----------------------------------- | ------------------ | ----------------------------------------- |
 | `prop.string(defaultValue?)`        | `PropDef<string>`  | Reflects by default                       |
-| `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Empty string and `'true'` parse as `true` |
+| `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false` |
 | `prop.number(defaultValue?)`        | `PropDef<number>`  | Uses `Number(...)` parsing                |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union        |
 | `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse; `reflect: false` by default   |
@@ -157,7 +164,7 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 | `classMap(record)`                | Reactive class string from object map          |
 | `styleMap(record)`                | Reactive inline style string from object map   |
 | `live(signal)`                    | Live form binding — skips stale writes to in-focus inputs |
-| `model(signal)`                   | Two-way value binding (reads value, writes on input event) |
+| `model(signal)`                   | Two-way value binding for `input`, `select` (single), `textarea`; writes on `input` event |
 | `raw(value)`                      | Trusted HTML rendering (XSS risk without sanitizer) |
 
 ### Event Modifiers
@@ -200,7 +207,7 @@ syncAria(element, {
 });
 ```
 
-When `autoCleanup: true` is passed and `syncAria` is called outside a component setup context (e.g., in a standalone module), a DEV warning is logged because no cleanup can be registered automatically.
+When `autoCleanup: true` is passed and `syncAria` is called outside a component setup context (e.g., in a standalone module), a `console.warn` is logged because no cleanup can be registered automatically.
 
 ## Slots
 
@@ -223,7 +230,8 @@ Both `provide()` and `inject()` must be called synchronously during `setup()`. C
 
 - `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
 - `createId(prefix?)` — Generate an auto-incrementing unique ID string (e.g. `cft-1`).
-- `createStableId(prefix?)` — Generate a stable unique ID with a short random tag (e.g. `field-a3k21`).
+- `createStableId(prefix?)` — Generate a stable unique ID with a short random tag (e.g. `field-a3k21`). The tag is fixed per page load, so IDs are stable across renders.
+- `resetIdCounter()` — Reset the `createStableId` counter to 1. Useful in test `beforeEach` blocks to ensure deterministic IDs.
 
 ## Form-Associated API
 
@@ -252,15 +260,17 @@ type FormFieldHandle = {
 Coordinate form state across child field components:
 
 - `createFormContext(options?)` — Create a `FormContextValue`
-- `provideFormContext(ctx)` — Provide to descendants via `provide(FORM_CONTEXT_KEY, ctx)`
-- `useFormContext()` — Inject from nearest ancestor
+- `useFormContext()` — Inject from nearest ancestor; returns `undefined` if no context is provided
+
+To provide a form context to descendants, call `provide(FORM_CONTEXT_KEY, ctx)` during setup.
 
 ```ts
 type FormContextValue = {
   readonly dirty: ReadonlySignal<boolean>;
+  readonly error: ReadonlySignal<unknown>;         // Last submit error; null if last submit succeeded
   markDirty(): void;                              // Call from input/change handlers
   registerField(validity: ReadonlySignal<boolean>): () => void;
-  reset(): void;                                   // Resets dirty to false
+  reset(): void;                                   // Resets dirty + error to false/null; calls onReset
   submit(e?: Event): Promise<void>;
   readonly submitting: ReadonlySignal<boolean>;
   readonly valid: ReadonlySignal<boolean>;         // true when all registered fields are valid
@@ -284,7 +294,7 @@ Import from `@vielzeug/craft/testing`.
 | -------------------------- | --------------------------------------------------------- |
 | `mount(setup, options?)`   | Mount a component and return a test fixture               |
 | `cleanup()`                | Remove all mounted elements and reset test state          |
-| `install(afterEach)`       | Register `cleanup()` with the test runner's `afterEach`   |
+| `install(afterEach)`       | _(removed)_ Use `cleanup()` manually in `afterEach`       |
 | `flush(options?)`          | Drain reactive updates and animation frames               |
 | `FLUSH_DEEP`               | Pre-built options for deep async chains (`maxTurns: 12`)  |
 | `mock(tag, template?)`     | Register a no-op stub custom element                      |
@@ -295,7 +305,7 @@ Import from `@vielzeug/craft/testing`.
 | `waitForEvent(el, name)`   | Resolve when the target element emits the named event     |
 | `within(element)`          | Scoped query helpers (`query`, `queryAll`, …)             |
 
-> **Test isolation:** `cleanup()` also resets internal `live()` signal tracking and the raw HTML sanitizer. Call it in `afterEach` (or use `install(afterEach)`) to prevent state leaking between tests.
+> **Test isolation:** `cleanup()` also resets internal `live()` signal tracking and the raw HTML sanitizer. Call it in `afterEach` to prevent state leaking between tests.
 
 #### `Fixture` interface
 
@@ -325,7 +335,7 @@ const { result, flush, destroy } = await renderHook(() => {
   onMounted(() => { count.value = 1; });
   return count;
 });
-export(result.value).toBe(1);
+expect(result.value).toBe(1);
 ```
 
 ## Ripple Re-exports

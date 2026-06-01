@@ -24,15 +24,20 @@ export const filterEquals = <T, V>(getValue: (item: T) => V, expected: V): Predi
 };
 
 export const filterRange = <T>(
-  getValue: (item: T) => number,
-  bounds: Readonly<{ max?: number; min?: number }>,
+  getValue: (item: T) => Date | number,
+  bounds: Readonly<{ max?: Date | number; min?: Date | number }>,
 ): Predicate<T> => {
+  const toNum = (v: Date | number): number => (v instanceof Date ? v.getTime() : v);
+
+  const min = bounds.min !== undefined ? toNum(bounds.min) : undefined;
+  const max = bounds.max !== undefined ? toNum(bounds.max) : undefined;
+
   return (item) => {
-    const value = getValue(item);
+    const value = toNum(getValue(item));
 
-    if (bounds.min !== undefined && value < bounds.min) return false;
+    if (min !== undefined && value < min) return false;
 
-    if (bounds.max !== undefined && value > bounds.max) return false;
+    if (max !== undefined && value > max) return false;
 
     return true;
   };

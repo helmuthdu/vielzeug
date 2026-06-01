@@ -16,30 +16,12 @@ export { effect, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
 export { CraftitError, reportRuntimeError } from './errors';
 
-export {
-  define,
-  LIFECYCLE_EVENTS,
-  prop,
-  type ComponentDefinition,
-  type HostBindFn,
-  type InferPropsFromDefs,
-  type InferPropsSignals,
-  type LifecycleEventName,
-  type PropDef,
-  type PropInputDefs,
-  type PropsDef,
-  type SetupContextBag,
-} from './registration';
+export { define, prop } from './define';
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropsDef } from './props';
+export type { ComponentDefinition, SetupContextBag } from './component-types';
+export { ComponentPhase, LIFECYCLE_EVENTS, type LifecycleEventName } from './types';
 
-export { ComponentPhase } from './types';
-
-export {
-  createFormContext,
-  FORM_CONTEXT_KEY,
-  provideFormContext,
-  useFormContext,
-  type FormContextValue,
-} from './form-context';
+export { createFormContext, FORM_CONTEXT_KEY, useFormContext, type FormContextValue } from './form-context';
 
 export { defineField, type FormFieldHandle, type FormFieldOptions } from './form-field';
 
@@ -47,7 +29,13 @@ export { createContext, inject, injectStrict, provide, type InjectionKey } from 
 
 export { syncAria, type SyncAriaOptions } from './aria';
 
-export { createBind, type HostBindConfig, type HostBindingValue, type ReflectConfig } from './host-bind';
+export {
+  createBind,
+  type HostBindConfig,
+  type HostBindFn,
+  type HostBindingValue,
+  type ReflectConfig,
+} from './host-bind';
 
 export { createSlots, type ComponentSlots } from './slots';
 

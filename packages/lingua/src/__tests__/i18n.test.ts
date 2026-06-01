@@ -136,10 +136,10 @@ describe('createI18n', () => {
     test('resolves ordinal plural forms', () => {
       const i18n = createI18n({ catalogs });
 
-      expect(i18n.tp('position', 1, undefined, true)).toBe('1st');
-      expect(i18n.tp('position', 2, undefined, true)).toBe('2nd');
-      expect(i18n.tp('position', 3, undefined, true)).toBe('3rd');
-      expect(i18n.tp('position', 4, undefined, true)).toBe('4th');
+      expect(i18n.tp('position', 1, { ordinal: true })).toBe('1st');
+      expect(i18n.tp('position', 2, { ordinal: true })).toBe('2nd');
+      expect(i18n.tp('position', 3, { ordinal: true })).toBe('3rd');
+      expect(i18n.tp('position', 4, { ordinal: true })).toBe('4th');
     });
 
     test('accepts vars alongside ordinal', () => {
@@ -147,13 +147,65 @@ describe('createI18n', () => {
         catalogs: { en: { pos: { one: '{name} is {count}st', other: '{name} is {count}th' } } },
       });
 
-      expect(i18n.tp('pos', 1, { name: 'Alice' }, true)).toBe('Alice is 1st');
+      expect(i18n.tp('pos', 1, { ordinal: true, vars: { name: 'Alice' } })).toBe('Alice is 1st');
     });
 
     test('falls back to .other when the specific plural form is absent', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count} items' } } } });
 
       expect(i18n.tp('items', 1)).toBe('1 items');
+    });
+
+    test('selects plural form using each fallback locale own CLDR rules', () => {
+      // Russian count=5 → CLDR 'many'; if active locale is 'en' (count=5 → 'other'),
+      // the fallback should still resolve using Russian rules when the key comes from 'ru'.
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          ru: {
+            items: {
+              few: '{count} предмета',
+              many: '{count} предметов',
+              one: '{count} предмет',
+              other: '{count} предмета',
+            },
+          },
+        },
+        fallback: 'ru',
+        locale: 'en',
+      });
+
+      expect(i18n.tp('items', 1)).toBe('1 предмет'); // Russian 'one'
+      expect(i18n.tp('items', 3)).toBe('3 предмета'); // Russian 'few'
+      expect(i18n.tp('items', 5)).toBe('5 предметов'); // Russian 'many' — was incorrectly 'other' before fix
+    });
+
+    test('count=0 resolves .zero override before CLDR form in fallback locale', () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          ru: { items: { many: '{count} предметов', other: '{count} предмета', zero: 'Нет предметов' } },
+        },
+        fallback: 'ru',
+        locale: 'en',
+      });
+
+      // Russian count=0 → CLDR 'many'; explicit .zero override should take precedence
+      expect(i18n.tp('items', 0)).toBe('Нет предметов');
+    });
+
+    test('count=0 uses CLDR form from fallback locale when .zero is absent', () => {
+      // Russian count=0 → CLDR 'many'; no .zero key present, so 'many' form should be used
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          ru: { items: { many: 'много предметов', other: 'других предметов' } },
+        },
+        fallback: 'ru',
+        locale: 'en',
+      });
+
+      expect(i18n.tp('items', 0)).toBe('много предметов');
     });
 
     test('throws when count is not finite', () => {
@@ -165,7 +217,7 @@ describe('createI18n', () => {
     test('throws when vars.count is provided', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
-      expect(() => i18n.tp('items', 2, { count: 'custom' })).toThrow(
+      expect(() => i18n.tp('items', 2, { vars: { count: 'custom' } })).toThrow(
         '[lingua/E003] `tp` does not allow `vars.count`; `count` is injected automatically.',
       );
     });
@@ -729,6 +781,14 @@ describe('createI18n', () => {
 
       expect(i18n.has('nav')).toBe(false);
     });
+
+    test('returns false for a pipe-plural base key (expanded to sub-keys)', () => {
+      const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
+
+      expect(i18n.has('inbox')).toBe(false);
+      expect(i18n.has('inbox.one')).toBe(true);
+      expect(i18n.has('inbox.other')).toBe(true);
+    });
   });
 
   // ─── getSupportedLocales() ────────────────────────────────────────────────
@@ -843,6 +903,13 @@ describe('createI18n', () => {
 
       expect(nav.t('home')).toBe('Home');
       expect(msgs.tp('inbox', 1)).toBe('One message');
+    });
+
+    test('fmt is the same formatter instance as the parent i18n.fmt', () => {
+      const i18n = createI18n({ catalogs });
+      const nav = i18n.scope('nav');
+
+      expect(nav.fmt).toBe(i18n.fmt);
     });
   });
 
@@ -987,6 +1054,21 @@ describe('createI18n', () => {
       const i18n = createI18n({ locale: 'en' });
 
       expect(i18n.fmt.number(1_234.56)).toContain('1,234');
+    });
+
+    test('fmt cache is cleared when setLocale() switches locale', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+
+      // Prime the cache with English
+      const enResult = i18n.fmt.number(1_234.56);
+
+      await i18n.setLocale('fr');
+
+      // After locale switch the cache is cleared; French formatting differs
+      const frResult = i18n.fmt.number(1_234.56);
+
+      expect(enResult).toContain('1,234');
+      expect(frResult).not.toContain('1,234');
     });
 
     test('returns the same formatter instance on repeated accesses', () => {
@@ -1147,6 +1229,30 @@ describe('createI18n', () => {
       expect(i18n.t('extra')).toBe('Extra');
     });
 
+    test('restoreState() clears namespace dedup markers so they can be re-applied', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: { base: 'Base' } } });
+
+      i18n.registerNamespace('ui', () => {
+        calls++;
+
+        return { extra: 'Extra' };
+      });
+
+      await i18n.loadNamespace('ui');
+      expect(calls).toBe(1);
+      expect(i18n.t('extra')).toBe('Extra');
+
+      // restoreState() replaces the catalog — namespace keys are gone
+      i18n.restoreState({ catalogs: { en: { base: 'RestoredBase' } }, locale: 'en' });
+      expect(i18n.t('extra')).toBe('extra'); // key gone
+
+      // loadNamespace() should re-apply since restoreState() cleared the marker
+      await i18n.loadNamespace('ui');
+      expect(calls).toBe(2);
+      expect(i18n.t('extra')).toBe('Extra');
+    });
+
     test('namespace task key with colon in name does not collide with locale', async () => {
       // "user:settings" ns + "en" locale → key "user:settings\x00en"
       // Should not interfere with ns "user" + locale "settings:en" (invalid BCP47 anyway)
@@ -1182,6 +1288,33 @@ describe('createI18n', () => {
       await i18n.setLocale('de');
 
       expect(calls).toEqual(['fr']);
+    });
+
+    test('does not subscribe when signal is already aborted', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+      const controller = new AbortController();
+
+      controller.abort();
+
+      const callback = vi.fn();
+
+      i18n.subscribe(callback, { signal: controller.signal });
+      await i18n.setLocale('fr');
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    test('already-aborted signal with immediate: true does not call callback', () => {
+      const i18n = createI18n({ catalogs: { en: {} }, locale: 'en' });
+      const controller = new AbortController();
+
+      controller.abort();
+
+      const callback = vi.fn();
+
+      i18n.subscribe(callback, { immediate: true, signal: controller.signal });
+
+      expect(callback).not.toHaveBeenCalled();
     });
   });
 
@@ -1338,6 +1471,20 @@ describe('createI18n', () => {
 
       i18n.restoreState({ catalogs: { es: { hello: 'Hola' } }, locale: 'es' });
       expect(i18n.t('hello')).toBe('Hola');
+    });
+
+    test('restoreState() preserves active fallback chain resolution', () => {
+      const server = createI18n({
+        catalogs: { en: { title: 'Title' }, fr: {} },
+        fallback: 'en',
+        locale: 'fr',
+      });
+      const state = server.getState();
+
+      const client = createI18n({ fallback: 'en', locale: 'fr' });
+
+      client.restoreState(state);
+      expect(client.t('title')).toBe('Title');
     });
 
     test('getState() → restoreState() round-trips correctly', async () => {
@@ -1531,6 +1678,19 @@ describe('createI18n', () => {
       expect(a()).toBe('Alpha');
       expect(b()).toBe('Beta');
     });
+
+    test('invalidates cached entry after setLocale() with compile: true', async () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
+        compile: true,
+        locale: 'en',
+      });
+      const hello = i18n.bind('hello');
+
+      expect(hello()).toBe('Hello');
+      await i18n.setLocale('fr');
+      expect(hello()).toBe('Bonjour');
+    });
   });
 
   // ─── fork() (F4) ──────────────────────────────────────────────────────────
@@ -1673,6 +1833,17 @@ describe('createI18n', () => {
 
       expect(child.t('nav.home')).toBe('Home');
       expect(child.t('nav.about')).toBe('About');
+    });
+
+    test('inherits compile mode and renders compiled templates correctly', () => {
+      const parent = createI18n({
+        catalogs: { en: { greeting: 'Hello, {name}!' } },
+        compile: true,
+        locale: 'en',
+      });
+      const child = parent.fork();
+
+      expect(child.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
     });
 
     test('inherits the namespace registry from the parent', async () => {

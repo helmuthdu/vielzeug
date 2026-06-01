@@ -72,6 +72,13 @@ export function queue(options: { concurrency?: number } = {}) {
 
   return {
     /**
+     * Returns the number of currently running tasks
+     */
+    get active(): number {
+      return activeCount;
+    },
+
+    /**
      * Adds a promise-returning function to the queue
      */
     add: <T>(fn: () => Promise<T>): Promise<T> => {
@@ -121,17 +128,17 @@ export function queue(options: { concurrency?: number } = {}) {
     },
 
     /**
-     * Returns the number of currently active promises
+     * Returns the number of tasks waiting to run (queued but not yet started)
      */
     get pending(): number {
-      return activeCount;
+      return tasks.length;
     },
 
     /**
-     * Returns the current size of the queue
+     * Returns the total number of tasks (active + pending)
      */
     get size(): number {
-      return tasks.length;
+      return activeCount + tasks.length;
     },
   };
 }

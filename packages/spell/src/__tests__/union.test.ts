@@ -150,3 +150,15 @@ describe('UnionSchema.schemas introspection', () => {
     expect(schema.schemas).toHaveLength(2);
   });
 });
+
+describe('s.union() — async non-ValidationError branch throw', () => {
+  it('does not include non-ValidationError branch throws in branchErrors', async () => {
+    const badSchema = s.string().checkAsync(async () => {
+      throw new Error('unexpected internal error');
+    });
+    const goodSchema = s.number();
+    const schema = s.union(badSchema, goodSchema);
+
+    await expect(schema.parseAsync(42)).resolves.toBe(42);
+  });
+});

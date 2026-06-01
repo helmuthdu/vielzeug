@@ -1,3 +1,4 @@
+import { pipeEvents } from '..';
 import { createTestBus } from './testing';
 
 type TestEvents = {
@@ -51,9 +52,16 @@ describe('createTestBus - bus behavior passthrough', () => {
     expect(listener).toHaveBeenCalledWith(42);
   });
 
-  it('calls provided onDispatch hook with event and payload', () => {
+  it('calls a middleware hook with event and payload on each emit', () => {
     const onDispatch = vi.fn();
-    const bus = createTestBus<TestEvents>({ onDispatch });
+    const bus = createTestBus<TestEvents>({
+      middleware: [
+        (event, payload, next) => {
+          onDispatch(event, payload);
+          next();
+        },
+      ],
+    });
 
     bus.emit('count', 42);
     bus.emit('toggle');
@@ -140,13 +148,13 @@ describe('createTestBus - lifecycle helpers', () => {
     expect(bus.emitted('count')).toEqual([7]);
   });
 
-  it('pipe() is delegated and forwards events to the target bus', () => {
+  it('pipeEvents() forwards events to the target bus', () => {
     const source = createTestBus<TestEvents>();
     const target = createTestBus<TestEvents>();
     const listener = vi.fn();
 
     target.on('count', listener);
-    source.pipe(target, ['count']);
+    pipeEvents(source, target, ['count']);
 
     source.emit('count', 42);
 

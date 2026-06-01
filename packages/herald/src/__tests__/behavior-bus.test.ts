@@ -193,13 +193,14 @@ describe('createBehaviorBus - signal and disposal', () => {
     expect(bus.current('count')).toBeUndefined();
   });
 
-  it('forwards onDispatch hook while still capturing current values', () => {
-    const onDispatch = vi.fn();
-    const bus = createBehaviorBus<TestEvents>({ count: 0 }, { onDispatch });
+  it('onAny fires while current() still reflects the emitted value', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 0 });
+    const observer = vi.fn();
 
+    bus.onAny(observer);
     bus.emit('count', 5);
 
-    expect(onDispatch).toHaveBeenCalledWith('count', 5);
+    expect(observer).toHaveBeenCalledWith('count', 5);
     expect(bus.current('count')).toBe(5);
   });
 });
@@ -363,6 +364,89 @@ describe('createBehaviorBus - replay error handling', () => {
     // First replayed value (1) threw — forwarded to onError. Values 2 and 3 still replayed.
     expect(onError).toHaveBeenCalledOnce();
     expect(received).toEqual([2, 3]);
+
+    bus.dispose();
+  });
+});
+
+describe('createBehaviorBus - reset()', () => {
+  it('reset(event) clears the buffer for that event — new subscribers get no replay', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 42 });
+
+    bus.reset('count');
+
+    const listener = vi.fn();
+
+    bus.on('count', listener);
+
+    expect(listener).not.toHaveBeenCalled();
+
+    bus.dispose();
+  });
+
+  it('reset(event) does not affect other events', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 1, greet: { name: 'Alice' } });
+
+    bus.reset('count');
+
+    const onCount = vi.fn();
+    const onGreet = vi.fn();
+
+    bus.on('count', onCount);
+    bus.on('greet', onGreet);
+
+    expect(onCount).not.toHaveBeenCalled();
+    expect(onGreet).toHaveBeenCalledWith({ name: 'Alice' });
+
+    bus.dispose();
+  });
+
+  it('reset() with no argument clears all buffers', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 1, greet: { name: 'Bob' } });
+
+    bus.reset();
+
+    const onCount = vi.fn();
+    const onGreet = vi.fn();
+
+    bus.on('count', onCount);
+    bus.on('greet', onGreet);
+
+    expect(onCount).not.toHaveBeenCalled();
+    expect(onGreet).not.toHaveBeenCalled();
+
+    bus.dispose();
+  });
+
+  it('reset() clears current() — returns undefined after reset', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 99 });
+
+    expect(bus.current('count')).toBe(99);
+    bus.reset('count');
+    expect(bus.current('count')).toBeUndefined();
+
+    bus.dispose();
+  });
+
+  it('reset() on an event with no buffer is a safe no-op', () => {
+    const bus = createBehaviorBus<TestEvents>();
+
+    expect(() => bus.reset('count')).not.toThrow();
+
+    bus.dispose();
+  });
+
+  it('emitting after reset() updates the buffer again', () => {
+    const bus = createBehaviorBus<TestEvents>({ count: 1 });
+
+    bus.reset('count');
+    bus.emit('count', 7);
+
+    const listener = vi.fn();
+
+    bus.on('count', listener);
+
+    expect(listener).toHaveBeenCalledWith(7);
 
     bus.dispose();
   });

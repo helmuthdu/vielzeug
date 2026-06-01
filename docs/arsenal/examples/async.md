@@ -8,11 +8,12 @@ description: Async utility examples for Arsenal.
 ## Quick Reference
 
 - [abortable](./async/abortable.md)
+- [abortError](./async/abortError.md)
+- [attempt](./async/attempt.md)
 - [parallel](./async/parallel.md)
 - [queue](./async/queue.md)
 - [retry](./async/retry.md)
 - [sleep](./async/sleep.md)
-- [timeout](./async/timeout.md)
 - [waitFor](./async/waitFor.md)
 
 ## Common Patterns
@@ -20,7 +21,7 @@ description: Async utility examples for Arsenal.
 ```ts
 import {
   abortable,
-  exponentialBackoff,
+  backoff,
   isAbortError,
   memo,
   parallel,
@@ -48,7 +49,7 @@ const resilient = await retry(
   {
     times: 4,
     timeout: 5_000,
-    delay: (failureIndex) => exponentialBackoff(failureIndex), // 1s, 2s, 4s, 8s
+    delay: (failureIndex) => backoff(failureIndex), // 1s, 2s, 4s, 8s
     shouldRetry: (err, failureIndex) => {
       // failureIndex is 0-based: 0 = first failure, 1 = second, …
       // Not called on the final (exhausting) attempt.

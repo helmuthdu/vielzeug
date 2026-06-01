@@ -1,4 +1,4 @@
-import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SourceSnapshot } from './types';
+import type { RemoteConfig, RemoteFetchQuery, RemoteSource, RemoteSourceQuery } from './types';
 
 import { createSourceCore } from './core';
 import { createFetchManager } from './fetchManager';
@@ -99,7 +99,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   };
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
-  const toRemoteQuery = (): RemoteSourceQuery<TFilter, TSort> => ({
+  const toRemoteQuery = (): RemoteFetchQuery<TFilter, TSort> => ({
     ...(filter !== undefined && { filter }),
     ...(sort !== undefined && { sort }),
     ...(search && { search }),
@@ -107,7 +107,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     page,
   });
 
-  const fetchQuery = (q: RemoteSourceQuery<TFilter, TSort>): Promise<void> => {
+  const fetchQuery = (q: RemoteFetchQuery<TFilter, TSort>): Promise<void> => {
     const key = keyOf(q);
 
     if (staleTimeMs > 0 && key === lastFetchKey && total > 0 && Date.now() - lastFetchTime < staleTimeMs) {
@@ -122,7 +122,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
         const startTime = Date.now();
 
         try {
-          const result = await retry((sig) => cfg.fetch(q, sig), {
+          const result = await retry((sig) => cfg.fetch(q, sig!), {
             delay: retryDelay,
             signal,
             times: retryAttempts + 1,
@@ -193,9 +193,11 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     goTo(target) {
-      if (target === page) return Promise.resolve();
+      const clamped = total > 0 ? clampPage(target, pageCount(total, limit)) : Math.max(1, Math.trunc(target));
 
-      page = target;
+      if (clamped === page) return Promise.resolve();
+
+      page = clamped;
 
       return doUpdate();
     },
@@ -206,49 +208,6 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       if (page === last) return Promise.resolve();
 
       page = last;
-
-      return doUpdate();
-    },
-
-    hydrate(patch) {
-      let changed = false;
-
-      if (patch.limit !== undefined) {
-        const n = Math.max(1, Math.trunc(patch.limit));
-
-        if (n !== limit) {
-          limit = n;
-          changed = true;
-        }
-      }
-
-      if ('search' in patch) {
-        const s = patch.search ?? '';
-
-        if (s !== search) {
-          search = s;
-          changed = true;
-        }
-      }
-
-      if ('filter' in patch && patch.filter !== filter) {
-        filter = patch.filter;
-        page = 1;
-        changed = true;
-      }
-
-      if ('sort' in patch && patch.sort !== sort) {
-        sort = patch.sort;
-        page = 1;
-        changed = true;
-      }
-
-      if (patch.page !== undefined && patch.page !== page) {
-        page = patch.page;
-        changed = true;
-      }
-
-      if (!changed) return Promise.resolve();
 
       return doUpdate();
     },
@@ -310,8 +269,54 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     reset() {
+      core.cancelTimer();
       search = '';
       page = 1;
+      filter = cfg.filter;
+      sort = cfg.sort;
+
+      return doUpdate();
+    },
+
+    restoreQuery(patch) {
+      let changed = false;
+
+      if (patch.limit !== undefined) {
+        const n = Math.max(1, Math.trunc(patch.limit));
+
+        if (n !== limit) {
+          limit = n;
+          changed = true;
+        }
+      }
+
+      if ('search' in patch) {
+        const s = patch.search ?? '';
+
+        if (s !== search) {
+          search = s;
+          changed = true;
+        }
+      }
+
+      if ('filter' in patch && patch.filter !== filter) {
+        filter = patch.filter;
+        page = 1;
+        changed = true;
+      }
+
+      if ('sort' in patch && patch.sort !== sort) {
+        sort = patch.sort;
+        page = 1;
+        changed = true;
+      }
+
+      if (patch.page !== undefined && patch.page !== page) {
+        page = patch.page;
+        changed = true;
+      }
+
+      if (!changed) return Promise.resolve();
 
       return doUpdate();
     },
@@ -380,23 +385,4 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       };
     },
   };
-}
-
-/** Creates a pre-populated `SourceSnapshot` suitable for embedding in HTML or passing over the wire. */
-export async function prefetchRemoteSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
-): Promise<SourceSnapshot<T>> {
-  const source = createRemoteSource({ ...cfg, autoFetch: false });
-
-  await source.refresh();
-
-  const snapshot: SourceSnapshot<T> = {
-    items: source.current,
-    page: source.meta.pageNumber,
-    total: source.meta.totalItems,
-  };
-
-  source.dispose();
-
-  return snapshot;
 }

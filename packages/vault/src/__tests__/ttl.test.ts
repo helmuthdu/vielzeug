@@ -49,6 +49,13 @@ describe('ttl helpers', () => {
     test('rejects zero for compound helpers (ttl.seconds(0))', () => {
       expect(() => ttl.seconds(0)).toThrow('ttl.seconds expected a finite positive number');
     });
+
+    test('rejects values that overflow to Infinity after multiplication', () => {
+      expect(() => ttl.days(1e304)).toThrow('expected a finite positive number');
+      expect(() => ttl.hours(1e304)).toThrow('expected a finite positive number');
+      expect(() => ttl.minutes(1e304)).toThrow('expected a finite positive number');
+      expect(() => ttl.seconds(1e306)).toThrow('expected a finite positive number');
+    });
   });
 
   describe('integration with writes', () => {

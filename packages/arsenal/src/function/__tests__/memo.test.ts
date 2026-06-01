@@ -181,6 +181,44 @@ describe('memoize', () => {
     await expect(p3).resolves.toBe(42);
   });
 
+  it('size reflects the number of cached entries', () => {
+    const mockFn = vi.fn((x: number) => x * 2);
+    const memoizedFn = memo(mockFn);
+
+    expect(memoizedFn.size).toBe(0);
+    memoizedFn(1);
+    expect(memoizedFn.size).toBe(1);
+    memoizedFn(2);
+    expect(memoizedFn.size).toBe(2);
+    memoizedFn.invalidate(1);
+    expect(memoizedFn.size).toBe(1);
+    memoizedFn.clear();
+    expect(memoizedFn.size).toBe(0);
+  });
+
+  it('invalidate() during in-flight prevents stale promise from writing to cache', async () => {
+    let resolvePromise!: (v: number) => void;
+    const mockFn = vi.fn(
+      (_x: number) =>
+        new Promise<number>((r) => {
+          resolvePromise = r;
+        }),
+    );
+    const memoizedFn = memo(mockFn);
+
+    const p = memoizedFn(1); // in-flight
+
+    memoizedFn.invalidate(1); // invalidate before resolve
+
+    resolvePromise(99);
+    await p; // original caller still gets the value
+
+    // After in-flight resolves, cache should NOT be repopulated for key 1
+    expect(memoizedFn.size).toBe(0);
+    memoizedFn(1); // should invoke fn again, not return cached 99
+    expect(mockFn).toHaveBeenCalledTimes(2);
+  });
+
   it('eviction loop breaks gracefully when all entries are in-flight', async () => {
     // maxSize: 1. Fill with 2 in-flight entries. The eviction loop should break
     // rather than loop forever when no evictable entry is available.

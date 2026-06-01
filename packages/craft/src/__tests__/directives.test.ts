@@ -3,8 +3,8 @@
  * Tests for core craft directives: each, raw
  */
 
-import { classMap, computed, each, html, live, raw, setRawSanitizer, signal, styleMap, when } from '../index';
-import { mount } from '../testing';
+import { classMap, computed, each, html, live, model, raw, setRawSanitizer, signal, styleMap, when } from '../index';
+import { fire, mount } from '../testing';
 import { register } from './test-utils';
 
 describe('Directive: each()', () => {
@@ -552,6 +552,170 @@ describe('Directive: when()', () => {
     await flush();
 
     expect(query('.off')?.textContent?.trim()).toBe('World');
+  });
+
+  it('renders truthy branch immediately for a static true condition', async () => {
+    const { query } = await mount(
+      () =>
+        html`<div>
+          ${when(
+            true,
+            () => html`<p class="yes">Yes</p>`,
+            () => html`<p class="no">No</p>`,
+          )}
+        </div>`,
+    );
+
+    expect(query('.yes')?.textContent).toBe('Yes');
+    expect(query('.no')).toBeNull();
+  });
+
+  it('renders falsy branch immediately for a static false condition', async () => {
+    const { query } = await mount(
+      () =>
+        html`<div>
+          ${when(
+            false,
+            () => html`<p class="yes">Yes</p>`,
+            () => html`<p class="no">No</p>`,
+          )}
+        </div>`,
+    );
+
+    expect(query('.no')?.textContent).toBe('No');
+    expect(query('.yes')).toBeNull();
+  });
+
+  it('renders nothing for static false with no falsy branch', async () => {
+    const { query } = await mount(() => html`<div>${when(false, () => html`<p class="yes">Yes</p>`)}</div>`);
+
+    expect(query('.yes')).toBeNull();
+  });
+});
+
+describe('Directive: model()', () => {
+  it('syncs text input value from signal to DOM', async () => {
+    const name = signal('Alice');
+    const { query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+
+    expect(query<HTMLInputElement>('.f')?.value).toBe('Alice');
+  });
+
+  it('syncs text input DOM value back to signal on input event', async () => {
+    const name = signal('');
+    const { act, query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    await act(() => {
+      input.value = 'Bob';
+      fire.input(input);
+    });
+
+    expect(name.value).toBe('Bob');
+  });
+
+  it('syncs number input value from signal to DOM', async () => {
+    const count = signal(42);
+    const { query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+
+    expect(query<HTMLInputElement>('.f')?.value).toBe('42');
+  });
+
+  it('syncs number input DOM value back to signal as a number', async () => {
+    const count = signal(0);
+    const { act, query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    await act(() => {
+      input.value = '7';
+      fire.input(input);
+    });
+
+    expect(count.value).toBe(7);
+    expect(typeof count.value).toBe('number');
+  });
+
+  it('sets signal to 0 when number input is cleared', async () => {
+    const count = signal(5);
+    const { act, query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    await act(() => {
+      input.value = '';
+      fire.input(input);
+    });
+
+    expect(count.value).toBe(0);
+  });
+
+  it('syncs range input DOM value back to signal as a number', async () => {
+    const vol = signal(50);
+    const { act, query } = await mount(() => html`<input class="f" type="range" ${model(vol)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    await act(() => {
+      input.value = '75';
+      fire.input(input);
+    });
+
+    expect(vol.value).toBe(75);
+    expect(typeof vol.value).toBe('number');
+  });
+
+  it('syncs checkbox checked state from signal to DOM', async () => {
+    const checked = signal(true);
+    const { query } = await mount(() => html`<input class="f" type="checkbox" ${model(checked)} />`);
+
+    expect(query<HTMLInputElement>('.f')?.checked).toBe(true);
+  });
+
+  it('syncs checkbox DOM state back to signal as boolean', async () => {
+    const checked = signal(false);
+    const { act, query } = await mount(() => html`<input class="f" type="checkbox" ${model(checked)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    await act(() => {
+      input.checked = true;
+      fire.input(input);
+    });
+
+    expect(checked.value).toBe(true);
+    expect(typeof checked.value).toBe('boolean');
+  });
+
+  it('syncs select value from signal to DOM', async () => {
+    const choice = signal('b');
+    const { query } = await mount(
+      () => html`
+        <select class="f" ${model(choice)}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+          <option value="c">C</option>
+        </select>
+      `,
+    );
+
+    expect(query<HTMLSelectElement>('.f')?.value).toBe('b');
+  });
+
+  it('syncs select DOM value back to signal on input event', async () => {
+    const choice = signal('a');
+    const { act, query } = await mount(
+      () => html`
+        <select class="f" ${model(choice)}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+      `,
+    );
+    const select = query<HTMLSelectElement>('.f')!;
+
+    await act(() => {
+      select.value = 'b';
+      fire.input(select);
+    });
+
+    expect(choice.value).toBe('b');
   });
 });
 

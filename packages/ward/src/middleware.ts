@@ -12,53 +12,46 @@ export type GuardResult<TAction extends string, TData> =
       reason: 'explicit-deny' | 'no-matching-rule';
     };
 
+/**
+ * Evaluates a ward decision for a known `principal` and returns a `GuardResult`.
+ * Use when you have already resolved the principal (e.g. from a session or JWT).
+ *
+ * For request-object based flows where the principal must be extracted asynchronously,
+ * use `guardRequestWith` instead.
+ */
 export async function guardRequest<TAction extends string, TData>(
   ward: Ward<TAction, TData>,
   principal: Principal,
   resource: string,
   action: TAction,
   data?: TData,
-): Promise<GuardResult<TAction, TData>>;
-export async function guardRequest<TAction extends string, TData, TReq extends WardRequest>(
-  ward: Ward<TAction, TData>,
-  req: TReq,
-  extractPrincipal: PrincipalExtractor<TReq>,
-  resource: string,
-  action: TAction,
-  data?: TData,
-): Promise<GuardResult<TAction, TData>>;
-export async function guardRequest<TAction extends string, TData, TReq extends WardRequest>(
-  ward: Ward<TAction, TData>,
-  reqOrPrincipal: TReq | Principal,
-  extractOrResource: PrincipalExtractor<TReq> | string,
-  resourceOrAction: string | TAction,
-  actionOrData?: TAction | TData,
-  data?: TData,
 ): Promise<GuardResult<TAction, TData>> {
-  let principal: Principal;
-  let resource: string;
-  let action: TAction;
-  let resolvedData: TData | undefined;
-
-  if (typeof extractOrResource === 'function') {
-    principal = await (extractOrResource as PrincipalExtractor<TReq>)(reqOrPrincipal as TReq);
-    resource = resourceOrAction as string;
-    action = actionOrData as TAction;
-    resolvedData = data;
-  } else {
-    principal = reqOrPrincipal as Principal;
-    resource = extractOrResource as string;
-    action = resourceOrAction as TAction;
-    resolvedData = actionOrData as TData | undefined;
-  }
-
-  const decision = ward.explain(principal, resource, action, resolvedData);
+  const decision = ward.explain(principal, resource, action, data);
 
   if (decision.allowed) {
     return { granted: true, principal };
   }
 
   return { decision, granted: false, principal, reason: decision.reason };
+}
+
+/**
+ * Evaluates a ward decision by first extracting the principal from a request object,
+ * then running the authorization check. The extractor may be async (e.g. to verify a JWT).
+ *
+ * Use `guardRequest` instead when the principal is already resolved.
+ */
+export async function guardRequestWith<TAction extends string, TData, TReq extends WardRequest>(
+  ward: Ward<TAction, TData>,
+  req: TReq,
+  extractPrincipal: PrincipalExtractor<TReq>,
+  resource: string,
+  action: TAction,
+  data?: TData,
+): Promise<GuardResult<TAction, TData>> {
+  const principal = await extractPrincipal(req);
+
+  return guardRequest(ward, principal, resource, action, data);
 }
 
 export type ExpressRequest = { [key: string]: unknown };
@@ -81,6 +74,14 @@ export type ExpressGuardOptions<TAction extends string, TData, TReq extends Expr
   ) => void | Promise<void>;
 };
 
+/**
+ * Creates an Express middleware that guards a route with ward.
+ *
+ * @remarks
+ * The default denied response is `403 { reason: 'explicit-deny' | 'no-matching-rule' }`.
+ * If you do not want to expose the denial reason to clients, provide an `onDenied` handler
+ * that returns a uniform 403 without the `reason` field.
+ */
 export function createExpressGuard<TAction extends string, TData, TReq extends ExpressRequest>(
   ward: Ward<TAction, TData>,
   extractPrincipal: PrincipalExtractor<TReq>,
@@ -90,7 +91,7 @@ export function createExpressGuard<TAction extends string, TData, TReq extends E
 ): ExpressMiddleware<TReq> {
   return async (req, res, next) => {
     try {
-      const result = await guardRequest(ward, req, extractPrincipal, resource, action, options.data);
+      const result = await guardRequestWith(ward, req, extractPrincipal, resource, action, options.data);
 
       if (result.granted) {
         next();
@@ -130,6 +131,10 @@ export type HonoGuardOptions<TAction extends string, TData> = {
  * @remarks
  * Errors thrown by `extractPrincipal` propagate to Hono's `app.onError` handler.
  * If you need finer control, wrap your extractor in a try/catch before passing it.
+ *
+ * The default denied response is `403 { reason: 'explicit-deny' | 'no-matching-rule' }`.
+ * If you do not want to expose the denial reason to clients, provide an `onDenied` handler
+ * that returns a uniform 403 without the `reason` field.
  */
 export function createHonoGuard<TAction extends string, TData>(
   ward: Ward<TAction, TData>,

@@ -1,4 +1,24 @@
 export const busBasicsExample = {
-  code: "import { createBus } from '/herald'\n\ntype AppEvents = {\n  'user:login': { userId: string; name: string }\n  'user:logout': void\n  notification: string\n  'count:update': number\n}\n\nconst bus = createBus<AppEvents>()\n\nconst unsubLogin = bus.on('user:login', (payload) => {\n  console.log('User logged in:', payload.name, '(' + payload.userId + ')')\n})\n\nbus.on('user:logout', () => {\n  console.log('User logged out')\n})\n\nbus.on('notification', (msg) => {\n  console.log('Notification:', msg)\n})\n\nbus.emit('user:login', { userId: '123', name: 'Alice' })\nbus.emit('notification', 'Welcome back!')\nbus.emit('count:update', 42)\n\nunsubLogin()\n\nbus.emit('user:login', { userId: '456', name: 'Bob' })\nconsole.log('Login listener removed; active listeners:', bus.listenerCount())\n\nbus.dispose()",
+  code: `import { createBus } from '@vielzeug/herald'
+
+// on() returns an unsubscribe handle; emit() delivers to all active listeners
+const bus = createBus()
+
+const unsubLogin = bus.on('user:login', (payload) => {
+  console.log('login:', payload.name, '(' + payload.userId + ')')
+})
+
+bus.on('user:logout', () => console.log('logged out'))
+bus.on('notification', (msg) => console.log('notification:', msg))
+
+bus.emit('user:login', { userId: '123', name: 'Alice' })
+bus.emit('notification', 'welcome back!')
+
+unsubLogin()
+
+bus.emit('user:login', { userId: '456', name: 'Bob' }) // no output — unsubscribed
+console.log('active listeners:', bus.listenerCount())
+
+bus.dispose()`,
   name: 'createBus - Basics',
 };

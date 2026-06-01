@@ -157,6 +157,7 @@ const DURATION_UNITS = [
   'milliseconds',
 ] as const satisfies ReadonlyArray<keyof Temporal.Duration>;
 
+// English-only fallback; runs only when Intl.DurationFormat is unavailable in the runtime.
 function buildDurationFallback(duration: Temporal.Duration): string {
   const parts: string[] = [];
 

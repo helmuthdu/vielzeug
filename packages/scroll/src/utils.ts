@@ -6,7 +6,12 @@ export type VirtualKey = number | string;
  *  for scroll restoration or SSR pre-measurement. */
 export type MeasurementCache = Map<VirtualKey, number>;
 
-export type Overscan = { end?: number; start?: number };
+/** Create a new, empty measurement cache. */
+export function createMeasurementCache(): MeasurementCache {
+  return new Map();
+}
+
+export type Overscan = number | { end?: number; start?: number };
 
 export const DEFAULT_ESTIMATE_SIZE = 36;
 export const DEFAULT_OVERSCAN = 3;
@@ -58,6 +63,8 @@ export function createScrollAdapter(target: ScrollTarget, onScroll: () => void, 
     };
   }
 
+  // ⚠️ ResizeObserver is assumed to exist (supported in all modern browsers).
+  // In SSR or older environments, callers must polyfill before constructing a virtualizer.
   const resizeObserver = new ResizeObserver(onResize);
 
   target.addEventListener('scroll', onScroll, { passive: true });
@@ -91,7 +98,7 @@ export function toNonNegativeInt(value: number, fallback = 0): number {
 }
 
 export function toPositiveNumber(value: number, fallback: number): number {
-  if (!Number.isFinite(value) || value <= 0) return fallback;
+  if (!Number.isFinite(value) || value <= 0 || value > 1e7) return fallback;
 
   return value;
 }
@@ -104,6 +111,12 @@ export function isWindowTarget(target: ScrollTarget): target is Window {
 }
 
 export function normalizeOverscan(overscan: Overscan | undefined, defaultVal: number): { end: number; start: number } {
+  if (typeof overscan === 'number') {
+    const n = toNonNegativeInt(overscan, defaultVal);
+
+    return { end: n, start: n };
+  }
+
   return {
     end: toNonNegativeInt(overscan?.end ?? defaultVal),
     start: toNonNegativeInt(overscan?.start ?? defaultVal),

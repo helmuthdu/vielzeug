@@ -11,7 +11,9 @@ You have several related signals and computed values for a single feature. Keepi
 
 ### Solution
 
-### Basic Store
+Use `store()` to group related state, `patch()` / `replace()` to mutate it, and `watch()` / `computed()` to react to changes.
+
+#### Basic Store
 
 ```ts
 import { store, watch, batch, computed } from '@vielzeug/ripple';
@@ -39,7 +41,7 @@ cart.reset();
 
 ---
 
-### Slice Watch via Getter + `watch()`
+#### Slice Watch via Getter + `watch()`
 
 ```ts
 import { store, watch } from '@vielzeug/ripple';
@@ -58,7 +60,7 @@ sub.dispose();
 
 ---
 
-### Resetting to Initial State
+#### Resetting to Initial State
 
 `reset()` restores the state passed to `store()` and protects it from external mutation:
 
@@ -75,7 +77,7 @@ console.log(s.value); // { count: 0, label: 'default' }
 
 ---
 
-### Store Lenses — Scoped Writable Signals
+#### Store Lenses — Scoped Writable Signals
 
 Use `store.lens(path)` to get a writable `Signal` scoped to a single property or dot-path. The lens is cached and produces immutable copies on write:
 

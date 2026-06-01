@@ -1,5 +1,11 @@
 import { flattenValues } from '../utils';
 
+/**
+ * Converts a form values object into a `FormData` instance.
+ * Nested objects are flattened to dot-notation keys (e.g. `user.name`).
+ * `File`, `Blob`, and `FileList` values are appended as-is; all others are coerced to strings.
+ * `null` and `undefined` values are omitted.
+ */
 export function toFormData(values: Record<string, unknown>): FormData {
   const fd = new FormData();
 

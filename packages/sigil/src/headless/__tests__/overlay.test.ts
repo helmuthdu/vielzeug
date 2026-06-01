@@ -207,6 +207,48 @@ describe('createOverlayControl', () => {
     outside.remove();
   });
 
+  it('cleanup() does not fire onClose when the overlay is open', () => {
+    const openState = signal(true);
+    const onClose = vi.fn();
+    const controller = new AbortController();
+
+    const overlay = createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      onClose,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    overlay.cleanup();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(openState.value).toBe(false);
+  });
+
+  it('aborting the signal calls cleanup silently', () => {
+    const openState = signal(true);
+    const onClose = vi.fn();
+    const controller = new AbortController();
+
+    createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      onClose,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    controller.abort();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(openState.value).toBe(false);
+  });
+
   it('uses event.target fallback when composedPath is unavailable', () => {
     const openState = signal(false);
     const host = document.createElement('div');

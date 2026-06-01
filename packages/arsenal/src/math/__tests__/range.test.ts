@@ -36,4 +36,16 @@ describe('range', () => {
     // 10,000,001 items
     expect(() => range(0, 10_000_001, 1)).toThrow('Range exceeds maximum allowed size of 10,000,000');
   });
+
+  it('1-arg overload: range(stop) starts from 0 with step 1', () => {
+    expect(range(5)).toEqual([0, 1, 2, 3, 4]);
+    expect(range(0)).toEqual([]);
+    expect(range(1)).toEqual([0]);
+  });
+
+  it('2-arg overload: range(start, stop) uses step 1', () => {
+    expect(range(2, 6)).toEqual([2, 3, 4, 5]);
+    expect(range(0, 3)).toEqual([0, 1, 2]);
+    expect(range(3, 3)).toEqual([]);
+  });
 });

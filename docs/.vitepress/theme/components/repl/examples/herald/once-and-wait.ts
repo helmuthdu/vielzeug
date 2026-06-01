@@ -1,4 +1,26 @@
 export const onceAndWaitExample = {
-  code: "import { createBus } from '/herald'\n\ntype AppEvents = {\n  'data:ready': { items: string[] }\n  'task:done': { result: number }\n}\n\nconst bus = createBus<AppEvents>()\n\nbus.once('data:ready', (payload) => {\n  console.log('Data arrived (once):', payload.items.join(', '))\n})\n\nbus.emit('data:ready', { items: ['alpha', 'beta', 'gamma'] })\nbus.emit('data:ready', { items: ['will not fire once listener'] })\n\nasync function waitForTask() {\n  console.log('Waiting for task to complete...')\n  const result = await bus.wait('task:done')\n  console.log('Task done! Result:', result.result)\n}\n\nvoid waitForTask()\n\nsetTimeout(() => {\n  bus.emit('task:done', { result: 99 })\n}, 50)",
+  code: `import { createBus } from '@vielzeug/herald'
+
+// once() fires exactly once then auto-removes; wait() resolves on the next emit
+const bus = createBus()
+
+bus.once('data:ready', (payload) => {
+  console.log('data (once):', payload.items.join(', '))
+})
+
+bus.emit('data:ready', { items: ['alpha', 'beta', 'gamma'] }) // fires
+bus.emit('data:ready', { items: ['ignored'] })                // once already consumed
+
+async function waitForTask() {
+  console.log('waiting for task...')
+  const result = await bus.wait('task:done')
+  console.log('task done! result:', result.result)
+}
+
+void waitForTask()
+
+setTimeout(() => {
+  bus.emit('task:done', { result: 99 })
+}, 50)`,
   name: 'once() and wait()',
 };

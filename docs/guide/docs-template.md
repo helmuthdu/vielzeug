@@ -1,6 +1,47 @@
+---
+title: Vielzeug Documentation Template
+description: Canonical structure, language, and formatting rules for all Vielzeug library documentation pages.
+---
+
 # Vielzeug Documentation Template
 
-This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 20 libraries is the primary goal.
+This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 23 libraries is the primary goal.
+
+---
+
+## Documentation Philosophy
+
+Vielzeug docs follow the **[Diátaxis](https://diataxis.fr/)** framework, which organises documentation by the reader's need, not the author's convenience. The four Diátaxis quadrants are:
+
+| Quadrant | Reader need | Orientation |
+| -------- | ----------- | ----------- |
+| **Tutorials** | Learning | Practical steps that guide a newcomer to a successful outcome |
+| **How-to Guides** | Problem-solving | Steps to accomplish a specific goal the reader already has |
+| **Reference** | Information | Accurate, complete technical data to consult while working |
+| **Explanation** | Understanding | Background, context, and the "why" behind decisions |
+
+These quadrants have hard boundaries. Mixing them degrades usability: a reader consulting `api.md` does not want a tutorial, and a reader following `usage.md` does not want exhaustive option tables. When content belongs to more than one quadrant, split it.
+
+Each standard doc page maps to one primary quadrant:
+
+| File            | Diátaxis type   | Reader's question                                              |
+| --------------- | --------------- | -------------------------------------------------------------- |
+| `index.md`      | **Explanation** | "What is this, why does it exist, and is it right for me?"     |
+| `usage.md`      | **How-to Guide**| "How do I accomplish this specific task?"                      |
+| `api.md`        | **Reference**   | "What is the exact signature, behaviour, and contract?"        |
+| `examples.md`   | Navigation (not a Diátaxis quadrant — an organisational tool) | "Which recipe do I need?"                                      |
+| `examples/*.md` | **How-to Guide**| "How do I solve this concrete problem end-to-end?"             |
+
+Understanding this mapping is more important than memorising the structural rules. When in doubt about where content belongs, ask: _which reader need does this serve?_
+
+**Common anti-patterns to avoid:**
+
+- Putting step-by-step learning walkthroughs in `index.md` — that is a tutorial, not an explanation.
+- Putting exhaustive option tables in `usage.md` — that belongs in `api.md`.
+- Putting opinionated guidance or "Best Practices" in `api.md` — that belongs in `usage.md`.
+- Putting conceptual background (the "why") in `api.md` or `usage.md` — that belongs in `index.md`.
+
+**Tutorials:** Vielzeug does not currently have a dedicated tutorial file per package. If a library's complexity warrants one (e.g., a ground-up walkthrough for a first-time user), add a `tutorial.md` at `docs/<pkg>/tutorial.md` and link it from `index.md`. A tutorial is learning-oriented: it takes the reader through a fixed, complete scenario step by step, prioritising the learning experience over real-world flexibility.
 
 ---
 
@@ -35,7 +76,9 @@ Do not add extra top-level files (e.g., `lifecycle-best-practices.md`, `controls
 
 ### Purpose
 
-This is the landing page. A reader should understand what the library does, see a working example, and decide whether it fits their need — all within 2–3 minutes.
+**Diátaxis type: Explanation** — understanding-oriented.
+
+This page helps the reader decide whether to adopt the library. It answers the question "what is this and why does it exist?" before the reader commits to learning anything. It is not a tutorial (no step-by-step learning), not a how-to guide (no task-focused instructions), and not a reference (no exhaustive API data). The Quick Start section on this page is a minimal motivating example — it shows what working code looks like, not a walk-through the reader follows interactively. A reader should understand what the library does and decide whether it fits their need in 2–3 minutes.
 
 ### Required Structure (in order)
 
@@ -153,7 +196,9 @@ yarn add @vielzeug/<pkg>
 
 ### Purpose
 
-Progressive guide from the simplest use case to advanced patterns. A reader working through it top-to-bottom should have a complete picture of day-to-day use.
+**Diátaxis type: How-to Guide** — task-oriented.
+
+This page helps the reader accomplish real tasks with the library. It assumes they have already decided to use it. Sections answer concrete questions ("How do I configure X?", "How do I handle Y?") rather than explaining concepts for their own sake. Do not embed exhaustive option tables here — those belong in `api.md`. Do not explain background or design rationale here — that belongs in `index.md`. A reader working through it top-to-bottom should have a complete picture of day-to-day use.
 
 ### Required Structure
 
@@ -258,7 +303,9 @@ const form = createForm({ validator: schemaValidator(schema), defaultValues: { e
 
 ### Purpose
 
-Exhaustive reference. A reader should be able to look up any export, understand its signature, parameters, return value, and see a minimal example.
+**Diátaxis type: Reference** — information-oriented.
+
+This page is consulted, not read. Readers come with a specific symbol in mind and want accurate, complete technical data: exact signature, all parameters, return type, errors thrown. Do not embed how-to prose, opinionated guidance, or Best Practices here. An inline example is acceptable, but it exists to illustrate the contract — it is not a tutorial step. If you feel the urge to write "you should prefer X", that sentence belongs in `usage.md`, not here.
 
 ### Required Structure
 
@@ -346,7 +393,9 @@ const result = functionName('value', { optionA: 'x' });
 
 ### Purpose
 
-Navigation-only page. It orients the reader and links to every recipe.
+**Diátaxis role: Navigation** — orients the reader to available How-to Guides.
+
+Navigation is not one of the four Diátaxis quadrants; it is a structural device that makes the quadrants discoverable. This page does not teach anything; it directs readers to the recipe that matches their problem. Keep it short and scannable.
 
 ### Required Structure
 
@@ -376,7 +425,9 @@ description: Practical examples and recipes for <pkg>.
 
 ### Purpose
 
-A single, self-contained recipe answering one specific question. Should be copy-paste ready.
+**Diátaxis type: How-to Guide** — problem-oriented.
+
+Each recipe answers one concrete question: "How do I do X?" It assumes the reader already knows the library and wants to accomplish a specific task. It is not a tutorial (no hand-holding, no conceptual teaching step-by-step), not a reference (no exhaustive option listing), and not an explanation (no background digression). Every recipe should be self-contained and copy-paste ready.
 
 ### Required Structure
 
@@ -517,7 +568,18 @@ Example: When an AI agent runs Codex's `get-package` tool with `packageSlug: "ri
 
 ## Checklist for Reviewing a Library's Docs
 
-Use this list when auditing or updating a library:
+Use this list when auditing or updating a library. The first check applies to all pages.
+
+### Diátaxis alignment (all pages)
+
+- [ ] `index.md` is Explanation-oriented: it helps readers understand and decide, not learn or look things up
+- [ ] `index.md` Quick Start is a motivating example, not a step-by-step tutorial walkthrough
+- [ ] `usage.md` is How-to-oriented: every section answers "how do I accomplish X?" with a working code block
+- [ ] `usage.md` contains no exhaustive option tables (those belong in `api.md`)
+- [ ] `api.md` is Reference-oriented: it is consulted, not read; no tutorial prose, no opinionated guidance, no Best Practices
+- [ ] `examples/*.md` are How-to Guides: each solves one concrete problem, no conceptual detours
+- [ ] Content that explains *why* (background, design decisions) lives in `index.md`, not `api.md` or `usage.md`
+- [ ] No content is duplicated across quadrants (e.g., option descriptions in both `usage.md` and `api.md`)
 
 ### `index.md`
 

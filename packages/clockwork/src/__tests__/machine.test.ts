@@ -1225,6 +1225,217 @@ describe('after + invoke interaction', () => {
   });
 });
 
+describe('validation — nested target paths', () => {
+  it('throws for unknown nested on[] target', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      defineMachine<'a' | 'b', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: { on: { GO: [{ target: 'b.nonexistent' as 'a' | 'b' }] } },
+          b: { initial: 'sub', states: { sub: {} } },
+        },
+      });
+    }).toThrow(MachineError);
+  });
+
+  it('throws for unknown nested after[] target', () => {
+    type Event = { type: 'NOOP' };
+
+    expect(() => {
+      defineMachine<'a' | 'b', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: { after: [{ delay: 100, target: 'b.ghost' as 'a' | 'b' }] },
+          b: { initial: 'sub', states: { sub: {} } },
+        },
+      });
+    }).toThrow(MachineError);
+  });
+
+  it('accepts valid nested on[] target', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      defineMachine<'a' | 'b', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: { on: { GO: [{ target: 'b.sub' as 'a' | 'b' }] } },
+          b: { initial: 'sub', states: { sub: {} } },
+        },
+      });
+    }).not.toThrow();
+  });
+});
+
+describe('can()', () => {
+  it('returns true when guard passes', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+      context: { ok: true },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { guard: ({ context }) => context.ok, target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = interpret(machine);
+
+    expect(m.can({ type: 'GO' })).toBe(true);
+  });
+
+  it('returns false for unknown event type', () => {
+    const m = interpret(trafficDefinition);
+
+    // @ts-expect-error unknown event
+    expect(m.can({ type: 'UNKNOWN' })).toBe(false);
+  });
+});
+
+describe('getSnapshot()', () => {
+  it('returns deep-cloned snapshot independent of live context', () => {
+    type Event = { type: 'SET'; value: number };
+
+    const machine = defineMachine<'idle', { n: number }, Event>({
+      context: { n: 1 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            SET: [
+              {
+                actions: [
+                  ({ context, event }) => {
+                    context.n = event.value;
+                  },
+                ],
+                target: 'idle',
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+    const snap = m.getSnapshot();
+
+    m.send({ type: 'SET', value: 99 });
+
+    expect(snap.context.n).toBe(1);
+    expect(m.context.value.n).toBe(99);
+    expect(snap.state).toBe('idle');
+  });
+});
+
+describe('maxTransitionsPerFlush via middleware path', () => {
+  it('enforces maxTransitionsPerFlush when middleware is active', () => {
+    expect(() => {
+      interpret(trafficDefinition, {
+        maxTransitionsPerFlush: 0,
+        middleware: [(_event, _snap, next) => next()],
+      });
+    }).toThrow(MachineError);
+  });
+});
+
+describe('validateContext at init', () => {
+  it('throws when initial context fails validateContext', () => {
+    type Event = { type: 'NOOP' };
+
+    const machine = defineMachine<'idle', { count: number }, Event>({
+      context: { count: -1 },
+      initial: 'idle',
+      states: { idle: {} },
+      validateContext: (ctx) => ctx.count >= 0,
+    });
+
+    expect(() => interpret(machine)).toThrow(MachineError);
+  });
+});
+
+describe('subscribe — no spurious fire', () => {
+  it('does not call subscriber when event is ignored (no transition)', () => {
+    const m = interpret(trafficDefinition);
+    const calls: unknown[] = [];
+
+    m.subscribe((snap) => calls.push(snap));
+
+    // @ts-expect-error unknown event — no transition should happen
+    m.send({ type: 'UNKNOWN' });
+
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('multiple after defs', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('schedules all after defs and fires the earliest', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'NOOP' };
+
+    const machine = defineMachine<'a' | 'b' | 'c', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: {
+          after: [
+            { delay: 200, target: 'c' },
+            { delay: 100, target: 'b' },
+          ],
+        },
+        b: {},
+        c: {},
+      },
+    });
+
+    const m = interpret(machine);
+
+    vi.advanceTimersByTime(100);
+    expect(m.state.value).toBe('b');
+  });
+});
+
+describe('persistence.clear', () => {
+  it('adapter clear() is callable', () => {
+    type Event = { type: 'GO' };
+
+    const clear = vi.fn();
+    const save = vi.fn();
+
+    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = interpret(machine, { persistence: { clear, load: () => undefined, save } });
+
+    m[Symbol.dispose]();
+    clear();
+
+    expect(clear).toHaveBeenCalled();
+  });
+});
+
+describe('getTrace — no traceLimit', () => {
+  it('returns empty array when traceLimit is not set', () => {
+    const m = interpret(trafficDefinition);
+
+    m.send({ type: 'NEXT' });
+
+    expect(m.getTrace()).toHaveLength(0);
+  });
+});
+
 describe('getTrace immutability', () => {
   it('returns cloned trace entries', () => {
     type Event = { type: 'GO' };

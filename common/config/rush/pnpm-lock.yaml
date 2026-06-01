@@ -61,6 +61,10 @@ importers:
         version: 4.1.7(@types/node@25.9.1)(jsdom@29.1.1)(vite@8.0.15(@types/node@25.9.1))
 
   ../../packages/coins:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.9.1

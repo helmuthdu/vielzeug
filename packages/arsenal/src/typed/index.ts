@@ -1,4 +1,5 @@
 export * from './isAbortError';
+export * from './isArray';
 export * from './isBoolean';
 export * from './isDate';
 export * from './isDefined';

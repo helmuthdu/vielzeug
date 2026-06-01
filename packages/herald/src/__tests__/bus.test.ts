@@ -1,4 +1,5 @@
-import { BusDisposedError, createBus } from '../index';
+import { BusDisposedError, combineSignals, createBus } from '../index';
+import { pipeEvents } from '../pipe';
 
 type TestEvents = {
   count: number;
@@ -344,30 +345,32 @@ describe('createBus - emit behavior', () => {
     expect(after).toHaveBeenCalledWith(99);
   });
 
-  it('calls onDispatch for every emit, including emits with no listeners', () => {
-    const onDispatch = vi.fn();
-    const bus = createBus<TestEvents>({ onDispatch });
+  it('onAny observes every emit, including emits with no specific listeners', () => {
+    const bus = createBus<TestEvents>();
+    const observer = vi.fn();
 
+    bus.onAny(observer);
     bus.emit('count', 1);
     bus.on('count', vi.fn());
     bus.emit('count', 2);
 
-    expect(onDispatch.mock.calls).toEqual([
+    expect(observer.mock.calls).toEqual([
       ['count', 1],
       ['count', 2],
     ]);
   });
 
-  it('does not call onDispatch or run listeners on a disposed bus', () => {
-    const onDispatch = vi.fn();
+  it('does not invoke onAny listeners on a disposed bus', () => {
+    const bus = createBus<TestEvents>();
+    const observer = vi.fn();
     const listener = vi.fn();
-    const bus = createBus<TestEvents>({ onDispatch });
 
     bus.on('count', listener);
+    bus.onAny(observer);
     bus.dispose();
     bus.emit('count', 1);
 
-    expect(onDispatch).not.toHaveBeenCalled();
+    expect(observer).not.toHaveBeenCalled();
     expect(listener).not.toHaveBeenCalled();
   });
 });
@@ -928,7 +931,7 @@ describe('createBus - disposalSignal', () => {
 describe('createBus - debug mode', () => {
   it('logs on() and off() to console.debug', () => {
     const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ debug: true });
+    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
 
     const unsub = bus.on('count', vi.fn());
 
@@ -944,7 +947,7 @@ describe('createBus - debug mode', () => {
 
   it('logs emit() to console.debug', () => {
     const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ debug: true });
+    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
 
     bus.emit('count', 42);
 
@@ -956,7 +959,7 @@ describe('createBus - debug mode', () => {
 
   it('logs dispose() to console.debug', () => {
     const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ debug: true });
+    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
 
     bus.dispose();
 
@@ -981,14 +984,14 @@ describe('createBus - debug mode', () => {
   });
 });
 
-describe('createBus - pipe()', () => {
+describe('pipeEvents() - via bus tests', () => {
   it('forwards listed events from source to target', () => {
     const source = createBus<TestEvents>();
     const target = createBus<TestEvents>();
     const listener = vi.fn();
 
     target.on('count', listener);
-    source.pipe(target, ['count']);
+    pipeEvents(source, target, ['count']);
 
     source.emit('count', 42);
 
@@ -1009,7 +1012,7 @@ describe('createBus - pipe()', () => {
 
     target.on('count', onCount);
     target.on('hello', onHello);
-    source.pipe(target, ['count', { from: 'greet', to: 'hello' }]);
+    pipeEvents(source, target, ['count', { from: 'greet', to: 'hello' }]);
 
     source.emit('count', 1);
     source.emit('greet', { name: 'Alice' });
@@ -1028,7 +1031,7 @@ describe('createBus - pipe()', () => {
 
     target.on('count', listener);
 
-    const stop = source.pipe(target, ['count']);
+    const stop = pipeEvents(source, target, ['count']);
 
     source.emit('count', 1);
     stop();
@@ -1047,7 +1050,7 @@ describe('createBus - pipe()', () => {
     const listener = vi.fn();
 
     target.on('count', listener);
-    source.pipe(target, ['count']);
+    pipeEvents(source, target, ['count']);
 
     source.emit('count', 1);
     target.dispose();
@@ -1066,7 +1069,7 @@ describe('createBus - pipe()', () => {
     const controller = new AbortController();
 
     target.on('count', listener);
-    source.pipe(target, ['count'], controller.signal);
+    pipeEvents(source, target, ['count'], controller.signal);
 
     source.emit('count', 1);
     controller.abort();
@@ -1143,7 +1146,7 @@ describe('createBus - middleware', () => {
     const order: string[] = [];
     const bus = createBus<TestEvents>({
       middleware: [
-        (event, payload, next) => {
+        (_event, _payload, next) => {
           order.push('middleware');
           next();
         },
@@ -1228,16 +1231,16 @@ describe('createBus - middleware', () => {
     expect(mw).not.toHaveBeenCalled();
   });
 
-  it('onDispatch still fires when middleware calls next()', () => {
-    const onDispatch = vi.fn();
+  it('onAny still fires when middleware calls next()', () => {
     const bus = createBus<TestEvents>({
       middleware: [(_e, _p, next) => next()],
-      onDispatch,
     });
+    const observer = vi.fn();
 
+    bus.onAny(observer);
     bus.emit('count', 7);
 
-    expect(onDispatch).toHaveBeenCalledWith('count', 7);
+    expect(observer).toHaveBeenCalledWith('count', 7);
 
     bus.dispose();
   });
@@ -1477,5 +1480,109 @@ describe('createBus - events().filter() and events().map()', () => {
     expect(result.done).toBe(true);
 
     bus.dispose();
+  });
+});
+
+describe('combineSignals', () => {
+  it('returns a if b is not provided', () => {
+    const ctrl = new AbortController();
+
+    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
+  });
+
+  it('returns a immediately if a is already aborted', () => {
+    const a = AbortSignal.abort('reason-a');
+    const b = new AbortController().signal;
+
+    expect(combineSignals(a, b)).toBe(a);
+  });
+
+  it('returns b immediately if b is already aborted', () => {
+    const a = new AbortController().signal;
+    const b = AbortSignal.abort('reason-b');
+
+    expect(combineSignals(a, b)).toBe(b);
+  });
+
+  it('aborts when a aborts', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
+
+    expect(combined.aborted).toBe(false);
+    ctrlA.abort('from-a');
+    expect(combined.aborted).toBe(true);
+    expect(combined.reason).toBe('from-a');
+  });
+
+  it('aborts when b aborts', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
+
+    ctrlB.abort('from-b');
+    expect(combined.aborted).toBe(true);
+    expect(combined.reason).toBe('from-b');
+  });
+
+  it('does not leak listeners when neither signal aborts', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
+
+    ctrlA.abort();
+    expect(combined.aborted).toBe(true);
+  });
+});
+
+describe('createBus - logger option', () => {
+  it('routes debug output through logger.debug', () => {
+    const logDebug = vi.fn();
+    const bus = createBus<TestEvents>({ logger: { debug: logDebug } });
+
+    bus.emit('count', 1);
+
+    expect(logDebug).toHaveBeenCalled();
+    expect(logDebug.mock.calls[0][0]).toContain('[herald:emit]');
+
+    bus.dispose();
+  });
+
+  it('routes warn output through logger.warn when maxListeners is exceeded', () => {
+    const logWarn = vi.fn();
+    const bus = createBus<TestEvents>({ logger: { warn: logWarn }, maxListeners: 1 });
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+
+    expect(logWarn).toHaveBeenCalledOnce();
+    expect(logWarn.mock.calls[0][0]).toContain('[herald:warn]');
+
+    bus.dispose();
+  });
+
+  it('suppresses debug output when logger.debug is not provided', () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ logger: {} });
+
+    bus.emit('count', 1);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    bus.dispose();
+    spy.mockRestore();
+  });
+
+  it('suppresses warn output when logger.warn is not provided', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ logger: {}, maxListeners: 1 });
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+
+    expect(spy).not.toHaveBeenCalled();
+
+    bus.dispose();
+    spy.mockRestore();
   });
 });

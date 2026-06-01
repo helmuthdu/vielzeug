@@ -39,7 +39,7 @@ describe('public api', () => {
     // Removed in prior revisions
     expect('assertAll' in arsenal).toBe(false);
     expect('is' in arsenal).toBe(false);
-    expect('attempt' in arsenal).toBe(false);
+    expect('attempt' in arsenal).toBe(true);
     expect('get' in arsenal).toBe(false);
     // Error constants not part of public API
     expect('IS_ARRAY_ERROR_MSG' in arsenal).toBe(false);
@@ -82,7 +82,7 @@ describe('public api', () => {
     expect('parallel' in asyncApi).toBe(true); // now in async subpath
     expect('queue' in asyncApi).toBe(true); // now in async subpath
     expect('anySignal' in asyncApi).toBe(false); // removed
-    expect('attempt' in asyncApi).toBe(false);
+    expect('attempt' in asyncApi).toBe(true);
     expect('defer' in asyncApi).toBe(false);
     expect('Scheduler' in asyncApi).toBe(false);
     expect('predict' in asyncApi).toBe(false);

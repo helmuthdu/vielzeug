@@ -15,10 +15,13 @@ export interface FlushOptions {
    */
   maxTurns?: number;
   /**
-   * Enable debug logging to console showing each turn and timing.
-   * Useful for diagnosing timing issues or unexpected update order.
+   * Logger function called with each diagnostic message during the flush.
+   * Pass `console.debug` or any `(msg: string) => void` to enable output.
+   * Omit (or pass `undefined`) to disable all logging.
+   *
+   * Prefer `debugFlush()` from `@vielzeug/craft/debug` over wiring this manually.
    */
-  debug?: boolean;
+  logger?: (msg: string) => void;
 }
 
 /**
@@ -52,49 +55,34 @@ export const FLUSH_DEEP: FlushOptions = { maxTurns: 12 };
  * await flush({ maxTurns: 4 });
  *
  * // Debug timing issues
- * await flush({ debug: true });
+ * await flush({ logger: console.debug });
  * ```
  */
 export async function flush(options: FlushOptions = {}): Promise<void> {
-  const { debug = false, maxTurns = 5 } = options;
+  const { logger, maxTurns = 5 } = options;
 
   const drainMicrotasks = async (turns: number, label: string): Promise<void> => {
     for (let i = 0; i < turns; i++) {
-      if (debug) console.debug(`[flush] ${label} turn ${i + 1}/${turns}`);
+      logger?.(`[flush] ${label} turn ${i + 1}/${turns}`);
 
       await Promise.resolve();
       await new Promise<void>((resolve) => queueMicrotask(resolve));
     }
   };
 
-  if (debug) console.debug(`[flush] starting with maxTurns=${maxTurns}`);
+  logger?.(`[flush] starting with maxTurns=${maxTurns}`);
 
   await drainMicrotasks(maxTurns, 'microtask');
 
-  if (debug) console.debug('[flush] draining requestAnimationFrame');
+  logger?.('[flush] draining requestAnimationFrame');
 
   await new Promise<void>((resolve) =>
     typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : resolve(),
   );
 
-  if (debug) console.debug('[flush] final microtask pass');
+  logger?.('[flush] final microtask pass');
 
   await drainMicrotasks(2, 'final');
 
-  if (debug) console.debug('[flush] complete');
+  logger?.('[flush] complete');
 }
-
-/**
- * Register auto-cleanup after each test. Call once in your test setup file.
- *
- * @example
- * // vitest.setup.ts
- * import { afterEach } from 'vitest';
- * import { install } from '@vielzeug/craft/testing';
- * install(afterEach);
- */
-export function install(afterEachHook: (fn: () => void) => void, cleanupFn: () => void): void {
-  afterEachHook(cleanupFn);
-}
-
-// Note: prefer the `install` re-export from testing/testing.ts or testing/index which wires cleanup automatically.

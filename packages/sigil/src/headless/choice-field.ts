@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+import { computed, type ReadonlySignal, signal, type Subscription, watch } from '@vielzeug/ripple';
 
 import { createField, type FieldHandle, type FieldOptions } from './field-base';
 
@@ -15,6 +15,14 @@ export type ChoiceChangeDetail = {
 export type ChoiceFieldOptions = FieldOptions & {
   multiple?: ReadonlySignal<boolean | undefined>;
   /**
+   * Optional `AbortSignal` tied to the component lifecycle.
+   * When provided, all internal `watch()` subscriptions are disposed automatically
+   * on abort — no need to call `cleanup()` manually.
+   *
+   * Obtain via `componentSignal(onCleanup)` inside a craft `setup()` function.
+   */
+  signal?: AbortSignal;
+  /**
    * Current selection value(s). Accepts a comma-separated string
    * (legacy/single-select form serialisation) or a `string[]` array.
    * The field normalises both formats internally via `parseChoiceValues`.
@@ -23,6 +31,13 @@ export type ChoiceFieldOptions = FieldOptions & {
 };
 
 export type ChoiceFieldHandle = FieldHandle & {
+  /**
+   * Manual cleanup. Disposes all internal `watch()` subscriptions.
+   * No-op when a `signal` was provided in options — cleanup is already
+   * wired automatically via `AbortSignal`. Only call this when managing
+   * teardown manually (e.g. in tests without a signal).
+   */
+  cleanup: () => void;
   clear: () => void;
   formValue: ReadonlySignal<string>;
   removeValue: (value: string) => void;
@@ -30,6 +45,12 @@ export type ChoiceFieldHandle = FieldHandle & {
   selectedValues: ReadonlySignal<string[]>;
   selectValue: (value: string) => void;
   setValues: (values: string[]) => void;
+  /**
+   * Toggles `value` in the selection.
+   * - **Multiple mode**: adds if absent, removes if present.
+   * - **Single mode**: always selects `value` (acts like `selectValue` — cannot
+   *   deselect; use `clear()` to reset a single-select field).
+   */
   toggleValue: (value: string) => void;
 };
 
@@ -97,14 +118,29 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
 
   const field = createField(options);
 
-  watch(options.value, syncFromProp, { immediate: true });
+  const subs: Subscription[] = [];
+
+  subs.push(watch(options.value, syncFromProp, { immediate: true }));
 
   if (options.multiple) {
-    watch(options.multiple, () => syncFromProp(options.value.value));
+    subs.push(watch(options.multiple, () => syncFromProp(options.value.value)));
   }
+
+  let isCleaned = false;
+
+  const cleanup = (): void => {
+    if (isCleaned) return;
+
+    isCleaned = true;
+
+    for (const sub of subs) sub.dispose();
+  };
+
+  options.signal?.addEventListener('abort', cleanup, { once: true });
 
   return {
     ...field,
+    cleanup,
     clear,
     formValue,
     removeValue,

@@ -1,4 +1,35 @@
 export const namedRoutesExample = {
-  code: "import { createMemoryHistory, createRouter } from '/wayfinder'\n\n// REPL uses memory history for deterministic demos.\n// In production apps, use createBrowserHistory().\n\nconst router = createRouter({\n  history: createMemoryHistory('/'),\n  routes: {\n    home: {\n      path: '/',\n      handler: () => console.log('🏠 Home')\n    },\n    users: {\n      path: '/users',\n      handler: () => console.log('👥 Users')\n    },\n    userDetail: {\n      path: '/users/:id',\n      handler: ({ params }) => console.log('👤 User Detail - ID:', params.id)\n    },\n    postComment: {\n      path: '/posts/:postId/comments/:commentId',\n      handler: ({ params }) => {\n        console.log('💬 Post:', params.postId, 'Comment:', params.commentId)\n      }\n    }\n  }\n})\n\nconsole.log('--- Building URLs ---')\nconsole.log('User 123 URL:', router.url('userDetail', { id: '123' }))\nconsole.log('Comment URL:', router.url('postComment', { postId: '10', commentId: '50' }))\n\nawait router.navigate({ name: 'userDetail', params: { id: '42' } })\nconsole.log('userDetail active (prefix):', router.isActive('userDetail'))\nconsole.log('users active (prefix):', router.isActive('users'))\nconsole.log('users active (exact):', router.isActive('users', { exact: true }))",
-  name: 'Named Routes - Type-Safe Navigation',
+  code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
+
+// Route keys become type-safe names; url() and navigate() reference them by name.
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: {
+    home:        { path: '/' },
+    users:       { path: '/users' },
+    userDetail:  { path: '/users/:id' },
+    postComment: { path: '/posts/:postId/comments/:commentId' },
+  },
+})
+
+// Build base-aware URLs without navigating.
+console.log('userDetail url:', router.url('userDetail', { id: '123' }))
+console.log('postComment url:', router.url('postComment', { postId: '10', commentId: '50' }))
+console.log('url with query:', router.url('users', undefined, { page: 2 }))
+
+// Navigate by name — TypeScript will enforce the required params shape.
+await router.navigate({ name: 'userDetail', params: { id: '42' } })
+
+// isActive() defaults to prefix matching — useful for parent nav items.
+console.log('userDetail isActive (prefix):', router.isActive('userDetail'))
+console.log('users isActive (prefix):',      router.isActive('users'))
+console.log('users isActive (exact):',       router.isActive('users', { exact: true }))
+
+// resolve() returns the matched branch without navigating or running data().
+const branch = router.resolve('/users/99')
+console.log('resolved name:', branch?.at(-1)?.name)
+console.log('resolved params:', branch?.at(-1)?.params)
+
+router.dispose()`,
+  name: 'Named Routes — Type-Safe Navigation',
 };

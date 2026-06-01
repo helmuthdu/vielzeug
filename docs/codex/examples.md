@@ -14,11 +14,3 @@ description: Practical MCP tool-call examples for package discovery, docs lookup
 - [Reading Docs](./examples/reading-docs.md)
 - [Inspector](./examples/inspector.md)
 
-## Multi-step agent flow
-
-A reliable AI-agent pattern:
-
-1. `search-packages` with a domain intent (for example `"forms"`)
-2. `list-packages` with `packageSlug` for structured metadata of the top candidate
-3. `get-docs` with `page: "usage"`
-4. `get-source` for exact exported signatures

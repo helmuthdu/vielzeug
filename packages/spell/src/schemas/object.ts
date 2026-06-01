@@ -2,6 +2,9 @@ import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
+import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
+import { LiteralSchema } from './literal';
+import { UnionSchema } from './union';
 
 export type ObjectShape = Record<string, AnySchema>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
@@ -9,6 +12,10 @@ export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
   readonly shape: T;
   private readonly _isRelaxed: boolean;
+
+  protected override get _kind(): string {
+    return 'object';
+  }
 
   constructor(shape: T, isRelaxed = false) {
     super();
@@ -43,7 +50,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     for (const key of this._unknownKeys(obj)) {
       // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
       // prototype mutation on the output object.
-      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (isUnsafeObjectKey(key)) continue;
 
       Object.defineProperty(output, key, {
         configurable: true,
@@ -94,7 +101,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       const result = fieldSchema._parseFullSync(obj[key]);
 
       if (result.issues.length === 0) {
-        output[key] = result.data;
+        defineOwnProperty(output, key, result.data);
       } else {
         // Failed field keys are intentionally omitted from parsed output so
         // object-level checks can branch on key presence.
@@ -128,7 +135,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     for (const r of keyResults) {
       if (r.issues.length === 0) {
-        output[r.key] = r.data;
+        defineOwnProperty(output, r.key, r.data);
       }
 
       issues.push(...r.issues);
@@ -147,7 +154,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
 
     return this._rebuildWith(
-      Object.fromEntries(
+      objectFromEntries(
         Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
       ) as any,
       this._isRelaxed,
@@ -156,33 +163,39 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
   override required(): Schema<InferObject<T>> {
     return this._rebuildWith(
-      Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
+      objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._isRelaxed,
     ) as unknown as Schema<InferObject<T>>;
   }
 
   extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
-    return this._rebuildWith({ ...this.shape, ...extra } as any);
+    return this._rebuildWith(
+      objectFromEntries([...Object.entries(this.shape), ...Object.entries(extra)]) as any,
+      this._isRelaxed,
+    );
   }
 
   pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
+    return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
   omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
+    return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
   }
 
   /**
    * Allow additional unknown properties (relaxed mode).
    * Default is strict mode (rejects unknown keys).
+   *
+   * Returns `ObjectSchema<T>` so fluent methods like `.pick()`, `.omit()`,
+   * `.extend()`, and `.partial()` remain usable after calling `.relaxed()`.
    */
-  relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
+  relaxed(): ObjectSchema<T> {
+    return this._rebuildWith(this.shape, true);
   }
 
   /**
@@ -190,21 +203,38 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * Useful after calling `.relaxed()` to return a new strict schema.
    */
   strict(): ObjectSchema<T> {
-    return this._rebuildWith(this.shape, false) as unknown as ObjectSchema<T>;
+    return this._rebuildWith(this.shape, false);
+  }
+
+  /**
+   * Returns a union schema of the object's key names as literal schemas.
+   *
+   * @example
+   * const User = s.object({ id: s.number(), name: s.string() });
+   * User.keyof(); // UnionSchema — validates 'id' | 'name'
+   */
+  keyof(): UnionSchema<readonly [LiteralSchema<keyof T & string>, ...LiteralSchema<keyof T & string>[]]> {
+    const keys = Object.keys(this.shape) as (keyof T & string)[];
+    const schemas = keys.map((k) => new LiteralSchema(k)) as unknown as readonly [
+      LiteralSchema<keyof T & string>,
+      ...LiteralSchema<keyof T & string>[],
+    ];
+
+    return new UnionSchema(schemas);
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     const fields: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of Object.entries(this.shape)) {
-      fields[key] = schema.toDescriptor();
+      defineOwnProperty(fields, key, schema.toDescriptor());
     }
 
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
-    const fields = Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.walk(visitor)]));
+    const fields = objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.object) return visitor.object(this, fields);
 
@@ -212,7 +242,9 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
-    return new ObjectSchema({ ...this.shape, ...other.shape } as unknown as T & U);
+    return new ObjectSchema(
+      objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as unknown as T & U,
+    );
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
@@ -225,6 +257,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (keys.length !== Object.keys(other.shape).length) return false;
 
     for (const k of keys) {
+      if (!Object.prototype.hasOwnProperty.call(other.shape, k)) return false;
+
       if (!this.shape[k].equals(other.shape[k])) return false;
     }
 

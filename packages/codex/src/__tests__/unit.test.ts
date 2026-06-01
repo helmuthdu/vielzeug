@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { BundledPackage } from '../types.js';
 
-import { packageMeta } from '../data.js';
+import { loadData, packageMeta, validateBundledData } from '../data.js';
 import { parseFrontmatter } from '../frontmatter.js';
 import { generateBundledData } from '../generator.js';
+import { resolvePort } from '../port.js';
 import { scorePackage } from '../search.js';
 
 // ---------------------------------------------------------------------------
@@ -85,6 +86,28 @@ describe('parseFrontmatter', () => {
     const md = `---\n# this is a comment\ntitle: Real\n---`;
 
     expect(parseFrontmatter(md)).toEqual({ title: 'Real' });
+  });
+
+  it('ignores block sequence key with no items (empty sequence body)', () => {
+    const md = `---\nexports:\ntitle: After\n---`;
+
+    expect(parseFrontmatter(md)).not.toHaveProperty('exports');
+    expect(parseFrontmatter(md)).toHaveProperty('title', 'After');
+  });
+
+  it('drops __proto__ key to prevent prototype pollution', () => {
+    const md = `---\n__proto__: injected\ntitle: Safe\n---`;
+    const result = parseFrontmatter(md);
+
+    expect(result).not.toHaveProperty('__proto__');
+    expect(result['title']).toBe('Safe');
+  });
+
+  it('drops constructor key to prevent prototype pollution', () => {
+    const md = `---\nconstructor: injected\ntitle: Safe\n---`;
+    const result = parseFrontmatter(md);
+
+    expect(result).not.toHaveProperty('constructor');
   });
 });
 
@@ -215,6 +238,24 @@ describe('scorePackage', () => {
     expect(hit?.matchedPages).toContain('api');
   });
 
+  it('reports both "keywords" and "exports" when both match', () => {
+    const pkg = makePkg({ exports: ['signal'], keywords: ['signal'] });
+    const hit = scorePackage(pkg, 'signal');
+
+    expect(hit?.score).toBe(2);
+    expect(hit?.matchedIn).toContain('keywords');
+    expect(hit?.matchedIn).toContain('exports');
+  });
+
+  it('scores exports array matches at 2 with matchedIn "exports"', () => {
+    const pkg = makePkg({ exports: ['signal', 'computed', 'effect'] });
+    const hit = scorePackage(pkg, 'signal');
+
+    expect(hit?.score).toBe(2);
+    expect(hit?.matchedIn).toContain('exports');
+    expect(hit?.matchedIn).not.toContain('keywords');
+  });
+
   it('does not include matchedPages when only metadata matches', () => {
     const pkg = makePkg({ name: '@vielzeug/ripple' });
     const hit = scorePackage(pkg, 'ripple');
@@ -297,5 +338,84 @@ describe('generateBundledData', () => {
       expect(typeof pkg.slug).toBe('string');
       expect(pkg.slug.length).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolvePort
+// ---------------------------------------------------------------------------
+
+describe('resolvePort', () => {
+  it('returns null when raw is undefined', () => {
+    expect(resolvePort(undefined)).toBeNull();
+  });
+
+  it('returns a number for a valid port string', () => {
+    expect(resolvePort('3100')).toBe(3100);
+    expect(resolvePort('1')).toBe(1);
+    expect(resolvePort('65535')).toBe(65535);
+  });
+
+  it('throws for port 0', () => {
+    expect(() => resolvePort('0')).toThrow(/Invalid --port/);
+  });
+
+  it('throws for port 65536', () => {
+    expect(() => resolvePort('65536')).toThrow(/Invalid --port/);
+  });
+
+  it('throws for a non-numeric string', () => {
+    expect(() => resolvePort('abc')).toThrow(/Invalid --port/);
+  });
+
+  it('throws for an empty string', () => {
+    expect(() => resolvePort('')).toThrow(/Invalid --port/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validate
+// ---------------------------------------------------------------------------
+
+describe('validate', () => {
+  it('throws when input is null', () => {
+    expect(() => validateBundledData(null)).toThrow(/malformed/);
+  });
+
+  it('throws when version field is missing', () => {
+    expect(() => validateBundledData({ packages: [] })).toThrow(/malformed/);
+  });
+
+  it('throws when packages is not an array', () => {
+    expect(() => validateBundledData({ packages: 'bad', version: '1.0.0' })).toThrow(/malformed/);
+  });
+
+  it('throws when a package entry is missing slug', () => {
+    expect(() => validateBundledData({ packages: [{ name: '@vielzeug/x' }], version: '1.0.0' })).toThrow(/malformed/);
+  });
+
+  it('throws when a package entry is missing name', () => {
+    expect(() => validateBundledData({ packages: [{ slug: 'x' }], version: '1.0.0' })).toThrow(/malformed/);
+  });
+
+  it('passes valid data through without throwing', () => {
+    const input = { packages: [{ name: '@vielzeug/x', slug: 'x' }], version: '1.0.0' };
+
+    expect(() => validateBundledData(input)).not.toThrow();
+  });
+
+  it('loadData succeeds with the bundled data file (smoke test)', () => {
+    expect(() => loadData()).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// index.ts re-exports smoke test
+// ---------------------------------------------------------------------------
+
+describe('index.ts re-exports', () => {
+  it('exports loadData and packageMeta from data.js', () => {
+    expect(typeof loadData).toBe('function');
+    expect(typeof packageMeta).toBe('function');
   });
 });

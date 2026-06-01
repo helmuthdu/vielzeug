@@ -1,8 +1,8 @@
 export const classProviderExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const DbToken = createToken('Database')
-const SvcToken = createToken('Service')
+const DbToken = token('Database')
+const SvcToken = token('Service')
 
 class Database {
   users = [{ id: 1, name: 'Alice' }]

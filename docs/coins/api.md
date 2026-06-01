@@ -19,12 +19,14 @@ description: Complete API reference for @vielzeug/coins.
 | `splitEvenly()` | Distribute into equal shares | Sync | Sugar over `allocate`; non-positive `parts` → `RangeError` |
 | `sum()` | Sum an array of money values | Sync | Empty array → `RangeError`; mixed currencies → `TypeError` |
 | `min()` / `max()` | Smallest / largest value | Sync | Throws `TypeError` on currency mismatch |
+| `clamp()` | Clamp to `[lower, upper]` range | Sync | Throws `TypeError` on currency mismatch; `RangeError` if `lower > upper` |
+| `zero()` | Create a zero-amount `Money` | Sync | Sugar over `money(0n, currency)` |
 | `compare()` | Three-way comparison | Sync | Throws `TypeError` on currency mismatch |
 | `isEqual()` / `greaterThan()` etc. | Boolean comparisons | Sync | All throw `TypeError` on currency mismatch |
 | `isZero()` / `isPositive()` / `isNegative()` | Sign predicates | Sync | |
 | `format()` | Locale-aware currency string | Sync | Uses `Intl.NumberFormat`; `maximumFractionDigits < minimumFractionDigits` → `RangeError` |
 | `formatParts()` | Typed part array for custom rendering | Sync | Joining all `value` fields equals `format()` output |
-| `exchange()` | Convert between currencies | Sync | `rate` must be a decimal string; throws `TypeError` on currency mismatch |
+| `exchange()` | Convert between currencies | Sync | `rate` must be a non-negative decimal string; throws `TypeError` on currency mismatch, `RangeError` for negative rates |
 | `toDecimal()` | Minor units → decimal string | Sync | Round-trips losslessly with `money()` |
 | `toNumber()` | Minor units → float | Sync | Lossy — for display and charting only, never for arithmetic |
 | `toJSON()` / `fromJSON()` | Serialize / deserialize through JSON | Sync | `amount` is a string in `MoneyJSON` because `bigint` is not JSON-serializable |
@@ -53,6 +55,21 @@ toCurrencyCode('NOTREAL');          // throws RangeError: Invalid ISO 4217 curre
 ```
 
 Use this when constructing an `ExchangeRate` or when processing a currency string from user input or an external API.
+
+---
+
+### `zero(currency)`
+
+```ts
+function zero(currency: string): Money;
+```
+
+Creates a `Money` value with a zero amount for the given currency. Equivalent to `money(0n, currency)` but more expressive. Throws `RangeError` for unrecognised currencies.
+
+```ts
+zero('USD')  // { amount: 0n, currency: 'USD' }
+zero('JPY')  // { amount: 0n, currency: 'JPY' }
+```
 
 ---
 
@@ -147,7 +164,7 @@ Returns the money with its sign flipped.
 ### `allocate(money, ratios)`
 
 ```ts
-function allocate(m: Money, ratios: readonly (number | string)[]): Money[];
+function allocate(m: Money, ratios: readonly (number | string)[]): [Money, ...Money[]];
 ```
 
 Distributes `m` across `ratios` using the **Largest Remainder Method**. The sum of all returned values is always exactly equal to `m` — no minor unit is ever lost or gained.
@@ -156,7 +173,7 @@ Ratios are proportional — they do not need to sum to 1. Accepts number or stri
 
 Throws `RangeError` if:
 - `ratios` is empty
-- any ratio is negative
+- any ratio is negative (including negative string ratios like `'-0.5'`)
 - all ratios are zero
 
 ```ts
@@ -170,7 +187,7 @@ allocate(money('10.00', 'USD'), ['0.3', '0.7'])
 ### `splitEvenly(money, parts)`
 
 ```ts
-function splitEvenly(m: Money, parts: number): Money[];
+function splitEvenly(m: Money, parts: number): [Money, ...Money[]];
 ```
 
 Splits `m` into `parts` equal shares. Equivalent to `allocate(m, Array(parts).fill(1))`. Throws `RangeError` if `parts` is not a positive integer.
@@ -202,6 +219,25 @@ function max(first: Money, ...rest: Money[]): Money;
 ```
 
 Returns the largest value. Throws `TypeError` on currency mismatch.
+
+### `clamp(m, lower, upper)`
+
+```ts
+function clamp(m: Money, lower: Money, upper: Money): Money;
+```
+
+Clamps `m` to the inclusive range `[lower, upper]`. Returns `lower` if `m < lower`, `upper` if `m > upper`, or `m` unchanged if within bounds.
+
+Throws `TypeError` on currency mismatch. Throws `RangeError` if `lower > upper`.
+
+```ts
+const lo = money('1.00', 'USD');
+const hi = money('10.00', 'USD');
+
+clamp(money('5.00', 'USD'),  lo, hi)  // $5.00  (within range)
+clamp(money('0.50', 'USD'),  lo, hi)  // $1.00  (below lower)
+clamp(money('15.00', 'USD'), lo, hi)  // $10.00 (above upper)
+```
 
 ---
 
@@ -302,18 +338,22 @@ Formats a `Money` value as a locale-aware currency string using bigint arithmeti
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `locale` | `string` | `'en-US'` | BCP 47 language tag |
-| `style` | `'symbol' \| 'code' \| 'name'` | `'symbol'` | Currency display style |
-| `minimumFractionDigits` | `number` | currency default | Minimum decimal places shown |
+| `style` | `'symbol' \| 'code' \| 'name' \| 'narrowSymbol'` | `'symbol'` | Currency display style (`'narrowSymbol'` renders compact symbols, e.g. `$` instead of `CA$`) |
+| `minimumFractionDigits` | `number` | `min(currency default, maximumFractionDigits)` | Minimum decimal places shown |
 | `maximumFractionDigits` | `number` | currency default | Maximum decimal places shown |
 
 Throws `RangeError` if `minimumFractionDigits > maximumFractionDigits` or if either is negative or non-integer.
 
 ```ts
-format(money('1234.56', 'USD'))                  // '$1,234.56'
-format(money('1234.56', 'USD'), { locale: 'de-DE' }) // '1.234,56 $'
-format(money('1234.56', 'USD'), { style: 'code' })   // 'USD 1,234.56'
-format(money('1234.56', 'USD'), { style: 'name' })   // '1,234.56 US dollars'
-format(money('1234', 'JPY'))                         // '¥1,234'
+format(money('1234.56', 'USD'))                           // '$1,234.56'
+format(money('1234.56', 'USD'), { locale: 'de-DE' })      // '1.234,56 $'
+format(money('1234.56', 'USD'), { style: 'code' })        // 'USD 1,234.56'
+format(money('1234.56', 'USD'), { style: 'name' })        // '1,234.56 US dollars'
+format(money('1234.56', 'USD'), { style: 'narrowSymbol' })// '$1,234.56' (compact)
+format(money('1234', 'JPY'))                              // '¥1,234'
+
+// Only maximumFractionDigits — no need to also set minimumFractionDigits
+format(money('100.99', 'USD'), { maximumFractionDigits: 0 })  // '$101'
 ```
 
 ---
@@ -359,7 +399,7 @@ function exchange(m: Money, rate: ExchangeRate, mode?: RoundingMode): Money;
 
 Converts `m` to the currency specified in `rate.to` using lossless bigint arithmetic. The `rate.rate` field must be a decimal string.
 
-Throws `TypeError` if `m.currency !== rate.from`. Accepts an optional `RoundingMode` (default `'half-away-from-zero'`).
+Throws `TypeError` if `m.currency !== rate.from`. Throws `RangeError` if `rate.rate` is negative. Accepts an optional `RoundingMode` (default `'half-away-from-zero'`).
 
 ```ts
 const usd = toCurrencyCode('USD');
@@ -440,7 +480,7 @@ type FormatOptions = {
   locale?:                string;
   maximumFractionDigits?: number;
   minimumFractionDigits?: number;
-  style?:                 'code' | 'name' | 'symbol';
+  style?:                 'code' | 'name' | 'narrowSymbol' | 'symbol';
 };
 ```
 

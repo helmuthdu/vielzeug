@@ -149,62 +149,68 @@ describe('Mutation', () => {
   });
 
   describe('Lifecycle Callbacks', () => {
-    it('onSuccess is called with the resolved data', async () => {
-      let received: unknown;
-      const mutation = createMutation(async () => ({ id: 1 }), {
-        onSuccess: (data) => {
-          received = data;
+    it('onSuccess is called with the resolved data and variables', async () => {
+      let receivedData: unknown;
+      let receivedVars: unknown;
+      const mutation = createMutation(async (name: string) => ({ id: 1, name }), {
+        onSuccess: (data, variables) => {
+          receivedData = data;
+          receivedVars = variables;
         },
       });
 
-      await mutation.mutate(undefined);
-      expect(received).toEqual({ id: 1 });
+      await mutation.mutate('Alice');
+      expect(receivedData).toEqual({ id: 1, name: 'Alice' });
+      expect(receivedVars).toBe('Alice');
     });
 
-    it('onError is called with the rejection error', async () => {
-      let received: Error | undefined;
+    it('onError is called with the rejection error and variables', async () => {
+      let receivedErr: Error | undefined;
+      let receivedVars: unknown;
       const mutation = createMutation(
-        async () => {
-          throw new Error('boom');
+        async (name: string) => {
+          throw new Error(`boom:${name}`);
         },
         {
-          onError: (err) => {
-            received = err;
+          onError: (err, variables) => {
+            receivedErr = err;
+            receivedVars = variables;
           },
         },
       );
 
-      await mutation.mutate(undefined).catch(() => {});
-      expect(received?.message).toBe('boom');
+      await mutation.mutate('Bob').catch(() => {});
+      expect(receivedErr?.message).toBe('boom:Bob');
+      expect(receivedVars).toBe('Bob');
     });
 
-    it('onSettled is called after success with data and null error', async () => {
-      const calls: Array<[unknown, Error | null]> = [];
-      const mutation = createMutation(async () => ({ id: 1 }), {
-        onSettled: (data, error) => {
-          calls.push([data, error]);
+    it('onSettled is called after success with data, null error, and variables', async () => {
+      const calls: Array<[unknown, Error | null, unknown]> = [];
+      const mutation = createMutation(async (n: number) => ({ id: n }), {
+        onSettled: (data, error, variables) => {
+          calls.push([data, error, variables]);
         },
       });
 
-      await mutation.mutate(undefined);
-      expect(calls).toEqual([[{ id: 1 }, null]]);
+      await mutation.mutate(42);
+      expect(calls).toEqual([[{ id: 42 }, null, 42]]);
     });
 
-    it('onSettled is called after failure with undefined data and the error', async () => {
-      const calls: Array<[unknown, Error | null]> = [];
+    it('onSettled is called after failure with undefined data, error, and variables', async () => {
+      const calls: Array<[unknown, Error | null, unknown]> = [];
       const mutation = createMutation(
-        async () => {
-          throw new Error('fail');
+        async (n: number) => {
+          throw new Error(`fail:${n}`);
         },
         {
-          onSettled: (data, error) => {
-            calls.push([data, error]);
+          onSettled: (data, error, variables) => {
+            calls.push([data, error, variables]);
           },
         },
       );
 
-      await mutation.mutate(undefined).catch(() => {});
-      expect(calls[0]).toEqual([undefined, expect.objectContaining({ message: 'fail' })]);
+      await mutation.mutate(7).catch(() => {});
+      expect(calls[0]).toEqual([undefined, expect.objectContaining({ message: 'fail:7' }), 7]);
     });
 
     it('onSettled is called after abort with undefined data and null error', async () => {

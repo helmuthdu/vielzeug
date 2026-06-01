@@ -1,6 +1,9 @@
+import { isPlainObject } from '@vielzeug/arsenal';
+
 import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
 
-import { isPlainObject, Schema } from '../core';
+import { Schema } from '../core';
+import { cloneRecord, defineOwnProperty } from '../safe-object';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
@@ -10,10 +13,10 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
  */
 function deepMerge(target: unknown, source: unknown): unknown {
   if (isPlainObject(target) && isPlainObject(source)) {
-    const result: Record<string, unknown> = { ...target };
+    const result = cloneRecord(target);
 
     for (const [key, val] of Object.entries(source)) {
-      result[key] = deepMerge(target[key], val);
+      defineOwnProperty(result, key, deepMerge(target[key], val));
     }
 
     return result;
@@ -27,6 +30,10 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   UnionToIntersection<InferOutput<T[number]>>
 > {
   readonly schemas: T;
+
+  protected override get _kind(): string {
+    return 'intersect';
+  }
 
   constructor(schemas: T) {
     super();

@@ -54,23 +54,65 @@ export const storeWithHistory = <T extends object>(
     cursor = snapshots.length - 1;
   };
 
-  // Intercept patch/replace/reset to record history
+  // Intercept patch/replace/reset AND direct applyTopLevelChange_ (called by lens writes)
+  // so that all mutation paths push a history snapshot.
+  //
+  // applyTopLevelChange_ is used by lens writes and is the lowest-level mutation point.
+  // We intercept it on the instance so lens writes also record history.
+  // patch/replace/reset already call applyTopLevelChange_ internally, so we guard with
+  // a `highLevelMutating` flag to avoid pushing a snapshot on each individual key change
+  // inside patch/replace — those high-level methods push one snapshot at the end.
+  let highLevelMutating = false;
+  const baseAsAny = base as unknown as {
+    applyTopLevelChange_: (key: string, newValue: unknown) => void;
+  };
+  const originalApplyTopLevelChange = baseAsAny.applyTopLevelChange_.bind(base);
+
+  baseAsAny.applyTopLevelChange_ = (key: string, newValue: unknown): void => {
+    originalApplyTopLevelChange(key, newValue);
+
+    if (!highLevelMutating && !pauseHistory) {
+      pushSnapshot(base.peek());
+    }
+  };
+
   const originalPatch = base.patch.bind(base);
   const originalReplace = base.replace.bind(base);
   const originalReset = base.reset.bind(base);
 
   const patch = (partial: Partial<T>): void => {
-    originalPatch(partial);
+    highLevelMutating = true;
+
+    try {
+      originalPatch(partial);
+    } finally {
+      highLevelMutating = false;
+    }
+
     pushSnapshot(base.peek());
   };
 
   const replace = (fn: (state: Readonly<T>) => T): void => {
-    originalReplace(fn);
+    highLevelMutating = true;
+
+    try {
+      originalReplace(fn);
+    } finally {
+      highLevelMutating = false;
+    }
+
     pushSnapshot(base.peek());
   };
 
   const reset = (): void => {
-    originalReset();
+    highLevelMutating = true;
+
+    try {
+      originalReset();
+    } finally {
+      highLevelMutating = false;
+    }
+
     pushSnapshot(base.peek());
   };
 

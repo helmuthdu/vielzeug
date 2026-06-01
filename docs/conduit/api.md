@@ -23,7 +23,7 @@ description: Complete API reference for @vielzeug/conduit.
 | `container.resolveMany()`     | Resolve multiple tokens in parallel, returning a typed tuple    | Async       | Rejects if any token fails                                 |
 | `container.resolveAll()`      | Eagerly resolve all singleton factories (walks parent chain)    | Async       | Only singletons; scoped and transient are skipped          |
 | `container.inspect()`         | Return a serializable graph of registered tokens                | Sync        | Defaults to deep traversal of the full parent chain        |
-| `container.validate()`        | Detect circular dependencies at registration time               | Sync        | Returns `this`; throws `CircularDependencyError` on cycle  |
+| `container.validate()`        | Detect circular and missing-dep errors at registration time     | Sync        | Throws `CircularDependencyError` or `ProviderNotFoundError` |
 | `container.freeze()`          | Prevent new registrations after startup                         | Sync        | Returns `this`; throws if `value()` or `factory()` is called after |
 | `container.createChild()`     | Create a generic child container                                | Sync        | Child inherits parent registrations read-only              |
 | `container.createScope()`     | Create a named-scope child container                            | Sync        | Factories with a `ScopeToken` lifetime resolve here        |
@@ -428,11 +428,13 @@ for (const node of graph.nodes) {
 validate(): this;
 ```
 
-Performs registration-time cycle detection across the full dependency graph using depth-first search. Returns `this` for chaining. Safe to call after every `factory()` call during setup.
+Performs registration-time graph validation across the full dependency graph using depth-first search. Catches both circular dependencies and factories that declare dependencies on unregistered tokens. Returns `this` for chaining. Safe to call after every `factory()` call during setup.
 
 **Returns:** `this` (chainable)
 
-**Throws:** `CircularDependencyError` if any cycle is detected.
+**Throws:**
+- `CircularDependencyError` — if any cycle is detected
+- `ProviderNotFoundError` — if a declared `deps` token has no registered provider
 
 **Example:**
 
@@ -657,10 +659,9 @@ type ContainerGraph = {
 
 | Error                        | When thrown                                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full cycle path                  |
-| `ProviderNotFoundError`      | `resolve()` / `resolveSync()` called for an unregistered token                           |
-| `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                   |
-| `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory  |
-| `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token       |
-| `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name             |
-| `ProviderNotFoundError`      | Token not registered — message includes the container name                               |
+| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full cycle path                                             |
+| `ProviderNotFoundError`      | `resolve()` / `resolveSync()` / `validate()` — token not registered; message includes container name and token description |
+| `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                                              |
+| `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory                            |
+| `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token                                  |
+| `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name                                        |

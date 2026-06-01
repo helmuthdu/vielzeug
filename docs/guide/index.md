@@ -1,6 +1,7 @@
 ---
 title: Getting Started
 description: Vielzeug is a collection of focused TypeScript packages — each one does one thing well, and they all fit together naturally.
+sidebar: false
 ---
 
 # Getting Started
@@ -12,12 +13,6 @@ You don't need to adopt the whole ecosystem. Pick the packages you need and impo
 ::: tip Try it first
 The [REPL](/repl.html) lets you run any package in the browser without installing anything.
 :::
-
-## Integration Guides
-
-- [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Spell + Forge + Courier
-- [State and Routing](./state-and-routing.md) - Ripple + Wayfinder
-- [State Machines in Practice](@vielzeug/clockwork/examples/) - Clockwork integration examples
 
 ## Install a Package
 
@@ -83,7 +78,8 @@ define('my-counter', () => {
 A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craft. Drop them straight into your project.
 
 ```html
-<bl-button variant="primary" @click="${handleSave}">Save</bl-button> <bl-input label="Email" :value="${emailSignal}" />
+<bit-button variant="solid" color="primary">Save</bit-button>
+<bit-input label="Email"></bit-input>
 ```
 
 **Start here if** you want production-ready components without building from scratch.
@@ -177,7 +173,7 @@ import { createLocalStorage, table } from '@vielzeug/vault';
 type User = { id: string; name: string; role: string };
 
 const schema = { users: table<User>('id') };
-const db = createLocalStorage('myapp', schema);
+const db = createLocalStorage({ name: 'myapp', schema });
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
 const admins = await db.query('users').equals('role', 'admin').toArray();
@@ -306,8 +302,7 @@ console.log(auth.state.value); // 'active'
 | Package                  | What it does                                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | **[Rune](/rune/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
-| **[Clockwork](/clockwork/)** | Typed finite state machines with guards, async invokes, context signals, and persistence        |
-| **[lingua](/lingua/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
+| **[Lingua](/lingua/)**     | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
 | **[Herald](/herald/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
 | **[Familiar](/familiar/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
 | **[Grip](/grip/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |

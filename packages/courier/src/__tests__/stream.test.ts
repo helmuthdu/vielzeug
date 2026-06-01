@@ -599,6 +599,18 @@ describe('createStream — readable()', () => {
     expect(items).toEqual([{ val: 1 }, { val: 2 }]);
   });
 
+  it('throws a descriptive error when an ndjson line is malformed', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    fetchMock.mockResolvedValue(textStreamResponse(['{"id":1}\n', 'not-json\n']));
+
+    await expect(async () => {
+      for await (const _ of stream.readable('/stream', { parse: 'ndjson' })) {
+        /* drain */
+      }
+    }).rejects.toThrow('[courier] NDJSON: failed to parse line: not-json');
+  });
+
   it('uses POST when body is provided', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 

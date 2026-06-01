@@ -1,4 +1,4 @@
-import { type Adapter, createLocalStorage, table, ttl } from '../index';
+import { type Adapter, createLocalStorage, table, ttl, VaultDisposedError } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -186,5 +186,26 @@ describe('LocalStorage adapter', () => {
     // Our schema only has 'users' — phantom table key must not be tracked
     expect(await db.count('users')).toBe(1);
     // Cross-tab write to phantom table must not trigger a users observer
+  });
+
+  test('isEmpty() returns true for empty table, false when records exist', async () => {
+    expect(await db.isEmpty('users')).toBe(true);
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.isEmpty('users')).toBe(false);
+
+    await db.clear('users');
+
+    expect(await db.isEmpty('users')).toBe(true);
+  });
+});
+
+describe('VaultDisposedError default message', () => {
+  test('no-arg constructor produces a meaningful message', () => {
+    const err = new VaultDisposedError();
+
+    expect(err.message).toContain('disposed');
+    expect(err instanceof VaultDisposedError).toBe(true);
   });
 });

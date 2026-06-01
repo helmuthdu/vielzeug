@@ -5,6 +5,7 @@ import {
   effect,
   html,
   inject,
+  onCleanup,
   prop,
   provide,
   type ReadonlySignal,
@@ -15,6 +16,7 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
   type ChoiceChangeDetail,
+  componentSignal,
   createChoiceField,
   createListControl,
   createStableId,
@@ -127,6 +129,7 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       helper: props.helper,
       label: props.label,
       prefix: 'radio-group',
+      signal: componentSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });

@@ -22,12 +22,12 @@ export function makeBusDelegate<T extends EventMap>(bus: Bus<T>): Bus<T> {
     on: bus.on,
     onAny: bus.onAny,
     once: bus.once,
-    pipe: bus.pipe,
     removeAllListeners: bus.removeAllListeners,
     [Symbol.dispose]: () => bus.dispose(),
     wait: bus.wait,
     waitAny: bus.waitAny,
-  } as Bus<T>;
+  } as Bus<T>; // Cast is safe: getters (disposed, disposalSignal) are added via defineProperty below.
+  // Note: if Bus<T> gains a new required field, TypeScript won't catch the omission here — keep in sync manually.
 
   Object.defineProperty(delegate, 'disposalSignal', {
     configurable: true,

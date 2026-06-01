@@ -267,22 +267,6 @@ const bus = createBus<AppEvents>({
 - `payload` — the payload passed to the failing listener (typed as `unknown`)
 - `timestamp` — `Date.now()` captured at the moment `emit()` was called
 
-### `onDispatch` hook
-
-`onDispatch` is called on every `emit()`, before listeners run. It is intentionally a runtime-oriented hook: `event` is a string and `payload` is unknown, which keeps logging and tracing hooks simple and honest about runtime behavior.
-
-```ts
-const bus = createBus<AppEvents>({
-  onDispatch: (event, payload) => {
-    console.debug(`[bus emit] ${event}`, payload);
-  },
-});
-```
-
-::: tip
-`createTestBus` composes your `onDispatch` hook with its own recording behavior.
-:::
-
 ## Dispose & Cleanup
 
 `dispose()` permanently tears down the bus: all listeners are removed and all pending `wait()` promises are rejected with `BusDisposedError`.
@@ -356,33 +340,13 @@ bus.onAny(logFirstEvent, { once: true });
 
 `onAny` listeners are removed by `removeAllListeners()` (no argument), but not by `removeAllListeners('event')`.
 
-::: tip `onAny` vs `onDispatch`
-- `onDispatch` is a **constructor-time hook** that fires before listeners; set once, cannot be removed.
-- `onAny` is a **runtime listener** that fires after listeners; can be added and removed dynamically.
-
-Prefer `onAny` for observable, removable side effects. Use `onDispatch` for permanent bus-wide tracing.
+::: tip `onAny` for bus-wide observability
+`onAny` is a runtime listener — it can be added and removed dynamically, and accepts `{ signal, once }` options just like `on()`. Prefer it over global tracing hooks for cross-cutting concerns.
 :::
 
 ## Event Piping
 
-Events can be forwarded between buses either via the standalone `pipeEvents()` function or the instance method `bus.pipe()`. Both approaches support same-name forwarding and event renaming.
-
-### `bus.pipe()` — Instance method
-
-`bus.pipe(target, entries, signal?)` is attached directly to every bus. No import needed.
-
-```ts
-// Forward same-named events
-const stop = appBus.pipe(auditBus, ['user:login', 'user:logout']);
-stop(); // stop forwarding
-
-// Rename events inline
-appBus.pipe(analyticsbus, [{ from: 'user:login', to: 'track:login' }]);
-```
-
-### `pipeEvents()` — Standalone function
-
-`pipeEvents()` is useful when piping from a bus you don't own, or from outside the component that created the bus.
+Use `pipeEvents()` to forward events from one bus to another. It supports same-name forwarding and event renaming.
 
 ```ts
 import { createBus, pipeEvents } from '@vielzeug/herald';
@@ -485,10 +449,12 @@ bus.current('zoom');  // 1
 
 ## Debug Mode
 
-Pass `debug: true` to `createBus()` to log all subscribe, emit, and dispose activity to `console.debug`. This is useful during development to trace the event flow through your application.
+Import `debugBus` from the dedicated sub-path to create a bus with debug logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
 
 ```ts
-const bus = createBus<AppEvents>({ debug: true });
+import { debugBus } from '@vielzeug/herald/debug';
+
+const bus = debugBus<AppEvents>();
 
 bus.on('user:login', handler);
 // → [herald:on] on("user:login")
@@ -500,7 +466,32 @@ bus.dispose();
 // → [herald:lifecycle] dispose()
 ```
 
-Debug mode has no effect on behavior and should not be enabled in production.
+Alternatively, wire logging manually by passing `logger.debug` directly to `createBus()`:
+
+```ts
+const bus = createBus<AppEvents>({ logger: { debug: console.debug } }); // equivalent
+```
+
+Debug logging has no effect on behavior and should not be enabled in production.
+
+### Custom logger
+
+Provide a `logger` object to route or silence debug and warn output:
+
+```ts
+const bus = createBus<AppEvents>({
+  logger: {
+    debug: (msg) => myLogger.trace(msg), // enable + redirect debug output
+    warn: (msg) => myLogger.warn(msg),   // redirect warn output
+  },
+});
+
+// Omit logger.debug to disable debug logging, omit logger.warn to silence warnings
+const warnOnlyBus = createBus<AppEvents>({ logger: { warn: console.warn } });
+
+// Pass {} to suppress all bus logging entirely
+const silentBus = createBus<AppEvents>({ logger: {} });
+```
 
 ### Detecting listener leaks with `maxListeners`
 
@@ -569,7 +560,13 @@ bus.reset(); // clear recorded payloads, keep listeners active
 bus.dispose(); // clear listeners and recorded payloads
 ```
 
-`createTestBus` accepts the full `BusOptions<T>` including `onDispatch` — your hook is composed with the internal recording.
+Use `emittedCount(event)` when you only need the count, not the full payload list:
+
+```ts
+bus.emittedCount('user:login'); // number of times the event was emitted
+```
+
+`createTestBus` accepts the full `BusOptions<T>` including `onError`.
 
 Use `reset()` to clear recorded payloads between assertions without affecting active listeners:
 
@@ -681,8 +678,8 @@ import { createLogger } from '@vielzeug/rune';
 const logger = createLogger({ scope: 'herald' });
 
 const bus = createBus<AppEvents>({
-  onDispatch: (event, payload) => logger.debug('dispatched', { event, payload }),
-  onError: (err, event) => logger.error('handler failed', { err, event }),
+  logger: { debug: logger.debug, warn: logger.warn },
+  onError: ({ err, event }) => logger.error('handler failed', { err, event }),
 });
 ```
 

@@ -1,12 +1,12 @@
 export const batcherExample = {
-  code: `import { createApi, createBatcher } from '/courier'
+  code: `import { createApi, createBatcher } from '@vielzeug/courier'
 
 const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
 // createBatcher coalesces individual load() calls made in the same scheduling
 // window into a single resolve() call — eliminating N+1 request patterns.
 const userLoader = createBatcher({
-  resolve: async (ids: number[]) => {
+  resolve: async (ids) => {
     // In production this would be a batch endpoint like POST /users/batch.
     // JSONPlaceholder doesn't have one, so we fetch in parallel here to demo.
     return Promise.all(ids.map((id) => http.get('/users/' + id)))

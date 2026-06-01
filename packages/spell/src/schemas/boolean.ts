@@ -4,6 +4,10 @@ import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
+  protected override get _kind(): string {
+    return 'boolean';
+  }
+
   constructor() {
     super((value) =>
       typeof value === 'boolean'

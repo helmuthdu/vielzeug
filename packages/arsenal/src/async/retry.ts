@@ -25,9 +25,31 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
 }
 
 /**
+ * Executes an async function and returns an `AttemptResult` — never throws.
+ * On success, returns `{ ok: true, value }`. On failure, returns `{ ok: false, error }`.
+ *
+ * @example
+ * ```ts
+ * const result = await attempt(() => fetch('/api').then(r => r.json()));
+ * if (result.ok) console.log(result.value);
+ * else console.error(result.error);
+ * ```
+ *
+ * @param fn - Async function to execute.
+ * @returns An `AttemptResult` that is either `{ ok: true, value }` or `{ ok: false, error }`.
+ */
+export async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>> {
+  try {
+    return { ok: true, value: await fn() };
+  } catch (error) {
+    return { error, ok: false };
+  }
+}
+
+/**
  * Retries an async function with optional per-attempt timeout, delay strategy, and abort support.
  * The function receives a merged AbortSignal from the per-attempt timeout and any external signal.
- * On total failure, throws the last error (use a try/catch to get an `AttemptResult`-style value).
+ * On total failure, throws the last error (use `attempt()` to get an `AttemptResult` without throwing).
  *
  * @example
  * ```ts
@@ -40,13 +62,8 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
  *   { times: 3, timeout: 5000 },
  * );
  *
- * // As AttemptResult (never throws)
- * try {
- *   const value = await retry(fn, { times: 3, timeout: 5000 });
- *   return { ok: true, value };
- * } catch (error) {
- *   return { ok: false, error };
- * }
+ * // As AttemptResult (never throws) — use attempt() + retry() together
+ * const result = await attempt(() => retry(fn, { times: 3 }));
  * ```
  *
  * @param fn - Async function to retry. Receives a merged AbortSignal when timeout or signal is set.
@@ -66,7 +83,7 @@ export async function retry<T>(
   fn: (signal?: AbortSignal) => Promise<T>,
   { delay = 250, onError, shouldRetry, signal, timeout, times = 3 }: RetryOptions = {},
 ): Promise<T> {
-  for (let attempt = 1; attempt <= times; attempt++) {
+  for (let tryCount = 1; tryCount <= times; tryCount++) {
     if (signal?.aborted) throw abortError(signal);
 
     const callSignal = buildSignal(timeout, signal);
@@ -74,17 +91,17 @@ export async function retry<T>(
     try {
       return await fn(callSignal);
     } catch (err) {
-      if (attempt === times) {
+      if (tryCount === times) {
         onError?.(err);
         throw err;
       }
 
-      if (shouldRetry && !shouldRetry(err, attempt - 1)) {
+      if (shouldRetry && !shouldRetry(err, tryCount - 1)) {
         onError?.(err);
         throw err;
       }
 
-      const ms = typeof delay === 'function' ? delay(attempt - 1) : delay;
+      const ms = typeof delay === 'function' ? delay(tryCount - 1) : delay;
 
       if (ms > 0) await sleep(ms, signal);
     }

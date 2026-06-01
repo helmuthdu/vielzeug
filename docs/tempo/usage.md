@@ -10,13 +10,13 @@ description: Parsing, timezone conversion, arithmetic, boundaries, and formattin
 Use named imports from `@vielzeug/tempo` for tree-shaking.
 
 ```ts
-import { format, now, parseLocal, shift, toInstant, toZoned } from '@vielzeug/tempo';
+import { format, now, parsePlainDateTime, shift, toInstant, toZoned } from '@vielzeug/tempo';
 
 // Current time in a timezone
 const berlin = now('Europe/Berlin');
 
 // Parse a wall-clock string, then pin it to a timezone
-const local = parseLocal('2026-03-21T10:15:30');
+const local = parsePlainDateTime('2026-03-21T10:15:30');
 const instant = toInstant(local, { tz: 'America/New_York' });
 
 // Format for display
@@ -25,24 +25,43 @@ format(instant, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
 
 ## Parsing and Conversion
 
-Use `parseLocal()` for wall-clock strings, `parseInstant()` for UTC ISO strings, and `parseAny()` when the input format varies. Use `toInstant()` and `toZoned()` to project values across timezones.
+All common Temporal constructors have a tempo equivalent — import only from `@vielzeug/tempo`:
+
+| Instead of… | Use… |
+| --- | --- |
+| `Temporal.Now.instant()` | `nowInstant()` |
+| `Temporal.Now.zonedDateTimeISO(tz)` | `now(tz)` |
+| `Temporal.Instant.from(str)` | `parseInstant(str)` |
+| `Temporal.ZonedDateTime.from(str)` | `parseZoned(str)` |
+| `Temporal.PlainDateTime.from(str)` | `parsePlainDateTime(str)` |
+| `Temporal.PlainDate.from(str)` | `parsePlainDate(str)` |
+| `Temporal.ZonedDateTime.from` / `Temporal.Instant.from` / … | `parseDate(str)` (unknown format) |
 
 ```ts
-import { isValid, parseAny, parseInstant, parseLocal, toInstant, toZoned } from '@vielzeug/tempo';
+import { isValid, nowInstant, parseDate, parseInstant, parsePlainDateTime, parsePlainDate, parseZoned, toInstant, toZoned } from '@vielzeug/tempo';
+
+// Current instant
+const t = nowInstant();
 
 // Wall-clock string from user input or database
-const local = parseLocal('2026-03-21T10:15:30');
+const local = parsePlainDateTime('2026-03-21T10:15:30');
 const instant = toInstant(local, { tz: 'Europe/Berlin' });
 const tokyo = toZoned(instant, { tz: 'Asia/Tokyo' });
 
 // UTC ISO string from an API response
 const ts = parseInstant('2026-03-21T10:15:30Z');
 
+// Zoned date-time string
+const meeting = parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+
+// Date-only string
+const date = parsePlainDate('2026-03-21');
+
 // Unknown ISO format — picks the most specific type automatically
-parseAny('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
-parseAny('2026-03-21T10:00:00Z');                     // Instant
-parseAny('2026-03-21T10:00:00');                      // PlainDateTime
-parseAny('2026-03-21');                               // PlainDate
+parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
+parseDate('2026-03-21T10:00:00Z');                     // Instant
+parseDate('2026-03-21T10:00:00');                      // PlainDateTime
+parseDate('2026-03-21');                               // PlainDate
 
 // Type guard — validate before passing to Tempo functions
 if (isValid(externalValue)) {
@@ -55,9 +74,9 @@ if (isValid(externalValue)) {
 `shift()` handles DST transitions correctly.
 
 ```ts
-import { shift } from '@vielzeug/tempo';
+import { parseZoned, shift } from '@vielzeug/tempo';
 
-const before = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
+const before = parseZoned('2026-03-08T01:30:00-05:00[America/New_York]');
 const after = shift(before, { hours: 1 });
 
 console.log(after.toString());
@@ -67,11 +86,11 @@ console.log(after.toString());
 ## Difference and Range Tools
 
 ```ts
-import { clamp, difference, within } from '@vielzeug/tempo';
+import { clamp, difference, parseInstant, within } from '@vielzeug/tempo';
 
 const duration = difference(
-  Temporal.Instant.from('2026-03-21T10:00:00Z'),
-  Temporal.Instant.from('2026-03-21T12:30:00Z'),
+  parseInstant('2026-03-21T10:00:00Z'),
+  parseInstant('2026-03-21T12:30:00Z'),
   {
     tz: 'UTC',
     largestUnit: 'hour',
@@ -80,31 +99,31 @@ const duration = difference(
 );
 
 const inWindow = within(
-  Temporal.Instant.from('2026-03-21T11:00:00Z'),
-  Temporal.Instant.from('2026-03-21T10:00:00Z'),
-  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  parseInstant('2026-03-21T11:00:00Z'),
+  parseInstant('2026-03-21T10:00:00Z'),
+  parseInstant('2026-03-21T12:00:00Z'),
 );
 
 const inWindowByDay = within(
-  Temporal.Instant.from('2026-03-22T04:59:00Z'),
-  Temporal.Instant.from('2026-03-21T06:00:00Z'),
-  Temporal.Instant.from('2026-03-22T03:00:00Z'),
+  parseInstant('2026-03-22T04:59:00Z'),
+  parseInstant('2026-03-21T06:00:00Z'),
+  parseInstant('2026-03-22T03:00:00Z'),
   { unit: 'day', tz: 'America/New_York' },
 );
 
 // clamp returns Temporal.Instant — project to a timezone as needed
 const clamped = clamp(
-  Temporal.Instant.from('2026-03-21T13:00:00Z'),
-  Temporal.Instant.from('2026-03-21T10:00:00Z'),
-  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  parseInstant('2026-03-21T13:00:00Z'),
+  parseInstant('2026-03-21T10:00:00Z'),
+  parseInstant('2026-03-21T12:00:00Z'),
 );
 const bounded = clamped.toZonedDateTimeISO('UTC');
 
 // with unit comparison, clamp aligns to the requested unit boundary
 const clampedByDay = clamp(
-  Temporal.Instant.from('2026-03-23T05:00:00Z'),
-  Temporal.Instant.from('2026-03-21T09:00:00Z'),
-  Temporal.Instant.from('2026-03-22T18:00:00Z'),
+  parseInstant('2026-03-23T05:00:00Z'),
+  parseInstant('2026-03-21T09:00:00Z'),
+  parseInstant('2026-03-22T18:00:00Z'),
   { unit: 'day', tz: 'America/New_York' },
 );
 ```
@@ -112,16 +131,16 @@ const clampedByDay = clamp(
 ## Comparison Helpers
 
 ```ts
-import { isAfter, isBefore, isSame } from '@vielzeug/tempo';
+import { isAfter, isBefore, isSame, parseInstant } from '@vielzeug/tempo';
 
-isBefore(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T11:00:00Z'));
-isAfter(Temporal.Instant.from('2026-03-21T12:00:00Z'), Temporal.Instant.from('2026-03-21T11:00:00Z'));
-isSame(Temporal.Instant.from('2026-03-21T23:30:00Z'), Temporal.Instant.from('2026-03-22T00:15:00Z'), {
+isBefore(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T11:00:00Z'));
+isAfter(parseInstant('2026-03-21T12:00:00Z'), parseInstant('2026-03-21T11:00:00Z'));
+isSame(parseInstant('2026-03-21T23:30:00Z'), parseInstant('2026-03-22T00:15:00Z'), {
   unit: 'day',
   tz: 'America/New_York',
 });
 
-isBefore(Temporal.Instant.from('2026-03-21T23:30:00Z'), Temporal.Instant.from('2026-03-22T00:15:00Z'), {
+isBefore(parseInstant('2026-03-21T23:30:00Z'), parseInstant('2026-03-22T00:15:00Z'), {
   unit: 'day',
   tz: 'UTC',
 });
@@ -130,12 +149,12 @@ isBefore(Temporal.Instant.from('2026-03-21T23:30:00Z'), Temporal.Instant.from('2
 ## Start and End Boundaries
 
 ```ts
-import { endOf, startOf } from '@vielzeug/tempo';
+import { endOf, parseInstant, startOf } from '@vielzeug/tempo';
 
-const dayStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
-const dayEnd = endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+const dayStart = startOf(parseInstant('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+const dayEnd = endOf(parseInstant('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
 
-const weekStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week', {
+const weekStart = startOf(parseInstant('2026-03-21T10:15:30Z'), 'week', {
   tz: 'Europe/Berlin',
   weekStartsOn: 1,
 });
@@ -146,22 +165,22 @@ const weekStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week',
 Use `format()` for UI, `formatInstant()`/`formatZoned()` for machine output, `formatRelative()` for UX copy.
 
 ```ts
-import { format, formatInstant, formatParts, formatRange, formatRangeParts, formatRelative, formatZoned } from '@vielzeug/tempo';
+import { format, formatInstant, formatParts, formatRange, formatRangeParts, formatRelative, formatZoned, parseInstant } from '@vielzeug/tempo';
 
-const instant = Temporal.Instant.from('2026-03-21T10:15:30Z');
+const instant = parseInstant('2026-03-21T10:15:30Z');
 
 format(instant, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
 formatInstant(instant);
 formatZoned(instant, { tz: 'Europe/Berlin' });
 
-formatRange(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+formatRange(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T12:00:00Z'), {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
 });
 
-formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
-  base: Temporal.Instant.from('2026-03-21T10:00:00Z'),
+formatRelative(parseInstant('2026-03-21T12:00:00Z'), {
+  base: parseInstant('2026-03-21T10:00:00Z'),
   locale: 'en-US',
   numeric: 'always',
 });
@@ -171,8 +190,8 @@ const parts = formatParts(instant, { pattern: 'date-only', tz: 'UTC' });
 // [{ type: 'month', value: '3' }, { type: 'literal', value: '/' }, ...]
 
 const rangeParts = formatRangeParts(
-  Temporal.Instant.from('2026-03-21T10:00:00Z'),
-  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+  parseInstant('2026-03-21T10:00:00Z'),
+  parseInstant('2026-03-21T12:00:00Z'),
   { pattern: 'short', locale: 'en-US', tz: 'UTC' },
 );
 const startOnly = rangeParts.filter(p => p.source === 'startRange' || p.source === 'shared');
@@ -192,7 +211,7 @@ const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 Use `expires()` to classify a date into a named threshold bucket of your choosing.
 
 ```ts
-import { classify, expires, humanize, timeDiff } from '@vielzeug/tempo';
+import { classify, expires, humanize, now, parseInstant, shift, timeDiff } from '@vielzeug/tempo';
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days past
@@ -202,10 +221,10 @@ const THRESHOLDS = {
   safe:        { years: 100 },
 } as const;
 
-// Classify — returns the key of the first matching threshold, or null
-expires(Temporal.Now.instant().subtract({ days: 60 }), THRESHOLDS); // 'longExpired'
-expires(Temporal.Now.instant().add({ hours: 48 }), THRESHOLDS);     // 'critical'
-expires(Temporal.Now.instant().add({ years: 200 }), THRESHOLDS);    // null (no match)
+// Use shift(now(tz), ...) for day-level offsets
+expires(shift(now('UTC'), { days: -60 }).toInstant(), THRESHOLDS); // 'longExpired'
+expires(shift(now('UTC'), { hours: 48 }).toInstant(), THRESHOLDS); // 'critical'
+expires(shift(now('UTC'), { years: 200 }).toInstant(), THRESHOLDS); // null (no match)
 
 // classify() = expires() + timeDiff() in one call
 const { key, diff } = classify(certificateExpiry, THRESHOLDS);
@@ -215,8 +234,8 @@ const { key, diff } = classify(certificateExpiry, THRESHOLDS);
 // timeDiff — largest-unit human-readable time difference
 // No tz needed when both are Instants
 timeDiff(
-  Temporal.Instant.from('2026-01-01T00:00:00Z'),
-  Temporal.Instant.from('2027-06-01T00:00:00Z'),
+  parseInstant('2026-01-01T00:00:00Z'),
+  parseInstant('2027-06-01T00:00:00Z'),
 ); // { unit: 'year', value: 1 }
 
 // humanize converts a TimeDiffResult to a readable string
@@ -227,6 +246,8 @@ humanize(timeDiff(expiresAt)); // '3 days', '1 hour', etc.
 
 Use `dateRange()` to lazily generate sequences of `ZonedDateTime` values for calendars, reports, or iteration.
 
+When `start` is a `ZonedDateTime`, the timezone is inferred automatically — no need to pass `options`. For plain inputs, pass `options.tz` explicitly.
+
 ```ts
 import { dateRange, recurrence } from '@vielzeug/tempo';
 
@@ -234,33 +255,32 @@ import { dateRange, recurrence } from '@vielzeug/tempo';
 const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
 const end   = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
 
-// Lazy iteration — break early without computing all values
-for (const day of dateRange(start, end, { days: 1 }, { tz: 'UTC' })) {
+// ZonedDateTime inputs — tz inferred, no options needed
+for (const day of dateRange(start, end, { days: 1 })) {
   render(day);
 }
 
 // Collect to array
-const days = [...dateRange(start, end, { days: 1 }, { tz: 'UTC' })];
+const days = [...dateRange(start, end, { days: 1 })];
 
 // Every Monday in a date range
 const mondays = [...dateRange(
   Temporal.ZonedDateTime.from('2026-03-02T00:00:00[UTC]'),
   Temporal.ZonedDateTime.from('2026-03-30T00:00:00[UTC]'),
   { weeks: 1 },
-  { tz: 'UTC' },
 )];
 
 // recurrence — repeating dates with count or until
 const meetingStart = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
 const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
 
-// Weekly meetings until a deadline (count OR until required at compile time)
-for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: deadline }, { tz: 'Europe/Berlin' })) {
+// ZonedDateTime start — tz inferred, no options needed
+for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: deadline })) {
   schedule(meeting);
 }
 
-// Every 3 months for 6 occurrences
-const quarters = [...recurrence(meetingStart, { frequency: 'monthly', interval: 3, count: 6 }, { tz: 'UTC' })];
+// Every 3 months for 6 occurrences (tz inferred from ZonedDateTime start)
+const quarters = [...recurrence(meetingStart, { frequency: 'monthly', interval: 3, count: 6 })];
 ```
 
 ## Framework Integration
@@ -350,7 +370,7 @@ await db.put('sessions', { id: '1', token: 'abc' }, ttl.ms(expiresIn));
 ## Best Practices
 
 - Store `Temporal.Instant` values in databases and APIs — never store offset-aware strings.
-- Use `parseLocal()` at the system boundary when receiving wall-clock strings from external sources; use `parseInstant()` for UTC ISO strings; use `parseAny()` when the format is unknown.
+- Use `parsePlainDateTime()` at the system boundary when receiving wall-clock strings from external sources; use `parseInstant()` for UTC ISO strings; use `parseDate()` when the format is unknown.
 - Use `isValid()` as a type guard when accepting `TimeInput` from external data.
 - Convert to `ZonedDateTime` only when rendering to users; keep instants everywhere else.
 - Always pass `tz` when calling `toInstant()`, `shift()`, or `difference()` with plain inputs.

@@ -1,5 +1,5 @@
 export const watchAndSubscribeExample = {
-  code: `import { signal, store, watch } from '/ripple'
+  code: `import { signal, store, watch } from '@vielzeug/ripple'
 
 const counter = signal(0)
 

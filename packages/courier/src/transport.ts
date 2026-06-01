@@ -97,7 +97,7 @@ export function createTransportCore(opts: TransportOptions = {}) {
 
   /** Returns a read-only snapshot of the current global headers. */
   function getHeaders(): Readonly<Record<string, string>> {
-    return globalHeaders;
+    return { ...globalHeaders };
   }
 
   /**

@@ -1,4 +1,4 @@
-import { createFormContext, defineField, html, signal } from '../index';
+import { createFormContext, defineField, FORM_CONTEXT_KEY, html, provide, signal, useFormContext } from '../index';
 import { mount } from '../testing';
 
 describe('createFormContext()', () => {
@@ -83,6 +83,58 @@ describe('createFormContext()', () => {
     expect(form.submitting.value).toBe(false);
   });
 
+  it('error signal captures exceptions thrown by onSubmit', async () => {
+    const boom = new Error('boom');
+    const form = createFormContext({
+      onSubmit: async () => {
+        throw boom;
+      },
+    });
+
+    await form.submit();
+
+    expect(form.error.value).toBe(boom);
+  });
+
+  it('error signal resets to null on next successful submit', async () => {
+    let shouldFail = true;
+    const form = createFormContext({
+      onSubmit: async () => {
+        if (shouldFail) throw new Error('fail');
+      },
+    });
+
+    await form.submit();
+    expect(form.error.value).not.toBeNull();
+
+    shouldFail = false;
+    await form.submit();
+    expect(form.error.value).toBeNull();
+  });
+
+  it('onReset callback is invoked by reset()', () => {
+    const resetSpy = vi.fn();
+    const form = createFormContext({ onReset: resetSpy });
+
+    form.reset();
+
+    expect(resetSpy).toHaveBeenCalledOnce();
+  });
+
+  it('reset() clears the error signal', async () => {
+    const form = createFormContext({
+      onSubmit: async () => {
+        throw new Error('fail');
+      },
+    });
+
+    await form.submit();
+    expect(form.error.value).not.toBeNull();
+
+    form.reset();
+    expect(form.error.value).toBeNull();
+  });
+
   it('submit is idempotent when already submitting', async () => {
     let callCount = 0;
     let resolveFn!: () => void;
@@ -103,6 +155,36 @@ describe('createFormContext()', () => {
     resolveFn();
     await Promise.all([p1, p2]);
     expect(callCount).toBe(1);
+  });
+});
+
+describe('useFormContext()', () => {
+  it('returns the form context when provided by an ancestor', async () => {
+    let captured: ReturnType<typeof useFormContext>;
+
+    await mount(() => {
+      const form = createFormContext();
+
+      provide(FORM_CONTEXT_KEY, form);
+      captured = useFormContext();
+
+      return html`<div></div>`;
+    });
+
+    expect(captured).toBeDefined();
+    expect(typeof captured!.submit).toBe('function');
+  });
+
+  it('returns undefined when no form context is provided', async () => {
+    let captured: ReturnType<typeof useFormContext> = undefined as never;
+
+    await mount(() => {
+      captured = useFormContext();
+
+      return html`<div></div>`;
+    });
+
+    expect(captured).toBeUndefined();
   });
 });
 
@@ -171,6 +253,20 @@ describe('component form integration', () => {
           return html`<div></div>`;
         }),
       ).rejects.toThrow(/formAssociated: true/);
+    });
+
+    it('throws when called twice on the same host element', async () => {
+      await expect(
+        mount(
+          () => {
+            defineField({ value: signal('first') });
+            defineField({ value: signal('second') });
+
+            return html`<div></div>`;
+          },
+          { componentOptions: { formAssociated: true } },
+        ),
+      ).rejects.toThrow(/defineField\(\) was already called/);
     });
   });
 });

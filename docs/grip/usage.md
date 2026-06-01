@@ -462,12 +462,6 @@ function useSortable(items: { id: string; text: string }[]) {
 
 :::
 
-### Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
 ## Working with Other Vielzeug Libraries
 
 ### With Craft

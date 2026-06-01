@@ -1,5 +1,6 @@
 import { createAxis1D, type VirtualItem } from './axis1d';
 import {
+  createMeasurementCache,
   createScrollAdapter,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
@@ -14,6 +15,7 @@ import {
 } from './utils';
 
 export {
+  createMeasurementCache,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   type MeasurementCache,
@@ -97,8 +99,10 @@ export interface Virtualizer {
   redraw: () => void;
   /** Rebuild the full offset table and re-emit (use when item sizes may have changed). */
   refresh: () => void;
+  scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
+  scrollToTop: (options?: { behavior?: ScrollBehavior }) => void;
   update: (next: VirtualizerUpdateOptions) => void;
   [Symbol.dispose]: () => void;
 }
@@ -384,7 +388,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('estimateSize' in next) {
+    if (Object.hasOwn(next, 'estimateSize')) {
       estimateFn = resolveEstimateFn(next.estimateSize, DEFAULT_ESTIMATE_SIZE);
       measuredByKey.clear();
       needsRebuild = true;
@@ -400,7 +404,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('getItemKey' in next) {
+    if (Object.hasOwn(next, 'getItemKey')) {
       const nextKey = next.getItemKey ?? defaultItemKey;
 
       if (nextKey !== getItemKey) {
@@ -419,7 +423,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
-    if ('sticky' in next) {
+    if (Object.hasOwn(next, 'sticky')) {
       const nextStickyFn = next.sticky ?? null;
 
       if (nextStickyFn !== stickyFn) {
@@ -540,6 +544,14 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     domAxis.writeOffset(clampScrollOffset(offset), opts.behavior ?? 'auto');
   }
 
+  function scrollToTop(opts: { behavior?: ScrollBehavior } = {}): void {
+    scrollToOffset(0, opts);
+  }
+
+  function scrollToBottom(opts: { behavior?: ScrollBehavior } = {}): void {
+    scrollToOffset(ax.totalSize, opts);
+  }
+
   function destroy(): void {
     if (destroyed) return;
 
@@ -603,8 +615,10 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get scrollOffset() {
       return scrollOffset;
     },
+    scrollToBottom,
     scrollToIndex,
     scrollToOffset,
+    scrollToTop,
     get stickyItems() {
       return stickyItems;
     },

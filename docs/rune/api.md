@@ -128,14 +128,22 @@ Argument rules:
 - Pass `transports: []` → disable all transports on the child.
 - Pass `transports: [...]` → replace entirely with the given list.
 
+`child()` namespace joining:
+
+- `parent.child({ namespace: 'auth' })` on a logger with namespace `'api'` produces `'api.auth'`.
+- Prefix with `/` to set an absolute namespace: `child({ namespace: '/root' })` → `'root'`.
+- Omit `namespace` → inherits parent namespace unchanged.
+
 ### Utilities
 
-| Method                      | Returns   | Description                                                            |
-| --------------------------- | --------- | ---------------------------------------------------------------------- |
-| `enabled(level)`            | `boolean` | True if entries at this level pass the configured threshold            |
-| `time(label, fn)`           | `T`       | Measures sync/async execution; emits `debug` entry with label as message and `{ duration_ms }` in context |
-| `group(label, fn)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject         |
-| `groupCollapsed(label, fn)` | `T`       | Same as `group`, using `console.groupCollapsed`                        |
+| Method                             | Returns   | Description                                                            |
+| ---------------------------------- | --------- | ---------------------------------------------------------------------- |
+| `enabled(level)`                   | `boolean` | True if entries at this level pass the configured threshold            |
+| `setLevel(level)`                  | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot. |
+| `resetLevel()`                     | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls. |
+| `time(label, fn, opts?)`           | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. `opts` accepts a `LogType` string or `{ level?: LogType }`. |
+| `group(label, fn)`                 | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Always calls `console.group` regardless of transports. |
+| `groupCollapsed(label, fn)`        | `T`       | Same as `group`, using `console.groupCollapsed`                        |
 
 ### Properties
 
@@ -224,6 +232,7 @@ Each line is a flat JSON object with `level`, `time` (ISO), and optional `ns`, `
 | -------- | ------------------------ | ----------------- | ------------------ |
 | `level`  | `LogLevel`               | `'debug'`         | Minimum level      |
 | `output` | `(line: string) => void` | `process.stdout`  | Custom output sink |
+| `safe`   | `boolean`                | `false`           | Replace circular references with `'[Circular]'` instead of throwing |
 
 **Returns:** `Transport`
 
@@ -238,7 +247,7 @@ const log = createLogger({
 });
 
 log.info({ path: '/users', status: 200 }, 'request');
-// {"level":"info","time":"2026-05-30T...","ns":"api","path":"/users","status":200,"msg":"request"}
+// {"path":"/users","status":200,"level":"info","time":"2026-05-30T...","ns":"api","msg":"request"}
 ```
 
 ### batchTransport(options)
@@ -249,13 +258,14 @@ batchTransport(options: BatchTransportOptions): BatchTransport
 
 Buffers entries and delivers them in batches. Flushes when the buffer reaches `maxSize` or after `interval` elapses.
 
-| Option          | Type                                                | Default   | Description                                    |
-| --------------- | --------------------------------------------------- | --------- | ---------------------------------------------- |
-| `onFlush`       | `(entries: LogEntry[]) => void \| Promise<void>`    | —         | Required. Receives each batch (may be async)   |
-| `onFlushError`  | `(entries: LogEntry[], error: unknown) => void`     | —         | Called when `onFlush` throws or rejects        |
-| `level`         | `LogLevel`                                          | `'debug'` | Minimum level to buffer                        |
-| `interval`      | `number`                                            | `5000`    | Flush interval in milliseconds                 |
-| `maxSize`       | `number`                                            | `50`      | Max buffer size before an early flush          |
+| Option          | Type                                                | Default     | Description                                    |
+| --------------- | --------------------------------------------------- | ----------- | ---------------------------------------------- |
+| `onFlush`       | `(entries: LogEntry[]) => void \| Promise<void>`    | —           | Required. Receives each batch (may be async)   |
+| `onFlushError`  | `(entries: LogEntry[], error: unknown) => void`     | —           | Called when `onFlush` throws or rejects        |
+| `level`         | `LogLevel`                                          | `'debug'`   | Minimum level to buffer                        |
+| `interval`      | `number`                                            | `5000`      | Flush interval in milliseconds                 |
+| `maxSize`       | `number`                                            | `50`        | Max buffer size before an early flush          |
+| `maxBuffer`     | `number`                                            | unbounded   | Hard cap — oldest entries are dropped silently when exceeded. Does not trigger a flush. |
 
 The returned `BatchTransport` adds:
 
@@ -316,7 +326,11 @@ const log = createLogger({
 redactTransport(options: RedactTransportOptions): Transport
 ```
 
-Strips sensitive fields from `bindings` and `context` before forwarding. Redaction is applied recursively at any depth.
+Strips sensitive fields from `bindings` and `context` before forwarding. Redaction is applied recursively at any depth (up to 20 levels).
+
+::: warning Key matching
+`keys` matches **exact field names** at any nesting depth. Dot-path notation (e.g. `'user.password'`) is **not** supported — use `'password'` to redact every field named `password` regardless of nesting.
+:::
 
 | Option        | Type        | Default        | Description                     |
 | ------------- | ----------- | -------------- | ------------------------------- |
@@ -523,10 +537,10 @@ Every log-level method uses this signature. Every call must provide at least one
 ### LogMiddleware
 
 ```ts
-type LogMiddleware = (entry: LogEntry, next: (entry: LogEntry) => void) => void;
+type LogMiddleware = (entry: LogEntry) => LogEntry | null;
 ```
 
-Middleware functions intercept entries before they reach transports. Call `next(entry)` to continue, or omit the call to drop the entry. Added via `use(fn)` or `RuneOptions.middleware`.
+Middleware functions intercept entries before they reach transports. Return the (optionally mutated) entry to continue, or return `null` to drop the entry. Added via `use(fn)` or `RuneOptions.middleware`.
 
 ### LazyBinding
 
@@ -553,7 +567,9 @@ type Logger = {
   use: (middleware: LogMiddleware) => Logger;
   withBindings: (bindings: Bindings) => Logger;
   enabled: (type: LogLevel) => boolean;
-  time: <T>(label: string, fn: () => T, level?: LogType) => T;
+  setLevel: (level: LogLevel) => void;
+  resetLevel: () => void;
+  time: <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }) => T;
   group: <T>(label: string, fn: () => T) => T;
   groupCollapsed: <T>(label: string, fn: () => T) => T;
   debug: LogMethod;
@@ -590,6 +606,7 @@ type Logger = {
 | -------- | ------------------------ | ---------------- | ------------------ |
 | `level`  | `LogLevel`               | `'debug'`        | Minimum level      |
 | `output` | `(line: string) => void` | `process.stdout` | Custom output sink |
+| `safe`   | `boolean`                | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
 
 ### BatchTransportOptions
 
@@ -598,8 +615,9 @@ type Logger = {
 | `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async) |
 | `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects      |
 | `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                      |
-| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds               |
-| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush        |
+| `interval`     | `number`                                         | `5000`      | Flush interval in milliseconds               |
+| `maxSize`      | `number`                                         | `50`        | Max buffer size before an early flush        |
+| `maxBuffer`    | `number`                                         | unbounded   | Hard cap — drops oldest when exceeded, no flush triggered |
 
 ### SampleTransportOptions
 

@@ -6,6 +6,7 @@ import {
   effect,
   effectAsync,
   getDevToolsHook,
+  getSignalName,
   installDevTools,
   isComputed,
   isSignal,
@@ -17,10 +18,10 @@ import {
   StateError,
   store,
   storeWithHistory,
-  traceEffect,
   untrack,
   watch,
 } from '../';
+import { debugEffect } from '../debug';
 
 describe('ripple', () => {
   describe('signals', () => {
@@ -1247,7 +1248,7 @@ describe('ripple', () => {
 
       const n = signal(0, { name: 'counter' });
 
-      const stop = traceEffect(
+      const stop = debugEffect(
         () => {
           void n.value;
         },
@@ -1271,7 +1272,7 @@ describe('ripple', () => {
 
       const n = signal(0);
 
-      const stop = traceEffect(() => {
+      const stop = debugEffect(() => {
         void n.value;
       });
 
@@ -2122,7 +2123,7 @@ describe('ripple', () => {
     });
 
     it('calls fallback with undefined lastValue on first-run failure', () => {
-      const safe = computed(
+      const safe = computed<number>(
         () => {
           throw new Error('always fails');
         },
@@ -2369,6 +2370,36 @@ describe('ripple', () => {
     });
   });
 
+  describe('getSignalName', () => {
+    it('returns the name for a named signal', () => {
+      const n = signal(0, { name: 'mySignal' });
+
+      expect(getSignalName(n)).toBe('mySignal');
+    });
+
+    it('returns the name for a named computed', () => {
+      const c = computed(() => 1, { name: 'myComputed' });
+
+      expect(getSignalName(c)).toBe('myComputed');
+
+      c.dispose();
+    });
+
+    it('returns undefined for an unnamed signal', () => {
+      const n = signal(0);
+
+      expect(getSignalName(n)).toBeUndefined();
+    });
+
+    it('returns undefined for an unnamed computed', () => {
+      const c = computed(() => 1);
+
+      expect(getSignalName(c)).toBeUndefined();
+
+      c.dispose();
+    });
+  });
+
   describe('F5 — storeWithHistory', () => {
     it('records and replays history via undo/redo', () => {
       const h = storeWithHistory({ count: 0 });
@@ -2423,6 +2454,316 @@ describe('ripple', () => {
       h.patch({ n: 4 }); // oldest entry evicted
 
       expect(h.historyLength).toBe(3);
+    });
+
+    it('lens writes push a history snapshot', () => {
+      const h = storeWithHistory({ name: 'Alice', score: 0 });
+      const scoreLens = h.lens('score');
+
+      scoreLens.value = 10;
+
+      expect(h.value.score).toBe(10);
+      expect(h.historyLength).toBe(2); // initial + lens write
+
+      h.undo();
+      expect(h.value.score).toBe(0);
+    });
+
+    it('lens writes are undoable independently from patch writes', () => {
+      const h = storeWithHistory({ count: 0 });
+      const lens = h.lens('count');
+
+      h.patch({ count: 1 });
+      lens.value = 2;
+
+      expect(h.historyLength).toBe(3); // initial + patch + lens
+      expect(h.value.count).toBe(2);
+
+      h.undo();
+      expect(h.value.count).toBe(1);
+
+      h.undo();
+      expect(h.value.count).toBe(0);
+    });
+  });
+
+  describe('readonly().filter() delegation', () => {
+    it('filter() on readonly delegates to source filter — no extra graph node', () => {
+      const n = signal(4);
+      const ro = readonly(n);
+      const evens = ro.filter((x) => x % 2 === 0);
+
+      expect(evens.value).toBe(4);
+
+      n.value = 3;
+      expect(evens.value).toBeUndefined();
+
+      n.value = 8;
+      expect(evens.value).toBe(8);
+
+      evens.dispose();
+    });
+
+    it('filter() on readonly with type predicate narrows correctly', () => {
+      const mixed = signal<string | number>(42);
+      const ro = readonly(mixed);
+      const nums = ro.filter((v): v is number => typeof v === 'number');
+
+      expect(nums.value).toBe(42);
+
+      mixed.value = 'hello';
+      expect(nums.value).toBeUndefined();
+
+      nums.dispose();
+    });
+  });
+
+  describe('watch() — equals option on plain signal', () => {
+    it('custom equals suppresses watch callback when predicate returns true', () => {
+      const s = signal({ x: 1, y: 2 });
+      const listener = vi.fn();
+
+      const stop = watch(s, listener, { equals: (a, b) => a.x === b.x });
+
+      s.value = { x: 1, y: 99 }; // same x — should NOT fire
+      expect(listener).not.toHaveBeenCalled();
+
+      s.value = { x: 2, y: 99 }; // different x — should fire
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ x: 2, y: 99 }, { x: 1, y: 2 });
+
+      stop.dispose();
+    });
+
+    it('custom equals fires on every change when predicate always returns false', () => {
+      const s = signal(0);
+      const listener = vi.fn();
+
+      const stop = watch(s, listener, { equals: () => false });
+
+      s.value = 1;
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      s.value = 1; // same value — signal suppresses at source level, watch not called
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      s.value = 2; // different value — equals() returns false → fires
+      expect(listener).toHaveBeenCalledTimes(2);
+
+      stop.dispose();
+    });
+  });
+
+  describe('effectAsync — onError option', () => {
+    it('calls custom onError instead of console.error when factory rejects', async () => {
+      const errors: unknown[] = [];
+      const dep = signal(0);
+      const stop = effectAsync(
+        async () => {
+          void dep.value;
+          throw new Error('boom');
+        },
+        { onError: (err) => errors.push(err) },
+      );
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(errors).toHaveLength(1);
+      expect((errors[0] as Error).message).toBe('boom');
+
+      await stop.dispose();
+    });
+
+    it('calls onError on re-run rejections', async () => {
+      const errors: unknown[] = [];
+      const dep = signal(0);
+      const stop = effectAsync(
+        async () => {
+          void dep.value;
+          throw new Error(`run-${dep.peek()}`);
+        },
+        { onError: (err) => errors.push(err) },
+      );
+
+      await new Promise((r) => setTimeout(r, 0));
+      dep.value = 1;
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(errors).toHaveLength(2);
+
+      await stop.dispose();
+    });
+  });
+
+  describe('watch — immediate option + cleanup', () => {
+    it('fires immediately with prev=undefined when immediate: true', () => {
+      const s = signal(10);
+      const calls: Array<[number, number | undefined]> = [];
+      const stop = watch(
+        s,
+        (next, prev) => {
+          calls.push([next, prev]);
+        },
+        { immediate: true },
+      );
+
+      expect(calls).toEqual([[10, undefined]]);
+
+      s.value = 20;
+      expect(calls).toEqual([
+        [10, undefined],
+        [20, 10],
+      ]);
+
+      stop.dispose();
+    });
+
+    it('runs cleanup from immediate call before next change', () => {
+      const s = signal(0);
+      const cleanups: string[] = [];
+      const stop = watch(
+        s,
+        (next) => {
+          cleanups.push(`setup-${next}`);
+
+          return () => cleanups.push(`cleanup-${next}`);
+        },
+        { immediate: true },
+      );
+
+      expect(cleanups).toEqual(['setup-0']);
+
+      s.value = 1;
+      expect(cleanups).toEqual(['setup-0', 'cleanup-0', 'setup-1']);
+
+      stop.dispose();
+      expect(cleanups).toEqual(['setup-0', 'cleanup-0', 'setup-1', 'cleanup-1']);
+    });
+  });
+
+  describe('storeWithHistory — batch() interaction', () => {
+    it('batch() wrapping multiple lens writes still pushes one snapshot per lens write', () => {
+      const h = storeWithHistory({ a: 0, b: 0 });
+      const aLens = h.lens('a');
+      const bLens = h.lens('b');
+
+      batch(() => {
+        aLens.value = 1;
+        bLens.value = 2;
+      });
+
+      expect(h.value).toEqual({ a: 1, b: 2 });
+      expect(h.historyLength).toBeGreaterThanOrEqual(2);
+    });
+
+    it('batch() wrapping patch() pushes exactly one snapshot', () => {
+      const h = storeWithHistory({ x: 0 });
+
+      batch(() => {
+        h.patch({ x: 1 });
+        h.patch({ x: 2 });
+      });
+
+      expect(h.value.x).toBe(2);
+      expect(h.historyLength).toBe(3);
+    });
+  });
+
+  describe('asyncScope — setup throws', () => {
+    it('rejects when synchronous setup throws before first await', async () => {
+      await expect(
+        asyncScope(() => {
+          throw new Error('setup-fail');
+        }),
+      ).rejects.toThrow('setup-fail');
+    });
+  });
+
+  describe('store.replace() — new keys', () => {
+    it('adds keys that were not in the original shape', () => {
+      const s = store<{ a: number; b?: number }>({ a: 1 });
+
+      s.replace((state) => ({ ...state, b: 99 }));
+
+      expect(s.value.a).toBe(1);
+      expect(s.value.b).toBe(99);
+    });
+  });
+
+  describe('asyncComputed — dispose mid-flight guard', () => {
+    it('does not throw when disposed while a promise is in flight', async () => {
+      let resolve!: (v: number) => void;
+      const ac = asyncComputed(
+        () =>
+          new Promise<number>((r) => {
+            resolve = r;
+          }),
+      );
+
+      ac.dispose();
+      resolve(42);
+
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  });
+
+  describe('readonly() — double-wrap short-circuit', () => {
+    it('readonly(readonly(x)) returns the same object reference', () => {
+      const s = signal(0);
+      const r1 = readonly(s);
+      const r2 = readonly(r1);
+
+      expect(r2).toBe(r1);
+    });
+
+    it('readonly(computed()) returns the computed directly', () => {
+      const c = computed(() => 1);
+      const r = readonly(c);
+
+      expect(r).toBe(c);
+
+      c.dispose();
+    });
+  });
+
+  describe('F2 — asyncComputed with initialValue', () => {
+    it('exposes initialValue while pending', () => {
+      let resolve!: (v: number) => void;
+      const ac = asyncComputed(
+        () =>
+          new Promise<number>((r) => {
+            resolve = r;
+          }),
+        { initialValue: 42 },
+      );
+
+      expect(ac.value.status).toBe('pending');
+      expect(ac.value.value).toBe(42);
+
+      resolve(99);
+      ac.dispose();
+    });
+
+    it('transitions to fulfilled and exposes resolved value', async () => {
+      const ac = asyncComputed(() => Promise.resolve(7), { initialValue: 0 });
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(ac.value.status).toBe('fulfilled');
+      expect(ac.value.value).toBe(7);
+
+      ac.dispose();
+    });
+
+    it('preserves initialValue in error state when previous state was pending', async () => {
+      const ac = asyncComputed(() => Promise.reject(new Error('oops')), { initialValue: 5 });
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(ac.value.status).toBe('error');
+      expect(ac.value.value).toBe(5);
+
+      ac.dispose();
     });
   });
 });

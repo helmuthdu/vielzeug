@@ -4,7 +4,7 @@ package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async]
 related: [craft, forge, herald]
-exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, traceEffect, isSignal, isComputed, isStore, installDevTools]
+exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, isSignal, isComputed, isStore, installDevTools]
 ---
 
 # @vielzeug/ripple
@@ -18,7 +18,7 @@ exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, st
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `traceEffect`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 

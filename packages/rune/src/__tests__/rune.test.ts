@@ -162,7 +162,7 @@ describe('emit and payload semantics', () => {
   it('invalid second arg is coerced to string — does not throw', () => {
     const { entries, log } = setup();
 
-    expect(() => log.info('msg', { id: 1 } as never)).not.toThrow();
+    expect(() => log.info('msg' as any, { id: 1 } as never)).not.toThrow();
     expect(() => log.info({ id: 1 }, { bad: true } as never)).not.toThrow();
     expect(() => log.error(new Error('e'), 123 as never)).not.toThrow();
 
@@ -245,7 +245,7 @@ describe('child and bindings composition', () => {
   it('child with explicit namespace creates isolated sub-logger', () => {
     const { entries, log } = setup({ namespace: 'app' });
 
-    log.child({ namespace: 'app.api.auth' }).info('call');
+    log.child({ namespace: '/app.api.auth' }).info('call');
 
     expect(entries[0].namespace).toBe('app.api.auth');
     expect(log.config.namespace).toBe('app');
@@ -703,7 +703,12 @@ describe('batchTransport', () => {
 
   it('buffers entries and flushes on maxSize', async () => {
     const flushed: LogEntry[][] = [];
-    const batch = batchTransport({ maxSize: 2, onFlush: (entries) => flushed.push(entries) });
+    const batch = batchTransport({
+      maxSize: 2,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
     const log = createLogger({ transports: [batch] });
 
     log.info('a');
@@ -718,7 +723,12 @@ describe('batchTransport', () => {
 
   it('flushes on interval', async () => {
     const flushed: LogEntry[][] = [];
-    const batch = batchTransport({ interval: 1000, onFlush: (entries) => flushed.push(entries) });
+    const batch = batchTransport({
+      interval: 1000,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
     const log = createLogger({ transports: [batch] });
 
     log.info('x');
@@ -733,7 +743,12 @@ describe('batchTransport', () => {
 
   it('dispose stops interval and flushes remaining', async () => {
     const flushed: LogEntry[][] = [];
-    const batch = batchTransport({ interval: 10_000, onFlush: (entries) => flushed.push(entries) });
+    const batch = batchTransport({
+      interval: 10_000,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
     const log = createLogger({ transports: [batch] });
 
     log.info('final');
@@ -751,7 +766,13 @@ describe('batchTransport', () => {
 
   it('flush() empties buffer without stopping the timer', async () => {
     const flushed: LogEntry[][] = [];
-    const batch = batchTransport({ interval: 5000, maxSize: 100, onFlush: (entries) => flushed.push(entries) });
+    const batch = batchTransport({
+      interval: 5000,
+      maxSize: 100,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
     const log = createLogger({ transports: [batch] });
 
     log.info('a');
@@ -771,7 +792,13 @@ describe('batchTransport', () => {
 
   it('filters below configured level', async () => {
     const flushed: LogEntry[][] = [];
-    const batch = batchTransport({ level: 'error', maxSize: 1, onFlush: (entries) => flushed.push(entries) });
+    const batch = batchTransport({
+      level: 'error',
+      maxSize: 1,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
     const log = createLogger({ transports: [batch] });
 
     log.info('no');
@@ -1379,7 +1406,7 @@ describe('pipe() fault tolerance (R3)', () => {
 /* ─── consoleTransport format option (F6) ─── */
 
 describe('consoleTransport inspectFn / format options (F6)', () => {
-  it('format:json serializes context as a JSON string', () => {
+  it('format:json serializes context as a JSON string — message appears before JSON', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ format: 'json', timestamp: false });
 
@@ -1387,15 +1414,19 @@ describe('consoleTransport inspectFn / format options (F6)', () => {
 
     expect(infoSpy).toHaveBeenCalled();
 
-    // The JSON string appears in the args
+    // message comes before the JSON string
     const args = infoSpy.mock.calls[0] as unknown[];
+    const msgIdx = args.indexOf('test');
+    const jsonIdx = args.findIndex((a) => typeof a === 'string' && a.includes('"a":1'));
 
-    expect(args.some((a) => typeof a === 'string' && a.includes('"a":1'))).toBe(true);
+    expect(msgIdx).toBeGreaterThanOrEqual(0);
+    expect(jsonIdx).toBeGreaterThanOrEqual(0);
+    expect(msgIdx).toBeLessThan(jsonIdx);
 
     infoSpy.mockRestore();
   });
 
-  it('format:raw passes the object directly', () => {
+  it('format:raw passes the object after the message', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const ctx = { x: 2 };
     const t = consoleTransport({ format: 'raw', timestamp: false });
@@ -1404,12 +1435,16 @@ describe('consoleTransport inspectFn / format options (F6)', () => {
 
     expect(infoSpy).toHaveBeenCalled();
 
-    // mergeContext spreads into a new object, so check by value
+    // message comes before context object
     const args = infoSpy.mock.calls[0] as unknown[];
-
-    expect(args.some((a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>)['x'] === 2)).toBe(
-      true,
+    const msgIdx = args.indexOf('raw');
+    const ctxIdx = args.findIndex(
+      (a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>)['x'] === 2,
     );
+
+    expect(msgIdx).toBeGreaterThanOrEqual(0);
+    expect(ctxIdx).toBeGreaterThanOrEqual(0);
+    expect(msgIdx).toBeLessThan(ctxIdx);
 
     infoSpy.mockRestore();
   });
@@ -1494,7 +1529,7 @@ describe('child() theme deep-merge', () => {
   });
 
   it('child without theme override inherits parent theme', () => {
-    const { entries, transport } = createTestTransport();
+    const { transport } = createTestTransport();
     const parent = createLogger({ theme: { warn: { badge: 'P' } }, transports: [transport] });
     const child = parent.child({ namespace: 'child' });
 
@@ -1554,6 +1589,425 @@ describe('consoleTransport with no context or bindings', () => {
     expect(infoSpy).toHaveBeenCalledTimes(1);
 
     infoSpy.mockRestore();
+  });
+});
+
+/* ─── setLevel() ─── */
+
+describe('setLevel()', () => {
+  it('mutates the level threshold in-place', () => {
+    const { entries, log } = setup({ logLevel: 'error' });
+
+    log.debug('before');
+    expect(entries).toHaveLength(0);
+
+    log.setLevel('debug');
+    log.debug('after');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBe('after');
+  });
+
+  it('config.logLevel reflects the new level', () => {
+    const { log } = setup({ logLevel: 'info' });
+
+    log.setLevel('warn');
+
+    expect(log.config.logLevel).toBe('warn');
+  });
+
+  it('enabled() reflects the updated level', () => {
+    const { log } = setup({ logLevel: 'info' });
+
+    expect(log.enabled('debug')).toBe(false);
+
+    log.setLevel('debug');
+
+    expect(log.enabled('debug')).toBe(true);
+  });
+
+  it('setting off silences all output', () => {
+    const { entries, log } = setup({ logLevel: 'debug' });
+
+    log.setLevel('off');
+    log.fatal('silenced');
+
+    expect(entries).toHaveLength(0);
+  });
+});
+
+/* ─── time() options-object form ─── */
+
+describe('time() opts object form', () => {
+  it('accepts { level } object as third arg', () => {
+    const { entries, log } = setup({ logLevel: 'info' });
+
+    log.time('task', () => {}, { level: 'info' });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].level).toBe('info');
+  });
+
+  it('positional string level still works (backwards compat)', () => {
+    const { entries, log } = setup({ logLevel: 'info' });
+
+    log.time('task', () => {}, 'info');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].level).toBe('info');
+  });
+
+  it('defaults to debug when opts is undefined', () => {
+    const { entries, log } = setup();
+
+    log.time('task', () => {});
+
+    expect(entries[0].level).toBe('debug');
+  });
+
+  it('defaults to debug when opts object has no level field', () => {
+    const { entries, log } = setup();
+
+    log.time('task', () => {}, {});
+
+    expect(entries[0].level).toBe('debug');
+  });
+});
+
+/* ─── pipe() overloads ─── */
+
+describe('pipe() overloads', () => {
+  it('variadic form works without options', () => {
+    const a = createTestTransport();
+    const b = createTestTransport();
+    const log = createLogger({ transports: [pipe(a.transport, b.transport)] });
+
+    log.info('x');
+
+    expect(a.entries).toHaveLength(1);
+    expect(b.entries).toHaveLength(1);
+  });
+
+  it('options-first form works with onError', () => {
+    const errors: unknown[] = [];
+    const boom: Transport = () => {
+      throw new Error('pipe-boom');
+    };
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ transports: [pipe({ onError: (e) => errors.push(e) }, boom, transport)] });
+
+    log.info('x');
+
+    expect(errors).toHaveLength(1);
+    expect(entries).toHaveLength(1);
+  });
+});
+
+/* ─── jsonTransport field collision ─── */
+
+describe('jsonTransport field collision', () => {
+  it('reserved fields (level, time, ns, msg) win over same-named bindings', () => {
+    const lines: string[] = [];
+    const log = createLogger({
+      bindings: { level: 'override-attempt', msg: 'override-attempt' },
+      namespace: 'svc',
+      transports: [jsonTransport({ output: (l) => lines.push(l) })],
+    });
+
+    log.warn('real message');
+
+    const record = JSON.parse(lines[0]) as Record<string, unknown>;
+
+    expect(record['level']).toBe('warn');
+    expect(record['msg']).toBe('real message');
+  });
+
+  it('context keys that match reserved fields do not clobber them', () => {
+    const lines: string[] = [];
+    const log = createLogger({
+      transports: [jsonTransport({ output: (l) => lines.push(l) })],
+    });
+
+    log.info({ level: 'debug', time: 'not-a-timestamp' }, 'structured');
+
+    const record = JSON.parse(lines[0]) as Record<string, unknown>;
+
+    expect(record['level']).toBe('info');
+    expect(record['msg']).toBe('structured');
+  });
+});
+
+/* ─── setLevel() child inheritance ─── */
+
+describe('setLevel() child inheritance', () => {
+  it('child created after setLevel inherits the new level', () => {
+    const { log } = setup({ logLevel: 'info' });
+
+    log.setLevel('debug');
+
+    const child = log.child();
+    const childEntries: LogEntry[] = [];
+
+    child.child({ transports: [(e) => childEntries.push(e)] }).debug('via-child');
+
+    expect(childEntries).toHaveLength(1);
+  });
+
+  it('child created before setLevel is unaffected', () => {
+    const childEntries: LogEntry[] = [];
+    const { log } = setup({ logLevel: 'debug' });
+    const child = log.child({ transports: [(e) => childEntries.push(e)] });
+
+    log.setLevel('off');
+    child.debug('child-still-works');
+
+    expect(childEntries).toHaveLength(1);
+  });
+});
+
+/* ─── pipe() edge cases ─── */
+
+describe('pipe() edge cases', () => {
+  it('zero-arg call returns a safe no-op transport', () => {
+    const log = createLogger({ transports: [pipe()] });
+
+    expect(() => log.info('should not throw')).not.toThrow();
+  });
+});
+
+/* ─── redactTransport edge cases ─── */
+
+describe('redactTransport edge cases', () => {
+  it('empty-string replacement replaces field value with empty string', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({
+      transports: [redactTransport({ keys: ['token'], replacement: '', transport })],
+    });
+
+    log.info({ token: 'abc' }, 'msg');
+
+    expect(entries[0].context?.['token']).toBe('');
+  });
+});
+
+/* ─── jsonTransport circular reference safety ─── */
+
+describe('jsonTransport circular reference safety', () => {
+  it('calls onTransportError instead of crashing on circular bindings', () => {
+    const errors: unknown[] = [];
+    const circular: Record<string, unknown> = {};
+
+    circular['self'] = circular;
+
+    const log = createLogger({
+      onTransportError: (e) => errors.push(e),
+      transports: [jsonTransport()],
+    });
+
+    log.info(circular, 'circular');
+
+    expect(errors).toHaveLength(1);
+  });
+});
+
+/* ─── redactTransport depth limit ─── */
+
+describe('redactTransport depth limit', () => {
+  it('does not stack-overflow on a 100-level deep object', () => {
+    const { entries, transport } = createTestTransport();
+
+    let nested: Record<string, unknown> = { password: 'secret' };
+
+    for (let i = 0; i < 100; i++) nested = { child: nested };
+
+    const log = createLogger({
+      transports: [redactTransport({ keys: ['password'], transport })],
+    });
+
+    expect(() => log.info(nested, 'deep')).not.toThrow();
+    expect(entries).toHaveLength(1);
+  });
+});
+
+/* ─── Namespace dot-joining ─── */
+
+describe('child() namespace dot-joining', () => {
+  it('joins parent and child namespace with a dot', () => {
+    const parent = createLogger({ namespace: 'api' });
+    const child = parent.child({ namespace: 'auth' });
+
+    expect(child.config.namespace).toBe('api.auth');
+  });
+
+  it('root parent with no namespace just uses child name', () => {
+    const parent = createLogger();
+    const child = parent.child({ namespace: 'api' });
+
+    expect(child.config.namespace).toBe('api');
+  });
+
+  it('chains multiple levels of namespaces', () => {
+    const root = createLogger({ namespace: 'app' });
+    const api = root.child({ namespace: 'api' });
+    const auth = api.child({ namespace: 'auth' });
+
+    expect(auth.config.namespace).toBe('app.api.auth');
+  });
+
+  it('absolute namespace (starting with /) replaces instead of joining', () => {
+    const parent = createLogger({ namespace: 'api' });
+    const child = parent.child({ namespace: '/root' });
+
+    expect(child.config.namespace).toBe('root');
+  });
+
+  it('omitting namespace in child() preserves parent namespace', () => {
+    const parent = createLogger({ namespace: 'api' });
+    const child = parent.child();
+
+    expect(child.config.namespace).toBe('api');
+  });
+});
+
+/* ─── resetLevel() ─── */
+
+describe('resetLevel()', () => {
+  it('restores the initial log level after setLevel()', () => {
+    const { log } = setup({ logLevel: 'info' });
+
+    log.setLevel('error');
+    expect(log.config.logLevel).toBe('error');
+
+    log.resetLevel();
+    expect(log.config.logLevel).toBe('info');
+  });
+
+  it('enabled() reflects the restored level', () => {
+    const { log } = setup({ logLevel: 'debug' });
+
+    log.setLevel('off');
+    expect(log.enabled('debug')).toBe(false);
+
+    log.resetLevel();
+    expect(log.enabled('debug')).toBe(true);
+  });
+
+  it('resetLevel() on an unmodified logger is a no-op', () => {
+    const { log } = setup({ logLevel: 'warn' });
+
+    log.resetLevel();
+    expect(log.config.logLevel).toBe('warn');
+  });
+});
+
+/* ─── jsonTransport safe mode ─── */
+
+describe('jsonTransport safe mode', () => {
+  it('handles circular references without throwing when safe:true', () => {
+    const lines: string[] = [];
+    const log = createLogger({
+      transports: [jsonTransport({ output: (l) => lines.push(l), safe: true })],
+    });
+    const circular: Record<string, unknown> = {};
+
+    circular['self'] = circular;
+
+    expect(() => log.info(circular, 'safe-circular')).not.toThrow();
+    expect(lines).toHaveLength(1);
+
+    const record = JSON.parse(lines[0]) as Record<string, unknown>;
+    const selfValue = record['self'] as Record<string, unknown>;
+
+    expect(selfValue['self']).toBe('[Circular]');
+  });
+
+  it('without safe:true circular refs still hit onTransportError', () => {
+    const errors: unknown[] = [];
+    const circular: Record<string, unknown> = {};
+
+    circular['self'] = circular;
+
+    const log = createLogger({
+      onTransportError: (e) => errors.push(e),
+      transports: [jsonTransport()],
+    });
+
+    log.info(circular, 'unsafe');
+    expect(errors).toHaveLength(1);
+  });
+});
+
+/* ─── redactTransport dot-path warning ─── */
+
+describe('redactTransport dot-path key warning', () => {
+  it('warns when a key contains a dot', () => {
+    const { transport } = createTestTransport();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    redactTransport({ keys: ['user.password'], transport });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('user.password'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn for plain keys without dots', () => {
+    const { transport } = createTestTransport();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    redactTransport({ keys: ['password', 'token'], transport });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});
+
+/* ─── batchTransport maxBuffer ─── */
+
+describe('batchTransport maxBuffer', () => {
+  it('drops oldest entries when maxBuffer is exceeded', async () => {
+    const flushed: LogEntry[][] = [];
+    const batch = batchTransport({
+      interval: 10_000,
+      maxBuffer: 2,
+      maxSize: 10,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
+    const log = createLogger({ transports: [batch] });
+
+    log.info('a');
+    log.info('b');
+    log.info('c'); // 'a' should be dropped — buffer capped at 2
+
+    batch.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushed[0]).toHaveLength(2);
+    expect(flushed[0][0].message).toBe('b');
+    expect(flushed[0][1].message).toBe('c');
+  });
+
+  it('without maxBuffer all entries are buffered', async () => {
+    const flushed: LogEntry[][] = [];
+    const batch = batchTransport({
+      interval: 10_000,
+      maxSize: 100,
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
+    });
+    const log = createLogger({ transports: [batch] });
+
+    log.info('a');
+    log.info('b');
+    log.info('c');
+    batch.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushed[0]).toHaveLength(3);
   });
 });
 

@@ -3,6 +3,7 @@ import { isPlainObject } from '@vielzeug/arsenal';
 import { fail, resolveMessage, ValidationError } from './errors';
 import { descriptorToJsonSchema } from './json-schema';
 import { _messages } from './messages';
+import { defineOwnProperty } from './safe-object';
 import {
   type AnySchema,
   type CheckContext,
@@ -18,6 +19,7 @@ import {
   type JsonSchema,
   type MessageFn,
   type ParseResult,
+  type ReconstructibleSchemaDescriptor,
   type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
@@ -39,6 +41,7 @@ export {
   type JsonSchema,
   type MessageFn,
   type ParseResult,
+  type ReconstructibleSchemaDescriptor,
   type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
@@ -46,7 +49,6 @@ export {
 };
 
 export { ValidationError, errorsAt, fail, prependIssuePath, resolveMessage } from './errors';
-export { isPlainObject } from '@vielzeug/arsenal';
 
 function materializeValue<T>(value: T): T {
   if (value == null || typeof value !== 'object') return value;
@@ -68,7 +70,7 @@ function materializeValue<T>(value: T): T {
   if (isPlainObject(value)) {
     const out: Record<string, unknown> = {};
 
-    for (const [key, entry] of Object.entries(value)) out[key] = materializeValue(entry);
+    for (const [key, entry] of Object.entries(value)) defineOwnProperty(out, key, materializeValue(entry));
 
     return out as T;
   }
@@ -130,8 +132,7 @@ export class Schema<Output = unknown, Input = Output> {
 
   /**
    * JSON Schema annotation fields set by constraint methods (min, max, pattern, etc.).
-   * Subclasses narrow this type with `declare protected _annotations: XxxAnnotations`
-   * to get typed access in `_toDescriptorImpl()`.
+   * Subclasses narrow this type locally at usage sites when they need typed access.
    */
   protected _annotations: Record<string, unknown> = {};
 
@@ -273,13 +274,31 @@ export class Schema<Output = unknown, Input = Output> {
       const result = checkFn(value as Output, ctx);
 
       if ((result as unknown) instanceof Promise) {
-        throw new Error('check() callback returned a Promise. Use checkAsync() for async validation.');
+        throw new ValidationError([
+          {
+            code: ErrorCode.custom,
+            message: 'check() callback returned a Promise. Use checkAsync() for async validation.',
+            path: [],
+          },
+        ]);
       }
 
       return normalizeCheckResult(result, ctxIssues);
     };
 
     return this._addConstraint(validator);
+  }
+
+  /**
+   * Alias for `check(predicate, message)` — familiar for users coming from zod / valibot.
+   * Accepts a boolean predicate and an optional message. For context-based refinements
+   * (using `ctx.addIssue()`), use `check()` directly.
+   *
+   * @example
+   * s.string().refine((v) => v.startsWith('https'), () => 'Must start with https')
+   */
+  refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this {
+    return this.check(predicate, message);
   }
 
   checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this {
@@ -301,7 +320,7 @@ export class Schema<Output = unknown, Input = Output> {
     if (this instanceof WrapperSchema) {
       const merged = this.mode === 'nullable' || this.mode === 'nullish' ? 'nullish' : 'optional';
 
-      return new WrapperSchema(this.inner, merged) as unknown as WrapperSchema<this, 'optional'>;
+      return this._withMode(merged) as unknown as WrapperSchema<this, 'optional'>;
     }
 
     return new WrapperSchema(this, 'optional');
@@ -311,7 +330,7 @@ export class Schema<Output = unknown, Input = Output> {
     if (this instanceof WrapperSchema) {
       const merged = this.mode === 'optional' || this.mode === 'nullish' ? 'nullish' : 'nullable';
 
-      return new WrapperSchema(this.inner, merged) as unknown as WrapperSchema<this, 'nullable'>;
+      return this._withMode(merged) as unknown as WrapperSchema<this, 'nullable'>;
     }
 
     return new WrapperSchema(this, 'nullable');
@@ -319,7 +338,7 @@ export class Schema<Output = unknown, Input = Output> {
 
   nullish(): WrapperSchema<this, 'nullish'> {
     if (this instanceof WrapperSchema) {
-      return new WrapperSchema(this.inner, 'nullish') as unknown as WrapperSchema<this, 'nullish'>;
+      return this._withMode('nullish') as unknown as WrapperSchema<this, 'nullish'>;
     }
 
     return new WrapperSchema(this, 'nullish');
@@ -444,8 +463,11 @@ export class Schema<Output = unknown, Input = Output> {
    * // throws: "userId: Expected string [invalid_type]"
    * ```
    *
+   * **Note:** `label` is only prepended to root-level issues (those with an empty `path`).
+   * Nested field validation messages (e.g. `user.email` path) are not prefixed by the label.
+   *
    * @param value The value to validate.
-   * @param label Optional name for the value used in error messages (default: 'value').
+   * @param label Optional name for the value, prepended to root-level error messages.
    */
   assert(value: unknown, label?: string): asserts value is Output {
     const result = this._parseFullSync(value);
@@ -489,13 +511,16 @@ export class Schema<Output = unknown, Input = Output> {
   }
 
   /**
-   * Returns the `kind` string for this schema instance.
-   * Subclasses expose their kind via `_toDescriptorImpl().kind`.
-   * Used as an extension point — custom subclasses can override `_toDescriptorImpl()`
-   * and `_walk()` to participate in the descriptor and walk system.
+   * The kind identifier for this schema (e.g. `'string'`, `'object'`, `'union'`).
+   * Subclasses override `_kind` directly — reads this without allocating a descriptor.
    */
   get kind(): string {
-    return this._toDescriptorImpl().kind;
+    return this._kind;
+  }
+
+  /** @internal Override in every subclass to declare the schema kind string. */
+  protected get _kind(): string {
+    return 'any';
   }
 
   /* -------------------- Protected helpers -------------------- */
@@ -571,10 +596,18 @@ export class Schema<Output = unknown, Input = Output> {
     return target;
   }
 
+  protected _copyStateToWithFlags<T extends Schema<any, any>>(target: T, isOptional: boolean, isNullable: boolean): T {
+    target.state = cloneState(this.state);
+    target.state.isOptional = isOptional;
+    target.state.isNullable = isNullable;
+
+    return target;
+  }
+
   protected _walk<R>(visitor: SchemaWalker<R>): R {
     if (visitor.unknown) return visitor.unknown(this);
 
-    throw new Error('[spell] walk(): no handler matched and no `unknown` fallback provided.');
+    throw new Error('[@vielzeug/spell] walk(): no handler matched and no `unknown` fallback provided.');
   }
 
   /** Override in subclasses to return the full schema descriptor. */
@@ -644,7 +677,13 @@ export class Schema<Output = unknown, Input = Output> {
       const typeResult = this._typeValidator(value);
 
       if (typeResult instanceof Promise) {
-        throw new Error('Type validator returned a Promise. Use checkAsync() for async validation.');
+        throw new ValidationError([
+          {
+            code: ErrorCode.custom,
+            message: 'Type validator returned a Promise. Use checkAsync() for async validation.',
+            path: [],
+          },
+        ]);
       }
 
       if (typeResult && typeResult.length > 0) return typeResult;
@@ -656,7 +695,13 @@ export class Schema<Output = unknown, Input = Output> {
       const result = validate(value);
 
       if (result instanceof Promise) {
-        throw new Error('check() callback returned a Promise. Use checkAsync() for async validation.');
+        throw new ValidationError([
+          {
+            code: ErrorCode.custom,
+            message: 'check() callback returned a Promise. Use checkAsync() for async validation.',
+            path: [],
+          },
+        ]);
       }
 
       if (result) issues.push(...result);
@@ -721,6 +766,10 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
   readonly inner: T;
   readonly mode: Mode;
 
+  protected override get _kind(): string {
+    return this.inner.kind;
+  }
+
   constructor(inner: T, mode: Mode) {
     super();
     this.inner = inner;
@@ -729,8 +778,24 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
     this.state.isNullable = mode === 'nullable' || mode === 'nullish';
   }
 
+  override get description(): string | undefined {
+    return this.state.description ?? this.inner.description;
+  }
+
+  _withMode<NewMode extends WrapperMode>(mode: NewMode): WrapperSchema<T, NewMode> {
+    return this._copyStateToWithFlags(
+      new WrapperSchema(this.inner, mode),
+      mode === 'optional' || mode === 'nullish',
+      mode === 'nullable' || mode === 'nullish',
+    ) as WrapperSchema<T, NewMode>;
+  }
+
   override required(): Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>> {
-    return this.inner as Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>>;
+    return this._copyStateToWithFlags(
+      this.mode === 'nullable' || this.mode === 'nullish' ? this.inner.nullable() : this.inner.required(),
+      false,
+      this.mode === 'nullable' || this.mode === 'nullish',
+    ) as Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>>;
   }
 
   protected override _parseValueSync(value: unknown): ParseValue {
@@ -752,11 +817,17 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
     const innerR = this.inner.walk(visitor);
 
-    if (this.mode === 'optional' && visitor.optional) return visitor.optional(this, innerR);
+    if (this.mode === 'optional' && visitor.optional) {
+      return visitor.optional(this as WrapperSchema<T, 'optional'>, innerR);
+    }
 
-    if (this.mode === 'nullable' && visitor.nullable) return visitor.nullable(this, innerR);
+    if (this.mode === 'nullable' && visitor.nullable) {
+      return visitor.nullable(this as WrapperSchema<T, 'nullable'>, innerR);
+    }
 
-    if (this.mode === 'nullish' && visitor.nullish) return visitor.nullish(this, innerR);
+    if (this.mode === 'nullish' && visitor.nullish) {
+      return visitor.nullish(this as WrapperSchema<T, 'nullish'>, innerR);
+    }
 
     return super._walk(visitor);
   }
@@ -777,6 +848,10 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
 export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
   readonly from: Schema<any, Input>;
   readonly to: Schema<Output, any>;
+
+  protected override get _kind(): string {
+    return 'pipe';
+  }
 
   constructor(from: Schema<any, Input>, to: Schema<Output, any>) {
     super();

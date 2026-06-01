@@ -91,3 +91,69 @@ describe('fromDescriptor() tuple rest round-trip', () => {
     expect(reconstructed.parse(['hello', 42])).toEqual(['hello', 42]);
   });
 });
+
+describe('fromDescriptor() reconstructible fidelity', () => {
+  it('preserves base fields and relaxed object descriptors', () => {
+    const schema = s.object({ email: s.string().email().optional() }).relaxed().nullable().label('User');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse(null)).toBeNull();
+    expect(reconstructed.parse({ email: 'person@example.com', extra: true })).toEqual({
+      email: 'person@example.com',
+      extra: true,
+    });
+  });
+
+  it('preserves strict object mode through a descriptor round-trip', () => {
+    const schema = s.object({ id: s.number() }).label('Strict user');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse({ id: 1 })).toEqual({ id: 1 });
+    expect(reconstructed.safeParse({ extra: true, id: 1 }).success).toBe(false);
+  });
+
+  it('preserves exclusiveMinimum, multipleOf, and integer type hints', () => {
+    const schema = s.number().int().multipleOf(2).positive().optional().label('Count');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse(4)).toBe(4);
+    expect(reconstructed.safeParse(0).success).toBe(false);
+    expect(() => reconstructed.parse(3)).toThrow();
+  });
+
+  it('preserves exclusiveMaximum through a descriptor round-trip', () => {
+    const schema = s.number().negative().label('Debt');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse(-1)).toBe(-1);
+    expect(reconstructed.safeParse(0).success).toBe(false);
+  });
+
+  it('preserves string formats and base fields through a descriptor round-trip', () => {
+    const schema = s.string().url().nullish().label('Website');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse(undefined)).toBeUndefined();
+    expect(reconstructed.parse(null)).toBeNull();
+    expect(reconstructed.parse('https://example.com')).toBe('https://example.com');
+  });
+
+  it('preserves reconstructible string annotations', () => {
+    const schema = s
+      .string()
+      .regex(/^dG9rZW4=$/)
+      .base64()
+      .nullable()
+      .label('Token');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse('dG9rZW4=')).toBe('dG9rZW4=');
+    expect(() => reconstructed.parse('plain-text')).toThrow();
+  });
+});

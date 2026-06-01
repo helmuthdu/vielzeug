@@ -41,4 +41,11 @@ describe('similarity', () => {
   it('should handle strings with different cases', () => {
     expect(similarity('Hello', 'hello')).toBeCloseTo(1, 5);
   });
+
+  it('throws RangeError for strings exceeding 10 000 characters', () => {
+    const long = 'a'.repeat(10_001);
+
+    expect(() => similarity(long, 'abc')).toThrow(RangeError);
+    expect(() => similarity('abc', long)).toThrow(RangeError);
+  });
 });

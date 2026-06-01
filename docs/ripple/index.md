@@ -5,7 +5,7 @@ package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async, history]
 related: [craft, forge, herald]
-exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, traceEffect, isSignal, isComputed, isStore, installDevTools]
+exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, isSignal, isComputed, isStore, installDevTools, getSignalName, getDevToolsHook]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, st
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `traceEffect`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
@@ -163,7 +163,7 @@ count.value = 1; // notifies automatically
 - **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
 - **`asyncScope(setup)`** — async variant of `scope()`; captures cleanups from the synchronous preamble before the first `await`
 - **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level
-- **`traceEffect(fn, options?)`** — like `effect()`, but logs changed reactive sources to the console before each re-run
+- **`debugEffect(fn, options?)`** (`@vielzeug/ripple/debug`) — like `effect()`, but logs changed reactive sources to the console before each re-run; tree-shaken from production bundles
 - **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
 - **`.map<U>(fn, options?)`** — combinator on all signal types; creates a derived `ComputedSignal<U>`
 - **`.filter(predicate)`** — combinator on all signal types; creates a `ComputedSignal<T | undefined>` via a predicate
@@ -174,9 +174,19 @@ count.value = 1; // notifies automatically
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
 - **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`
 - **`installDevTools(hook)`** — install a global `__RIPPLE_DEVTOOLS__` hook to observe signal writes, effect runs, and computed recomputes
+- **`getSignalName(signal)`** — look up the name registered for a named signal; returns `undefined` for unnamed signals
+- **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
+
+## Sub-paths
+
+| Import | Purpose |
+|---|---|
+| `@vielzeug/ripple` | All exports and types |
+| `@vielzeug/ripple/debug` | `debugEffect` — reactive source tracing (dev only) |
+| `@vielzeug/ripple/ssr` | No-op stubs for server-side rendering |
 
 ## Compatibility
 

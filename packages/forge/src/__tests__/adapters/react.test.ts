@@ -1,4 +1,5 @@
 import { createForgeHooks, type UseSyncExternalStoreFn } from '../../adapters/react';
+import type { FormState } from '../../types';
 import { createForm } from '../../index';
 
 // Minimal synchronous mock: subscribes and immediately returns the snapshot.
@@ -25,10 +26,10 @@ describe('/forge react adapter', () => {
     });
 
     test('getSnapshot function returns live state after mutations', () => {
-      let capturedGetSnapshot!: () => ReturnType<typeof form.state>;
+      let capturedGetSnapshot!: () => FormState;
       const form = createForm({ defaultValues: { name: 'Alice' } });
       const hooks = createForgeHooks(<T>(sub: (fn: () => void) => () => void, snap: () => T): T => {
-        capturedGetSnapshot = snap as () => ReturnType<typeof form.state>;
+        capturedGetSnapshot = snap as () => FormState;
         sub(() => {});
 
         return snap();

@@ -1,5 +1,5 @@
 export const persistenceExample = {
-  code: `import { defineMachine, interpret, assign } from '/clockwork'
+  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
 
 // In-memory persistence adapter (swap load/save/clear for localStorage in production)
 let storedSnapshot = null
@@ -17,17 +17,17 @@ const cartMachine = defineMachine({
       on: {
         ADD_ITEM: {
           target: 'shopping',
-          actions: [assign(({ context, event }) => {
-            const items = [...context.items, { id: event.id, price: event.price }]
-            return { items, total: items.reduce((s, i) => s + i.price, 0) }
-          })],
+          actions: [({ context, event }) => {
+            context.items.push({ id: event.id, price: event.price })
+            context.total = context.items.reduce((s, i) => s + i.price, 0)
+          }],
         },
         REMOVE_ITEM: {
           target: 'shopping',
-          actions: [assign(({ context, event }) => {
-            const items = context.items.filter(i => i.id !== event.id)
-            return { items, total: items.reduce((s, i) => s + i.price, 0) }
-          })],
+          actions: [({ context, event }) => {
+            context.items = context.items.filter(i => i.id !== event.id)
+            context.total = context.items.reduce((s, i) => s + i.price, 0)
+          }],
         },
         CHECKOUT: { guard: ({ context }) => context.items.length > 0, target: 'checkout' },
       },

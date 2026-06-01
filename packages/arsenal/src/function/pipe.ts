@@ -26,12 +26,12 @@ type LastReturnType<T extends readonly Fn[]> = T extends [...unknown[], infer La
  *
  * @returns A new function that is the pipe of the input functions.
  */
-export function pipe<T extends readonly [Fn, ...Fn[]]>(...fns: T): (...args: FirstParameters<T>) => LastReturnType<T> {
+export function pipe(): never;
+export function pipe<T extends readonly [Fn, ...Fn[]]>(...fns: T): (...args: FirstParameters<T>) => LastReturnType<T>;
+export function pipe(...fns: Fn[]): Fn {
   assert(fns.length > 0, 'pipe requires at least one function');
 
   const [firstFn, ...restFns] = fns;
 
-  return ((...args: FirstParameters<T>) => restFns.reduce((prev, fn) => fn(prev), firstFn(...args))) as (
-    ...args: FirstParameters<T>
-  ) => LastReturnType<T>;
+  return (...args: unknown[]) => restFns.reduce((prev: unknown, fn) => fn(prev), firstFn!(...args));
 }

@@ -1,10 +1,14 @@
 import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema } from '../core';
+import { ErrorCode, Schema, ValidationError } from '../core';
 import { _messages } from '../messages';
 
 export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>> {
   readonly schemas: T;
+
+  protected override get _kind(): string {
+    return 'union';
+  }
 
   constructor(schemas: T) {
     super();
@@ -56,7 +60,9 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
 
       return { data, issues: [], typeOk: true };
     } catch (aggregateError) {
-      const branchErrors = (aggregateError as AggregateError).errors.map((e: { issues: Issue[] }) => e.issues);
+      const branchErrors = ((aggregateError as AggregateError).errors as unknown[])
+        .filter(ValidationError.is)
+        .map((e) => e.issues);
 
       return this._invalidUnionResult(value, branchErrors);
     }

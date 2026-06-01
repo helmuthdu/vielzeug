@@ -11,14 +11,14 @@ A rule is not matching as expected and you need to understand which rules were c
 
 ### Solution
 
-Use `ward.trace()` to get every candidate rule that matched the principal, resource, and action, along with their priority, specificity score, deny bonus, and whether they won:
+Use `ward.trace()` to get every candidate rule that matched the principal, resource, and action, along with their priority, specificity score, and whether they won:
 
 ```ts
 import { createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: '*',      resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
-  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
+  { role: '*',       resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
+  { role: 'editor',  resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
   { role: 'blocked', resource: 'posts', action: 'read', effect: 'deny',  priority: 5 },
 ]);
 
@@ -28,14 +28,13 @@ const { decision, candidates } = ward.trace(
   'read',
 );
 
-candidates.forEach(({ rule, priority, score, denyBonus, won }) => {
+candidates.forEach(({ rule, priority, score, won }) => {
   console.log(
     `[${won ? 'WINNER' : '      '}]`,
     `effect=${rule.effect}`,
     `role=${rule.role}`,
     `priority=${priority}`,
     `score=${score}`,
-    `denyBonus=${denyBonus}`,
   );
 });
 
@@ -44,9 +43,9 @@ console.log('Decision:', decision.allowed ? 'allow' : `deny (${decision.reason})
 
 Example output:
 ```
-[      ] effect=allow role=* priority=0 score=0 denyBonus=0
-[      ] effect=allow role=editor priority=0 score=1 denyBonus=0
-[WINNER] effect=deny  role=blocked priority=5 score=1 denyBonus=1
+[      ] effect=allow role=* priority=0 score=0
+[      ] effect=allow role=editor priority=0 score=1
+[WINNER] effect=deny  role=blocked priority=5 score=1
 Decision: deny (explicit-deny)
 ```
 
@@ -56,8 +55,7 @@ Decision: deny (explicit-deny)
 |---|---|---|
 | `rule` | `WardRule` | The compiled rule that matched. Frozen — mutations throw. |
 | `priority` | `number` | The rule's `priority` value (default `0`). |
-| `score` | `number` | Specificity score across role + resource + action (`exact=1`, `ns:*=0.5`, `*=0`). Higher is more specific. |
-| `denyBonus` | `0 \| 1` | `1` for `deny` rules, `0` for `allow`. Tie-breaks in favour of explicit denials. |
+| `score` | `number` | Specificity score across role + resource + action (`exact=1`, `ns:*=0.5`, `*=0`). Higher is more specific. Deny rules gain an internal tiebreak advantage but it is not exposed here — use `rule.effect` to distinguish. |
 | `won` | `boolean` | `true` for exactly one candidate — the winner. |
 
 ### Trace with `BoundWard`

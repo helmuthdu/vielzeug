@@ -1,7 +1,7 @@
 /** A function that tears down a subscription or listener registration. */
 export type Unsubscribe = () => void;
 
-export type Fn<Args extends unknown[] = unknown[], Result = unknown> = (...args: Args) => Result;
+export type Fn<Args extends any[] = any[], Result = unknown> = (...args: Args) => Result;
 
 export type Obj = Record<string, unknown>;
 

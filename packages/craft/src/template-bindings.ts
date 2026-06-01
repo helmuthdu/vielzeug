@@ -127,7 +127,9 @@ export const applyAttrBinding = (binding: AttrBinding, registerCleanup: Register
     }
 
     if (!isSignal(value) && isStructuredValue(value)) {
-      (el as unknown as Record<string, unknown>)[name] = value;
+      if (name !== '__proto__' && name !== 'constructor' && name !== 'prototype') {
+        (el as unknown as Record<string, unknown>)[name] = value;
+      }
 
       return;
     }
@@ -233,8 +235,8 @@ export const applyHtmlBinding = (binding: HtmlBinding, registerCleanup: Register
     });
   });
 
-  registerCleanup(() => stop.dispose());
   registerCleanup(() => {
+    stop.dispose();
     clearCurrent();
     removeNodes(currentNodes);
   });

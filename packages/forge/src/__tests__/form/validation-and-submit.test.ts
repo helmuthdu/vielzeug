@@ -326,6 +326,19 @@ describe('form submit', () => {
     expect(form.state.submitCount).toBe(2);
   });
 
+  test('replace() resets submitCount to 0', async () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    await form.submit(async () => undefined);
+    await form.submit(async () => undefined);
+
+    expect(form.state.submitCount).toBe(2);
+
+    form.replace({ x: 2 });
+
+    expect(form.state.submitCount).toBe(0);
+  });
+
   test('isSubmitting toggles while submit handler is running', async () => {
     const form = createForm({ defaultValues: { x: 1 } });
     let sawSubmitting = false;
@@ -386,7 +399,7 @@ describe('validateStream', () => {
   test('yields FORM_ERROR entry last when a form-level validator is set', async () => {
     const form = createForm({
       defaultValues: { x: '' },
-      validator: async (_values: { x: string }, _signal: AbortSignal) => ({ _form: 'Overall error' }),
+      validator: async (_values: { x: string }, _signal?: AbortSignal) => ({ _form: 'Overall error' }),
     });
 
     const results: { error: string | undefined; field: string }[] = [];
@@ -399,5 +412,22 @@ describe('validateStream', () => {
 
     expect(formEntry).toBeDefined();
     expect(formEntry!.error).toBe('Overall error');
+  });
+
+  test('non-abort errors thrown by a field validator propagate out of the stream', async () => {
+    const boom = new Error('boom');
+    const form = createForm({
+      validators: {
+        bad: () => {
+          throw boom;
+        },
+      },
+    });
+
+    await expect(async () => {
+      for await (const _ of form.validateStream()) {
+        // consume
+      }
+    }).rejects.toThrow('boom');
   });
 });

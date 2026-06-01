@@ -67,24 +67,17 @@ export function createDropdownPositioner({
         ...(offsetPx ? [offset(offsetPx)] : []),
         flip({ padding }),
         shift({ padding }),
-        ...(matchWidth
-          ? [
-              size({
-                // Capture reference width at compute time so it reflects any
-                // reflow that triggered this updatePosition call.
-                apply({ elements }) {
-                  elements.floating.style.width = `${ref.getBoundingClientRect().width}px`;
-                },
-                padding,
-              }),
-            ]
-          : []),
+        ...(matchWidth ? [size({ padding })] : []),
       ],
       placement,
     });
 
     floating.style.left = `${result.x}px`;
     floating.style.top = `${result.y}px`;
+
+    if (matchWidth) {
+      floating.style.width = `${ref.getBoundingClientRect().width}px`;
+    }
   }
 
   function startAutoUpdate(): () => void {

@@ -1,5 +1,5 @@
 // Core engine
-export { computePosition, getRects } from './core';
+export { computeOnce, computePosition } from './core';
 export { detectOverflow } from './overflow';
 
 // High-level API
@@ -40,7 +40,7 @@ export type { SizeOptions } from './middleware/size';
 export type { PositioningPreset, PresetOptions } from './presets';
 
 // Public utilities
-export { MIDDLEWARE_NAME, getAlignment, getSide } from './utils';
+export { getAlignment, getSide } from './utils';
 
 // Types
 export type {
@@ -52,6 +52,7 @@ export type {
   FlipData,
   FloatHandle,
   HideData,
+  InferMiddlewareData,
   Middleware,
   MiddlewareData,
   MiddlewareReset,
@@ -65,5 +66,7 @@ export type {
   Side,
   SideObject,
   SizeData,
+  TypedComputePositionResult,
+  TypedMiddleware,
   VirtualReference,
 } from './types';

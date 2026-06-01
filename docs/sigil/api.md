@@ -7,11 +7,12 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 
 ## API At a Glance
 
-| Symbol                     | Purpose                                    | Execution mode | Common gotcha                                              |
-| -------------------------- | ------------------------------------------ | -------------- | ---------------------------------------------------------- |
-| `Custom element subpaths`  | Register only the components you use       | Sync           | Import component styles before rendering UI                |
-| `@vielzeug/sigil/styles` | Load shared design tokens and base styles  | Sync           | Missing base styles causes inconsistent spacing and colors |
-| `Component exports`        | Consume component types and shared symbols | Sync           | Prefer documented subpaths over deep internal imports      |
+| Symbol                     | Purpose                                                              | Execution mode | Common gotcha                                                              |
+| -------------------------- | -------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| `Custom element subpaths`  | Register only the components you use                                 | Sync           | Import component styles before rendering UI                                |
+| `@vielzeug/sigil/styles` | Load shared design tokens and base styles                            | Sync           | Missing base styles causes inconsistent spacing and colors                 |
+| `Component exports`        | Consume component types and shared symbols                           | Sync           | Prefer documented subpaths over deep internal imports                      |
+| `componentSignal()`        | Bridge `onCleanup` to an `AbortSignal` for headless primitive wiring | Sync           | Pass directly as `signal:` option; never store the result across re-renders |
 
 ## Package Entry Points
 
@@ -25,7 +26,9 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 | `@vielzeug/sigil/styles/animation.css` | Animation helpers                                                      |
 | `@vielzeug/sigil/styles/layers.css`    | Cascade layer definitions                                              |
 
-For headless controller primitives (`createTextField`, `createChoiceField`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craft/controls`.
+Headless controller primitives (`createTextField`, `createChoiceField`, `createCheckable`, `createListControl`, `createOverlayControl`, and others) are exported from `@vielzeug/sigil` alongside the component types — no separate subpath is needed. Use `componentSignal(onCleanup)` to wire an `AbortSignal` from a craft component's `onCleanup` callback into any headless primitive that accepts a `signal` option.
+
+The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountBitInput`, `mountBitSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
 
 ## Runtime Registration Imports
 
@@ -181,3 +184,45 @@ Use the following pages as the canonical per-component API source.
 - Importing `@vielzeug/sigil` registers every published component; use it when convenience matters more than granular control.
 - For attribute/event/CSS variable details, use each component page in this section.
 - For WCAG compliance details and the axe-core testing contract, see the **[Accessibility Quality Bar](./accessibility.md)**.
+
+## Headless API Changes
+
+### `TextFieldOptions` — `lifecycle` renamed to `signal`
+
+`TextFieldOptions.lifecycle` has been renamed to `signal` for consistency with all other headless primitives (`createCheckable`, `createOverlayControl`, `createOptionList`). Update any existing usages:
+
+```ts
+// Before
+createTextField({ lifecycle: abortSignal, ... });
+
+// After
+createTextField({ signal: abortSignal, ... });
+```
+
+### `ListControl` — `cleanup()` added
+
+`createListControl` now returns a `cleanup()` method that immediately resets the typeahead search buffer. Call it when disposing the list to prevent stale timer callbacks from firing after teardown. `createOptionList` calls this automatically.
+
+### `createOverlayControl` — `cleanup()` no longer fires `onClose`
+
+Previously, calling `cleanup()` on an open overlay would invoke the `onClose` callback. It now closes silently. This prevents state mutations on unmounted components.
+
+### `createChoiceField` — `signal` and `cleanup()` added
+
+`ChoiceFieldOptions` now accepts an optional `signal?: AbortSignal` to auto-dispose internal `watch()` subscriptions on component unmount. A `cleanup()` method is also exposed on `ChoiceFieldHandle` for manual teardown. All component consumers (`bit-select`, `bit-combobox`, `bit-checkbox-group`, `bit-radio-group`) now pass their `componentSignal` automatically.
+
+```ts
+// Before — subscriptions leaked on unmount
+const choice = createChoiceField({ value, ... });
+
+// After — auto-disposed
+const choice = createChoiceField({ signal: componentSignal(onCleanup), value, ... });
+```
+
+### `createListControl` — `set(-1)` now clears focus
+
+Previously `set(-1)` was silently clamped to `set(0)`. It now behaves like `reset()`, setting the index to `-1` (no focused item) and returning `-1`. This is a bug-fix breaking change.
+
+### `OptionListHandle` — navigation methods now return `number`
+
+`first()`, `last()`, `next()`, `prev()`, and `set()` on `OptionListHandle` now return the resolved index (`number`) instead of `void`. Callers can use the return value directly instead of reading `focusedIndex.value` as a follow-up step.

@@ -443,4 +443,45 @@ describe('persistQueryCache + hydrateQueryCache round-trip', () => {
 
     vi.useRealTimers();
   });
+
+  it('hydrates multiple keys in parallel (all succeed even with async storage)', async () => {
+    let resolveAll!: () => void;
+    const ready = new Promise<void>((res) => (resolveAll = res));
+
+    let callCount = 0;
+
+    const asyncStorage: PersistStorage & { store: Record<string, string> } = {
+      async getItem(key) {
+        callCount++;
+        // Simulate a brief async delay (all run concurrently)
+        await ready;
+
+        return asyncStorage.store[key] ?? null;
+      },
+      removeItem() {},
+      setItem() {},
+      store: {
+        'courier:["a"]': JSON.stringify({ data: 'val-a', updatedAt: Date.now() }),
+        'courier:["b"]': JSON.stringify({ data: 'val-b', updatedAt: Date.now() }),
+        'courier:["c"]': JSON.stringify({ data: 'val-c', updatedAt: Date.now() }),
+      },
+    };
+
+    const qc = createQuery();
+    const hydratePromise = hydrateQueryCache(qc, {
+      keys: [['a'], ['b'], ['c']],
+      storage: asyncStorage,
+    });
+
+    // All three getItem calls should have been started before any resolves
+    // (parallel) — if sequential, callCount would be 1 here, not 3.
+    expect(callCount).toBe(3);
+
+    resolveAll();
+    await hydratePromise;
+
+    expect(qc.get(['a'])).toBe('val-a');
+    expect(qc.get(['b'])).toBe('val-b');
+    expect(qc.get(['c'])).toBe('val-c');
+  });
 });

@@ -52,13 +52,14 @@ export function autoUpdate(
 }
 
 /**
- * No-op stub. Returns a FloatHandle with no-op methods and zero-coordinate position.
+ * No-op stub. Returns a FloatHandle with no-op methods. `getPosition()` always returns `null`
+ * (position is never computed in an SSR environment).
  */
-export function float(_reference: ReferenceElement, _floating: HTMLElement, options: FloatOptions = {}): FloatHandle {
+export function float(_reference: ReferenceElement, _floating: HTMLElement, _options: FloatOptions = {}): FloatHandle {
   return {
     cleanup: NOOP,
     cssAnchor: false,
-    getPosition: () => NULL_RESULT(options.placement),
+    getPosition: () => null,
     update: NOOP,
   };
 }

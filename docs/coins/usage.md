@@ -7,10 +7,10 @@ description: How to use @vielzeug/coins for monetary arithmetic, formatting, and
 
 ## Creating Money Values
 
-Use `money()` to construct a `Money` value from a human-readable decimal, number, or raw bigint minor units. The currency code is validated against `Intl.NumberFormat` — unrecognised codes throw `RangeError`.
+Use `money()` to construct a `Money` value from a human-readable decimal, number, or raw bigint minor units. Use `zero()` when you need an idiomatic zero starting point. The currency code is validated against `Intl.NumberFormat` — unrecognised codes throw `RangeError`.
 
 ```ts
-import { money } from '@vielzeug/coins';
+import { money, zero } from '@vielzeug/coins';
 
 // From decimal string (preferred — lossless)
 money('1234.56', 'USD');   // { amount: 123456n, currency: 'USD' }
@@ -23,6 +23,10 @@ money(1234.56, 'USD');     // { amount: 123456n, currency: 'USD' }
 
 // From bigint — raw minor units, passed through as-is
 money(123456n, 'USD');     // { amount: 123456n, currency: 'USD' }
+
+// Zero amount — idiomatic starting value
+zero('USD');  // { amount: 0n, currency: 'USD' }
+zero('JPY');  // { amount: 0n, currency: 'JPY' }
 
 // Invalid currency — throws RangeError
 money('1.00', 'NOTREAL');  // RangeError: Invalid ISO 4217 currency code: "NOTREAL"
@@ -141,7 +145,7 @@ splitEvenly(money('10.00', 'USD'), 3);
 ## Aggregates
 
 ```ts
-import { sum, min, max } from '@vielzeug/coins';
+import { clamp, max, min, sum } from '@vielzeug/coins';
 
 const items = [money('1.00', 'USD'), money('2.50', 'USD'), money('0.99', 'USD')];
 
@@ -150,6 +154,14 @@ min(...items);                         // $0.99
 max(...items);                         // $2.50
 
 sum([]);  // throws RangeError: sum requires at least one Money value
+
+// Clamp to an allowed price range
+const lo = money('1.00', 'USD');
+const hi = money('99.99', 'USD');
+
+clamp(money('0.50', 'USD'),   lo, hi);  // $1.00  (below minimum)
+clamp(money('42.00', 'USD'),  lo, hi);  // $42.00 (in range)
+clamp(money('150.00', 'USD'), lo, hi);  // $99.99 (above maximum)
 ```
 
 ## Comparison
@@ -226,12 +238,13 @@ format(price, { locale: 'de-DE' });               // '1.234,56 $'
 format(price, { locale: 'fr-FR' });               // '1 234,56 $'
 format(price, { style: 'code' });                 // 'USD 1,234.56'
 format(price, { style: 'name' });                 // '1,234.56 US dollars'
+format(price, { style: 'narrowSymbol' });         // '$1,234.56' (compact)
 
 // Zero-decimal currencies
 format(money('1234', 'JPY'));                      // '¥1,234'
 
-// Custom fraction digits
-format(price, { minimumFractionDigits: 0, maximumFractionDigits: 0 });  // '$1,235'
+// Custom fraction digits — set only maximumFractionDigits when you want to truncate
+format(price, { maximumFractionDigits: 0 });                            // '$1,235'
 format(price, { minimumFractionDigits: 3, maximumFractionDigits: 3 });  // '$1,234.560'
 ```
 
@@ -282,6 +295,9 @@ exchange(money('100.00', 'USD'), rate, 'floor');  // explicit rounding mode
 
 // Throws TypeError if money.currency !== rate.from
 exchange(money('100.00', 'EUR'), rate);  // TypeError: Currency mismatch: EUR and USD
+
+// Throws RangeError for negative rates
+exchange(money('100.00', 'USD'), { from: usd, rate: '-0.92', to: eur });  // RangeError: Exchange rate must be non-negative
 
 // High-precision rates — string parsing avoids float error
 const jpyRate: ExchangeRate = { from: usd, rate: '0.847532', to: eur };

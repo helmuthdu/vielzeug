@@ -139,6 +139,7 @@ api.info({ data }, 'GET /users');
 ## Features
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
+- Runtime level mutation via `setLevel(level)` — toggle debug mode without recreating loggers
 - Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
 - Auto-serializes `Error` objects into `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line

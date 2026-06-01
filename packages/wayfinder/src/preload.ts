@@ -1,5 +1,6 @@
 /**
- * PreloadManager — LRU cache for preloaded data loader results with concurrent-call deduplication.
+ * PreloadManager — FIFO cache for preloaded data loader results with concurrent-call deduplication.
+ * Eviction removes the oldest inserted entry (insertion-order FIFO, not access-order LRU).
  *
  * - `set(key, results)` — store results; evicts the oldest entry when the cache is full.
  * - `consume(key)` — retrieve and delete results (consume-once semantics).

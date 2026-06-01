@@ -10,7 +10,7 @@ import type {
 } from '../types';
 
 import { buildAdapterOps, buildTxContext, type StorageBackend } from '../adapter-core';
-import { VaultDisposedError, VaultMigrationError } from '../errors';
+import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
 import { defaultCodec, type VaultCodec } from '../ttl';
@@ -18,14 +18,14 @@ import { defaultCodec, type VaultCodec } from '../ttl';
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error('[vault] IndexedDB request failed'));
+    request.onerror = () => reject(request.error ?? new VaultError('IndexedDB request failed'));
   });
 }
 
-function wrapTxError(scope: string, message: string, cause: unknown): Error {
+function wrapTxError(scope: string, message: string, cause: unknown): VaultError {
   const causeMessage = cause instanceof Error && cause.message ? `: ${cause.message}` : '';
 
-  return new Error(`[vault] ${message} on "${scope}"${causeMessage}`, { cause });
+  return new VaultError(`${message} on "${scope}"${causeMessage}`, { cause });
 }
 
 function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>): Promise<T> {
@@ -199,7 +199,7 @@ function pruneExpiredInStore(store: IDBObjectStore, codec: VaultCodec): Promise<
     let deleted = 0;
     const request = store.openCursor();
 
-    request.onerror = () => reject(request.error ?? new Error('[vault] IndexedDB cursor failed during prune'));
+    request.onerror = () => reject(request.error ?? new VaultError('IndexedDB cursor failed during prune'));
     request.onsuccess = () => {
       const cursor = request.result;
 
@@ -263,7 +263,7 @@ function iterateStoreWithCursor<T extends Record<string, unknown>>(
       };
 
       cursorRequest.onerror = () => {
-        const err = cursorRequest.error ?? new Error('[vault] IndexedDB cursor iteration failed');
+        const err = cursorRequest.error ?? new VaultError('IndexedDB cursor iteration failed');
 
         if (state.type === 'waiting') {
           const { reject } = state;
@@ -406,7 +406,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   } = options;
 
   if (!Number.isInteger(version) || version < 1) {
-    throw new RangeError(`[vault] createIndexedDB version must be a positive integer, got ${String(version)}`);
+    throw new VaultError(`createIndexedDB: version must be a positive integer, got ${String(version)}`);
   }
 
   // F4: Codec-bound encode/decode used throughout the IDB adapter.
@@ -512,7 +512,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         };
         request.onerror = () => {
           connectPromise = null;
-          reject(new Error(`[vault] failed to open "${name}"`, { cause: request.error }));
+          reject(new VaultError(`failed to open "${name}"`, { cause: request.error }));
         };
       });
     }

@@ -6,6 +6,10 @@ import { _messages } from '../messages';
 export class SetSchema<T> extends Schema<Set<T>> {
   readonly itemSchema: Schema<T, any>;
 
+  protected override get _kind(): string {
+    return 'set';
+  }
+
   constructor(itemSchema: Schema<T, any>) {
     super();
     this.itemSchema = itemSchema;
@@ -131,6 +135,6 @@ export class SetSchema<T> extends Schema<Set<T>> {
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof SetSchema)) return false;
 
-    return this.itemSchema.equals(other.itemSchema) && super._equalsImpl(other);
+    return this.itemSchema.equals(other.itemSchema);
   }
 }

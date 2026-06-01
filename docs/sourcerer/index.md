@@ -5,7 +5,7 @@ package: sourcerer
 category: data
 keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
 related: [courier, ripple, wayfinder]
-exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals, SourceError, itemRange, sourceState, prefetchSource, prefetchSourceWithSource, composeFetch]
+exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, deriveSource, mergeSource, toSignals, SourceError, SourceTimeoutError, sourceState, itemRange, prefetchSource, prefetchSourceWithSource, composeFetch, filterContains, filterEquals, filterRange, sortBy, encodeQuery, decodeQuery, FetchMiddleware]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -37,7 +37,7 @@ exports: [createLocalSource, createRemoteSource, createCursorSource, createInfin
 - `createInfiniteSource()` — append-mode (infinite scroll) collections
 - `toSignals()` — universal Ripple signal adapter for all source types
 - `SourceError` — structured error class with `message`, `cause`, `query`, and `attempt`
-- `sourceState()` — derive a discriminated union (`loading` / `error` / `data`) from any source
+- `sourceState()` — derive a discriminated union (`loading` / `error` / `success`) from any source
 - `itemRange()` — compute 1-based display range from `SourceMeta`
 
 All sources expose `current`, `meta`, and `subscribe` — UI code is identical regardless of the underlying data strategy.
@@ -136,10 +136,10 @@ await source.searchNow(search);
 
 | Factory | Data model | Navigation | Key extras |
 |---|---|---|---|
-| `createLocalSource()` | In-memory array | Page number | `filterAsync`, `sortAsync`, custom `searchFn` |
-| `createRemoteSource()` | Server fetch | Page number | `staleTime`, `optimisticUpdate`, `hydrate`, `queryKey` |
-| `createCursorSource()` | Server fetch | Cursor tokens | `autoFetch`, `queryKey` |
-| `createInfiniteSource()` | Server fetch | Append (`loadMore`) | `autoFetch`, `isLoadingMore` |
+| `createLocalSource()` | In-memory array | Page number | `filterAsync`, `sortAsync`, `ready()`, custom `searchFn` |
+| `createRemoteSource()` | Server fetch | Page number | `staleTime`, `optimisticUpdate`, `restoreQuery`, `ready()`, `queryKey` |
+| `createCursorSource()` | Server fetch | Cursor tokens | `restoreQuery()`, `ready()`, `queryKey` |
+| `createInfiniteSource()` | Server fetch | Append (`loadMore`) | `loadedPages`, `ready()`, `queryKey` |
 
 ## Compatibility
 

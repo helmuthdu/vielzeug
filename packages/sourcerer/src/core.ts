@@ -1,3 +1,5 @@
+import { SourceTimeoutError } from './types';
+
 /**
  * Shared source infrastructure: listener management, debounce scheduling, and ready() polling.
  * All source factories compose this core rather than duplicating the same patterns.
@@ -46,6 +48,11 @@ export type SourceCore = {
 
 export function createSourceCore(): SourceCore {
   const listeners = new Set<() => void>();
+  const readyWaiters = new Set<{
+    check: () => void;
+    reject: (err: unknown) => void;
+    timeoutId?: ReturnType<typeof setTimeout>;
+  }>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
 
@@ -63,6 +70,13 @@ export function createSourceCore(): SourceCore {
         timer = undefined;
       }
 
+      for (const waiter of readyWaiters) {
+        if (waiter.timeoutId !== undefined) clearTimeout(waiter.timeoutId);
+
+        waiter.reject(new Error('Source disposed while waiting for ready()'));
+      }
+
+      readyWaiters.clear();
       listeners.clear();
       disposed = true;
     },
@@ -90,33 +104,37 @@ export function createSourceCore(): SourceCore {
       for (const listener of listeners) {
         listener();
       }
+
+      for (const waiter of readyWaiters) {
+        waiter.check();
+      }
     },
 
     ready(isIdle, timeoutMs) {
       if (isIdle()) return Promise.resolve();
 
       return new Promise<void>((resolve, reject) => {
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const waiter: { check: () => void; reject: (err: unknown) => void; timeoutId?: ReturnType<typeof setTimeout> } =
+          {
+            check: () => {
+              if (isIdle()) {
+                if (waiter.timeoutId !== undefined) clearTimeout(waiter.timeoutId);
 
-        const check = () => {
-          if (isIdle()) {
-            if (timeoutId !== undefined) {
-              clearTimeout(timeoutId);
-            }
-
-            listeners.delete(check);
-            resolve();
-          }
-        };
+                readyWaiters.delete(waiter);
+                resolve();
+              }
+            },
+            reject,
+          };
 
         if (timeoutMs !== undefined) {
-          timeoutId = setTimeout(() => {
-            listeners.delete(check);
-            reject(new Error(`Source.ready() timed out after ${timeoutMs}ms`));
+          waiter.timeoutId = setTimeout(() => {
+            readyWaiters.delete(waiter);
+            reject(new SourceTimeoutError(timeoutMs));
           }, timeoutMs);
         }
 
-        listeners.add(check);
+        readyWaiters.add(waiter);
       });
     },
 

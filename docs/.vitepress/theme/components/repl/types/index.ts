@@ -1,5 +1,6 @@
 import { arsenalTypes } from './arsenal';
 import { clockworkTypes } from './clockwork';
+import { coinsTypes } from './coins';
 import { conduitTypes } from './conduit';
 import { courierTypes } from './courier';
 import { craftTypes } from './craft';
@@ -21,6 +22,7 @@ import { wayfinderTypes } from './wayfinder';
 
 export const libraryTypes = {
   clockwork: clockworkTypes,
+  coins: coinsTypes,
   conduit: conduitTypes,
   courier: courierTypes,
   craft: craftTypes,

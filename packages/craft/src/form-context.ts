@@ -1,6 +1,6 @@
 import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
-import { createContext, inject, provide } from './context';
+import { createContext, inject } from './context';
 
 /**
  * A shared form context value, typically provided by a parent form component
@@ -9,6 +9,8 @@ import { createContext, inject, provide } from './context';
 export type FormContextValue = {
   /** Whether any field has been touched (interacted with). Set via markDirty(). */
   readonly dirty: ReadonlySignal<boolean>;
+  /** The last submit error, or null if the last submit succeeded. */
+  readonly error: ReadonlySignal<unknown>;
   /**
    * Mark the form as dirty (e.g. call from a field's input/change handler).
    * Reset to false via reset().
@@ -55,6 +57,7 @@ export function createFormContext(
   const fieldValiditySignals = signal<Array<ReadonlySignal<boolean>>>([]);
   const submitting = signal(false);
   const dirty = signal(false);
+  const error = signal<unknown>(null);
 
   const valid = computed(() => fieldValiditySignals.value.every((s) => s.value));
 
@@ -64,9 +67,12 @@ export function createFormContext(
     if (submitting.value) return;
 
     submitting.value = true;
+    error.value = null;
 
     try {
       await options.onSubmit?.(e);
+    } catch (err) {
+      error.value = err;
     } finally {
       submitting.value = false;
     }
@@ -74,6 +80,7 @@ export function createFormContext(
 
   const reset = (): void => {
     dirty.value = false;
+    error.value = null;
     options.onReset?.();
   };
 
@@ -89,7 +96,7 @@ export function createFormContext(
     };
   };
 
-  return { dirty, markDirty, registerField, reset, submit, submitting, valid };
+  return { dirty, error, markDirty, registerField, reset, submit, submitting, valid };
 }
 
 /**
@@ -107,17 +114,4 @@ export function createFormContext(
  */
 export function useFormContext(): FormContextValue | undefined {
   return inject(FORM_CONTEXT_KEY);
-}
-
-/**
- * Provide a form context to child components.
- *
- * @example
- * ```ts
- * const form = createForm({ onSubmit: handleSubmit });
- * provideFormContext(form);
- * ```
- */
-export function provideFormContext(ctx: FormContextValue): void {
-  provide(FORM_CONTEXT_KEY, ctx);
 }

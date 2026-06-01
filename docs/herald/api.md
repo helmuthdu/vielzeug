@@ -15,7 +15,7 @@ description: Complete API reference for @vielzeug/herald.
 | `bus.on()`               | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe                   |
 | `bus.emit()`             | Emit an event; returns listener invocation count     | Sync           | Returns `0` if disposed, middleware blocked, or invalid |
 | `bus.events()`           | Stream future emits as an async generator            | Async          | Chain `.filter()` / `.map()` for in-place transforms    |
-| `bus.pipe()`             | Instance-level event forwarding (no import needed)   | Sync           | Same as `pipeEvents` but attached to the source         |
+| `combineSignals()`       | Merge two AbortSignals into one                      | Sync           | Returns the first signal to abort                       |
 | `bus.wait()`             | Await a one-time event occurrence                    | Async          | Pass `{ signal }` for timeout / cancellation            |
 | `bus.waitAny()`          | Await the first event from many                      | Async          | Result is a discriminated union by event key            |
 | `bus.onAny()`            | Subscribe to all events                              | Sync           | Fires after event-specific listeners                    |
@@ -26,8 +26,9 @@ description: Complete API reference for @vielzeug/herald.
 
 | Import                   | Purpose                        |
 | ------------------------ | ------------------------------ |
-| `@vielzeug/herald`      | Main runtime API and types     |
-| `@vielzeug/herald/test` | Test helpers (`createTestBus`) |
+| `@vielzeug/herald`       | Main runtime API and types            |
+| `@vielzeug/herald/debug` | `debugBus` — debug wrapper (dev only) |
+| `@vielzeug/herald/test`  | Test helpers (`createTestBus`)        |
 
 ## Types
 
@@ -55,13 +56,17 @@ type EmissionErrorContext<T extends EventMap = EventMap> = {
   timestamp: number;   // ms since epoch at emit() call time
 };
 
+type BusLogger = {
+  debug?: (msg: string) => void; // omit to silence debug output
+  warn?: (msg: string) => void;  // omit to silence warn output
+};
+
 type BusOptions<T extends EventMap> = {
-  debug?: boolean;
+  logger?: BusLogger;
   maxListeners?: number;
   middleware?: readonly Middleware<T>[];
-  onDispatch?: (event: EventKey<T>, payload: unknown) => void;
   onError?: (context: EmissionErrorContext<T>) => void;
-  validatePayload?: (event: EventKey<T>, payload: unknown) => void;
+  validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
 };
 ```
 
@@ -128,11 +133,6 @@ type Bus<T extends EventMap> = {
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
-  pipe<U extends EventMap>(
-    target: Bus<U>,
-    entries: readonly [PipeEntry<T, U>, ...PipeEntry<T, U>[]],
-    signal?: AbortSignal,
-  ): Unsubscribe;
   removeAllListeners(event?: EventKey<T>): void;
   wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
@@ -149,6 +149,7 @@ type BehaviorInitial<T extends EventMap> = { [K in EventKey<T>]?: T[K] };
 
 type BehaviorBus<T extends EventMap> = Bus<T> & {
   current<K extends EventKey<T>>(event: K): T[K] | undefined;
+  reset(event?: EventKey<T>): void;
 };
 ```
 
@@ -157,6 +158,7 @@ type BehaviorBus<T extends EventMap> = Bus<T> & {
 ```ts
 type TestBus<T extends EventMap> = Bus<T> & {
   emitted<K extends EventKey<T>>(event: K): T[K][];
+  emittedCount<K extends EventKey<T>>(event: K): number;
   reset(): void;
 };
 ```
@@ -182,11 +184,10 @@ type AppEvents = {
 };
 
 const bus = createBus<AppEvents>({
-  debug: true, // log subscribe/emit/dispose to console.debug
-  onDispatch: (event, payload) => console.debug('[bus]', event, payload),
+  logger: { debug: myLogger.debug, warn: myLogger.warn }, // provide debug to enable logging; pass {} to silence all
   onError: ({ err, event, payload }) => console.error('[bus] error in', event, err, payload),
   middleware: [
-    (event, payload, next) => {
+    (event, _payload, next) => {
       // run before listeners; omit next() to block dispatch
       console.debug('[mw]', event);
       next();
@@ -560,39 +561,9 @@ bus.removeAllListeners('user:login');
 bus.removeAllListeners(); // remove everything
 ```
 
----
-
-### `bus.pipe()`
-
-Signature: `pipe(target, entries, signal?) => Unsubscribe`
-
-Forwards a selected subset of events from this bus to `target`. Instance-level convenience method; equivalent to calling `pipeEvents(this, target, entries, signal)`.
-
-| Parameter | Type                                               | Description                                       |
-| --------- | -------------------------------------------------- | ------------------------------------------------- |
-| `target`  | `Bus<U>`                                           | The bus to forward events to                      |
-| `entries` | `readonly [PipeEntry<T, U>, ...PipeEntry<T, U>[]]` | One or more string keys or `{ from, to }` renames |
-| `signal`  | `AbortSignal` (optional)                           | Optional signal to stop forwarding early          |
-
-**Returns:** `Unsubscribe` — call to stop forwarding manually.
-
-Forwarding stops automatically when `target` is disposed.
-
-```ts
-const stop = appBus.pipe(auditBus, ['user:login', 'user:logout']);
-stop(); // manual teardown
-
-// Rename events
-appBus.pipe(analyticsbus, [{ from: 'user:login', to: 'track:login' }]);
-
-// Scoped to a signal
-const controller = new AbortController();
-appBus.pipe(auditBus, ['user:login'], controller.signal);
-```
-
 ## `BusOptions` — middleware
 
-`BusOptions.middleware` accepts an array of `Middleware<T>` functions that run on every `emit()`, after `validatePayload` and before `onDispatch` and listeners. Each middleware receives `(event, payload, next)` — call `next()` to continue the chain; omit it to block dispatch entirely.
+`BusOptions.middleware` accepts an array of `Middleware<T>` functions that run on every `emit()`, after `validatePayload` and before listeners. Each middleware receives `(event, payload, next)` — call `next()` to continue the chain; omit it to block dispatch entirely.
 
 ```ts
 import { createBus } from '@vielzeug/herald';
@@ -622,7 +593,7 @@ bus.emit('user:login', { userId: '1', email: 'a@b.com' });
 
 ## `BusOptions` — validatePayload
 
-`BusOptions.validatePayload` is called on every `emit()` **before** middleware and listeners. Throw to reject the payload entirely — no middleware, `onDispatch`, or listener will run.
+`BusOptions.validatePayload` is called on every `emit()` **before** middleware and listeners. Throw to reject the payload entirely — no middleware or listener will run.
 
 | Throw with `onError`    | Error forwarded to `onError`; `emit()` returns `0`. |
 | Throw without `onError` | Error propagates to the `emit()` caller.            |
@@ -651,7 +622,7 @@ Creates a bus that replays the last known value to new subscribers. Useful for s
 | Parameter | Type                  | Description                                     |
 | --------- | --------------------- | ----------------------------------------------- |
 | `initial` | `BehaviorInitial<T>`  | Optional map of event names to starting values  |
-| `options` | `BusOptions<T>`       | Standard bus options (hooks, debug, etc.)       |
+| `options` | `BusOptions<T>`       | Standard bus options (hooks, logger, etc.)      |
 
 **Returns:** `BehaviorBus<T>`
 
@@ -687,6 +658,26 @@ Returns the last emitted value for the given event, or `undefined` if no value h
 ```ts
 bus.current('theme');  // 'dark'
 bus.current('unknown' as never); // undefined
+```
+
+---
+
+### `behaviorBus.reset()`
+
+Signature: `reset(event?) => void`
+
+Clears the replay buffer for a specific event, or for all events when called without arguments. After reset, new subscribers will not receive a replayed value until the next `emit()`.
+
+Does not affect active subscriptions or the disposed state of the bus.
+
+```ts
+bus.emit('theme', 'dark');
+bus.current('theme'); // 'dark'
+
+bus.reset('theme');   // clear only 'theme'
+bus.current('theme'); // undefined
+
+bus.reset();          // clear all buffers
 ```
 
 ## `pipeEvents()`
@@ -754,7 +745,7 @@ Behavior:
 - `emitted(event)` returns a snapshot array
 - `reset()` clears records without removing listeners
 - `dispose()` clears listeners and records
-- Accepts full `BusOptions<T>` including `onDispatch` and `onError`
+- Accepts full `BusOptions<T>` including `onError`
 
 | Parameter | Type            | Description                                     |
 | --------- | --------------- | ----------------------------------------------- |
@@ -793,6 +784,22 @@ bus.emitted('user:login');
 
 ---
 
+### `testBus.emittedCount()`
+
+Signature: `emittedCount(event) => number`
+
+Returns the number of times the given event has been emitted. Shorthand for `emitted(event).length`.
+
+```ts
+bus.emit('user:login', { userId: '1' });
+bus.emit('user:login', { userId: '2' });
+
+bus.emittedCount('user:login'); // 2
+bus.emittedCount('user:logout'); // 0
+```
+
+---
+
 ### `testBus.reset()`
 
 Signature: `reset() => void`
@@ -811,6 +818,32 @@ bus.emitted('user:login'); // => []
 Signature: `dispose() => void`
 
 Clears recorded payloads and then calls the underlying `bus.dispose()`, removing all listeners and rejecting pending waits. Idempotent.
+
+---
+
+## `combineSignals()`
+
+Signature: `combineSignals(a: AbortSignal, b?: AbortSignal) => AbortSignal`
+
+Returns a signal that aborts as soon as either `a` or `b` aborts. If only `a` is provided, returns `a` directly. Registers and cleans up its own event listeners — no leaks when neither signal fires.
+
+| Parameter | Type          | Description                          |
+| --------- | ------------- | ------------------------------------ |
+| `a`       | `AbortSignal` | First signal                         |
+| `b`       | `AbortSignal` (optional) | Second signal; omit to pass `a` through |
+
+**Returns:** `AbortSignal` — aborts when either input aborts.
+
+```ts
+import { combineSignals, createBus } from '@vielzeug/herald';
+
+const bus = createBus<AppEvents>();
+const timeoutSignal = AbortSignal.timeout(5_000);
+
+// Unsubscribe when the bus disposes OR after 5 seconds
+const signal = combineSignals(bus.disposalSignal, timeoutSignal);
+bus.on('user:login', handler, { signal });
+```
 
 ---
 

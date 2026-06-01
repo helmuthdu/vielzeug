@@ -9,6 +9,12 @@
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
+    "./debug": {
+      "source": "./src/debug.ts",
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js",
+      "require": "./dist/debug.cjs"
+    },
     ".": {
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",

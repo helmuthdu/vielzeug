@@ -1,8 +1,8 @@
 export const basicContainerExample = {
-  code: `import { createContainer, createToken } from '/conduit'
+  code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const ConfigToken = createToken('Config')
-const LoggerToken = createToken('Logger')
+const ConfigToken = token('Config')
+const LoggerToken = token('Logger')
 
 const container = createContainer()
 container.value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 })

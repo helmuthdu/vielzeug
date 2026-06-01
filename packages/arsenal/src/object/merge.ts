@@ -43,7 +43,7 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, option
     const sourceValue = source[key];
     const targetValue = result[key];
 
-    (result as any)[key] =
+    (result as Record<string, unknown>)[key] =
       Array.isArray(sourceValue) && Array.isArray(targetValue)
         ? options.arrayStrategy === 'concat'
           ? [...targetValue, ...sourceValue]

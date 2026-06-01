@@ -2,7 +2,7 @@
 
 ## Project
 
-**Vielzeug** is monorepo of **22 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
+**Vielzeug** is monorepo of **23 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
 
 ## Key conventions
 
@@ -64,6 +64,7 @@ All other packages are fully independent.
 | `@vielzeug/scroll` | UI | Virtual list engine for large datasets |
 | `@vielzeug/codex` | AI | MCP server exposing all Vielzeug docs to AI clients |
 | `@vielzeug/clockwork` | State | Finite state machine interpreter with typed events |
+| `@vielzeug/coins` | Finance | Currency formatting and exchange utilities for monetary arithmetic |
 
 ## AI integration
 

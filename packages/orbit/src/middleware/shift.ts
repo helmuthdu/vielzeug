@@ -1,4 +1,4 @@
-import type { DetectOverflowOptions, Middleware, MiddlewareState } from '../types';
+import type { DetectOverflowOptions, Middleware, MiddlewareState, ShiftData, TypedMiddleware } from '../types';
 
 import { detectOverflow } from '../overflow';
 import { clamp, getSide, tagMiddleware } from '../utils';
@@ -95,7 +95,7 @@ export interface ShiftOptions extends DetectOverflowOptions {
  * | `top` / `bottom` | horizontal | vertical  |
  * | `left` / `right` | vertical   | horizontal|
  */
-export function shift(options: ShiftOptions = {}): Middleware {
+export function shift(options: ShiftOptions = {}): TypedMiddleware<'shift', ShiftData> {
   const { crossAxis = true, limiter, mainAxis = false } = options;
 
   return tagMiddleware(function shiftMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {

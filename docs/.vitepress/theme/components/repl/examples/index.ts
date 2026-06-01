@@ -1,7 +1,9 @@
 import { arsenalExamples } from './arsenal';
 import { clockworkExamples } from './clockwork';
+import { coinsExamples } from './coins';
 import { conduitExamples } from './conduit';
 import { courierExamples } from './courier';
+import { craftExamples } from './craft';
 import { familiarExamples } from './familiar';
 import { forgeExamples } from './forge';
 import { gripExamples } from './grip';
@@ -21,8 +23,10 @@ import { wayfinderExamples } from './wayfinder';
 export const examples = {
   arsenal: arsenalExamples,
   clockwork: clockworkExamples,
+  coins: coinsExamples,
   conduit: conduitExamples,
   courier: courierExamples,
+  craft: craftExamples,
   familiar: familiarExamples,
   forge: forgeExamples,
   grip: gripExamples,

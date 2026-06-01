@@ -248,23 +248,24 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
             const validator = validators?.[msg.table as keyof S];
 
+            const keyField = schema[msg.table as keyof S & string]?.key;
+
             const applyStoredWithValidation = (key: string, stored: StoredRecord<unknown>): boolean => {
-              if (!validator) {
-                store.set(key, stored);
-
-                return true;
-              }
-
               try {
                 const parsed = codec.decode(stored as unknown);
 
                 if (!parsed) return false;
 
-                const validatedValue = validator.parse(parsed.value);
+                const rawValue = validator ? validator.parse(parsed.value) : parsed.value;
+
+                // Security: verify the record's own primary key matches the broadcast envelope key.
+                // Prevents a rogue same-origin sender from inserting records with mismatched keys.
+                if (keyField && String((rawValue as Record<string, unknown>)[keyField]) !== key) return false;
+
                 const validated: StoredRecord<unknown> =
                   parsed.expiresAt !== undefined
-                    ? { expiresAt: parsed.expiresAt, value: validatedValue }
-                    : { value: validatedValue };
+                    ? { expiresAt: parsed.expiresAt, value: rawValue }
+                    : { value: rawValue };
 
                 store.set(key, validated);
 

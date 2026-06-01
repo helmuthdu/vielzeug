@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@vielzeug/arsenal': path.resolve(__dirname, '../arsenal/src/index.ts'),
+      '@vielzeug/ripple': path.resolve(__dirname, '../ripple/src/index.ts'),
     },
   },
   test: {

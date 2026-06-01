@@ -1,16 +1,16 @@
 export const cachePersistExample = {
-  code: `import { createApi, createQuery, hydrateQueryCache, persistQueryCache } from '/courier'
+  code: `import { createApi, createQuery, hydrateQueryCache, persistQueryCache } from '@vielzeug/courier'
 
 const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 const qc = createQuery({ staleTime: 60_000 })
 
 // A simple in-memory storage that mimics the PersistStorage interface.
 // In a real app, pass localStorage or an IndexedDB adapter here.
-const memStorage = new Map<string, string>()
+const memStorage = new Map()
 const storage = {
-  getItem: (key: string) => memStorage.get(key) ?? null,
-  setItem: (key: string, value: string) => { memStorage.set(key, value) },
-  removeItem: (key: string) => { memStorage.delete(key) },
+  getItem: (key) => memStorage.get(key) ?? null,
+  setItem: (key, value) => { memStorage.set(key, value) },
+  removeItem: (key) => { memStorage.delete(key) },
 }
 
 const KEYS = [['posts', 1], ['users', 1]]
@@ -44,7 +44,7 @@ qc.clear()
 console.log('Cache cleared. post cached?', qc.getState(['posts', 1])?.status ?? 'no')
 
 await hydrateQueryCache(qc, { keys: KEYS, storage })
-const post = qc.get<{ title: string }>(['posts', 1])
+const post = qc.get(['posts', 1])
 console.log('✓ Post restored from storage:', post?.title)`,
   name: 'Cache Persistence - persistQueryCache / hydrateQueryCache',
 };

@@ -11,7 +11,7 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | ----------------------- | ---------------------------------------------------- | -------------- | ------------------------------------------------------------ |
 | `createApi()`           | Create an HTTP client with defaults and interceptors | Sync           | Uses `TransportOptions`, not `ApiClientOptions`              |
 | `createQuery()`         | Create cache/query orchestration utilities           | Sync           | Use `fetch()`, not `query()`                                 |
-| `createMutation()`      | Create tracked write handles with cancellation       | Sync           | `maxAttempts: 1` means no retries                            |
+| `createMutation()`      | Create tracked write handles with cancellation       | Sync           | `times: 1` means no retries; lifecycle callbacks receive `variables` |
 | `createCourier()`       | Create a unified client with shared transport        | Sync           | REST timeout defaults to 30s; streams default to `Infinity`  |
 | `createStream()`        | Open SSE or readable HTTP streams                    | Sync           | `reconnect: true` means up to 5 reconnects after a failure   |
 | `createTransportCore()` | Expose the shared transport internals                | Sync           | Advanced use only; powers both `createApi()` and `createStream()` |
@@ -21,7 +21,9 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `withRequestId()`       | Interceptor preset adding a unique request ID header | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`        |
 | `withLogging()`         | Interceptor preset logging method/URL/status/ms      | Sync           | Defaults to `console.debug`; override with `logger` option   |
 | `persistQueryCache()`   | Subscribe to cache and write successful entries      | Sync           | Eagerly persists existing successful entries on setup        |
-| `hydrateQueryCache()`   | Read persisted entries and seed the cache            | Async          | Restores original `updatedAt`; respect `maxAge`              |
+| `hydrateQueryCache()`   | Read persisted entries and seed the cache            | Async          | Runs all keys in parallel; restores original `updatedAt`     |
+| `resolveRetryDelay()`   | Compute a jitter-based retry delay for a given attempt | Sync         | Useful for custom retry strategies consistent with Courier defaults |
+| `NO_RETRY`              | Constant (`1`) for "no retries" — one attempt total  | —              | Equivalent to `times: 1`; exported for explicit, readable code  |
 | `HttpError`             | Structured HTTP/network/abort/timeout errors         | Sync           | Prefer `HttpError.is(err, status?)` for narrowing            |
 
 ## Package Entry Point
@@ -62,7 +64,7 @@ Creates an HTTP client. When `sharedTransport` is provided, the client reuses th
 | `delete`           | `<T, P>(url: P, cfg?) => Promise<T>`                     | DELETE request                                                         |
 | `request`          | `<T, P>(method, url: P, cfg?) => Promise<T>`             | Custom HTTP method                                                     |
 | `cancelAll`        | `() => void`                                             | Abort every active request without disposing the client                |
-| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Read current global headers                                            |
+| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Returns a **snapshot copy** — mutating it has no effect on the client  |
 | `headers`          | `(updates: Record<string, string \| undefined>) => void` | Update global headers; `undefined` removes a header                    |
 | `use`              | `(interceptor: Interceptor) => () => void`               | Add an interceptor; returns a dispose function                         |
 | `dispose`          | `() => void`                                             | Dispose the underlying transport when owned by this client             |
@@ -96,8 +98,8 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------- |
 | `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches  |
 | `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC        |
-| `maxAttempts` | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries                |
-| `retryDelay`  | `number \| (attempt) => number` | full jitter | Delay between retries                                                           |
+| `times`       | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries                |
+| `delay`       | `number \| (attempt) => number` | full jitter | Delay between retries                                                           |
 | `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                            |
 
 **Methods:**
@@ -133,10 +135,12 @@ const user = await qc.fetch({
 
 ---
 
+### `createMutation()`
+
 ```ts
 createMutation<TData, TVariables = void>(
   fn: (input: TVariables, signal: AbortSignal) => Promise<TData>,
-  options?: MutationOptions<TData>,
+  options?: MutationOptions<TData, TVariables>,
 ): Mutation<TData, TVariables>;
 ```
 
@@ -144,17 +148,17 @@ Creates a standalone, observable mutation handle.
 
 **Returns:** `Mutation<TData, TVariables>`
 
-**`MutationOptions<TData>`:**
+**`MutationOptions<TData, TVariables>`:**
 
-| Option            | Type                                      | Default | Description                                                |
-| ----------------- | ----------------------------------------- | ------- | ---------------------------------------------------------- |
-| `maxAttempts`     | `number`                                  | `1`     | Total attempts; `1` means a single try with no retries     |
-| `retryDelay`      | `number \| (attempt) => number`           | full jitter | Delay between retries                                   |
-| `shouldRetry`     | `(error, attempt) => boolean`             | —       | Return `false` to skip retrying for a specific error class |
-| `onSuccess`       | `(data: TData) => void \| Promise<void>`  | —       | Called after a successful run                              |
-| `onError`         | `(error: Error) => void \| Promise<void>` | —       | Called after a failed run, excluding aborts                |
-| `onSettled`       | `(data, error) => void \| Promise<void>`  | —       | Called after every run                                     |
-| `onCallbackError` | `(error: Error) => void`                  | —       | Optional development hook for callback failures            |
+| Option            | Type                                                            | Default | Description                                                |
+| ----------------- | --------------------------------------------------------------- | ------- | ---------------------------------------------------------- |
+| `times`           | `number`                                                        | `1`     | Total attempts; `1` means a single try with no retries     |
+| `delay`           | `number \| (attempt) => number`                                 | full jitter | Delay between retries                                   |
+| `shouldRetry`     | `(error, attempt) => boolean`                                   | —       | Return `false` to skip retrying for a specific error class |
+| `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>` | —       | Called after a successful run                              |
+| `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>` | —      | Called after a failed run; **not** called on abort         |
+| `onSettled`       | `(data, error, variables: TVariables) => void \| Promise<void>` | —       | Called after every run including aborts (`error` is `null` for success and abort) |
+| `onCallbackError` | `(error: Error) => void`                                        | —       | Called when `onSuccess`/`onError`/`onSettled` throws; does not affect `mutate()` result |
 
 **Mutation methods:**
 
@@ -174,11 +178,21 @@ import { createMutation } from '@vielzeug/courier';
 
 const addUser = createMutation(
   (input: NewUser, signal: AbortSignal) => api.post<User>('/users', { body: input, signal }),
-  { onSuccess: (user) => qc.set(['users', user.id], user) },
+  {
+    onSuccess: (user, variables) => {
+      qc.set(['users', user.id], user);
+      console.log('Created user with input:', variables);
+    },
+    onError: (err, variables) => console.error('Failed for input:', variables, err),
+  },
 );
 
 await addUser.mutate({ name: 'Alice' });
 ```
+
+::: tip Concurrent mutations
+When multiple `mutate()` calls run simultaneously, state updates reflect the **latest** call. Lifecycle callbacks (`onSuccess`, `onError`, `onSettled`) fire independently for **every** call — not just the last one. Use `mutation.cancel()` before calling `mutate()` again if you need last-call-wins semantics.
+:::
 
 ---
 
@@ -199,7 +213,7 @@ Creates a unified Courier client backed by one shared transport.
 | `headers`          | `Record<string,string>` | `{}` | Shared global headers                                             |
 | `timeout`          | `number`             | `30000` | REST timeout; streaming connections still default to `Infinity`   |
 | `query`            | `QueryClientOptions` | —       | Defaults for the embedded query client                            |
-| `mutationDefaults` | `MutationOptions`    | —       | Defaults merged into every `mutation()` call                      |
+| `mutationDefaults` | `Pick<MutationOptions, 'times' \| 'delay' \| 'shouldRetry' \| 'onCallbackError'>` | — | Retry/error-handling defaults merged into every `mutation()` call; lifecycle callbacks are per-mutation since they receive typed variables |
 
 **Courier interface:**
 
@@ -233,6 +247,8 @@ const user = await client.query.fetch({
 ```
 
 ---
+
+### `createStream()`
 
 ```ts
 createStream(opts?: TransportOptions, sharedTransport?: TransportCore): StreamClient;
@@ -268,6 +284,8 @@ source.close();
 ```
 
 ---
+
+### `createTransportCore()`
 
 ```ts
 createTransportCore(opts?: TransportOptions): TransportCore;
@@ -313,7 +331,7 @@ const stream = createStream({}, transport);
 Thrown for non-2xx HTTP responses, network failures, abort, and timeout.
 
 - `kind`: `'http' | 'network' | 'abort' | 'timeout'`
-- `status`, `method`, `url`, `data`, `response`, `headers`
+- `status`, `method`, `url`, `data`, `headers`
 - `isTimeout` and `isAborted`
 - Static helpers: `fromResponse()`, `fromCause()`, `is()`
 
@@ -365,7 +383,7 @@ type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
 | `responseType` | `ResponseType`   | Response parsing strategy                                               |
 | `timeout`      | `number`         | Per-request timeout override                                            |
 
-Idempotent requests (`GET`, `HEAD`, `OPTIONS`, `DELETE`) dedupe by **method + URL + responseType**. Request headers are no longer part of the automatic dedupe key.
+Idempotent requests (`GET`, `HEAD`, `OPTIONS`) dedupe by **method + URL + responseType** automatically. `DELETE` does not auto-dedupe (it has side effects); provide an explicit `dedupeKey` to opt in. Request headers are not part of the automatic dedupe key.
 
 ---
 
@@ -374,13 +392,15 @@ Idempotent requests (`GET`, `HEAD`, `OPTIONS`, `DELETE`) dedupe by **method + UR
 ```ts
 type StreamRequestConfig<P extends string = string> = {
   body?: unknown;
+  /** Raw fetch options for advanced use (credentials, cache, mode, referrer, etc.). */
+  fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
   headers?: Record<string, string>;
   method?: string;
   params?: P extends string ? Record<string, string | number | boolean> : never;
   query?: Params;
   signal?: AbortSignal;
   timeout?: number;
-} & Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
+};
 ```
 
 Streaming requests default to `Infinity` timeout per connection when `timeout` is omitted.
@@ -403,13 +423,13 @@ type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
 
 ```ts
 type ReconnectOptions = {
-  maxAttempts?: number;
-  retryDelay?: number | ((attempt: number) => number);
+  times?: number;
+  delay?: number | ((attempt: number) => number);
 };
 ```
 
-- `maxAttempts` counts reconnects **after** the first failure
-- default `maxAttempts` is `5`
+- `times` counts reconnects **after** the first failure
+- default `times` is `5`
 - clean server closes do **not** reset the reconnect budget
 
 ## Types
@@ -450,28 +470,30 @@ type QueryClientOptions = {
 type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 ```
 
-### `MutationOptions<TData>`
+### `MutationOptions<TData, TVariables>`
 
 ```ts
-type MutationOptions<TData = unknown> = RetryOptions & {
+type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   onCallbackError?: (error: Error) => void;
-  onError?: (error: Error) => void | Promise<void>;
-  onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
-  onSuccess?: (data: TData) => void | Promise<void>;
+  onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void | Promise<void>;
+  onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
 ```
+
+`onError` is not called when the mutation is aborted. `onSettled` is always called — `error` is `null` for both success and abort outcomes.
 
 ### `RetryOptions`
 
 ```ts
 type RetryOptions = {
-  maxAttempts?: number;
-  retryDelay?: number | ((attempt: number) => number);
+  delay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
+  times?: number;
 };
 ```
 
-`maxAttempts: 1` means one try with no retries.
+`times: 1` (the default) means one try with no retries. `delay` defaults to full-jitter exponential backoff capped at 30 s.
 
 ### `SyncStore<T>`
 
@@ -582,12 +604,9 @@ interface PersistOptions {
 ```ts
 interface PersistStorage {
   getItem(key: string): Promise<string | null> | string | null;
-```ts
-type PersistStorage = {
-  getItem(key: string): Promise<string | null> | string | null;
   removeItem(key: string): Promise<void> | void;
   setItem(key: string, value: string): Promise<void> | void;
-};
+}
 ```
 
 ## Utility Functions
@@ -612,6 +631,24 @@ const unbind = bindRefetch(qc);
 
 // On cleanup:
 unbind();
+```
+
+---
+
+### `NO_RETRY`
+
+```ts
+const NO_RETRY = 1;
+```
+
+A named constant for "no retries" — equivalent to `times: 1`. Use it in `RetryOptions` or `QueryClientOptions` for explicit, self-documenting code.
+
+**Example:**
+
+```ts
+import { createQuery, NO_RETRY } from '@vielzeug/courier';
+
+const qc = createQuery({ times: NO_RETRY });
 ```
 
 ---

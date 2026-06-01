@@ -3,12 +3,6 @@ title: Sigil — Usage Guide
 description: Import patterns, slots, events, and accessibility for Sigil components.
 ---
 
-# Sigil Usage Guide
-
-::: tip New to Sigil?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
-:::
-
 [[toc]]
 
 ## Basic Usage

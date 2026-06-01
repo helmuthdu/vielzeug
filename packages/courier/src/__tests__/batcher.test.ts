@@ -178,4 +178,15 @@ describe('createBatcher', () => {
 
     vi.useRealTimers();
   });
+
+  it('[Symbol.dispose] delegates to dispose()', async () => {
+    const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
+
+    const p1 = batcher.load(1);
+
+    batcher[Symbol.dispose]();
+
+    await expect(p1).rejects.toThrow('[courier] Batcher disposed');
+    await expect(batcher.load(2)).rejects.toThrow('[courier] Batcher disposed');
+  });
 });

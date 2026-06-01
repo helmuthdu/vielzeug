@@ -20,54 +20,48 @@ import { TupleSchema, type TupleSchemas } from './schemas/tuple';
 import { UnionSchema } from './schemas/union';
 import { VariantSchema } from './schemas/variant';
 
-/* -------------------- Tree-shakeable standalone exports -------------------- */
+/* -------------------- Internal factory functions -------------------- */
 
-export const sAnd = <A, B>(
-  a: Schema<A, any>,
-  b: Schema<B, any>,
-): IntersectSchema<readonly [Schema<A, any>, Schema<B, any>]> => sIntersect(a, b);
-export const sAny = (): Schema<any> => new Schema();
-export const sArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
-export const sBigint = (): BigIntSchema => new BigIntSchema();
-export const sBoolean = (): BooleanSchema => new BooleanSchema();
-export const sDate = (): DateSchema => new DateSchema();
-export const sEnum = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);
-export const sInstanceof = <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
-export const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
+const sAnd = <A, B>(a: Schema<A, any>, b: Schema<B, any>): IntersectSchema<readonly [Schema<A, any>, Schema<B, any>]> =>
+  sIntersect(a, b);
+const sAny = (): Schema<any> => new Schema();
+const sArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
+const sBigint = (): BigIntSchema => new BigIntSchema();
+const sBoolean = (): BooleanSchema => new BooleanSchema();
+const sDate = (): DateSchema => new DateSchema();
+const sEnum = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);
+const sInstanceof = <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
+const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
   ...items: T
 ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-export const sLazy = <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter);
-export const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
+const sLazy = <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter);
+const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
   new LiteralSchema(value);
-export const sMap = <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
+const sMap = <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
   new MapSchema(keySchema, valueSchema);
-export const sNever = (): NeverSchema => new NeverSchema();
-export const sNull = (): LiteralSchema<null> => new LiteralSchema(null);
-export const sNumber = (): NumberSchema => new NumberSchema();
-export const sObject = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);
-export const sRecord = <K extends string, V>(
-  keySchema: Schema<K, any>,
-  valueSchema: Schema<V, any>,
-): RecordSchema<K, V> => new RecordSchema(keySchema, valueSchema);
-export const sSet = <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema);
-export const sString = (): StringSchema => new StringSchema();
-export const sTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
-export const sUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
-export const sUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
+const sNever = (): NeverSchema => new NeverSchema();
+const sNull = (): LiteralSchema<null> => new LiteralSchema(null);
+const sNumber = (): NumberSchema => new NumberSchema();
+const sObject = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);
+const sRecord = <K extends string, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): RecordSchema<K, V> =>
+  new RecordSchema(keySchema, valueSchema);
+const sSet = <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema);
+const sString = (): StringSchema => new StringSchema();
+const sTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
+const sUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
+const sUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
   ...items: T
 ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-export const sOr = <A, B>(
-  a: Schema<A, any>,
-  b: Schema<B, any>,
-): UnionSchema<readonly [Schema<A, any>, Schema<B, any>]> => sUnion(a, b);
-export const sUnknown = (): Schema<unknown> => new Schema();
-export const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
+const sOr = <A, B>(a: Schema<A, any>, b: Schema<B, any>): UnionSchema<readonly [Schema<A, any>, Schema<B, any>]> =>
+  sUnion(a, b);
+const sUnknown = (): Schema<unknown> => new Schema();
+const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
   discriminator: K,
   map: M,
 ): VariantSchema<K, M> => new VariantSchema(discriminator, map);
-export const sCoerce = {
+const sCoerce = {
   bigint: (): BigIntSchema => BigIntSchema.coerce(),
   boolean: (): BooleanSchema => BooleanSchema.coerce(),
   date: (): DateSchema => DateSchema.coerce(),
@@ -75,11 +69,16 @@ export const sCoerce = {
   string: (): StringSchema => StringSchema.coerce(),
 };
 
-/* -------------------- `s` namespace (built from standalones — no duplication) -------------------- */
+/* -------------------- `s` namespace — the public API -------------------- */
 
 /**
- * The `s` namespace bundles all schema factories for convenience.
- * All methods are identical to the tree-shakeable `sXxx` exports.
+ * Namespace of all schema factories. Use `s.string()`, `s.object()`, etc.
+ *
+ * @example
+ * import { s, type Infer } from '@vielzeug/spell';
+ *
+ * const User = s.object({ name: s.string(), age: s.number().int().positive() });
+ * type User = Infer<typeof User>;
  */
 export const s = {
   and: sAnd,
