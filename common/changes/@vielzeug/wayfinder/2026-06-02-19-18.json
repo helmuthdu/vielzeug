@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/wayfinder",
+      "comment": "Patch release to fix npm publishing issue",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/wayfinder",
+  "email": ""
+}
