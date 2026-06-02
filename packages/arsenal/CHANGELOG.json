@@ -2,6 +2,20 @@
   "name": "@vielzeug/arsenal",
   "entries": [
     {
+      "version": "4.0.1",
+      "tag": "@vielzeug/arsenal_v4.0.1",
+      "date": "Tue, 02 Jun 2026 17:33:08 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Patch release to fix npm publishing issue",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0cd730e572bb05e190550d4f78f1c6222c0ad41d"
+          }
+        ]
+      }
+    },
+    {
       "version": "4.0.0",
       "tag": "@vielzeug/arsenal_v4.0.0",
       "date": "Tue, 02 Jun 2026 17:13:14 GMT",
