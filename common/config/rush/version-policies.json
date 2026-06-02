@@ -12,7 +12,6 @@
   {
     "definitionName": "individualVersion",
     "policyName": "vielzeug-packages",
-    "lockedMajor": 3,
     "exemptFromRushChange": false
   }
   // {
