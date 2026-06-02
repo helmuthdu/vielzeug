@@ -459,8 +459,17 @@ const handleRunCode = async () => {
 
     localStorage.setItem(`${props.storagePrefix}${props.selectedLibrary}`, code);
 
+    // Strip TypeScript-only syntax so cached or hand-typed TS code still runs.
+    // 1. Remove 'type X = ...' declarations, including multiline union types.
+    code = code.replace(/^type\s+\w[^\n]*(?:\n[ \t]+[|&][^\n]*)*/gm, '');
+    // 2. Remove 'as TYPE' casts — 'as' is not a valid JS operator, always safe to drop.
+    //    Handles: 'as any', 'as Foo', 'as Foo[]', 'as A | B', 'as { ... }', 'as { ... }[]'
+    code = code.replace(/\bas\s+(?:\{[^}]*\}(?:\[\])*|[\w$][\w$.<>\[\]]*(?:\s*\|\s*(?:null|undefined|[\w$][\w$.<>\[\]]*))*)/g, '');
+    // 3. Remove ': any' parameter/variable type annotations.
+    code = code.replace(/:\s*any\b/g, '');
+
     // Transform import statements to use global variables
-    // Example: import { Deposit } from '@vielzeug/deposit' -> const { Deposit } = window.deposit || {}
+    // Example: import { Vault } from '@vielzeug/vault' -> const { Vault } = window.vault || {}
     code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, imports, libName) => {
       // Keep only runtime imports (drop type-only specifiers) and map "a as b" to object destructuring alias "a: b".
       const runtimeImports = imports
@@ -560,8 +569,8 @@ const handleClearOutput = () => {
 };
 
 const handleExampleSelect = (e: Event) => {
-  const detail = (e as CustomEvent<{ value: string }>).detail;
-  const newValue = detail?.value ?? '';
+  const detail = (e as CustomEvent<{ values: string[] }>).detail;
+  const newValue = detail?.values?.[0] ?? '';
   localSelectedExample.value = newValue;
   // Always call loadExample directly so that re-selecting the *same* example
   // also reloads the editor — the watcher only fires when the value changes.

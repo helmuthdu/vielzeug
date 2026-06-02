@@ -1,14 +1,14 @@
 <template>
   <div class="reference-section">
     <div class="reference-header">
-      <h3>{{ selectedLibrary === 'toolkit' ? 'Available Functions' : 'Available Exports' }}</h3>
+      <h3>{{ selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports' }}</h3>
       <div class="search-container">
         <bit-input :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </bit-input>
       </div>
     </div>
     <div class="function-categories">
       <div
-        v-if="selectedLibrary === 'toolkit'"
+        v-if="selectedLibrary === 'arsenal'"
         v-for="category in filteredCategories"
         :key="category.name"
         class="category">
@@ -43,7 +43,7 @@
         </div>
       </div>
       <div
-        v-if="(selectedLibrary === 'toolkit' ? filteredCategories.length : filteredExports.length) === 0"
+        v-if="(selectedLibrary === 'arsenal' ? filteredCategories.length : filteredExports.length) === 0"
         class="no-results">
         No exports found matching "{{ localSearchQuery }}"
       </div>
@@ -60,7 +60,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps<{
   selectedLibrary: string;
-  toolkitCategories: ReadonlyArray<{
+  arsenalCategories: ReadonlyArray<{
     name: string;
     functions: readonly string[];
   }>;
@@ -87,12 +87,12 @@ const handleSearchInput = (e: Event) => {
 // ============================================================================
 
 const filteredCategories = computed(() => {
-  if (props.selectedLibrary !== 'toolkit' || !localSearchQuery.value) {
-    return props.selectedLibrary === 'toolkit' ? props.toolkitCategories : [];
+  if (props.selectedLibrary !== 'arsenal' || !localSearchQuery.value) {
+    return props.selectedLibrary === 'arsenal' ? props.arsenalCategories : [];
   }
 
   const query = localSearchQuery.value.toLowerCase();
-  return props.toolkitCategories
+  return props.arsenalCategories
     .map((cat) => ({
       ...cat,
       functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),

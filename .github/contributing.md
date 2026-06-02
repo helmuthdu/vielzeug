@@ -45,7 +45,7 @@ pnpm test
 
 ```bash
 # Navigate to the package
-cd packages/deposit
+cd packages/vault
 
 # Run tests in watch mode
 pnpm test
@@ -173,10 +173,10 @@ describe('formatName', () => {
 **Use the PackageInfo and PackageBadges components:**
 ```markdown
 <!-- In docs -->
-<PackageBadges package="deposit" />
+<PackageBadges package="vault" />
 
 <!-- Inline usage -->
-Only <PackageInfo package="deposit" type="size" /> gzipped!
+Only <PackageInfo package="vault" type="size" /> gzipped!
 ```
 
 ## Submitting Your Work
@@ -188,9 +188,9 @@ Use clear, descriptive commit messages:
 ```bash
 # Format: <type>(<package>): <description>
 
-git commit -m "feat(deposit): add TTL support for records"
-git commit -m "fix(fetchit): correct timeout handling"
-git commit -m "docs(formit): update validation examples"
+git commit -m "feat(vault): add TTL support for records"
+git commit -m "fix(courier): correct timeout handling"
+git commit -m "docs(forge): update validation examples"
 ```
 
 **Common types:**
@@ -228,19 +228,19 @@ git push origin your-branch-name
 ```
 vielzeug/
 ├── packages/          # All packages
-│   ├── buildit/       # UI Library
-│   ├── craftit/       # Web components
-│   ├── deposit/       # Client-side storage
-│   ├── fetchit/       # HTTP client
-│   ├── formit/        # Form management
-│   ├── i18nit/        # Internationalization
-│   ├── logit/         # Logging
-│   ├── permit/        # Permissions
-│   ├── routeit/       # Routing
+│   ├── block/       # UI Library
+│   ├── craft/       # Web components
+│   ├── vault/       # Client-side storage
+│   ├── courier/       # HTTP client
+│   ├── forge/        # Form management
+│   ├── lingua/        # Internationalization
+│   ├── rune/         # Logging
+│   ├── ward/        # Permissions
+│   ├── wayfinder/       # Routing
 │   ├── storeit/        # State management
-│   ├── toolkit/       # Utilities
-│   ├── validit/       # Validation
-│   └── wireit/        # Dependency injection
+│   ├── arsenal/       # Utilities
+│   ├── sieve/       # Validation
+│   └── wired/        # Dependency injection
 └── docs/              # VitePress documentation
 ```
 

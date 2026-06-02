@@ -17,69 +17,75 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
-  - title: '@vielzeug/buildit'
-    details: "<img src='/logo-buildit.svg' class='logo-highlight-smaller' alt='Buildit Logo' width='72'/>A library of ready-made web components, accessible, themeable, built on craftit."
-    link: /buildit/
-  - title: '@vielzeug/craftit'
-    details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state."
-    link: /craftit/
-  - title: '@vielzeug/deposit'
-    details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
-    link: /deposit/
-  - title: '@vielzeug/dragit'
-    details: "<img src='/logo-dragit.svg' class='logo-highlight-smaller' alt='Dragit Logo' width='72'/>File drop zones with MIME filtering and sortable lists."
-    link: /dragit/
-  - title: '@vielzeug/eventit'
-    details: "<img src='/logo-eventit.svg' class='logo-highlight-smaller' alt='Eventit Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
-    link: /eventit/
-  - title: '@vielzeug/fetchit'
-    details: "<img src='/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
-    link: /fetchit/
-  - title: '@vielzeug/floatit'
-    details: "<img src='/logo-floatit.svg' class='logo-highlight-smaller' alt='Floatit Logo' width='72'/>Type-safe utility for precise floating-point math without pitfalls."
-    link: /floatit/
-  - title: '@vielzeug/formit'
-    details: "<img src='/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
-    link: /formit/
-  - title: '@vielzeug/i18nit'
-    details: "<img src='/logo-i18nit.svg' class='logo-highlight-smaller' alt='i18nit Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and more."
-    link: /i18nit/
-  - title: '@vielzeug/logit'
-    details: "<img src='/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
-    link: /logit/
-  - title: '@vielzeug/mcpit'
-    details: "<img src='/logo-mcpit.svg' class='logo-highlight-smaller' alt='Mcpit Logo' width='72'/>MCP server for exposing Vielzeug package docs, APIs, and metadata to AI clients."
-    link: /mcpit/
-  - title: '@vielzeug/permit'
-    details: "<img src='/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
-    link: /permit/
-  - title: '@vielzeug/routeit'
-    details: "<img src='/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
-    link: /routeit/
-  - title: '@vielzeug/stateit'
-    details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
-    link: /stateit/
-  - title: '@vielzeug/sourceit'
-    details: "<img src='/logo-sourceit.svg' class='logo-highlight-smaller' alt='Sourceit Logo' width='72'/>Reactive local and remote query sources with pagination, filtering, sorting, and search."
-    link: /sourceit/
-  - title: '@vielzeug/timit'
-    details: "<img src='/logo-timit.svg' class='logo-highlight-smaller' alt='Timit Logo' width='72'/>Temporal-powered date and time utilities for modern TypeScript apps."
-    link: /timit/
-  - title: '@vielzeug/toolkit'
-    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Toolkit Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
-    link: /toolkit/
-  - title: '@vielzeug/validit'
-    details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
-    link: /validit/
-  - title: '@vielzeug/virtualit'
-    details: "<img src='/logo-virtualit.svg' class='logo-highlight-smaller' alt='Virtualit Logo' width='72'/>Lightweight virtual list engine to renders only visible items."
-    link: /virtualit/
-  - title: '@vielzeug/wireit'
-    details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
-    link: /wireit/
-  - title: '@vielzeug/workit'
-    details: "<img src='/logo-workit.svg' class='logo-highlight-smaller' alt='Workit Logo' width='72'/>Web Worker abstraction with pooling, queuing, timeouts, and more."
-    link: /workit/
+  - title: '@vielzeug/arsenal'
+    details: "<img src='/logo-arsenal.svg' class='logo-highlight-smaller' alt='Arsenal Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
+    link: /arsenal/
+  - title: '@vielzeug/clockwork'
+    details: "<img src='/logo-clockwork.svg' class='logo-highlight-smaller' alt='Clockwork Logo' width='72'/>Typed finite state machines with reactive signals, invokes, and more."
+    link: /clockwork/
+  - title: '@vielzeug/coins'
+    details: "<img src='/logo-coins.svg' class='logo-highlight-smaller' alt='Coins Logo' width='72'/>Bigint-based monetary arithmetic, formatting, and currency conversion."
+    link: /coins/
+  - title: '@vielzeug/codex'
+    details: "<img src='/logo-codex.svg' class='logo-highlight-smaller' alt='Codex Logo' width='72'/>MCP server for exposing Vielzeug package docs, APIs, and metadata to AI clients."
+    link: /codex/
+  - title: '@vielzeug/conduit'
+    details: "<img src='/logo-conduit.svg' class='logo-highlight-smaller' alt='Conduit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
+    link: /conduit/
+  - title: '@vielzeug/courier'
+    details: "<img src='/logo-courier.svg' class='logo-highlight-smaller' alt='Courier Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
+    link: /courier/
+  - title: '@vielzeug/craft'
+    details: "<img src='/logo-craft.svg' class='logo-highlight-smaller' alt='Craft Logo' width='72'/>Lightweight, type-safe web component creation with reactive state."
+    link: /craft/
+  - title: '@vielzeug/familiar'
+    details: "<img src='/logo-familiar.svg' class='logo-highlight-smaller' alt='Familiar Logo' width='72'/>Web Worker abstraction with pooling, queuing, timeouts, and more."
+    link: /familiar/
+  - title: '@vielzeug/forge'
+    details: "<img src='/logo-forge.svg' class='logo-highlight-smaller' alt='Forge Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
+    link: /forge/
+  - title: '@vielzeug/grip'
+    details: "<img src='/logo-grip.svg' class='logo-highlight-smaller' alt='Grip Logo' width='72'/>File drop zones with MIME filtering and sortable lists."
+    link: /grip/
+  - title: '@vielzeug/herald'
+    details: "<img src='/logo-herald.svg' class='logo-highlight-smaller' alt='Herald Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
+    link: /herald/
+  - title: '@vielzeug/lingua'
+    details: "<img src='/logo-lingua.svg' class='logo-highlight-smaller' alt='Lingua Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and more."
+    link: /lingua/
+  - title: '@vielzeug/orbit'
+    details: "<img src='/logo-orbit.svg' class='logo-highlight-smaller' alt='Orbit Logo' width='72'/>Floating-element positioning for tooltips, popovers, and dropdowns."
+    link: /orbit/
+  - title: '@vielzeug/ripple'
+    details: "<img src='/logo-ripple.svg' class='logo-highlight-smaller' alt='Ripple Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    link: /ripple/
+  - title: '@vielzeug/rune'
+    details: "<img src='/logo-rune.svg' class='logo-highlight-smaller' alt='Rune Logo' width='72'/>Beautiful console logging with styling and remote logging support."
+    link: /rune/
+  - title: '@vielzeug/scroll'
+    details: "<img src='/logo-scroll.svg' class='logo-highlight-smaller' alt='Scroll Logo' width='72'/>Lightweight virtual list engine that renders only visible items."
+    link: /scroll/
+  - title: '@vielzeug/sigil'
+    details: "<img src='/logo-sigil.svg' class='logo-highlight-smaller' alt='Sigil Logo' width='72'/>A library of ready-made web components, accessible, themeable, built on craft."
+    link: /sigil/
+  - title: '@vielzeug/sourcerer'
+    details: "<img src='/logo-sourcerer.svg' class='logo-highlight-smaller' alt='Sourcerer Logo' width='72'/>Reactive query sources with pagination, filtering, sorting, and search."
+    link: /sourcerer/
+  - title: '@vielzeug/spell'
+    details: "<img src='/logo-spell.svg' class='logo-highlight-smaller' alt='Spell Logo' width='72'/>Type-safe schema validation with advanced error handling."
+    link: /spell/
+  - title: '@vielzeug/tempo'
+    details: "<img src='/logo-tempo.svg' class='logo-highlight-smaller' alt='Tempo Logo' width='72'/>Temporal-powered date and time utilities for modern TypeScript apps."
+    link: /tempo/
+  - title: '@vielzeug/vault'
+    details: "<img src='/logo-vault.svg' class='logo-highlight-smaller' alt='Vault Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
+    link: /vault/
+  - title: '@vielzeug/ward'
+    details: "<img src='/logo-ward.svg' class='logo-highlight-smaller' alt='Ward Logo' width='72'/>Role-based access control (RBAC) system for permissions."
+    link: /ward/
+  - title: '@vielzeug/wayfinder'
+    details: "<img src='/logo-wayfinder.svg' class='logo-highlight-smaller' alt='Wayfinder Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
+    link: /wayfinder/
 ---
 
 ## 🚀 Why Vielzeug?
@@ -94,21 +100,21 @@ features:
 ::: code-group
 
 ```bash [npm]
-npm install @vielzeug/toolkit
+npm install @vielzeug/arsenal
 ```
 
 ```bash [pnpm]
-pnpm add @vielzeug/toolkit
+pnpm add @vielzeug/arsenal
 ```
 
 ```bash [yarn]
-yarn add @vielzeug/toolkit
+yarn add @vielzeug/arsenal
 ```
 
 :::
 
 ```typescript
-import { chunk, debounce, currency } from '@vielzeug/toolkit';
+import { chunk, debounce, currency } from '@vielzeug/arsenal';
 
 // Utilities that just work
 const batches = chunk([1, 2, 3, 4, 5], 2);

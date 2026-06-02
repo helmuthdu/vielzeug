@@ -128,5 +128,9 @@ docs/.vitepress/.temp/
 # Junie
 .junie
 
-# MCpit generated bundled data
-packages/mcpit/data/
+# Windsurf
+.windsurf/
+!.windsurf/workflows/
+
+# Codex generated bundled data
+packages/codex/data/

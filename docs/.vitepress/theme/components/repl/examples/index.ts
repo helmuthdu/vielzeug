@@ -1,39 +1,45 @@
-import { depositExamples } from './deposit';
-import { dragitExamples } from './dragit';
-import { eventitExamples } from './eventit';
-import { fetchitExamples } from './fetchit';
-import { floatitExamples } from './floatit';
-import { formitExamples } from './formit';
-import { i18nitExamples } from './i18nit';
-import { logitExamples } from './logit';
-import { permitExamples } from './permit';
-import { routeitExamples } from './routeit';
-import { sourceitExamples } from './sourceit';
-import { stateitExamples } from './stateit';
-import { timitExamples } from './timit';
-import { toolkitExamples } from './toolkit';
-import { validitExamples } from './validit';
-import { virtualitExamples } from './virtualit';
-import { wireitExamples } from './wireit';
-import { workitExamples } from './workit';
+import { arsenalExamples } from './arsenal';
+import { clockworkExamples } from './clockwork';
+import { coinsExamples } from './coins';
+import { conduitExamples } from './conduit';
+import { courierExamples } from './courier';
+import { craftExamples } from './craft';
+import { familiarExamples } from './familiar';
+import { forgeExamples } from './forge';
+import { gripExamples } from './grip';
+import { heraldExamples } from './herald';
+import { linguaExamples } from './lingua';
+import { orbitExamples } from './orbit';
+import { rippleExamples } from './ripple';
+import { runeExamples } from './rune';
+import { scrollExamples } from './scroll';
+import { sourcererExamples } from './sourcerer';
+import { spellExamples } from './spell';
+import { tempoExamples } from './tempo';
+import { vaultExamples } from './vault';
+import { wardExamples } from './ward';
+import { wayfinderExamples } from './wayfinder';
 
 export const examples = {
-  deposit: depositExamples,
-  dragit: dragitExamples,
-  eventit: eventitExamples,
-  fetchit: fetchitExamples,
-  floatit: floatitExamples,
-  formit: formitExamples,
-  i18nit: i18nitExamples,
-  logit: logitExamples,
-  permit: permitExamples,
-  routeit: routeitExamples,
-  sourceit: sourceitExamples,
-  stateit: stateitExamples,
-  timit: timitExamples,
-  toolkit: toolkitExamples,
-  validit: validitExamples,
-  virtualit: virtualitExamples,
-  wireit: wireitExamples,
-  workit: workitExamples,
+  arsenal: arsenalExamples,
+  clockwork: clockworkExamples,
+  coins: coinsExamples,
+  conduit: conduitExamples,
+  courier: courierExamples,
+  craft: craftExamples,
+  familiar: familiarExamples,
+  forge: forgeExamples,
+  grip: gripExamples,
+  herald: heraldExamples,
+  lingua: linguaExamples,
+  orbit: orbitExamples,
+  ripple: rippleExamples,
+  rune: runeExamples,
+  scroll: scrollExamples,
+  sourcerer: sourcererExamples,
+  spell: spellExamples,
+  tempo: tempoExamples,
+  vault: vaultExamples,
+  ward: wardExamples,
+  wayfinder: wayfinderExamples,
 };

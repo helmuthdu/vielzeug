@@ -1,0 +1,4 @@
+export const syncAriaExample = {
+  code: "import { signal, syncAria } from '@vielzeug/craft'\n\n// Reactively sync ARIA attributes to a standalone element\nconst button = document.createElement('button')\nbutton.textContent = 'Toggle'\ndocument.body.appendChild(button)\n\nconst expanded = signal(false)\nconst disabled = signal(false)\n\n// Static role + reactive aria-expanded and aria-disabled\nconst cleanup = syncAria(button, {\n  role: 'button',\n  expanded: expanded,\n  disabled: disabled,\n}, { autoCleanup: false })\n\nbutton.addEventListener('click', () => {\n  expanded.value = !expanded.value\n})\n\nconsole.log('aria-expanded (initial):', button.getAttribute('aria-expanded'))\n\nexpanded.value = true\n// Wait one microtask for the effect to flush\nqueueMicrotask(() => {\n  console.log('aria-expanded (after toggle):', button.getAttribute('aria-expanded'))\n  cleanup()\n})",
+  name: 'Reactive ARIA with syncAria()',
+};

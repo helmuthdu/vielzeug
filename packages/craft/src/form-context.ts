@@ -1,0 +1,117 @@
+import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+
+import { createContext, inject } from './context';
+
+/**
+ * A shared form context value, typically provided by a parent form component
+ * and injected by child field components.
+ */
+export type FormContextValue = {
+  /** Whether any field has been touched (interacted with). Set via markDirty(). */
+  readonly dirty: ReadonlySignal<boolean>;
+  /** The last submit error, or null if the last submit succeeded. */
+  readonly error: ReadonlySignal<unknown>;
+  /**
+   * Mark the form as dirty (e.g. call from a field's input/change handler).
+   * Reset to false via reset().
+   */
+  markDirty(): void;
+  /**
+   * Register a field's validity signal with the form context.
+   * Returns a cleanup function.
+   */
+  registerField(validity: ReadonlySignal<boolean>): () => void;
+  /** Reset all registered field values. */
+  reset(): void;
+  /** Submit the form programmatically. */
+  submit(e?: Event): Promise<void>;
+  /** Whether the form is currently submitting. */
+  readonly submitting: ReadonlySignal<boolean>;
+  /** Whether all fields in the form are valid. */
+  readonly valid: ReadonlySignal<boolean>;
+};
+
+export const FORM_CONTEXT_KEY = createContext<FormContextValue>('craft:form-context');
+
+/**
+ * Create a `FormContextValue` for coordinating form state across child field components.
+ * Call `provide()` with the result to make it available to child components via `useFormContext`.
+ *
+ * @example
+ * ```ts
+ * define('my-form', {
+ *   setup() {
+ *     const form = createFormContext({ onSubmit: async (e) => { ... } });
+ *     provide(FORM_CONTEXT_KEY, form);
+ *     return html`<form @submit=${form.submit}><slot></slot></form>`;
+ *   }
+ * });
+ * ```
+ */
+export function createFormContext(
+  options: {
+    onReset?: () => void;
+    onSubmit?: (e?: Event) => void | Promise<void>;
+  } = {},
+): FormContextValue {
+  const fieldValiditySignals = signal<Array<ReadonlySignal<boolean>>>([]);
+  const submitting = signal(false);
+  const dirty = signal(false);
+  const error = signal<unknown>(null);
+
+  const valid = computed(() => fieldValiditySignals.value.every((s) => s.value));
+
+  const submit = async (e?: Event): Promise<void> => {
+    e?.preventDefault();
+
+    if (submitting.value) return;
+
+    submitting.value = true;
+    error.value = null;
+
+    try {
+      await options.onSubmit?.(e);
+    } catch (err) {
+      error.value = err;
+    } finally {
+      submitting.value = false;
+    }
+  };
+
+  const reset = (): void => {
+    dirty.value = false;
+    error.value = null;
+    options.onReset?.();
+  };
+
+  const markDirty = (): void => {
+    dirty.value = true;
+  };
+
+  const registerField = (validity: ReadonlySignal<boolean>): (() => void) => {
+    fieldValiditySignals.value = [...fieldValiditySignals.value, validity];
+
+    return () => {
+      fieldValiditySignals.value = fieldValiditySignals.value.filter((s) => s !== validity);
+    };
+  };
+
+  return { dirty, error, markDirty, registerField, reset, submit, submitting, valid };
+}
+
+/**
+ * Inject the nearest `FormContextValue` from a parent form component.
+ *
+ * @example
+ * ```ts
+ * define('my-input', {
+ *   setup(props) {
+ *     const form = useFormContext();
+ *     // form?.registerField(isValid);
+ *   }
+ * });
+ * ```
+ */
+export function useFormContext(): FormContextValue | undefined {
+  return inject(FORM_CONTEXT_KEY);
+}

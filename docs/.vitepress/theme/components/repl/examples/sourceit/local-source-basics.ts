@@ -1,4 +1,0 @@
-export const localSourceBasicsExample = {
-  code: "import { createLocalSource, encodeLocalQueryParams, filterContains, sortBy } from '@vielzeug/sourceit'\n\nconst users = [\n  { id: 1, name: 'Ada Lovelace', role: 'admin' },\n  { id: 2, name: 'Grace Hopper', role: 'admin' },\n  { id: 3, name: 'Linus Torvalds', role: 'member' },\n  { id: 4, name: 'Margaret Hamilton', role: 'member' },\n]\n\nconst source = createLocalSource(users, { limit: 2 })\n\nsource.setFilter(filterContains((u) => u.name, 'a'))\nsource.setSort(sortBy((u) => u.name, 'asc'))\nsource.next()\n\nconsole.log('Current page:', source.current)\nconsole.log('Meta:', source.meta)\n\nconst query = encodeLocalQueryParams(source.toQuery())\nconsole.log('Query params:', query)\n\nsource.reset()\nsource.fromQueryParams(query)\nconsole.log('Restored page:', source.current)",
-  name: 'Local Source Basics',
-};

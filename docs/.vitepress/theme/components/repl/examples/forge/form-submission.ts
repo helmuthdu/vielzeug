@@ -1,0 +1,4 @@
+export const formSubmissionExample = {
+  code: "import { createForm } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: {\n    username: '',\n    email: '',\n  },\n  validators: {\n    username: (value) => (!value ? 'Username is required' : undefined),\n    email: (value) => {\n      if (!value) return 'Email is required'\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email'\n    },\n  },\n})\n\nform.set('username', 'johndoe')\nform.set('email', 'john@example.com')\n\nconst result = await form.submit(async (values) => {\n  console.log('Submitting...', values)\n  await new Promise((resolve) => setTimeout(resolve, 200))\n  return { id: 123, success: true }\n})\n\nif (result.ok) {\n  console.log('✓ Form submitted!', result.value)\n} else {\n  console.error('✗ Validation errors:', result.errors)\n}",
+  name: 'Form Submission with Validation',
+};

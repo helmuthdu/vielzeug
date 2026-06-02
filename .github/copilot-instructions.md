@@ -2,7 +2,7 @@
 
 ## Project
 
-**Vielzeug** is monorepo of **20 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
+**Vielzeug** is monorepo of **23 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
 
 ## Key conventions
 
@@ -11,7 +11,7 @@
 - **`pnpm`** for package management, **Rush** for monorepo orchestration (`pnpm setup` = `rush install`).
 - **ESLint Perfectionist** enforces sorted imports and object keys — run `pnpm fix` to auto-sort.
 - **Prettier** at 120-char line width, 2-space indent, trailing commas.
-- **Conventional commits**: `feat(fetchit): add retry logic`.
+- **Conventional commits**: `feat(courier): add retry logic`.
 - Tests live at `packages/<name>/src/__tests__/`. Run with `pnpm test` (vitest).
 
 ## Package layout
@@ -29,10 +29,11 @@ packages/<name>/
 ## Package dependency graph
 
 ```
-buildit  → craftit → stateit, floatit
-deposit  → logit, toolkit
-fetchit  → toolkit
-permit   → logit
+@vielzeug/sigil  → @vielzeug/craft → @vielzeug/ripple, @vielzeug/orbit
+@vielzeug/sigil  → @vielzeug/arsenal, @vielzeug/grip, @vielzeug/scroll
+@vielzeug/courier  → @vielzeug/arsenal
+@vielzeug/sourcerer  → @vielzeug/arsenal
+@vielzeug/clockwork  → @vielzeug/ripple
 ```
 
 All other packages are fully independent.
@@ -41,41 +42,43 @@ All other packages are fully independent.
 
 | Package | Category | What it does |
 |---|---|---|
-| `@vielzeug/stateit` | State | Reactive signals, computed, effects, stores |
-| `@vielzeug/craftit` | UI | Functional web-component authoring on top of stateit |
-| `@vielzeug/buildit` | UI | Accessible, themeable web components built on craftit |
-| `@vielzeug/formit` | Forms | Typed form state, validation, submission |
-| `@vielzeug/validit` | Validation | Zero-dep schema validation (Zod-like) |
-| `@vielzeug/fetchit` | HTTP | Typed HTTP client with caching and mutations |
-| `@vielzeug/deposit` | Storage | IndexedDB + LocalStorage unified typed API |
-| `@vielzeug/routeit` | Routing | Client-side router with middleware and guards |
-| `@vielzeug/permit` | Auth | RBAC engine with wildcards and predicates |
-| `@vielzeug/wireit` | DI | Typed dependency injection container |
-| `@vielzeug/logit` | Logging | Structured scoped logger with remote transport |
-| `@vielzeug/i18nit` | i18n | Typed i18n with pluralization and async loading |
-| `@vielzeug/eventit` | Events | Typed event bus, pub/sub, async streams |
-| `@vielzeug/workit` | Workers | Web Worker pool with tasks, timeouts, cancellation |
-| `@vielzeug/dragit` | UI | Drag-and-drop — drop zones and sortable lists |
-| `@vielzeug/floatit` | UI | Floating element positioning (tooltip, popover) |
-| `@vielzeug/sourceit` | Data | Reactive data sources with pagination and search |
-| `@vielzeug/timit` | Date/Time | Temporal-powered date utilities |
-| `@vielzeug/toolkit` | Utilities | 75+ tree-shakeable array/object/string/async helpers |
-| `@vielzeug/virtualit` | UI | Virtual list engine for large datasets |
-| `@vielzeug/mcpit` | AI | MCP server exposing all Vielzeug docs to AI clients |
+| `@vielzeug/ripple` | State | Reactive signals, computed, effects, stores |
+| `@vielzeug/craft` | UI | Functional web-component authoring on top of ripple |
+| `@vielzeug/sigil` | UI | Accessible, themeable web components built on craft |
+| `@vielzeug/forge` | Forms | Typed form state, validation, submission |
+| `@vielzeug/spell` | Validation | Zero-dep schema validation (Zod-like) |
+| `@vielzeug/courier` | HTTP | Typed HTTP client with caching and mutations |
+| `@vielzeug/vault` | Storage | IndexedDB + LocalStorage unified typed API |
+| `@vielzeug/wayfinder` | Routing | Client-side router with middleware and guards |
+| `@vielzeug/ward` | Auth | RBAC engine with wildcards and predicates |
+| `@vielzeug/conduit` | DI | Typed dependency injection container |
+| `@vielzeug/rune` | Logging | Structured scoped logger with remote transport |
+| `@vielzeug/lingua` | i18n | Typed i18n with pluralization and async loading |
+| `@vielzeug/herald` | Events | Typed event bus, pub/sub, async streams |
+| `@vielzeug/familiar` | Workers | Web Worker pool with tasks, timeouts, cancellation |
+| `@vielzeug/grip` | UI | Drag-and-drop — drop zones and sortable lists |
+| `@vielzeug/orbit` | UI | Floating element positioning (tooltip, popover) |
+| `@vielzeug/sourcerer` | Data | Reactive data sources with pagination and search |
+| `@vielzeug/tempo` | Date/Time | Temporal-powered date utilities |
+| `@vielzeug/arsenal` | Utilities | 75+ tree-shakeable array/object/string/async helpers |
+| `@vielzeug/scroll` | UI | Virtual list engine for large datasets |
+| `@vielzeug/codex` | AI | MCP server exposing all Vielzeug docs to AI clients |
+| `@vielzeug/clockwork` | State | Finite state machine interpreter with typed events |
+| `@vielzeug/coins` | Finance | Currency formatting and exchange utilities for monetary arithmetic |
 
 ## AI integration
 
-The `@vielzeug/mcpit` package is an MCP server you can connect to AI clients:
+The `codex` package is an MCP server you can connect to AI clients:
 
 ```sh
 # build once
-cd packages/mcpit && pnpm build
+cd packages/codex && pnpm build
 
 # stdio (Claude Desktop, Copilot Chat)
-node packages/mcpit/dist/index.js
+node packages/codex/dist/index.js
 
 # HTTP (remote agents)
-node packages/mcpit/dist/index.js --port 3100
+node packages/codex/dist/index.js --port 3100
 ```
 
 Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get-docs`, `get-package-api`, `get-ai-context`, `list-components`, `get-component`.
@@ -84,19 +87,18 @@ Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get
 
 ```typescript
 // Reactive state
-import { signal, computed, effect } from '@vielzeug/stateit';
+import { signal, computed, effect } from '@vielzeug/ripple';
 
 // Form with validation
-import { createForm } from '@vielzeug/formit';
-import { v } from '@vielzeug/validit';
+import { createForm } from '@vielzeug/forge';
+import { s } from '@vielzeug/spell';
 
 // HTTP with caching
-import { createApi, createQuery } from '@vielzeug/fetchit';
+import { createApi, createQuery } from '@vielzeug/courier';
 
 // Storage
-import { createLocalStorage, table } from '@vielzeug/deposit';
+import { createLocalStorage, table } from '@vielzeug/vault';
 
 // DI container
-import { createContainer, createToken } from '@vielzeug/wireit';
+import { createContainer, createToken } from '@vielzeug/conduit';
 ```
-

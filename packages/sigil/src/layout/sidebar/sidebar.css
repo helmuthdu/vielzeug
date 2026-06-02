@@ -1,0 +1,440 @@
+.sidebar-logo[hidden] {
+  display: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+/*
+ * Simplified and unified sidebar CSS:
+ * - Grouped collapsed/expanded state rules
+ * - Consistent use of CSS variables for spacing, color, and transitions
+ * - Removed redundant or legacy rules
+ * - Clarified variant handling
+ */
+
+@layer sigil.base {
+  :host {
+    --_sidebar-width: var(--sidebar-width, 16rem);
+    --_sidebar-collapsed-width: var(--sidebar-collapsed-width, 3.5rem);
+    --_sidebar-transition: var(--transition-normal);
+    --_panel-bg: var(
+      --sidebar-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_panel-blur: var(--sidebar-panel-blur, var(--blur-md));
+    --_panel-border-color: var(
+      --sidebar-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
+    --_panel-radius: var(--sidebar-radius, var(--rounded-lg));
+    --_panel-shadow: var(--sidebar-shadow, var(--shadow-md));
+
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: var(--size-2xs);
+    max-width: var(--_sidebar-width);
+    height: 100%;
+    min-height: 0;
+    overflow: visible;
+    transition: var(--_motion-transition, width var(--_sidebar-transition), min-width var(--_sidebar-transition));
+  }
+
+  :host > nav {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--_panel-bg);
+    border-inline-end: var(--border) solid var(--_panel-border-color);
+    backdrop-filter: blur(var(--_panel-blur));
+  }
+
+  .mobile-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-sticky, 40) + 1);
+    display: none;
+    width: 100%;
+    height: 100%;
+    background: color-mix(in srgb, var(--color-contrast-950) 36%, transparent);
+    border: 0;
+  }
+
+  :host([data-bottom-nav][data-mobile-open]) .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-sticky, 40) + 1);
+    display: block;
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  :host([data-preview-mode][data-bottom-nav][data-mobile-open]) .mobile-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  :host([data-no-transition]),
+  :host([data-no-transition]) > nav {
+    transition: none !important;
+  }
+
+  :host([data-collapsed]) {
+    width: var(--_sidebar-collapsed-width);
+    min-width: var(--_sidebar-collapsed-width);
+    max-width: var(--_sidebar-collapsed-width);
+  }
+
+  :host([data-bottom-nav]) {
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: calc(var(--z-sticky, 40) + 2);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: var(--sidebar-bottom-nav-height, 3.75rem);
+    pointer-events: auto;
+  }
+
+  /* Preview mode: constrain bottom-nav to container bounds */
+  :host([data-preview-mode][data-bottom-nav]) {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    pointer-events: none;
+  }
+
+  :host([data-bottom-nav]) > nav {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: calc(var(--z-sticky, 40) + 3);
+    width: min(var(--_sidebar-width), 85vw);
+    max-width: 85vw;
+    max-height: 100dvh;
+    transform: translateX(-104%);
+    transition: transform var(--transition-normal);
+  }
+
+  /* Preview mode: use absolute positioning so drawer stays within container */
+  :host([data-preview-mode][data-bottom-nav]) > nav {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: calc(var(--z-sticky, 40) + 3);
+    max-height: 100%;
+    pointer-events: auto;
+  }
+
+  :host(:dir(rtl)[data-bottom-nav]) > nav {
+    transform: translateX(104%);
+  }
+
+  :host([data-bottom-nav][data-mobile-open]) > nav {
+    transform: translateX(0);
+  }
+
+  .bottom-bar {
+    display: flex;
+    visibility: hidden;
+    gap: var(--size-1);
+    align-items: stretch;
+    justify-content: space-around;
+    width: 100%;
+    height: 100%;
+    padding: var(--size-1);
+    pointer-events: none;
+    background: var(--_panel-bg);
+    border-top: var(--border) solid var(--_panel-border-color);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    backdrop-filter: blur(var(--_panel-blur));
+    transform: translateY(100%);
+    transition:
+      opacity var(--_sidebar-transition),
+      transform var(--_sidebar-transition),
+      visibility var(--_sidebar-transition);
+  }
+
+  :host([data-bottom-nav]) .bottom-bar {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  :host([data-preview-mode][data-bottom-nav]) .bottom-bar {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: calc(var(--z-sticky, 40) + 2);
+    height: var(--sidebar-bottom-nav-height, 3.75rem);
+  }
+
+  :host([data-bottom-nav][data-mobile-open]) .bottom-bar {
+    z-index: calc(var(--z-sticky, 40) + 1);
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  .bottom-tab {
+    all: unset;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: var(--size-0-5);
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: var(--size-1) var(--size-1-5);
+    color: var(--sidebar-item-color, var(--color-contrast-700));
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--rounded-md);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .bottom-tab:hover,
+  .bottom-tab:focus-visible {
+    color: var(--sidebar-item-hover-color, var(--color-contrast-900));
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    background: var(--sidebar-item-hover-bg, var(--color-contrast-100));
+  }
+
+  .bottom-tab:disabled {
+    color: var(--sidebar-item-disabled-color, var(--color-contrast-400));
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .bottom-tab-active,
+  .bottom-tab[data-active='true'] {
+    color: var(--sidebar-item-active-color, var(--color-primary));
+    background: var(
+      --sidebar-item-active-bg,
+      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+    );
+  }
+
+  .bottom-tab-active::before,
+  .bottom-tab[data-active='true']::before {
+    display: none;
+  }
+
+  .bottom-tab-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+  }
+
+  .bottom-tab-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+
+  .sidebar-header {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--size-6);
+    padding: var(--size-4);
+    border-bottom: var(--border) solid var(--color-contrast-200);
+  }
+
+  .sidebar-header .sidebar-header-content {
+    display: block;
+    flex: 1 1 0%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  :host([data-collapsed]) .sidebar-header {
+    flex-direction: column;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: flex-start;
+    min-height: unset;
+    padding-block: var(--size-2);
+    padding-inline: var(--size-2);
+  }
+
+  :host([data-collapsed]) .sidebar-header .sidebar-header-content {
+    display: none !important;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-8);
+    min-height: var(--size-8);
+    margin-inline-end: var(--size-2);
+  }
+
+  .sidebar-logo:empty {
+    display: none !important;
+  }
+
+  :host([data-collapsed]) .sidebar-logo {
+    margin-block: var(--size-1);
+    margin-inline-end: 0;
+  }
+
+  .sidebar-content {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-2);
+    align-content: start;
+    min-width: 0;
+    padding: var(--size-4);
+    overflow: clip auto;
+    scrollbar-width: thin;
+  }
+
+  .sidebar-footer {
+    flex-shrink: 0;
+    padding: var(--size-4);
+    border-top: var(--border) solid var(--color-contrast-200);
+  }
+
+  .toggle-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-8);
+    height: var(--size-8);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast);
+  }
+
+  .toggle-btn:hover {
+    color: var(--color-contrast-800);
+    background: var(--color-contrast-200);
+  }
+
+  .toggle-btn:focus-visible {
+    outline: var(--focus-ring);
+  }
+
+  .toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--_motion-transition, transform var(--_sidebar-transition));
+  }
+
+  :host([data-collapsed]) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host([data-bottom-nav]) .toggle-btn {
+    display: none;
+  }
+
+  :host(:not([dir='rtl'])[data-collapsed]) .toggle-icon,
+  :host(:dir(ltr)[data-collapsed]) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host(:dir(rtl)) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host(:dir(rtl)[data-collapsed]) .toggle-icon {
+    transform: rotate(0deg);
+  }
+}
+
+@layer sigil.variants {
+  /* ── floating ── */
+  :host([variant='floating']) {
+    height: calc(100% - var(--size-6));
+    margin: var(--size-3);
+
+    --_panel-radius: var(--rounded-lg);
+  }
+
+  :host([variant='floating']) > nav {
+    border: var(--border) solid var(--_panel-border-color);
+    border-radius: var(--_panel-radius);
+  }
+
+  :host([variant='floating'][data-bottom-nav]) {
+    inset-block-end: var(--size-2);
+    inset-inline: var(--size-2);
+    width: auto;
+    max-width: none;
+  }
+
+  :host([variant='floating'][data-preview-mode][data-bottom-nav]) {
+    inset: var(--size-2);
+  }
+
+  :host([variant='floating'][data-bottom-nav]) .bottom-bar {
+    border: var(--border) solid var(--_panel-border-color);
+    border-radius: var(--_panel-radius);
+    box-shadow: var(--_panel-shadow);
+  }
+
+  :host([variant='floating'][data-bottom-nav]) > nav {
+    inset-block-start: var(--size-2);
+    inset-inline-start: var(--size-2);
+  }
+
+  :host([variant='floating'][data-preview-mode][data-bottom-nav]) .bottom-bar {
+    inset-block-end: var(--size-2);
+    inset-inline: var(--size-2);
+    width: auto;
+  }
+
+  :host([variant='floating'][data-preview-mode][data-bottom-nav]) > nav {
+    inset-block-start: var(--size-1);
+    inset-inline-start: var(--size-1);
+  }
+
+  /* ── inset ── */
+  :host([variant='inset']) {
+    --_panel-bg: var(--color-contrast-50);
+    --_panel-shadow: none;
+    --_panel-border-color: transparent;
+  }
+}

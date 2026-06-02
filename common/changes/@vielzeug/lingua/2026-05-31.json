@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/lingua",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

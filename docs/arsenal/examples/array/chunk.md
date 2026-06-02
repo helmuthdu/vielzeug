@@ -1,0 +1,81 @@
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1533_B-success" alt="Size">
+</div>
+
+# chunk
+
+The `chunk` utility splits an array or string into smaller pieces (chunks) of a specified size.
+
+## Source Code
+
+::: details View Source Code
+<<< @/../packages/arsenal/src/array/chunk.ts
+:::
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Supports both arrays and strings.
+- **Overlapping**: Optional support for overlapping chunks in strings.
+- **Padding**: Optional padding for string chunks that don't meet the chunk size.
+
+## API
+
+::: details Type Definitions
+<<< @/../packages/arsenal/src/array/chunk.ts#ChunkTypes
+:::
+
+```ts
+function chunk<T>(input: T[] | string, size?: number, options?: ChunkOptions): ChunkResult<T>;
+```
+
+### Parameters
+
+- `input`: The array or string to be chunked.
+- `size`: The size of each chunk (default: 2).
+- `options`: Optional configuration (for strings):
+  - `overlap`: If `true`, chunks will overlap by one character.
+  - `pad`: Character used to pad the last chunk if it's shorter than `size`.
+
+### Returns
+
+- An array containing the chunks.
+
+## Examples
+
+### Array Chunking
+
+```ts
+import { chunk } from '@vielzeug/arsenal';
+
+const data = [1, 2, 3, 4, 5, 6, 7];
+
+chunk(data, 2); // [[1, 2], [3, 4], [5, 6], [7]]
+chunk(data, 3); // [[1, 2, 3], [4, 5, 6], [7]]
+```
+
+### String Chunking
+
+```ts
+import { chunk } from '@vielzeug/arsenal';
+
+chunk('vielzeug', 3); // ['vie', 'lze', 'ug '] (padded with space by default)
+
+// Custom padding
+chunk('hello', 2, { pad: '_' }); // ['he', 'll', 'o_']
+
+// Overlapping chunks
+chunk('abc', 2, { overlap: true }); // ['ab', 'bc']
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if input is neither an array nor a string.
+- Throws `RangeError` if `size` is less than 1.
+- For arrays, the last chunk may be smaller than `size` if the total length is not perfectly divisible.
+
+## See Also
+
+- [group](./group.md): Partition array elements by a criterion.
+- [group](./group.md): Group array elements by a criterion.

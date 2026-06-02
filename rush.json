@@ -9,132 +9,144 @@
     "preRushx": []
   },
   "gitPolicy": {},
-  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.3",
+  "nodeSupportedVersionRange": ">=20.14.0 <=24.16.0",
   "pnpmVersion": "10.33.4",
   "projects": [
     {
-      "packageName": "@vielzeug/buildit",
-      "projectFolder": "packages/buildit",
+      "packageName": "@vielzeug/sigil",
+      "projectFolder": "packages/sigil",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/craftit",
-      "projectFolder": "packages/craftit",
+      "packageName": "@vielzeug/craft",
+      "projectFolder": "packages/craft",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/deposit",
-      "projectFolder": "packages/deposit",
+      "packageName": "@vielzeug/vault",
+      "projectFolder": "packages/vault",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/eventit",
-      "projectFolder": "packages/eventit",
+      "packageName": "@vielzeug/herald",
+      "projectFolder": "packages/herald",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/fetchit",
-      "projectFolder": "packages/fetchit",
+      "packageName": "@vielzeug/courier",
+      "projectFolder": "packages/courier",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/floatit",
-      "projectFolder": "packages/floatit",
+      "packageName": "@vielzeug/orbit",
+      "projectFolder": "packages/orbit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/formit",
-      "projectFolder": "packages/formit",
+      "packageName": "@vielzeug/forge",
+      "projectFolder": "packages/forge",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/i18nit",
-      "projectFolder": "packages/i18nit",
+      "packageName": "@vielzeug/lingua",
+      "projectFolder": "packages/lingua",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/logit",
-      "projectFolder": "packages/logit",
+      "packageName": "@vielzeug/rune",
+      "projectFolder": "packages/rune",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/permit",
-      "projectFolder": "packages/permit",
+      "packageName": "@vielzeug/ward",
+      "projectFolder": "packages/ward",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/routeit",
-      "projectFolder": "packages/routeit",
+      "packageName": "@vielzeug/wayfinder",
+      "projectFolder": "packages/wayfinder",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/stateit",
-      "projectFolder": "packages/stateit",
+      "packageName": "@vielzeug/ripple",
+      "projectFolder": "packages/ripple",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/sourceit",
-      "projectFolder": "packages/sourceit",
+      "packageName": "@vielzeug/sourcerer",
+      "projectFolder": "packages/sourcerer",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/toolkit",
-      "projectFolder": "packages/toolkit",
+      "packageName": "@vielzeug/arsenal",
+      "projectFolder": "packages/arsenal",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/timit",
-      "projectFolder": "packages/timit",
+      "packageName": "@vielzeug/coins",
+      "projectFolder": "packages/coins",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/validit",
-      "projectFolder": "packages/validit",
+      "packageName": "@vielzeug/tempo",
+      "projectFolder": "packages/tempo",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/wireit",
-      "projectFolder": "packages/wireit",
+      "packageName": "@vielzeug/spell",
+      "projectFolder": "packages/spell",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/workit",
-      "projectFolder": "packages/workit",
+      "packageName": "@vielzeug/conduit",
+      "projectFolder": "packages/conduit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/virtualit",
-      "projectFolder": "packages/virtualit",
+      "packageName": "@vielzeug/familiar",
+      "projectFolder": "packages/familiar",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/dragit",
-      "projectFolder": "packages/dragit",
+      "packageName": "@vielzeug/scroll",
+      "projectFolder": "packages/scroll",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/mcpit",
-      "projectFolder": "packages/mcpit",
+      "packageName": "@vielzeug/grip",
+      "projectFolder": "packages/grip",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/codex",
+      "projectFolder": "packages/codex",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/clockwork",
+      "projectFolder": "packages/clockwork",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

@@ -1,0 +1,4 @@
+export const fieldBindingExample = {
+  code: "import { createForm, ValidationModes } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: {\n    firstName: '',\n    lastName: '',\n    email: '',\n  },\n  connect: ValidationModes.onTouched,\n  validators: {\n    email: (value) => (!String(value).includes('@') ? 'Invalid email' : undefined),\n  },\n})\n\nconst firstNameConn = form.connect('firstName')\nconst emailConn = form.connect('email')\n\nconsole.log('Initial connection state:', {\n  firstName: firstNameConn.value,\n  emailError: emailConn.error,\n})\n\nfirstNameConn.onChange('John')\nemailConn.onChange('john')\nconsole.log('After typing:', form.values())\n\nemailConn.onBlur()\nawait form.validateField('email')\nconsole.log('After blur validation:', form.field('email'))\n\nemailConn.onChange('john@example.com')\nawait form.validateField('email')\nconsole.log('After fixing email:', form.field('email'))",
+  name: 'Field Connection (connect)',
+};

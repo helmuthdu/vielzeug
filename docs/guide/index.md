@@ -1,6 +1,7 @@
 ---
 title: Getting Started
 description: Vielzeug is a collection of focused TypeScript packages — each one does one thing well, and they all fit together naturally.
+sidebar: false
 ---
 
 # Getting Started
@@ -13,11 +14,6 @@ You don't need to adopt the whole ecosystem. Pick the packages you need and impo
 The [REPL](/repl.html) lets you run any package in the browser without installing anything.
 :::
 
-## Integration Guides
-
-- [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Validit + Formit + Fetchit
-- [State and Routing](./state-and-routing.md) - Stateit + Routeit
-
 ## Install a Package
 
 Every package is independent. Install just what you need:
@@ -25,27 +21,27 @@ Every package is independent. Install just what you need:
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/stateit
+pnpm add @vielzeug/ripple
 ```
 
 ```sh [npm]
-npm install @vielzeug/stateit
+npm install @vielzeug/ripple
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/stateit
+yarn add @vielzeug/ripple
 ```
 
 :::
 
 ## The Packages
 
-### Reactive State — [Stateit](/stateit/)
+### Reactive State — [Ripple](/ripple/)
 
 Fine-grained signals with computed values, effects, and batched updates. No classes, no decorators — just functions.
 
 ```typescript
-import { signal, computed, effect } from '@vielzeug/stateit';
+import { signal, computed, effect } from '@vielzeug/ripple';
 
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
@@ -59,12 +55,12 @@ count.value++; // → 2
 
 ---
 
-### Web Components — [Craftit](/craftit/)
+### Web Components — [Craft](/craft/)
 
-Define custom elements with a clean setup function, reactive templates, and automatic lifecycle management. Built on top of Stateit signals.
+Define custom elements with a clean setup function, reactive templates, and automatic lifecycle management. Built on top of Ripple signals.
 
 ```typescript
-import { define, html, signal } from '@vielzeug/craftit';
+import { define, html, signal } from '@vielzeug/craft';
 
 define('my-counter', () => {
   const count = signal(0);
@@ -77,35 +73,36 @@ define('my-counter', () => {
 
 ---
 
-### Component Library — [Buildit](/buildit/)
+### Component Library — [Sigil](/sigil/)
 
-A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craftit. Drop them straight into your project.
+A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craft. Drop them straight into your project.
 
 ```html
-<bl-button variant="primary" @click="${handleSave}">Save</bl-button> <bl-input label="Email" :value="${emailSignal}" />
+<bit-button variant="solid" color="primary">Save</bit-button>
+<bit-input label="Email"></bit-input>
 ```
 
 **Start here if** you want production-ready components without building from scratch.
 
 ---
 
-### Forms — [Formit](/formit/)
+### Forms — [Forge](/forge/)
 
 Form state management with field validation, dirty tracking, submission handling, and file upload support.
 
 ```typescript
-import { createForm } from '@vielzeug/formit';
-import { v } from '@vielzeug/validit';
+import { createForm } from '@vielzeug/forge';
+import { s } from '@vielzeug/spell';
 
 const form = createForm({
   defaultValues: { email: '', age: 0 },
   validators: {
     email: (val) => {
-      const r = v.string().email().safeParse(val);
+      const r = s.string().email().safeParse(val);
       return r.success ? undefined : r.error.message;
     },
     age: (val) => {
-      const r = v.number().min(18).safeParse(Number(val));
+      const r = s.number().min(18).safeParse(Number(val));
       return r.success ? undefined : r.error.message;
     },
   },
@@ -120,17 +117,17 @@ await form.submit(async (values) => {
 
 ---
 
-### Validation — [Validit](/validit/)
+### Validation — [Spell](/spell/)
 
-Schema-based validation with a chainable builder, async validators, and detailed error messages. Pairs naturally with Formit.
+Schema-based validation with a chainable builder, async validators, and detailed error messages. Pairs naturally with Forge.
 
 ```typescript
-import { v } from '@vielzeug/validit';
+import { s } from '@vielzeug/spell';
 
-const schema = v.object({
-  name: v.string().min(2).max(50),
-  email: v.string().email(),
-  age: v.number().min(18).optional(),
+const schema = s.object({
+  name: s.string().min(2).max(50),
+  email: s.string().email(),
+  age: s.number().min(18).optional(),
 });
 
 const result = schema.safeParse(input);
@@ -141,12 +138,12 @@ if (!result.success) console.log(result.error.issues);
 
 ---
 
-### HTTP Client — [Fetchit](/fetchit/)
+### HTTP Client — [Courier](/courier/)
 
 A modern HTTP client with request deduplication, smart caching, retries, and a query layer.
 
 ```typescript
-import { createApi, createQuery } from '@vielzeug/fetchit';
+import { createApi, createQuery } from '@vielzeug/courier';
 
 const api = createApi({ baseUrl: '/api' });
 const queryClient = createQuery({ staleTime: 5_000 });
@@ -166,17 +163,17 @@ queryClient.invalidate(['user', id]);
 
 ---
 
-### Client Storage — [Deposit](/deposit/)
+### Client Storage — [Vault](/vault/)
 
 Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
 
 ```typescript
-import { createLocalStorage, table } from '@vielzeug/deposit';
+import { createLocalStorage, table } from '@vielzeug/vault';
 
 type User = { id: string; name: string; role: string };
 
 const schema = { users: table<User>('id') };
-const db = createLocalStorage('myapp', schema);
+const db = createLocalStorage({ name: 'myapp', schema });
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
 const admins = await db.query('users').equals('role', 'admin').toArray();
@@ -186,12 +183,12 @@ const admins = await db.query('users').equals('role', 'admin').toArray();
 
 ---
 
-### Routing — [Routeit](/routeit/)
+### Routing — [Wayfinder](/wayfinder/)
 
 Hash and History router with type-safe params, middleware, async handlers, and View Transitions API support.
 
 ```typescript
-import { createRouter } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
@@ -211,14 +208,14 @@ const router = createRouter({
 
 ---
 
-### Permissions — [Permit](/permit/)
+### Permissions — [Ward](/ward/)
 
 Role-based access control with wildcard support, dynamic permission functions, and anonymous user handling.
 
 ```typescript
-import { createPermit, owns } from '@vielzeug/permit';
+import { createWard, owns } from '@vielzeug/ward';
 
-const permit = createPermit<'create' | 'update' | 'delete', { authorId: string }>([
+const ward = createWard<'create' | 'update' | 'delete', { authorId: string }>([
   { role: 'admin', resource: 'posts', action: 'create', effect: 'allow' },
   { role: 'admin', resource: 'posts', action: 'update', effect: 'allow' },
   { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
@@ -226,7 +223,7 @@ const permit = createPermit<'create' | 'update' | 'delete', { authorId: string }
   { role: 'user', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
 ]);
 
-if (!permit.can(currentUser, 'posts', 'delete')) {
+if (!ward.can(currentUser, 'posts', 'delete')) {
   throw new ForbiddenError();
 }
 ```
@@ -235,12 +232,12 @@ if (!permit.can(currentUser, 'posts', 'delete')) {
 
 ---
 
-### Dependency Injection — [Wireit](/wireit/)
+### Dependency Injection — [Conduit](/conduit/)
 
 Typed DI container with singleton and transient lifetimes, child scopes, and circular dependency detection.
 
 ```typescript
-import { createContainer, createToken } from '@vielzeug/wireit';
+import { createContainer, createToken } from '@vielzeug/conduit';
 
 const LoggerToken = createToken<Logger>('Logger');
 const ApiToken = createToken<ApiService>('ApiService');
@@ -256,12 +253,12 @@ const api = await container.resolve(ApiToken);
 
 ---
 
-### Utilities — [Toolkit](/toolkit/)
+### Utilities — [Arsenal](/arsenal/)
 
 75+ tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
 
 ```typescript
-import { debounce, group, clamp, isEqual } from '@vielzeug/toolkit';
+import { debounce, group, clamp, isEqual } from '@vielzeug/arsenal';
 
 const search = debounce(fetchResults, 300);
 const byRole = group(users, (u) => u.role); // { admin: [...], user: [...] }
@@ -273,34 +270,64 @@ const unchanged = isEqual(prev, next);
 
 ---
 
+### State Machines — [Clockwork](/clockwork/)
+
+Typed finite state machines with discriminated event unions, guard conditions, async invokes with cancellation, and reactive state/context as Ripple signals.
+
+```typescript
+import { defineMachine, interpret } from '@vielzeug/clockwork';
+
+type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
+
+const authMachine = defineMachine({
+  initial: 'idle',
+  context: { token: '' },
+  states: {
+    idle: { on: { LOGIN: [{ target: 'active', actions: [({ context, event }) => { context.token = event.token; }] }] } },
+    active: { on: { LOGOUT: [{ target: 'idle', actions: [({ context }) => { context.token = ''; }] }] } },
+  },
+});
+
+const auth = interpret(authMachine);
+auth.send({ type: 'LOGIN', token: 'abc123' });
+console.log(auth.state.value); // 'active'
+```
+
+**Start here if** you need predictable state transitions with strict type safety and reactive UI binding.
+
+---
+
 ### Other Packages
 
 | Package                  | What it does                                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
-| **[Logit](/logit/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
-| **[i18nit](/i18nit/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
-| **[Eventit](/eventit/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
-| **[Workit](/workit/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
-| **[Dragit](/dragit/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
-| **[Floatit](/floatit/)**     | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
-| **[Sourceit](/sourceit/)**   | Typed local and remote data sources for pagination, filtering, sorting, and search              |
-| **[Timit](/timit/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
-| **[Virtualit](/virtualit/)** | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
+| **[Rune](/rune/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
+| **[Lingua](/lingua/)**     | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
+| **[Herald](/herald/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
+| **[Familiar](/familiar/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
+| **[Grip](/grip/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
+| **[Orbit](/orbit/)**     | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
+| **[Sourcerer](/sourcerer/)**   | Typed local and remote data sources for pagination, filtering, sorting, and search              |
+| **[Tempo](/tempo/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
+| **[Scroll](/scroll/)** | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
 
 ## Packages That Work Well Together
 
 | Combination           | Why                                                                                       |
 | --------------------- | ----------------------------------------------------------------------------------------- |
-| **Stateit + Craftit**       | Craftit templates are powered by Stateit signals — same reactive primitives, zero glue                   |
-| **Validit + Formit**        | Pass a Validit schema directly as a field validator — one schema serves both form and API                |
-| **Fetchit + Stateit**       | Fetch remote data with caching, push results into a signal for reactive rendering                        |
-| **Deposit + Fetchit**       | Persist query results in IndexedDB for offline-capable apps                                              |
-| **Permit + Routeit**        | Check permissions in router middleware before the route handler ever runs                                |
-| **Wireit + Logit**          | Register a scoped logger per service in your DI container                                                |
-| **Sourceit + Fetchit**      | Use Fetchit as the HTTP transport inside a `createRemoteSource` for pagination and search with caching   |
-| **Virtualit + Floatit**     | Render a virtualised list inside a Floatit-positioned dropdown for high-item-count comboboxes            |
-| **Dragit + Virtualit**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
-| **Sourceit + Routeit**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
+| **Ripple + Craft**       | Craft templates are powered by Ripple signals — same reactive primitives, zero glue                   |
+| **Spell + Forge**        | Pass a Spell schema directly as a field validator — one schema serves both form and API                |
+| **Courier + Ripple**       | Fetch remote data with caching, push results into a signal for reactive rendering                        |
+| **Vault + Courier**       | Persist query results in IndexedDB for offline-capable apps                                              |
+| **Ward + Wayfinder**      | Check permissions in router middleware before the route handler ever runs                                |
+| **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                |
+| **Sourcerer + Courier**      | Use Courier as the HTTP transport inside a `createRemoteSource` for pagination and search with caching   |
+| **Scroll + Orbit**     | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
+| **Grip + Scroll**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
+| **Sourcerer + Wayfinder**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
+| **Clockwork + Ripple**      | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates            |
+| **Clockwork + Ward**       | Call ward predicates inside clockwork guards to block unauthorized transitions                           |
+| **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                |
 
 ## Philosophy
 

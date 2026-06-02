@@ -43,7 +43,7 @@ export function getPackagesData(): PackagesData {
         if (fs.existsSync(distPath)) {
           const distFiles = fs.readdirSync(distPath);
 
-          // Prefer package-named file (e.g., deposit.cjs) over index.cjs
+          // Prefer package-named file (e.g., vault.cjs) over index.cjs
           let cjsFile = distFiles.find((f: string) => f === `${dir}.cjs`);
 
           if (!cjsFile) {

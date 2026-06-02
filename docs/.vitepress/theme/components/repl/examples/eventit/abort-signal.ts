@@ -1,4 +1,0 @@
-export const abortSignalExample = {
-  code: "import { createBus, BusDisposedError } from '@vielzeug/eventit'\n\ntype AppEvents = {\n  message: string\n}\n\nconst bus = createBus<AppEvents>()\n\nconst controller = new AbortController()\nconst { signal } = controller\n\nbus.on('message', (msg) => {\n  console.log('Listener with signal:', msg)\n}, signal)\n\nbus.emit('message', 'First message')\nbus.emit('message', 'Second message')\n\ncontroller.abort()\n\nbus.emit('message', 'Third message')\nconsole.log('After abort, the third message is ignored')\n\nconst bus2 = createBus<AppEvents>()\n\nvoid bus2.wait('message').catch((err) => {\n  if (err instanceof BusDisposedError) {\n    console.log('Caught BusDisposedError:', err.message)\n  }\n})\n\nbus2.dispose()",
-  name: 'AbortSignal & BusDisposedError',
-};

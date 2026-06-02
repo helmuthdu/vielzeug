@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/forge",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

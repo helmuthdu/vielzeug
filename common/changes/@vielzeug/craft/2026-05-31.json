@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/craft",
+      "comment": "Initial major release",
+      "type": "major"
+    }
+  ]
+}

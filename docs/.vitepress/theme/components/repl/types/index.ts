@@ -1,42 +1,46 @@
-import { craftitTypes } from './craftit';
-import { depositTypes } from './deposit';
-import { dragitTypes } from './dragit';
-import { eventitTypes } from './eventit';
-import { fetchitTypes } from './fetchit';
-import { floatitTypes } from './floatit';
-import { formitTypes } from './formit';
-import { i18nitTypes } from './i18nit';
-import { logitTypes } from './logit';
-import { permitTypes } from './permit';
-import { routeitTypes } from './routeit';
-import { sourceitTypes } from './sourceit';
-import { stateitTypes } from './stateit';
-import { timitTypes } from './timit';
-import { toolkitTypes } from './toolkit';
-import { validitTypes } from './validit';
-import { virtualitTypes } from './virtualit';
-import { wireitTypes } from './wireit';
-import { workitTypes } from './workit';
+import { arsenalTypes } from './arsenal';
+import { clockworkTypes } from './clockwork';
+import { coinsTypes } from './coins';
+import { conduitTypes } from './conduit';
+import { courierTypes } from './courier';
+import { craftTypes } from './craft';
+import { familiarTypes } from './familiar';
+import { forgeTypes } from './forge';
+import { gripTypes } from './grip';
+import { heraldTypes } from './herald';
+import { linguaTypes } from './lingua';
+import { orbitTypes } from './orbit';
+import { rippleTypes } from './ripple';
+import { runeTypes } from './rune';
+import { scrollTypes } from './scroll';
+import { sourcererTypes } from './sourcerer';
+import { spellTypes } from './spell';
+import { tempoTypes } from './tempo';
+import { vaultTypes } from './vault';
+import { wardTypes } from './ward';
+import { wayfinderTypes } from './wayfinder';
 
 export const libraryTypes = {
-  craftit: craftitTypes,
-  deposit: depositTypes,
-  dragit: dragitTypes,
-  eventit: eventitTypes,
-  fetchit: fetchitTypes,
-  floatit: floatitTypes,
-  formit: formitTypes,
-  i18nit: i18nitTypes,
-  logit: logitTypes,
-  permit: permitTypes,
-  routeit: routeitTypes,
-  sourceit: sourceitTypes,
-  stateit: stateitTypes,
-  timit: timitTypes,
-  validit: validitTypes,
-  virtualit: virtualitTypes,
-  wireit: wireitTypes,
-  workit: workitTypes,
+  clockwork: clockworkTypes,
+  coins: coinsTypes,
+  conduit: conduitTypes,
+  courier: courierTypes,
+  craft: craftTypes,
+  familiar: familiarTypes,
+  forge: forgeTypes,
+  grip: gripTypes,
+  herald: heraldTypes,
+  lingua: linguaTypes,
+  orbit: orbitTypes,
+  ripple: rippleTypes,
+  rune: runeTypes,
+  scroll: scrollTypes,
+  sourcerer: sourcererTypes,
+  spell: spellTypes,
+  tempo: tempoTypes,
+  vault: vaultTypes,
+  ward: wardTypes,
+  wayfinder: wayfinderTypes,
 };
 
-export { toolkitTypes };
+export { arsenalTypes };

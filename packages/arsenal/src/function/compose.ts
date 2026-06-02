@@ -1,0 +1,39 @@
+import type { Fn } from '../types';
+
+import { assert } from './assert';
+
+type LastParameters<T extends readonly Fn[]> = T extends [...unknown[], infer Last extends Fn]
+  ? Parameters<Last>
+  : never;
+type FirstReturnType<T extends readonly Fn[]> = T extends [infer First extends Fn, ...unknown[]]
+  ? ReturnType<First>
+  : never;
+
+/**
+ * Composes multiple functions into a single function. It starts from the rightmost function and proceeds to the left.
+ *
+ * @example
+ * ```ts
+ * const add = (x) => x + 2;
+ * const multiply = (x) => x * 3;
+ * const subtract = (x) => x - 4;
+ * const composedFn = compose(subtract, multiply, add);
+ * composedFn(5); // ((5 + 2) * 3) - 4 = 17
+ * ```
+ *
+ * @param fns - List of the functions to be composed.
+ *
+ * @returns A new function that is the composition of the input functions.
+ */
+export function compose(): never;
+export function compose<T extends readonly [Fn, ...Fn[]]>(
+  ...fns: T
+): (...args: LastParameters<T>) => FirstReturnType<T>;
+export function compose(...fns: Fn[]): Fn {
+  assert(fns.length > 0, 'compose requires at least one function');
+
+  const lastFn = fns[fns.length - 1];
+  const restFns = fns.slice(0, -1);
+
+  return (...args: unknown[]) => restFns.reduceRight((prev: unknown, fn) => fn(prev), lastFn(...args));
+}
