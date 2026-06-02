@@ -11,6 +11,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
+      { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
       { find: /^@vielzeug\/orbit\/inline$/, replacement: path.resolve(__dirname, 'src/inline.ts') },
       { find: /^@vielzeug\/orbit\/presets$/, replacement: path.resolve(__dirname, 'src/presets.ts') },
       { find: /^@vielzeug\/orbit\/reactive$/, replacement: path.resolve(__dirname, 'src/reactive.ts') },

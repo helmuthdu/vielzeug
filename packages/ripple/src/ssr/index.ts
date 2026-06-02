@@ -72,7 +72,6 @@ export const setTrackingProvider = (provider: TrackingProvider | null): void => 
 export const createAsyncProvider = (): TrackingProvider => {
   // Dynamic require so this module can be bundled for environments without AsyncLocalStorage.
   // In browser builds, this code path should never be reached.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { AsyncLocalStorage } = require('async_hooks') as { AsyncLocalStorage: new <T>() => AsyncLocalStorageType<T> };
   const storage = new AsyncLocalStorage<TrackingContext | null>();
 

@@ -54,11 +54,19 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 ### Package Dependency Graph (notable edges)
 
 ```
-sigil    → craft → ripple, orbit
-sigil    → arsenal, grip, scroll
-courier  → arsenal
-sourcerer → arsenal
 clockwork → ripple
+coins → arsenal
+courier → arsenal
+craft → arsenal, ripple
+familiar → arsenal
+forge → arsenal, ripple
+herald → arsenal
+orbit → arsenal, ripple
+scroll → ripple
+sigil → arsenal, craft, grip, orbit, ripple, scroll
+sourcerer → arsenal, ripple
+spell → arsenal
+tempo → arsenal
 ```
 
 All other packages are fully independent.

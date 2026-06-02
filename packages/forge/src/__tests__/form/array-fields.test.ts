@@ -1,5 +1,6 @@
-import { createForm } from '../../index';
 import type { Form } from '../../types';
+
+import { createForm } from '../../index';
 
 describe('array field helpers', () => {
   test('append adds an item to existing array', () => {

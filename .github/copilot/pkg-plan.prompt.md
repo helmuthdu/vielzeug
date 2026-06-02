@@ -179,6 +179,7 @@ Consider the dependency graph when suggesting breaking changes or major refactor
 
 ```
 clockwork → ripple
+coins → arsenal
 courier → arsenal
 craft → arsenal, ripple
 familiar → arsenal
@@ -186,7 +187,7 @@ forge → arsenal, ripple
 herald → arsenal
 orbit → arsenal, ripple
 scroll → ripple
-sigil → craft, grip, orbit, ripple, arsenal, scroll
+sigil → arsenal, craft, grip, orbit, ripple, scroll
 sourcerer → arsenal, ripple
 spell → arsenal
 tempo → arsenal

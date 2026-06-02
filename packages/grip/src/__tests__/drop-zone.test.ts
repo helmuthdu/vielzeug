@@ -424,7 +424,7 @@ describe('createDropZone', () => {
       const onDrop = vi.fn();
 
       {
-        createDropZone({ element, onDrop });
+        using _zone = createDropZone({ element, onDrop });
       }
 
       element.dispatchEvent(makeDragEvent('drop', { files: [new File([''], 'a.txt')] }));
