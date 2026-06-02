@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/sourcerer",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

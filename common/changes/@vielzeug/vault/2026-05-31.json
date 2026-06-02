@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/vault",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

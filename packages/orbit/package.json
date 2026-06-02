@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/orbit",
-  "version": "3.0.4",
+  "version": "4.0.0",
   "type": "module",
   "files": [
     "dist"

@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/clockwork",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

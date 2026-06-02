@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/sigil",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

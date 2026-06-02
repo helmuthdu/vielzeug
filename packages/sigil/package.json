@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sigil",
-  "version": "3.0.4",
+  "version": "4.0.0",
   "type": "module",
   "customElements": "dist/custom-elements.json",
   "files": [

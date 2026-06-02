@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/orbit",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

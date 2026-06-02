@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/conduit",
+  "entries": [
+    {
+      "version": "4.0.0",
+      "tag": "@vielzeug/conduit_v4.0.0",
+      "date": "Tue, 02 Jun 2026 17:13:14 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial major release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "572badce96941a3b4eb0879c43f19e23c347d5b1"
+          }
+        ]
+      }
+    }
+  ]
+}

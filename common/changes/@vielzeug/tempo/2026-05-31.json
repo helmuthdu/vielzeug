@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/tempo",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

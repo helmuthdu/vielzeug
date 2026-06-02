@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/codex",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

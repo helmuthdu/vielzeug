@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/wayfinder",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}

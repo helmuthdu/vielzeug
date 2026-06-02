@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/rune",
-      "comment": "Initial major release",
-      "type": "major"
-    }
-  ]
-}
