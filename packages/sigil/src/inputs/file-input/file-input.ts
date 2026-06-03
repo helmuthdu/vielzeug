@@ -5,6 +5,7 @@ import {
   html,
   inject,
   onCleanup,
+  onElement,
   onEvent,
   onMounted,
   prop,
@@ -12,6 +13,7 @@ import {
   signal,
 } from '@vielzeug/craft';
 import { createDropZone, matchesAccept } from '@vielzeug/grip';
+import { watch } from '@vielzeug/ripple';
 
 import { createInteraction, createStableId } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
@@ -61,6 +63,13 @@ export type BitFileInputProps = {
   multiple?: boolean;
   /** Form field name */
   name?: string;
+  /**
+   * JS-only callback fired with the inner `<input type="file">` element when it
+   * mounts, and with `null` when it unmounts. Intended for composed components
+   * that need imperative access to the raw element.
+   * Set as a JS property: `bitFileInput.ref = (el) => { ... }`.
+   */
+  ref?: ((el: HTMLInputElement | null) => void) | null;
   /** Required field */
   required?: boolean;
   /** Field size preset */
@@ -130,6 +139,7 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
     'max-size': prop.number(0),
     multiple: prop.bool(false),
     name: prop.string(),
+    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
     required: prop.bool(false),
     size: prop.string(),
   },
@@ -255,6 +265,19 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
     // ============================================
     // Template
     // ============================================
+    onElement(inputRef, (inp) => {
+      props.ref.value?.(inp);
+
+      const sub = watch(props.ref, (cb) => {
+        cb?.(inp);
+      });
+
+      return () => {
+        sub.dispose();
+        props.ref.value?.(null);
+      };
+    });
+
     onMounted(() => {
       const inp = inputRef.value!;
       const dz = dropzoneRef.value!;

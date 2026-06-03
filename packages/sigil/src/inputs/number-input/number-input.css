@@ -15,55 +15,15 @@
     width: 100%;
   }
 
-  /* Align buttons to top and add margin when label is outside */
+  /* Align buttons to the top when the label is outside (it adds height above the field) */
   :host([label-placement='outside']) .wrapper {
-    align-items: flex-start;
+    align-items: flex-end;
   }
 
-  :host([label-placement='outside']) button {
-    margin-top: var(--size-7);
-  }
-
-  .field-wrapper {
-    position: relative;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: var(--size-1);
-  }
-
-  .label {
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
-    cursor: pointer;
-    user-select: none;
-    transition: color var(--transition-fast);
-  }
-
-  /* Inset placement (default): label floats over the field */
-  :host(:not([label-placement='outside'])) .label {
-    position: absolute;
-    inset-block-start: var(--size-2);
-    inset-inline-start: var(--size-3);
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  :host(:not([label-placement='outside'])) .field-wrapper:has(.label:not([hidden])) .field {
-    padding-block-start: calc(var(--size-2) + 1lh + 2px);
-  }
-
-  /* Outside placement */
-  :host([label-placement='outside']) .label {
-    font-size: var(--text-sm);
-    line-height: var(--leading-none);
-  }
-
-  /* Style the spin buttons */
+  /* Spin buttons */
   button {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     width: var(--size-10);
@@ -98,16 +58,16 @@
     outline-offset: 2px;
   }
 
-  /* Style the inner <input> through bit-input's exported part */
-  bit-input::part(input) {
+  /* Centre the typed number inside the field */
+  .field::part(input) {
     text-align: center;
   }
 
-  bit-input {
+  .field {
     width: var(--size-20);
   }
 
-  :host([fullwidth]) bit-input {
+  :host([fullwidth]) .field {
     flex: 1;
     width: auto;
     min-width: 0;

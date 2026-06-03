@@ -110,6 +110,20 @@ export { announce, type AnnouncePoliteness, type AnnounceOptions } from './annou
 // ── Focus management ─────────────────────────────────────────────────────────
 export { createFocusManager, type FocusManager, type FocusManagerOptions } from './focus';
 
+// ── Date picker ──────────────────────────────────────────────────────────────
+export {
+  createDatePickerControl,
+  formatDisplayDate,
+  parseIso,
+  toIsoString,
+  type DateCell,
+  type DatePickerControl,
+  type DatePickerControlOptions,
+  type DatePickerView,
+  type MonthCell,
+  type YearCell,
+} from './date-picker';
+
 // ── Dialog focus ─────────────────────────────────────────────────────────────
 export { createDialogFocusControl, type DialogFocusControl, type DialogFocusControlOptions } from './dialog-focus';
 
@@ -122,3 +136,14 @@ export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
 
 // ── Number utilities ──────────────────────────────────────────────────────────
 export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
+
+// ── Data grid ─────────────────────────────────────────────────────────────────
+export {
+  createDataGridControl,
+  type DataGridColumn,
+  type DataGridControl,
+  type DataGridControlOptions,
+  type SelectionMode,
+  type SortDirection,
+  type SortState,
+} from './datagrid';

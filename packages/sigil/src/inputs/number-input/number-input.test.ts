@@ -1,5 +1,17 @@
 import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
+function getInput(fixture: Fixture<HTMLElement>): HTMLInputElement | null {
+  const bitInput = fixture.query('bit-input.field');
+
+  return bitInput?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+}
+
+function getLabel(fixture: Fixture<HTMLElement>): HTMLElement | null {
+  const bitInput = fixture.query('bit-input.field');
+
+  return bitInput?.shadowRoot?.querySelector<HTMLElement>('label') ?? null;
+}
+
 describe('bit-number-input', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -36,15 +48,16 @@ describe('bit-number-input', () => {
 
     it('renders a native input with part="input"', async () => {
       fixture = await mount('bit-number-input');
+      await fixture.flush();
 
-      expect(fixture.query('input[part="input"]')).toBeTruthy();
+      expect(getInput(fixture)).toBeTruthy();
     });
 
     it('renders a label element when label prop is set', async () => {
       fixture = await mount('bit-number-input', { attrs: { label: 'Quantity' } });
       await fixture.flush();
 
-      const label = fixture.query('label');
+      const label = getLabel(fixture);
 
       expect(label?.textContent?.trim()).toBe('Quantity');
     });
@@ -53,7 +66,8 @@ describe('bit-number-input', () => {
       fixture = await mount('bit-number-input');
       await fixture.flush();
 
-      const labels = Array.from(fixture.element.shadowRoot?.querySelectorAll('label') ?? []);
+      const bitInput = fixture.query('bit-input.field');
+      const labels = Array.from(bitInput?.shadowRoot?.querySelectorAll('label') ?? []);
 
       expect(labels.every((l) => l.hidden)).toBe(true);
     });
@@ -82,18 +96,16 @@ describe('bit-number-input', () => {
 
     it('applies placeholder to inner input', async () => {
       fixture = await mount('bit-number-input', { attrs: { placeholder: '0' } });
+      await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('[part="input"]');
-
-      expect(input?.getAttribute('placeholder')).toBe('0');
+      expect(getInput(fixture)?.getAttribute('placeholder')).toBe('0');
     });
 
     it('inner input uses inputmode="decimal"', async () => {
       fixture = await mount('bit-number-input');
+      await fixture.flush();
 
-      const input = fixture.query('[part="input"]');
-
-      expect(input?.getAttribute('inputmode')).toBe('decimal');
+      expect(getInput(fixture)?.getAttribute('inputmode')).toBe('decimal');
     });
   });
 
@@ -324,10 +336,9 @@ describe('bit-number-input accessibility', () => {
   describe('Input accessible to AT', () => {
     it('inner input is not aria-hidden', async () => {
       fixture = await mount('bit-number-input');
+      await fixture.flush();
 
-      const input = fixture.query('[part="input"]');
-
-      expect(input?.getAttribute('aria-hidden')).toBeNull();
+      expect(getInput(fixture)?.getAttribute('aria-hidden')).toBeNull();
     });
   });
 });

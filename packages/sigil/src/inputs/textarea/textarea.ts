@@ -1,4 +1,5 @@
 import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
+import { watch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
@@ -31,6 +32,13 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
   maxlength?: number;
   /** Disable a manual resize handle */
   'no-resize'?: boolean;
+  /**
+   * JS-only callback fired with the inner `<textarea>` element when it mounts,
+   * and with `null` when it unmounts. Intended for composed components that
+   * need imperative access to the raw element.
+   * Set as a JS property: `bitTextarea.ref = (el) => { ... }`.
+   */
+  ref?: ((el: HTMLTextAreaElement | null) => void) | null;
   /** Resize direction override */
   resize?: 'none' | 'horizontal' | 'both' | 'vertical';
   /** Number of visible text rows */
@@ -103,6 +111,7 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
     'no-resize': prop.bool(false),
     placeholder: prop.string(),
     readonly: prop.bool(false),
+    ref: prop.json(undefined as ((el: HTMLTextAreaElement | null) => void) | null | undefined),
     required: prop.bool(false),
     resize: prop.string<'none' | 'both' | 'horizontal' | 'vertical'>(),
     rows: prop.json(undefined as number | undefined),
@@ -150,6 +159,13 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
+
+      props.ref.value?.(textareaEl);
+
+      const sub = watch(props.ref, (cb) => {
+        cb?.(textareaEl);
+      });
+
       const stopLayoutEffect = effect(() => {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
@@ -160,6 +176,8 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
       });
 
       return () => {
+        sub.dispose();
+        props.ref.value?.(null);
         unwireEl();
         stopLayoutEffect();
       };

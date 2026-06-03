@@ -36,6 +36,13 @@
     border-radius: var(--_radius);
   }
 
+  .badge-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   ::slotted([slot='icon']) {
     display: inline-flex;
     flex-shrink: 0;
@@ -79,8 +86,17 @@
   /* Dot-only mode */
   :host([dot]) .badge {
     min-width: unset;
-    padding: var(--size-1);
+    padding: var(--_dot-padding, var(--size-1));
     line-height: 0;
+  }
+}
+
+@layer sigil.sizes {
+  :host([size='xs']) {
+    --_padding-x: var(--size-1);
+    --_padding-y: 0px;
+    --_font-size: var(--text-2xs);
+    --_dot-padding: var(--size-0-5);
   }
 }
 

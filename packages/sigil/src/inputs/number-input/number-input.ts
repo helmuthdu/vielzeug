@@ -1,14 +1,15 @@
 import { clamp } from '@vielzeug/arsenal';
-import { computed, define, defineField, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
+import { computed, define, effect, html, inject, onElement, prop, ref, signal } from '@vielzeug/craft';
+import { watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createSpinnerControl } from '../../headless';
 import '../../content/icon/icon';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
+import '../input/input';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { useTextField } from '../shared/use-field';
 import styles from './number-input.css?inline';
 
 export type BitNumberInputEvents = {
@@ -22,8 +23,12 @@ export type BitNumberInputProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
+  /** Error message */
+  error?: string;
   /** Stretch to full width of container */
   fullwidth?: boolean;
+  /** Helper text */
+  helper?: string;
   /** Visible label */
   label?: string;
   /** Label placement: 'inset' renders the label inside the control box, 'outside' renders it above */
@@ -40,6 +45,14 @@ export type BitNumberInputProps = {
   placeholder?: string;
   /** Make the input read-only */
   readonly?: boolean;
+  /**
+   * JS-only callback fired with the inner `<input>` element when it mounts,
+   * and with `null` when it unmounts.
+   * Set as a JS property: `bitNumberInput.ref = (el) => { ... }`.
+   */
+  ref?: ((el: HTMLInputElement | null) => void) | null;
+  /** Border radius */
+  rounded?: string;
   /** Component size */
   size?: ComponentSize;
   /** Step size for increment/decrement */
@@ -93,7 +106,10 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
+    ...roundableBundle,
+    error: prop.string(),
     fullwidth: prop.bool(false),
+    helper: prop.string(),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     'large-step': prop.json(undefined as number | undefined),
@@ -102,44 +118,26 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
     name: prop.string(),
     placeholder: prop.string(),
     readonly: prop.bool(false),
+    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
     step: prop.number(1),
     value: prop.json(undefined as number | undefined),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, el: _el, emit }) {
+  setup(props, { bind, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
-    const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
     const isDisabled = fCtxProps.disabled;
     const isReadonly = computed(() => Boolean(props.readonly.value));
-    const inputRef = ref<HTMLInputElement>();
 
-    const tf = useTextField(
-      {
-        disabled: fCtxProps.disabled,
-        error: undefined,
-        helper: undefined,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        onChange: (event: Event, value: string) => {
-          const n = value !== '' ? Number.parseFloat(value) : null;
+    // Internal numeric value signal (string representation for the input)
+    const fieldValue = signal(props.value.value != null ? String(props.value.value) : '');
 
-          commit(Number.isNaN(n ?? NaN) ? null : n, event);
-        },
-        onInput: (event: Event, value: string) => {
-          const n = value !== '' ? Number.parseFloat(value) : null;
+    // Keep fieldValue in sync when props.value changes externally
+    watch(props.value, (v) => {
+      const next = v != null ? String(v) : '';
 
-          emit('input', { originalEvent: event, value: Number.isNaN(n ?? NaN) ? null : n });
-        },
-        prefix: 'number-input',
-        validateOn: formCtx?.validateOn,
-        value: computed(() => normalizeValue(props.value.value)),
-      },
-      defineField,
-      onCleanup,
-    );
-
-    const { abortSignal, aria, assistive, assistiveId, label, value: fieldValue } = tf;
+      if (fieldValue.value !== next) fieldValue.value = next;
+    });
 
     function parseValue(): number | null {
       const v = fieldValue.value.trim();
@@ -173,7 +171,64 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
       step: props.step,
     });
 
-    onElement(inputRef, (el) => tf.wire(el, abortSignal));
+    // Ref to the bit-input host element
+    const bitInputRef = ref<HTMLElement>();
+    // Raw inner <input> extracted from bit-input's shadow root
+    let inputEl: HTMLInputElement | null = null;
+
+    onElement(bitInputRef, (bitInputEl) => {
+      const rawInput = bitInputEl.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+
+      if (!rawInput) return;
+
+      inputEl = rawInput;
+
+      // Set inputmode and text-align imperatively
+      rawInput.setAttribute('inputmode', 'decimal');
+
+      // Wire change/input events
+      const handleChange = (e: Event) => {
+        const val = (e.target as HTMLInputElement).value;
+        const n = val !== '' ? Number.parseFloat(val) : null;
+
+        commit(Number.isNaN(n ?? NaN) ? null : n, e);
+      };
+
+      const handleInput = (e: Event) => {
+        const val = (e.target as HTMLInputElement).value;
+        const n = val !== '' ? Number.parseFloat(val) : null;
+
+        fieldValue.value = val;
+        emit('input', { originalEvent: e, value: Number.isNaN(n ?? NaN) ? null : n });
+      };
+
+      rawInput.addEventListener('change', handleChange);
+      rawInput.addEventListener('input', handleInput);
+
+      // Fire user ref callback
+      props.ref.value?.(rawInput);
+
+      const sub = watch(props.ref, (cb) => {
+        cb?.(rawInput);
+      });
+
+      return () => {
+        sub.dispose();
+        props.ref.value?.(null);
+        rawInput.removeEventListener('change', handleChange);
+        rawInput.removeEventListener('input', handleInput);
+        inputEl = null;
+      };
+    });
+
+    // Keep the raw input's displayed value in sync with fieldValue signal
+    effect(() => {
+      if (!bitInputRef.value) return;
+
+      const el = inputEl;
+
+      if (el && el.value !== fieldValue.value) el.value = fieldValue.value;
+    });
 
     bind({
       attr: {
@@ -205,38 +260,24 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
           @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
           <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
         </button>
-        <div class="field-wrapper" part="field">
-          <label class="label" for="${tf.fieldId}" id="${label.id}" part="label" ?hidden="${() => !label.show.value}"
-            >${props.label}</label
-          >
-          <div class="field" part="input-wrapper">
-            <input
-              part="input"
-              id="${tf.fieldId}"
-              type="text"
-              inputmode="decimal"
-              :name="${props.name}"
-              :placeholder="${props.placeholder}"
-              ?disabled="${isDisabled}"
-              ?readonly="${isReadonly}"
-              :value="${live(fieldValue)}"
-              :aria-labelledby="${aria.labelledBy}"
-              :aria-describedby="${aria.describedBy}"
-              :aria-errormessage="${aria.errorMessage}"
-              :aria-invalid="${aria.invalid}"
-              ref="${inputRef}" />
-          </div>
-          <div
-            class="helper-text"
-            id="${assistiveId}"
-            part="helper"
-            ?hidden="${() => !!assistive.value.errorText || !assistive.value.helperText}">
-            ${() => assistive.value.helperText}
-          </div>
-          <div class="helper-text" role="alert" part="error" ?hidden="${() => !assistive.value.errorText}">
-            ${() => assistive.value.errorText}
-          </div>
-        </div>
+        <bit-input
+          class="field"
+          part="field"
+          ref="${bitInputRef}"
+          :label="${() => props.label.value ?? ''}"
+          :label-placement="${() => props['label-placement'].value ?? 'inset'}"
+          :placeholder="${() => props.placeholder.value ?? ''}"
+          :name="${() => props.name.value ?? ''}"
+          :helper="${() => props.helper.value ?? ''}"
+          :error="${() => props.error.value ?? ''}"
+          :size="${fCtxProps.size}"
+          :color="${() => props.color.value ?? ''}"
+          :variant="${() => props.variant.value ?? ''}"
+          ?rounded="${() => props.rounded.value}"
+          ?disabled="${isDisabled}"
+          ?readonly="${isReadonly}"
+          ?fullwidth="${() => false}">
+        </bit-input>
         <button
           type="button"
           part="increment-btn"

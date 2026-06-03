@@ -66,6 +66,7 @@ import '@vielzeug/sigil/checkbox';
 import '@vielzeug/sigil/checkbox-group';
 import '@vielzeug/sigil/chip';
 import '@vielzeug/sigil/combobox';
+import '@vielzeug/sigil/date-picker';
 import '@vielzeug/sigil/dialog';
 import '@vielzeug/sigil/drawer';
 import '@vielzeug/sigil/file-input';

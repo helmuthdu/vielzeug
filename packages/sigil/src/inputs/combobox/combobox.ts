@@ -1,4 +1,16 @@
-import { computed, define, defineField, effect, html, inject, onCleanup, prop, signal } from '@vielzeug/craft';
+import {
+  computed,
+  define,
+  defineField,
+  effect,
+  html,
+  inject,
+  onCleanup,
+  onElement,
+  prop,
+  ref,
+  signal,
+} from '@vielzeug/craft';
 
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
@@ -11,19 +23,11 @@ import {
   type DialogCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
-import { FIELD_SIZE_PRESET } from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledLoadingMixin,
-  forcedColorsFocusMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { reducedMotionMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
+import '../input/input';
 import componentStyles from './combobox.css?inline';
 
 export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
@@ -102,9 +106,12 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
 
     // Element refs needed by the composite option-list factory.
     let inputEl: HTMLInputElement | null = null;
-    let fieldEl: HTMLElement | null = null;
+    let fieldEl: HTMLElement | null = null; // set to the bit-input host once it mounts
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
+
+    // Ref to the bit-input host; resolved when the template renders.
+    const bitInputRef = ref<HTMLElement>();
 
     const abortSignal = componentSignal(onCleanup);
     const choice = createChoiceField({
@@ -154,8 +161,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       signal: abortSignal,
     });
 
-    const { assistiveId, disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
-    const labelId = choice.label.id;
+    const { disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
 
     choice.bindFormField(
       defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
@@ -166,8 +172,6 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     const isMultiple = () => Boolean(props.multiple.value);
     const isCreatable = () => Boolean(props.creatable.value);
     const isNoFilter = () => Boolean(props['no-filter'].value);
-    const hasLabel = () => !!props.label.value;
-    const labelHidden = () => !choice.label.show.value;
 
     bind({
       attr: {
@@ -276,7 +280,6 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     const creatableLabel = computed(() => {
       return getCreatableLabel(query.value, isCreatable(), filteredOptions.value);
     });
-    const assistiveText = choice.assistive;
     const inputPlaceholder = () =>
       isMultiple() && selectedValues.value.length > 0 ? '' : props.placeholder.value || '';
 
@@ -672,6 +675,77 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       if (isOpen.value) positioner.update();
     });
 
+    // Once bit-input is in the DOM, grab its inner <input> from its shadow root
+    // and attach all combobox-specific ARIA + event handlers imperatively.
+    // MUST be registered before the ARIA effects below so inputEl is set first
+    // when bitInputRef fires (effects run in registration order).
+    onElement(bitInputRef, (bitInputEl) => {
+      fieldEl = bitInputEl;
+
+      const rawInput = bitInputEl.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+
+      if (!rawInput) return;
+
+      inputEl = rawInput;
+
+      rawInput.setAttribute('role', 'combobox');
+      rawInput.setAttribute('autocomplete', 'off');
+      rawInput.setAttribute('aria-autocomplete', 'list');
+      rawInput.setAttribute('aria-haspopup', 'listbox');
+      rawInput.setAttribute('spellcheck', 'false');
+      rawInput.setAttribute('aria-controls', `${comboId}-listbox`);
+
+      const handleInputClick = (): void => {
+        if (!isOpen.value) openPopup(true, 'click');
+
+        focusLiveInput();
+      };
+
+      rawInput.addEventListener('input', handleInput as EventListener);
+      rawInput.addEventListener('keydown', handleKeydown as EventListener);
+      rawInput.addEventListener('focus', handleFocus);
+      rawInput.addEventListener('click', handleInputClick);
+
+      return () => {
+        inputEl = null;
+        fieldEl = null;
+        rawInput.removeEventListener('input', handleInput as EventListener);
+        rawInput.removeEventListener('keydown', handleKeydown as EventListener);
+        rawInput.removeEventListener('focus', handleFocus);
+        rawInput.removeEventListener('click', handleInputClick);
+      };
+    });
+
+    // Reactively sync combobox-specific ARIA attrs that bit-input doesn't manage.
+    // Uses bitInputRef (a signal) as the gate so the effect re-runs when the
+    // inner input mounts — inputEl is a plain variable and would not trigger re-runs.
+    effect(() => {
+      if (!bitInputRef.value) return;
+
+      const el = inputEl;
+
+      if (!el) return;
+
+      el.setAttribute('aria-expanded', String(isOpen.value));
+
+      if (isDisabled.value) {
+        el.setAttribute('aria-disabled', 'true');
+      } else {
+        el.removeAttribute('aria-disabled');
+      }
+    });
+
+    // Reactively sync the query signal into the raw input value.
+    effect(() => {
+      if (!bitInputRef.value) return;
+
+      const el = inputEl;
+
+      if (!el) return;
+
+      if (el.value !== query.value) el.value = query.value;
+    });
+
     onCleanup(() => {
       shadowRoot?.removeEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
       stopListboxListeners?.();
@@ -680,174 +754,138 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       stopObserving();
     });
 
+    const inputColor = () => props.color?.value ?? undefined;
+    const inputSize = () => fCtxProps.size?.value ?? undefined;
+    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputRounded = () => props.rounded?.value ?? undefined;
+    const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
+
     return html`
       <slot></slot>
-      <div class="combobox-wrapper" part="wrapper">
-        <label class="label" for="${comboId}" id="${labelId}" ?hidden=${labelHidden} part="label">
-          ${props.label}
-        </label>
-        <div
-          class="field"
-          part="field"
-          @click="${(e: MouseEvent) => {
-            fieldPress.handleClick(e);
-          }}">
-          <div class="field-row">
-            <div class="chips-row">
-              <!-- Keep chip list diffing isolated so input node identity stays stable. -->
-              <span class="chips-list">
-                ${() =>
-                  (isMultiple() ? selectedValues.value : []).map(
-                    (value) => html`
-                      <bit-chip
-                        value=${value}
-                        label=${allOptions.value.find((option) => option.value === value)?.label ?? value}
-                        mode="removable"
-                        variant="flat"
-                        size="sm"
-                        color="${props.color}"
-                        @remove=${removeChip}>
-                        ${allOptions.value.find((option) => option.value === value)?.label ?? value}
-                      </bit-chip>
-                    `,
-                  )}
-              </span>
-              <input
-                ref=${(el: HTMLInputElement | null) => {
-                  inputEl = el;
-
-                  if (!el) {
-                    fieldEl = null;
-
-                    return;
-                  }
-
-                  fieldEl = el.closest('.field') as HTMLElement | null;
-                }}
-                class="input"
-                part="input"
-                type="text"
-                role="combobox"
-                autocomplete="off"
-                aria-autocomplete="list"
-                aria-haspopup="listbox"
-                spellcheck="false"
-                id="${comboId}"
-                name="${props.name}"
-                placeholder="${inputPlaceholder}"
-                :aria-controls="${() => `${comboId}-listbox`}"
-                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-                :aria-expanded="${() => String(isOpen.value)}"
-                :aria-describedby="${choice.aria.describedBy}"
-                :aria-invalid="${choice.aria.invalid}"
-                :aria-labelledby="${() => (hasLabel() ? labelId : null)}"
-                :disabled="${isDisabled}"
-                @input=${handleInput}
-                @keydown=${handleKeydown}
-                @focus=${handleFocus}
-                :value=${query} />
-            </div>
-            <button
-              class="clear-btn"
-              part="clear-btn"
-              type="button"
-              aria-label="Clear"
-              tabindex="-1"
-              ?hidden=${() => !hasValue()}
-              @click="${clearValue}">
-              <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
-            </button>
-            <span class="chevron" aria-hidden="true">
+      <bit-input
+        class="trigger"
+        ref=${bitInputRef}
+        :label="${() => props.label.value ?? ''}"
+        :placeholder="${inputPlaceholder}"
+        :label-placement="${() => props['label-placement'].value ?? 'inset'}"
+        :color="${inputColor}"
+        :size="${inputSize}"
+        :variant="${inputVariant}"
+        :rounded="${inputRounded}"
+        :helper="${() => props.helper.value ?? ''}"
+        :error="${() => props.error.value ?? ''}"
+        ?disabled="${isDisabled}"
+        ?required="${() => false}"
+        ?fullwidth="${inputFullwidth}"
+        :name="${() => props.name.value ?? ''}"
+        @click="${(e: MouseEvent) => {
+          fieldPress.handleClick(e);
+        }}"
+        part="wrapper">
+        <div slot="prefix" class="chips-row">
+          <!-- Keep chip list diffing isolated so input node identity stays stable. -->
+          <span class="chips-list">
+            ${() =>
+              (isMultiple() ? selectedValues.value : []).map(
+                (value) => html`
+                  <bit-chip
+                    value=${value}
+                    label=${allOptions.value.find((option) => option.value === value)?.label ?? value}
+                    mode="removable"
+                    variant="flat"
+                    size="sm"
+                    color="${props.color}"
+                    @remove=${removeChip}>
+                    ${allOptions.value.find((option) => option.value === value)?.label ?? value}
+                  </bit-chip>
+                `,
+              )}
+          </span>
+        </div>
+        <span slot="suffix" class="combobox-suffix" aria-hidden="true">
+          <button
+            class="clear-btn"
+            part="clear-btn"
+            type="button"
+            aria-label="Clear"
+            tabindex="-1"
+            ?hidden=${() => !hasValue()}
+            @click="${clearValue}">
+            <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+          </button>
+          <span class="combobox-suffix-end">
+            <span class="loader"></span>
+            <span class="chevron">
               <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-              <span class="loader" aria-label="Loading"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
+      </bit-input>
+      <div
+        class="dropdown"
+        part="dropdown"
+        id="${() => `${comboId}-dropdown`}"
+        ?data-open=${() => isOpen.value}
+        ref=${(el: HTMLElement | null) => {
+          dropdownEl = el;
+        }}>
         <div
-          class="dropdown"
-          part="dropdown"
-          id="${() => `${comboId}-dropdown`}"
-          ?data-open=${() => isOpen.value}
+          role="listbox"
+          id="${() => `${comboId}-listbox`}"
+          :style="${() =>
+            isOpen.value && filteredOptions.value.length > 0 ? `height:${filteredOptions.value.length * 36}px;` : ''}"
+          aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"
           ref=${(el: HTMLElement | null) => {
-            dropdownEl = el;
+            setListboxElement(el);
           }}>
-          <div
-            role="listbox"
-            id="${() => `${comboId}-listbox`}"
-            :style="${() =>
-              isOpen.value && filteredOptions.value.length > 0 ? `height:${filteredOptions.value.length * 36}px;` : ''}"
-            aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"
-            ref=${(el: HTMLElement | null) => {
-              setListboxElement(el);
-            }}>
-            ${() => {
-              if (!isOpen.value) return '';
+          ${() => {
+            if (!isOpen.value) return '';
 
-              if (isLoading()) {
-                return html`<div class="dropdown-loading">Loading...</div>`;
+            if (isLoading()) {
+              return html`<div class="dropdown-loading">Loading...</div>`;
+            }
+
+            if (filteredOptions.value.length === 0) {
+              if (creatableLabel.value) {
+                return html`<button
+                  type="button"
+                  class="no-results-create"
+                  ?data-focused=${() => focusedIndex.value === -1}>
+                  ${creatableLabel.value}
+                </button>`;
               }
 
-              if (filteredOptions.value.length === 0) {
-                if (creatableLabel.value) {
-                  return html`<button
-                    type="button"
-                    class="no-results-create"
-                    ?data-focused=${() => focusedIndex.value === -1}>
-                    ${creatableLabel.value}
-                  </button>`;
-                }
+              return html`<div class="no-results" role="presentation">No results found</div>`;
+            }
 
-                return html`<div class="no-results" role="presentation">No results found</div>`;
-              }
-
-              return filteredOptions.value.map((option, index) => {
-                return html`<div
-                  class="option"
-                  role="option"
-                  id="${`${comboId}-opt-${index}`}"
-                  data-option-index="${index}"
-                  data-option-value="${option.value}"
-                  :aria-selected="${() =>
-                    String(
-                      isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value,
-                    )}"
-                  aria-disabled="${String(option.disabled)}"
-                  style="${`position:absolute;top:0;left:0;right:0;transform:translateY(${index * 36}px);`}"
-                  ?data-focused=${() => focusedIndex.value === index}
-                  ?data-selected=${() =>
-                    isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value}
-                  ?data-disabled=${option.disabled}>
-                  <span>${option.label}</span>
-                  <span class="option-check" aria-hidden="true"
-                    ><bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
-                  ></span>
-                </div>`;
-              });
-            }}
-          </div>
+            return filteredOptions.value.map((option, index) => {
+              return html`<div
+                class="option"
+                role="option"
+                id="${`${comboId}-opt-${index}`}"
+                data-option-index="${index}"
+                data-option-value="${option.value}"
+                :aria-selected="${() =>
+                  String(
+                    isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value,
+                  )}"
+                aria-disabled="${String(option.disabled)}"
+                style="${`position:absolute;top:0;left:0;right:0;transform:translateY(${index * 36}px);`}"
+                ?data-focused=${() => focusedIndex.value === index}
+                ?data-selected=${() =>
+                  isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value}
+                ?data-disabled=${option.disabled}>
+                <span>${option.label}</span>
+                <span class="option-check" aria-hidden="true"
+                  ><bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
+                ></span>
+              </div>`;
+            });
+          }}
         </div>
-
-        <span
-          class="helper-text"
-          id="${assistiveId}"
-          part="helper-text"
-          aria-live="polite"
-          ?hidden=${() => !assistiveText.value.errorText && !assistiveText.value.helperText}
-          style="${() => (assistiveText.value.errorText ? 'color: var(--color-error);' : '')}"
-          >${() => assistiveText.value.errorText || assistiveText.value.helperText}</span
-        >
       </div>
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [
-    sizeVariantMixin(FIELD_SIZE_PRESET),
-    colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    roundedVariantMixin,
-    disabledLoadingMixin(),
-    forcedColorsFocusMixin('.input'),
-    componentStyles,
-  ],
+  styles: [reducedMotionMixin, componentStyles],
 }) as unknown as AddEventListeners<BitComboboxEvents>;

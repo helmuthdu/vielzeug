@@ -9,7 +9,7 @@
     "./generator": "./dist/generator.js"
   },
   "bin": {
-    "vielzeug-mcp": "./dist/cli.js"
+    "codex": "./dist/cli.js"
   },
   "files": [
     "data",

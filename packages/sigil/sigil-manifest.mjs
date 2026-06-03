@@ -17,6 +17,7 @@ export const componentManifest = [
   { name: 'breadcrumb', source: './src/content/breadcrumb/breadcrumb' },
   { name: 'button', source: './src/inputs/button/button' },
   { name: 'button-group', source: './src/inputs/button-group/button-group' },
+  { name: 'calendar', source: './src/inputs/calendar/calendar' },
   { name: 'card', source: './src/content/card/card' },
   { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
   { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
@@ -52,6 +53,7 @@ export const componentManifest = [
   { name: 'tabs', source: './src/disclosure/tabs/tabs' },
   { name: 'text', source: './src/content/text/text' },
   { name: 'textarea', source: './src/inputs/textarea/textarea' },
+  { name: 'time-picker', source: './src/inputs/time-picker/time-picker' },
   { name: 'toast', source: './src/feedback/toast/toast' },
   { name: 'tooltip', source: './src/overlay/tooltip/tooltip' },
 ];

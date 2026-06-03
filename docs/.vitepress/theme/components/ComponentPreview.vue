@@ -7,6 +7,7 @@ const props = defineProps<{
   center?: boolean;
   background?: string;
   colorful?: boolean;
+  height?: string;
 }>();
 
 type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
@@ -390,7 +391,7 @@ const backgroundStyle = computed(() => {
 
         <!-- Preview tab panel -->
         <bit-tab-panel value="preview" padding="none">
-          <div class="preview-scroll-container">
+          <div class="preview-scroll-container" :class="{ 'is-centered': center }" :style="!isMaximized && props.height ? { height: props.height, minHeight: props.height } : {}">
             <div class="preview-container-wrapper" :style="{ width: getViewportWidth }">
               <div
                 class="preview-container"
@@ -487,9 +488,21 @@ const backgroundStyle = computed(() => {
   background-position: 0 0;
   min-height: 150px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 0;
+}
+
+.preview-scroll-container.is-centered {
+  align-items: center;
+}
+
+.preview-scroll-container.is-centered .preview-container-wrapper {
+  height: 100%;
+}
+
+.preview-scroll-container.is-centered .preview-container {
+  min-height: 100%;
 }
 
 /* Full height in maximized mode */
@@ -516,7 +529,7 @@ const backgroundStyle = computed(() => {
   position: relative;
   transition: width 0.3s ease;
   min-width: var(--size-min);
-  margin: auto;
+  margin-inline: auto;
   container-type: inline-size;
   container-name: preview;
 }
@@ -540,6 +553,7 @@ const backgroundStyle = computed(() => {
 .preview-container.center {
   justify-content: center;
   align-items: center;
+  min-height: 100%;
 }
 
 .preview-container.colorful {

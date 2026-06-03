@@ -1,12 +1,13 @@
 import { computed, define, html, prop } from '@vielzeug/craft';
 
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import { roundableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './badge.css?inline';
 
 type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;
+type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 
 /** Badge component properties */
 export type BitBadgeProps = {
@@ -29,7 +30,7 @@ export type BitBadgeProps = {
   /** Border radius override */
   rounded?: RoundedSize;
   /** Badge size */
-  size?: ComponentSize;
+  size?: BadgeSize;
   /** Visual style variant */
   variant?: BadgeVariant;
 };
@@ -42,7 +43,7 @@ export type BitBadgeProps = {
  *
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'
- * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} size - Component size: 'xs' | 'sm' | 'md' | 'lg'
  * @attr {number} count - Numeric count to display
  * @attr {number} max - Max count before showing "<max>+"
  * @attr {boolean} dot - Render as a dot indicator (no text)
@@ -76,7 +77,7 @@ export const BADGE_TAG = 'bit-badge' as const;
 define<BitBadgeProps>(BADGE_TAG, {
   props: {
     ...themableBundle,
-    ...sizableBundle,
+    size: prop.string<BadgeSize>(),
     ...roundableBundle,
     anchor: prop.string<'top-end' | 'top-start' | 'bottom-end' | 'bottom-start'>(),
     count: prop.json(undefined as number | undefined),
@@ -100,7 +101,7 @@ define<BitBadgeProps>(BADGE_TAG, {
     return html`<span class="badge" part="badge" aria-label="${props.label}">
         <slot name="icon"></slot>
         <span ?hidden="${() => label.value == null}">${label}</span>
-        <slot ?hidden="${() => label.value != null}"></slot>
+        <span class="badge-label" ?hidden="${() => label.value != null}"><slot></slot></span>
       </span>
       <slot name="target"></slot>`;
   },

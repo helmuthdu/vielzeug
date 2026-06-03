@@ -1,5 +1,5 @@
 import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
-import { computed } from '@vielzeug/ripple';
+import { computed, watch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
@@ -39,6 +39,13 @@ export type BitInputProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'fro
   minlength?: number;
   /** HTML pattern attribute for client-side validation */
   pattern?: string;
+  /**
+   * JS-only callback fired with the inner `<input>` element when it mounts,
+   * and with `null` when it unmounts. Intended for composed components that
+   * need imperative access to the raw input element.
+   * Set as a JS property: `bitInput.ref = (el) => { ... }`.
+   */
+  ref?: ((el: HTMLInputElement | null) => void) | null;
   /** HTML input type */
   type?: InputType;
 };
@@ -133,6 +140,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
     pattern: prop.string(),
     placeholder: prop.string(),
     readonly: prop.bool(false),
+    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
     required: prop.bool(false),
     type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
     value: prop.string(),
@@ -182,6 +190,21 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
 
     onElement(inputRef, (el) => {
       wire(el, abortSignal);
+
+      // Immediate fire for when the prop is already set on mount.
+      props.ref.value?.(el);
+
+      // Reactive watcher so that if props.ref is set *after* the inner
+      // <input> mounts (e.g. parent sets it via a ref callback after render),
+      // the new callback still receives the live element.
+      const sub = watch(props.ref, (cb) => {
+        cb?.(el);
+      });
+
+      return () => {
+        sub.dispose();
+        props.ref.value?.(null);
+      };
     });
 
     const clear = (event?: Event): void => {
@@ -267,7 +290,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
             </button>
           </div>
         </div>
-        <div class="helper-text" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">
+        <div class="helper-text" aria-live="polite" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">
           <slot name="helper">${helperText}</slot>
         </div>
         <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">

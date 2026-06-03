@@ -319,6 +319,12 @@
       "require": "./dist/textarea.cjs",
       "types": "./dist/inputs/textarea/textarea.d.ts"
     },
+    "./time-picker": {
+      "source": "./src/inputs/time-picker/time-picker.ts",
+      "import": "./dist/time-picker.js",
+      "require": "./dist/time-picker.cjs",
+      "types": "./dist/inputs/time-picker/time-picker.d.ts"
+    },
     "./toast": {
       "source": "./src/feedback/toast/toast.ts",
       "import": "./dist/toast.js",
@@ -350,6 +356,7 @@
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/arsenal": "workspace:*",
     "@vielzeug/scroll": "workspace:*",
+    "@vielzeug/tempo": "workspace:*",
     "lucide": "^1.17.0"
   },
   "devDependencies": {

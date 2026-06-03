@@ -19,23 +19,9 @@ import type { VisualVariant } from '../../types';
 import { componentSignal, createChoiceField, createOptionList } from '../../headless';
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
-import {
-  disablableBundle,
-  FIELD_SIZE_PRESET,
-  loadableBundle,
-  roundableBundle,
-  sizableBundle,
-  themableBundle,
-} from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledLoadingMixin,
-  forcedColorsFocusMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import '../input/input';
+import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import { reducedMotionMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './select.css?inline';
 
@@ -233,7 +219,6 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       signal: abortSignal,
     });
 
-    const assistiveText = choice.assistive;
     const { triggerValidation } = choice;
     const selectedValues = choice.selectedValues;
     const isDisabled = choice.disabled;
@@ -243,7 +228,6 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     );
 
     const { fieldId: selectId } = choice;
-    const labelId = choice.label.id;
     const listboxId = `listbox-${selectId}`;
     const { focusedIndex, isOpen } = optionList;
 
@@ -310,8 +294,6 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     });
     const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
     const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
-    const hasLabel = computed(() => !!props.label.value);
-    const labelHidden = () => !choice.label.show.value;
 
     function buildFlatList(opts: OptionItem[]): FlatRow[] {
       const flat: FlatRow[] = [];
@@ -423,9 +405,22 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       }
     }
 
+    // bit-input prop helpers
+    const inputValue = () => triggerText.value;
+    const inputLabel = () => props.label.value ?? '';
+    const inputPlaceholder = () => props.placeholder.value ?? '';
+    const inputLabelPlacement = () => props['label-placement'].value ?? 'inset';
+    const inputColor = () => props.color?.value ?? undefined;
+    const inputSize = () => fCtxProps.size?.value ?? undefined;
+    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputRounded = () => props.rounded?.value ?? undefined;
+    const inputHelper = () => props.helper.value ?? '';
+    const inputError = () => props.error.value ?? '';
+    const inputDisabled = () => (isDisabled.value ? true : undefined);
+    const inputRequired = () => (props.required.value ? true : undefined);
+    const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
+    const inputLoading = () => (props.loading.value ? true : undefined);
     const tabIndexAttr = () => (isDisabled.value ? '-1' : '0');
-    const triggerValueClass = () => `trigger-value ${displayLabel.value ? '' : 'trigger-placeholder'}`;
-    const helperStyle = () => (assistiveText.value.errorText ? 'color: var(--color-error);' : '');
 
     watch(slots.elements(), () => readOptions(), { immediate: true });
 
@@ -458,54 +453,56 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     });
 
     return html`<slot style="display:none"></slot>
-      <div class="select-wrapper">
-        <label class="label" id="${labelId}" ?hidden="${labelHidden}">${props.label}</label>
-        <div
-          class="field"
-          ref="${(el: HTMLElement) => {
-            triggerEl = el;
-          }}"
-          role="combobox"
-          tabindex="${tabIndexAttr}"
-          aria-controls="${listboxId}"
-          aria-haspopup="listbox"
-          :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-          :aria-expanded="${() => String(isOpen.value)}"
-          :aria-invalid="${() => (props.error.value ? 'true' : null)}"
-          :aria-labelledby="${() => (hasLabel.value ? labelId : null)}">
-          <div class="trigger-row">
-            <div class="chips-row" ?hidden="${() => !showChips.value}">
-              ${() =>
-                selectedChipItems.value.map(
-                  (item) => html`
-                    <bit-chip
-                      value="${item.value}"
-                      label="${item.label}"
-                      mode="removable"
-                      variant="flat"
-                      size="sm"
-                      color="${props.color}"
-                      @remove="${removeChip}">
-                      ${item.label}
-                    </bit-chip>
-                  `,
-                )}
-            </div>
-            <span class="${triggerValueClass}" ?hidden="${showChips}">${triggerText}</span>
-          </div>
-          <span class="trigger-icon" aria-hidden="true">
+      <bit-input
+        class="trigger"
+        readonly
+        tabindex="${tabIndexAttr}"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-controls="${listboxId}"
+        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        :aria-expanded="${() => String(isOpen.value)}"
+        :aria-invalid="${() => (props.error.value ? 'true' : null)}"
+        :value="${inputValue}"
+        :label="${inputLabel}"
+        :placeholder="${inputPlaceholder}"
+        :label-placement="${inputLabelPlacement}"
+        :color="${inputColor}"
+        :size="${inputSize}"
+        :variant="${inputVariant}"
+        :rounded="${inputRounded}"
+        :helper="${inputHelper}"
+        :error="${inputError}"
+        ?disabled="${inputDisabled}"
+        ?required="${inputRequired}"
+        ?fullwidth="${inputFullwidth}"
+        ?loading="${inputLoading}"
+        ref="${(el: HTMLElement) => {
+          triggerEl = el;
+        }}">
+        <div slot="prefix" class="chips-row" ?hidden="${() => !showChips.value}">
+          ${() =>
+            selectedChipItems.value.map(
+              (item) =>
+                html`<bit-chip
+                  value="${item.value}"
+                  label="${item.label}"
+                  mode="removable"
+                  variant="flat"
+                  size="sm"
+                  color="${props.color}"
+                  @remove="${removeChip}">
+                  ${item.label}
+                </bit-chip>`,
+            )}
+        </div>
+        <span slot="suffix" class="trigger-suffix" aria-hidden="true">
+          <span class="loader"></span>
+          <span class="trigger-icon">
             <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-            <span class="loader" aria-label="Loading"></span>
           </span>
-        </div>
-        <div
-          class="helper-text"
-          aria-live="polite"
-          ?hidden="${() => !assistiveText.value.errorText && !assistiveText.value.helperText}"
-          style="${helperStyle}">
-          ${() => assistiveText.value.errorText || assistiveText.value.helperText}
-        </div>
-      </div>
+        </span>
+      </bit-input>
       <div
         class="dropdown"
         ?data-open="${isOpen}"
@@ -550,14 +547,5 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       </div>`;
   },
   shadow: { delegatesFocus: true },
-  styles: [
-    sizeVariantMixin(FIELD_SIZE_PRESET),
-    colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    roundedVariantMixin,
-    disabledLoadingMixin(),
-    forcedColorsFocusMixin('.field'),
-    componentStyles,
-  ],
+  styles: [reducedMotionMixin, componentStyles],
 });

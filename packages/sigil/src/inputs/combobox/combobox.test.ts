@@ -14,6 +14,13 @@ describe('bit-combobox', () => {
     fixture?.destroy();
   });
 
+  /**
+   * The raw <input> lives inside bit-input's shadow DOM, which is itself inside
+   * the combobox shadow DOM. This helper pierces both levels.
+   */
+  const getInput = (root: ShadowRoot | null | undefined = fixture.element.shadowRoot) =>
+    root?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+
   const optionsHtml = `
     <bit-combobox-option value="us">United States</bit-combobox-option>
     <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
@@ -27,7 +34,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      expect(fixture.query('input[role="combobox"]')).toBeTruthy();
+      expect(getInput()).toBeTruthy();
       expect(fixture.query('[role="listbox"]')).toBeTruthy();
     });
 
@@ -41,7 +48,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('search', onInput);
 
-      await user.type(fixture.query<HTMLInputElement>('input')!, 'uni');
+      await user.type(getInput()!, 'uni');
 
       expect(onInput).toHaveBeenCalled();
       expect((onInput.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toContain('uni');
@@ -59,7 +66,7 @@ describe('bit-combobox', () => {
       fixture.element.addEventListener('open', onOpen);
       fixture.element.addEventListener('close', onClose);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -82,7 +89,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('open', onOpen);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.press(input, 'Enter');
       await fixture.flush();
@@ -100,7 +107,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -121,7 +128,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -143,7 +150,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+      const input = getInput();
 
       expect(input).toBeTruthy();
       await user.click(input!);
@@ -171,7 +178,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       // Open and select first option
       await user.click(input);
@@ -197,7 +204,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -224,7 +231,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -249,7 +256,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -281,7 +288,9 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const label = fixture.query<HTMLElement>('.label');
+      const label = fixture.element.shadowRoot
+        ?.querySelector('bit-input.trigger')
+        ?.shadowRoot?.querySelector<HTMLElement>('.label');
 
       expect(label?.hidden).toBe(false);
     });
@@ -292,7 +301,9 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const label = fixture.query<HTMLElement>('.label');
+      const label = fixture.element.shadowRoot
+        ?.querySelector('bit-input.trigger')
+        ?.shadowRoot?.querySelector<HTMLElement>('.label');
 
       expect(label?.hidden).toBe(false);
     });
@@ -303,7 +314,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      expect(fixture.query('input')?.getAttribute('role')).toBe('combobox');
+      expect(getInput()?.getAttribute('role')).toBe('combobox');
       expect(fixture.query('[role="listbox"]')).toBeTruthy();
     });
 
@@ -313,7 +324,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const input = fixture.query<HTMLInputElement>('input')!;
+      const input = getInput()!;
 
       expect(input.getAttribute('aria-expanded')).toBe('false');
 
@@ -338,8 +349,12 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      expect(fixture.query('.helper-text')?.getAttribute('aria-live')).toBe('polite');
-      expect(fixture.query('.helper-text')?.textContent).toContain('Use arrow keys');
+      const helperEl = fixture.element.shadowRoot
+        ?.querySelector('bit-input.trigger')
+        ?.shadowRoot?.querySelector<HTMLElement>('.helper-text');
+
+      expect(helperEl?.getAttribute('aria-live')).toBe('polite');
+      expect(helperEl?.textContent).toContain('Use arrow keys');
     });
 
     it('supports keyboard selection with Enter after ArrowDown', async () => {
@@ -352,7 +367,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const input = fixture.query<HTMLInputElement>('input')!;
+      const input = getInput()!;
 
       input.focus();
       await user.press(input, 'ArrowDown');
@@ -369,7 +384,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const input = fixture.query<HTMLInputElement>('input')!;
+      const input = getInput()!;
 
       // Open the dropdown first, then type a query with no matches.
       await user.click(input);
@@ -403,7 +418,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await user.type(input, 'ger');
@@ -429,7 +444,7 @@ describe('bit-combobox', () => {
         `,
       });
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -462,7 +477,7 @@ describe('bit-combobox', () => {
         `,
       });
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -491,7 +506,7 @@ describe('bit-combobox', () => {
         `,
       });
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -507,7 +522,7 @@ describe('bit-combobox', () => {
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('.field')!);
+      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
       await user.type(input, 'ru');
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -529,10 +544,12 @@ describe('bit-combobox', () => {
         `,
       });
 
-      const getInput = () =>
-        fixture.element.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
+      const getLocalInput = () =>
+        fixture.element.shadowRoot
+          ?.querySelector('bit-input.trigger')
+          ?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
 
-      const initialInput = getInput();
+      const initialInput = getLocalInput();
 
       if (!initialInput) throw new Error('Expected combobox input to exist before first click');
 
@@ -544,14 +561,14 @@ describe('bit-combobox', () => {
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('.field')!);
+      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
       await fixture.flush();
 
-      const liveInput = getInput();
+      const liveInput = getLocalInput();
 
       if (!liveInput) throw new Error('Expected combobox input to exist after chip re-render');
 
-      expect(fixture.element.shadowRoot?.activeElement).toBe(liveInput);
+      expect(fixture.element.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.activeElement).toBe(liveInput);
 
       await user.type(liveInput, 'ru');
       await fixture.flush();
@@ -571,7 +588,7 @@ describe('bit-combobox', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -664,7 +681,7 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+      const input = getInput();
 
       expect(input).toBeTruthy();
 
@@ -715,7 +732,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -734,7 +751,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+      const input = getInput()!;
 
       await user.click(input);
       await fixture.flush();
@@ -762,7 +779,7 @@ describe('bit-combobox', () => {
       });
       await fixture.flush();
 
-      const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+      const input = getInput();
 
       expect(input?.value).toBe('United States');
     });
@@ -782,7 +799,9 @@ describe('bit-combobox', () => {
       });
 
       const combobox = fixture.query<HTMLElement>('bit-combobox')!;
-      const input = combobox.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]');
+      const input =
+        combobox.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
+        null;
 
       await user.click(input as HTMLInputElement);
       await fixture.flush();
@@ -813,7 +832,9 @@ describe('bit-combobox', () => {
       });
 
       const combobox = fixture.query<HTMLElement>('bit-combobox')!;
-      const input = combobox.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]');
+      const input =
+        combobox.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
+        null;
 
       await user.click(input as HTMLInputElement);
       await fixture.flush();
