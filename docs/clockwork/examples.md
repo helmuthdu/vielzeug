@@ -1,6 +1,6 @@
 ---
 title: Clockwork — Examples
-description: Practical examples and recipes for Machine.
+description: Practical examples and recipes for Clockwork.
 ---
 
 ## Examples

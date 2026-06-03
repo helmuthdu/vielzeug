@@ -14,7 +14,7 @@ exports: [defineMachine, interpret, resolveTransition, MachineError, debugInterp
 
 <img src="/logo-clockwork.svg" alt="Clockwork logo" width="156" class="logo-highlight"/>
 
-# Machine
+# Clockwork
 
 <details>
 <summary>⚡ Quick Reference</summary>
@@ -91,7 +91,7 @@ console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 5
 ```
 
-## Why Machine?
+## Why Clockwork?
 
 Manual state management leads to invalid state combinations, unreachable code paths, and complex conditional logic. FSMs eliminate these bugs by making state transitions explicit and exhaustive.
 
@@ -121,7 +121,7 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 // Now success && error is impossible. State is always valid.
 ```
 
-| Feature                    | Machine                                         | xstate              | zustand   |
+| Feature                    | Clockwork                                       | xstate              | zustand   |
 | -------------------------- | ----------------------------------------------- | ------------------- | --------- |
 | Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
 | Zero dependencies          | ✅                                              | ❌ 5+ deps          | ✅        |
@@ -132,7 +132,7 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 | Middleware pipeline        | ✅ Composable                                   | ❌                  | ✅        |
 | Context isolation          | ✅ Cloned on every transition                   | ✅                  | ❌        |
 
-**Use Machine when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
+**Use Clockwork when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
 
 **Consider xstate when** you need visual state machine tooling or already have a large bundle budget.
 
@@ -179,9 +179,9 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 
 ## See Also
 
-- [Ripple](/ripple/) — Reactive signals and effects; core reactivity layer for Machine
+- [Ripple](/ripple/) — Reactive signals and effects; core reactivity layer for Clockwork
 - [Herald](/herald/) — Typed event bus; complementary for event-driven architectures
-- [Ward](/ward/) — RBAC engine; use alongside Machine for state-dependent permissions
-- [Forge](/forge/) — Form state management; integrates with Machine for multi-step workflows
+- [Ward](/ward/) — RBAC engine; use alongside Clockwork for state-dependent permissions
+- [Forge](/forge/) — Form state management; integrates with Clockwork for multi-step workflows
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

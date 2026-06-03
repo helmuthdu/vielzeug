@@ -12,7 +12,7 @@ Workflows with role-based access control need to:
 - Guard state machine transitions with permission checks
 - Log access attempts and denials
 
-Hardcoding permission logic in the machine makes it inflexible and hard to test with different role configurations.
+Hardcoding permission logic in the state machine makes it inflexible and hard to test with different role configurations.
 
 ## Solution
 

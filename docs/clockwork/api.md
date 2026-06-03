@@ -1,6 +1,6 @@
 ---
 title: Clockwork — API Reference
-description: Complete API reference for Machine.
+description: Complete API reference for Clockwork.
 ---
 
 [[toc]]
@@ -421,7 +421,7 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
   can(event: Ev): boolean;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-  matches(...states: State[]): boolean;
+  matches(...states: string[]): boolean;
   send(event: Ev): boolean;
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;

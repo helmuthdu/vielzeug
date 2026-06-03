@@ -1,6 +1,6 @@
 ---
 title: Paginated Data Loading with Search
-description: Use Sourcerer with Machine to manage async data loading, pagination, and search state.
+description: Use Sourcerer with Clockwork to manage async data loading, pagination, and search state.
 ---
 
 ## Problem
@@ -17,7 +17,7 @@ Managing all these states together leads to spaghetti code with race conditions 
 
 ## Solution
 
-Use Machine for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
+Use Clockwork for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
 
 ```ts
 import { defineMachine, interpret } from '@vielzeug/clockwork';

@@ -1,6 +1,6 @@
 ---
 title: Clockwork — Usage Guide
-description: Common patterns, best practices, and recipes for building state machines with Machine.
+description: Common patterns, best practices, and recipes for building state machines with Clockwork.
 ---
 
 [[toc]]
@@ -774,7 +774,7 @@ onUnmounted(() => {
 
 ### With `@vielzeug/ripple`
 
-`state` and `context` are `ReadonlySignal` values from `@vielzeug/ripple`. Use `effect()` to drive reactive UI from machine state:
+`state` and `context` are `ReadonlySignal` values from `@vielzeug/ripple`. Use `effect()` to drive reactive UI from Clockwork state:
 
 ```ts
 import { effect } from '@vielzeug/ripple';
@@ -791,7 +791,7 @@ m.send({ type: 'PLAY' }); // effect runs immediately
 
 ### With `@vielzeug/herald`
 
-Bridge machine transitions to a shared event bus for cross-machine coordination:
+Bridge Clockwork transitions to a shared event bus for cross-machine coordination:
 
 ```ts
 import { createBus } from '@vielzeug/herald';
