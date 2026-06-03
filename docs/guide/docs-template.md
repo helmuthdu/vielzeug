@@ -7,30 +7,28 @@ description: Canonical structure, language, and formatting rules for all Vielzeu
 
 This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 23 libraries is the primary goal.
 
----
-
 ## Documentation Philosophy
 
 Vielzeug docs follow the **[Diátaxis](https://diataxis.fr/)** framework, which organises documentation by the reader's need, not the author's convenience. The four Diátaxis quadrants are:
 
-| Quadrant | Reader need | Orientation |
-| -------- | ----------- | ----------- |
-| **Tutorials** | Learning | Practical steps that guide a newcomer to a successful outcome |
-| **How-to Guides** | Problem-solving | Steps to accomplish a specific goal the reader already has |
-| **Reference** | Information | Accurate, complete technical data to consult while working |
-| **Explanation** | Understanding | Background, context, and the "why" behind decisions |
+| Quadrant          | Reader need     | Orientation                                                   |
+| ----------------- | --------------- | ------------------------------------------------------------- |
+| **Tutorials**     | Learning        | Practical steps that guide a newcomer to a successful outcome |
+| **How-to Guides** | Problem-solving | Steps to accomplish a specific goal the reader already has    |
+| **Reference**     | Information     | Accurate, complete technical data to consult while working    |
+| **Explanation**   | Understanding   | Background, context, and the "why" behind decisions           |
 
 These quadrants have hard boundaries. Mixing them degrades usability: a reader consulting `api.md` does not want a tutorial, and a reader following `usage.md` does not want exhaustive option tables. When content belongs to more than one quadrant, split it.
 
 Each standard doc page maps to one primary quadrant:
 
-| File            | Diátaxis type   | Reader's question                                              |
-| --------------- | --------------- | -------------------------------------------------------------- |
-| `index.md`      | **Explanation** | "What is this, why does it exist, and is it right for me?"     |
-| `usage.md`      | **How-to Guide**| "How do I accomplish this specific task?"                      |
-| `api.md`        | **Reference**   | "What is the exact signature, behaviour, and contract?"        |
-| `examples.md`   | Navigation (not a Diátaxis quadrant — an organisational tool) | "Which recipe do I need?"                                      |
-| `examples/*.md` | **How-to Guide**| "How do I solve this concrete problem end-to-end?"             |
+| File            | Diátaxis type                                                 | Reader's question                                          |
+| --------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `index.md`      | **Explanation**                                               | "What is this, why does it exist, and is it right for me?" |
+| `usage.md`      | **How-to Guide**                                              | "How do I accomplish this specific task?"                  |
+| `api.md`        | **Reference**                                                 | "What is the exact signature, behaviour, and contract?"    |
+| `examples.md`   | Navigation (not a Diátaxis quadrant — an organisational tool) | "Which recipe do I need?"                                  |
+| `examples/*.md` | **How-to Guide**                                              | "How do I solve this concrete problem end-to-end?"         |
 
 Understanding this mapping is more important than memorising the structural rules. When in doubt about where content belongs, ask: _which reader need does this serve?_
 
@@ -42,8 +40,6 @@ Understanding this mapping is more important than memorising the structural rule
 - Putting conceptual background (the "why") in `api.md` or `usage.md` — that belongs in `index.md`.
 
 **Tutorials:** Vielzeug does not currently have a dedicated tutorial file per package. If a library's complexity warrants one (e.g., a ground-up walkthrough for a first-time user), add a `tutorial.md` at `docs/<pkg>/tutorial.md` and link it from `index.md`. A tutorial is learning-oriented: it takes the reader through a fixed, complete scenario step by step, prioritising the learning experience over real-world flexibility.
-
----
 
 ## Overview
 
@@ -59,8 +55,6 @@ Every library has exactly five documentation concerns:
 
 Do not add extra top-level files (e.g., `lifecycle-best-practices.md`, `controls.md`) unless the library has a domain so complex that a separate conceptual guide is unavoidable. In those rare cases, list the extra file under a "Guides" heading in the sidebar, separate from the standard four pages.
 
----
-
 ## Tone and Language
 
 - **Direct and technical.** Address the reader as "you". Prefer active voice. Avoid filler ("simply", "just", "easy", "straightforward").
@@ -69,8 +63,6 @@ Do not add extra top-level files (e.g., `lifecycle-best-practices.md`, `controls
 - **Code first, prose second.** When in doubt, show code and annotate it instead of explaining in prose.
 - **No marketing language.** Do not write "powerful", "blazing fast", or "seamless". Use factual comparisons in tables instead.
 - **Comments in code blocks** should explain _why_, not _what_. One comment per meaningful block is enough. Never write multi-line comment blocks.
-
----
 
 ## `index.md` — Overview
 
@@ -115,7 +107,6 @@ exports: [export1, export2, export3]
 </details>
 
 `@vielzeug/<pkg>` is a <short description in one sentence>.
-
 
 ## Installation
 
@@ -189,8 +180,6 @@ yarn add @vielzeug/<pkg>
 - The Before/After code block in "Why" must be a single fenced block with a `// Before` comment block followed by a `// After` comment block, not two separate blocks with prose between them.
 - Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `✅`, `❌`, `⚠️` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
 - "Use when / Consider when" must both be present. They are italic-free, direct statements.
-
----
 
 ## `usage.md` — Usage Guide
 
@@ -297,8 +286,6 @@ const form = createForm({ validator: schemaValidator(schema), defaultValues: { e
 \```
 ````
 
----
-
 ## `api.md` — API Reference
 
 ### Purpose
@@ -362,8 +349,6 @@ const result = functionName('value', { optionA: 'x' });
 | --------- | ------------------ | ----------- |
 | `methodA` | `(arg: T) => void` | Description |
 
----
-
 ## <Group B — e.g., Error Classes>
 
 ...
@@ -387,8 +372,6 @@ const result = functionName('value', { optionA: 'x' });
 - Use `---` (horizontal rule) to separate distinct top-level API entries within a group.
 - Do not list every method inline in the intro section — use the `**Methods:**` table pattern after the constructor/factory description.
 
----
-
 ## `examples.md` — Examples Index
 
 ### Purpose
@@ -405,8 +388,6 @@ title: <PackageName> — Examples
 description: Practical examples and recipes for <pkg>.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [<Recipe Name>](./examples/<slug>.md)
@@ -418,8 +399,6 @@ description: Practical examples and recipes for <pkg>.
 - List recipes in order of complexity: basic patterns first, advanced and integration recipes last.
 - No prose descriptions next to the links — the recipe titles must be self-explanatory.
 - No `#` heading (VitePress renders the frontmatter title).
-
----
 
 ## `examples/<slug>.md` — Individual Recipes
 
@@ -489,19 +468,17 @@ import { relevantExport } from '@vielzeug/<pkg>';
 - **No `## Expected Output` section.** It adds length without value — if the example is well-written, the output is apparent from the code.
 - Frontmatter `title` uses em-dash (—) and single quotes around the full value.
 
----
-
 ## Frontmatter Conventions
 
 | Field         | `index.md`                           | `usage.md`                  | `api.md`                       | `examples.md`                          | `examples/*.md`                                        |
 | ------------- | ------------------------------------ | --------------------------- | ------------------------------ | -------------------------------------- | ------------------------------------------------------ |
 | `title`       | `PackageName — One-line description` | `PackageName — Usage Guide` | `PackageName — API Reference`  | `PackageName — Examples`               | `'PackageName Examples — Recipe Name'` (single-quoted) |
 | `description` | Tweet-length summary                 | What the guide teaches      | "Complete API reference for …" | "Practical examples and recipes for …" | "Recipe Name example for @vielzeug/pkg."               |
-| `package`     | `<pkg>` (always)                     | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
-| `category`    | one of the 12 categories (always)    | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
-| `keywords`    | `[keyword1, keyword2, …]` (always)   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
-| `related`     | `[pkg1, pkg2, …]` (always)           | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
-| `exports`     | top exports as `[name1, name2, …]`   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
+| `package`     | `<pkg>` (always)                     | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `category`    | one of the 12 categories (always)    | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `keywords`    | `[keyword1, keyword2, …]` (always)   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `related`     | `[pkg1, pkg2, …]` (always)           | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `exports`     | top exports as `[name1, name2, …]`   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
 
 Use em-dash (—) as the separator in titles, except for individual example files where the frontmatter title is wrapped in single quotes and uses an em-dash.
 
@@ -515,8 +492,6 @@ These fields enable AI agents (via the Codex MCP server) to discover and underst
 - **`related`:** Related package slugs (e.g., `[spell, ripple]`). Must exist as real packages. Used in Quick Reference links.
 - **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and Codex metadata.
 
----
-
 ## AI-Agent Integration (Codex)
 
 The **Codex** MCP (Model Context Protocol) server reads the metadata from `index.md` to expose Vielzeug packages and their documentation to AI assistants. This enables agents to:
@@ -529,13 +504,13 @@ The **Codex** MCP (Model Context Protocol) server reads the metadata from `index
 
 ### Codex Tools That Use Your Metadata
 
-| Tool | Frontmatter fields used |
-|------|-------------------------|
-| `list-packages` | All fields (package, category, keywords, related, exports, description) |
-| `search-packages` | `package`, `category`, `keywords`, description, all doc pages |
-| `get-package` | All fields — returns complete structured metadata for one package |
-| `get-docs` | `package` — serves markdown content from docs files |
-| `get-source` | `package` — serves `src/index.ts` source |
+| Tool              | Frontmatter fields used                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `list-packages`   | All fields (package, category, keywords, related, exports, description) |
+| `search-packages` | `package`, `category`, `keywords`, description, all doc pages           |
+| `get-package`     | All fields — returns complete structured metadata for one package       |
+| `get-docs`        | `package` — serves markdown content from docs files                     |
+| `get-source`      | `package` — serves `src/index.ts` source                                |
 
 ### How to Publish Your Docs
 
@@ -564,8 +539,6 @@ Example: When an AI agent runs Codex's `get-package` tool with `packageSlug: "ri
 }
 ```
 
----
-
 ## Checklist for Reviewing a Library's Docs
 
 Use this list when auditing or updating a library. The first check applies to all pages.
@@ -578,7 +551,7 @@ Use this list when auditing or updating a library. The first check applies to al
 - [ ] `usage.md` contains no exhaustive option tables (those belong in `api.md`)
 - [ ] `api.md` is Reference-oriented: it is consulted, not read; no tutorial prose, no opinionated guidance, no Best Practices
 - [ ] `examples/*.md` are How-to Guides: each solves one concrete problem, no conceptual detours
-- [ ] Content that explains *why* (background, design decisions) lives in `index.md`, not `api.md` or `usage.md`
+- [ ] Content that explains _why_ (background, design decisions) lives in `index.md`, not `api.md` or `usage.md`
 - [ ] No content is duplicated across quadrants (e.g., option descriptions in both `usage.md` and `api.md`)
 
 ### `index.md`

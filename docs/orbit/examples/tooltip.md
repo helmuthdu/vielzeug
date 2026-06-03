@@ -51,7 +51,6 @@ trigger.addEventListener('focusout', hide);
 
 ---
 
-
 ### Pitfalls
 
 - `autoUpdate` registers scroll and resize listeners globally. Not calling its returned cleanup function leaks these listeners even after the tooltip is hidden.

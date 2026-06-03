@@ -162,8 +162,6 @@ const zone = createDropZone({
 
 When `onPaste` is omitted, accepted pasted files fall through to `onDrop`.
 
----
-
 ## Sortable
 
 `createSortable` makes direct children of a container reorderable via drag.
@@ -334,9 +332,7 @@ const sortable = createSortable({
   element: listEl,
   onBeforeReorder: (from, to) => {
     // snapshot bounds before the DOM moves
-    const snapshots = new Map(
-      getItems().map((el) => [el.dataset.sortId!, el.getBoundingClientRect()]),
-    );
+    const snapshots = new Map(getItems().map((el) => [el.dataset.sortId!, el.getBoundingClientRect()]));
 
     requestAnimationFrame(() => {
       // animate from snapshot to new position
@@ -405,7 +401,9 @@ function SortableList({ initialItems }: { initialItems: { id: string; text: stri
   return (
     <ul ref={listRef}>
       {initialItems.map((item) => (
-        <li key={item.id} data-sort-id={item.id}>{item.text}</li>
+        <li key={item.id} data-sort-id={item.id}>
+          {item.text}
+        </li>
       ))}
     </ul>
   );

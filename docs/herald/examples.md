@@ -3,8 +3,6 @@ title: Herald — Examples
 description: Practical examples and recipes for relay.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Standalone Entry](./examples/standalone-entry.md)

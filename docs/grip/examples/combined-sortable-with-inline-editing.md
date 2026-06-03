@@ -49,7 +49,6 @@ const sortable = createSortable({
 render();
 ```
 
-
 ### Pitfalls
 
 - A `pointerdown` event starts a drag by default. Guard inline-edit activation behind an explicit handle element or a long-press delay so a short click doesn't trigger a drag.

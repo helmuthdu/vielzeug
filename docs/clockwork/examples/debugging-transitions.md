@@ -41,20 +41,21 @@ const m = interpret(machine, {
           break;
       }
     },
-    onTransition: ({ event, from, to }) =>
-      console.info(`[transition] ${from} → ${to} via ${event.type}`),
+    onTransition: ({ event, from, to }) => console.info(`[transition] ${from} → ${to} via ${event.type}`),
     traceLimit: 200,
   },
 });
 
 // Read the trace ring buffer at any time
 const trace = m.getTrace();
-console.table(trace.map(({ event, from, timestamp, to }) => ({
-  event: event.type,
-  from,
-  ms: timestamp,
-  to,
-})));
+console.table(
+  trace.map(({ event, from, timestamp, to }) => ({
+    event: event.type,
+    from,
+    ms: timestamp,
+    to,
+  })),
+);
 ```
 
 ### Pitfalls

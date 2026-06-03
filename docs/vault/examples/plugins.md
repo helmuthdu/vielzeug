@@ -47,9 +47,9 @@ const db = createMemory({
   schema,
   validators: {
     users: s.object({
-      id:   s.number(),
+      id: s.number(),
       name: s.string(),
-      age:  s.number().min(0).max(150),
+      age: s.number().min(0).max(150),
     }),
   },
 });

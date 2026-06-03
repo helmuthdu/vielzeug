@@ -3,8 +3,6 @@ title: Orbit — Examples
 description: Practical examples and recipes for orbit.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Tooltip](./examples/tooltip.md)

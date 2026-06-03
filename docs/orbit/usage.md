@@ -80,8 +80,6 @@ const handle2 = float(trigger, menu, {
 
 Available presets: `tooltip`, `dropdown`, `popover`, `contextMenu`. Each accepts optional `{ offset, padding, placement }`.
 
----
-
 ## Middleware Model
 
 Middleware are pure functions that receive the current state and return partial updates. Return `undefined` when making no change.
@@ -162,7 +160,7 @@ const handle = float(ref, el, {
     const { size } = result.middlewareData;
     if (size) el.style.maxHeight = `${size.availableHeight}px`;
     el.style.left = `${result.x}px`;
-    el.style.top  = `${result.y}px`;
+    el.style.top = `${result.y}px`;
   },
 });
 
@@ -184,7 +182,7 @@ const { middlewareData } = computePosition(reference, floating, {
 
 const { x, y } = middlewareData.arrow as ArrowData;
 arrowEl.style.left = x != null ? `${x}px` : '';
-arrowEl.style.top  = y != null ? `${y}px` : '';
+arrowEl.style.top = y != null ? `${y}px` : '';
 ```
 
 ### `hide`
@@ -206,8 +204,8 @@ Use `strategy` to compute only what you need:
 
 ```ts
 hide({ strategy: 'referenceHidden' }); // only tracks reference
-hide({ strategy: 'escaped' });          // only tracks floating
-hide({ strategy: 'both' });             // default — both
+hide({ strategy: 'escaped' }); // only tracks floating
+hide({ strategy: 'both' }); // default — both
 ```
 
 ### `inline`
@@ -220,8 +218,6 @@ import { inline } from '@vielzeug/orbit/inline';
 middleware: [inline({ x: event.clientX, y: event.clientY }), flip(), shift({ padding: 6 })];
 ```
 
----
-
 ## Middleware Order
 
 Recommended order for the most common full stack:
@@ -232,7 +228,7 @@ import { inline } from '@vielzeug/orbit/inline';
 middleware: [
   offset(8),
   inline({ x: pointerX, y: pointerY }), // only for multi-line inline refs
-  flip(),                                // or autoPlacement() — not both
+  flip(), // or autoPlacement() — not both
   shift({ padding: 6 }),
   size(),
   arrow({ element: arrowEl, padding: 6 }),
@@ -241,6 +237,7 @@ middleware: [
 ```
 
 Rules:
+
 - `offset` first — ensures flip/shift account for the gap
 - `inline` before `flip` — corrects the reference rect before overflow detection
 - `flip` XOR `autoPlacement` — combining them has no effect and adds overhead
@@ -253,18 +250,10 @@ Rules:
 ```ts
 import { arrow, compose, flip, offset, shift, size } from '@vielzeug/orbit';
 
-const middleware = compose(
-  offset(8),
-  flip(),
-  shift({ padding: 6 }),
-  size(),
-  arrow({ element: arrowEl }),
-);
+const middleware = compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: arrowEl }));
 
 const handle = float(trigger, floating, { middleware });
 ```
-
----
 
 ## Virtual References
 
@@ -295,8 +284,6 @@ import { contextMenu } from '@vielzeug/orbit/presets';
 
 const { x, y } = computePosition(virtualRef, menu, contextMenu());
 ```
-
----
 
 ## `autoUpdate`
 
@@ -378,8 +365,6 @@ const handle = float(trigger, floating, {
 
 Without `containingBlock`, coordinates are viewport-relative (correct for `position: fixed`).
 
----
-
 ## CSS Anchor Positioning
 
 Pass `preferCssAnchor: true` to `float()` to use native CSS Anchor Positioning in supporting browsers. The browser handles repositioning with no JS overhead and no event listeners.
@@ -398,8 +383,6 @@ Requirements and fallback behaviour:
 - Falls back when a custom `apply` callback is provided
 - `position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline` is applied automatically
 - `handle.cssAnchor` is `true` when the CSS anchor path is active; `handle.getPosition()` returns `null` in this mode
-
----
 
 ## Framework Integration
 
@@ -421,7 +404,11 @@ function Tooltip({ anchor, children }: { anchor: HTMLElement | null; children: R
     return () => handle.cleanup();
   }, [anchor]);
 
-  return <div ref={tooltipRef} role="tooltip" style={{ position: 'fixed' }}>{children}</div>;
+  return (
+    <div ref={tooltipRef} role="tooltip" style={{ position: 'fixed' }}>
+      {children}
+    </div>
+  );
 }
 ```
 
@@ -474,8 +461,6 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
 - **Vue 3:** When using `v-if`, `ref.value` is `null` until the next tick. `watchEffect` re-runs automatically when the ref populates.
 - **Svelte:** `{#if}` defers `bind:this` to the next microtask. `onMount` runs after the DOM is ready, which is the correct place.
 
----
-
 ## Working with Other Vielzeug Libraries
 
 ### With Craft
@@ -505,8 +490,6 @@ define('x-tooltip', {
 });
 ```
 
----
-
 ## Reactive Adapter
 
 Import from `@vielzeug/orbit/reactive` to get a `@vielzeug/ripple` signal that updates on every position change. DOM styles are **not** automatically applied — use a ripple `effect` to consume `position` and write to the DOM.
@@ -525,7 +508,7 @@ effect(() => {
   const pos = position.value;
   if (!pos) return;
   tooltip.style.left = `${pos.x}px`;
-  tooltip.style.top  = `${pos.y}px`;
+  tooltip.style.top = `${pos.y}px`;
 });
 
 // on teardown:
@@ -533,8 +516,6 @@ cleanup();
 ```
 
 `createFloatState` accepts all `FloatOptions` except `apply` (which is used internally to update the signal).
-
----
 
 ## SSR
 
@@ -559,8 +540,6 @@ import { computePosition } from '@vielzeug/orbit/ssr';
 // Returns { x: 0, y: 0, placement: 'bottom', middlewareData: {} }
 const result = computePosition(reference, floating, { placement: 'bottom' });
 ```
-
----
 
 ## Best Practices
 

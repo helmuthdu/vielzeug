@@ -44,10 +44,12 @@ const Article = s.object({
   title: s.string().trim().min(1).max(120),
   slug: s.string().slug(),
   tags: s.array(s.string().min(1)).default(() => []),
-  meta: s.object({
-    published: s.boolean(),
-    publishedAt: s.date().nullable(),
-  }).relaxed(),
+  meta: s
+    .object({
+      published: s.boolean(),
+      publishedAt: s.date().nullable(),
+    })
+    .relaxed(),
 });
 ```
 
@@ -112,14 +114,23 @@ const reservedUsernames = new Set(['admin', 'root']);
 const takenEmails = new Set(['ada@example.com']);
 
 const Signup = s.object({
-  email: s.string().email().checkAsync(async (value, ctx) => {
-    if (takenEmails.has(value)) {
-      ctx.addIssue({ code: 'custom', message: 'Email is already taken' });
-    }
-  }),
-  username: s.string().min(3).check((value) => !reservedUsernames.has(value), ({ value }) => {
-    return `${value} is reserved`;
-  }),
+  email: s
+    .string()
+    .email()
+    .checkAsync(async (value, ctx) => {
+      if (takenEmails.has(value)) {
+        ctx.addIssue({ code: 'custom', message: 'Email is already taken' });
+      }
+    }),
+  username: s
+    .string()
+    .min(3)
+    .check(
+      (value) => !reservedUsernames.has(value),
+      ({ value }) => {
+        return `${value} is reserved`;
+      },
+    ),
 });
 
 await Signup.parseAsync({
@@ -135,7 +146,10 @@ Use `refine()` instead of `check()` when you only need a boolean predicate and a
 ```ts
 import { s } from '@vielzeug/spell';
 
-const EvenNumber = s.number().refine((n) => n % 2 === 0, () => 'Must be even');
+const EvenNumber = s.number().refine(
+  (n) => n % 2 === 0,
+  () => 'Must be even',
+);
 EvenNumber.parse(4); // 4
 ```
 
@@ -191,11 +205,13 @@ Use descriptors when schemas need to cross process boundaries or feed tooling.
 ```ts
 import { descriptorToJsonSchema, fromDescriptor, s } from '@vielzeug/spell';
 
-const Product = s.object({
-  id: s.string().uuid(),
-  name: s.string().min(1),
-  price: s.number().positive().multipleOf(0.01),
-}).label('Product');
+const Product = s
+  .object({
+    id: s.string().uuid(),
+    name: s.string().min(1),
+    price: s.number().positive().multipleOf(0.01),
+  })
+  .label('Product');
 
 const descriptor = Product.toDescriptor();
 const rebuilt = fromDescriptor(descriptor);
@@ -276,18 +292,25 @@ Use `bestMatch()` on a union failure when you want the branch that came closest 
 Spell works anywhere you can call a function before state enters your app.
 
 ::: code-group
+
 ```tsx [React]
 import { s } from '@vielzeug/spell';
 
-const SearchParams = s.object({
-  page: s.coerce.number().int().positive().default(1),
-  q: s.string().trim().optional(),
-}).relaxed();
+const SearchParams = s
+  .object({
+    page: s.coerce.number().int().positive().default(1),
+    q: s.string().trim().optional(),
+  })
+  .relaxed();
 
 export function SearchPage({ rawParams }: { rawParams: unknown }) {
   const params = SearchParams.parse(rawParams);
 
-  return <div>{params.q ?? 'All results'} — page {params.page}</div>;
+  return (
+    <div>
+      {params.q ?? 'All results'} — page {params.page}
+    </div>
+  );
 }
 ```
 
@@ -303,6 +326,7 @@ const Settings = s.object({
 const raw = ref<unknown>({ locale: 'en', compact: 'true' });
 const settings = computed(() => Settings.parse(raw.value));
 ```
+
 :::
 
 Use `safeParse()` at event boundaries and `parse()` inside trusted data flows.

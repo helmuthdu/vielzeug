@@ -22,21 +22,21 @@ No additional setup is required — the module is a pure helper layer on top of 
 
 Boolean predicates for the most common ARIA states:
 
-| Helper                  | Checks                          |
-| ----------------------- | ------------------------------- |
-| `isAriaInvalid(el)`     | `aria-invalid="true"`           |
-| `isAriaDisabled(el)`    | `aria-disabled="true"`          |
-| `isAriaChecked(el)`     | `aria-checked="true"`           |
-| `isAriaIndeterminate(el)` | `aria-checked="mixed"`        |
-| `isAriaExpanded(el)`    | `aria-expanded="true"`          |
-| `isAriaPressed(el)`     | `aria-pressed="true"`           |
-| `isAriaRequired(el)`    | `aria-required="true"`          |
-| `isAriaHidden(el)`      | `aria-hidden="true"`            |
-| `getAriaLabel(el)`      | Returns `aria-label` or `null`  |
-| `getAriaLabelledBy(el)` | Returns `aria-labelledby` or `null` |
-| `getAriaDescribedBy(el)` | Returns `aria-describedby` or `null` |
-| `getAriaControls(el)`   | Returns `aria-controls` or `null` |
-| `getRole(el)`           | Returns `role` or `null`        |
+| Helper                    | Checks                               |
+| ------------------------- | ------------------------------------ |
+| `isAriaInvalid(el)`       | `aria-invalid="true"`                |
+| `isAriaDisabled(el)`      | `aria-disabled="true"`               |
+| `isAriaChecked(el)`       | `aria-checked="true"`                |
+| `isAriaIndeterminate(el)` | `aria-checked="mixed"`               |
+| `isAriaExpanded(el)`      | `aria-expanded="true"`               |
+| `isAriaPressed(el)`       | `aria-pressed="true"`                |
+| `isAriaRequired(el)`      | `aria-required="true"`               |
+| `isAriaHidden(el)`        | `aria-hidden="true"`                 |
+| `getAriaLabel(el)`        | Returns `aria-label` or `null`       |
+| `getAriaLabelledBy(el)`   | Returns `aria-labelledby` or `null`  |
+| `getAriaDescribedBy(el)`  | Returns `aria-describedby` or `null` |
+| `getAriaControls(el)`     | Returns `aria-controls` or `null`    |
+| `getRole(el)`             | Returns `role` or `null`             |
 
 ### ARIA Snapshot
 

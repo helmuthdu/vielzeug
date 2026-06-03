@@ -29,13 +29,14 @@ define('search-list', {
 
       ${when(
         () => filtered.value.length > 0,
-        () => html`<ul>
-          ${each(
-            filtered,
-            (_, i) => i,
-            (name) => html`<li>${name}</li>`,
-          )}
-        </ul>`,
+        () =>
+          html`<ul>
+            ${each(
+              filtered,
+              (_, i) => i,
+              (name) => html`<li>${name}</li>`,
+            )}
+          </ul>`,
         () => html`<p>No matches</p>`,
       )}
     `;

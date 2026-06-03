@@ -103,8 +103,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" color="warning" solid></bit-rating>
-<bit-rating value="4" color="primary" solid></bit-rating>
+<bit-rating value="3" color="warning" solid></bit-rating> <bit-rating value="4" color="primary" solid></bit-rating>
 ```
 
 </ComponentPreview>

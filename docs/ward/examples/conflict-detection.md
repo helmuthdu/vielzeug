@@ -80,7 +80,7 @@ Rules with a `when` predicate are excluded from both `'duplicate'` and `'shadowe
 const ward = createWard([
   // NOT flagged — the predicate may fail and cause the rule to not match
   { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'deny',  when: owns('authorId') },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'deny', when: owns('authorId') },
 ]);
 
 ward.detectConflicts(); // []

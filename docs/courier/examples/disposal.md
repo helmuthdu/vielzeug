@@ -24,7 +24,6 @@ function cleanup() {
 }
 ```
 
-
 ### Pitfalls
 
 - Aborting via `AbortController` cancels the network request but does not prevent state updates that were queued before the abort. Guard setters with a mounted/active flag.

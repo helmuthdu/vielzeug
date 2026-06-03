@@ -34,7 +34,6 @@ async function setupPage() {
 }
 ```
 
-
 ### Pitfalls
 
 - `using` requires TypeScript 5.2+ and a `tsconfig.json` `target` of `es2022` or later. Without this, `[Symbol.dispose]` is `undefined` at runtime.

@@ -70,7 +70,7 @@ Validation result:
 ```ts
 const result = await form.validateFields(['email']);
 
-console.log(result.valid);  // true only if no errors exist after this run
+console.log(result.valid); // true only if no errors exist after this run
 console.log(result.errors); // full current error map after the run
 ```
 
@@ -189,12 +189,12 @@ const emailConn = form.connect('email', ValidationModes.onChange);
 const passwordConn = form.connect('password', { validateOnBlur: true, debounce: 300 });
 ```
 
-| Preset                           | `touchOnBlur` | `validateOnBlur` | `validateOnChange` | `validateOnTouch` |
-| -------------------------------- | ------------- | ---------------- | ------------------ | ----------------- |
-| `ValidationModes.onSubmit` (default) | —         | —                | —                  | —                 |
-| `ValidationModes.onBlur`         | ✅            | ✅               | —                  | —                 |
-| `ValidationModes.onChange`       | ✅            | —                | ✅                 | —                 |
-| `ValidationModes.onTouched`      | ✅            | ✅               | —                  | ✅                |
+| Preset                               | `touchOnBlur` | `validateOnBlur` | `validateOnChange` | `validateOnTouch` |
+| ------------------------------------ | ------------- | ---------------- | ------------------ | ----------------- |
+| `ValidationModes.onSubmit` (default) | —             | —                | —                  | —                 |
+| `ValidationModes.onBlur`             | ✅            | ✅               | —                  | —                 |
+| `ValidationModes.onChange`           | ✅            | —                | ✅                 | —                 |
+| `ValidationModes.onTouched`          | ✅            | ✅               | —                  | ✅                |
 
 `debounce` delays auto-triggered validation by a given number of milliseconds — useful for async validators on `onChange` to avoid one request per keystroke.
 
@@ -216,11 +216,11 @@ const form = createForm({
 // scope() is memoized — repeated calls with the same prefix return the same object
 const address = form.scope('address');
 
-address.get('city');                     // same as form.get('address.city')
-address.set('city', 'Portland');         // same as form.set('address.city', 'Portland')
-address.connect('city');                 // same as form.connect('address.city')
-await address.validate();                // validates only address.* fields; returns scoped errors (no prefix)
-await address.submit((vals) => vals);    // validates and submits only address.* fields
+address.get('city'); // same as form.get('address.city')
+address.set('city', 'Portland'); // same as form.set('address.city', 'Portland')
+address.connect('city'); // same as form.connect('address.city')
+await address.validate(); // validates only address.* fields; returns scoped errors (no prefix)
+await address.submit((vals) => vals); // validates and submits only address.* fields
 ```
 
 **Key characteristics:**
@@ -325,11 +325,11 @@ form.batch(() => {
 ## Reset, Replace, and Patch
 
 ```ts
-form.reset();                           // restore all values to baseline; clear errors/touched/dirty/submitCount
-form.replace({ email: '', name: '' });  // replace values and baseline; also resets submitCount
-form.patch({ name: 'Alice' });          // merge specific fields into store and baseline (marks them clean)
-form.resetField('email');               // restore single field to baseline
-form.removeField('coupon');             // drop field entirely (value, touched, error, validator)
+form.reset(); // restore all values to baseline; clear errors/touched/dirty/submitCount
+form.replace({ email: '', name: '' }); // replace values and baseline; also resets submitCount
+form.patch({ name: 'Alice' }); // merge specific fields into store and baseline (marks them clean)
+form.resetField('email'); // restore single field to baseline
+form.removeField('coupon'); // drop field entirely (value, touched, error, validator)
 ```
 
 `patch()` accepts a `DeepPartial` object — nested paths are flattened automatically. Useful for applying a server response without dirtying the form.
@@ -337,8 +337,8 @@ form.removeField('coupon');             // drop field entirely (value, touched, 
 ## Lifecycle
 
 ```ts
-form.dispose();            // tear down: abort all pending validation, clear listeners
-console.log(form.disposed) // true after dispose()
+form.dispose(); // tear down: abort all pending validation, clear listeners
+console.log(form.disposed); // true after dispose()
 ```
 
 After `dispose()`, all mutating APIs throw.
@@ -368,14 +368,20 @@ function LoginForm() {
   const conn = form.connect('email', { touchOnBlur: true });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.submit(handleLogin); }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(handleLogin);
+      }}>
       <input
         value={email.value as string}
         onChange={(e) => conn.onChange(e.target.value)}
         onBlur={() => conn.onBlur()}
       />
       {email.error && <p>{email.error}</p>}
-      <button type="submit" disabled={state.isSubmitting}>Submit</button>
+      <button type="submit" disabled={state.isSubmitting}>
+        Submit
+      </button>
     </form>
   );
 }

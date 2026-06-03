@@ -31,7 +31,6 @@ exports: [createWorker, createModuleWorker, createTestWorker]
 
 `@vielzeug/familiar` is a typed Web Worker pool with task queuing, priorities, per-task timeouts, streaming, heartbeat monitoring, and in-process testing.
 
-
 ## Installation
 
 ::: code-group
@@ -97,20 +96,20 @@ console.log(await typedWorker.run(21)); // 42 — typed, awaitable, error-safe
 typedWorker.dispose();
 ```
 
-| Feature             | Worker                                        | Comlink | workerpool |
-| ------------------- | --------------------------------------------- | ------- | ---------- |
-| Bundle size         | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
-| Worker pools        | ✅                                            | ❌      | ✅         |
-| Typed payloads      | ✅                                            | Partial | ❌         |
-| Timeout support     | ✅                                            | ❌      | ✅         |
-| Priority queue      | ✅                                            | ❌      | ❌         |
-| AbortSignal         | ✅ Queued tasks                               | ❌      | ❌         |
-| Streaming           | ✅ `runStream()`                              | ❌      | ❌         |
-| Heartbeat           | ✅ Auto for inline workers                    | ❌      | ❌         |
-| Typed errors        | ✅ `instanceof WorkerTimeoutError` etc.       | ❌      | ❌         |
-| Testing utilities   | ✅                                            | ❌      | ❌         |
-| Module workers      | ✅ `createModuleWorker`                       | ✅      | ❌         |
-| Zero dependencies   | ✅                                            | ✅      | ❌         |
+| Feature           | Worker                                         | Comlink | workerpool |
+| ----------------- | ---------------------------------------------- | ------- | ---------- |
+| Bundle size       | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
+| Worker pools      | ✅                                             | ❌      | ✅         |
+| Typed payloads    | ✅                                             | Partial | ❌         |
+| Timeout support   | ✅                                             | ❌      | ✅         |
+| Priority queue    | ✅                                             | ❌      | ❌         |
+| AbortSignal       | ✅ Queued tasks                                | ❌      | ❌         |
+| Streaming         | ✅ `runStream()`                               | ❌      | ❌         |
+| Heartbeat         | ✅ Auto for inline workers                     | ❌      | ❌         |
+| Typed errors      | ✅ `instanceof WorkerTimeoutError` etc.        | ❌      | ❌         |
+| Testing utilities | ✅                                             | ❌      | ❌         |
+| Module workers    | ✅ `createModuleWorker`                        | ✅      | ❌         |
+| Zero dependencies | ✅                                             | ✅      | ❌         |
 
 **Use Worker when** you need typed, awaitable Web Workers with pooling, priorities, timeouts, streaming, and cancellation.
 
@@ -139,12 +138,12 @@ typedWorker.dispose();
 
 ## Compatibility
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | ✅ Full support |
+| Environment | Support                                                                          |
+| ----------- | -------------------------------------------------------------------------------- |
+| Browser     | ✅ Full support                                                                  |
 | Node.js     | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
 | SSR         | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
-| Deno        | ⚠️ Support depends on Worker compatibility |
+| Deno        | ⚠️ Support depends on Worker compatibility                                       |
 
 ## Documentation
 

@@ -45,7 +45,6 @@ define('my-dropzone', (props) => {
 });
 ```
 
-
 ### Pitfalls
 
 - `createSortable()` and `createDropZone()` must be called after the element is connected to the DOM — inside `mount()`, not during component definition. The container element does not exist before connection.
@@ -53,6 +52,7 @@ define('my-dropzone', (props) => {
 - Call `onCleanup(() => sortable.destroy())` (or `zone.destroy()`) inside `mount()` so the listener is removed when the component disconnects.
 
 ### Related
+
 - [With Craft Component (Orbit)](@vielzeug/orbit/examples/with-craft-component)
 
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)

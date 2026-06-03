@@ -35,6 +35,7 @@ async function watchCart() {
 - If the bus is disposed while the generator is awaiting the next event, the generator **returns cleanly** — no exception is thrown. The `for await` loop simply exits. There is no need to wrap it in `try/catch` for disposal.
 
 ### Related
+
 - [Async Workflows with watch (Ripple)](@vielzeug/ripple/examples/pattern-nextvalue-in-async-workflows)
 - [Polling (Courier)](@vielzeug/courier/examples/polling)
 

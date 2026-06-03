@@ -89,10 +89,10 @@ await db.putAll('users', [
 ]);
 
 // read
-const alice  = await db.get('users', 1);         // User | undefined
-const all    = await db.getAll('users');          // User[]
-const total  = await db.count('users');           // number (live records only)
-const exists = await db.has('users', 1);          // boolean
+const alice = await db.get('users', 1); // User | undefined
+const all = await db.getAll('users'); // User[]
+const total = await db.count('users'); // number (live records only)
+const exists = await db.has('users', 1); // boolean
 
 // update — merges fields, throws VaultError if key does not exist
 const updated = await db.update('users', 1, { age: 31 });
@@ -101,7 +101,7 @@ const updated = await db.update('users', 1, { age: 31 });
 await db.delete('users', 1);
 await db.clear('users');
 
-void alice, all, total, exists, updated;
+(void alice, all, total, exists, updated);
 ```
 
 `update` returns the merged record or throws `VaultError` when the key is not found. Use `upsert` for insert-or-update semantics.
@@ -220,7 +220,7 @@ const count = await db.query('users').equals('age', 30).limit(10).count();
 // totalCount() ignores limit/offset/orderBy — returns the full filtered set size
 const total = await db.query('users').equals('age', 30).totalCount();
 
-void page, first, count, total;
+(void page, first, count, total);
 ```
 
 Use `totalCount()` alongside `limit`/`offset` for "page X of N" UIs:
@@ -232,7 +232,10 @@ const pageIndex = 2;
 const q = db.query('users').between('age', 18, 99).orderBy('name', 'asc');
 
 const [page, total] = await Promise.all([
-  q.limit(pageSize).offset(pageIndex * pageSize).toArray(),
+  q
+    .limit(pageSize)
+    .offset(pageIndex * pageSize)
+    .toArray(),
   q.totalCount(),
 ]);
 
@@ -242,7 +245,10 @@ console.log(`Page ${pageIndex + 1} of ${Math.ceil(total / pageSize)}`, page);
 ### Delete via Query
 
 ```ts
-const deleted = await db.query('users').filter((u) => u.age < 18).delete();
+const deleted = await db
+  .query('users')
+  .filter((u) => u.age < 18)
+  .delete();
 ```
 
 Returns the number of deleted records.
@@ -328,8 +334,7 @@ By default (`mode: 'latest'`) intermediate snapshots are dropped if the consumer
 `watchStream(table)` returns a Web Standard `ReadableStream` of snapshots. Use it with WHATWG stream pipelines or in environments that consume `ReadableStream` directly.
 
 ```ts
-db.watchStream('users')
-  .pipeTo(new WritableStream({ write: (users) => render(users) }));
+db.watchStream('users').pipeTo(new WritableStream({ write: (users) => render(users) }));
 ```
 
 Always cancel the stream (or pass a `signal`) to stop the underlying observer:
@@ -386,7 +391,10 @@ await db.batch(['users', 'posts'], async (tx) => {
   await tx.put('posts', { id: 10, title: 'Hello', userId: 1 });
 
   // query and delete are also available inside the callback
-  await tx.query('posts').filter((p) => p.title.startsWith('H')).delete();
+  await tx
+    .query('posts')
+    .filter((p) => p.title.startsWith('H'))
+    .delete();
 });
 ```
 
@@ -536,12 +544,7 @@ const db = createLocalStorage({
 All factories return the same `Adapter<S>` type, making it straightforward to select a backend at runtime.
 
 ```ts
-import {
-  createIndexedDB,
-  createLocalStorage,
-  createMemory,
-  type Adapter,
-} from '@vielzeug/vault';
+import { createIndexedDB, createLocalStorage, createMemory, type Adapter } from '@vielzeug/vault';
 
 function createStorage(): Adapter<typeof schema> {
   if (typeof indexedDB !== 'undefined') {
@@ -569,13 +572,7 @@ db.dispose();
 All errors thrown by `@vielzeug/vault` are instances of `VaultError`. Catch the base class to handle any vault-originated error, or catch specific subclasses for fine-grained handling.
 
 ```ts
-import {
-  VaultDisposedError,
-  VaultError,
-  VaultMigrationError,
-  VaultQuotaError,
-  VaultScopeError,
-} from '@vielzeug/vault';
+import { VaultDisposedError, VaultError, VaultMigrationError, VaultQuotaError, VaultScopeError } from '@vielzeug/vault';
 
 try {
   await db.put('users', { id: 1, name: 'Alice', age: 30 });
@@ -594,13 +591,13 @@ try {
 }
 ```
 
-| Class | Thrown when |
-| --- | --- |
-| `VaultError` | Base class — catch all vault errors |
-| `VaultDisposedError` | Any operation after `dispose()` |
-| `VaultScopeError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
-| `VaultQuotaError` | A LocalStorage / SessionStorage write exceeds the storage quota |
-| `VaultMigrationError` | IndexedDB `onupgradeneeded` migration callback threw |
+| Class                 | Thrown when                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `VaultError`          | Base class — catch all vault errors                                                        |
+| `VaultDisposedError`  | Any operation after `dispose()`                                                            |
+| `VaultScopeError`     | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
+| `VaultQuotaError`     | A LocalStorage / SessionStorage write exceeds the storage quota                            |
+| `VaultMigrationError` | IndexedDB `onupgradeneeded` migration callback threw                                       |
 
 ## Framework Integration
 

@@ -3,8 +3,6 @@ title: Lingua — Examples
 description: Practical examples and recipes for lingua.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Shared Instance Setup](./examples/shared-instance-setup.md)

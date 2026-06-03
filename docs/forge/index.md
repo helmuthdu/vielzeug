@@ -31,7 +31,6 @@ exports: [createForm]
 
 `@vielzeug/forge` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
 
-
 ## Installation
 
 ::: code-group
@@ -101,17 +100,17 @@ const form = createForm({
 await form.submit(submit);
 ```
 
-| Feature                       | Forge                                        | React Hook Form | VeeValidate |
-| ----------------------------- | -------------------------------------------- | --------------- | ----------- |
-| Bundle size                   | <PackageInfo package="forge" type="size" />  | ~9 kB           | ~16 kB      |
-| Framework-agnostic            | ✅                                           | React only      | Vue only    |
-| Typed dot-path APIs           | ✅                                           | Partial         | Partial     |
-| Result-based submit flow      | ✅                                           | ❌              | ❌          |
-| Live field observation        | ✅                                           | ✅              | ✅          |
-| Full array helpers            | ✅                                           | ✅              | ✅          |
-| Scoped sub-forms              | ✅                                           | ❌              | ❌          |
-| Form + field subscriptions    | ✅                                           | ✅              | ✅          |
-| Zero dependencies             | ✅                                           | ❌              | ❌          |
+| Feature                    | Forge                                       | React Hook Form | VeeValidate |
+| -------------------------- | ------------------------------------------- | --------------- | ----------- |
+| Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
+| Framework-agnostic         | ✅                                          | React only      | Vue only    |
+| Typed dot-path APIs        | ✅                                          | Partial         | Partial     |
+| Result-based submit flow   | ✅                                          | ❌              | ❌          |
+| Live field observation     | ✅                                          | ✅              | ✅          |
+| Full array helpers         | ✅                                          | ✅              | ✅          |
+| Scoped sub-forms           | ✅                                          | ❌              | ❌          |
+| Form + field subscriptions | ✅                                          | ✅              | ✅          |
+| Zero dependencies          | ✅                                          | ❌              | ❌          |
 
 **Use Forge when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
 

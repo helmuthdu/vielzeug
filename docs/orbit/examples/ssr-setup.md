@@ -19,9 +19,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   resolve: {
-    alias: process.env.SSR
-      ? { '@vielzeug/orbit': '@vielzeug/orbit/ssr' }
-      : {},
+    alias: process.env.SSR ? { '@vielzeug/orbit': '@vielzeug/orbit/ssr' } : {},
   },
 });
 ```
@@ -43,10 +41,10 @@ async function getFloat() {
 
 ## What the Stubs Return
 
-| Export            | SSR Return Value                                               |
-| ----------------- | -------------------------------------------------------------- |
-| `computePosition` | `{ x: 0, y: 0, placement, middlewareData: {} }`                |
-| `autoUpdate`      | `() => void` (no-op cleanup); `update` is never called        |
+| Export            | SSR Return Value                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `computePosition` | `{ x: 0, y: 0, placement, middlewareData: {} }`                                          |
+| `autoUpdate`      | `() => void` (no-op cleanup); `update` is never called                                   |
 | `float`           | `FloatHandle` with no-op `cleanup`/`update`; `getPosition()` returns a zero-coord result |
 
 The stub `FloatHandle` is fully typed — consuming code that calls `handle.cleanup()` or reads `handle.cssAnchor` will work identically on the server and the client.

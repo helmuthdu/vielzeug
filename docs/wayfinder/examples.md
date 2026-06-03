@@ -3,8 +3,6 @@ title: Wayfinder — Examples
 description: Practical examples and recipes for wayfinder.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Route Table Basics](./examples/route-table-basics.md)

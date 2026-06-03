@@ -40,9 +40,7 @@ effect(() => {
   const { query, role, sort } = controls.value;
   void source.setFilter(role === 'all' ? undefined : (user) => user.role === role);
   void source.setSort(
-    sort === 'name'
-      ? (a, b) => a.name.localeCompare(b.name)
-      : (a, b) => a.role.localeCompare(b.role),
+    sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : (a, b) => a.role.localeCompare(b.role),
   );
   void source.searchNow(query);
 });
@@ -52,7 +50,7 @@ controls.patch({ query: 'a' });
 controls.patch({ role: 'admin' });
 
 // current and meta update automatically via the signal adapters
-console.log(current.value);        // filtered + sorted page 1
+console.log(current.value); // filtered + sorted page 1
 console.log(meta.value.totalItems);
 
 // Clean up when done

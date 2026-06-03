@@ -11,7 +11,6 @@ Date utilities (`expires`, `timeDiff`, `dateRange`) were removed from `@vielzeug
 
 See the [tempo examples](/tempo/examples/) for usage.
 
-
 - The main flow produces the behavior described in the recipe title.
 
 ## Common Pitfalls

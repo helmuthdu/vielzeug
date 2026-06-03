@@ -232,7 +232,7 @@ const log = Rune.withBindings({
 });
 
 log.debug('state trace'); // snapshot() only called here
-log.warn('cache miss');   // snapshot() NOT called — warn doesn't need it
+log.warn('cache miss'); // snapshot() NOT called — warn doesn't need it
 ```
 
 Lazy bindings are resolved on every emitted call, not cached:
@@ -320,9 +320,7 @@ function useLogger() {
 }
 
 function App() {
-  const [requestLogger] = useState(() =>
-    createLogger({ namespace: 'app' }).withBindings({ userId: '42' }),
-  );
+  const [requestLogger] = useState(() => createLogger({ namespace: 'app' }).withBindings({ userId: '42' }));
   return (
     <LogContext.Provider value={requestLogger}>
       <Dashboard />

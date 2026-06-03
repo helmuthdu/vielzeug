@@ -469,7 +469,10 @@ Scroll is rendering-layer agnostic. The pattern is always the same: create the v
 import { createVirtualizer, type Virtualizer } from '@vielzeug/scroll';
 import { useEffect, useRef } from 'react';
 
-interface Row { id: number; label: string; }
+interface Row {
+  id: number;
+  label: string;
+}
 
 function VirtualList({ rows }: { rows: Row[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -499,7 +502,9 @@ function VirtualList({ rows }: { rows: Row[] }) {
     return () => virt.destroy();
   }, []); // attach once
 
-  useEffect(() => { virtRef.current?.update({ count: rows.length }); }, [rows.length]);
+  useEffect(() => {
+    virtRef.current?.update({ count: rows.length });
+  }, [rows.length]);
 
   return (
     <div ref={scrollRef} style={{ height: 400, overflow: 'auto', position: 'relative' }}>
@@ -537,7 +542,12 @@ onMounted(() => {
     },
   });
 });
-watch(() => props.rows.length, (n) => { virt?.update({ count: n }); });
+watch(
+  () => props.rows.length,
+  (n) => {
+    virt?.update({ count: n });
+  },
+);
 onUnmounted(() => virt?.destroy());
 </script>
 
@@ -590,7 +600,16 @@ import { createVirtualizer, type Virtualizer } from '@vielzeug/scroll';
 
 @customElement('virtual-list')
 class VirtualList extends LitElement {
-  static styles = css`.scroll{height:400px;overflow:auto;position:relative;}.list{position:relative;}`;
+  static styles = css`
+    .scroll {
+      height: 400px;
+      overflow: auto;
+      position: relative;
+    }
+    .list {
+      position: relative;
+    }
+  `;
 
   @property({ type: Array }) rows: { label: string }[] = [];
   #virt: Virtualizer | null = null;
@@ -614,14 +633,20 @@ class VirtualList extends LitElement {
     });
   }
 
-  updated() { this.#virt?.update({ count: this.rows.length }); }
-  disconnectedCallback() { this.#virt?.destroy(); super.disconnectedCallback(); }
-  render() { return html`<div class="scroll"><div class="list"></div></div>`; }
+  updated() {
+    this.#virt?.update({ count: this.rows.length });
+  }
+  disconnectedCallback() {
+    this.#virt?.destroy();
+    super.disconnectedCallback();
+  }
+  render() {
+    return html`<div class="scroll"><div class="list"></div></div>`;
+  }
 }
 ```
 
 :::
-
 
 ### Pitfalls
 

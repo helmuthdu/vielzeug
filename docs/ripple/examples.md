@@ -3,8 +3,6 @@ title: Ripple — Examples
 description: Practical examples and recipes for ripple.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Signals](./examples/signals.md)

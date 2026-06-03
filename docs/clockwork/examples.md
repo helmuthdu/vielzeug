@@ -3,8 +3,6 @@ title: Clockwork — Examples
 description: Practical examples and recipes for Machine.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Counter with Reset](./examples/counter-with-reset.md)

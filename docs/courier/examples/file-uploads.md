@@ -29,7 +29,6 @@ for (const file of files) batch.append('files', file);
 await api.post('/upload/batch', { body: batch });
 ```
 
-
 ### Pitfalls
 
 - Do not set `Content-Type` manually on a `FormData` request. The browser must include the multipart boundary in the header — setting it manually removes the boundary and breaks server parsing.

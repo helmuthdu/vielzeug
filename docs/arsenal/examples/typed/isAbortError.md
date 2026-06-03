@@ -5,7 +5,7 @@ Returns `true` if the value is an `Error` with `name === 'AbortError'`.
 ## Signature
 
 ```ts
-function isAbortError(value: unknown): value is Error
+function isAbortError(value: unknown): value is Error;
 ```
 
 ## Examples
@@ -35,7 +35,10 @@ try {
 import { abortable, isAbortError } from '@vielzeug/arsenal';
 
 const ac = new AbortController();
-const promise = abortable(fetch('/api').then((r) => r.json()), ac.signal);
+const promise = abortable(
+  fetch('/api').then((r) => r.json()),
+  ac.signal,
+);
 
 ac.abort();
 

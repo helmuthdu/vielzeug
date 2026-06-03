@@ -79,14 +79,14 @@ const html = await res.text();
 { "name": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
 ```
 
-| Feature | `@vielzeug/codex` | Custom fetch | Generic web search |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="mcp" type="size" /> | — | — |
-| Zero external deps | ❌ (MCP SDK) | ✅ | ✅ |
-| Structured metadata | ✅ | ❌ | ❌ |
-| Sigil component CEM | ✅ | ❌ | ❌ |
-| Offline / snapshot-backed | ✅ | ❌ | ❌ |
-| Stdio + HTTP transports | ✅ | ❌ | ❌ |
+| Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
+| ------------------------- | ----------------------------------------- | ------------ | ------------------ |
+| Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
+| Zero external deps        | ❌ (MCP SDK)                              | ✅           | ✅                 |
+| Structured metadata       | ✅                                        | ❌           | ❌                 |
+| Sigil component CEM       | ✅                                        | ❌           | ❌                 |
+| Offline / snapshot-backed | ✅                                        | ❌           | ❌                 |
+| Stdio + HTTP transports   | ✅                                        | ❌           | ❌                 |
 
 **Use `@vielzeug/codex` when** you are building or configuring an AI agent that needs reliable, offline access to Vielzeug documentation and component metadata.
 
@@ -96,21 +96,21 @@ const html = await res.text();
 
 ### Tools
 
-| Tool | Input | Description |
-| --- | --- | --- |
-| `list-packages` | `packageSlug?` | All packages with metadata; pass `packageSlug` to filter to a single-item result |
-| `get-docs` | `packageSlug`, `page?` | Package docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
-| `get-source` | `packageSlug` | Bundled `src/index.ts` text for a package |
-| `search-packages` | `query` | Search package metadata and docs with ranked matches |
-| `list-components` | — | Sigil component tags from bundled CEM metadata |
-| `get-component` | `tagName` | Full Sigil component CEM declaration by tag |
+| Tool              | Input                  | Description                                                                      |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------------- |
+| `list-packages`   | `packageSlug?`         | All packages with metadata; pass `packageSlug` to filter to a single-item result |
+| `get-docs`        | `packageSlug`, `page?` | Package docs page (`index`, `api`, `usage`, `examples`); defaults to `index`     |
+| `get-source`      | `packageSlug`          | Bundled `src/index.ts` text for a package                                        |
+| `search-packages` | `query`                | Search package metadata and docs with ranked matches                             |
+| `list-components` | —                      | Sigil component tags from bundled CEM metadata                                   |
+| `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                                      |
 
 ### Resources
 
-| URI pattern | MIME type | Content |
-| --- | --- | --- |
-| `vielzeug://docs/<slug>/<page>` | `text/markdown` | Documentation page |
-| `vielzeug://source/<slug>` | `text/x-typescript` | `src/index.ts` source |
+| URI pattern                     | MIME type           | Content               |
+| ------------------------------- | ------------------- | --------------------- |
+| `vielzeug://docs/<slug>/<page>` | `text/markdown`     | Documentation page    |
+| `vielzeug://source/<slug>`      | `text/x-typescript` | `src/index.ts` source |
 
 ### Transports
 
@@ -130,13 +130,13 @@ const html = await res.text();
 
 ## Compatibility
 
-| Environment | Support |
-| --- | --- |
-| Node.js 22+ | ✅ |
-| Claude Desktop (stdio) | ✅ |
-| GitHub Copilot Chat (stdio) | ✅ |
-| Remote agents (HTTP) | ✅ |
-| Browser | ❌ |
+| Environment                 | Support |
+| --------------------------- | ------- |
+| Node.js 22+                 | ✅      |
+| Claude Desktop (stdio)      | ✅      |
+| GitHub Copilot Chat (stdio) | ✅      |
+| Remote agents (HTTP)        | ✅      |
+| Browser                     | ❌      |
 
 ## Documentation
 

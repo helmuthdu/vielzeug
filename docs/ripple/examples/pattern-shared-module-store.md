@@ -57,7 +57,6 @@ export function logout() {
 }
 ```
 
-
 ### Pitfalls
 
 - A module-level store is a singleton. Tests that import it share the same instance — reset signal values to initial state in `afterEach` to prevent cross-test contamination.
@@ -65,6 +64,7 @@ export function logout() {
 - Exporting individual writable signals directly allows external code to mutate internal state, breaking encapsulation. Export derived read-only values or explicit setter functions instead.
 
 ### Related
+
 - [Shared Bus (Relay)](@vielzeug/herald/examples/module-level-bus)
 - [DI Container (Conduit)](/conduit/)
 

@@ -140,8 +140,13 @@ const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true
 
 // Handles Dates, Sets, Maps, bigints
-stableStringify(new Set([3, 1, 2]));              // '[Set:1,2,3]'
-stableStringify(new Map([['b', 2], ['a', 1]]));   // '[Map:"a"=>1,"b"=>2]'
+stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
+stableStringify(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:"a"=>1,"b"=>2]'
 stableStringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
 
 // Class instances fall back to String() by default

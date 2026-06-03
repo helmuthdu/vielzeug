@@ -54,7 +54,6 @@ using sortable = createSortable({
 });
 ```
 
-
 ### Pitfalls
 
 - If the list container has `touch-action: auto`, touch drags on mobile scroll the page instead of dragging. Set `touch-action: none` on drag handles.

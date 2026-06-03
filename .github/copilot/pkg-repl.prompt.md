@@ -104,9 +104,9 @@ Verify changes in layers:
    ```
 
 2. **Snippet correctness**
-    - Cross-check each snippet against `packages/<name>/src/index.ts`.
-    - For substantial snippet changes, temporarily copy the code string into a scratch `.ts` file outside the committed docs tree and run TypeScript against that file.
-    - Do not commit temporary verification files.
+   - Cross-check each snippet against `packages/<name>/src/index.ts`.
+   - For substantial snippet changes, temporarily copy the code string into a scratch `.ts` file outside the committed docs tree and run TypeScript against that file.
+   - Do not commit temporary verification files.
 
    Example scratch-file verification:
 
@@ -115,8 +115,8 @@ Verify changes in layers:
    ```
 
 3. **Runtime sanity**
-    - Prefer examples that execute cleanly in the browser REPL environment without extra setup.
-    - Ensure the snippet produces meaningful console output or a final returned value that’s visible to the user.
+   - Prefer examples that execute cleanly in the browser REPL environment without extra setup.
+   - Ensure the snippet produces meaningful console output or a final returned value that’s visible to the user.
 
 ### Step 5 — Report
 

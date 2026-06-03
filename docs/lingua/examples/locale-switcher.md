@@ -36,7 +36,7 @@ const stop = i18n.subscribe(
 
 // Call this from your locale-picker button handler
 async function changeLocale(locale: string) {
-  await i18n.preload(locale);   // download catalog
+  await i18n.preload(locale); // download catalog
   await i18n.setLocale(locale); // switch atomically
 }
 

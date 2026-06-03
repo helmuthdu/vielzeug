@@ -30,13 +30,24 @@ const auth = defineMachine<State, Context, Event>({
   states: {
     authenticated: {
       on: {
-        LOGOUT: { actions: [({ context }) => { context.token = ''; }], target: 'unauthenticated' },
+        LOGOUT: {
+          actions: [
+            ({ context }) => {
+              context.token = '';
+            },
+          ],
+          target: 'unauthenticated',
+        },
       },
     },
     error: {
       on: {
         LOGIN: {
-          actions: [({ context }) => { context.attempts += 1; }],
+          actions: [
+            ({ context }) => {
+              context.attempts += 1;
+            },
+          ],
           guard: ({ context }) => context.attempts < 3,
           target: 'loading',
         },
@@ -54,19 +65,38 @@ const auth = defineMachine<State, Context, Event>({
               headers: { 'Content-Type': 'application/json' },
               method: 'POST',
               signal,
-            }).then(r => r.json());
+            }).then((r) => r.json());
           },
         },
       ],
       on: {
-        AUTH_FAILED: { actions: [({ context }) => { context.attempts += 1; }], target: 'error' },
-        AUTH_SUCCESS: { actions: [({ context, event }) => { context.attempts = 0; context.token = event.token; }], target: 'authenticated' },
+        AUTH_FAILED: {
+          actions: [
+            ({ context }) => {
+              context.attempts += 1;
+            },
+          ],
+          target: 'error',
+        },
+        AUTH_SUCCESS: {
+          actions: [
+            ({ context, event }) => {
+              context.attempts = 0;
+              context.token = event.token;
+            },
+          ],
+          target: 'authenticated',
+        },
       },
     },
     unauthenticated: {
       on: {
         LOGIN: {
-          actions: [({ context }) => { context.attempts += 1; }],
+          actions: [
+            ({ context }) => {
+              context.attempts += 1;
+            },
+          ],
           guard: ({ context }) => context.attempts < 3,
           target: 'loading',
         },
@@ -102,7 +132,7 @@ test('blocks login after 3 attempts', () => {
 
 ### Pitfalls
 
-- **Guard runs before actions.** The guard sees the context *before* actions mutate it — `attempts` is checked pre-increment.
+- **Guard runs before actions.** The guard sees the context _before_ actions mutate it — `attempts` is checked pre-increment.
 - **`entryEvent` in invoke `src`** gives access to the event that triggered entry. Cast or check its type since it may also be a lifecycle event.
 - **Always handle both `onDone` and `onError`.** If `onError` is omitted and the invoke rejects, the machine remains in the current state silently.
 

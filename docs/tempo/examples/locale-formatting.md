@@ -19,13 +19,13 @@ import { format, formatInstant, formatRange, formatRelative } from '@vielzeug/te
 const time = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
 // Preset patterns
-format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });   // '3/21/2026, 10:15 AM'
+format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' }); // '3/21/2026, 10:15 AM'
 format(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' }); // '21.3.2026, 11:15'
-format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });   // '2026/3/21 19:15'
+format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' }); // '2026/3/21 19:15'
 
 // All preset patterns
-format(time, { pattern: 'medium',    locale: 'en-GB', tz: 'UTC' }); // '21 Mar 2026, 10:15'
-format(time, { pattern: 'long',      locale: 'en-GB', tz: 'UTC' }); // 'Saturday, 21 March 2026 at 10:15:30'
+format(time, { pattern: 'medium', locale: 'en-GB', tz: 'UTC' }); // '21 Mar 2026, 10:15'
+format(time, { pattern: 'long', locale: 'en-GB', tz: 'UTC' }); // 'Saturday, 21 March 2026 at 10:15:30'
 format(time, { pattern: 'date-only', locale: 'en-GB', tz: 'UTC' }); // '21/03/2026'
 format(time, { pattern: 'time-only', locale: 'en-GB', tz: 'UTC' }); // '10:15'
 
@@ -51,11 +51,11 @@ format(time, {
 ```ts
 import { formatRange } from '@vielzeug/tempo';
 
-formatRange(
-  Temporal.Instant.from('2026-03-21T10:00:00Z'),
-  Temporal.Instant.from('2026-03-21T12:00:00Z'),
-  { pattern: 'short', locale: 'en-US', tz: 'America/New_York' },
-);
+formatRange(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+  pattern: 'short',
+  locale: 'en-US',
+  tz: 'America/New_York',
+});
 // → '3/21/2026, 6:00 AM – 8:00 AM'
 ```
 

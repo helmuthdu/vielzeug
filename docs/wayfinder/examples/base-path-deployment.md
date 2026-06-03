@@ -26,9 +26,9 @@ const router = createRouter({
   notFound: { component: NotFoundPage },
 });
 
-await router.navigate({ name: 'about' });           // pushes /my-app/about
+await router.navigate({ name: 'about' }); // pushes /my-app/about
 const href = router.url('userDetail', { id: '7' }); // '/my-app/users/7'
-const branch = router.resolve('/my-app/users/7');   // strips base: params.id = '7'
+const branch = router.resolve('/my-app/users/7'); // strips base: params.id = '7'
 ```
 
 ### Pitfalls

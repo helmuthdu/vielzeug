@@ -24,9 +24,30 @@ const counter = defineMachine<'idle', { count: number }, Event>({
   states: {
     idle: {
       on: {
-        DEC:   { actions: [({ context }) => { context.count -= 1; }], target: 'idle' },
-        INC:   { actions: [({ context }) => { context.count += 1; }], target: 'idle' },
-        RESET: { actions: [({ context }) => { context.count = 0; }], target: 'idle' },
+        DEC: {
+          actions: [
+            ({ context }) => {
+              context.count -= 1;
+            },
+          ],
+          target: 'idle',
+        },
+        INC: {
+          actions: [
+            ({ context }) => {
+              context.count += 1;
+            },
+          ],
+          target: 'idle',
+        },
+        RESET: {
+          actions: [
+            ({ context }) => {
+              context.count = 0;
+            },
+          ],
+          target: 'idle',
+        },
       },
     },
   },

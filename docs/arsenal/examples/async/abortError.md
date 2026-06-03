@@ -5,7 +5,7 @@ Extracts the abort reason from an `AbortSignal`, or constructs a `DOMException('
 ## Signature
 
 ```ts
-function abortError(signal?: AbortSignal): unknown
+function abortError(signal?: AbortSignal): unknown;
 ```
 
 ## Parameters

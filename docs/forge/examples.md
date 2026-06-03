@@ -3,8 +3,6 @@ title: Forge — Examples
 description: Practical examples and recipes for forge.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Login Form](./examples/login-form.md)

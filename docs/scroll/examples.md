@@ -3,8 +3,6 @@ title: Scroll — Examples
 description: Practical examples and recipes for scroll.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Basic Fixed Height List](./examples/basic-fixed-height-list.md)

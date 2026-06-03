@@ -13,30 +13,30 @@ Use `money()` to construct a `Money` value from a human-readable decimal, number
 import { money, zero } from '@vielzeug/coins';
 
 // From decimal string (preferred — lossless)
-money('1234.56', 'USD');   // { amount: 123456n, currency: 'USD' }
-money('-10.50', 'USD');    // { amount: -1050n,  currency: 'USD' }
-money('1234',   'JPY');    // { amount: 1234n,   currency: 'JPY' }  (zero-decimal)
-money('1.234',  'KWD');    // { amount: 1234n,   currency: 'KWD' }  (three-decimal)
+money('1234.56', 'USD'); // { amount: 123456n, currency: 'USD' }
+money('-10.50', 'USD'); // { amount: -1050n,  currency: 'USD' }
+money('1234', 'JPY'); // { amount: 1234n,   currency: 'JPY' }  (zero-decimal)
+money('1.234', 'KWD'); // { amount: 1234n,   currency: 'KWD' }  (three-decimal)
 
 // From number (converted via String() — IEEE-754 applies; prefer strings)
-money(1234.56, 'USD');     // { amount: 123456n, currency: 'USD' }
+money(1234.56, 'USD'); // { amount: 123456n, currency: 'USD' }
 
 // From bigint — raw minor units, passed through as-is
-money(123456n, 'USD');     // { amount: 123456n, currency: 'USD' }
+money(123456n, 'USD'); // { amount: 123456n, currency: 'USD' }
 
 // Zero amount — idiomatic starting value
-zero('USD');  // { amount: 0n, currency: 'USD' }
-zero('JPY');  // { amount: 0n, currency: 'JPY' }
+zero('USD'); // { amount: 0n, currency: 'USD' }
+zero('JPY'); // { amount: 0n, currency: 'JPY' }
 
 // Invalid currency — throws RangeError
-money('1.00', 'NOTREAL');  // RangeError: Invalid ISO 4217 currency code: "NOTREAL"
+money('1.00', 'NOTREAL'); // RangeError: Invalid ISO 4217 currency code: "NOTREAL"
 ```
 
 `Money` is a plain readonly object — no class, no methods:
 
 ```ts
 type Money = {
-  readonly amount:   bigint;       // minor units
+  readonly amount: bigint; // minor units
   readonly currency: CurrencyCode; // validated, branded string
 };
 ```
@@ -48,10 +48,10 @@ type Money = {
 ```ts
 import { toCurrencyCode } from '@vielzeug/coins';
 
-const usd = toCurrencyCode('USD');  // CurrencyCode
-const eur = toCurrencyCode('EUR');  // CurrencyCode
+const usd = toCurrencyCode('USD'); // CurrencyCode
+const eur = toCurrencyCode('EUR'); // CurrencyCode
 
-toCurrencyCode('XXX');              // throws RangeError for unrecognised codes
+toCurrencyCode('XXX'); // throws RangeError for unrecognised codes
 ```
 
 The `money()` factory validates its `currency` argument internally, so you don't need `toCurrencyCode` for ordinary `money()` calls.
@@ -64,11 +64,11 @@ All binary functions (`add`, `subtract`) throw `TypeError` when currencies diffe
 import { add, subtract, multiply, divide, abs, negate } from '@vielzeug/coins';
 
 const a = money('100.00', 'USD');
-const b = money('30.00',  'USD');
+const b = money('30.00', 'USD');
 
-add(a, b);       // { amount: 13000n, currency: 'USD' }  ($130.00)
-subtract(a, b);  // { amount:  7000n, currency: 'USD' }  ($70.00)
-abs(money('-50.00', 'USD'));   // { amount:  5000n, currency: 'USD' }
+add(a, b); // { amount: 13000n, currency: 'USD' }  ($130.00)
+subtract(a, b); // { amount:  7000n, currency: 'USD' }  ($70.00)
+abs(money('-50.00', 'USD')); // { amount:  5000n, currency: 'USD' }
 negate(money('10.00', 'USD')); // { amount: -1000n, currency: 'USD' }
 
 // throws TypeError: Currency mismatch: USD and EUR
@@ -80,26 +80,26 @@ add(money('10.00', 'USD'), money('10.00', 'EUR'));
 Both accept a `number | string` scalar and an optional `RoundingMode` (default `'half-away-from-zero'`). Use strings for lossless fractional factors.
 
 ```ts
-multiply(money('100.00', 'USD'), '1.5');             // $150.00
-multiply(money('1.00',   'USD'), '0.339', 'floor');  // $0.33
-multiply(money('1.00',   'USD'), '0.339', 'ceiling');// $0.34
+multiply(money('100.00', 'USD'), '1.5'); // $150.00
+multiply(money('1.00', 'USD'), '0.339', 'floor'); // $0.33
+multiply(money('1.00', 'USD'), '0.339', 'ceiling'); // $0.34
 
-divide(money('100.00', 'USD'), 3);                   // $33.33
-divide(money('100.00', 'USD'), 3, 'ceiling');        // $33.34
+divide(money('100.00', 'USD'), 3); // $33.33
+divide(money('100.00', 'USD'), 3, 'ceiling'); // $33.34
 
-divide(money('100.00', 'USD'), 0);  // throws RangeError: Division by zero
+divide(money('100.00', 'USD'), 0); // throws RangeError: Division by zero
 ```
 
 ### Rounding Modes
 
-| Mode | Description |
-|---|---|
-| `'half-away-from-zero'` | Round half away from zero **(default)** |
-| `'half-even'` | Banker's rounding — minimises cumulative error over many operations |
-| `'down'` | Truncate toward zero |
-| `'up'` | Away from zero |
-| `'floor'` | Toward −∞ (down for positives, extra step for negatives) |
-| `'ceiling'` | Toward +∞ (extra step for positives, truncate for negatives) |
+| Mode                    | Description                                                         |
+| ----------------------- | ------------------------------------------------------------------- |
+| `'half-away-from-zero'` | Round half away from zero **(default)**                             |
+| `'half-even'`           | Banker's rounding — minimises cumulative error over many operations |
+| `'down'`                | Truncate toward zero                                                |
+| `'up'`                  | Away from zero                                                      |
+| `'floor'`               | Toward −∞ (down for positives, extra step for negatives)            |
+| `'ceiling'`             | Toward +∞ (extra step for positives, truncate for negatives)        |
 
 ## Allocation
 
@@ -149,19 +149,19 @@ import { clamp, max, min, sum } from '@vielzeug/coins';
 
 const items = [money('1.00', 'USD'), money('2.50', 'USD'), money('0.99', 'USD')];
 
-sum(items);                            // $4.49
-min(...items);                         // $0.99
-max(...items);                         // $2.50
+sum(items); // $4.49
+min(...items); // $0.99
+max(...items); // $2.50
 
-sum([]);  // throws RangeError: sum requires at least one Money value
+sum([]); // throws RangeError: sum requires at least one Money value
 
 // Clamp to an allowed price range
 const lo = money('1.00', 'USD');
 const hi = money('99.99', 'USD');
 
-clamp(money('0.50', 'USD'),   lo, hi);  // $1.00  (below minimum)
-clamp(money('42.00', 'USD'),  lo, hi);  // $42.00 (in range)
-clamp(money('150.00', 'USD'), lo, hi);  // $99.99 (above maximum)
+clamp(money('0.50', 'USD'), lo, hi); // $1.00  (below minimum)
+clamp(money('42.00', 'USD'), lo, hi); // $42.00 (in range)
+clamp(money('150.00', 'USD'), lo, hi); // $99.99 (above maximum)
 ```
 
 ## Comparison
@@ -172,20 +172,20 @@ All comparison functions throw `TypeError` on currency mismatch.
 import { compare, isEqual, greaterThan, lessThan, isZero, isPositive, isNegative } from '@vielzeug/coins';
 
 const five = money('5.00', 'USD');
-const ten  = money('10.00', 'USD');
+const ten = money('10.00', 'USD');
 
-compare(five, ten);          // -1
-compare(ten,  five);         //  1
-compare(five, five);         //  0
+compare(five, ten); // -1
+compare(ten, five); //  1
+compare(five, five); //  0
 
-isEqual(five, five);         // true
-isEqual(five, ten);          // false
+isEqual(five, five); // true
+isEqual(five, ten); // false
 
-greaterThan(ten, five);      // true
-lessThan(five, ten);         // true
+greaterThan(ten, five); // true
+lessThan(five, ten); // true
 
-isZero(money('0.00', 'USD'));   // true
-isPositive(five);               // true
+isZero(money('0.00', 'USD')); // true
+isPositive(five); // true
 isNegative(money('-1.00', 'USD')); // true
 
 // throws TypeError: Currency mismatch: USD and EUR
@@ -208,18 +208,18 @@ const serialized = toJSON(price);
 JSON.stringify(serialized);
 // → '{"amount":"123456","currency":"USD"}'
 
-fromJSON(serialized);  // → { amount: 123456n, currency: 'USD' }
+fromJSON(serialized); // → { amount: 123456n, currency: 'USD' }
 
 // Round-trips
-fromJSON(toJSON(price));          // equals price
-money(toDecimal(price), 'USD');   // equals price
+fromJSON(toJSON(price)); // equals price
+money(toDecimal(price), 'USD'); // equals price
 
 // Decimal string — useful for display or passing to other systems
-toDecimal(money(5n, 'USD'));   // '0.05'
+toDecimal(money(5n, 'USD')); // '0.05'
 toDecimal(money(1234n, 'JPY')); // '1234'
 
 // Lossy float — for charting libraries, not arithmetic
-toNumber(price);  // 1234.56
+toNumber(price); // 1234.56
 ```
 
 ## Formatting
@@ -233,19 +233,19 @@ import { format } from '@vielzeug/coins';
 
 const price = money('1234.56', 'USD');
 
-format(price);                                    // '$1,234.56'
-format(price, { locale: 'de-DE' });               // '1.234,56 $'
-format(price, { locale: 'fr-FR' });               // '1 234,56 $'
-format(price, { style: 'code' });                 // 'USD 1,234.56'
-format(price, { style: 'name' });                 // '1,234.56 US dollars'
-format(price, { style: 'narrowSymbol' });         // '$1,234.56' (compact)
+format(price); // '$1,234.56'
+format(price, { locale: 'de-DE' }); // '1.234,56 $'
+format(price, { locale: 'fr-FR' }); // '1 234,56 $'
+format(price, { style: 'code' }); // 'USD 1,234.56'
+format(price, { style: 'name' }); // '1,234.56 US dollars'
+format(price, { style: 'narrowSymbol' }); // '$1,234.56' (compact)
 
 // Zero-decimal currencies
-format(money('1234', 'JPY'));                      // '¥1,234'
+format(money('1234', 'JPY')); // '¥1,234'
 
 // Custom fraction digits — set only maximumFractionDigits when you want to truncate
-format(price, { maximumFractionDigits: 0 });                            // '$1,235'
-format(price, { minimumFractionDigits: 3, maximumFractionDigits: 3 });  // '$1,234.560'
+format(price, { maximumFractionDigits: 0 }); // '$1,235'
+format(price, { minimumFractionDigits: 3, maximumFractionDigits: 3 }); // '$1,234.560'
 ```
 
 ### `formatParts(money, options?)`
@@ -273,7 +273,9 @@ formatParts(money('-99.99', 'USD'));
 // ]
 
 // Joining all values always equals format():
-formatParts(m).map(p => p.value).join('') === format(m);  // true
+formatParts(m)
+  .map((p) => p.value)
+  .join('') === format(m); // true
 ```
 
 ## Currency Exchange
@@ -290,18 +292,18 @@ const jpy = toCurrencyCode('JPY');
 
 const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
 
-exchange(money('100.00', 'USD'), rate);           // { amount: 9200n, currency: 'EUR' }
-exchange(money('100.00', 'USD'), rate, 'floor');  // explicit rounding mode
+exchange(money('100.00', 'USD'), rate); // { amount: 9200n, currency: 'EUR' }
+exchange(money('100.00', 'USD'), rate, 'floor'); // explicit rounding mode
 
 // Throws TypeError if money.currency !== rate.from
-exchange(money('100.00', 'EUR'), rate);  // TypeError: Currency mismatch: EUR and USD
+exchange(money('100.00', 'EUR'), rate); // TypeError: Currency mismatch: EUR and USD
 
 // Throws RangeError for negative rates
-exchange(money('100.00', 'USD'), { from: usd, rate: '-0.92', to: eur });  // RangeError: Exchange rate must be non-negative
+exchange(money('100.00', 'USD'), { from: usd, rate: '-0.92', to: eur }); // RangeError: Exchange rate must be non-negative
 
 // High-precision rates — string parsing avoids float error
 const jpyRate: ExchangeRate = { from: usd, rate: '0.847532', to: eur };
-exchange(money('1000.00', 'USD'), jpyRate);  // { amount: 84753n, currency: 'EUR' }
+exchange(money('1000.00', 'USD'), jpyRate); // { amount: 84753n, currency: 'EUR' }
 ```
 
 ## Practical Patterns
@@ -312,17 +314,13 @@ exchange(money('1000.00', 'USD'), jpyRate);  // { amount: 84753n, currency: 'EUR
 import { add, format, money, sum } from '@vielzeug/coins';
 import type { Money } from '@vielzeug/coins';
 
-const items: Money[] = [
-  money('9.99',  'USD'),
-  money('14.99', 'USD'),
-  money('2.50',  'USD'),
-];
+const items: Money[] = [money('9.99', 'USD'), money('14.99', 'USD'), money('2.50', 'USD')];
 
 const subtotal = sum(items);
-const tax      = multiply(subtotal, '0.08');
-const total    = add(subtotal, tax);
+const tax = multiply(subtotal, '0.08');
+const total = add(subtotal, tax);
 
-format(total);  // '$29.68'
+format(total); // '$29.68'
 ```
 
 ### Invoice Line Allocation
@@ -333,9 +331,9 @@ import { allocate, format, money } from '@vielzeug/coins';
 const invoice = money('100.00', 'USD');
 const [alice, bob, carol] = allocate(invoice, [50, 30, 20]);
 
-format(alice);  // '$50.00'
-format(bob);    // '$30.00'
-format(carol);  // '$20.00'
+format(alice); // '$50.00'
+format(bob); // '$30.00'
+format(carol); // '$20.00'
 // alice.amount + bob.amount + carol.amount === 10000n  (exactly)
 ```
 
@@ -346,11 +344,11 @@ import { exchange, format, money, toCurrencyCode } from '@vielzeug/coins';
 import type { ExchangeRate } from '@vielzeug/coins';
 
 const price = money('50.00', 'USD');
-const usd   = toCurrencyCode('USD');
+const usd = toCurrencyCode('USD');
 
 const rates: ExchangeRate[] = [
-  { from: usd, rate: '0.92',  to: toCurrencyCode('EUR') },
-  { from: usd, rate: '0.79',  to: toCurrencyCode('GBP') },
+  { from: usd, rate: '0.92', to: toCurrencyCode('EUR') },
+  { from: usd, rate: '0.79', to: toCurrencyCode('GBP') },
   { from: usd, rate: '149.5', to: toCurrencyCode('JPY') },
 ];
 

@@ -33,7 +33,11 @@ const wizard = defineMachine<State, Context, Event>({
       on: {
         BACK: { target: 'info' },
         SUBMIT_DETAILS: {
-          actions: [({ context, event }) => { context.details = event.details; }],
+          actions: [
+            ({ context, event }) => {
+              context.details = event.details;
+            },
+          ],
           target: 'confirm',
         },
       },
@@ -41,7 +45,12 @@ const wizard = defineMachine<State, Context, Event>({
     info: {
       on: {
         SUBMIT_INFO: {
-          actions: [({ context, event }) => { context.email = event.email; context.name = event.name; }],
+          actions: [
+            ({ context, event }) => {
+              context.email = event.email;
+              context.name = event.name;
+            },
+          ],
           target: 'details',
         },
       },

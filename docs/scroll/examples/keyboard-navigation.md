@@ -53,7 +53,6 @@ scrollEl.addEventListener('keydown', (e) => {
 
 ---
 
-
 ### Pitfalls
 
 - `scrollToIndex` with `align: 'auto'` only scrolls when the item is outside the visible area. On first render, the virtualizer may not have rendered the focused item yet, making the initial scroll a no-op.

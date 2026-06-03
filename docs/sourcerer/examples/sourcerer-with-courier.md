@@ -50,8 +50,8 @@ Sourcerer manages request concurrency automatically. When a new request supersed
 
 ```ts
 // Optimistically close an issue in the UI before the server confirms
-const rollback = source.optimisticUpdate(
-  (issues) => issues.map((i) => (i.id === targetId ? { ...i, status: 'closed' } : i)),
+const rollback = source.optimisticUpdate((issues) =>
+  issues.map((i) => (i.id === targetId ? { ...i, status: 'closed' } : i)),
 );
 
 try {

@@ -17,23 +17,23 @@ Use `createWard` with per-role rules and `owns()` to gate the update action on a
 import { ANONYMOUS, createWard, owns } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'create' | 'update' | 'delete', { authorId: string }>([
-  { role: ANONYMOUS,   resource: 'posts', action: 'read',   effect: 'allow' },
-  { role: 'viewer',    resource: 'posts', action: 'read',   effect: 'allow' },
-  { role: 'editor',    resource: 'posts', action: 'create', effect: 'allow' },
-  { role: 'editor',    resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
-  { role: 'admin',     resource: 'posts', action: 'delete', effect: 'allow' },
+  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'create', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+  { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
 ]);
 
 // Anonymous visitor can read
-ward.can(null, 'posts', 'read');                                                                    // true
+ward.can(null, 'posts', 'read'); // true
 
 // Editor can update their own post but not another's
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });                  // true
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' });                  // false
+ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' }); // true
+ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' }); // false
 
 // Admin can delete, editor cannot
-ward.can({ id: 'u2', roles: ['admin'] },  'posts', 'delete');                                       // true
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'delete');                                       // false
+ward.can({ id: 'u2', roles: ['admin'] }, 'posts', 'delete'); // true
+ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'delete'); // false
 ```
 
 ### Pitfalls

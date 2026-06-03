@@ -7,7 +7,7 @@ Executes an async function and returns an `AttemptResult` — never throws. On s
 ```ts
 type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
 
-async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>
+async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>;
 ```
 
 ## Parameters
@@ -17,6 +17,7 @@ async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>
 ## Returns
 
 A promise that always resolves to:
+
 - `{ ok: true, value }` on success
 - `{ error, ok: false }` on failure — never rejects
 
@@ -64,10 +65,7 @@ if (result.ok) {
 import { attempt } from '@vielzeug/arsenal';
 
 async function loadDashboard() {
-  const [users, stats] = await Promise.all([
-    attempt(() => fetchUsers()),
-    attempt(() => fetchStats()),
-  ]);
+  const [users, stats] = await Promise.all([attempt(() => fetchUsers()), attempt(() => fetchStats())]);
 
   return {
     users: users.ok ? users.value : [],

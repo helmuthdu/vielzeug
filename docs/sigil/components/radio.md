@@ -24,8 +24,6 @@ A radio button and a group wrapper for mutually exclusive selections.
 <<< @/../packages/sigil/src/inputs/radio-group/radio-group.ts
 :::
 
----
-
 ## Standalone Radio
 
 ### Basic Usage
@@ -87,8 +85,6 @@ Prevent interaction and reduce opacity for unavailable options.
 ```
 
 </ComponentPreview>
-
----
 
 ## Radio Group
 
@@ -212,8 +208,6 @@ The selected `value` attribute is submitted with the form under the `name` field
 </script>
 ```
 
----
-
 ## API Reference
 
 ### `bit-radio` Attributes
@@ -280,8 +274,6 @@ The selected `value` attribute is submitted with the form under the `name` field
 | ------------------------- | ------------------------------- | --------------- |
 | `--radio-group-gap`       | Spacing between options         | `var(--size-2)` |
 | `--radio-group-direction` | Flex direction (`column`/`row`) | `column`        |
-
----
 
 ## Accessibility
 

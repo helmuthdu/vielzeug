@@ -33,11 +33,11 @@ const i18n = createI18n({
 // scope() returns { fmt, t, tp, has } bound to 'auth'
 const auth = i18n.scope('auth');
 
-auth.t('login');                      // i18n.t('auth.login')
-auth.t('logout');                     // i18n.t('auth.logout')
+auth.t('login'); // i18n.t('auth.login')
+auth.t('logout'); // i18n.t('auth.logout')
 auth.t('welcome', { name: 'Alice' }); // i18n.t('auth.welcome', { name: 'Alice' })
-auth.tp('attempts', 3);               // i18n.tp('auth.attempts', 3)
-auth.has('login');                    // i18n.has('auth.login')
+auth.tp('attempts', 3); // i18n.tp('auth.attempts', 3)
+auth.has('login'); // i18n.has('auth.login')
 ```
 
 ### Pitfalls

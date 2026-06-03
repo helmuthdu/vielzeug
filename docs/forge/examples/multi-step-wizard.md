@@ -19,27 +19,32 @@ import { createForm } from '@vielzeug/forge';
 const form = createForm({
   defaultValues: {
     personal: { firstName: '', lastName: '', email: '' },
-    address:  { street: '', city: '', zipCode: '' },
-    payment:  { cardNumber: '', expiryDate: '', cvv: '' },
+    address: { street: '', city: '', zipCode: '' },
+    payment: { cardNumber: '', expiryDate: '', cvv: '' },
   },
   validators: {
     'personal.firstName': (v) => (!v ? 'First name is required' : undefined),
-    'personal.lastName':  (v) => (!v ? 'Last name is required' : undefined),
-    'personal.email':     (v) => (!v ? 'Email is required' : !String(v).includes('@') ? 'Invalid email' : undefined),
-    'address.street':     (v) => (!v ? 'Street is required' : undefined),
-    'address.city':       (v) => (!v ? 'City is required' : undefined),
-    'address.zipCode':    (v) => (!v ? 'ZIP code is required' : !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP' : undefined),
-    'payment.cardNumber': (v) => (!v ? 'Card number is required' : !/^\d{16}$/.test(String(v).replace(/\s/g, '')) ? 'Invalid card number' : undefined),
+    'personal.lastName': (v) => (!v ? 'Last name is required' : undefined),
+    'personal.email': (v) => (!v ? 'Email is required' : !String(v).includes('@') ? 'Invalid email' : undefined),
+    'address.street': (v) => (!v ? 'Street is required' : undefined),
+    'address.city': (v) => (!v ? 'City is required' : undefined),
+    'address.zipCode': (v) => (!v ? 'ZIP code is required' : !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP' : undefined),
+    'payment.cardNumber': (v) =>
+      !v
+        ? 'Card number is required'
+        : !/^\d{16}$/.test(String(v).replace(/\s/g, ''))
+          ? 'Invalid card number'
+          : undefined,
     'payment.expiryDate': (v) => (!v ? 'Expiry date is required' : undefined),
-    'payment.cvv':        (v) => (!v ? 'CVV is required' : !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
+    'payment.cvv': (v) => (!v ? 'CVV is required' : !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
   },
 });
 
 // scope() is memoized — repeated calls with the same prefix return the same object
 const steps = [
   { title: 'Personal Info', scope: form.scope('personal') },
-  { title: 'Address',       scope: form.scope('address') },
-  { title: 'Payment',       scope: form.scope('payment') },
+  { title: 'Address', scope: form.scope('address') },
+  { title: 'Payment', scope: form.scope('payment') },
 ];
 
 let currentStep = 0;

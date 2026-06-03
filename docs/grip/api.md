@@ -7,21 +7,21 @@ description: Complete API reference for Grip.
 
 ## API At a Glance
 
-| Symbol                    | Purpose                                      | Execution mode | Common gotcha                                                        |
-| ------------------------- | -------------------------------------------- | -------------- | -------------------------------------------------------------------- |
-| `createDropZone()`        | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                   |
-| `createSortable()`        | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations                  |
-| `createSortableScope()`   | Create a shared scope for connected lists    | Sync           | Each set of connected containers needs its own scope instance        |
-| `applyReorder()`          | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended            |
-| `DropZoneOptions.accept`  | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly    |
-| `DropZoneOptions.maxFiles`| Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called   |
-| `matchesAccept()`         | Test a single `File` against an accept list  | Sync           | Extension patterns are case-insensitive; empty list accepts all      |
+| Symbol                     | Purpose                                      | Execution mode | Common gotcha                                                     |
+| -------------------------- | -------------------------------------------- | -------------- | ----------------------------------------------------------------- |
+| `createDropZone()`         | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                |
+| `createSortable()`         | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations               |
+| `createSortableScope()`    | Create a shared scope for connected lists    | Sync           | Each set of connected containers needs its own scope instance     |
+| `applyReorder()`           | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended         |
+| `DropZoneOptions.accept`   | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly |
+| `DropZoneOptions.maxFiles` | Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called |
+| `matchesAccept()`          | Test a single `File` against an accept list  | Sync           | Extension patterns are case-insensitive; empty list accepts all   |
 
 ## Package Entry Point
 
-| Import               | Purpose                |
-| -------------------- | ---------------------- |
-| `@vielzeug/grip`   | Main exports and types |
+| Import           | Purpose                |
+| ---------------- | ---------------------- |
+| `@vielzeug/grip` | Main exports and types |
 
 ## Types
 
@@ -114,8 +114,6 @@ declare function createSortableScope(): SortableScope;
 
 Creates an explicit connection scope for multi-container sorting. Containers only exchange items when they share the same scope instance.
 
----
-
 ## `createDropZone()`
 
 ```ts
@@ -124,19 +122,19 @@ declare function createDropZone(options: DropZoneOptions): DropZone;
 
 Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` handle.
 
-| Option           | Type                                                       | Default   | Description                                                                                                                                                |
-| ---------------- | ---------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `element`        | `HTMLElement`                                              | —         | **Required.** The element to attach drag listeners to.                                                                                                     |
-| `accept`         | `string[] \| (() => string[])`                             | `[]`      | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
-| `maxFiles`       | `number`                                                   | —         | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                   |
-| `onValidate`     | `(files: File[]) => boolean \| Promise<boolean>`           | —         | Optional async gating step. Called after type/`accept`/`maxFiles` filtering, before `onDrop`. Return or resolve `false` to reject all accepted files. `zone.validating` is `true` while a promise is pending. Only receives type-accepted files. |
-| `disabled`       | `boolean \| (() => boolean)`                               | —         | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally. |
-| `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`                     | `'copy'`  | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
-| `onDrop`         | `(files: File[], event: DragEvent) => void`                | —         | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
-| `onDropRejected` | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —      | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`. The event is a `ClipboardEvent` for paste rejections. |
-| `onHoverChange`  | `(hovered: boolean) => void`                               | —         | Called when hover state toggles. Use this callback for drag-over styling.                                                                                  |
-| `paste`          | `boolean`                                                  | `false`   | When `true`, attaches a `paste` listener to `window`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.  |
-| `onPaste`        | `(files: File[], event: ClipboardEvent) => void`           | —         | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                      |
+| Option           | Type                                                          | Default  | Description                                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `element`        | `HTMLElement`                                                 | —        | **Required.** The element to attach drag listeners to.                                                                                                                                                                                                 |
+| `accept`         | `string[] \| (() => string[])`                                | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`).                                                                                             |
+| `maxFiles`       | `number`                                                      | —        | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                                                                                                               |
+| `onValidate`     | `(files: File[]) => boolean \| Promise<boolean>`              | —        | Optional async gating step. Called after type/`accept`/`maxFiles` filtering, before `onDrop`. Return or resolve `false` to reject all accepted files. `zone.validating` is `true` while a promise is pending. Only receives type-accepted files.       |
+| `disabled`       | `boolean \| (() => boolean)`                                  | —        | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally. |
+| `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`                        | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                                                               |
+| `onDrop`         | `(files: File[], event: DragEvent) => void`                   | —        | Called with accepted files only. Not called if all dropped files are rejected.                                                                                                                                                                         |
+| `onDropRejected` | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —        | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`. The event is a `ClipboardEvent` for paste rejections.                                                                                            |
+| `onHoverChange`  | `(hovered: boolean) => void`                                  | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                              |
+| `paste`          | `boolean`                                                     | `false`  | When `true`, attaches a `paste` listener to `window`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                              |
+| `onPaste`        | `(files: File[], event: ClipboardEvent) => void`              | —        | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                                                  |
 
 **Returns:** `DropZone`
 
@@ -161,8 +159,6 @@ const zone = createDropZone({
   },
 });
 ```
-
----
 
 ## `DropZone` Interface
 
@@ -215,8 +211,6 @@ Alias for `destroy()`. Called automatically when used with the `using` keyword.
   using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
 } // zone.destroy() runs here
 ```
-
----
 
 ## `createSortable()`
 
@@ -273,8 +267,6 @@ declare function createSortableScope(): SortableScope;
 
 Use one scope per connected set of containers. Sortables without an explicit scope use a private scope and remain isolated.
 
----
-
 ## `Sortable` Interface
 
 ### `sortable.isDragging`
@@ -327,8 +319,6 @@ Removes all event listeners from the container, strips sortable attributes from 
 
 Alias for `destroy()`.
 
----
-
 ## DOM Attributes
 
 Grip reads and writes the following DOM attributes:
@@ -343,8 +333,8 @@ Grip reads and writes the following DOM attributes:
 
 ## CSS Classes
 
-| Class                | Applied to                   | When                                                          |
-| -------------------- | ---------------------------- | ------------------------------------------------------------- |
+| Class              | Applied to                   | When                                                          |
+| ------------------ | ---------------------------- | ------------------------------------------------------------- |
 | `grip-placeholder` | `<div>` inserted by sortable | While an item is being dragged, in the placeholder's position |
 
 ## `matchesAccept()`
@@ -366,8 +356,6 @@ import { matchesAccept } from '@vielzeug/grip';
 
 matchesAccept(file, ['image/*', '.pdf']); // true or false
 ```
-
----
 
 ## `applyReorder()`
 

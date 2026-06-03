@@ -41,11 +41,11 @@ async function onEnterSettings() {
 await onEnterSettings();
 
 i18n.t('settings.heading'); // from merge
-i18n.t('nav.home');         // from base catalog — still present
+i18n.t('nav.home'); // from base catalog — still present
 
 // Use scope() to avoid repeating the 'settings' prefix
 const s = i18n.scope('settings');
-s.t('heading');       // 'Account Settings'
+s.t('heading'); // 'Account Settings'
 s.t('danger.delete'); // 'Delete account'
 ```
 

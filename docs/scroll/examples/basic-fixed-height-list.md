@@ -47,7 +47,6 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-
 ### Pitfalls
 
 - Calling `createVirtualizer` before the scroll container is in the DOM gives it a scroll height of 0, disabling virtualization entirely. Always create it inside `onMounted` or `firstUpdated`.

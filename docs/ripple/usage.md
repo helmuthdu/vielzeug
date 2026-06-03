@@ -132,41 +132,26 @@ Ripple includes a built-in loop guard (100 iterations by default) to protect aga
 import { effect } from '@vielzeug/ripple';
 
 // Named effect — name appears in StateError messages for easier debugging
-const sub = effect(
-  () => console.log('count:', count.value),
-  { name: 'count-logger' },
-);
+const sub = effect(() => console.log('count:', count.value), { name: 'count-logger' });
 
 // Microtask scheduler — re-runs are deferred and coalesce within the same task
-effect(
-  () => document.title = count.value.toString(),
-  { scheduler: 'microtask' },
-);
+effect(() => (document.title = count.value.toString()), { scheduler: 'microtask' });
 
 // RAF scheduler — re-runs are capped at display refresh rate (ideal for animations)
-effect(
-  () => canvas.draw(data.value),
-  { scheduler: 'raf' },
-);
+effect(() => canvas.draw(data.value), { scheduler: 'raf' });
 
 // Custom scheduler function — any scheduling strategy is supported
-effect(
-  () => renderHighFrequency(pos.value),
-  { scheduler: (run) => requestIdleCallback(run) },
-);
+effect(() => renderHighFrequency(pos.value), { scheduler: (run) => requestIdleCallback(run) });
 
 // Increase the loop guard for known deep cascade graphs
-effect(
-  () => processGraph(root.value),
-  { maxIterations: 500 },
-);
+effect(() => processGraph(root.value), { maxIterations: 500 });
 ```
 
-| Option           | Type                                            | Default    | Description                                                          |
-| ---------------- | ----------------------------------------------- | ---------- | -------------------------------------------------------------------- |
-| `scheduler`      | `EffectScheduler \| (run: () => void) => void`  | `'sync'`   | `'sync'` \| `'microtask'` \| `'raf'`, or a custom function           |
-| `name`           | `string`                                        | —          | Shown in error messages                                              |
-| `maxIterations`  | `number`                                        | `100`      | Loop guard threshold for this effect                                 |
+| Option          | Type                                           | Default  | Description                                                |
+| --------------- | ---------------------------------------------- | -------- | ---------------------------------------------------------- |
+| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'` \| `'raf'`, or a custom function |
+| `name`          | `string`                                       | —        | Shown in error messages                                    |
+| `maxIterations` | `number`                                       | `100`    | Loop guard threshold for this effect                       |
 
 For debugging which deps trigger re-runs, use `debugEffect()` instead of `effect()` — see [debugEffect](#debugeffect) below.
 
@@ -277,9 +262,12 @@ watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
 Use a getter function when you want to watch a derived slice directly:
 
 ```ts
-watch(() => userStore.value.name, (name, prevName) => {
-  console.log('name:', prevName, '→', name);
-});
+watch(
+  () => userStore.value.name,
+  (name, prevName) => {
+    console.log('name:', prevName, '→', name);
+  },
+);
 
 // For reusable derived values, keep using computed()
 const nameSignal = computed(() => userStore.value.name);
@@ -400,10 +388,7 @@ s.dispose();
 ```ts
 import { debugEffect } from '@vielzeug/ripple/debug';
 
-const stop = debugEffect(
-  () => renderUser(userId.value, name.value),
-  { name: 'renderUser' },
-);
+const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 'renderUser' });
 
 // Console output on re-run:
 // [ripple:trace] "renderUser" re-running — changed sources:
@@ -421,25 +406,34 @@ import { signal, effect, asyncComputed } from '@vielzeug/ripple';
 
 const userId = signal('u1');
 
-const user = asyncComputed(async (signal) => {
-  const id = userId.value; // ← tracked dep (synchronous read)
-  const res = await fetch(`/users/${id}`, { signal });
-  if (!res.ok) throw new Error('Not found');
-  return res.json() as Promise<User>;
-}, { initialValue: undefined });
+const user = asyncComputed(
+  async (signal) => {
+    const id = userId.value; // ← tracked dep (synchronous read)
+    const res = await fetch(`/users/${id}`, { signal });
+    if (!res.ok) throw new Error('Not found');
+    return res.json() as Promise<User>;
+  },
+  { initialValue: undefined },
+);
 
 effect(() => {
   const state = user.value;
   switch (state.status) {
     case 'idle':
-    case 'pending': showSpinner(); break;
-    case 'fulfilled': renderUser(state.value); break;
-    case 'error': showError(state.error); break;
+    case 'pending':
+      showSpinner();
+      break;
+    case 'fulfilled':
+      renderUser(state.value);
+      break;
+    case 'error':
+      showError(state.error);
+      break;
   }
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
-user.dispose();      // cancel and detach
+user.dispose(); // cancel and detach
 ```
 
 ::: tip deps must be read synchronously
@@ -459,13 +453,13 @@ editor.patch({ text: 'hello', cursor: 5 });
 editor.patch({ text: 'hello world', cursor: 11 });
 
 console.log(editor.historyLength); // 3  (initial + 2 patches)
-console.log(editor.historyAt(0));  // { text: '', cursor: 0 }
+console.log(editor.historyAt(0)); // { text: '', cursor: 0 }
 
 editor.undo();
-console.log(editor.value.text);    // 'hello'
+console.log(editor.value.text); // 'hello'
 
 editor.redo();
-console.log(editor.value.text);    // 'hello world'
+console.log(editor.value.text); // 'hello world'
 ```
 
 All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`, `map`, `filter`, `watch`) work as usual on a `StoreWithHistory<T>`.
@@ -560,15 +554,15 @@ const settings = store({
 });
 
 // Top-level lens
-const theme = settings.lens('theme');            // Signal<'light' | 'dark'>
+const theme = settings.lens('theme'); // Signal<'light' | 'dark'>
 theme.value = 'dark';
 
 // Nested dot-path lens
 const city = settings.lens('user.address.city'); // Signal<string>
 city.value = 'Hamburg';
 
-console.log(settings.value.theme);               // 'dark'
-console.log(settings.value.user.address.city);   // 'Hamburg'
+console.log(settings.value.theme); // 'dark'
+console.log(settings.value.user.address.city); // 'Hamburg'
 
 // Watch a single field
 watch(theme, (next, prev) => console.log(prev, '→', next));
@@ -588,7 +582,7 @@ Every intermediate segment of the path must resolve to a non-null object. Writin
 For read-only derived slices, the `.map()` combinator is the most concise option:
 
 ```ts
-const count = s.map((st) => st.count);  // ComputedSignal<number>
+const count = s.map((st) => st.count); // ComputedSignal<number>
 watch(count, (n, prev) => console.log('count:', prev, '→', n));
 count.dispose();
 ```
@@ -633,7 +627,10 @@ Use a getter source to watch a slice — only fires when the derived value chang
 
 ```ts
 // Only fires when `count` changes — unrelated state changes are ignored
-watch(() => s.value.count, (count, prev) => console.log('count changed to', count));
+watch(
+  () => s.value.count,
+  (count, prev) => console.log('count changed to', count),
+);
 
 // With computed() for a reusable or shareable slice signal
 const countSignal = computed(() => s.value.count);
@@ -704,7 +701,7 @@ Projects a signal value into a new derived signal:
 
 ```ts
 const count = signal(3);
-const doubled = count.map((n) => n * 2);  // ComputedSignal<number>
+const doubled = count.map((n) => n * 2); // ComputedSignal<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
@@ -782,7 +779,9 @@ function Counter() {
 
   return (
     <div>
-      <p>{value} × 2 = {doubledValue}</p>
+      <p>
+        {value} × 2 = {doubledValue}
+      </p>
       <button onClick={() => count.value++}>Increment</button>
     </div>
   );
@@ -982,7 +981,10 @@ Both approaches work; choose based on reuse needs:
 
 ```ts
 // ✅ getter source — simple for one-off watches
-watch(() => userStore.value.count, (count) => console.log('count:', count));
+watch(
+  () => userStore.value.count,
+  (count) => console.log('count:', count),
+);
 
 // ✅ composed with computed() — better for shared/complex selections
 const countSignal = computed(() => userStore.value.count);
@@ -1027,3 +1029,4 @@ effect(() => {
   const name = untrack(() => users.value[id]); // NOT tracked — avoids re-run on users change
   render(id, name);
 });
+```

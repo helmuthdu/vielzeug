@@ -5,7 +5,8 @@ package: orbit
 category: ui
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
 related: [craft, sigil, grip]
-exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, hide, autoPlacement, compose, limitShift]
+exports:
+  [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, hide, autoPlacement, compose, limitShift]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -30,7 +31,6 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, 
 </details>
 
 `@vielzeug/orbit` is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a high-level follow API, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
-
 
 ## Installation
 
@@ -84,15 +84,15 @@ handle.cleanup();
 Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
 
 | Feature                  | Orbit                                       | Floating UI | Popper  |
-| ------------------------ | --------------------------------------------- | ----------- | ------- |
+| ------------------------ | ------------------------------------------- | ----------- | ------- |
 | Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB      | ~6 kB   |
-| Middleware pipeline      | ✅                                            | ✅          | ✅      |
-| Direct compute API       | ✅                                            | ✅          | ✅      |
-| High-level follow API    | ✅                                            | ✅          | Partial |
-| Inline anchor middleware | ✅                                            | ✅          | ❌      |
-| Auto-update helpers      | ✅                                            | ✅          | ✅      |
-| Framework agnostic       | ✅                                            | ✅          | ✅      |
-| Zero dependencies        | ✅                                            | ✅          | ✅      |
+| Middleware pipeline      | ✅                                          | ✅          | ✅      |
+| Direct compute API       | ✅                                          | ✅          | ✅      |
+| High-level follow API    | ✅                                          | ✅          | Partial |
+| Inline anchor middleware | ✅                                          | ✅          | ❌      |
+| Auto-update helpers      | ✅                                          | ✅          | ✅      |
+| Framework agnostic       | ✅                                          | ✅          | ✅      |
+| Zero dependencies        | ✅                                          | ✅          | ✅      |
 
 **Use Orbit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
 
@@ -120,23 +120,23 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/orbit` | Core API, middleware, utilities, types |
-| `@vielzeug/orbit/presets` | Pre-configured middleware stacks |
-| `@vielzeug/orbit/inline` | `inline` middleware for multi-line references |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/debug` | Visual debug overlay (development only) |
-| `@vielzeug/orbit/ssr` | No-op stubs for server-side rendering |
+| Import                     | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `@vielzeug/orbit`          | Core API, middleware, utilities, types        |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks              |
+| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line references |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)  |
+| `@vielzeug/orbit/debug`    | Visual debug overlay (development only)       |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
 
 ## Compatibility
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | ✅      |
+| Environment | Support                                          |
+| ----------- | ------------------------------------------------ |
+| Browser     | ✅                                               |
 | Node.js     | ❌ (use `@vielzeug/orbit/ssr` for SSR rendering) |
-| SSR         | ✅ via `@vielzeug/orbit/ssr` |
-| Deno        | ❌      |
+| SSR         | ✅ via `@vielzeug/orbit/ssr`                     |
+| Deno        | ❌                                               |
 
 ## Documentation
 

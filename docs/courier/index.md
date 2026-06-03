@@ -3,9 +3,38 @@ title: Courier — HTTP, queries, SSE, and streaming
 description: Type-safe HTTP, query cache, mutations, SSE, and readable streaming built on native fetch.
 package: courier
 category: http
-keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors, persist, batcher]
+keywords:
+  [
+    http-client,
+    fetch,
+    caching,
+    deduplication,
+    mutations,
+    query-cache,
+    rest,
+    sse,
+    streaming,
+    interceptors,
+    persist,
+    batcher,
+  ]
 related: [spell, ripple, vault]
-exports: [createApi, createCourier, createMutation, createQuery, createStream, HttpError, bindRefetch, createBatcher, withBearerAuth, withRequestId, withLogging, persistQueryCache, hydrateQueryCache]
+exports:
+  [
+    createApi,
+    createCourier,
+    createMutation,
+    createQuery,
+    createStream,
+    HttpError,
+    bindRefetch,
+    createBatcher,
+    withBearerAuth,
+    withRequestId,
+    withLogging,
+    persistQueryCache,
+    hydrateQueryCache,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

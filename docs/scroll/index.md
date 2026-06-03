@@ -5,7 +5,15 @@ package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
 related: [grip, craft, sigil]
-exports: [createVirtualizer, createDomVirtualList, createVirtualScroller, createGroupedVirtualizer, createGridVirtualizer, createReactiveVirtualizer]
+exports:
+  [
+    createVirtualizer,
+    createDomVirtualList,
+    createVirtualScroller,
+    createGroupedVirtualizer,
+    createGridVirtualizer,
+    createReactiveVirtualizer,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -30,7 +38,6 @@ exports: [createVirtualizer, createDomVirtualList, createVirtualScroller, create
 </details>
 
 `@vielzeug/scroll` is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
-
 
 ## Installation
 
@@ -116,13 +123,13 @@ const virt = createVirtualizer(scrollEl, {
 ```
 
 | Feature            | Scroll                                       | TanStack Virtual | react-window |
-| ------------------ | ----------------------------------------------- | ---------------- | ------------ |
+| ------------------ | -------------------------------------------- | ---------------- | ------------ |
 | Bundle size        | <PackageInfo package="scroll" type="size" /> | ~5 kB            | ~8 kB        |
-| Framework agnostic | ✅                                              | ✅               | React only   |
-| Variable heights   | ✅ Measured                                     | ✅               | ⚠️ Static    |
-| O(log n) lookup    | ✅                                              | ✅               | ✅           |
-| `using` support    | ✅                                              | ❌               | ❌           |
-| Zero dependencies  | ✅                                              | ✅               | ✅           |
+| Framework agnostic | ✅                                           | ✅               | React only   |
+| Variable heights   | ✅ Measured                                  | ✅               | ⚠️ Static    |
+| O(log n) lookup    | ✅                                           | ✅               | ✅           |
+| `using` support    | ✅                                           | ❌               | ❌           |
+| Zero dependencies  | ✅                                           | ✅               | ✅           |
 
 **Use Scroll when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
 

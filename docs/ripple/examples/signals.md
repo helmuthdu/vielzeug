@@ -136,7 +136,7 @@ import { signal, store, watch } from '@vielzeug/ripple';
 
 // .map() — project to a derived type
 const count = signal(3);
-const doubled = count.map((n) => n * 2);  // ComputedSignal<number>
+const doubled = count.map((n) => n * 2); // ComputedSignal<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
@@ -167,7 +167,6 @@ cart.patch({ items: 10 }); // → 'items: 10'
 itemCount.dispose();
 ```
 
-
 ### Pitfalls
 
 - Signal updates are reference-based. Mutating an object in place (for example, pushing into an array) does not notify subscribers — assign a new value or use `update()` to produce a new reference.
@@ -175,6 +174,7 @@ itemCount.dispose();
 - Creating a `computed()` inside a component render function without memoization creates a new computed instance on every render, leaking watchers. Create computeds at module scope or in the component setup phase.
 
 ### Related
+
 - [Stores](./stores)
 - [Craft Reactivity](/craft/)
 

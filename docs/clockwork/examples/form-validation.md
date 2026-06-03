@@ -48,7 +48,11 @@ const formMachine = defineMachine<
           {
             guard: ({ context }) => context.data.email.includes('@'),
             target: 'step2',
-            actions: [({ context }) => { context.step = 2; }],
+            actions: [
+              ({ context }) => {
+                context.step = 2;
+              },
+            ],
           },
         ],
         RESET: [
@@ -71,21 +75,47 @@ const formMachine = defineMachine<
           {
             guard: ({ context }) => context.data.password.length >= 8,
             target: 'step3',
-            actions: [({ context }) => { context.step = 3; }],
+            actions: [
+              ({ context }) => {
+                context.step = 3;
+              },
+            ],
           },
         ],
-        PREV: [{ target: 'step1', actions: [({ context }) => { context.step = 1; }] }],
+        PREV: [
+          {
+            target: 'step1',
+            actions: [
+              ({ context }) => {
+                context.step = 1;
+              },
+            ],
+          },
+        ],
         RESET: [{ target: 'step1' }],
       },
     },
     step3: {
       on: {
-        PREV: [{ target: 'step2', actions: [({ context }) => { context.step = 2; }] }],
+        PREV: [
+          {
+            target: 'step2',
+            actions: [
+              ({ context }) => {
+                context.step = 2;
+              },
+            ],
+          },
+        ],
         SUBMIT: [
           {
             guard: ({ context }) => context.data.name.length > 0,
             target: 'submitting',
-            actions: [({ context, event }) => { context.data = event.data as any; }],
+            actions: [
+              ({ context, event }) => {
+                context.data = event.data as any;
+              },
+            ],
           },
         ],
         RESET: [{ target: 'step1' }],
@@ -98,7 +128,7 @@ const formMachine = defineMachine<
             fetch('/api/register', {
               method: 'POST',
               body: JSON.stringify(context.data),
-            }).then(r => {
+            }).then((r) => {
               if (!r.ok) throw new Error('Registration failed');
               return r.json();
             }),
@@ -111,7 +141,11 @@ const formMachine = defineMachine<
         SUBMIT_FAILURE: [
           {
             target: 'error',
-            actions: [({ context, event }) => { context.errors = { submit: event.error }; }],
+            actions: [
+              ({ context, event }) => {
+                context.errors = { submit: event.error };
+              },
+            ],
           },
         ],
       },

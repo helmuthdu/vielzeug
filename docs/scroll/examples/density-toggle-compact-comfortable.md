@@ -33,7 +33,6 @@ document.getElementById('toggle-density')!.addEventListener('click', () => {
 
 ---
 
-
 ### Pitfalls
 
 - Calling `update({ estimateSize })` triggers a full layout recalculation. Toggling rapidly (e.g., bound to a slider) causes layout thrashing — debounce the update call.

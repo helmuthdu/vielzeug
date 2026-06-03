@@ -3,8 +3,6 @@ title: Ward — Examples
 description: Practical examples and recipes for ward.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Blog Roles](./examples/blog-roles.md)

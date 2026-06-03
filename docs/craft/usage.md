@@ -19,9 +19,7 @@ define('status-chip', {
     const online = signal(true);
 
     return html`
-      <button @click=${() => (online.value = !online.value)}>
-        ${() => (online.value ? 'Online' : 'Offline')}
-      </button>
+      <button @click=${() => (online.value = !online.value)}>${() => (online.value ? 'Online' : 'Offline')}</button>
     `;
   },
 });
@@ -104,9 +102,7 @@ define('x-button', {
   },
   setup(props) {
     return html`
-      <button ?disabled=${props.disabled} :data-variant=${props.variant}>
-        ${props.label} (${props.count})
-      </button>
+      <button ?disabled=${props.disabled} :data-variant=${props.variant}>${props.label} (${props.count})</button>
     `;
   },
 });
@@ -186,7 +182,7 @@ each(
   (item) => item.id,
   (item, index) => html`<li>#${index}: ${() => item.value.label}</li>`,
   () => html`<li>No items</li>`,
-)
+);
 ```
 
 ## live form bindings
@@ -201,9 +197,7 @@ define('live-search', {
     const query = signal('');
 
     return html`
-      <input
-        :value=${live(query)}
-        @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+      <input :value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
     `;
   },
 });
@@ -245,10 +239,7 @@ define('card-with-footer', {
       <div class="card">
         <slot name="header"></slot>
         <slot></slot>
-        ${when(
-          slots.has('footer'),
-          () => html`<footer><slot name="footer"></slot></footer>`,
-        )}
+        ${when(slots.has('footer'), () => html`<footer><slot name="footer"></slot></footer>`)}
       </div>
       <button @click=${() => emit('action')}>Go</button>
     `;

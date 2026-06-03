@@ -7,38 +7,36 @@ description: Complete API reference for @vielzeug/conduit.
 
 ## API At a Glance
 
-| Symbol                        | Purpose                                                         | Mode        | Common gotcha                                              |
-| ----------------------------- | --------------------------------------------------------------- | ----------- | ---------------------------------------------------------- |
-| `token()`                     | Create a typed DI token (Symbol-backed)                         | Sync        | Each call produces a distinct symbol                       |
-| `scope()`                     | Create a named scope token for lifecycle-scoped instances        | Sync        | Register factories with a `ScopeToken` as their lifetime   |
-| `createContainer()`           | Create a new root DI container                                  | Sync        | Register all providers before resolving                    |
-| `container.value()`           | Register a static value                                         | Sync        | Throws `DuplicateRegistrationError` if token already used  |
-| `container.factory()`         | Register a lazy factory (sync or async)                         | Sync        | Factory does not run until first `resolve()`               |
-| `container.load()`            | Apply `ContainerModule` functions sequentially                  | **Async**   | Returns `Promise<this>`; modules may be async              |
-| `container.has()`             | Check if a token is registered (walks parent chain)             | Sync        | Does not execute the factory                               |
-| `container.resolve()`         | Resolve a single provider                                       | Async       | Throws `ProviderNotFoundError` if token not registered     |
-| `container.resolveSync()`     | Resolve synchronously from cache                                | Sync        | Throws for transient and not-yet-resolved factories        |
-| `container.resolveOptional()` | Resolve, returning `undefined` if missing                       | Async       | Still throws for disposed container and other errors       |
-| `container.tryResolve()`      | Resolve, returning a result object instead of throwing          | Async       | `{ ok: true, value }` or `{ ok: false, error }`            |
-| `container.resolveMany()`     | Resolve multiple tokens in parallel, returning a typed tuple    | Async       | Rejects if any token fails                                 |
-| `container.resolveAll()`      | Eagerly resolve all singleton factories (walks parent chain)    | Async       | Only singletons; scoped and transient are skipped          |
-| `container.inspect()`         | Return a serializable graph of registered tokens                | Sync        | Defaults to deep traversal of the full parent chain        |
-| `container.validate()`        | Detect circular and missing-dep errors at registration time     | Sync        | Throws `CircularDependencyError` or `ProviderNotFoundError` |
-| `container.freeze()`          | Prevent new registrations after startup                         | Sync        | Returns `this`; throws if `value()` or `factory()` is called after |
-| `container.createChild()`     | Create a generic child container                                | Sync        | Child inherits parent registrations read-only              |
-| `container.createScope()`     | Create a named-scope child container                            | Sync        | Factories with a `ScopeToken` lifetime resolve here        |
-| `container.on()`              | Subscribe to container events (register / resolve / dispose)    | Sync        | Events propagate to parent container listeners             |
-| `container.dispose()`         | Dispose container and run cleanup hooks                         | Async       | Hooks from both `value()` and `factory()` are called       |
-| `container.disposed`          | Whether the container has been disposed                         | Sync getter | —                                                          |
-| `container.name`              | Human-readable container identifier                             | Sync getter | Set via `createContainer({ name })` or `createChild({ name })` |
+| Symbol                        | Purpose                                                      | Mode        | Common gotcha                                                      |
+| ----------------------------- | ------------------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
+| `token()`                     | Create a typed DI token (Symbol-backed)                      | Sync        | Each call produces a distinct symbol                               |
+| `scope()`                     | Create a named scope token for lifecycle-scoped instances    | Sync        | Register factories with a `ScopeToken` as their lifetime           |
+| `createContainer()`           | Create a new root DI container                               | Sync        | Register all providers before resolving                            |
+| `container.value()`           | Register a static value                                      | Sync        | Throws `DuplicateRegistrationError` if token already used          |
+| `container.factory()`         | Register a lazy factory (sync or async)                      | Sync        | Factory does not run until first `resolve()`                       |
+| `container.load()`            | Apply `ContainerModule` functions sequentially               | **Async**   | Returns `Promise<this>`; modules may be async                      |
+| `container.has()`             | Check if a token is registered (walks parent chain)          | Sync        | Does not execute the factory                                       |
+| `container.resolve()`         | Resolve a single provider                                    | Async       | Throws `ProviderNotFoundError` if token not registered             |
+| `container.resolveSync()`     | Resolve synchronously from cache                             | Sync        | Throws for transient and not-yet-resolved factories                |
+| `container.resolveOptional()` | Resolve, returning `undefined` if missing                    | Async       | Still throws for disposed container and other errors               |
+| `container.tryResolve()`      | Resolve, returning a result object instead of throwing       | Async       | `{ ok: true, value }` or `{ ok: false, error }`                    |
+| `container.resolveMany()`     | Resolve multiple tokens in parallel, returning a typed tuple | Async       | Rejects if any token fails                                         |
+| `container.resolveAll()`      | Eagerly resolve all singleton factories (walks parent chain) | Async       | Only singletons; scoped and transient are skipped                  |
+| `container.inspect()`         | Return a serializable graph of registered tokens             | Sync        | Defaults to deep traversal of the full parent chain                |
+| `container.validate()`        | Detect circular and missing-dep errors at registration time  | Sync        | Throws `CircularDependencyError` or `ProviderNotFoundError`        |
+| `container.freeze()`          | Prevent new registrations after startup                      | Sync        | Returns `this`; throws if `value()` or `factory()` is called after |
+| `container.createChild()`     | Create a generic child container                             | Sync        | Child inherits parent registrations read-only                      |
+| `container.createScope()`     | Create a named-scope child container                         | Sync        | Factories with a `ScopeToken` lifetime resolve here                |
+| `container.on()`              | Subscribe to container events (register / resolve / dispose) | Sync        | Events propagate to parent container listeners                     |
+| `container.dispose()`         | Dispose container and run cleanup hooks                      | Async       | Hooks from both `value()` and `factory()` are called               |
+| `container.disposed`          | Whether the container has been disposed                      | Sync getter | —                                                                  |
+| `container.name`              | Human-readable container identifier                          | Sync getter | Set via `createContainer({ name })` or `createChild({ name })`     |
 
 ## Package Entry Point
 
 ```ts
 import { token, scope, createContainer } from '@vielzeug/conduit';
 ```
-
----
 
 ## Core Functions
 
@@ -107,9 +105,9 @@ Creates a new root container with an empty registry.
 
 **Parameters:**
 
-| Option | Type     | Default    | Description                                                    |
-| ------ | -------- | ---------- | -------------------------------------------------------------- |
-| `name` | `string` | `'root'`   | Human-readable identifier for the container (shown in errors)  |
+| Option | Type     | Default  | Description                                                   |
+| ------ | -------- | -------- | ------------------------------------------------------------- |
+| `name` | `string` | `'root'` | Human-readable identifier for the container (shown in errors) |
 
 **Returns:** `Container`
 
@@ -120,8 +118,6 @@ import { createContainer } from '@vielzeug/conduit';
 
 const container = createContainer({ name: 'app' });
 ```
-
----
 
 ## Container
 
@@ -137,9 +133,9 @@ Registers a constant value. The value is returned as-is on every resolution. An 
 
 **Parameters — `ValueOptions<T>`:**
 
-| Option    | Type                                       | Default     | Description                            |
-| --------- | ------------------------------------------ | ----------- | -------------------------------------- |
-| `dispose` | `(instance: T) => void \| Promise<void>`   | `undefined` | Called during disposal                 |
+| Option    | Type                                     | Default     | Description            |
+| --------- | ---------------------------------------- | ----------- | ---------------------- |
+| `dispose` | `(instance: T) => void \| Promise<void>` | `undefined` | Called during disposal |
 
 **Returns:** `this` (chainable)
 
@@ -174,11 +170,11 @@ Registers a lazy factory. The factory runs on first resolution and its result is
 
 **Parameters — `FactoryOptions<T>`:**
 
-| Option     | Type                                              | Default       | Description                                         |
-| ---------- | ------------------------------------------------- | ------------- | --------------------------------------------------- |
-| `deps`     | `Token<any>[]`                                    | `[]`          | Tokens resolved and passed as factory arguments     |
-| `lifetime` | `'singleton' \| 'transient' \| 'scoped' \| ScopeToken` | `'singleton'` | Caching strategy                            |
-| `dispose`  | `(instance: T) => void \| Promise<void>`          | `undefined`   | Called during disposal if the instance was resolved |
+| Option     | Type                                                   | Default       | Description                                         |
+| ---------- | ------------------------------------------------------ | ------------- | --------------------------------------------------- |
+| `deps`     | `Token<any>[]`                                         | `[]`          | Tokens resolved and passed as factory arguments     |
+| `lifetime` | `'singleton' \| 'transient' \| 'scoped' \| ScopeToken` | `'singleton'` | Caching strategy                                    |
+| `dispose`  | `(instance: T) => void \| Promise<void>`               | `undefined`   | Called during disposal if the instance was resolved |
 
 **Returns:** `this` (chainable)
 
@@ -189,21 +185,17 @@ const Logger = token<{ log(msg: string): void }>('Logger');
 const Service = token<{ run(): Promise<void> }>('Service');
 
 container.value(Logger, console);
-container.factory(
-  Service,
-  (logger) => ({ run: async () => logger.log('ok') }),
-  { deps: [Logger] },
-);
+container.factory(Service, (logger) => ({ run: async () => logger.log('ok') }), { deps: [Logger] });
 ```
 
 #### Lifetimes
 
-| Value         | Behavior                                                                                       |
-| ------------- | ---------------------------------------------------------------------------------------------- |
+| Value         | Behavior                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
 | `'singleton'` | Factory runs once; the same instance is returned on every subsequent call. Shared across child containers. |
-| `'transient'` | Factory runs on every resolution; result is never cached                                       |
-| `'scoped'`    | One instance per child container; throws `ScopedResolutionError` from the root                 |
-| `ScopeToken`  | One instance per matching scope container (created via `createScope(scopeToken)`)              |
+| `'transient'` | Factory runs on every resolution; result is never cached                                                   |
+| `'scoped'`    | One instance per child container; throws `ScopedResolutionError` from the root                             |
+| `ScopeToken`  | One instance per matching scope container (created via `createScope(scopeToken)`)                          |
 
 #### Singleton failure caching
 
@@ -278,6 +270,7 @@ Resolves synchronously. Works for value providers (always) and singleton/scoped 
 **Returns:** `T`
 
 **Throws:**
+
 - `SyncResolutionError` — transient factory, or unresolved singleton/scoped instance
 - `ScopedResolutionError` — scoped token called on the root container
 - `ProviderNotFoundError`, `ContainerDisposedError`
@@ -315,6 +308,7 @@ resolveAll(): Promise<void>;
 Eagerly resolves all **singleton** factory registrations in parallel — including singletons inherited from parent containers. Value registrations and transient/scoped factories are skipped.
 
 Useful for:
+
 - **Startup validation** — fail fast if any factory throws
 - **Pre-warming** — populate the cache so `resolveSync()` is available immediately
 
@@ -389,9 +383,9 @@ Returns a serializable description of every registered token. By default travers
 
 **Parameters:**
 
-| Option  | Type      | Default | Description                                |
-| ------- | --------- | ------- | ------------------------------------------ |
-| `deep`  | `boolean` | `true`  | Whether to include parent chain registrations |
+| Option | Type      | Default | Description                                   |
+| ------ | --------- | ------- | --------------------------------------------- |
+| `deep` | `boolean` | `true`  | Whether to include parent chain registrations |
 
 **Returns:** `ContainerGraph`
 
@@ -433,6 +427,7 @@ Performs registration-time graph validation across the full dependency graph usi
 **Returns:** `this` (chainable)
 
 **Throws:**
+
 - `CircularDependencyError` — if any cycle is detected
 - `ProviderNotFoundError` — if a declared `deps` token has no registered provider
 
@@ -541,11 +536,11 @@ Subscribes to container lifecycle events. The listener receives events synchrono
 
 **Event types:**
 
-| Event type   | Shape                                                       | When                                         |
-| ------------ | ----------------------------------------------------------- | -------------------------------------------- |
-| `'register'` | `{ type: 'register', description, kind: 'value'|'factory' }` | `value()` or `factory()` is called          |
-| `'resolve'`  | `{ type: 'resolve', description }`                          | `resolve()` or `resolveSync()` completes     |
-| `'dispose'`  | `{ type: 'dispose' }`                                       | `dispose()` is called                        |
+| Event type   | Shape                                           | When                                     |
+| ------------ | ----------------------------------------------- | ---------------------------------------- | ---------------------------------- |
+| `'register'` | `{ type: 'register', description, kind: 'value' | 'factory' }`                             | `value()` or `factory()` is called |
+| `'resolve'`  | `{ type: 'resolve', description }`              | `resolve()` or `resolveSync()` completes |
+| `'dispose'`  | `{ type: 'dispose' }`                           | `dispose()` is called                    |
 
 **Example:**
 
@@ -597,8 +592,6 @@ get disposed(): boolean;
 ```
 
 Returns `true` after `dispose()` has been called. All container operations throw `ContainerDisposedError` when `disposed` is `true`.
-
----
 
 ## Types
 
@@ -653,15 +646,13 @@ type ContainerGraph = {
 };
 ```
 
----
-
 ## Errors
 
-| Error                        | When thrown                                                                              |
-| ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full cycle path                                             |
+| Error                        | When thrown                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full cycle path                                                    |
 | `ProviderNotFoundError`      | `resolve()` / `resolveSync()` / `validate()` — token not registered; message includes container name and token description |
-| `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                                              |
-| `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory                            |
-| `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token                                  |
-| `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name                                        |
+| `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                                                     |
+| `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory                                   |
+| `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token                                         |
+| `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name                                               |

@@ -23,7 +23,6 @@ const result = await Rune.groupCollapsed('Checkout', async () => {
 });
 ```
 
-
 ### Pitfalls
 
 - `time()` always emits at `debug` level with the label as the log message and `{ duration_ms }` in context. If `logLevel` is above `debug`, the timer still runs but no entry is emitted. Set `logLevel: 'debug'` when capturing timing data.

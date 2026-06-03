@@ -50,7 +50,6 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-
 ### Pitfalls
 
 - `measure(index, height)` must be called after the row's DOM is rendered and its height is stable. Calling it before render with an estimate triggers two layout passes per row.

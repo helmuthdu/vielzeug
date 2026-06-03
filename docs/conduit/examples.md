@@ -3,8 +3,6 @@ title: Conduit — Examples
 description: Practical examples and recipes for @vielzeug/conduit.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Basic Setup](./examples/basic-setup.md)

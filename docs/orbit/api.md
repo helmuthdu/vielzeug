@@ -7,38 +7,36 @@ description: Complete API reference for the Orbit floating positioning library.
 
 ## API At a Glance
 
-| Symbol              | Purpose                                                      | Execution mode        | Common gotcha                                              |
-| ------------------- | ------------------------------------------------------------ | --------------------- | ---------------------------------------------------------- |
-| `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.cleanup()` on teardown                  |
-| `computePosition()` | Compute position once without auto-update                    | Sync                  | Does not watch for layout changes                          |
-| `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup | Call cleanup on teardown                                   |
-| `detectOverflow()`  | Per-side overflow of the floating rect against boundary      | Sync                  | Positive = overflow, negative = remaining space            |
-| `compose()`         | Validate middleware order and return typed array             | Sync, throws          | Throws at call time on bad ordering                        |
-| `getSide()`         | Extract the primary side from a placement string             | Sync                  | —                                                          |
-| `getAlignment()`    | Extract the alignment from a placement string                | Sync                  | Returns `null` for cardinal placements                     |
-| `offset()`          | Add space between reference and floating element             | Middleware            | Apply before `flip` so flip accounts for the gap           |
-| `flip()`            | Flip to opposite side when clipped                           | Middleware            | Do not combine with `autoPlacement`                        |
-| `autoPlacement()`   | Automatically pick the placement with the most space         | Middleware            | Do not combine with `flip`                                 |
-| `shift()`           | Shift along boundary to keep element in view                 | Middleware            | Does not change placement, only adjusts coordinates        |
-| `limitShift()`      | Constrain shift drift to keep float near reference           | `ShiftLimiter`        | Pass as `limiter` option to `shift()`                      |
-| `size()`            | Report available space between reference and boundary        | Middleware            | Read `middlewareData.size` in `apply` or after compute     |
-| `arrow()`           | Position an arrow element pointing to the reference          | Middleware            | Arrow element must be a child of the floating element      |
-| `hide()`            | Detect when reference or floating is hidden outside boundary | Middleware            | Combine with CSS `visibility` or `opacity`                 |
-| `inline()`          | Accurate rect for inline references spanning multiple lines  | Middleware            | Import from `@vielzeug/orbit/inline`                       |
-| presets             | Pre-configured placement + middleware stacks                 | Factory               | Import from `@vielzeug/orbit/presets`                      |
+| Symbol              | Purpose                                                      | Execution mode              | Common gotcha                                          |
+| ------------------- | ------------------------------------------------------------ | --------------------------- | ------------------------------------------------------ |
+| `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.cleanup()` on teardown                    |
+| `computePosition()` | Compute position once without auto-update                    | Sync                        | Does not watch for layout changes                      |
+| `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup       | Call cleanup on teardown                               |
+| `detectOverflow()`  | Per-side overflow of the floating rect against boundary      | Sync                        | Positive = overflow, negative = remaining space        |
+| `compose()`         | Validate middleware order and return typed array             | Sync, throws                | Throws at call time on bad ordering                    |
+| `getSide()`         | Extract the primary side from a placement string             | Sync                        | —                                                      |
+| `getAlignment()`    | Extract the alignment from a placement string                | Sync                        | Returns `null` for cardinal placements                 |
+| `offset()`          | Add space between reference and floating element             | Middleware                  | Apply before `flip` so flip accounts for the gap       |
+| `flip()`            | Flip to opposite side when clipped                           | Middleware                  | Do not combine with `autoPlacement`                    |
+| `autoPlacement()`   | Automatically pick the placement with the most space         | Middleware                  | Do not combine with `flip`                             |
+| `shift()`           | Shift along boundary to keep element in view                 | Middleware                  | Does not change placement, only adjusts coordinates    |
+| `limitShift()`      | Constrain shift drift to keep float near reference           | `ShiftLimiter`              | Pass as `limiter` option to `shift()`                  |
+| `size()`            | Report available space between reference and boundary        | Middleware                  | Read `middlewareData.size` in `apply` or after compute |
+| `arrow()`           | Position an arrow element pointing to the reference          | Middleware                  | Arrow element must be a child of the floating element  |
+| `hide()`            | Detect when reference or floating is hidden outside boundary | Middleware                  | Combine with CSS `visibility` or `opacity`             |
+| `inline()`          | Accurate rect for inline references spanning multiple lines  | Middleware                  | Import from `@vielzeug/orbit/inline`                   |
+| presets             | Pre-configured placement + middleware stacks                 | Factory                     | Import from `@vielzeug/orbit/presets`                  |
 
 ## Package Entry Points
 
-| Import                    | Purpose                                 |
-| ------------------------- | --------------------------------------- |
-| `@vielzeug/orbit`         | Core API, middleware, utilities, types  |
-| `@vielzeug/orbit/inline`  | `inline` middleware for multi-line refs |
-| `@vielzeug/orbit/presets` | Pre-configured middleware stacks        |
+| Import                     | Purpose                                      |
+| -------------------------- | -------------------------------------------- |
+| `@vielzeug/orbit`          | Core API, middleware, utilities, types       |
+| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line refs      |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks             |
 | `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/debug`   | Visual debug overlay (dev only)         |
-| `@vielzeug/orbit/ssr`     | No-op stubs for server-side rendering   |
-
----
+| `@vielzeug/orbit/debug`    | Visual debug overlay (dev only)              |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering        |
 
 ## Core Functions
 
@@ -68,13 +66,13 @@ cleanup();
 
 **Options — `FloatOptions`**
 
-| Option            | Type                            | Default    | Description                                                                                               |
-| ----------------- | ------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
-| `placement`       | `Placement`                     | `'bottom'` | Initial placement. Middleware may change it.                                                              |
-| `middleware`      | `Middleware[]`                  | `[]`       | Middleware pipeline.                                                                                      |
-| `apply`           | `(result, elements) => void`    | —          | Custom DOM write callback. Defaults to writing `left`/`top`. Providing this disables the CSS anchor path. |
-| `autoUpdate`      | `AutoUpdateOptions \| false`    | `{}`       | Auto-update options. Pass `false` to position once without listeners.                                     |
-| `preferCssAnchor` | `boolean`                       | `false`    | Use CSS Anchor Positioning when supported. Requires no `middleware` and no custom `apply`.                |
+| Option            | Type                         | Default    | Description                                                                                               |
+| ----------------- | ---------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| `placement`       | `Placement`                  | `'bottom'` | Initial placement. Middleware may change it.                                                              |
+| `middleware`      | `Middleware[]`               | `[]`       | Middleware pipeline.                                                                                      |
+| `apply`           | `(result, elements) => void` | —          | Custom DOM write callback. Defaults to writing `left`/`top`. Providing this disables the CSS anchor path. |
+| `autoUpdate`      | `AutoUpdateOptions \| false` | `{}`       | Auto-update options. Pass `false` to position once without listeners.                                     |
+| `preferCssAnchor` | `boolean`                    | `false`    | Use CSS Anchor Positioning when supported. Requires no `middleware` and no custom `apply`.                |
 
 When `preferCssAnchor: true`, `float()` uses native CSS Anchor Positioning in supporting browsers (no scroll listeners, no JS updates). It falls back to JS positioning when the browser does not support it, when `middleware` is non-empty, or when a custom `apply` is provided.
 
@@ -103,22 +101,22 @@ const { x, y, placement, middlewareData } = computePosition(trigger, panel, {
 
 **Options — `ComputePositionOptions`**
 
-| Option           | Type                                                       | Default    | Description                                                                                       |
-| ---------------- | ---------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
-| `placement`      | `Placement`                                                | `'bottom'` | Initial placement for this computation.                                                           |
-| `middleware`     | `Array<Middleware \| null \| undefined \| false>`          | `[]`       | Middleware pipeline. Falsy entries are skipped.                                                   |
-| `containingBlock` | `Element \| null`                                         | —          | Subtract the block's origin. Use when the floating element is `position: absolute`.               |
-| `boundary`       | `Element \| Rect`                                          | viewport   | Default boundary for all overflow-aware middleware. Per-middleware `boundary` takes precedence.   |
-| `padding`        | `Padding`                                                  | `0`        | Default padding for all overflow-aware middleware. Per-middleware `padding` takes precedence.     |
+| Option            | Type                                              | Default    | Description                                                                                     |
+| ----------------- | ------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
+| `placement`       | `Placement`                                       | `'bottom'` | Initial placement for this computation.                                                         |
+| `middleware`      | `Array<Middleware \| null \| undefined \| false>` | `[]`       | Middleware pipeline. Falsy entries are skipped.                                                 |
+| `containingBlock` | `Element \| null`                                 | —          | Subtract the block's origin. Use when the floating element is `position: absolute`.             |
+| `boundary`        | `Element \| Rect`                                 | viewport   | Default boundary for all overflow-aware middleware. Per-middleware `boundary` takes precedence. |
+| `padding`         | `Padding`                                         | `0`        | Default padding for all overflow-aware middleware. Per-middleware `padding` takes precedence.   |
 
 **Returns — `ComputePositionResult`**
 
-| Field            | Type             | Description                                    |
-| ---------------- | ---------------- | ---------------------------------------------- |
-| `x`              | `number`         | Left position in viewport-relative pixels.     |
-| `y`              | `number`         | Top position in viewport-relative pixels.      |
-| `placement`      | `Placement`      | Resolved placement after middleware.           |
-| `middlewareData` | `MiddlewareData` | Accumulated data from all middleware.          |
+| Field            | Type             | Description                                |
+| ---------------- | ---------------- | ------------------------------------------ |
+| `x`              | `number`         | Left position in viewport-relative pixels. |
+| `y`              | `number`         | Top position in viewport-relative pixels.  |
+| `placement`      | `Placement`      | Resolved placement after middleware.       |
+| `middlewareData` | `MiddlewareData` | Accumulated data from all middleware.      |
 
 ---
 
@@ -152,14 +150,14 @@ Supported triggers:
 
 **Options — `AutoUpdateOptions`**
 
-| Option                  | Type      | Default | Description                                                                                       |
-| ----------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------- |
-| `observeFloating`       | `boolean` | `true`  | Watch the floating element for size changes.                                                      |
+| Option                  | Type      | Default | Description                                                                                                                       |
+| ----------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `observeFloating`       | `boolean` | `true`  | Watch the floating element for size changes.                                                                                      |
 | `observeAncestors`      | `boolean` | `true`  | Attach scroll listeners to ancestor scroll containers of the reference. More reliable than window-only in nested scroll contexts. |
-| `observeVisualViewport` | `boolean` | `true`  | Track visual viewport scroll and resize.                                                          |
-| `pauseWhenHidden`       | `boolean` | `true`  | Pause updates when the reference is off-screen (IntersectionObserver). Fires one update when visible again. |
-| `animationFrame`        | `boolean` | `false` | Re-position on every animation frame. Use only when the reference itself animates.                |
-| `throttle`              | `number`  | `0`     | Throttle updates to at most once every N ms. Uses leading + trailing strategy. `0` = no throttle. |
+| `observeVisualViewport` | `boolean` | `true`  | Track visual viewport scroll and resize.                                                                                          |
+| `pauseWhenHidden`       | `boolean` | `true`  | Pause updates when the reference is off-screen (IntersectionObserver). Fires one update when visible again.                       |
+| `animationFrame`        | `boolean` | `false` | Re-position on every animation frame. Use only when the reference itself animates.                                                |
+| `throttle`              | `number`  | `0`     | Throttle updates to at most once every N ms. Uses leading + trailing strategy. `0` = no throttle.                                 |
 
 **Returns:** `Cleanup` (`() => void`)
 
@@ -212,7 +210,7 @@ Extracts the primary side from a placement string.
 import { getSide } from '@vielzeug/orbit';
 
 getSide('bottom-start'); // → 'bottom'
-getSide('left');         // → 'left'
+getSide('left'); // → 'left'
 ```
 
 ---
@@ -233,10 +231,8 @@ Extracts the alignment from a placement string. Returns `null` for cardinal plac
 import { getAlignment } from '@vielzeug/orbit';
 
 getAlignment('top-start'); // → 'start'
-getAlignment('bottom');    // → null
+getAlignment('bottom'); // → null
 ```
-
----
 
 ## Middleware
 
@@ -296,11 +292,11 @@ flip({ fallbackPlacements: ['right', 'left'], padding: 8 });
 
 **Options — `FlipOptions`** (extends `DetectOverflowOptions`)
 
-| Option               | Type              | Default      | Description                                                     |
-| -------------------- | ----------------- | ------------ | --------------------------------------------------------------- |
-| `fallbackPlacements` | `Placement[]`     | opposite side | Ordered candidates to try when the current placement overflows. |
-| `padding`            | `Padding`         | `0`          | Inset from boundary edges.                                      |
-| `boundary`           | `Element \| Rect` | visual viewport | Boundary to use for overflow detection.                      |
+| Option               | Type              | Default         | Description                                                     |
+| -------------------- | ----------------- | --------------- | --------------------------------------------------------------- |
+| `fallbackPlacements` | `Placement[]`     | opposite side   | Ordered candidates to try when the current placement overflows. |
+| `padding`            | `Padding`         | `0`             | Inset from boundary edges.                                      |
+| `boundary`           | `Element \| Rect` | visual viewport | Boundary to use for overflow detection.                         |
 
 ---
 
@@ -324,11 +320,11 @@ autoPlacement({ allowedPlacements: ['top', 'bottom'] });
 
 **Options — `AutoPlacementOptions`** (extends `DetectOverflowOptions`)
 
-| Option              | Type              | Default                            | Description                              |
-| ------------------- | ----------------- | ---------------------------------- | ---------------------------------------- |
-| `allowedPlacements` | `Placement[]`     | `['top','right','bottom','left']`  | Placements to consider.                  |
-| `padding`           | `Padding`         | `0`                                | Inset from boundary edges.               |
-| `boundary`          | `Element \| Rect` | visual viewport                    | Boundary to use for overflow detection.  |
+| Option              | Type              | Default                           | Description                             |
+| ------------------- | ----------------- | --------------------------------- | --------------------------------------- |
+| `allowedPlacements` | `Placement[]`     | `['top','right','bottom','left']` | Placements to consider.                 |
+| `padding`           | `Padding`         | `0`                               | Inset from boundary edges.              |
+| `boundary`          | `Element \| Rect` | visual viewport                   | Boundary to use for overflow detection. |
 
 ---
 
@@ -358,12 +354,12 @@ shift({ padding: { top: 8, bottom: 8 }, mainAxis: true });
 
 **Options — `ShiftOptions`** (extends `DetectOverflowOptions`)
 
-| Option      | Type              | Default         | Description                                                        |
-| ----------- | ----------------- | --------------- | ------------------------------------------------------------------ |
-| `crossAxis` | `boolean`         | `true`          | Shift along the cross axis.                                        |
-| `mainAxis`  | `boolean`         | `false`         | Shift along the main axis.                                         |
-| `padding`   | `Padding`         | `0`             | Inset from boundary edges.                                         |
-| `boundary`  | `Element \| Rect` | visual viewport | Boundary to shift within.                                          |
+| Option      | Type              | Default         | Description                 |
+| ----------- | ----------------- | --------------- | --------------------------- |
+| `crossAxis` | `boolean`         | `true`          | Shift along the cross axis. |
+| `mainAxis`  | `boolean`         | `false`         | Shift along the main axis.  |
+| `padding`   | `Padding`         | `0`             | Inset from boundary edges.  |
+| `boundary`  | `Element \| Rect` | visual viewport | Boundary to shift within.   |
 
 ---
 
@@ -390,7 +386,7 @@ const handle = float(ref, el, {
       el.style.maxHeight = `${result.middlewareData.size.availableHeight}px`;
     }
     el.style.left = `${result.x}px`;
-    el.style.top  = `${result.y}px`;
+    el.style.top = `${result.y}px`;
   },
 });
 
@@ -401,10 +397,10 @@ el.style.maxHeight = `${middlewareData.size!.availableHeight}px`;
 
 **Options — `SizeOptions`** (extends `DetectOverflowOptions`)
 
-| Option     | Type              | Description                              |
-| ---------- | ----------------- | ---------------------------------------- |
-| `padding`  | `Padding`         | Inset from boundary edges.               |
-| `boundary` | `Element \| Rect` | Boundary to measure against.             |
+| Option     | Type              | Description                  |
+| ---------- | ----------------- | ---------------------------- |
+| `padding`  | `Padding`         | Inset from boundary edges.   |
+| `boundary` | `Element \| Rect` | Boundary to measure against. |
 
 **`SizeData`** (`middlewareData.size`)
 
@@ -439,7 +435,7 @@ const { middlewareData } = computePosition(ref, floating, {
 
 const { x, y } = middlewareData.arrow as ArrowData;
 arrowEl.style.left = x != null ? `${x}px` : '';
-arrowEl.style.top  = y != null ? `${y}px` : '';
+arrowEl.style.top = y != null ? `${y}px` : '';
 ```
 
 **Options — `ArrowOptions`**
@@ -451,11 +447,11 @@ arrowEl.style.top  = y != null ? `${y}px` : '';
 
 **`ArrowData`** (`middlewareData.arrow`)
 
-| Field          | Type                  | Description                                                                            |
-| -------------- | --------------------- | -------------------------------------------------------------------------------------- |
+| Field          | Type                  | Description                                                                           |
+| -------------- | --------------------- | ------------------------------------------------------------------------------------- |
 | `x`            | `number \| undefined` | Arrow x offset (set for `top`/`bottom` placements).                                   |
 | `y`            | `number \| undefined` | Arrow y offset (set for `left`/`right` placements).                                   |
-| `centerOffset` | `number`              | Non-zero when the arrow was clamped away from the ideal centered position.             |
+| `centerOffset` | `number`              | Non-zero when the arrow was clamped away from the ideal centered position.            |
 | `constrained`  | `boolean`             | `true` when the arrow was clamped (e.g. due to `padding` or the float being shifted). |
 
 ---
@@ -486,20 +482,20 @@ floating.style.visibility = referenceHidden ? 'hidden' : 'visible';
 
 **Options — `HideOptions`** (extends `DetectOverflowOptions`)
 
-| Option     | Type                                          | Default  | Description                                 |
-| ---------- | --------------------------------------------- | -------- | ------------------------------------------- |
-| `strategy` | `'referenceHidden' \| 'escaped' \| 'both'`    | `'both'` | Which hidden states to compute.             |
-| `padding`  | `Padding`                                     | `0`      | Inset from boundary edges.                  |
-| `boundary` | `Element \| Rect`                             | viewport | Boundary to check against.                  |
+| Option     | Type                                       | Default  | Description                     |
+| ---------- | ------------------------------------------ | -------- | ------------------------------- |
+| `strategy` | `'referenceHidden' \| 'escaped' \| 'both'` | `'both'` | Which hidden states to compute. |
+| `padding`  | `Padding`                                  | `0`      | Inset from boundary edges.      |
+| `boundary` | `Element \| Rect`                          | viewport | Boundary to check against.      |
 
 **`HideData`**
 
-| Field                    | Type                      | Description                                                           |
-| ------------------------ | ------------------------- | --------------------------------------------------------------------- |
-| `referenceHidden`        | `boolean \| undefined`    | `true` when the reference is fully clipped by the boundary.           |
-| `referenceHiddenOffsets` | `SideObject \| undefined` | Per-side overflow of the reference rect.                              |
-| `escaped`                | `boolean \| undefined`    | `true` when the floating element has fully left the boundary.         |
-| `escapedOffsets`         | `SideObject \| undefined` | Per-side overflow of the floating element.                            |
+| Field                    | Type                      | Description                                                   |
+| ------------------------ | ------------------------- | ------------------------------------------------------------- |
+| `referenceHidden`        | `boolean \| undefined`    | `true` when the reference is fully clipped by the boundary.   |
+| `referenceHiddenOffsets` | `SideObject \| undefined` | Per-side overflow of the reference rect.                      |
+| `escaped`                | `boolean \| undefined`    | `true` when the floating element has fully left the boundary. |
+| `escapedOffsets`         | `SideObject \| undefined` | Per-side overflow of the floating element.                    |
 
 ---
 
@@ -529,13 +525,11 @@ float(selectionRef, tooltip, {
 
 **Options — `InlineOptions`**
 
-| Option    | Type      | Description                                                                                                      |
-| --------- | --------- | ---------------------------------------------------------------------------------------------------------------- |
-| `x`       | `number`  | Cursor x. When both `x` and `y` are provided, picks the client rect containing the cursor.                       |
-| `y`       | `number`  | Cursor y.                                                                                                        |
+| Option    | Type      | Description                                                                                                          |
+| --------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
+| `x`       | `number`  | Cursor x. When both `x` and `y` are provided, picks the client rect containing the cursor.                           |
+| `y`       | `number`  | Cursor y.                                                                                                            |
 | `padding` | `Padding` | Hit-test tolerance around rect edges when using cursor coordinates. Has no effect without `x` and `y`. Default: `2`. |
-
----
 
 ## Presets — `@vielzeug/orbit/presets`
 
@@ -575,19 +569,17 @@ Default placement: `'bottom-start'`
 
 **`PresetOptions`** (all fields optional)
 
-| Option    | Type        | Description                                   |
-| --------- | ----------- | --------------------------------------------- |
-| `offset`  | `number`    | Gap in pixels between reference and floating. |
-| `padding` | `number`    | Distance from boundary edges.                 |
-| `placement` | `Placement` | Override the default placement.             |
+| Option      | Type        | Description                                   |
+| ----------- | ----------- | --------------------------------------------- |
+| `offset`    | `number`    | Gap in pixels between reference and floating. |
+| `padding`   | `number`    | Distance from boundary edges.                 |
+| `placement` | `Placement` | Override the default placement.               |
 
 Both `PositioningPreset` and `PresetOptions` are also exported as types from the main entry point:
 
 ```ts
 import type { PositioningPreset, PresetOptions } from '@vielzeug/orbit';
 ```
-
----
 
 ## `compose(...middleware)`
 
@@ -602,18 +594,10 @@ Filters falsy entries and validates middleware ordering at call time. Throws a d
 ```ts
 import { arrow, compose, flip, offset, shift, size } from '@vielzeug/orbit';
 
-const middleware = compose(
-  offset(8),
-  flip(),
-  shift({ padding: 6 }),
-  size(),
-  arrow({ element: arrowEl }),
-);
+const middleware = compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: arrowEl }));
 
 const handle = float(trigger, floating, { middleware });
 ```
-
----
 
 ## `shift` — `limitShift(options?)`
 
@@ -631,10 +615,10 @@ Without `limitShift`, `shift()` will push the float as far as necessary to keep 
 import { limitShift, shift } from '@vielzeug/orbit';
 
 // Arrow stays within the reference's width
-shift({ padding: 6, limiter: limitShift() })
+shift({ padding: 6, limiter: limitShift() });
 
 // Allow up to 10px of drift beyond the reference's edges
-shift({ padding: 6, limiter: limitShift({ offset: 10 }) })
+shift({ padding: 6, limiter: limitShift({ offset: 10 }) });
 ```
 
 **Options — `LimitShiftOptions`**
@@ -642,8 +626,6 @@ shift({ padding: 6, limiter: limitShift({ offset: 10 }) })
 | Option   | Type                                           | Default | Description                                                |
 | -------- | ---------------------------------------------- | ------- | ---------------------------------------------------------- |
 | `offset` | `number \| (state: MiddlewareState) => number` | `0`     | Extra pixels of drift allowed past the reference's extent. |
-
----
 
 ## Reactive Adapter — `@vielzeug/orbit/reactive`
 
@@ -679,7 +661,7 @@ effect(() => {
   const pos = position.value;
   if (!pos) return;
   tooltip.style.left = `${pos.x}px`;
-  tooltip.style.top  = `${pos.y}px`;
+  tooltip.style.top = `${pos.y}px`;
 });
 
 cleanup();
@@ -687,14 +669,12 @@ cleanup();
 
 **Returns — `ReactiveFloatHandle`**
 
-| Field       | Type                               | Description                                                                                 |
-| ----------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `position`  | `Signal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update or when `cssAnchor` is `true`.         |
-| `cssAnchor` | `boolean`                          | `true` when CSS Anchor Positioning is active.                                               |
-| `cleanup()` | `() => void`                       | Removes all listeners. Always call on teardown.                                             |
-| `update()`  | `() => void`                       | Manually trigger a position recalculation.                                                  |
-
----
+| Field       | Type                                    | Description                                                                    |
+| ----------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| `position`  | `Signal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update or when `cssAnchor` is `true`. |
+| `cssAnchor` | `boolean`                               | `true` when CSS Anchor Positioning is active.                                  |
+| `cleanup()` | `() => void`                            | Removes all listeners. Always call on teardown.                                |
+| `update()`  | `() => void`                            | Manually trigger a position recalculation.                                     |
 
 ## SSR Stubs — `@vielzeug/orbit/ssr`
 
@@ -719,14 +699,12 @@ resolve: {
 }
 ```
 
----
-
 ## Types
 
 ### `Placement`
 
 ```ts
-type Side      = 'top' | 'bottom' | 'left' | 'right';
+type Side = 'top' | 'bottom' | 'left' | 'right';
 type Alignment = 'start' | 'end';
 type Placement = Side | `${Side}-${Alignment}`;
 ```

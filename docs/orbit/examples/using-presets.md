@@ -51,8 +51,7 @@ document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
 
   const virtualRef = {
-    getBoundingClientRect: () =>
-      DOMRect.fromRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 }),
+    getBoundingClientRect: () => DOMRect.fromRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 }),
   };
 
   const { x, y } = computePosition(virtualRef, menu, contextMenu());

@@ -72,7 +72,6 @@ const childBus = createBus<AppEvents>();
 pipeEvents(parentBus, childBus, ['user:login'], parentBus.disposalSignal);
 ```
 
-
 ### Pitfalls
 
 - Source and target buses may have **different event map types** — TypeScript enforces that the listed keys exist in both with compatible payload types, but the buses themselves do not need to share the same type.

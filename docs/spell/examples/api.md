@@ -16,13 +16,15 @@ Use one schema at the request boundary, then reuse the parsed value everywhere e
 ```ts
 import { ValidationError, s } from '@vielzeug/spell';
 
-const CreateArticle = s.object({
-  body: s.string().min(20),
-  published: s.boolean().default(false),
-  slug: s.string().slug(),
-  title: s.string().min(3).max(120),
-  tags: s.array(s.string().min(1)).default(() => []),
-}).strict();
+const CreateArticle = s
+  .object({
+    body: s.string().min(20),
+    published: s.boolean().default(false),
+    slug: s.string().slug(),
+    title: s.string().min(3).max(120),
+    tags: s.array(s.string().min(1)).default(() => []),
+  })
+  .strict();
 
 function handleCreateArticle(payload: unknown) {
   const parsed = CreateArticle.parse(payload);

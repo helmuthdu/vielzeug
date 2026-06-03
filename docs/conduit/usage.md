@@ -18,11 +18,7 @@ const Service = token<{ run(): Promise<void> }>('Service');
 const container = createContainer();
 
 container.value(Logger, console);
-container.factory(
-  Service,
-  (logger) => ({ run: async () => logger.log('running') }),
-  { deps: [Logger] },
-);
+container.factory(Service, (logger) => ({ run: async () => logger.log('running') }), { deps: [Logger] });
 
 const service = await container.resolve(Service);
 await service.run();
@@ -53,9 +49,7 @@ const Service = token<{ run(): void }>('Service');
 
 const container = createContainer();
 
-container
-  .value(Logger, console)
-  .factory(Service, (logger) => ({ run: () => logger.log('ok') }), { deps: [Logger] });
+container.value(Logger, console).factory(Service, (logger) => ({ run: () => logger.log('ok') }), { deps: [Logger] });
 ```
 
 ## Container Modules
@@ -312,7 +306,12 @@ const ContainerCtx = createContext<Container | null>(null);
 
 export const ContainerProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [container] = useState(() => createContainer());
-  useEffect(() => () => { container.dispose(); }, [container]);
+  useEffect(
+    () => () => {
+      container.dispose();
+    },
+    [container],
+  );
   return <ContainerCtx.Provider value={container}>{children}</ContainerCtx.Provider>;
 };
 
@@ -384,11 +383,9 @@ container.factory(EventBus, () => createBus(), { dispose: (bus) => bus.clear() }
 
 const NotificationService = token<{ notify(msg: string): void }>('NotificationService');
 
-container.factory(
-  NotificationService,
-  (bus) => ({ notify: (msg) => bus.emit('notification', msg) }),
-  { deps: [EventBus] },
-);
+container.factory(NotificationService, (bus) => ({ notify: (msg) => bus.emit('notification', msg) }), {
+  deps: [EventBus],
+});
 ```
 
 ## Observing Container Events

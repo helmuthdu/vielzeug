@@ -7,26 +7,26 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 ## API At a Glance
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `list-packages` | All packages or one by slug | Sync | Always returns an array — even with `packageSlug` |
-| `get-docs` | Package documentation page | Sync | `page` enum excludes `source` — use `get-source` |
-| `get-source` | `src/index.ts` text | Sync | `isError: true` when package has no bundled source |
-| `search-packages` | Ranked search across metadata + docs | Sync | Returns `[]`, never an error, when nothing matches |
-| `list-components` | Sigil component tag list | Sync | `isError: true` if Sigil CEM not in snapshot |
-| `get-component` | Single Sigil CEM declaration | Sync | `isError: true` lists available tags on miss |
-| `createServer()` | Programmatic server factory | Sync | Requires pre-loaded `BundledData` — call `loadData()` first |
-| `loadData()` | Load and validate bundled snapshot | Sync | Throws with an actionable message on missing or malformed data |
-| `packageMeta()` | Strip heavy fields from a `BundledPackage` | Sync | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
-| `validateBundledData()` | Validate raw JSON against `BundledData` shape | Sync | Use when loading data from a custom path |
+| Symbol                  | Purpose                                       | Execution mode | Common gotcha                                                   |
+| ----------------------- | --------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `list-packages`         | All packages or one by slug                   | Sync           | Always returns an array — even with `packageSlug`               |
+| `get-docs`              | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                |
+| `get-source`            | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source              |
+| `search-packages`       | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches              |
+| `list-components`       | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                    |
+| `get-component`         | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                    |
+| `createServer()`        | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first     |
+| `loadData()`            | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data  |
+| `packageMeta()`         | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
+| `validateBundledData()` | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                        |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/codex` | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, and all types |
-| `@vielzeug/codex/data` | `loadData`, `packageMeta`, `validateBundledData` (subpath import) |
-| `@vielzeug/codex/generator` | `generateBundledData` (build-time use only) |
+| Import                      | Purpose                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, and all types |
+| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)               |
+| `@vielzeug/codex/generator` | `generateBundledData` (build-time use only)                                     |
 
 The CLI binary (`vielzeug-mcp`) is the primary runtime interface; direct imports are for custom server wiring.
 
@@ -38,9 +38,9 @@ Returns an array of `PackageMeta` objects. Pass `packageSlug` to filter to a sin
 
 **Input:**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `packageSlug` | `string` | No | Package folder name, e.g. `"ripple"`. Omit to return all. |
+| Field         | Type     | Required | Description                                               |
+| ------------- | -------- | -------- | --------------------------------------------------------- |
+| `packageSlug` | `string` | No       | Package folder name, e.g. `"ripple"`. Omit to return all. |
 
 **Result shape:**
 
@@ -71,12 +71,13 @@ Returns the Markdown content of a documentation page.
 
 **Input:**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `packageSlug` | `string` | Yes | Package folder name, e.g. `"spell"` |
-| `page` | `'index' \| 'api' \| 'usage' \| 'examples'` | No | Defaults to `'index'` |
+| Field         | Type                                        | Required | Description                         |
+| ------------- | ------------------------------------------- | -------- | ----------------------------------- |
+| `packageSlug` | `string`                                    | Yes      | Package folder name, e.g. `"spell"` |
+| `page`        | `'index' \| 'api' \| 'usage' \| 'examples'` | No       | Defaults to `'index'`               |
 
 **Notes:**
+
 - Returns raw Markdown text. Use `get-source` for `src/index.ts`.
 - When a page is unavailable, the error message lists which pages the package has.
 
@@ -90,9 +91,9 @@ Returns the bundled `src/index.ts` source text.
 
 **Input:**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `packageSlug` | `string` | Yes | Package folder name, e.g. `"ripple"` |
+| Field         | Type     | Required | Description                          |
+| ------------- | -------- | -------- | ------------------------------------ |
+| `packageSlug` | `string` | Yes      | Package folder name, e.g. `"ripple"` |
 
 **Error cases:** unknown slug or no bundled source → `isError: true`.
 
@@ -104,18 +105,18 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
 
 **Input:**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `query` | `string` | Yes | Non-empty search term |
+| Field   | Type     | Required | Description           |
+| ------- | -------- | -------- | --------------------- |
+| `query` | `string` | Yes      | Non-empty search term |
 
 **Ranking:**
 
-| Score | Category | Field(s) searched |
-| --- | --- | --- |
-| 3 | `"metadata"` | `name`, `description`, `category` |
-| 2 | `"keywords"` | `keywords` array |
-| 2 | `"exports"` | `exports` array (exported symbol names) |
-| 1 | `"docs"` | All doc pages and `src/index.ts` (`matchedPages` lists which) |
+| Score | Category     | Field(s) searched                                             |
+| ----- | ------------ | ------------------------------------------------------------- |
+| 3     | `"metadata"` | `name`, `description`, `category`                             |
+| 2     | `"keywords"` | `keywords` array                                              |
+| 2     | `"exports"`  | `exports` array (exported symbol names)                       |
+| 1     | `"docs"`     | All doc pages and `src/index.ts` (`matchedPages` lists which) |
 
 Results are sorted by `score` descending, then `slug` ascending. Multiple categories can match simultaneously.
 
@@ -168,15 +169,13 @@ Returns one full CEM declaration for a Sigil component.
 
 **Input:**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `tagName` | `string` | Yes | HTML custom element tag, e.g. `"bit-button"` |
+| Field     | Type     | Required | Description                                  |
+| --------- | -------- | -------- | -------------------------------------------- |
+| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"bit-button"` |
 
 **Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS properties.
 
 **Error cases:** unknown tag (lists available tags) or missing Sigil CEM → `isError: true`.
-
----
 
 ## Resources
 
@@ -184,14 +183,12 @@ Resources follow the MCP `resources/list` and `resources/read` protocol.
 
 ### URI format
 
-| Pattern | MIME type | Description |
-| --- | --- | --- |
-| `vielzeug://docs/<slug>/<page>` | `text/markdown` | Documentation page — one of `index`, `api`, `usage`, `examples` |
-| `vielzeug://source/<slug>` | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source |
+| Pattern                         | MIME type           | Description                                                     |
+| ------------------------------- | ------------------- | --------------------------------------------------------------- |
+| `vielzeug://docs/<slug>/<page>` | `text/markdown`     | Documentation page — one of `index`, `api`, `usage`, `examples` |
+| `vielzeug://source/<slug>`      | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source   |
 
 **Error cases:** unknown URI → `McpError` with `InvalidParams` code.
-
----
 
 ## Programmatic API
 
@@ -205,9 +202,9 @@ Creates and returns an MCP `Server` instance with all tools and resources regist
 
 **Parameters:**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `data` | `BundledData` | Validated bundled snapshot — call `loadData()` to obtain it |
+| Parameter | Type          | Description                                                 |
+| --------- | ------------- | ----------------------------------------------------------- |
+| `data`    | `BundledData` | Validated bundled snapshot — call `loadData()` to obtain it |
 
 **Returns:** `Server` from `@modelcontextprotocol/sdk`
 
@@ -247,9 +244,9 @@ Strips `docs`, `apiSource`, and `components` from a `BundledPackage` and adds `h
 
 **Parameters:**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `pkg` | `BundledPackage` | Full package record from `BundledData.packages` |
+| Parameter | Type             | Description                                     |
+| --------- | ---------------- | ----------------------------------------------- |
+| `pkg`     | `BundledPackage` | Full package record from `BundledData.packages` |
 
 **Returns:** `PackageMeta`
 
@@ -265,9 +262,9 @@ Validates that `raw` conforms to the top-level `BundledData` shape (checks `vers
 
 **Parameters:**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `raw` | `unknown` | Parsed JSON to validate |
+| Parameter | Type      | Description             |
+| --------- | --------- | ----------------------- |
+| `raw`     | `unknown` | Parsed JSON to validate |
 
 **Returns:** `BundledData` (cast after validation)
 
@@ -282,8 +279,6 @@ import { readFileSync } from 'node:fs';
 const raw = JSON.parse(readFileSync('./my-snapshot.json', 'utf8'));
 const data = validateBundledData(raw); // throws if invalid
 ```
-
----
 
 ## Types
 
@@ -349,8 +344,6 @@ interface SearchHit {
 type DocPage = 'api' | 'examples' | 'index' | 'usage';
 ```
 
----
-
 ## Errors
 
 ### Tool errors (`isError: true`)
@@ -359,10 +352,10 @@ All tool-level failures return a text content item with `isError: true`. The err
 
 ### Protocol errors (`McpError`)
 
-| Situation | Error code |
-| --- | --- |
-| Unknown tool name | `MethodNotFound` |
-| Unknown resource URI | `InvalidParams` |
+| Situation            | Error code       |
+| -------------------- | ---------------- |
+| Unknown tool name    | `MethodNotFound` |
+| Unknown resource URI | `InvalidParams`  |
 
 ### Startup errors
 
@@ -371,8 +364,6 @@ All tool-level failures return a text content item with `isError: true`. The err
 - The bundled data file is missing (`ENOENT`): includes the regen command
 - The file is malformed JSON: includes the regen command
 - The parsed data fails schema validation: includes the regen command
-
----
 
 ## Runtime Behavior
 

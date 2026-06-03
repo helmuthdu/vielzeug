@@ -22,8 +22,7 @@ const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery({ staleTime: 30_000 });
 
 const addTag = createMutation(
-  (input: { name: string }, signal: AbortSignal) =>
-    api.post<Tag>('/tags', { body: input, signal }),
+  (input: { name: string }, signal: AbortSignal) => api.post<Tag>('/tags', { body: input, signal }),
   {
     onSuccess: (tag, variables) => {
       // `variables` is `{ name: string }` — the exact input passed to mutate()

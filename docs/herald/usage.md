@@ -145,7 +145,7 @@ const bus = createBus<AppEvents>({
 });
 
 bus.emit('count', 'oops'); // → onError called, listeners skipped, returns 0
-bus.emit('count', 42);     // → listeners run, returns listener count
+bus.emit('count', 42); // → listeners run, returns listener count
 ```
 
 Without `onError`, a `validatePayload` throw propagates directly to the `emit()` caller.
@@ -236,7 +236,10 @@ for await (const label of bus.events('count').map((n) => `count: ${n}`)) {
 }
 
 // Chain filter and map
-for await (const s of bus.events('count').filter((n) => n % 2 === 0).map((n) => n * 2)) {
+for await (const s of bus
+  .events('count')
+  .filter((n) => n % 2 === 0)
+  .map((n) => n * 2)) {
   console.log(s);
 }
 ```
@@ -403,8 +406,8 @@ Mix string keys and `{ from, to }` objects freely in the same array:
 
 ```ts
 pipeEvents(sourceBus, targetBus, [
-  'config:updated',                                   // same name
-  { from: 'auth:login', to: 'user:authenticated' },  // renamed
+  'config:updated', // same name
+  { from: 'auth:login', to: 'user:authenticated' }, // renamed
 ]);
 ```
 
@@ -421,7 +424,7 @@ type UIState = { theme: 'light' | 'dark'; zoom: number };
 const bus = createBehaviorBus<UIState>({ theme: 'light', zoom: 1 });
 
 bus.on('theme', applyTheme); // called with 'light' immediately
-bus.on('zoom', setZoom);     // called with 1 immediately
+bus.on('zoom', setZoom); // called with 1 immediately
 
 bus.emit('theme', 'dark');
 
@@ -434,18 +437,18 @@ Read the current value for any event without subscribing:
 
 ```ts
 bus.current('theme'); // 'dark'
-bus.current('zoom');  // 1
+bus.current('zoom'); // 1
 ```
 
 ### Replay rules
 
-| Method          | Replays current value? |
-| --------------- | ---------------------- |
-| `on()`          | ✅ Yes                 |
-| `once()`        | ✅ Yes (then done)     |
-| `on({ once })`  | ✅ Yes (then done)     |
-| `events()`      | ❌ No                  |
-| `wait()`        | ❌ No                  |
+| Method         | Replays current value? |
+| -------------- | ---------------------- |
+| `on()`         | ✅ Yes                 |
+| `once()`       | ✅ Yes (then done)     |
+| `on({ once })` | ✅ Yes (then done)     |
+| `events()`     | ❌ No                  |
+| `wait()`       | ❌ No                  |
 
 ## Debug Mode
 
@@ -482,7 +485,7 @@ Provide a `logger` object to route or silence debug and warn output:
 const bus = createBus<AppEvents>({
   logger: {
     debug: (msg) => myLogger.trace(msg), // enable + redirect debug output
-    warn: (msg) => myLogger.warn(msg),   // redirect warn output
+    warn: (msg) => myLogger.warn(msg), // redirect warn output
   },
 });
 
@@ -603,10 +606,7 @@ type AppEvents = {
 // Module-level bus shared across components
 const bus = createBus<AppEvents>();
 
-function useEvent<K extends keyof AppEvents>(
-  event: K,
-  handler: (payload: AppEvents[K]) => void,
-) {
+function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEvents[K]) => void) {
   useEffect(() => {
     const controller = new AbortController();
     bus.on(event as any, handler as any, controller.signal);
@@ -696,8 +696,12 @@ const bus = createBus<AppEvents>();
 
 const currentUser = signal<{ userId: string; email: string } | null>(null);
 
-bus.on('user:login', (payload) => { currentUser.value = payload; });
-bus.on('user:logout', () => { currentUser.value = null; });
+bus.on('user:login', (payload) => {
+  currentUser.value = payload;
+});
+bus.on('user:logout', () => {
+  currentUser.value = null;
+});
 ```
 
 ## Best Practices

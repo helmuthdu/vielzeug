@@ -69,7 +69,6 @@ async function handleSubmit() {
 }
 ```
 
-
 ### Pitfalls
 
 - Do not set `Content-Type` manually when building a `FormData` request. The browser must include the multipart boundary — overriding the header removes it and breaks server parsing.
@@ -77,6 +76,7 @@ async function handleSubmit() {
 - `form.state.isSubmitting` is `false` before `submit()` is called. Checking it during the pre-submit validation phase always returns `false`.
 
 ### Related
+
 - [File Uploads (Courier)](@vielzeug/courier/examples/file-uploads)
 - [Schema Validation with Sieve](/spell/)
 

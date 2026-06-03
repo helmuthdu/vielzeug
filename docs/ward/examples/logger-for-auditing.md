@@ -18,19 +18,16 @@ import { createWard } from '@vielzeug/ward';
 
 const audit: string[] = [];
 
-const ward = createWard(
-  [{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }],
-  {
-    logger: ({ action, decision, principal, resource, ...rest }) => {
-      const identity = principal === null ? 'anonymous' : principal.id;
-      // 'rule' is only present when decision is 'allow' or 'explicit-deny'
-      const matched  = 'rule' in rest ? `${rest.rule.role}:${rest.rule.effect}` : 'no-match';
-      audit.push(`${identity}:${resource}:${action}:${decision}:${matched}`);
-    },
+const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }], {
+  logger: ({ action, decision, principal, resource, ...rest }) => {
+    const identity = principal === null ? 'anonymous' : principal.id;
+    // 'rule' is only present when decision is 'allow' or 'explicit-deny'
+    const matched = 'rule' in rest ? `${rest.rule.role}:${rest.rule.effect}` : 'no-match';
+    audit.push(`${identity}:${resource}:${action}:${decision}:${matched}`);
   },
-);
+});
 
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');   // logged: u1:posts:read:allow:viewer:allow
+ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // logged: u1:posts:read:allow:viewer:allow
 ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete'); // logged: u1:posts:delete:deny:no-match
 ```
 

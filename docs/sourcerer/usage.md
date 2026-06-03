@@ -22,7 +22,7 @@ const users: User[] = [
 
 const source = createLocalSource<User>(users, { limit: 2 });
 await source.searchNow('ada');
-console.log(source.current);         // [{ id: 1, name: 'Ada Lovelace', role: 'admin' }]
+console.log(source.current); // [{ id: 1, name: 'Ada Lovelace', role: 'admin' }]
 console.log(source.meta.pageNumber); // 1
 console.log(source.meta.totalItems); // 1
 ```
@@ -43,9 +43,9 @@ const source = createLocalSource<User>(users, { limit: 10 });
 
 ```ts
 createLocalSource(data, {
-  limit: 10,          // items per page (default: 20)
-  debounceMs: 300,    // debounce delay for source.search() (default: 300)
-  filter: (u) => u.active,   // initial synchronous filter predicate
+  limit: 10, // items per page (default: 20)
+  debounceMs: 300, // debounce delay for source.search() (default: 300)
+  filter: (u) => u.active, // initial synchronous filter predicate
   sort: (a, b) => a.name.localeCompare(b.name), // initial sorter
   searchFn: (items, query) => items.filter(/* custom match */), // override default search
   // Async variants — enable Web Worker offloading via @vielzeug/familiar:
@@ -61,12 +61,12 @@ createLocalSource(data, {
 ```ts
 await source.setFilter((user) => user.role === 'admin');
 await source.setSort((a, b) => a.name.localeCompare(b.name));
-await source.searchNow('ada');  // immediate, cancels any pending debounce
-source.search('ada');           // debounced — fire-and-forget
-await source.flush();           // flush pending debounced search immediately
+await source.searchNow('ada'); // immediate, cancels any pending debounce
+source.search('ada'); // debounced — fire-and-forget
+await source.flush(); // flush pending debounced search immediately
 await source.goTo(2);
 await source.setData(newUsers); // replace entire dataset
-await source.reset();           // restore initial filter/sort, reset to page 1
+await source.reset(); // restore initial filter/sort, reset to page 1
 ```
 
 ### Restoring from URL state
@@ -79,8 +79,6 @@ import { decodeQuery } from '@vielzeug/sourcerer';
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
 await source.restoreQuery(query);
 ```
-
----
 
 ## Remote Source
 
@@ -111,18 +109,18 @@ await source.ready();
 
 ```ts
 createRemoteSource({
-  fetch,                      // required: (query, AbortSignal) => Promise<{ items, total }>
-  limit: 25,                  // items per page (default: 20)
-  debounceMs: 300,            // debounce for source.search() (default: 300)
-  filter,                     // initial filter value
-  sort,                       // initial sort value
-  autoFetch: true,            // fetch on creation (default: true)
+  fetch, // required: (query, AbortSignal) => Promise<{ items, total }>
+  limit: 25, // items per page (default: 20)
+  debounceMs: 300, // debounce for source.search() (default: 300)
+  filter, // initial filter value
+  sort, // initial sort value
+  autoFetch: true, // fetch on creation (default: true)
   queryKey: (q) => `${q.page}-${q.limit}`, // custom deduplication key
-  staleTime: 5000,            // skip re-fetch if last fetch was within this many ms (default: 0)
-  refreshInterval: 30_000,    // auto re-fetch every N ms; cancelled on dispose()
+  staleTime: 5000, // skip re-fetch if last fetch was within this many ms (default: 0)
+  refreshInterval: 30_000, // auto re-fetch every N ms; cancelled on dispose()
   retry: { attempts: 2, delay: (n) => n * 1000 }, // retry on failure
   onFetch: (event) => logger.info(event), // telemetry callback
-  snapshot,                   // pre-populate from SSR snapshot
+  snapshot, // pre-populate from SSR snapshot
 });
 ```
 
@@ -151,14 +149,14 @@ fetch: async ({ filter, limit, page, search, sort }, signal) => {
 await source.setFilter({ role: 'admin' });
 await source.setSort({ by: 'name', dir: 'asc' });
 await source.searchNow('ada');
-source.search('ada');     // debounced — triggers fetch after debounceMs
-await source.flush();     // flush pending debounced search immediately
+source.search('ada'); // debounced — triggers fetch after debounceMs
+await source.flush(); // flush pending debounced search immediately
 await source.goTo(3);
 await source.next();
 await source.prev();
 await source.goToLast();
-await source.reset();     // restore initial config and refetch
-await source.refresh();   // re-fetch current query
+await source.reset(); // restore initial config and refetch
+await source.refresh(); // re-fetch current query
 ```
 
 ### Restoring from URL state
@@ -177,10 +175,9 @@ await source.restoreQuery(query);
 Apply a mutator immediately so the UI reflects the change before the server confirms.
 
 ```ts
-const rollback = source.optimisticUpdate(
-  (current) => current.filter((u) => u.id !== deletedId),
-  { total: source.meta.totalItems - 1 },
-);
+const rollback = source.optimisticUpdate((current) => current.filter((u) => u.id !== deletedId), {
+  total: source.meta.totalItems - 1,
+});
 
 try {
   await api.users.delete(deletedId);
@@ -210,8 +207,6 @@ await source.ready(5000); // rejects with timeout error after 5 s if still loadi
 
 Use `ready()` in server-side rendering, test setup, or any flow that needs initial data before rendering.
 
----
-
 ## Cursor Source
 
 `createCursorSource()` is for APIs that return opaque cursor tokens instead of page numbers — common with relay-style GraphQL, DynamoDB, and Stripe.
@@ -225,9 +220,9 @@ const source = createCursorSource<Item, string>({
     const data = await res.json();
     return {
       items: data.items,
-      nextCursor: data.nextCursor,  // string | undefined
-      prevCursor: data.prevCursor,  // string | undefined
-      total: data.total,            // optional
+      nextCursor: data.nextCursor, // string | undefined
+      prevCursor: data.prevCursor, // string | undefined
+      total: data.total, // optional
     };
   },
   limit: 20,
@@ -236,14 +231,12 @@ const source = createCursorSource<Item, string>({
 await source.ready();
 console.log(source.meta.hasNextPage, source.meta.hasPrevPage);
 
-await source.next();  // advance to next page using nextCursor
-await source.prev();  // go back using prevCursor
+await source.next(); // advance to next page using nextCursor
+await source.prev(); // go back using prevCursor
 await source.reset(); // clear cursors and refetch from the start
 ```
 
 `next()` and `prev()` are no-ops if there is no cursor in that direction.
-
----
 
 ## Infinite Source
 
@@ -261,21 +254,19 @@ const source = createInfiniteSource<Post>({
 });
 
 await source.ready();
-console.log(source.current);            // first page of posts
-console.log(source.meta.hasMore);       // true if more pages exist
+console.log(source.current); // first page of posts
+console.log(source.meta.hasMore); // true if more pages exist
 console.log(source.meta.isLoadingMore); // true only during loadMore() fetches
 
-await source.loadMore();  // fetches page 2 and appends to source.current
-await source.loadMore();  // fetches page 3, appends again
+await source.loadMore(); // fetches page 2 and appends to source.current
+await source.loadMore(); // fetches page 3, appends again
 
-await source.reset();     // clear all, restart from page 1
+await source.reset(); // clear all, restart from page 1
 ```
 
 `loadMore()` is a no-op when `meta.hasMore` is `false`.
 
 `meta.isLoadingMore` is `true` only during `loadMore()` — distinct from `meta.isLoading` which is `true` during `reset()` and the initial fetch.
-
----
 
 ## Error Handling
 
@@ -283,9 +274,9 @@ All sources expose `meta.error` as a `SourceError | null`. `SourceError` extends
 
 ```ts
 if (source.meta.error) {
-  console.error(source.meta.error.message);  // human-readable message
-  console.error(source.meta.error.cause);    // original thrown value
-  console.error(source.meta.error.query);    // query that triggered the failure
+  console.error(source.meta.error.message); // human-readable message
+  console.error(source.meta.error.cause); // original thrown value
+  console.error(source.meta.error.query); // query that triggered the failure
 }
 ```
 
@@ -297,32 +288,33 @@ import { sourceState } from '@vielzeug/sourcerer';
 const state = sourceState(source);
 
 switch (state.status) {
-  case 'loading': return renderSpinner();
-  case 'error':   return renderError(state.error.message);
-  case 'success': return renderList(state.items);
+  case 'loading':
+    return renderSpinner();
+  case 'error':
+    return renderError(state.error.message);
+  case 'success':
+    return renderList(state.items);
 }
 ```
 
 `sourceState()` works with any source type.
-
----
 
 ## Read Model
 
 Every source exposes `current`, `meta`, and `subscribe`.
 
 ```ts
-source.current  // readonly T[] — items on the current page (or all accumulated for infinite)
-source.meta     // SourceMeta | CursorMeta | InfiniteMeta — pagination and status snapshot
+source.current; // readonly T[] — items on the current page (or all accumulated for infinite)
+source.meta; // SourceMeta | CursorMeta | InfiniteMeta — pagination and status snapshot
 ```
 
 ### `SourceMeta`
 
 ```ts
 type SourceMeta = Readonly<{
-  error: SourceError | null;    // null when healthy
+  error: SourceError | null; // null when healthy
   isLoading: boolean;
-  isSearchPending: boolean;     // true while a debounced search timer is active
+  isSearchPending: boolean; // true while a debounced search timer is active
   pageCount: number;
   pageNumber: number;
   pageSize: number;
@@ -361,7 +353,7 @@ type InfiniteMeta = Readonly<{
   error: SourceError | null;
   hasMore: boolean;
   isLoading: boolean;
-  isLoadingMore: boolean;   // true only during loadMore() — not during reset()
+  isLoadingMore: boolean; // true only during loadMore() — not during reset()
   isSearchPending: boolean;
   pageSize: number;
   totalItems: number;
@@ -369,8 +361,6 @@ type InfiniteMeta = Readonly<{
 ```
 
 `meta` is replaced with a new object reference on every change. Both `current` and `meta` are stable between changes — safe to compare with `===` to detect updates.
-
----
 
 ## Subscriptions
 
@@ -385,8 +375,6 @@ const unsubscribe = source.subscribe(() => {
 // later
 unsubscribe();
 ```
-
----
 
 ## Ripple Signal Adapter
 
@@ -412,8 +400,6 @@ dispose();
 
 > Always call `dispose()` when the source is no longer needed. It unsubscribes from the source and releases the computed signals and their internal tick signal.
 
----
-
 ## URL Query Param Sync
 
 `encodeQuery()` serializes source state to flat URL-safe string params.
@@ -434,8 +420,6 @@ await source.restoreQuery(query);
 `decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
 
 `search` is omitted from both `toQuery()` and `decodeQuery()` output when no search is active (no `search: ''` noise in URLs).
-
----
 
 ## SSR Prefetch
 
@@ -468,8 +452,6 @@ const { snapshot, source } = await prefetchSourceWithSource({ fetch: fetchUsers,
 source.dispose();
 ```
 
----
-
 ## Fetch Middleware
 
 `composeFetch()` layers middleware around any `fetch`-shaped function. Middlewares execute left-to-right (first = outermost).
@@ -479,8 +461,8 @@ import { composeFetch } from '@vielzeug/sourcerer';
 
 const fetchWithMiddleware = composeFetch(
   baseApiFetch,
-  loggingMiddleware,   // runs first
-  retryMiddleware,     // runs second
+  loggingMiddleware, // runs first
+  retryMiddleware, // runs second
 );
 ```
 
@@ -496,8 +478,6 @@ const loggingMiddleware: FetchMiddleware = async (q, signal, next) => {
   return result;
 };
 ```
-
----
 
 ## Framework Integration
 
@@ -517,9 +497,17 @@ function UsersList({ users }: { users: User[] }) {
   return (
     <>
       <input onChange={(e) => source.search(e.target.value)} placeholder="Search" />
-      <ul>{current.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
-      <button onClick={() => source.prev()} disabled={meta.pageNumber <= 1}>Prev</button>
-      <button onClick={() => source.next()} disabled={meta.pageNumber >= meta.pageCount}>Next</button>
+      <ul>
+        {current.map((u) => (
+          <li key={u.id}>{u.name}</li>
+        ))}
+      </ul>
+      <button onClick={() => source.prev()} disabled={meta.pageNumber <= 1}>
+        Prev
+      </button>
+      <button onClick={() => source.next()} disabled={meta.pageNumber >= meta.pageCount}>
+        Next
+      </button>
     </>
   );
 }
@@ -570,8 +558,6 @@ onUnmounted(stop);
 
 :::
 
----
-
 ## Working with Other Vielzeug Libraries
 
 ### With Courier
@@ -601,11 +587,11 @@ const source = createLocalSource(users, { limit: 10 });
 const { current, meta, dispose } = toSignals(source);
 const controls = store({ query: '' });
 
-effect(() => { void source.searchNow(controls.value.query); });
+effect(() => {
+  void source.searchNow(controls.value.query);
+});
 // current and meta update automatically when query changes
 ```
-
----
 
 ## Best Practices
 

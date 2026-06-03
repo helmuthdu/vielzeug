@@ -5,7 +5,23 @@ package: vault
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
 related: [courier, rune, ripple, spell, arsenal]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, VaultError, VaultDisposedError, VaultMigrationError, VaultQuotaError, VaultScopeError, IndexedDbAdapter, BaseAdapterOptions]
+exports:
+  [
+    createLocalStorage,
+    createSessionStorage,
+    createIndexedDB,
+    createMemory,
+    table,
+    ttl,
+    scheduleExpiredPrune,
+    VaultError,
+    VaultDisposedError,
+    VaultMigrationError,
+    VaultQuotaError,
+    VaultScopeError,
+    IndexedDbAdapter,
+    BaseAdapterOptions,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -98,15 +114,15 @@ await db.put('users', { id: 2, name: 'Bob', age: 25 }, ttl.hours(1)); // TTL bui
 const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
 ```
 
-| Feature | Vault | idb-keyval | Raw Web Storage |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="vault" type="size" /> | ~1.3 kB | Native |
-| TypeScript schema types | ✅ | ❌ | ❌ |
-| Query builder | ✅ | ❌ | ❌ |
-| TTL | ✅ | ❌ | Manual |
-| Multiple backends | ✅ | IDB only | localStorage only |
-| Reactivity | ✅ | ❌ | ❌ |
-| Zero dependencies | ✅ | ✅ | Native |
+| Feature                 | Vault                                       | idb-keyval | Raw Web Storage   |
+| ----------------------- | ------------------------------------------- | ---------- | ----------------- |
+| Bundle size             | <PackageInfo package="vault" type="size" /> | ~1.3 kB    | Native            |
+| TypeScript schema types | ✅                                          | ❌         | ❌                |
+| Query builder           | ✅                                          | ❌         | ❌                |
+| TTL                     | ✅                                          | ❌         | Manual            |
+| Multiple backends       | ✅                                          | IDB only   | localStorage only |
+| Reactivity              | ✅                                          | ❌         | ❌                |
+| Zero dependencies       | ✅                                          | ✅         | Native            |
 
 **Use Vault when** you need typed, queryable browser storage with TTL and reactivity across LocalStorage, SessionStorage, IndexedDB, and Memory from a single consistent API.
 
@@ -173,10 +189,10 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 
 ## Compatibility
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | ✅ |
-| Node.js     | ⚠️ (`createMemory` works; browser adapters require web APIs) |
+| Environment | Support                                                                |
+| ----------- | ---------------------------------------------------------------------- |
+| Browser     | ✅                                                                     |
+| Node.js     | ⚠️ (`createMemory` works; browser adapters require web APIs)           |
 | SSR         | ⚠️ (`createMemory` works directly; browser adapters require polyfills) |
 
 ## Documentation

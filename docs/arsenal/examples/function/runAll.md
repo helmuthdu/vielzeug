@@ -10,7 +10,7 @@ type RunAllOptions = {
   reverse?: boolean;
 };
 
-function runAll(fns: Array<() => void>, options?: RunAllOptions): void
+function runAll(fns: Array<() => void>, options?: RunAllOptions): void;
 ```
 
 ## Parameters
@@ -29,7 +29,9 @@ import { runAll } from '@vielzeug/arsenal';
 const cleanups: Array<() => void> = [];
 
 cleanups.push(() => console.log('close db'));
-cleanups.push(() => { throw new Error('close socket failed'); });
+cleanups.push(() => {
+  throw new Error('close socket failed');
+});
 cleanups.push(() => console.log('clear timers'));
 
 // All three run; the error is collected and thrown at the end
@@ -62,7 +64,12 @@ import { runAll } from '@vielzeug/arsenal';
 
 const err = new Error('oops');
 try {
-  runAll([() => { throw err; }, () => console.log('still runs')]);
+  runAll([
+    () => {
+      throw err;
+    },
+    () => console.log('still runs'),
+  ]);
 } catch (e) {
   console.log(e === err); // true — single error re-thrown directly
 }

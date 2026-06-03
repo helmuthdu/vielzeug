@@ -38,7 +38,6 @@ qc.subscribe<Job>(['job', jobId], (state) => {
 });
 ```
 
-
 ### Pitfalls
 
 - Polling continues even when the browser tab is hidden, wasting bandwidth. Pause on `document.visibilitychange` and resume when the tab becomes visible again.
@@ -46,6 +45,7 @@ qc.subscribe<Job>(['job', jobId], (state) => {
 - Failing to stop polling on component teardown causes fetch callbacks to fire on unmounted state. Always call the disposer returned by `startPolling()` in your cleanup function.
 
 ### Related
+
 - [Signals (Ripple)](@vielzeug/ripple/examples/signals)
 
 - [Authentication](./authentication.md)

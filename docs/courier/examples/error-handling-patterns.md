@@ -64,7 +64,6 @@ mutation.subscribe((state) => {
 mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
 ```
 
-
 ### Pitfalls
 
 - Courier distinguishes HTTP errors (4xx/5xx with a response) from network errors (no response). Treating them identically hides the root cause — check `response.ok` before accessing the body.
@@ -72,6 +71,7 @@ mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
 - Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to network errors and 5xx status codes.
 
 ### Related
+
 - [Production Logging (Rune)](@vielzeug/rune/examples/production-setup)
 
 - [Authentication](./authentication.md)

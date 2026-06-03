@@ -42,8 +42,22 @@ const machine = defineMachine<'idle', Context, Event>({
   states: {
     idle: {
       on: {
-        DEC: { actions: [({ context }) => { context.count -= 1; }], target: 'idle' },
-        INC: { actions: [({ context }) => { context.count += 1; }], target: 'idle' },
+        DEC: {
+          actions: [
+            ({ context }) => {
+              context.count -= 1;
+            },
+          ],
+          target: 'idle',
+        },
+        INC: {
+          actions: [
+            ({ context }) => {
+              context.count += 1;
+            },
+          ],
+          target: 'idle',
+        },
       },
     },
   },
@@ -303,7 +317,11 @@ When targeting a compound state, the machine automatically descends to the deepe
 
 ```ts
 // target: 'active' resolves to 'active.editing'
-on: { RESTART: { target: 'active' } }
+on: {
+  RESTART: {
+    target: 'active';
+  }
+}
 ```
 
 ### `matches()` with hierarchy
@@ -311,7 +329,7 @@ on: { RESTART: { target: 'active' } }
 `matches()` returns `true` for ancestor states too:
 
 ```ts
-m.matches('active');         // true when in 'active.editing' or 'active.saving'
+m.matches('active'); // true when in 'active.editing' or 'active.saving'
 m.matches('active.editing'); // true only when in 'active.editing'
 ```
 
@@ -396,7 +414,7 @@ Middleware is composed right-to-left: the first middleware in the array is the o
 ```ts
 const m = interpret(machine);
 
-m.matches('idle');              // true if current state is 'idle'
+m.matches('idle'); // true if current state is 'idle'
 m.matches('loading', 'error'); // true if in either state (or a child of either)
 ```
 
@@ -582,9 +600,9 @@ type Event = { type: 'EMERGENCY' } | { type: 'NEXT' };
 const trafficLight = defineMachine<'green' | 'red' | 'yellow', Record<string, never>, Event>({
   initial: 'red',
   states: {
-    green:  { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'yellow' } } },
-    red:    { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'green'  } } },
-    yellow: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'red'    } } },
+    green: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'yellow' } } },
+    red: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'green' } } },
+    yellow: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'red' } } },
   },
 });
 ```
@@ -601,7 +619,11 @@ const notification = defineMachine<'hidden' | 'visible', { message: string }, Ev
     hidden: {
       on: {
         SHOW: {
-          actions: [({ context, event }) => { context.message = event.message; }],
+          actions: [
+            ({ context, event }) => {
+              context.message = event.message;
+            },
+          ],
           target: 'visible',
         },
       },
@@ -630,7 +652,14 @@ const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthentica
   states: {
     authenticated: {
       on: {
-        LOGOUT: { actions: [({ context }) => { context.user = undefined; }], target: 'unauthenticated' },
+        LOGOUT: {
+          actions: [
+            ({ context }) => {
+              context.user = undefined;
+            },
+          ],
+          target: 'unauthenticated',
+        },
       },
     },
     error: {},
@@ -652,13 +681,24 @@ const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthentica
       ],
       on: {
         AUTH_FAILED: { target: 'unauthenticated' },
-        AUTH_SUCCESS: { actions: [({ context, event }) => { context.user = event.user; }], target: 'authenticated' },
+        AUTH_SUCCESS: {
+          actions: [
+            ({ context, event }) => {
+              context.user = event.user;
+            },
+          ],
+          target: 'authenticated',
+        },
       },
     },
     unauthenticated: {
       on: {
         SUBMIT: {
-          actions: [({ context }) => { context.attempts += 1; }],
+          actions: [
+            ({ context }) => {
+              context.attempts += 1;
+            },
+          ],
           guard: ({ context }) => context.attempts < 3,
           target: 'loading',
         },
@@ -684,7 +724,10 @@ function TrafficLight() {
     const m = interpret(trafficMachine);
     machineRef.current = m;
     const unsub = m.subscribe(({ state }) => setState(state));
-    return () => { unsub(); m[Symbol.dispose](); };
+    return () => {
+      unsub();
+      m[Symbol.dispose]();
+    };
   }, []);
 
   return (
@@ -740,8 +783,7 @@ import { defineMachine, interpret } from '@vielzeug/clockwork';
 const m = interpret(playerMachine);
 
 effect(() => {
-  document.getElementById('play-btn')!.textContent =
-    m.state.value === 'playing' ? 'Pause' : 'Play';
+  document.getElementById('play-btn')!.textContent = m.state.value === 'playing' ? 'Pause' : 'Play';
 });
 
 m.send({ type: 'PLAY' }); // effect runs immediately

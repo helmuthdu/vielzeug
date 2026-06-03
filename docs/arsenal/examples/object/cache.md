@@ -5,10 +5,12 @@ Creates a simple bounded FIFO cache. When at capacity, the oldest entry is evict
 ## Signature
 
 ```ts
-function cache<K, V>(maxSize: number): {
+function cache<K, V>(
+  maxSize: number,
+): {
   get(key: K): V | undefined;
   set(key: K, value: V): void;
-}
+};
 ```
 
 ## Parameters
@@ -29,11 +31,14 @@ import { cache } from '@vielzeug/arsenal';
 const fmt = cache<string, Intl.NumberFormat>(64);
 
 function getFormatter(locale: string): Intl.NumberFormat {
-  return fmt.get(locale) ?? (() => {
-    const f = new Intl.NumberFormat(locale);
-    fmt.set(locale, f);
-    return f;
-  })();
+  return (
+    fmt.get(locale) ??
+    (() => {
+      const f = new Intl.NumberFormat(locale);
+      fmt.set(locale, f);
+      return f;
+    })()
+  );
 }
 
 console.log(getFormatter('en-US').format(1234.5)); // '1,234.5'

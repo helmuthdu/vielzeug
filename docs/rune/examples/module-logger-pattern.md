@@ -26,7 +26,6 @@ log.api.info('GET /users');
 log.auth.warn('token expiring');
 ```
 
-
 ### Pitfalls
 
 - Using the same namespace string in two different modules makes their log entries indistinguishable. Use hierarchical namespaces (e.g., `app:orders:service`) to ensure uniqueness.

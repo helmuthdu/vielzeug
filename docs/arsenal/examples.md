@@ -3,8 +3,6 @@ title: Arsenal — Examples
 description: Practical examples and recipes for arsenal.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Array utilities](./examples/array.md)

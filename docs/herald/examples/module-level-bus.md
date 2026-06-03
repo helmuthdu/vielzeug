@@ -35,7 +35,6 @@ appBus.on('user:login', ({ userId }) => loadCart(userId));
 appBus.on('user:logout', clearCart);
 ```
 
-
 ### Pitfalls
 
 - A module-level bus is a singleton. Calling `dispose()` in a component's teardown disposes it for all modules that imported it. Only dispose when the application shuts down.
@@ -43,6 +42,7 @@ appBus.on('user:logout', clearCart);
 - The TypeScript event map is erased at runtime. Emitting a misspelled event name does not throw — it simply fires with no listeners. Use the type parameter to catch these at compile time.
 
 ### Related
+
 - [Shared Module Store (Ripple)](@vielzeug/ripple/examples/pattern-shared-module-store)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)

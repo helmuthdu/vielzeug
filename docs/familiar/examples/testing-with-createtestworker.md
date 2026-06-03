@@ -63,7 +63,7 @@ describe('math worker', () => {
 
 ```ts
 type TestWorkerOptions = {
-  concurrency?: number;  // default: 1
+  concurrency?: number; // default: 1
   maxQueue?: number;
   onFull?: 'reject' | 'wait';
 };
@@ -73,10 +73,9 @@ Test concurrency-specific behavior by raising `concurrency`:
 
 ```ts
 it('runs tasks in parallel', async () => {
-  const worker = createTestWorker<number, number>(
-    (n) => new Promise((r) => setTimeout(() => r(n * 2), 20)),
-    { concurrency: 3 },
-  );
+  const worker = createTestWorker<number, number>((n) => new Promise((r) => setTimeout(() => r(n * 2), 20)), {
+    concurrency: 3,
+  });
 
   const start = Date.now();
   const results = await Promise.all([worker.run(1), worker.run(2), worker.run(3)]);

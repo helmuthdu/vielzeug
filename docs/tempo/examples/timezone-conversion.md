@@ -19,12 +19,12 @@ import { format, now, toZoned } from '@vielzeug/tempo';
 const utc = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
 // Project the same instant into three timezones
-const tokyo   = toZoned(utc, { tz: 'Asia/Tokyo' });
-const london  = toZoned(utc, { tz: 'Europe/London' });
+const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
+const london = toZoned(utc, { tz: 'Europe/London' });
 const newyork = toZoned(utc, { tz: 'America/New_York' });
 
-tokyo.hour;   // 19 (7:15 PM JST)
-london.hour;  // 10 (10:15 AM GMT)
+tokyo.hour; // 19 (7:15 PM JST)
+london.hour; // 10 (10:15 AM GMT)
 newyork.hour; // 6  (6:15 AM EDT)
 ```
 
@@ -32,10 +32,10 @@ newyork.hour; // 6  (6:15 AM EDT)
 
 ```ts
 const event = Temporal.Instant.from('2026-04-15T14:00:00Z');
-const zones  = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'];
+const zones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'];
 
 for (const tz of zones) {
-  const local     = toZoned(event, { tz });
+  const local = toZoned(event, { tz });
   const formatted = format(local, { pattern: 'long', tz });
   console.log(`${tz}: ${formatted}`);
 }
@@ -44,13 +44,13 @@ for (const tz of zones) {
 #### Current Time by Timezone
 
 ```ts
-const utcNow    = now('UTC');
+const utcNow = now('UTC');
 const londonNow = now('Europe/London');
-const tokyoNow  = now('Asia/Tokyo');
+const tokyoNow = now('Asia/Tokyo');
 
-format(utcNow,    { pattern: 'short', tz: 'UTC' });
+format(utcNow, { pattern: 'short', tz: 'UTC' });
 format(londonNow, { pattern: 'short', tz: 'Europe/London' });
-format(tokyoNow,  { pattern: 'short', tz: 'Asia/Tokyo' });
+format(tokyoNow, { pattern: 'short', tz: 'Asia/Tokyo' });
 ```
 
 ### Pitfalls

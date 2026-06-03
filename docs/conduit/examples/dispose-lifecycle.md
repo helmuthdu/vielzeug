@@ -20,16 +20,16 @@ Factory `dispose` hooks fire only for instances that were resolved at least once
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Pool { end(): Promise<void> }
+interface Pool {
+  end(): Promise<void>;
+}
 
 const DbPool = token<Pool>('DbPool');
 const container = createContainer();
 
-container.factory(
-  DbPool,
-  () => createPool({ connectionString: process.env.DATABASE_URL! }),
-  { dispose: (pool) => pool.end() },
-);
+container.factory(DbPool, () => createPool({ connectionString: process.env.DATABASE_URL! }), {
+  dispose: (pool) => pool.end(),
+});
 
 const pool = await container.resolve(DbPool);
 await container.dispose(); // calls pool.end()
@@ -42,7 +42,9 @@ await container.dispose(); // calls pool.end()
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Db { close(): Promise<void> }
+interface Db {
+  close(): Promise<void>;
+}
 
 const Db = token<Db>('Db');
 const container = createContainer();
@@ -60,7 +62,9 @@ Child containers have their own disposal lifecycle. Disposing a child runs only 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface ScopedCache { clear(): void }
+interface ScopedCache {
+  clear(): void;
+}
 
 const ScopedCache = token<ScopedCache>('ScopedCache');
 const container = createContainer();
@@ -90,14 +94,33 @@ const A = token<object>('A');
 const B = token<object>('B');
 const container = createContainer();
 
-container.value(A, {}, { dispose: () => { throw new Error('A cleanup failed'); } });
-container.value(B, {}, { dispose: () => { throw new Error('B cleanup failed'); } });
+container.value(
+  A,
+  {},
+  {
+    dispose: () => {
+      throw new Error('A cleanup failed');
+    },
+  },
+);
+container.value(
+  B,
+  {},
+  {
+    dispose: () => {
+      throw new Error('B cleanup failed');
+    },
+  },
+);
 
 try {
   await container.dispose();
 } catch (err) {
   if (err instanceof AggregateError) {
-    console.error('cleanup errors:', err.errors.map((e) => e.message));
+    console.error(
+      'cleanup errors:',
+      err.errors.map((e) => e.message),
+    );
     // ["A cleanup failed", "B cleanup failed"]
   }
 }

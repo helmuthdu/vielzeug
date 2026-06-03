@@ -82,8 +82,8 @@ try {
 const checks = {
   isBoolean: isBoolean(true),
   isDate: isDate(new Date()),
-  isDefined: isDefined(0),       // true — 0 is defined
-  isEmpty: isEmpty([]),           // true
+  isDefined: isDefined(0), // true — 0 is defined
+  isEmpty: isEmpty([]), // true
   isError: isError(new Error()), // true
   isFunction: isFunction(() => {}),
   isPrimitive: isPrimitive('x'), // true
@@ -101,3 +101,4 @@ console.log(normalize('  hi  '), ok, shallow, match, mapSource, plain, notPlain,
 - [isLessThan](./typed/isLessThan.md)
 - [isLessThanOrEqual](./typed/isLessThanOrEqual.md)
 - [isWithin](./typed/isWithin.md)
+```

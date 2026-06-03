@@ -7,24 +7,24 @@ description: Complete API reference for the Courier HTTP client, query client, u
 
 ## API At a Glance
 
-| Symbol                  | Purpose                                              | Execution mode | Common gotcha                                                |
-| ----------------------- | ---------------------------------------------------- | -------------- | ------------------------------------------------------------ |
-| `createApi()`           | Create an HTTP client with defaults and interceptors | Sync           | Uses `TransportOptions`, not `ApiClientOptions`              |
-| `createQuery()`         | Create cache/query orchestration utilities           | Sync           | Use `fetch()`, not `query()`                                 |
-| `createMutation()`      | Create tracked write handles with cancellation       | Sync           | `times: 1` means no retries; lifecycle callbacks receive `variables` |
-| `createCourier()`       | Create a unified client with shared transport        | Sync           | REST timeout defaults to 30s; streams default to `Infinity`  |
-| `createStream()`        | Open SSE or readable HTTP streams                    | Sync           | `reconnect: true` means up to 5 reconnects after a failure   |
-| `createTransportCore()` | Expose the shared transport internals                | Sync           | Advanced use only; powers both `createApi()` and `createStream()` |
-| `bindRefetch()`         | Opt-in focus/reconnect revalidation binding          | Sync           | Returns unbind fn; call it on cleanup                        |
-| `createBatcher()`       | DataLoader-style request coalescing                  | Sync           | `resolve()` must return results in the same order as keys    |
-| `withBearerAuth()`      | Interceptor preset for Bearer token injection        | Sync           | Accepts static string or async token factory                 |
-| `withRequestId()`       | Interceptor preset adding a unique request ID header | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`        |
-| `withLogging()`         | Interceptor preset logging method/URL/status/ms      | Sync           | Defaults to `console.debug`; override with `logger` option   |
-| `persistQueryCache()`   | Subscribe to cache and write successful entries      | Sync           | Eagerly persists existing successful entries on setup        |
-| `hydrateQueryCache()`   | Read persisted entries and seed the cache            | Async          | Runs all keys in parallel; restores original `updatedAt`     |
-| `resolveRetryDelay()`   | Compute a jitter-based retry delay for a given attempt | Sync         | Useful for custom retry strategies consistent with Courier defaults |
-| `NO_RETRY`              | Constant (`1`) for "no retries" — one attempt total  | —              | Equivalent to `times: 1`; exported for explicit, readable code  |
-| `HttpError`             | Structured HTTP/network/abort/timeout errors         | Sync           | Prefer `HttpError.is(err, status?)` for narrowing            |
+| Symbol                  | Purpose                                                | Execution mode | Common gotcha                                                        |
+| ----------------------- | ------------------------------------------------------ | -------------- | -------------------------------------------------------------------- |
+| `createApi()`           | Create an HTTP client with defaults and interceptors   | Sync           | Uses `TransportOptions`, not `ApiClientOptions`                      |
+| `createQuery()`         | Create cache/query orchestration utilities             | Sync           | Use `fetch()`, not `query()`                                         |
+| `createMutation()`      | Create tracked write handles with cancellation         | Sync           | `times: 1` means no retries; lifecycle callbacks receive `variables` |
+| `createCourier()`       | Create a unified client with shared transport          | Sync           | REST timeout defaults to 30s; streams default to `Infinity`          |
+| `createStream()`        | Open SSE or readable HTTP streams                      | Sync           | `reconnect: true` means up to 5 reconnects after a failure           |
+| `createTransportCore()` | Expose the shared transport internals                  | Sync           | Advanced use only; powers both `createApi()` and `createStream()`    |
+| `bindRefetch()`         | Opt-in focus/reconnect revalidation binding            | Sync           | Returns unbind fn; call it on cleanup                                |
+| `createBatcher()`       | DataLoader-style request coalescing                    | Sync           | `resolve()` must return results in the same order as keys            |
+| `withBearerAuth()`      | Interceptor preset for Bearer token injection          | Sync           | Accepts static string or async token factory                         |
+| `withRequestId()`       | Interceptor preset adding a unique request ID header   | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`                |
+| `withLogging()`         | Interceptor preset logging method/URL/status/ms        | Sync           | Defaults to `console.debug`; override with `logger` option           |
+| `persistQueryCache()`   | Subscribe to cache and write successful entries        | Sync           | Eagerly persists existing successful entries on setup                |
+| `hydrateQueryCache()`   | Read persisted entries and seed the cache              | Async          | Runs all keys in parallel; restores original `updatedAt`             |
+| `resolveRetryDelay()`   | Compute a jitter-based retry delay for a given attempt | Sync           | Useful for custom retry strategies consistent with Courier defaults  |
+| `NO_RETRY`              | Constant (`1`) for "no retries" — one attempt total    | —              | Equivalent to `times: 1`; exported for explicit, readable code       |
+| `HttpError`             | Structured HTTP/network/abort/timeout errors           | Sync           | Prefer `HttpError.is(err, status?)` for narrowing                    |
 
 ## Package Entry Point
 
@@ -55,21 +55,21 @@ Creates an HTTP client. When `sharedTransport` is provided, the client reuses th
 
 **Methods:**
 
-| Method             | Signature                                                | Description                                                            |
-| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `get`              | `<T, P>(url: P, cfg?) => Promise<T>`                     | GET request                                                            |
-| `post`             | `<T, P>(url: P, cfg?) => Promise<T>`                     | POST request                                                           |
-| `put`              | `<T, P>(url: P, cfg?) => Promise<T>`                     | PUT request                                                            |
-| `patch`            | `<T, P>(url: P, cfg?) => Promise<T>`                     | PATCH request                                                          |
-| `delete`           | `<T, P>(url: P, cfg?) => Promise<T>`                     | DELETE request                                                         |
-| `request`          | `<T, P>(method, url: P, cfg?) => Promise<T>`             | Custom HTTP method                                                     |
-| `cancelAll`        | `() => void`                                             | Abort every active request without disposing the client                |
-| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Returns a **snapshot copy** — mutating it has no effect on the client  |
-| `headers`          | `(updates: Record<string, string \| undefined>) => void` | Update global headers; `undefined` removes a header                    |
-| `use`              | `(interceptor: Interceptor) => () => void`               | Add an interceptor; returns a dispose function                         |
-| `dispose`          | `() => void`                                             | Dispose the underlying transport when owned by this client             |
-| `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                                    |
-| `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`; enables `using` declarations                 |
+| Method             | Signature                                                | Description                                                           |
+| ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| `get`              | `<T, P>(url: P, cfg?) => Promise<T>`                     | GET request                                                           |
+| `post`             | `<T, P>(url: P, cfg?) => Promise<T>`                     | POST request                                                          |
+| `put`              | `<T, P>(url: P, cfg?) => Promise<T>`                     | PUT request                                                           |
+| `patch`            | `<T, P>(url: P, cfg?) => Promise<T>`                     | PATCH request                                                         |
+| `delete`           | `<T, P>(url: P, cfg?) => Promise<T>`                     | DELETE request                                                        |
+| `request`          | `<T, P>(method, url: P, cfg?) => Promise<T>`             | Custom HTTP method                                                    |
+| `cancelAll`        | `() => void`                                             | Abort every active request without disposing the client               |
+| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Returns a **snapshot copy** — mutating it has no effect on the client |
+| `headers`          | `(updates: Record<string, string \| undefined>) => void` | Update global headers; `undefined` removes a header                   |
+| `use`              | `(interceptor: Interceptor) => () => void`               | Add an interceptor; returns a dispose function                        |
+| `dispose`          | `() => void`                                             | Dispose the underlying transport when owned by this client            |
+| `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                                   |
+| `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`; enables `using` declarations                |
 
 **Example:**
 
@@ -94,32 +94,32 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 
 **Parameters — `QueryClientOptions`:**
 
-| Option        | Type                            | Default     | Description                                                                     |
-| ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------- |
-| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches  |
-| `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC        |
-| `times`       | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries                |
-| `delay`       | `number \| (attempt) => number` | full jitter | Delay between retries                                                           |
-| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                            |
+| Option        | Type                            | Default     | Description                                                                    |
+| ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches |
+| `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC       |
+| `times`       | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries               |
+| `delay`       | `number \| (attempt) => number` | full jitter | Delay between retries                                                          |
+| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                           |
 
 **Methods:**
 
-| Method             | Signature                                     | Description                                                                 |
-| ------------------ | --------------------------------------------- | --------------------------------------------------------------------------- |
-| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T \| undefined>` | Fetch with caching, deduplication, and retry                    |
-| `prefetch`         | `(options) => Promise<void>`                  | Warm cache using fetch semantics                                            |
-| `get`              | `<T>(key) => T \| undefined`                  | Read cached data                                                            |
-| `set`              | `<T>(key, data \| updater, opts?) => void`    | Set or update cached data; `opts.updatedAt` restores a historical timestamp |
-| `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                                         |
-| `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe` | Subscribe to future state changes; **not** called immediately on attach     |
-| `watch`            | `<T, S>(key, opts?) => SyncStore<QueryState<S>>` | Build a framework-friendly external store without an immediate callback  |
-| `invalidate`       | `(key) => void`                               | Evict or background-revalidate a key/prefix                                 |
-| `cancel`           | `(key) => void`                               | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success |
-| `clear`            | `() => void`                                  | Clear all entries; active subscribers see `'idle'`                          |
-| `refetchStale`     | `() => void`                                  | Manually revalidate all stale observed entries                              |
-| `dispose`          | `() => void`                                  | Cancel all in-flight requests and clear all timers                          |
-| `disposed`         | `boolean` (getter)                            | Whether `dispose()` has been called                                         |
-| `[Symbol.dispose]` | —                                             | Delegates to `dispose()`                                                    |
+| Method             | Signature                                                  | Description                                                                 |
+| ------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T \| undefined>` | Fetch with caching, deduplication, and retry                                |
+| `prefetch`         | `(options) => Promise<void>`                               | Warm cache using fetch semantics                                            |
+| `get`              | `<T>(key) => T \| undefined`                               | Read cached data                                                            |
+| `set`              | `<T>(key, data \| updater, opts?) => void`                 | Set or update cached data; `opts.updatedAt` restores a historical timestamp |
+| `getState`         | `<T>(key) => QueryState<T> \| null`                        | Full state snapshot                                                         |
+| `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe`              | Subscribe to future state changes; **not** called immediately on attach     |
+| `watch`            | `<T, S>(key, opts?) => SyncStore<QueryState<S>>`           | Build a framework-friendly external store without an immediate callback     |
+| `invalidate`       | `(key) => void`                                            | Evict or background-revalidate a key/prefix                                 |
+| `cancel`           | `(key) => void`                                            | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success |
+| `clear`            | `() => void`                                               | Clear all entries; active subscribers see `'idle'`                          |
+| `refetchStale`     | `() => void`                                               | Manually revalidate all stale observed entries                              |
+| `dispose`          | `() => void`                                               | Cancel all in-flight requests and clear all timers                          |
+| `disposed`         | `boolean` (getter)                                         | Whether `dispose()` has been called                                         |
+| `[Symbol.dispose]` | —                                                          | Delegates to `dispose()`                                                    |
 
 **Example:**
 
@@ -150,26 +150,26 @@ Creates a standalone, observable mutation handle.
 
 **`MutationOptions<TData, TVariables>`:**
 
-| Option            | Type                                                            | Default | Description                                                |
-| ----------------- | --------------------------------------------------------------- | ------- | ---------------------------------------------------------- |
-| `times`           | `number`                                                        | `1`     | Total attempts; `1` means a single try with no retries     |
-| `delay`           | `number \| (attempt) => number`                                 | full jitter | Delay between retries                                   |
-| `shouldRetry`     | `(error, attempt) => boolean`                                   | —       | Return `false` to skip retrying for a specific error class |
-| `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>` | —       | Called after a successful run                              |
-| `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>` | —      | Called after a failed run; **not** called on abort         |
-| `onSettled`       | `(data, error, variables: TVariables) => void \| Promise<void>` | —       | Called after every run including aborts (`error` is `null` for success and abort) |
-| `onCallbackError` | `(error: Error) => void`                                        | —       | Called when `onSuccess`/`onError`/`onSettled` throws; does not affect `mutate()` result |
+| Option            | Type                                                             | Default     | Description                                                                             |
+| ----------------- | ---------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------- |
+| `times`           | `number`                                                         | `1`         | Total attempts; `1` means a single try with no retries                                  |
+| `delay`           | `number \| (attempt) => number`                                  | full jitter | Delay between retries                                                                   |
+| `shouldRetry`     | `(error, attempt) => boolean`                                    | —           | Return `false` to skip retrying for a specific error class                              |
+| `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>`  | —           | Called after a successful run                                                           |
+| `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>` | —           | Called after a failed run; **not** called on abort                                      |
+| `onSettled`       | `(data, error, variables: TVariables) => void \| Promise<void>`  | —           | Called after every run including aborts (`error` is `null` for success and abort)       |
+| `onCallbackError` | `(error: Error) => void`                                         | —           | Called when `onSuccess`/`onError`/`onSettled` throws; does not affect `mutate()` result |
 
 **Mutation methods:**
 
-| Method      | Signature                                         | Description                                            |
-| ----------- | ------------------------------------------------- | ------------------------------------------------------ |
-| `mutate`    | `(variables, opts?) => Promise<TData>`            | Execute a run                                           |
-| `cancel`    | `() => Promise<void>`                             | Abort the active run and wait for it to settle          |
-| `getState`  | `() => MutationState<TData>`                      | Read current state                                      |
-| `subscribe` | `(listener) => Unsubscribe`                       | Subscribe immediately to mutation state                 |
-| `toStore`   | `() => SyncStore<MutationState<TData>>`           | Build a framework-friendly external store               |
-| `reset`     | `() => void`                                      | Reset back to the idle state                            |
+| Method      | Signature                               | Description                                    |
+| ----------- | --------------------------------------- | ---------------------------------------------- |
+| `mutate`    | `(variables, opts?) => Promise<TData>`  | Execute a run                                  |
+| `cancel`    | `() => Promise<void>`                   | Abort the active run and wait for it to settle |
+| `getState`  | `() => MutationState<TData>`            | Read current state                             |
+| `subscribe` | `(listener) => Unsubscribe`             | Subscribe immediately to mutation state        |
+| `toStore`   | `() => SyncStore<MutationState<TData>>` | Build a framework-friendly external store      |
+| `reset`     | `() => void`                            | Reset back to the idle state                   |
 
 **Example:**
 
@@ -206,29 +206,29 @@ Creates a unified Courier client backed by one shared transport.
 
 **`CourierOptions`:**
 
-| Option             | Type                 | Default | Description                                                       |
-| ------------------ | -------------------- | ------- | ----------------------------------------------------------------- |
-| `baseUrl`          | `string`             | `''`    | Shared base URL for `api` and `stream`                            |
-| `fetch`            | `typeof fetch`       | global  | Shared fetch implementation                                       |
-| `headers`          | `Record<string,string>` | `{}` | Shared global headers                                             |
-| `timeout`          | `number`             | `30000` | REST timeout; streaming connections still default to `Infinity`   |
-| `query`            | `QueryClientOptions` | —       | Defaults for the embedded query client                            |
-| `mutationDefaults` | `Pick<MutationOptions, 'times' \| 'delay' \| 'shouldRetry' \| 'onCallbackError'>` | — | Retry/error-handling defaults merged into every `mutation()` call; lifecycle callbacks are per-mutation since they receive typed variables |
+| Option             | Type                                                                              | Default | Description                                                                                                                                |
+| ------------------ | --------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `baseUrl`          | `string`                                                                          | `''`    | Shared base URL for `api` and `stream`                                                                                                     |
+| `fetch`            | `typeof fetch`                                                                    | global  | Shared fetch implementation                                                                                                                |
+| `headers`          | `Record<string,string>`                                                           | `{}`    | Shared global headers                                                                                                                      |
+| `timeout`          | `number`                                                                          | `30000` | REST timeout; streaming connections still default to `Infinity`                                                                            |
+| `query`            | `QueryClientOptions`                                                              | —       | Defaults for the embedded query client                                                                                                     |
+| `mutationDefaults` | `Pick<MutationOptions, 'times' \| 'delay' \| 'shouldRetry' \| 'onCallbackError'>` | —       | Retry/error-handling defaults merged into every `mutation()` call; lifecycle callbacks are per-mutation since they receive typed variables |
 
 **Courier interface:**
 
-| Property / Method  | Type / Signature                                | Description                                              |
-| ------------------ | ----------------------------------------------- | -------------------------------------------------------- |
-| `api`              | `ApiClient`                                     | Shared REST client                                       |
-| `stream`           | `StreamClient`                                  | Shared SSE/readable stream client                        |
-| `query`            | `QueryClient`                                   | Embedded query client                                    |
-| `mutation`         | `(fn, opts?) => Mutation`                       | Create a mutation using optional shared defaults         |
-| `use`              | `(interceptor) => () => void`                   | Register an interceptor shared by `api` and `stream`     |
-| `headers`          | `(updates) => void`                             | Update shared global headers                             |
-| `cancelAll`        | `() => void`                                    | Abort all active transport-backed requests and streams   |
-| `dispose`          | `() => void`                                    | Dispose the transport and embedded query client          |
-| `disposed`         | `boolean`                                       | Whether the shared transport is disposed                 |
-| `[Symbol.dispose]` | —                                               | Delegates to `dispose()`                                 |
+| Property / Method  | Type / Signature              | Description                                            |
+| ------------------ | ----------------------------- | ------------------------------------------------------ |
+| `api`              | `ApiClient`                   | Shared REST client                                     |
+| `stream`           | `StreamClient`                | Shared SSE/readable stream client                      |
+| `query`            | `QueryClient`                 | Embedded query client                                  |
+| `mutation`         | `(fn, opts?) => Mutation`     | Create a mutation using optional shared defaults       |
+| `use`              | `(interceptor) => () => void` | Register an interceptor shared by `api` and `stream`   |
+| `headers`          | `(updates) => void`           | Update shared global headers                           |
+| `cancelAll`        | `() => void`                  | Abort all active transport-backed requests and streams |
+| `dispose`          | `() => void`                  | Dispose the transport and embedded query client        |
+| `disposed`         | `boolean`                     | Whether the shared transport is disposed               |
+| `[Symbol.dispose]` | —                             | Delegates to `dispose()`                               |
 
 **Example:**
 
@@ -260,17 +260,17 @@ Creates a streaming client for SSE and readable HTTP responses. Like `createApi(
 
 **Stream methods:**
 
-| Method             | Signature                                                | Description                                                      |
-| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------- |
-| `sse`              | `<TEvents>(url, opts?) => SseSource<TEvents>`            | Open a Server-Sent Events connection                             |
-| `readable`         | `<T>(url, opts?) => AsyncGenerator<T>`                   | Stream text or NDJSON chunks                                     |
-| `cancelAll`        | `() => void`                                             | Abort every active SSE or readable stream                        |
-| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Read current global headers                                      |
-| `headers`          | `(updates: Record<string, string \| undefined>) => void` | Update shared global headers                                     |
-| `use`              | `(interceptor: Interceptor) => () => void`               | Add an interceptor shared by all stream requests                 |
-| `dispose`          | `() => void`                                             | Dispose the underlying transport when owned by this client       |
-| `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                              |
-| `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`                                         |
+| Method             | Signature                                                | Description                                                |
+| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------- |
+| `sse`              | `<TEvents>(url, opts?) => SseSource<TEvents>`            | Open a Server-Sent Events connection                       |
+| `readable`         | `<T>(url, opts?) => AsyncGenerator<T>`                   | Stream text or NDJSON chunks                               |
+| `cancelAll`        | `() => void`                                             | Abort every active SSE or readable stream                  |
+| `getHeaders`       | `() => Readonly<Record<string, string>>`                 | Read current global headers                                |
+| `headers`          | `(updates: Record<string, string \| undefined>) => void` | Update shared global headers                               |
+| `use`              | `(interceptor: Interceptor) => () => void`               | Add an interceptor shared by all stream requests           |
+| `dispose`          | `() => void`                                             | Dispose the underlying transport when owned by this client |
+| `disposed`         | `boolean` (getter)                                       | Whether `dispose()` has been called                        |
+| `[Symbol.dispose]` | —                                                        | Delegates to `dispose()`                                   |
 
 **Example:**
 
@@ -297,19 +297,19 @@ Exposes the shared transport used internally by both `createApi()` and `createSt
 
 **TransportCore methods:**
 
-| Method       | Signature                                                | Description                                  |
-| ------------ | -------------------------------------------------------- | -------------------------------------------- |
-| `dispatch`   | `(ctx: FetchContext) => Promise<Response>`               | Run a request through the interceptor chain  |
-| `mergeHeaders` | `(perRequest?, extra?) => Record<string, string>`      | Merge normalized headers                     |
-| `getHeaders` | `() => Readonly<Record<string, string>>`                 | Read current global headers                  |
-| `headers`    | `(updates: Record<string, string \| undefined>) => void` | Update global headers                        |
-| `use`        | `(interceptor: Interceptor) => () => void`               | Add an interceptor                           |
-| `track`      | `(controller: AbortController) => () => void`            | Register an AbortController for lifecycle tracking |
-| `cancelAll`  | `() => void`                                             | Abort all tracked controllers                |
-| `dispose`    | `() => void`                                             | Abort controllers and clear interceptors     |
-| `baseUrl`    | `string`                                                 | Shared base URL                              |
-| `timeout`    | `number`                                                 | Shared default timeout                       |
-| `disposed`   | `boolean`                                                | Whether the transport is disposed            |
+| Method         | Signature                                                | Description                                        |
+| -------------- | -------------------------------------------------------- | -------------------------------------------------- |
+| `dispatch`     | `(ctx: FetchContext) => Promise<Response>`               | Run a request through the interceptor chain        |
+| `mergeHeaders` | `(perRequest?, extra?) => Record<string, string>`        | Merge normalized headers                           |
+| `getHeaders`   | `() => Readonly<Record<string, string>>`                 | Read current global headers                        |
+| `headers`      | `(updates: Record<string, string \| undefined>) => void` | Update global headers                              |
+| `use`          | `(interceptor: Interceptor) => () => void`               | Add an interceptor                                 |
+| `track`        | `(controller: AbortController) => () => void`            | Register an AbortController for lifecycle tracking |
+| `cancelAll`    | `() => void`                                             | Abort all tracked controllers                      |
+| `dispose`      | `() => void`                                             | Abort controllers and clear interceptors           |
+| `baseUrl`      | `string`                                                 | Shared base URL                                    |
+| `timeout`      | `number`                                                 | Shared default timeout                             |
+| `disposed`     | `boolean`                                                | Whether the transport is disposed                  |
 
 **Example:**
 
@@ -318,7 +318,9 @@ import { createApi, createStream, createTransportCore } from '@vielzeug/courier'
 
 // Share one interceptor pipeline across api and stream
 const transport = createTransportCore({ baseUrl: 'https://api.example.com' });
-transport.use(async (ctx, next) => { /* shared middleware */ return next(ctx); });
+transport.use(async (ctx, next) => {
+  /* shared middleware */ return next(ctx);
+});
 
 const api = createApi({}, transport);
 const stream = createStream({}, transport);
@@ -374,14 +376,14 @@ type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
 
 `CourierRequestConfig<P>` adds:
 
-| Field          | Type             | Description                                                             |
-| -------------- | ---------------- | ----------------------------------------------------------------------- |
-| `body`         | `unknown`        | Plain objects are serialized as JSON; `BodyInit` values pass through    |
-| `dedupe`       | `boolean`        | Set to `false` to opt out of in-flight deduplication                    |
-| `dedupeKey`    | `StableValue`    | Explicit stable key for deduplicating non-idempotent writes             |
-| `query`        | `Params`         | Query string parameters                                                 |
-| `responseType` | `ResponseType`   | Response parsing strategy                                               |
-| `timeout`      | `number`         | Per-request timeout override                                            |
+| Field          | Type           | Description                                                          |
+| -------------- | -------------- | -------------------------------------------------------------------- |
+| `body`         | `unknown`      | Plain objects are serialized as JSON; `BodyInit` values pass through |
+| `dedupe`       | `boolean`      | Set to `false` to opt out of in-flight deduplication                 |
+| `dedupeKey`    | `StableValue`  | Explicit stable key for deduplicating non-idempotent writes          |
+| `query`        | `Params`       | Query string parameters                                              |
+| `responseType` | `ResponseType` | Response parsing strategy                                            |
+| `timeout`      | `number`       | Per-request timeout override                                         |
 
 Idempotent requests (`GET`, `HEAD`, `OPTIONS`) dedupe by **method + URL + responseType** automatically. `DELETE` does not auto-dedupe (it has side effects); provide an explicit `dedupeKey` to opt in. Request headers are not part of the automatic dedupe key.
 
@@ -414,10 +416,10 @@ type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
 };
 ```
 
-| Field       | Type                              | Description                                                  |
-| ----------- | --------------------------------- | ------------------------------------------------------------ |
-| `reconnect` | `boolean \| ReconnectOptions`     | `true` uses 5 reconnect attempts with full-jitter backoff    |
-| `onError`   | `(error: Error) => void`          | Called when reconnect budget is exhausted                    |
+| Field       | Type                          | Description                                               |
+| ----------- | ----------------------------- | --------------------------------------------------------- |
+| `reconnect` | `boolean \| ReconnectOptions` | `true` uses 5 reconnect attempts with full-jitter backoff |
+| `onError`   | `(error: Error) => void`      | Called when reconnect budget is exhausted                 |
 
 ### `ReconnectOptions`
 
@@ -525,10 +527,34 @@ type QueryFnContext = {
 
 ```ts
 type AsyncState<T = unknown> =
-  | { readonly data: undefined; readonly error: null; readonly isFetching: false; readonly status: 'idle'; readonly updatedAt: undefined }
-  | { readonly data: T | undefined; readonly error: null; readonly isFetching: true; readonly status: 'pending'; readonly updatedAt: number | undefined }
-  | { readonly data: T; readonly error: null; readonly isFetching: boolean; readonly status: 'success'; readonly updatedAt: number }
-  | { readonly data: T | undefined; readonly error: Error; readonly isFetching: boolean; readonly status: 'error'; readonly updatedAt: number };
+  | {
+      readonly data: undefined;
+      readonly error: null;
+      readonly isFetching: false;
+      readonly status: 'idle';
+      readonly updatedAt: undefined;
+    }
+  | {
+      readonly data: T | undefined;
+      readonly error: null;
+      readonly isFetching: true;
+      readonly status: 'pending';
+      readonly updatedAt: number | undefined;
+    }
+  | {
+      readonly data: T;
+      readonly error: null;
+      readonly isFetching: boolean;
+      readonly status: 'success';
+      readonly updatedAt: number;
+    }
+  | {
+      readonly data: T | undefined;
+      readonly error: Error;
+      readonly isFetching: boolean;
+      readonly status: 'error';
+      readonly updatedAt: number;
+    };
 ```
 
 ### `QueryState<T>`

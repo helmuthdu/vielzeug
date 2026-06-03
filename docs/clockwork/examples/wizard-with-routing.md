@@ -6,6 +6,7 @@ description: Sync a multi-step wizard state machine with URL routing using Clock
 ## Problem
 
 Multi-step wizards need to maintain both internal state and URL state. Users expect:
+
 - Back/forward buttons to navigate steps
 - Bookmarkable step URLs
 - Syncing between machine state and route changes

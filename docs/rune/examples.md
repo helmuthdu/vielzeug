@@ -3,8 +3,6 @@ title: Rune — Examples
 description: Practical examples and recipes for rune.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Module Logger Pattern](./examples/module-logger-pattern.md)

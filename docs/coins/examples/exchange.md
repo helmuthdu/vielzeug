@@ -23,8 +23,8 @@ const eur = toCurrencyCode('EUR');
 const price = money('100.00', 'USD');
 const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
 
-const result = exchange(price, rate);  // { amount: 9200n, currency: 'EUR' }
-format(result);                        // '€92.00'
+const result = exchange(price, rate); // { amount: 9200n, currency: 'EUR' }
+format(result); // '€92.00'
 ```
 
 #### Explicit rounding modes
@@ -36,15 +36,15 @@ const usd = toCurrencyCode('USD');
 const eur = toCurrencyCode('EUR');
 const rate = { from: usd, rate: '0.926', to: eur };
 
-const price = money('1.00', 'USD');  // 100 cents
+const price = money('1.00', 'USD'); // 100 cents
 
 // Each mode produces a different result for fractional minor units
-exchange(price, rate);                            // 93n  half-away-from-zero (default)
-exchange(price, rate, 'floor');                   // 92n  toward −∞
-exchange(price, rate, 'ceiling');                 // 93n  toward +∞
-exchange(price, rate, 'down');                    // 92n  toward zero
-exchange(price, rate, 'up');                      // 93n  away from zero
-exchange(price, rate, 'half-even');               // 93n  banker's rounding
+exchange(price, rate); // 93n  half-away-from-zero (default)
+exchange(price, rate, 'floor'); // 92n  toward −∞
+exchange(price, rate, 'ceiling'); // 93n  toward +∞
+exchange(price, rate, 'down'); // 92n  toward zero
+exchange(price, rate, 'up'); // 93n  away from zero
+exchange(price, rate, 'half-even'); // 93n  banker's rounding
 ```
 
 #### Multi-currency display
@@ -53,12 +53,12 @@ exchange(price, rate, 'half-even');               // 93n  banker's rounding
 import { exchange, format, money, toCurrencyCode } from '@vielzeug/coins';
 import type { ExchangeRate } from '@vielzeug/coins';
 
-const usd   = toCurrencyCode('USD');
+const usd = toCurrencyCode('USD');
 const price = money('50.00', 'USD');
 
 const rates: ExchangeRate[] = [
-  { from: usd, rate: '0.92',  to: toCurrencyCode('EUR') },
-  { from: usd, rate: '0.79',  to: toCurrencyCode('GBP') },
+  { from: usd, rate: '0.92', to: toCurrencyCode('EUR') },
+  { from: usd, rate: '0.79', to: toCurrencyCode('GBP') },
   { from: usd, rate: '149.5', to: toCurrencyCode('JPY') },
 ];
 
@@ -79,13 +79,13 @@ const usd = toCurrencyCode('USD');
 const eur = toCurrencyCode('EUR');
 const gbp = toCurrencyCode('GBP');
 
-const price    = money('100.00', 'USD');
+const price = money('100.00', 'USD');
 const usdToEur = { from: usd, rate: '0.92', to: eur };
 const eurToGbp = { from: eur, rate: '0.86', to: gbp };
 
 // Each conversion is independent — exchange() does not mutate
-const inEur = exchange(price, usdToEur);  // { amount: 9200n, currency: 'EUR' }
-const inGbp = exchange(inEur, eurToGbp);  // { amount: 7912n, currency: 'GBP' }
+const inEur = exchange(price, usdToEur); // { amount: 9200n, currency: 'EUR' }
+const inGbp = exchange(inEur, eurToGbp); // { amount: 7912n, currency: 'GBP' }
 ```
 
 ### Pitfalls
@@ -100,7 +100,6 @@ const inGbp = exchange(inEur, eurToGbp);  // { amount: 7912n, currency: 'GBP' }
 - [Formatting](./formatting.md)
 - [API Reference — exchange()](../api.md#exchange-money-rate-mode)
 - [Usage Guide — Currency Exchange](../usage.md#currency-exchange)
-
 
 [[toc]]
 
@@ -125,7 +124,7 @@ const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
 const euros = exchange(price, rate);
 // { amount: 9200n, currency: 'EUR' }
 
-format(euros);  // '€92.00'
+format(euros); // '€92.00'
 ```
 
 ## Explicit Rounding Modes
@@ -139,14 +138,14 @@ const usd = toCurrencyCode('USD');
 const eur = toCurrencyCode('EUR');
 const rate = { from: usd, rate: '0.926', to: eur };
 
-const price = money('1.00', 'USD');  // amount = 100n cents
+const price = money('1.00', 'USD'); // amount = 100n cents
 
-exchange(price, rate, 'half-away-from-zero');  // 93n  ($0.93)
-exchange(price, rate, 'floor');               // 92n  ($0.92)
-exchange(price, rate, 'ceiling');             // 93n  ($0.93)
-exchange(price, rate, 'down');                // 92n  ($0.92)
-exchange(price, rate, 'up');                  // 93n  ($0.93)
-exchange(price, rate, 'half-even');           // 93n  ($0.93)
+exchange(price, rate, 'half-away-from-zero'); // 93n  ($0.93)
+exchange(price, rate, 'floor'); // 92n  ($0.92)
+exchange(price, rate, 'ceiling'); // 93n  ($0.93)
+exchange(price, rate, 'down'); // 92n  ($0.92)
+exchange(price, rate, 'up'); // 93n  ($0.93)
+exchange(price, rate, 'half-even'); // 93n  ($0.93)
 ```
 
 ## Multi-Currency Price Display
@@ -155,12 +154,12 @@ exchange(price, rate, 'half-even');           // 93n  ($0.93)
 import { exchange, format, money, toCurrencyCode } from '@vielzeug/coins';
 import type { ExchangeRate } from '@vielzeug/coins';
 
-const usd  = toCurrencyCode('USD');
+const usd = toCurrencyCode('USD');
 const price = money('50.00', 'USD');
 
 const rates: ExchangeRate[] = [
-  { from: usd, rate: '0.92',  to: toCurrencyCode('EUR') },
-  { from: usd, rate: '0.79',  to: toCurrencyCode('GBP') },
+  { from: usd, rate: '0.92', to: toCurrencyCode('EUR') },
+  { from: usd, rate: '0.79', to: toCurrencyCode('GBP') },
   { from: usd, rate: '149.5', to: toCurrencyCode('JPY') },
 ];
 
@@ -181,12 +180,12 @@ const usd = toCurrencyCode('USD');
 const eur = toCurrencyCode('EUR');
 const gbp = toCurrencyCode('GBP');
 
-const price     = money('100.00', 'USD');
-const usdToEur  = { from: usd, rate: '0.92', to: eur };
-const eurToGbp  = { from: eur, rate: '0.86', to: gbp };
+const price = money('100.00', 'USD');
+const usdToEur = { from: usd, rate: '0.92', to: eur };
+const eurToGbp = { from: eur, rate: '0.86', to: gbp };
 
-const inEur = exchange(price, usdToEur);  // { amount: 9200n, currency: 'EUR' }
-const inGbp = exchange(inEur, eurToGbp);  // { amount: 7912n, currency: 'GBP' }
+const inEur = exchange(price, usdToEur); // { amount: 9200n, currency: 'EUR' }
+const inGbp = exchange(inEur, eurToGbp); // { amount: 7912n, currency: 'GBP' }
 ```
 
 ## High-Precision Rates
@@ -197,11 +196,11 @@ Because `rate` is parsed as a rational number (numerator/denominator), arbitrari
 import { exchange, format, money, toCurrencyCode } from '@vielzeug/coins';
 
 const usd = toCurrencyCode('USD');
-const brl = toCurrencyCode('BRL');  // Brazilian Real
+const brl = toCurrencyCode('BRL'); // Brazilian Real
 
 const rate = { from: usd, rate: '5.019875', to: brl };
 
-format(exchange(money('1000.00', 'USD'), rate));  // 'R$5,019.88'
+format(exchange(money('1000.00', 'USD'), rate)); // 'R$5,019.88'
 ```
 
 ## Negative Amounts
@@ -215,11 +214,11 @@ const usd = toCurrencyCode('USD');
 const eur = toCurrencyCode('EUR');
 const rate = { from: usd, rate: '0.92', to: eur };
 
-const refund = money('-50.00', 'USD');  // { amount: -5000n, currency: 'USD' }
+const refund = money('-50.00', 'USD'); // { amount: -5000n, currency: 'USD' }
 
-format(exchange(refund, rate));               // '-€46.00'
-format(exchange(refund, rate, 'floor'));      // '-€46.00'
-format(exchange(refund, rate, 'ceiling'));    // '-€46.00'
+format(exchange(refund, rate)); // '-€46.00'
+format(exchange(refund, rate, 'floor')); // '-€46.00'
+format(exchange(refund, rate, 'ceiling')); // '-€46.00'
 ```
 
 ## Currency Mismatch Error

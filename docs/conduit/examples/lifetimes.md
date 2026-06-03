@@ -31,8 +31,8 @@ container.factory(Counter, () => ({ id: ++nextId }), { lifetime: 'singleton' });
 const a = await container.resolve(Counter);
 const b = await container.resolve(Counter);
 
-console.log(a === b);   // true
-console.log(nextId);    // 1 — factory ran once
+console.log(a === b); // true
+console.log(nextId); // 1 — factory ran once
 ```
 
 #### Transient
@@ -98,7 +98,7 @@ const idA = await scopeA.resolve(RequestId);
 const idB = await scopeB.resolve(RequestId);
 
 console.log(idA === idB); // false — each scope has its own instance
-console.log(await scopeA.resolve(RequestId) === idA); // true — same scope, same instance
+console.log((await scopeA.resolve(RequestId)) === idA); // true — same scope, same instance
 ```
 
 ### Pitfalls

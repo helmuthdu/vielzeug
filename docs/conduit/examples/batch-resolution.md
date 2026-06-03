@@ -18,9 +18,15 @@ Use `container.resolveMany()` to resolve multiple tokens concurrently and get a 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Logger { log(msg: string): void }
-interface Config { apiUrl: string }
-interface Metrics { record(event: string): void }
+interface Logger {
+  log(msg: string): void;
+}
+interface Config {
+  apiUrl: string;
+}
+interface Metrics {
+  record(event: string): void;
+}
 
 const Logger = token<Logger>('Logger');
 const Config = token<Config>('Config');
@@ -43,7 +49,9 @@ Use `Promise.all` when you need per-token error handling or conditional resoluti
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Cache { get(key: string): unknown }
+interface Cache {
+  get(key: string): unknown;
+}
 
 const Logger = token<{ log(msg: string): void }>('Logger');
 const Cache = token<Cache>('Cache');
@@ -53,10 +61,7 @@ container.value(Logger, console);
 container.factory(Cache, async () => connectCache());
 
 // Wrap individual calls when partial failure is acceptable
-const [logger, cacheResult] = await Promise.all([
-  container.resolve(Logger),
-  container.tryResolve(Cache),
-]);
+const [logger, cacheResult] = await Promise.all([container.resolve(Logger), container.tryResolve(Cache)]);
 
 if (cacheResult.ok) {
   logger.log(`Cache connected`);

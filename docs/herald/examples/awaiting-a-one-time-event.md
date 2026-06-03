@@ -27,7 +27,6 @@ function onAuthSuccess(user: User) {
 }
 ```
 
-
 ### Pitfalls
 
 - If the event fires before `wait()` is called, `wait()` hangs forever — there is no replay buffer. Ensure the emitter always fires after the listener is registered.

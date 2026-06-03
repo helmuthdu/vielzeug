@@ -5,7 +5,8 @@ package: spell
 category: validation
 keywords: [schema, validation, parsing, json-schema, locale, typescript, descriptors]
 related: [forge, courier, vault]
-exports: [s, sString, sNumber, sObject, sUnion, sVariant, sCoerce, fromDescriptor, configure, ValidationError, refine, keyof]
+exports:
+  [s, sString, sNumber, sObject, sUnion, sVariant, sCoerce, fromDescriptor, configure, ValidationError, refine, keyof]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -36,6 +37,7 @@ Spell validates unknown input with strict TypeScript inference, sync and async p
 Use your workspace package manager to add Spell.
 
 ::: code-group
+
 ```sh [pnpm]
 pnpm add @vielzeug/spell
 ```
@@ -47,6 +49,7 @@ npm install @vielzeug/spell
 ```sh [yarn]
 yarn add @vielzeug/spell
 ```
+
 :::
 
 ## Quick Start
@@ -56,11 +59,13 @@ Start with a schema, then parse unknown input and use the inferred output type e
 ```ts
 import { s, type Infer } from '@vielzeug/spell';
 
-const User = s.object({
-  email: s.string().email(),
-  name: s.string().min(1),
-  role: s.enum(['admin', 'editor', 'viewer'] as const),
-}).relaxed();
+const User = s
+  .object({
+    email: s.string().email(),
+    name: s.string().min(1),
+    role: s.enum(['admin', 'editor', 'viewer'] as const),
+  })
+  .relaxed();
 
 type User = Infer<typeof User>;
 
@@ -113,13 +118,13 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 ```
 
 | Feature           | Spell                                       | Zod    | Yup     |
-| ----------------- |---------------------------------------------| ------ | ------- |
+| ----------------- | ------------------------------------------- | ------ | ------- |
 | Bundle size       | <PackageInfo package="spell" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | ✅ `Infer<T>`                                | ✅     | Partial |
-| Coercion API      | ✅ `s.coerce.*`                              | ✅     | ✅      |
-| Async validation  | ✅ `.check()`                                | ✅     | ✅      |
-| Error flattening  | ✅ `flatten()` + `flattenFirst()`            | ✅     | Partial |
-| Zero dependencies | ✅                                           | ✅     | ❌      |
+| Type inference    | ✅ `Infer<T>`                               | ✅     | Partial |
+| Coercion API      | ✅ `s.coerce.*`                             | ✅     | ✅      |
+| Async validation  | ✅ `.check()`                               | ✅     | ✅      |
+| Error flattening  | ✅ `flatten()` + `flattenFirst()`           | ✅     | Partial |
+| Zero dependencies | ✅                                          | ✅     | ❌      |
 
 **Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
 

@@ -3,8 +3,6 @@ title: Courier — Examples
 description: Practical examples and recipes for courier.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Crud Operations](./examples/crud-operations.md)

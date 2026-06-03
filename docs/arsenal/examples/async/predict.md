@@ -27,10 +27,13 @@ function predict<T>(
 ```typescript
 import { predict } from '@vielzeug/arsenal';
 
-const result = await predict(async (signal) => {
-  const response = await fetch('/api/user', { signal });
-  return response.json();
-}, { timeout: 2_000 });
+const result = await predict(
+  async (signal) => {
+    const response = await fetch('/api/user', { signal });
+    return response.json();
+  },
+  { timeout: 2_000 },
+);
 
 console.log(result);
 ```

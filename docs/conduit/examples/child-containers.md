@@ -16,7 +16,10 @@ Use `container.createChild()` to create a child container that inherits root reg
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface RequestService { id: string; handle(path: string): string }
+interface RequestService {
+  id: string;
+  handle(path: string): string;
+}
 
 const RequestId = token<string>('RequestId');
 const RequestService = token<RequestService>('RequestService');
@@ -24,20 +27,16 @@ const RequestService = token<RequestService>('RequestService');
 const container = createContainer();
 
 container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'scoped' });
-container.factory(
-  RequestService,
-  (id) => ({ id, handle: (path) => `${id}: ${path}` }),
-  { deps: [RequestId], lifetime: 'scoped' },
-);
+container.factory(RequestService, (id) => ({ id, handle: (path) => `${id}: ${path}` }), {
+  deps: [RequestId],
+  lifetime: 'scoped',
+});
 
 // Two concurrent request scopes — each gets isolated instances
 const requestA = container.createChild();
 const requestB = container.createChild();
 
-const [serviceA, serviceB] = await Promise.all([
-  requestA.resolve(RequestService),
-  requestB.resolve(RequestService),
-]);
+const [serviceA, serviceB] = await Promise.all([requestA.resolve(RequestService), requestB.resolve(RequestService)]);
 
 // serviceA.id !== serviceB.id — separate scope caches
 console.log(serviceA.id === serviceB.id); // false
@@ -51,7 +50,9 @@ await requestB.dispose(); // cleans up requestB's scoped instances
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Logger { log(msg: string): void }
+interface Logger {
+  log(msg: string): void;
+}
 
 const Logger = token<Logger>('Logger');
 const container = createContainer();

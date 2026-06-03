@@ -37,8 +37,8 @@ const fetcher = defineMachine<State, Context, Event>({
     loading: {
       invoke: [
         {
-          onDone:  (items) => ({ items: items as string[], type: 'SUCCESS' }),
-          onError: (err)   => ({ message: String(err), type: 'FAILURE' }),
+          onDone: (items) => ({ items: items as string[], type: 'SUCCESS' }),
+          onError: (err) => ({ message: String(err), type: 'FAILURE' }),
           src: async ({ signal }) => {
             const res = await fetch('/api/items', { signal });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -47,8 +47,23 @@ const fetcher = defineMachine<State, Context, Event>({
         },
       ],
       on: {
-        FAILURE: { actions: [({ context, event }) => { context.error = event.message; }], target: 'error' },
-        SUCCESS: { actions: [({ context, event }) => { context.data = event.items; context.error = ''; }], target: 'idle' },
+        FAILURE: {
+          actions: [
+            ({ context, event }) => {
+              context.error = event.message;
+            },
+          ],
+          target: 'error',
+        },
+        SUCCESS: {
+          actions: [
+            ({ context, event }) => {
+              context.data = event.items;
+              context.error = '';
+            },
+          ],
+          target: 'idle',
+        },
       },
     },
   },

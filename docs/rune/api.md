@@ -7,25 +7,25 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 
 ## API At a Glance
 
-| Symbol               | Purpose                                          | Execution mode | Common gotcha                                              |
-| -------------------- | ------------------------------------------------ | -------------- | ---------------------------------------------------------- |
-| `createLogger()`     | Create an isolated `Logger` instance             | Sync           | Omitting `transports` defaults to `consoleTransport()`     |
+| Symbol               | Purpose                                          | Execution mode | Common gotcha                                                |
+| -------------------- | ------------------------------------------------ | -------------- | ------------------------------------------------------------ |
+| `createLogger()`     | Create an isolated `Logger` instance             | Sync           | Omitting `transports` defaults to `consoleTransport()`       |
 | `Rune`               | Pre-created default logger singleton             | —              | Shared instance — use `child()` or `withBindings()` to scope |
-| `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                       |
-| `pipe()`             | Fan-out dispatcher to multiple transports        | Sync           | Errors in one transport don't propagate to others          |
-| `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                             |
-| `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry      |
-| `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`             |
-| `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                |
-| `batchTransport()`   | Buffered batch delivery with flush interval      | Sync/Interval  | Must call `.dispose()` on shutdown to flush remaining      |
-| `sampleTransport()`  | Probabilistic entry forwarding                   | Sync           | `rate: 1` forwards all entries; `rate: 0` forwards none    |
-| `redactTransport()`  | Sensitive field stripping before forwarding      | Sync           | Place this closest to the remote transport, not console    |
+| `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                         |
+| `pipe()`             | Fan-out dispatcher to multiple transports        | Sync           | Errors in one transport don't propagate to others            |
+| `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                               |
+| `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
+| `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`               |
+| `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
+| `batchTransport()`   | Buffered batch delivery with flush interval      | Sync/Interval  | Must call `.dispose()` on shutdown to flush remaining        |
+| `sampleTransport()`  | Probabilistic entry forwarding                   | Sync           | `rate: 1` forwards all entries; `rate: 0` forwards none      |
+| `redactTransport()`  | Sensitive field stripping before forwarding      | Sync           | Place this closest to the remote transport, not console      |
 
 ## Package Entry Point
 
-| Import             | Purpose                                           |
-| ------------------ | ------------------------------------------------- |
-| `@vielzeug/rune`   | All exports — logger, transport factories, `lazy`, types |
+| Import           | Purpose                                                  |
+| ---------------- | -------------------------------------------------------- |
+| `@vielzeug/rune` | All exports — logger, transport factories, `lazy`, types |
 
 ## createLogger(initial?, initialBindings?)
 
@@ -116,11 +116,11 @@ Argument rules:
 
 ### Composition
 
-| Method                 | Returns  | What it does                                           |
-| ---------------------- | -------- | ------------------------------------------------------ |
-| `child(overrides?)`    | `Logger` | Clones config, applies overrides, inherits bindings    |
-| `withBindings(fields)` | `Logger` | Pins fields to every subsequent call                   |
-| `use(middleware)`      | `Logger` | Appends a middleware function to the processing chain  |
+| Method                 | Returns  | What it does                                          |
+| ---------------------- | -------- | ----------------------------------------------------- |
+| `child(overrides?)`    | `Logger` | Clones config, applies overrides, inherits bindings   |
+| `withBindings(fields)` | `Logger` | Pins fields to every subsequent call                  |
+| `use(middleware)`      | `Logger` | Appends a middleware function to the processing chain |
 
 `child()` transport inheritance:
 
@@ -136,21 +136,21 @@ Argument rules:
 
 ### Utilities
 
-| Method                             | Returns   | Description                                                            |
-| ---------------------------------- | --------- | ---------------------------------------------------------------------- |
-| `enabled(level)`                   | `boolean` | True if entries at this level pass the configured threshold            |
-| `setLevel(level)`                  | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot. |
-| `resetLevel()`                     | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls. |
-| `time(label, fn, opts?)`           | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. `opts` accepts a `LogType` string or `{ level?: LogType }`. |
-| `group(label, fn)`                 | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Always calls `console.group` regardless of transports. |
-| `groupCollapsed(label, fn)`        | `T`       | Same as `group`, using `console.groupCollapsed`                        |
+| Method                      | Returns   | Description                                                                                                                                                                           |
+| --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled(level)`            | `boolean` | True if entries at this level pass the configured threshold                                                                                                                           |
+| `setLevel(level)`           | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot.                                   |
+| `resetLevel()`              | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls.                                                                                         |
+| `time(label, fn, opts?)`    | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. `opts` accepts a `LogType` string or `{ level?: LogType }`. |
+| `group(label, fn)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Always calls `console.group` regardless of transports.                                                                |
+| `groupCollapsed(label, fn)` | `T`       | Same as `group`, using `console.groupCollapsed`                                                                                                                                       |
 
 ### Properties
 
-| Property   | Type                   | Description                            |
-| ---------- | ---------------------- | -------------------------------------- |
-| `config`   | `Readonly<RuneConfig>` | Snapshot of resolved configuration     |
-| `bindings` | `Readonly<Bindings>`   | Snapshot of currently pinned fields    |
+| Property   | Type                   | Description                         |
+| ---------- | ---------------------- | ----------------------------------- |
+| `config`   | `Readonly<RuneConfig>` | Snapshot of resolved configuration  |
+| `bindings` | `Readonly<Bindings>`   | Snapshot of currently pinned fields |
 
 ## Transport Factories
 
@@ -162,14 +162,14 @@ consoleTransport(options?: ConsoleTransportOptions): Transport
 
 Writes styled output to the browser console (CSS badges) or Node terminal (plain text). This is the default transport.
 
-| Option      | Type                      | Default   | Description                                        |
-| ----------- | ------------------------- | --------- | -------------------------------------------------- |
-| `level`     | `LogLevel`                | `'debug'` | Minimum level to output                            |
-| `timestamp` | `boolean`                 | `true`    | Include `HH:MM:SS.mmm`                             |
-| `ansi`      | `boolean`                 | auto      | Force ANSI color codes on/off (Node only)          |
-| `format`    | `'json' \| 'raw'`         | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
-| `inspectFn` | `(v: unknown) => string`  | —         | Custom object formatter (e.g. `util.inspect`)      |
-| `theme`     | `ConsoleTheme`            | —         | Override default badge colours for this transport  |
+| Option      | Type                     | Default   | Description                                         |
+| ----------- | ------------------------ | --------- | --------------------------------------------------- |
+| `level`     | `LogLevel`               | `'debug'` | Minimum level to output                             |
+| `timestamp` | `boolean`                | `true`    | Include `HH:MM:SS.mmm`                              |
+| `ansi`      | `boolean`                | auto      | Force ANSI color codes on/off (Node only)           |
+| `format`    | `'json' \| 'raw'`        | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
+| `inspectFn` | `(v: unknown) => string` | —         | Custom object formatter (e.g. `util.inspect`)       |
+| `theme`     | `ConsoleTheme`           | —         | Override default badge colours for this transport   |
 
 **Returns:** `Transport`
 
@@ -228,11 +228,11 @@ Outputs newline-delimited JSON (NDJSON) to `stdout` or a custom function. Useful
 
 Each line is a flat JSON object with `level`, `time` (ISO), and optional `ns`, `msg`, plus all merged context fields.
 
-| Option   | Type                     | Default           | Description        |
-| -------- | ------------------------ | ----------------- | ------------------ |
-| `level`  | `LogLevel`               | `'debug'`         | Minimum level      |
-| `output` | `(line: string) => void` | `process.stdout`  | Custom output sink |
-| `safe`   | `boolean`                | `false`           | Replace circular references with `'[Circular]'` instead of throwing |
+| Option   | Type                     | Default          | Description                                                         |
+| -------- | ------------------------ | ---------------- | ------------------------------------------------------------------- |
+| `level`  | `LogLevel`               | `'debug'`        | Minimum level                                                       |
+| `output` | `(line: string) => void` | `process.stdout` | Custom output sink                                                  |
+| `safe`   | `boolean`                | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
 
 **Returns:** `Transport`
 
@@ -258,14 +258,14 @@ batchTransport(options: BatchTransportOptions): BatchTransport
 
 Buffers entries and delivers them in batches. Flushes when the buffer reaches `maxSize` or after `interval` elapses.
 
-| Option          | Type                                                | Default     | Description                                    |
-| --------------- | --------------------------------------------------- | ----------- | ---------------------------------------------- |
-| `onFlush`       | `(entries: LogEntry[]) => void \| Promise<void>`    | —           | Required. Receives each batch (may be async)   |
-| `onFlushError`  | `(entries: LogEntry[], error: unknown) => void`     | —           | Called when `onFlush` throws or rejects        |
-| `level`         | `LogLevel`                                          | `'debug'`   | Minimum level to buffer                        |
-| `interval`      | `number`                                            | `5000`      | Flush interval in milliseconds                 |
-| `maxSize`       | `number`                                            | `50`        | Max buffer size before an early flush          |
-| `maxBuffer`     | `number`                                            | unbounded   | Hard cap — oldest entries are dropped silently when exceeded. Does not trigger a flush. |
+| Option         | Type                                             | Default   | Description                                                                             |
+| -------------- | ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------- |
+| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async)                                            |
+| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects                                                 |
+| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                                                 |
+| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds                                                          |
+| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush                                                   |
+| `maxBuffer`    | `number`                                         | unbounded | Hard cap — oldest entries are dropped silently when exceeded. Does not trigger a flush. |
 
 The returned `BatchTransport` adds:
 
@@ -298,9 +298,9 @@ sampleTransport(options: SampleTransportOptions): Transport
 
 Probabilistically forwards entries to a downstream transport.
 
-| Option      | Type        | Description                                    |
-| ----------- | ----------- | ---------------------------------------------- |
-| `rate`      | `number`    | Fraction of entries to forward (0–1)           |
+| Option      | Type        | Description                                     |
+| ----------- | ----------- | ----------------------------------------------- |
+| `rate`      | `number`    | Fraction of entries to forward (0–1)            |
 | `transport` | `Transport` | Downstream transport to receive sampled entries |
 
 **Returns:** `Transport`
@@ -364,8 +364,8 @@ pipe(options: PipeOptions, ...transports: Transport[]): Transport
 
 Dispatches each `LogEntry` to every transport in the list independently. An error thrown by one transport does not stop the others. Use in place of separate array entries when you want fault isolation or a shared error observer.
 
-| Option    | Type                                      | Description                                          |
-| --------- | ----------------------------------------- | ---------------------------------------------------- |
+| Option    | Type                                        | Description                                               |
+| --------- | ------------------------------------------- | --------------------------------------------------------- |
 | `onError` | `(error: unknown, entry: LogEntry) => void` | Called with the error and entry when any transport throws |
 
 **Returns:** `Transport`
@@ -385,7 +385,8 @@ const log = createLogger({
   ],
 });
 ```
-```
+
+````
 
 ## Utilities
 
@@ -393,7 +394,7 @@ const log = createLogger({
 
 ```ts
 isLevelEnabled(threshold: LogLevel, level: LogLevel): boolean
-```
+````
 
 Returns `true` when `level` is at or above `threshold`. Always returns `false` when `level` is `'off'`. Useful for building custom transports that respect level filtering.
 
@@ -401,14 +402,14 @@ Returns `true` when `level` is at or above `threshold`. Always returns `false` w
 import { isLevelEnabled } from '@vielzeug/rune';
 
 isLevelEnabled('warn', 'error'); // true
-isLevelEnabled('warn', 'info');  // false
+isLevelEnabled('warn', 'info'); // false
 isLevelEnabled('debug', 'off'); // false
 ```
 
 ### PRIORITY
 
 ```ts
-const PRIORITY: Record<LogLevel, number>
+const PRIORITY: Record<LogLevel, number>;
 ```
 
 Exported priority map: `{ debug: 0, info: 1, warn: 2, error: 3, fatal: 4, off: 5 }`. Useful for building custom transports or middleware that perform level comparisons.
@@ -459,7 +460,7 @@ The structured record produced by every log call and dispatched to all transport
 ### Transport
 
 ```ts
-type Transport = (entry: LogEntry) => void
+type Transport = (entry: LogEntry) => void;
 ```
 
 Receives every `LogEntry` that passes the logger's level threshold. Responsible for its own formatting, delivery, and per-transport level filtering.
@@ -483,9 +484,9 @@ Payload shape delivered to `RemoteHandler`:
 
 ### PipeOptions
 
-| Field     | Type                                      | Description                                               |
-| --------- | ----------------------------------------- | --------------------------------------------------------- |
-| `onError` | `(error: unknown, entry: LogEntry) => void` | Called when a transport in the pipe throws or rejects   |
+| Field     | Type                                        | Description                                           |
+| --------- | ------------------------------------------- | ----------------------------------------------------- |
+| `onError` | `(error: unknown, entry: LogEntry) => void` | Called when a transport in the pipe throws or rejects |
 
 ### ResolvedTheme
 
@@ -493,17 +494,17 @@ Payload shape delivered to `RemoteHandler`:
 
 ### RuneOptions
 
-| Field              | Type                            | Default                | Description                                              |
-| ------------------ | ------------------------------- | ---------------------- | -------------------------------------------------------- |
-| `logLevel`         | `LogLevel?`                     | `'debug'`              | Logger level threshold                                   |
-| `namespace`        | `string?`                       | `''`                   | Namespace prefix                                         |
-| `transports`       | `Transport[]?`                  | `[DEFAULT_TRANSPORT]`  | Transport pipeline                                       |
-| `bindings`         | `Bindings?`                     | `{}`                   | Initial pinned bindings                                  |
-| `middleware`       | `LogMiddleware[]?`               | `[]`                   | Entry transform/filter chain                             |
-| `now`              | `() => Date`                    | `() => new Date()`     | Timestamp factory (useful in tests)                      |
-| `onTransportError` | `(error, entry, index) => void` | `console.warn`         | Called when a transport throws synchronously             |
-| `sample`           | `number?`                       | `1`                    | Keep probability 0–1; applied after middleware           |
-| `theme`            | `ConsoleTheme?`                 | —                      | Theme for console output and `group()` rendering         |
+| Field              | Type                            | Default               | Description                                      |
+| ------------------ | ------------------------------- | --------------------- | ------------------------------------------------ |
+| `logLevel`         | `LogLevel?`                     | `'debug'`             | Logger level threshold                           |
+| `namespace`        | `string?`                       | `''`                  | Namespace prefix                                 |
+| `transports`       | `Transport[]?`                  | `[DEFAULT_TRANSPORT]` | Transport pipeline                               |
+| `bindings`         | `Bindings?`                     | `{}`                  | Initial pinned bindings                          |
+| `middleware`       | `LogMiddleware[]?`              | `[]`                  | Entry transform/filter chain                     |
+| `now`              | `() => Date`                    | `() => new Date()`    | Timestamp factory (useful in tests)              |
+| `onTransportError` | `(error, entry, index) => void` | `console.warn`        | Called when a transport throws synchronously     |
+| `sample`           | `number?`                       | `1`                   | Keep probability 0–1; applied after middleware   |
+| `theme`            | `ConsoleTheme?`                 | —                     | Theme for console output and `group()` rendering |
 
 ### RuneConfig
 
@@ -602,22 +603,22 @@ type Logger = {
 
 ### JsonTransportOptions
 
-| Field    | Type                     | Default          | Description        |
-| -------- | ------------------------ | ---------------- | ------------------ |
-| `level`  | `LogLevel`               | `'debug'`        | Minimum level      |
-| `output` | `(line: string) => void` | `process.stdout` | Custom output sink |
+| Field    | Type                     | Default          | Description                                                         |
+| -------- | ------------------------ | ---------------- | ------------------------------------------------------------------- |
+| `level`  | `LogLevel`               | `'debug'`        | Minimum level                                                       |
+| `output` | `(line: string) => void` | `process.stdout` | Custom output sink                                                  |
 | `safe`   | `boolean`                | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
 
 ### BatchTransportOptions
 
-| Field          | Type                                             | Default   | Description                                  |
-| -------------- | ------------------------------------------------ | --------- | -------------------------------------------- |
-| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async) |
-| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects      |
-| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                      |
-| `interval`     | `number`                                         | `5000`      | Flush interval in milliseconds               |
-| `maxSize`      | `number`                                         | `50`        | Max buffer size before an early flush        |
-| `maxBuffer`    | `number`                                         | unbounded   | Hard cap — drops oldest when exceeded, no flush triggered |
+| Field          | Type                                             | Default   | Description                                               |
+| -------------- | ------------------------------------------------ | --------- | --------------------------------------------------------- |
+| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async)              |
+| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects                   |
+| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                   |
+| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds                            |
+| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush                     |
+| `maxBuffer`    | `number`                                         | unbounded | Hard cap — drops oldest when exceeded, no flush triggered |
 
 ### SampleTransportOptions
 

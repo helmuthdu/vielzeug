@@ -20,11 +20,11 @@ const ward = createWard([
   // Broad allow: editor can read any resource
   { role: 'editor', resource: WILDCARD, action: 'read', effect: 'allow', priority: 10 },
   // Specific deny: posts are off-limits for reading
-  { role: 'editor', resource: 'posts',  action: 'read', effect: 'deny',  priority: 10 },
+  { role: 'editor', resource: 'posts', action: 'read', effect: 'deny', priority: 10 },
 ]);
 
 // Specific rule wins at equal priority
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts',    'read'); // false
+ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read'); // false
 ward.can({ id: 'u1', roles: ['editor'] }, 'comments', 'read'); // true
 ```
 

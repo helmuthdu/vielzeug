@@ -73,7 +73,6 @@ it('writes error to console.error', () => {
 });
 ```
 
-
 ### Pitfalls
 
 - Asserting only on the final console payload can be brittle. Prefer checking the message and structured context arguments rather than the exact badge formatting.

@@ -17,16 +17,12 @@ Use `ward.trace()` to get every candidate rule that matched the principal, resou
 import { createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: '*',       resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
-  { role: 'editor',  resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
-  { role: 'blocked', resource: 'posts', action: 'read', effect: 'deny',  priority: 5 },
+  { role: '*', resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
+  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
+  { role: 'blocked', resource: 'posts', action: 'read', effect: 'deny', priority: 5 },
 ]);
 
-const { decision, candidates } = ward.trace(
-  { id: 'u1', roles: ['editor', 'blocked'] },
-  'posts',
-  'read',
-);
+const { decision, candidates } = ward.trace({ id: 'u1', roles: ['editor', 'blocked'] }, 'posts', 'read');
 
 candidates.forEach(({ rule, priority, score, won }) => {
   console.log(
@@ -42,6 +38,7 @@ console.log('Decision:', decision.allowed ? 'allow' : `deny (${decision.reason})
 ```
 
 Example output:
+
 ```
 [      ] effect=allow role=* priority=0 score=0
 [      ] effect=allow role=editor priority=0 score=1
@@ -51,12 +48,12 @@ Decision: deny (explicit-deny)
 
 ### Candidate fields explained
 
-| Field | Type | Description |
-|---|---|---|
-| `rule` | `WardRule` | The compiled rule that matched. Frozen — mutations throw. |
-| `priority` | `number` | The rule's `priority` value (default `0`). |
-| `score` | `number` | Specificity score across role + resource + action (`exact=1`, `ns:*=0.5`, `*=0`). Higher is more specific. Deny rules gain an internal tiebreak advantage but it is not exposed here — use `rule.effect` to distinguish. |
-| `won` | `boolean` | `true` for exactly one candidate — the winner. |
+| Field      | Type       | Description                                                                                                                                                                                                              |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `rule`     | `WardRule` | The compiled rule that matched. Frozen — mutations throw.                                                                                                                                                                |
+| `priority` | `number`   | The rule's `priority` value (default `0`).                                                                                                                                                                               |
+| `score`    | `number`   | Specificity score across role + resource + action (`exact=1`, `ns:*=0.5`, `*=0`). Higher is more specific. Deny rules gain an internal tiebreak advantage but it is not exposed here — use `rule.effect` to distinguish. |
+| `won`      | `boolean`  | `true` for exactly one candidate — the winner.                                                                                                                                                                           |
 
 ### Trace with `BoundWard`
 
@@ -81,7 +78,7 @@ const ward = createWard(rules, {
 });
 
 ward.explain(principal, 'posts', 'read'); // logs once
-ward.trace(principal, 'posts', 'read');   // also logs once
+ward.trace(principal, 'posts', 'read'); // also logs once
 ```
 
 ### Pitfalls

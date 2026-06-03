@@ -55,7 +55,6 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-
 ### Pitfalls
 
 - Off-by-one in the scroll-end check (`>` vs `>=`) causes a double-trigger or a missed trigger at the boundary. Verify the comparison against `count - threshold`, not `count - 1`.
@@ -63,6 +62,7 @@ const virt = createVirtualizer(scrollEl, {
 - After loading the last page, `update({ count })` with the same count as before does not trigger a re-render. Handle the "all pages loaded" state explicitly and stop observing scroll.
 
 ### Related
+
 - [CRUD Operations (Courier)](@vielzeug/courier/examples/crud-operations)
 - [Polling (Courier)](@vielzeug/courier/examples/polling)
 

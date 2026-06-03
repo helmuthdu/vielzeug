@@ -16,10 +16,7 @@ Use `storeWithHistory()` in place of `store()` and call `undo()` / `redo()` to n
 ```ts
 import { storeWithHistory, effect } from '@vielzeug/ripple';
 
-const editor = storeWithHistory(
-  { text: '', cursor: 0 },
-  { maxHistory: 100, name: 'editor' },
-);
+const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100, name: 'editor' });
 
 effect(() => {
   console.log('text:', editor.value.text);
@@ -29,18 +26,18 @@ editor.patch({ text: 'H' });
 editor.patch({ text: 'He' });
 editor.patch({ text: 'Hello' });
 
-console.log(editor.historyLength);  // 4 (initial + 3 patches)
-console.log(editor.historyAt(0));   // { text: '', cursor: 0 }
-console.log(editor.historyAt(1));   // { text: 'H', cursor: 0 }
+console.log(editor.historyLength); // 4 (initial + 3 patches)
+console.log(editor.historyAt(0)); // { text: '', cursor: 0 }
+console.log(editor.historyAt(1)); // { text: 'H', cursor: 0 }
 
 editor.undo();
-console.log(editor.value.text);     // 'He'
+console.log(editor.value.text); // 'He'
 
 editor.undo();
-console.log(editor.value.text);     // 'H'
+console.log(editor.value.text); // 'H'
 
 editor.redo();
-console.log(editor.value.text);     // 'He'
+console.log(editor.value.text); // 'He'
 ```
 
 #### With lens writes
@@ -57,7 +54,7 @@ titleLens.value = 'Published'; // snapshot pushed
 
 console.log(doc.historyLength); // 2
 doc.undo();
-console.log(doc.value.title);   // 'Draft'
+console.log(doc.value.title); // 'Draft'
 ```
 
 #### With branching history
@@ -68,7 +65,7 @@ Writing after an undo discards the redo stack — no branch-divergence support:
 const s = storeWithHistory({ n: 0 });
 s.patch({ n: 1 });
 s.patch({ n: 2 });
-s.undo();           // n = 1
+s.undo(); // n = 1
 
 s.patch({ n: 99 }); // redo to 2 is no longer possible
 console.log(s.historyLength); // 3: [0, 1, 99]

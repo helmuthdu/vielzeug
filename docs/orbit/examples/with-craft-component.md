@@ -52,7 +52,6 @@ define('my-tooltip', {
 });
 ```
 
-
 ### Pitfalls
 
 - `autoUpdate` must be called after the Craft element's shadow DOM is ready — inside `onMounted`, not the constructor. The floating element reference may not exist before that point.
@@ -60,6 +59,7 @@ define('my-tooltip', {
 - The floating element must have `position: fixed` or `position: absolute`. Without explicit CSS positioning, the computed `top`/`left` values are applied but have no visual effect.
 
 ### Related
+
 - [Web Component with Craft (Grip)](@vielzeug/grip/examples/web-component-with-craft)
 
 - [Context Menu](./context-menu.md)

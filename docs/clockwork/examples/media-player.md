@@ -32,11 +32,7 @@ type PlayerEvent =
   | { type: 'LOADED'; duration: number }
   | { type: 'ERROR'; error: string };
 
-const playerMachine = defineMachine<
-  'idle' | 'loading' | 'playing' | 'paused' | 'error',
-  PlayerContext,
-  PlayerEvent
->({
+const playerMachine = defineMachine<'idle' | 'loading' | 'playing' | 'paused' | 'error', PlayerContext, PlayerEvent>({
   initial: 'idle',
   context: { url: '', currentTime: 0, duration: 0, volume: 100 },
   states: {
@@ -45,7 +41,11 @@ const playerMachine = defineMachine<
         LOAD: [
           {
             target: 'loading',
-            actions: [({ context, event }) => { context.url = event.url; }],
+            actions: [
+              ({ context, event }) => {
+                context.url = event.url;
+              },
+            ],
           },
         ],
       },
@@ -54,9 +54,9 @@ const playerMachine = defineMachine<
       invoke: [
         {
           src: async ({ context }) =>
-            fetch(context.url).then(r => {
+            fetch(context.url).then((r) => {
               if (!r.ok) throw new Error('Failed to load');
-              return r.blob().then(blob => URL.createObjectURL(blob));
+              return r.blob().then((blob) => URL.createObjectURL(blob));
             }),
           onDone: () => ({ type: 'LOADED', duration: 180 }), // Duration typically from metadata
           onError: (error) => ({ type: 'ERROR', error: String(error) }),
@@ -66,13 +66,21 @@ const playerMachine = defineMachine<
         LOADED: [
           {
             target: 'paused',
-            actions: [({ context, event }) => { context.duration = event.duration; }],
+            actions: [
+              ({ context, event }) => {
+                context.duration = event.duration;
+              },
+            ],
           },
         ],
         ERROR: [
           {
             target: 'error',
-            actions: [({ context }) => { context.url = ''; }],
+            actions: [
+              ({ context }) => {
+                context.url = '';
+              },
+            ],
           },
         ],
       },
@@ -84,13 +92,21 @@ const playerMachine = defineMachine<
         PAUSE: [{ target: 'paused' }],
         SEEK: [
           {
-            actions: [({ context, event }) => { context.currentTime = event.time; }],
+            actions: [
+              ({ context, event }) => {
+                context.currentTime = event.time;
+              },
+            ],
             target: 'playing',
           },
         ],
         VOLUME: [
           {
-            actions: [({ context, event }) => { context.volume = event.level; }],
+            actions: [
+              ({ context, event }) => {
+                context.volume = event.level;
+              },
+            ],
             target: 'playing',
           },
         ],
@@ -101,13 +117,21 @@ const playerMachine = defineMachine<
         PLAY: [{ target: 'playing' }],
         SEEK: [
           {
-            actions: [({ context, event }) => { context.currentTime = event.time; }],
+            actions: [
+              ({ context, event }) => {
+                context.currentTime = event.time;
+              },
+            ],
             target: 'paused',
           },
         ],
         VOLUME: [
           {
-            actions: [({ context, event }) => { context.volume = event.level; }],
+            actions: [
+              ({ context, event }) => {
+                context.volume = event.level;
+              },
+            ],
             target: 'paused',
           },
         ],
@@ -118,7 +142,11 @@ const playerMachine = defineMachine<
         LOAD: [
           {
             target: 'loading',
-            actions: [({ context, event }) => { context.url = event.url; }],
+            actions: [
+              ({ context, event }) => {
+                context.url = event.url;
+              },
+            ],
           },
         ],
       },
@@ -133,7 +161,7 @@ player.send({ type: 'LOAD', url: '/music/song.mp3' });
 // state: 'loading' (fetching audio)
 
 // Listen for state changes
-player.subscribe(state => console.log('State:', state.value, 'Volume:', player.context.value.volume));
+player.subscribe((state) => console.log('State:', state.value, 'Volume:', player.context.value.volume));
 
 // Once loading completes: state → 'paused'
 setTimeout(() => {

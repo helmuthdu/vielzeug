@@ -31,7 +31,6 @@ exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
 
 **Sigil** is the Vielzeug component library: accessible, themeable web components built with [@vielzeug/craft](/craft/). It works with vanilla Document Object Model (DOM) code and framework apps through standards-based custom elements and tree-shakeable registration entry points.
 
-
 ## Installation
 
 ::: code-group
@@ -79,8 +78,8 @@ import '@vielzeug/sigil';
 
 ### Package Entry Points
 
-| Import                     | Purpose                                   |
-| -------------------------- | ----------------------------------------- |
+| Import                   | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
 | `@vielzeug/sigil`        | Register all published components         |
 | `@vielzeug/sigil/styles` | Global tokens and shared component styles |
 | `@vielzeug/sigil/types`  | Shared TypeScript types                   |
@@ -119,11 +118,11 @@ Every project needs UI primitives. Sigil provides accessible web components that
 ```
 
 | Feature            | Sigil                                       | Shoelace | Material Web |
-| ------------------ | --------------------------------------------- | -------- | ------------ |
+| ------------------ | ------------------------------------------- | -------- | ------------ |
 | Bundle size        | <PackageInfo package="sigil" type="size" /> | ~145 kB  | ~200 kB      |
 | Built with         | Craft                                       | Lit      | Lit          |
-| Accessible         | WCAG AA                                       | WCAG AA  | WCAG AA      |
-| Framework agnostic | ✅                                            | ✅       | ✅           |
+| Accessible         | WCAG AA                                     | WCAG AA  | WCAG AA      |
+| Framework agnostic | ✅                                          | ✅       | ✅           |
 
 **Use Sigil when** you want accessible web components that match the Vielzeug design system without a heavy framework dependency.
 

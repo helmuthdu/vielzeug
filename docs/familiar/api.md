@@ -7,21 +7,21 @@ description: Complete API reference for @vielzeug/familiar.
 
 ## API At a Glance
 
-| Symbol                  | Purpose                                             | Execution mode  | Common gotcha                                      |
-| ----------------------- | --------------------------------------------------- | --------------- | -------------------------------------------------- |
-| `createWorker()`        | Create an inline worker or pool                     | Sync            | Task functions must be entirely self-contained     |
-| `createModuleWorker()`  | Create a pool from a real module-worker file        | Sync            | Worker file must implement the message protocol    |
-| `worker.run()`          | Execute a task in a Worker                          | Async           | Pass transferables for large buffers               |
-| `worker.runStream()`    | Execute a streaming task, yield partial results     | Async iterator  | Requires a free slot — cannot be queued            |
-| `worker.batch()`        | Run multiple inputs, yield results                  | Async iterator  | Cancels remaining tasks on first failure           |
-| `worker.group()`        | Submit related tasks that share an abort + drain    | Sync            | `drain()` only waits for tasks added so far        |
-| `createTestWorker()`    | Run tasks in-process for tests                      | Async           | Does not enforce serialization constraints         |
+| Symbol                 | Purpose                                          | Execution mode | Common gotcha                                   |
+| ---------------------- | ------------------------------------------------ | -------------- | ----------------------------------------------- |
+| `createWorker()`       | Create an inline worker or pool                  | Sync           | Task functions must be entirely self-contained  |
+| `createModuleWorker()` | Create a pool from a real module-worker file     | Sync           | Worker file must implement the message protocol |
+| `worker.run()`         | Execute a task in a Worker                       | Async          | Pass transferables for large buffers            |
+| `worker.runStream()`   | Execute a streaming task, yield partial results  | Async iterator | Requires a free slot — cannot be queued         |
+| `worker.batch()`       | Run multiple inputs, yield results               | Async iterator | Cancels remaining tasks on first failure        |
+| `worker.group()`       | Submit related tasks that share an abort + drain | Sync           | `drain()` only waits for tasks added so far     |
+| `createTestWorker()`   | Run tasks in-process for tests                   | Async          | Does not enforce serialization constraints      |
 
 ## Package Entry Point
 
-| Import                    | Purpose                             |
-| ------------------------- | ----------------------------------- |
-| `@vielzeug/familiar`      | All public exports and types        |
+| Import                       | Purpose                             |
+| ---------------------------- | ----------------------------------- |
+| `@vielzeug/familiar`         | All public exports and types        |
 | `@vielzeug/familiar/testing` | Test utilities (not in main bundle) |
 
 ## Package Exports
@@ -105,13 +105,13 @@ type WorkerOptions = {
 };
 ```
 
-| Field         | Type                         | Default      | Description |
-| ------------- | ---------------------------- | ------------ | ----------- |
-| `concurrency` | `number \| 'auto'`           | `1`          | Worker slot count. `'auto'` uses `navigator.hardwareConcurrency`. |
-| `maxQueue`    | `number`                     | unlimited    | Maximum queued tasks. Exceeding this rejects with `WorkerQueueFullError` (or suspends when `onFull='wait'`). |
-| `onFull`      | `'reject' \| 'wait'`         | `'reject'`   | Behavior when queue is full. `'wait'` suspends the caller until a slot opens (natural backpressure). |
-| `onSlotError` | `(error, restart) => void`   | —            | Called when a Worker slot encounters an unhandled runtime error. `restart()` pre-warms a replacement Worker. |
-| `timeout`     | `number`                     | —            | Pool-level task timeout in milliseconds. Can be overridden per-run via `RunOptions.timeout`. |
+| Field         | Type                       | Default    | Description                                                                                                  |
+| ------------- | -------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `concurrency` | `number \| 'auto'`         | `1`        | Worker slot count. `'auto'` uses `navigator.hardwareConcurrency`.                                            |
+| `maxQueue`    | `number`                   | unlimited  | Maximum queued tasks. Exceeding this rejects with `WorkerQueueFullError` (or suspends when `onFull='wait'`). |
+| `onFull`      | `'reject' \| 'wait'`       | `'reject'` | Behavior when queue is full. `'wait'` suspends the caller until a slot opens (natural backpressure).         |
+| `onSlotError` | `(error, restart) => void` | —          | Called when a Worker slot encounters an unhandled runtime error. `restart()` pre-warms a replacement Worker. |
+| `timeout`     | `number`                   | —          | Pool-level task timeout in milliseconds. Can be overridden per-run via `RunOptions.timeout`.                 |
 
 ---
 
@@ -127,13 +127,13 @@ type RunOptions = {
 };
 ```
 
-| Field              | Type             | Default | Description |
-| ------------------ | ---------------- | ------- | ----------- |
+| Field              | Type             | Default | Description                                                                                                                                                                                        |
+| ------------------ | ---------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `heartbeatTimeout` | `number`         | —       | Watchdog timeout in ms. The task is killed with `WorkerTimeoutError` if no heartbeat arrives within this window. Inline workers send heartbeats automatically at `heartbeatTimeout / 2` intervals. |
-| `priority`         | `number`         | `0`     | Scheduling priority. Higher values run first when tasks queue up. Equal priorities are FIFO. |
-| `signal`           | `AbortSignal`    | —       | Cancel a queued task before it starts. In-flight tasks cannot be interrupted. |
-| `timeout`          | `number`         | —       | Per-run timeout in ms. Overrides `WorkerOptions.timeout` for this task. |
-| `transferables`    | `Transferable[]` | `[]`    | Objects to move (not copy) to the Worker thread. |
+| `priority`         | `number`         | `0`     | Scheduling priority. Higher values run first when tasks queue up. Equal priorities are FIFO.                                                                                                       |
+| `signal`           | `AbortSignal`    | —       | Cancel a queued task before it starts. In-flight tasks cannot be interrupted.                                                                                                                      |
+| `timeout`          | `number`         | —       | Per-run timeout in ms. Overrides `WorkerOptions.timeout` for this task.                                                                                                                            |
+| `transferables`    | `Transferable[]` | `[]`    | Objects to move (not copy) to the Worker thread.                                                                                                                                                   |
 
 ---
 
@@ -156,8 +156,7 @@ Extends `RunOptions` (minus `signal`) with:
 `WorkerHandle` is the full intersection of all capability types:
 
 ```ts
-type WorkerHandle<TInput, TOutput> =
-  WorkerPool<TInput, TOutput> &
+type WorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> &
   WorkerMetrics &
   StreamingWorker<TInput, TOutput> &
   GroupableWorker<TInput, TOutput> &
@@ -166,13 +165,13 @@ type WorkerHandle<TInput, TOutput> =
 
 Individual types are also exported for use in function signatures:
 
-| Type                | Members |
-| ------------------- | ------- |
-| `WorkerPool`        | `run`, `close`, `dispose`, `status`, `[Symbol.dispose]`, `[Symbol.asyncDispose]` |
-| `WorkerMetrics`     | `active`, `completed`, `concurrency`, `failed`, `queued`, `utilization` |
-| `StreamingWorker`   | `batch`, `runStream` |
-| `GroupableWorker`   | `group` |
-| `PrimableWorker`    | `prime` |
+| Type              | Members                                                                          |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `WorkerPool`      | `run`, `close`, `dispose`, `status`, `[Symbol.dispose]`, `[Symbol.asyncDispose]` |
+| `WorkerMetrics`   | `active`, `completed`, `concurrency`, `failed`, `queued`, `utilization`          |
+| `StreamingWorker` | `batch`, `runStream`                                                             |
+| `GroupableWorker` | `group`                                                                          |
+| `PrimableWorker`  | `prime`                                                                          |
 
 ---
 
@@ -205,25 +204,23 @@ const buf = new ArrayBuffer(1024);
 await worker.run(buf, { transferables: [buf] });
 ```
 
----
-
 ## createWorker
 
 ```ts
 function createWorker<TInput, TOutput>(
   fn: TaskFn<TInput, TOutput>,
   options?: WorkerOptions,
-): WorkerHandle<TInput, TOutput>
+): WorkerHandle<TInput, TOutput>;
 ```
 
 Creates a typed worker or pool that executes `fn` in a Web Worker. Safe to call in any runtime — errors from Worker unavailability surface on the first `run()` call.
 
 ### Parameters
 
-| Parameter | Type                      | Description |
-| --------- | ------------------------- | ----------- |
+| Parameter | Type                      | Description                                                                            |
+| --------- | ------------------------- | -------------------------------------------------------------------------------------- |
 | `fn`      | `TaskFn<TInput, TOutput>` | Self-contained task function. Serialized via `.toString()`, runs in an isolated scope. |
-| `options` | `WorkerOptions`           | Optional pool configuration. |
+| `options` | `WorkerOptions`           | Optional pool configuration.                                                           |
 
 Returns `WorkerHandle<TInput, TOutput>`.
 
@@ -240,25 +237,20 @@ const pool = createWorker<number, number>((n) => n ** 2, { concurrency: 4, timeo
 const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'auto' });
 ```
 
----
-
 ## createModuleWorker
 
 ```ts
-function createModuleWorker<TInput, TOutput>(
-  url: URL | string,
-  options?: WorkerOptions,
-): WorkerHandle<TInput, TOutput>
+function createModuleWorker<TInput, TOutput>(url: URL | string, options?: WorkerOptions): WorkerHandle<TInput, TOutput>;
 ```
 
 Creates a pool where each slot is a `{ type: 'module' }` Web Worker loaded from `url`. The Worker file is a normal ES module — it can use imports, top-level await, and module-scope helpers.
 
 ### Parameters
 
-| Parameter | Type            | Description |
-| --------- | --------------- | ----------- |
+| Parameter | Type            | Description                                                                             |
+| --------- | --------------- | --------------------------------------------------------------------------------------- |
 | `url`     | `URL \| string` | URL of the worker module. Use `new URL('./my-worker.ts', import.meta.url)` in bundlers. |
-| `options` | `WorkerOptions` | Optional pool configuration (same as `createWorker`). |
+| `options` | `WorkerOptions` | Optional pool configuration (same as `createWorker`).                                   |
 
 ### Worker File Protocol
 
@@ -308,13 +300,8 @@ self.onmessage = async (event) => {
 // main.ts
 import { createModuleWorker } from '@vielzeug/familiar';
 
-const pool = createModuleWorker<number, number>(
-  new URL('./my-worker.ts', import.meta.url),
-  { concurrency: 4 },
-);
+const pool = createModuleWorker<number, number>(new URL('./my-worker.ts', import.meta.url), { concurrency: 4 });
 ```
-
----
 
 ## WorkerHandle Members
 
@@ -326,14 +313,14 @@ Dispatches a task to the next available slot. If all slots are busy, the task en
 
 **Rejects with:**
 
-| Error                      | Code           | Condition |
-| -------------------------- | -------------- | --------- |
-| `WorkerQueueFullError`     | `'queue_full'` | `maxQueue` is set and the queue is at capacity (`onFull='reject'`) |
-| `WorkerTimeoutError`       | `'timeout'`    | Task exceeded its timeout or heartbeat window |
-| `WorkerTerminatedError`    | `'terminated'` | `dispose()` was called before or during the task |
-| `WorkerTaskError`          | `'task'`       | Task function threw an error |
-| `WorkerRuntimeError`       | `'worker'`     | Worker runtime or setup failure |
-| `DOMException (AbortError)` | —             | Provided `signal` was aborted before the task started |
+| Error                       | Code           | Condition                                                          |
+| --------------------------- | -------------- | ------------------------------------------------------------------ |
+| `WorkerQueueFullError`      | `'queue_full'` | `maxQueue` is set and the queue is at capacity (`onFull='reject'`) |
+| `WorkerTimeoutError`        | `'timeout'`    | Task exceeded its timeout or heartbeat window                      |
+| `WorkerTerminatedError`     | `'terminated'` | `dispose()` was called before or during the task                   |
+| `WorkerTaskError`           | `'task'`       | Task function threw an error                                       |
+| `WorkerRuntimeError`        | `'worker'`     | Worker runtime or setup failure                                    |
+| `DOMException (AbortError)` | —              | Provided `signal` was aborted before the task started              |
 
 ---
 
@@ -442,8 +429,8 @@ Graceful shutdown. Waits until all queued and in-flight tasks settle, then termi
 If `timeoutMs` is given and the pool has not gone idle within that window, rejects with `WorkerTimeoutError` and force-terminates.
 
 ```ts
-await pool.close();       // drain then terminate
-await pool.close(5000);   // must drain within 5 s
+await pool.close(); // drain then terminate
+await pool.close(5000); // must drain within 5 s
 ```
 
 ---
@@ -476,15 +463,15 @@ const result = await pool.run(21); // no cold-start
 
 ### Metrics
 
-| Member        | Type           | Description |
-| ------------- | -------------- | ----------- |
-| `active`      | `number`       | Slots currently executing a task |
-| `completed`   | `number`       | Successful tasks since creation |
-| `concurrency` | `number`       | Configured slot count |
+| Member        | Type           | Description                                                                      |
+| ------------- | -------------- | -------------------------------------------------------------------------------- |
+| `active`      | `number`       | Slots currently executing a task                                                 |
+| `completed`   | `number`       | Successful tasks since creation                                                  |
+| `concurrency` | `number`       | Configured slot count                                                            |
 | `failed`      | `number`       | Tasks rejected with task/timeout/worker error (excludes aborts and terminations) |
-| `queued`      | `number`       | Tasks waiting in queue (accurate — excludes cancelled items) |
-| `utilization` | `number`       | `active / concurrency` (0–1) |
-| `status`      | `WorkerStatus` | Current lifecycle state |
+| `queued`      | `number`       | Tasks waiting in queue (accurate — excludes cancelled items)                     |
+| `utilization` | `number`       | `active / concurrency` (0–1)                                                     |
+| `status`      | `WorkerStatus` | Current lifecycle state                                                          |
 
 ---
 
@@ -508,8 +495,6 @@ const result = await pool.run(21); // no cold-start
 } // close() called automatically
 ```
 
----
-
 ## Error Model
 
 All worker errors extend `WorkerError`. Use `instanceof` against the specific subclass for precise handling.
@@ -522,22 +507,17 @@ class WorkerError extends Error {
 
 ### Error Hierarchy
 
-| Class                       | Code                | Extra fields           | When thrown |
-| --------------------------- | ------------------- | ---------------------- | ----------- |
-| `WorkerTimeoutError`        | `'timeout'`         | `.timeoutMs: number`   | Task exceeded timeout or heartbeat window |
-| `WorkerTaskError`           | `'task'`            | `.cause: unknown`      | Task function threw |
-| `WorkerQueueFullError`      | `'queue_full'`      | `.maxQueue: number`    | Queue at capacity (`onFull='reject'`) |
-| `WorkerTerminatedError`     | `'terminated'`      | —                      | `dispose()` called; task was in-flight or queued |
-| `WorkerRuntimeError`        | `'worker'`          | `.cause?: unknown`     | Worker API unavailable or unhandled thread error |
-| `WorkerInvalidOptionsError` | `'invalid_options'` | —                      | Invalid `createWorker` / `createModuleWorker` options |
+| Class                       | Code                | Extra fields         | When thrown                                           |
+| --------------------------- | ------------------- | -------------------- | ----------------------------------------------------- |
+| `WorkerTimeoutError`        | `'timeout'`         | `.timeoutMs: number` | Task exceeded timeout or heartbeat window             |
+| `WorkerTaskError`           | `'task'`            | `.cause: unknown`    | Task function threw                                   |
+| `WorkerQueueFullError`      | `'queue_full'`      | `.maxQueue: number`  | Queue at capacity (`onFull='reject'`)                 |
+| `WorkerTerminatedError`     | `'terminated'`      | —                    | `dispose()` called; task was in-flight or queued      |
+| `WorkerRuntimeError`        | `'worker'`          | `.cause?: unknown`   | Worker API unavailable or unhandled thread error      |
+| `WorkerInvalidOptionsError` | `'invalid_options'` | —                    | Invalid `createWorker` / `createModuleWorker` options |
 
 ```ts
-import {
-  WorkerQueueFullError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
-} from '@vielzeug/familiar';
+import { WorkerQueueFullError, WorkerTaskError, WorkerTerminatedError, WorkerTimeoutError } from '@vielzeug/familiar';
 
 try {
   await worker.run(input, { timeout: 500 });
@@ -553,8 +533,6 @@ try {
   }
 }
 ```
-
----
 
 ## Testing Utilities
 
@@ -575,7 +553,7 @@ Error classes are also re-exported from the test subpath so test files need only
 function createTestWorker<TInput, TOutput>(
   fn: (input: TInput) => TOutput | Promise<TOutput>,
   options?: TestWorkerOptions,
-): TestWorkerHandle<TInput, TOutput>
+): TestWorkerHandle<TInput, TOutput>;
 ```
 
 Creates an in-process test double. `fn` runs on the same thread — no Worker is spawned. Successful calls are recorded in `handle.calls`. Errors propagate unwrapped (not wrapped in `WorkerError`), so vitest assertion errors surface directly in test output.
@@ -592,11 +570,11 @@ type TestWorkerOptions = {
 };
 ```
 
-| Field         | Type                  | Default    | Description |
-| ------------- | --------------------- | ---------- | ----------- |
-| `concurrency` | `number`              | `1`        | In-process slot count. Default `1` for deterministic ordering. Increase only when testing concurrency-specific behavior. |
-| `maxQueue`    | `number`              | unlimited  | Queue capacity before rejecting with `WorkerQueueFullError`. |
-| `onFull`      | `'reject' \| 'wait'`  | `'reject'` | Queue-full behavior. |
+| Field         | Type                 | Default    | Description                                                                                                              |
+| ------------- | -------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `concurrency` | `number`             | `1`        | In-process slot count. Default `1` for deterministic ordering. Increase only when testing concurrency-specific behavior. |
+| `maxQueue`    | `number`             | unlimited  | Queue capacity before rejecting with `WorkerQueueFullError`.                                                             |
+| `onFull`      | `'reject' \| 'wait'` | `'reject'` | Queue-full behavior.                                                                                                     |
 
 ---
 
@@ -636,4 +614,3 @@ describe('add worker', () => {
   });
 });
 ```
-

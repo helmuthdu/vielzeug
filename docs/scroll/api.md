@@ -7,26 +7,32 @@ description: Complete API reference for the Scroll virtual list engine.
 
 ## API At a Glance
 
-| Symbol                         | Purpose                                         | Returns                        |
-| ------------------------------ | ----------------------------------------------- | ------------------------------ |
-| `createVirtualizer()`          | Core 1D virtualizer                             | `Virtualizer`                  |
-| `createDomVirtualList()`       | DOM adapter for dropdown/listbox UIs            | `DomVirtualListController<T>`  |
-| `createVirtualScroller()`      | Self-contained scroller (creates its own DOM)   | `DomVirtualListController<T>`  |
-| `createGroupedVirtualizer()`   | Sectioned list with sticky headers              | `GroupVirtualizer<T>`          |
-| `createGridVirtualizer()`      | Two-dimensional grid virtualizer                | `GridVirtualizer`              |
-| `createReactiveVirtualizer()`  | Virtualizer with reactive signal output         | `ReactiveVirtualizer`          |
+| Symbol                        | Purpose                                       | Returns                       |
+| ----------------------------- | --------------------------------------------- | ----------------------------- |
+| `createVirtualizer()`         | Core 1D virtualizer                           | `Virtualizer`                 |
+| `createDomVirtualList()`      | DOM adapter for dropdown/listbox UIs          | `DomVirtualListController<T>` |
+| `createVirtualScroller()`     | Self-contained scroller (creates its own DOM) | `DomVirtualListController<T>` |
+| `createGroupedVirtualizer()`  | Sectioned list with sticky headers            | `GroupVirtualizer<T>`         |
+| `createGridVirtualizer()`     | Two-dimensional grid virtualizer              | `GridVirtualizer`             |
+| `createReactiveVirtualizer()` | Virtualizer with reactive signal output       | `ReactiveVirtualizer`         |
 
 ## Package Entry Point
 
 Everything exports from a single entry:
 
 ```ts
-import { createVirtualizer, createDomVirtualList, createVirtualScroller,
-         createGroupedVirtualizer, createGridVirtualizer, createReactiveVirtualizer,
-         type Virtualizer, type VirtualItem, type VirtualizerState } from '@vielzeug/scroll';
+import {
+  createVirtualizer,
+  createDomVirtualList,
+  createVirtualScroller,
+  createGroupedVirtualizer,
+  createGridVirtualizer,
+  createReactiveVirtualizer,
+  type Virtualizer,
+  type VirtualItem,
+  type VirtualizerState,
+} from '@vielzeug/scroll';
 ```
-
----
 
 ## `createVirtualizer(target, options)`
 
@@ -59,26 +65,26 @@ const virt = createVirtualizer(scrollEl, {
 
 ### Parameters
 
-| Parameter | Type                    | Description                  |
-| --------- | ----------------------- | ---------------------------- |
-| `target`  | `HTMLElement \| Window` | Scroll container to observe  |
-| `options` | `VirtualizerOptions`    | Initial options              |
+| Parameter | Type                    | Description                 |
+| --------- | ----------------------- | --------------------------- |
+| `target`  | `HTMLElement \| Window` | Scroll container to observe |
+| `options` | `VirtualizerOptions`    | Initial options             |
 
 ### `VirtualizerOptions`
 
-| Option             | Type                                                  | Default                | Description                                                    |
-| ------------------ | ----------------------------------------------------- | ---------------------- | -------------------------------------------------------------- |
-| `count`            | `number`                                              | required               | Total item count                                               |
-| `estimateSize`     | `number \| (index: number) => number`                 | `36`                   | Fixed size or per-index estimate in pixels                     |
-| `gap`              | `number`                                              | `0`                    | Gap between adjacent items in pixels                           |
-| `getItemKey`       | `(index: number) => string \| number`                 | `index => index`       | Stable key for the measurement cache                           |
-| `horizontal`       | `boolean`                                             | `false`                | Virtualize along the X axis instead of Y                       |
-| `initialOffset`    | `number`                                              | —                      | Initial scroll position; applied once on construction          |
-| `measurementCache` | `MeasurementCache`                                    | —                      | Shared external cache for scroll restoration or SSR pre-measurement |
-| `onChange`         | `(state: VirtualizerState) => void`                   | —                      | Called when the visible window changes                         |
-| `onRangeChange`    | `(first: number, last: number) => void`               | —                      | Zero-allocation alternative: fires with first/last indices only. When used **without** `onChange`, `v.items` stays empty |
-| `overscan`         | `number \| { start?: number; end?: number }`          | `3`                    | Extra items outside the viewport; number = symmetric on both sides |
-| `sticky`           | `(index: number) => boolean`                          | —                      | Mark an item as a sticky header (pinned at viewport top)       |
+| Option             | Type                                         | Default          | Description                                                                                                              |
+| ------------------ | -------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `count`            | `number`                                     | required         | Total item count                                                                                                         |
+| `estimateSize`     | `number \| (index: number) => number`        | `36`             | Fixed size or per-index estimate in pixels                                                                               |
+| `gap`              | `number`                                     | `0`              | Gap between adjacent items in pixels                                                                                     |
+| `getItemKey`       | `(index: number) => string \| number`        | `index => index` | Stable key for the measurement cache                                                                                     |
+| `horizontal`       | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                                                                 |
+| `initialOffset`    | `number`                                     | —                | Initial scroll position; applied once on construction                                                                    |
+| `measurementCache` | `MeasurementCache`                           | —                | Shared external cache for scroll restoration or SSR pre-measurement                                                      |
+| `onChange`         | `(state: VirtualizerState) => void`          | —                | Called when the visible window changes                                                                                   |
+| `onRangeChange`    | `(first: number, last: number) => void`      | —                | Zero-allocation alternative: fires with first/last indices only. When used **without** `onChange`, `v.items` stays empty |
+| `overscan`         | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                                                       |
+| `sticky`           | `(index: number) => boolean`                 | —                | Mark an item as a sticky header (pinned at viewport top)                                                                 |
 
 `onChange` and `onRangeChange` are fixed at construction — they cannot be changed via `update()`.
 
@@ -98,32 +104,32 @@ interface VirtualizerState {
 
 ### `Virtualizer` — read-only properties
 
-| Property       | Type            | Description                                                                 |
-| -------------- | --------------- | --------------------------------------------------------------------------- |
-| `count`        | `number`        | Current item count                                                          |
-| `items`        | `VirtualItem[]` | Currently rendered items. Empty when only `onRangeChange` is registered     |
-| `scrollOffset` | `number`        | Current scroll position in pixels                                           |
-| `stickyItems`  | `VirtualItem[]` | Items pinned at the viewport top (requires `sticky` option)                 |
-| `totalSize`    | `number`        | Total height (or width in horizontal mode)                                  |
+| Property       | Type            | Description                                                             |
+| -------------- | --------------- | ----------------------------------------------------------------------- |
+| `count`        | `number`        | Current item count                                                      |
+| `items`        | `VirtualItem[]` | Currently rendered items. Empty when only `onRangeChange` is registered |
+| `scrollOffset` | `number`        | Current scroll position in pixels                                       |
+| `stickyItems`  | `VirtualItem[]` | Items pinned at the viewport top (requires `sticky` option)             |
+| `totalSize`    | `number`        | Total height (or width in horizontal mode)                              |
 
 ### `Virtualizer` — methods
 
-| Method             | Signature                                                               | Description                                                            |
-| ------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `update`           | `(next: VirtualizerUpdateOptions) => void`                              | Atomically update live options                                         |
-| `measure`          | `(index: number, size: number) => void`                                 | Record one measured size; rebuild batched in microtask                 |
-| `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`             | Record many sizes; single rebuild                                      |
-| `measureEl`        | `(index: number, el: HTMLElement) => () => void`                        | Attach ResizeObserver to auto-measure. Returns a disconnect function   |
-| `redraw`           | `() => void`                                                            | Re-emit the current window without rebuilding offsets (O(1))           |
-| `refresh`          | `() => void`                                                            | Rebuild offset table from current estimates/measurements               |
-| `prepend`          | `(additionalCount: number) => void`                                     | Add items at the top; adjusts scroll offset to keep viewport stable    |
-| `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`               | Scroll to an item; out-of-range indices are clamped                    |
-| `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void`     | Scroll to a raw pixel offset                                           |
-| `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                     | Scroll to offset `0`                                                   |
-| `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                     | Scroll to the end of the list                                          |
-| `invalidate`       | `() => void`                                                            | Clear all measurements and rebuild from estimates                      |
-| `destroy`          | `() => void`                                                            | Detach listeners; idempotent                                           |
-| `[Symbol.dispose]` | `() => void`                                                            | Delegates to `destroy()` — enables `using` declarations                |
+| Method             | Signature                                                           | Description                                                          |
+| ------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `update`           | `(next: VirtualizerUpdateOptions) => void`                          | Atomically update live options                                       |
+| `measure`          | `(index: number, size: number) => void`                             | Record one measured size; rebuild batched in microtask               |
+| `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`         | Record many sizes; single rebuild                                    |
+| `measureEl`        | `(index: number, el: HTMLElement) => () => void`                    | Attach ResizeObserver to auto-measure. Returns a disconnect function |
+| `redraw`           | `() => void`                                                        | Re-emit the current window without rebuilding offsets (O(1))         |
+| `refresh`          | `() => void`                                                        | Rebuild offset table from current estimates/measurements             |
+| `prepend`          | `(additionalCount: number) => void`                                 | Add items at the top; adjusts scroll offset to keep viewport stable  |
+| `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`           | Scroll to an item; out-of-range indices are clamped                  |
+| `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void` | Scroll to a raw pixel offset                                         |
+| `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to offset `0`                                                 |
+| `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to the end of the list                                        |
+| `invalidate`       | `() => void`                                                        | Clear all measurements and rebuild from estimates                    |
+| `destroy`          | `() => void`                                                        | Detach listeners; idempotent                                         |
+| `[Symbol.dispose]` | `() => void`                                                        | Delegates to `destroy()` — enables `using` declarations              |
 
 ### `update(next)`
 
@@ -143,9 +149,7 @@ Report exact sizes for variable-height rows. Calls within one microtask tick coa
 virt.measure(item.index, el.offsetHeight);
 
 // Prefer measureBatch for ResizeObserver batches
-virt.measureBatch(
-  entries.map((e) => ({ index: Number(e.target.dataset.index), size: e.contentRect.height })),
-);
+virt.measureBatch(entries.map((e) => ({ index: Number(e.target.dataset.index), size: e.contentRect.height })));
 ```
 
 ### `measureEl(index, el)`
@@ -173,12 +177,12 @@ Adds `additionalCount` items at the front while adjusting scroll offset so the v
 
 Scroll to an item. Out-of-range indices are clamped silently.
 
-| `align`            | Behavior                                                                 |
-| ------------------ | ------------------------------------------------------------------------ |
-| `'start'`          | Item top at viewport top                                                 |
-| `'end'`            | Item bottom at viewport bottom                                           |
-| `'center'`         | Item centered in the viewport                                            |
-| `'auto'` (default) | No scroll if already fully visible; otherwise minimum scroll             |
+| `align`            | Behavior                                                     |
+| ------------------ | ------------------------------------------------------------ |
+| `'start'`          | Item top at viewport top                                     |
+| `'end'`            | Item bottom at viewport bottom                               |
+| `'center'`         | Item centered in the viewport                                |
+| `'auto'` (default) | No scroll if already fully visible; otherwise minimum scroll |
 
 ```ts
 virt.scrollToIndex(0, { align: 'start' });
@@ -209,8 +213,6 @@ document.fonts.ready.then(() => virt.invalidate());
   using virt = createVirtualizer(scrollEl, { count: rows.length, onChange: render });
 } // → destroy() called automatically
 ```
-
----
 
 ## `createDomVirtualList(options)`
 
@@ -245,18 +247,18 @@ ctrl.destroy();
 
 ### `DomVirtualListOptions<T>`
 
-| Option             | Type                                           | Default                | Description                                             |
-| ------------------ | ---------------------------------------------- | ---------------------- | ------------------------------------------------------- |
-| `scrollElement`    | `HTMLElement \| Window`                        | required               | Scroll container to observe                             |
-| `listElement`      | `HTMLElement`                                  | required               | Element that receives height and item children          |
-| `render`           | `(args: DomVirtualListRenderArgs<T>) => void`  | required               | Called on every visible-window change                   |
-| `estimateSize`     | `number \| (index, item) => number`            | `36`                   | Fixed or per-item size estimate                         |
-| `gap`              | `number`                                       | `0`                    | Gap between items in pixels                             |
-| `getItemKey`       | `(index, item) => string \| number`            | —                      | Stable key; keeps measurements across `setItems()` calls |
-| `horizontal`       | `boolean`                                      | `false`                | Virtualize along X axis                                 |
-| `measurementCache` | `MeasurementCache`                             | —                      | External measurement cache                              |
-| `overscan`         | `number \| { start?: number; end?: number }`   | `3`                    | Extra items outside the viewport; number = symmetric   |
-| `clear`            | `(listEl: HTMLElement) => void`                | —                      | Custom teardown for listEl; defaults to `textContent = ''` |
+| Option             | Type                                          | Default  | Description                                                |
+| ------------------ | --------------------------------------------- | -------- | ---------------------------------------------------------- |
+| `scrollElement`    | `HTMLElement \| Window`                       | required | Scroll container to observe                                |
+| `listElement`      | `HTMLElement`                                 | required | Element that receives height and item children             |
+| `render`           | `(args: DomVirtualListRenderArgs<T>) => void` | required | Called on every visible-window change                      |
+| `estimateSize`     | `number \| (index, item) => number`           | `36`     | Fixed or per-item size estimate                            |
+| `gap`              | `number`                                      | `0`      | Gap between items in pixels                                |
+| `getItemKey`       | `(index, item) => string \| number`           | —        | Stable key; keeps measurements across `setItems()` calls   |
+| `horizontal`       | `boolean`                                     | `false`  | Virtualize along X axis                                    |
+| `measurementCache` | `MeasurementCache`                            | —        | External measurement cache                                 |
+| `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
+| `clear`            | `(listEl: HTMLElement) => void`               | —        | Custom teardown for listEl; defaults to `textContent = ''` |
 
 Without `getItemKey`, each `setItems()` call drops cached measurements.
 
@@ -264,9 +266,9 @@ Without `getItemKey`, each `setItems()` call drops cached measurements.
 
 ```ts
 type DomVirtualListRenderArgs<T> = {
-  items: Array<VirtualRenderItem<T>>;       // visible items — each has .data + layout fields
+  items: Array<VirtualRenderItem<T>>; // visible items — each has .data + layout fields
   listEl: HTMLElement;
-  recycle: RecycleFn;                       // node pool — returns existing node or calls create()
+  recycle: RecycleFn; // node pool — returns existing node or calls create()
   stickyItems: Array<VirtualRenderItem<T>>; // sticky items (requires sticky option)
   totalSize: number;
 };
@@ -280,26 +282,24 @@ type DomVirtualListRenderArgs<T> = {
 
 Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virtualizer methods and live getters are available directly.
 
-| Member             | Description                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| `setItems(items)`  | Set the current item array. Spawns virtualizer on first non-empty call; destroys it on `[]`   |
-| `count`            | Current item count (live getter)                                                               |
-| `items`            | Currently rendered virtual items (live getter)                                                 |
-| `totalSize`        | Total list size in pixels (live getter)                                                        |
-| `scrollOffset`     | Current scroll position (live getter)                                                          |
-| `stickyItems`      | Sticky items pinned at viewport top (live getter)                                              |
-| `measure`          | Delegate to underlying virtualizer; no-op before first `setItems`                             |
-| `measureBatch`     | Batch measurement delegate                                                                     |
-| `measureEl`        | Attach auto-measuring ResizeObserver                                                           |
-| `redraw`           | Re-emit without rebuilding offsets                                                             |
-| `refresh`          | Rebuild offset table                                                                           |
-| `invalidate`       | Clear measurements and rebuild from estimates                                                  |
-| `scrollToIndex`    | Scroll to an item                                                                              |
-| `scrollToOffset`   | Scroll to a pixel offset                                                                       |
-| `destroy`          | Teardown; idempotent                                                                           |
-| `[Symbol.dispose]` | Delegates to `destroy()`                                                                       |
-
----
+| Member             | Description                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `setItems(items)`  | Set the current item array. Spawns virtualizer on first non-empty call; destroys it on `[]` |
+| `count`            | Current item count (live getter)                                                            |
+| `items`            | Currently rendered virtual items (live getter)                                              |
+| `totalSize`        | Total list size in pixels (live getter)                                                     |
+| `scrollOffset`     | Current scroll position (live getter)                                                       |
+| `stickyItems`      | Sticky items pinned at viewport top (live getter)                                           |
+| `measure`          | Delegate to underlying virtualizer; no-op before first `setItems`                           |
+| `measureBatch`     | Batch measurement delegate                                                                  |
+| `measureEl`        | Attach auto-measuring ResizeObserver                                                        |
+| `redraw`           | Re-emit without rebuilding offsets                                                          |
+| `refresh`          | Rebuild offset table                                                                        |
+| `invalidate`       | Clear measurements and rebuild from estimates                                               |
+| `scrollToIndex`    | Scroll to an item                                                                           |
+| `scrollToOffset`   | Scroll to a pixel offset                                                                    |
+| `destroy`          | Teardown; idempotent                                                                        |
+| `[Symbol.dispose]` | Delegates to `destroy()`                                                                    |
 
 ## `createVirtualScroller(container, options)`
 
@@ -333,8 +333,6 @@ list.destroy(); // also removes the generated scroll container
 | `containerClass` | `string` | CSS class applied to the generated scroll element |
 
 `destroy()` removes the generated scroll container from the DOM.
-
----
 
 ## `createGroupedVirtualizer(target, options)`
 
@@ -390,16 +388,16 @@ virt.destroy();
 
 ### `GroupVirtualizerOptions<T>`
 
-| Option               | Type                                                                    | Default                | Description                                     |
-| -------------------- | ----------------------------------------------------------------------- | ---------------------- | ----------------------------------------------- |
-| `sections`           | `Array<GroupSection<T>>`                                                | required               | Initial sections                                |
-| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                             | —                      | Called when the visible window changes          |
-| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                           | `36`                   | Header height estimate                          |
-| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`                   | `36`                   | Item height estimate                            |
-| `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey`      | —                      | Stable key for measurement cache                |
-| `horizontal`         | `boolean`                                                               | `false`                | Virtualize along X axis                         |
-| `measurementCache`   | `MeasurementCache`                                                      | —                      | External measurement cache                      |
-| `overscan`           | `number \| { start?: number; end?: number }`                            | `3`                    | Overscan on each side (number = symmetric)      |
+| Option               | Type                                                               | Default  | Description                                |
+| -------------------- | ------------------------------------------------------------------ | -------- | ------------------------------------------ |
+| `sections`           | `Array<GroupSection<T>>`                                           | required | Initial sections                           |
+| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                        | —        | Called when the visible window changes     |
+| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                      | `36`     | Header height estimate                     |
+| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`              | `36`     | Item height estimate                       |
+| `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey` | —        | Stable key for measurement cache           |
+| `horizontal`         | `boolean`                                                          | `false`  | Virtualize along X axis                    |
+| `measurementCache`   | `MeasurementCache`                                                 | —        | External measurement cache                 |
+| `overscan`           | `number \| { start?: number; end?: number }`                       | `3`      | Overscan on each side (number = symmetric) |
 
 ### `GroupSection<T>`
 
@@ -428,7 +426,7 @@ interface GroupVirtualizerState<T> {
 ```ts
 interface GroupVirtualItem<T> extends VirtualItem {
   data: T;
-  itemIndex: number;    // index within the section
+  itemIndex: number; // index within the section
   sectionIndex: number;
 }
 
@@ -442,23 +440,21 @@ interface GroupVirtualHeader extends VirtualItem {
 
 `GroupVirtualizer<T>` extends `Virtualizer` (minus `prepend` and `update`), so all core methods are available directly.
 
-| Method                           | Description                                                                    |
-| -------------------------------- | ------------------------------------------------------------------------------ |
-| `update(sections)`               | Replace sections; rebuilds flat index, preserves cached measurements           |
-| `scrollToSection(i, options?)`   | Scroll to section header at index `i`. Out-of-range is a no-op                |
-| `scrollToItem(s, i, options?)`   | Scroll to item `i` in section `s`. Out-of-range is a no-op                    |
-| `scrollToIndex(i, options?)`     | Scroll to flat index `i` (from underlying virtualizer)                        |
-| `scrollToTop(options?)`          | Scroll to offset `0`                                                           |
-| `scrollToBottom(options?)`       | Scroll to the end of the list                                                  |
-| `measure(index, size)`           | Record a measurement for a flat index                                          |
-| `invalidate()`                   | Clear all measurements and rebuild                                             |
-| `refresh()`                      | Rebuild offset table without clearing measurements                             |
-| `destroy()`                      | Teardown; idempotent                                                           |
-| `[Symbol.dispose]()`             | Delegates to `destroy()`                                                       |
+| Method                         | Description                                                          |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `update(sections)`             | Replace sections; rebuilds flat index, preserves cached measurements |
+| `scrollToSection(i, options?)` | Scroll to section header at index `i`. Out-of-range is a no-op       |
+| `scrollToItem(s, i, options?)` | Scroll to item `i` in section `s`. Out-of-range is a no-op           |
+| `scrollToIndex(i, options?)`   | Scroll to flat index `i` (from underlying virtualizer)               |
+| `scrollToTop(options?)`        | Scroll to offset `0`                                                 |
+| `scrollToBottom(options?)`     | Scroll to the end of the list                                        |
+| `measure(index, size)`         | Record a measurement for a flat index                                |
+| `invalidate()`                 | Clear all measurements and rebuild                                   |
+| `refresh()`                    | Rebuild offset table without clearing measurements                   |
+| `destroy()`                    | Teardown; idempotent                                                 |
+| `[Symbol.dispose]()`           | Delegates to `destroy()`                                             |
 
 All scroll methods accept an optional `ScrollToIndexOptions` object (`{ align?, behavior?, onComplete? }`).
-
----
 
 ## `createGridVirtualizer(target, options)`
 
@@ -497,22 +493,22 @@ grid.destroy();
 
 ### `GridVirtualizerOptions`
 
-| Option                | Type                                            | Default                | Description                              |
-| --------------------- | ----------------------------------------------- | ---------------------- | ---------------------------------------- |
-| `rowCount`            | `number`                                        | required               | Total row count                          |
-| `colCount`            | `number`                                        | required               | Total column count                       |
-| `estimateRowSize`     | `number \| (row) => number`                     | `36`                   | Row height estimate                      |
-| `estimateColSize`     | `number \| (col) => number`                     | `36`                   | Column width estimate                    |
-| `rowGap`              | `number`                                        | `0`                    | Gap between rows                         |
-| `colGap`              | `number`                                        | `0`                    | Gap between columns                      |
-| `overscanY`           | `{ start?: number; end?: number }`              | `{ start: 3, end: 3 }` | Row overscan                             |
-| `overscanX`           | `{ start?: number; end?: number }`              | `{ start: 3, end: 3 }` | Column overscan                          |
-| `initialScrollTop`    | `number`                                        | —                      | Initial vertical scroll position         |
-| `initialScrollLeft`   | `number`                                        | —                      | Initial horizontal scroll position       |
-| `onChange`            | `(state: GridVirtualizerState) => void`         | —                      | Called when the visible window changes   |
-| `onRangeChange`       | `(range: GridRangeChangeEvent) => void`         | —                      | Zero-allocation range callback           |
-| `rowMeasurementCache` | `Map<number, number>`                           | —                      | External row measurement cache           |
-| `colMeasurementCache` | `Map<number, number>`                           | —                      | External column measurement cache        |
+| Option                | Type                                    | Default                | Description                            |
+| --------------------- | --------------------------------------- | ---------------------- | -------------------------------------- |
+| `rowCount`            | `number`                                | required               | Total row count                        |
+| `colCount`            | `number`                                | required               | Total column count                     |
+| `estimateRowSize`     | `number \| (row) => number`             | `36`                   | Row height estimate                    |
+| `estimateColSize`     | `number \| (col) => number`             | `36`                   | Column width estimate                  |
+| `rowGap`              | `number`                                | `0`                    | Gap between rows                       |
+| `colGap`              | `number`                                | `0`                    | Gap between columns                    |
+| `overscanY`           | `{ start?: number; end?: number }`      | `{ start: 3, end: 3 }` | Row overscan                           |
+| `overscanX`           | `{ start?: number; end?: number }`      | `{ start: 3, end: 3 }` | Column overscan                        |
+| `initialScrollTop`    | `number`                                | —                      | Initial vertical scroll position       |
+| `initialScrollLeft`   | `number`                                | —                      | Initial horizontal scroll position     |
+| `onChange`            | `(state: GridVirtualizerState) => void` | —                      | Called when the visible window changes |
+| `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | —                      | Zero-allocation range callback         |
+| `rowMeasurementCache` | `Map<number, number>`                   | —                      | External row measurement cache         |
+| `colMeasurementCache` | `Map<number, number>`                   | —                      | External column measurement cache      |
 
 ### `GridVirtualizerState`
 
@@ -529,20 +525,20 @@ interface GridVirtualizerState {
 
 **Read-only properties:** `rows`, `cols`, `scrollTop`, `scrollLeft`, `totalHeight`, `totalWidth`
 
-| Method                      | Description                                                             |
-| --------------------------- | ----------------------------------------------------------------------- |
-| `update(next)`              | Atomically update row/col counts, estimates, gaps, and overscan         |
-| `measureRow(row, size)`     | Record a row height                                                     |
-| `measureColumn(col, size)`  | Record a column width                                                   |
-| `measureBatch(rows, cols)`  | Measure rows and columns in a single coordinated rebuild pass           |
-| `measureRowEl(row, el)`     | Auto-measure row height via ResizeObserver. Returns disconnect fn       |
-| `measureColEl(col, el)`     | Auto-measure column width via ResizeObserver. Returns disconnect fn     |
-| `refresh()`                 | Rebuild offset tables from current measurements                         |
-| `invalidate()`              | Clear all measurements and rebuild from estimates                       |
-| `scrollToCell(row, col, options?)` | Scroll to bring a cell into view                               |
-| `prependRows(n)`            | Add `n` rows at the top; adjusts scroll offset to keep viewport stable  |
-| `destroy()`                 | Teardown; idempotent                                                    |
-| `[Symbol.dispose]()`        | Delegates to `destroy()`                                                |
+| Method                             | Description                                                            |
+| ---------------------------------- | ---------------------------------------------------------------------- |
+| `update(next)`                     | Atomically update row/col counts, estimates, gaps, and overscan        |
+| `measureRow(row, size)`            | Record a row height                                                    |
+| `measureColumn(col, size)`         | Record a column width                                                  |
+| `measureBatch(rows, cols)`         | Measure rows and columns in a single coordinated rebuild pass          |
+| `measureRowEl(row, el)`            | Auto-measure row height via ResizeObserver. Returns disconnect fn      |
+| `measureColEl(col, el)`            | Auto-measure column width via ResizeObserver. Returns disconnect fn    |
+| `refresh()`                        | Rebuild offset tables from current measurements                        |
+| `invalidate()`                     | Clear all measurements and rebuild from estimates                      |
+| `scrollToCell(row, col, options?)` | Scroll to bring a cell into view                                       |
+| `prependRows(n)`                   | Add `n` rows at the top; adjusts scroll offset to keep viewport stable |
+| `destroy()`                        | Teardown; idempotent                                                   |
+| `[Symbol.dispose]()`               | Delegates to `destroy()`                                               |
 
 ### `ScrollToCellOptions`
 
@@ -553,8 +549,6 @@ interface ScrollToCellOptions {
   rowAlign?: 'auto' | 'center' | 'end' | 'start';
 }
 ```
-
----
 
 ## `createReactiveVirtualizer(target, options)`
 
@@ -600,8 +594,6 @@ interface ReactiveVirtualizer extends Virtualizer {
 ```
 
 The `state` signal is updated synchronously whenever the visible window changes. All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current — the implementation uses a `Proxy` rather than a snapshot.
-
----
 
 ## Types
 
@@ -690,7 +682,6 @@ Explicit interface for `update()`. Accepts: `count`, `estimateSize`, `gap`, `get
 ### Constants
 
 ```ts
-const DEFAULT_ESTIMATE_SIZE = 36;  // default estimateSize
-const DEFAULT_OVERSCAN = 3;        // default overscan on each side
+const DEFAULT_ESTIMATE_SIZE = 36; // default estimateSize
+const DEFAULT_OVERSCAN = 3; // default overscan on each side
 ```
-

@@ -40,7 +40,6 @@ export function applySettings(settings: UserSettings) {
 applySettings({ theme: 'dark', language: 'de', notifications: false });
 ```
 
-
 ### Pitfalls
 
 - Throwing inside a `batch()` callback does not roll back mutations made before the throw. All writes applied before the error are committed. Wrap in try/catch and manually revert if atomicity is required.

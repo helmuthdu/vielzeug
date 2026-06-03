@@ -5,7 +5,24 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when, syncAria, defineField, createFormContext]
+exports:
+  [
+    define,
+    html,
+    css,
+    signal,
+    computed,
+    effect,
+    prop,
+    ref,
+    provide,
+    inject,
+    each,
+    when,
+    syncAria,
+    defineField,
+    createFormContext,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -61,7 +78,10 @@ define('my-counter', {
   },
   styles: [
     css`
-      :host { display: inline-grid; gap: 0.5rem; }
+      :host {
+        display: inline-grid;
+        gap: 0.5rem;
+      }
     `,
   ],
   setup(props, { bind }) {
@@ -71,9 +91,7 @@ define('my-counter', {
     bind({ class: { 'is-positive': () => count.value > 0 } });
 
     return html`
-      <button @click=${() => (count.value += props.step.value)}>
-        ${props.label}: ${count}
-      </button>
+      <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>
       <p>Doubled: ${doubled}</p>
     `;
   },
@@ -94,7 +112,10 @@ class MyCounter extends HTMLElement {
   }
   #render() {
     this.shadowRoot!.innerHTML = `<button>${this.#count}</button>`;
-    this.shadowRoot!.querySelector('button')!.onclick = () => { this.#count++; this.#render(); };
+    this.shadowRoot!.querySelector('button')!.onclick = () => {
+      this.#count++;
+      this.#render();
+    };
   }
 }
 customElements.define('my-counter', MyCounter);
@@ -111,14 +132,14 @@ define('my-counter', {
 ```
 
 | Feature                    | Craft                                       | Lit                           | Stencil           |
-| -------------------------- | --------------------------------------------- | ----------------------------- | ----------------- |
+| -------------------------- | ------------------------------------------- | ----------------------------- | ----------------- |
 | Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
-| Signal-first runtime       | ✅                                            | ❌ (separate signals package) | ❌                |
-| Functional component setup | ✅                                            | Partial                       | ❌                |
-| Typed prop helpers         | ✅                                            | Partial                       | ✅                |
-| Host binding helpers       | ✅                                            | Partial                       | Partial           |
-| Form-associated helpers    | ✅                                            | Manual                        | Partial           |
-| Zero dependencies          | ✅                                            | ✅                            | ❌                |
+| Signal-first runtime       | ✅                                          | ❌ (separate signals package) | ❌                |
+| Functional component setup | ✅                                          | Partial                       | ❌                |
+| Typed prop helpers         | ✅                                          | Partial                       | ✅                |
+| Host binding helpers       | ✅                                          | Partial                       | Partial           |
+| Form-associated helpers    | ✅                                          | Manual                        | Partial           |
+| Zero dependencies          | ✅                                          | ✅                            | ❌                |
 
 **Use Craft when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
 
@@ -140,12 +161,12 @@ define('my-counter', {
 
 ## Package Entry Points
 
-| Import                        | Purpose                                                    |
-| ----------------------------- | ---------------------------------------------------------- |
-| `@vielzeug/craft`           | Core component API, directives, utilities, ripple re-exports |
-| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics (dev only) |
+| Import                      | Purpose                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `@vielzeug/craft`           | Core component API, directives, utilities, ripple re-exports                  |
+| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
 | `@vielzeug/craft/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
-| `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers |
+| `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
 
 ## Compatibility
 

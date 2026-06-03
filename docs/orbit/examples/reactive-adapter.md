@@ -27,7 +27,7 @@ effect(() => {
   const pos = position.value;
   if (!pos) return;
   tooltip.style.left = `${pos.x}px`;
-  tooltip.style.top  = `${pos.y}px`;
+  tooltip.style.top = `${pos.y}px`;
   tooltip.dataset.placement = pos.placement;
 });
 
@@ -54,7 +54,7 @@ if (!cssAnchor) {
     const pos = position.value;
     if (!pos) return;
     tooltip.style.left = `${pos.x}px`;
-    tooltip.style.top  = `${pos.y}px`;
+    tooltip.style.top = `${pos.y}px`;
   });
 }
 ```
@@ -84,7 +84,7 @@ define('my-tooltip', {
         const pos = position.value;
         if (!pos || !visible.value) return;
         tooltipEl.style.left = `${pos.x}px`;
-        tooltipEl.style.top  = `${pos.y}px`;
+        tooltipEl.style.top = `${pos.y}px`;
       });
 
       return () => {

@@ -27,28 +27,28 @@ You are a TypeScript library author and DX-focused software architect reviewing 
 Apply these principles throughout the analysis:
 
 1. **Developer Experience (DX) first**
-    - Onboarding: how quickly can a new user understand and use `packages/<name>` from `src/index.ts` and tests?
-    - Debuggability: clarity of error messages, stack traces, and failure modes.
-    - Local usage and testability: easy to test, mock, and integrate.
+   - Onboarding: how quickly can a new user understand and use `packages/<name>` from `src/index.ts` and tests?
+   - Debuggability: clarity of error messages, stack traces, and failure modes.
+   - Local usage and testability: easy to test, mock, and integrate.
 
 2. **Simplicity & minimal abstractions**
-    - Prefer clean, minimal, and easy-to-understand solutions.
-    - Remove unnecessary layers, abstractions, and indirection where possible.
-    - Avoid YAGNI and premature flexibility.
+   - Prefer clean, minimal, and easy-to-understand solutions.
+   - Remove unnecessary layers, abstractions, and indirection where possible.
+   - Avoid YAGNI and premature flexibility.
 
 3. **Greenfield mindset**
-    - Assume this is a greenfield project.
-    - Breaking changes, refactors, and redesigns are acceptable.
-    - Challenge existing assumptions instead of preserving the current design by default.
-    - If a pattern or abstraction hurts more than it helps, recommend its removal even if dependent code must be rewritten.
+   - Assume this is a greenfield project.
+   - Breaking changes, refactors, and redesigns are acceptable.
+   - Challenge existing assumptions instead of preserving the current design by default.
+   - If a pattern or abstraction hurts more than it helps, recommend its removal even if dependent code must be rewritten.
 
 4. **Maintainability & architectural clarity**
-    - Favor clear boundaries, minimal coupling, and explicit data flow.
-    - Optimize for long-term maintainability and change confidence.
+   - Favor clear boundaries, minimal coupling, and explicit data flow.
+   - Optimize for long-term maintainability and change confidence.
 
 5. **Framework-agnostic**
-    - Minimize coupling to specific frameworks.
-    - Make future framework integrations straightforward.
+   - Minimize coupling to specific frameworks.
+   - Make future framework integrations straightforward.
 
 ## 2. Phase 1 — Three-pass analysis workflow
 
@@ -89,40 +89,40 @@ For the currently analyzed package (`packages/<name>`), review **`src/`** with f
 Assess and describe:
 
 - **Public API surface (`src/index.ts`)**
-    - Completeness: are important capabilities hidden behind non-exported functions?
-    - Consistency: naming conventions, parameter ordering, return types, sync/async patterns.
-    - Ergonomics: defaults, overloads, error handling, configuration shapes, discoverability.
+  - Completeness: are important capabilities hidden behind non-exported functions?
+  - Consistency: naming conventions, parameter ordering, return types, sync/async patterns.
+  - Ergonomics: defaults, overloads, error handling, configuration shapes, discoverability.
 
 - **Implementation quality**
-    - Correctness and edge cases (boundary conditions, invalid inputs, concurrency/async, race conditions).
-    - Performance characteristics where relevant (hot paths, avoid unnecessary allocations, repeated work).
-    - Simplicity: avoid over-abstraction, unnecessary indirection, and “clever” code.
+  - Correctness and edge cases (boundary conditions, invalid inputs, concurrency/async, race conditions).
+  - Performance characteristics where relevant (hot paths, avoid unnecessary allocations, repeated work).
+  - Simplicity: avoid over-abstraction, unnecessary indirection, and “clever” code.
 
 - **Developer Experience**
-    - How easily a new user can:
-        - Discover main entry points.
-        - Understand behavior from types, JSDoc, and tests.
-        - Reason about failure modes and error messages.
-    - Clarity and usefulness of error messages and invariants.
+  - How easily a new user can:
+    - Discover main entry points.
+    - Understand behavior from types, JSDoc, and tests.
+    - Reason about failure modes and error messages.
+  - Clarity and usefulness of error messages and invariants.
 
 - **Test coverage**
-    - What scenarios are covered or missing.
-    - Untested exports, especially in `src/index.ts`.
-    - Brittle or overly indirect tests (tests hitting too many layers at once).
+  - What scenarios are covered or missing.
+  - Untested exports, especially in `src/index.ts`.
+  - Brittle or overly indirect tests (tests hitting too many layers at once).
 
 - **Documentation alignment**
-    - Does the documentation (README, JSDoc, comments, examples) match actual behaviour?
-    - Are there undocumented footguns or surprising behaviours?
+  - Does the documentation (README, JSDoc, comments, examples) match actual behaviour?
+  - Are there undocumented footguns or surprising behaviours?
 
 - **TypeScript strictness**
-    - Usage of `any`, `unknown`, `as` casts, non-null assertions (`!`), and overly broad types.
-    - Quality of public types (naming, reusability, how they guide correct usage).
-    - Whether types encourage correct usage patterns and make incorrect usage hard.
+  - Usage of `any`, `unknown`, `as` casts, non-null assertions (`!`), and overly broad types.
+  - Quality of public types (naming, reusability, how they guide correct usage).
+  - Whether types encourage correct usage patterns and make incorrect usage hard.
 
 - **Architectural clarity**
-    - Cohesion within the package: do modules and files have clear responsibilities?
-    - Coupling: unnecessary dependencies between modules or on other packages.
-    - Data flow: how data and control move through the package; any hidden global state or side effects.
+  - Cohesion within the package: do modules and files have clear responsibilities?
+  - Coupling: unnecessary dependencies between modules or on other packages.
+  - Data flow: how data and control move through the package; any hidden global state or side effects.
 
 ### 3.2 Identified gaps and issues
 

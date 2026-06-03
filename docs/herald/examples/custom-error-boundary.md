@@ -53,8 +53,12 @@ bus.emit('order:placed', { orderId: 'abc-1', amount: 1500 });
 // errors[0] === { err: Error('Amount exceeds limit'), event: 'order:placed', payload: { orderId: 'abc-1', amount: 1500 } }
 console.log('Collected errors:', errors.length); // 1
 
-function processPayment(_amount: number) { /* ... */ }
-function sendConfirmationEmail(_id: string) { /* ... */ }
+function processPayment(_amount: number) {
+  /* ... */
+}
+function sendConfirmationEmail(_id: string) {
+  /* ... */
+}
 ```
 
 ### Pitfalls

@@ -5,7 +5,7 @@ Returns `true` if the value is a plain object — one with `Object.prototype` or
 ## Signature
 
 ```ts
-function isPlainObject(value: unknown): value is Record<string, unknown>
+function isPlainObject(value: unknown): value is Record<string, unknown>;
 ```
 
 ## Examples
@@ -15,15 +15,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown>
 ```ts
 import { isPlainObject } from '@vielzeug/arsenal';
 
-isPlainObject({});                   // true
-isPlainObject({ a: 1 });             // true
-isPlainObject(Object.create(null));  // true
+isPlainObject({}); // true
+isPlainObject({ a: 1 }); // true
+isPlainObject(Object.create(null)); // true
 
-isPlainObject([]);           // false
-isPlainObject(new Date());   // false
-isPlainObject(new Map());    // false
-isPlainObject(null);         // false
-isPlainObject('string');     // false
+isPlainObject([]); // false
+isPlainObject(new Date()); // false
+isPlainObject(new Map()); // false
+isPlainObject(null); // false
+isPlainObject('string'); // false
 ```
 
 ### Distinguish from class instances
@@ -33,7 +33,7 @@ import { isPlainObject } from '@vielzeug/arsenal';
 
 class Foo {}
 isPlainObject(new Foo()); // false — has Foo.prototype
-isPlainObject({});        // true — has Object.prototype
+isPlainObject({}); // true — has Object.prototype
 ```
 
 ### Runtime data validation

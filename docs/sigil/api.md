@@ -7,17 +7,17 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 
 ## API At a Glance
 
-| Symbol                     | Purpose                                                              | Execution mode | Common gotcha                                                              |
-| -------------------------- | -------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `Custom element subpaths`  | Register only the components you use                                 | Sync           | Import component styles before rendering UI                                |
-| `@vielzeug/sigil/styles` | Load shared design tokens and base styles                            | Sync           | Missing base styles causes inconsistent spacing and colors                 |
-| `Component exports`        | Consume component types and shared symbols                           | Sync           | Prefer documented subpaths over deep internal imports                      |
-| `componentSignal()`        | Bridge `onCleanup` to an `AbortSignal` for headless primitive wiring | Sync           | Pass directly as `signal:` option; never store the result across re-renders |
+| Symbol                    | Purpose                                                              | Execution mode | Common gotcha                                                               |
+| ------------------------- | -------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------- |
+| `Custom element subpaths` | Register only the components you use                                 | Sync           | Import component styles before rendering UI                                 |
+| `@vielzeug/sigil/styles`  | Load shared design tokens and base styles                            | Sync           | Missing base styles causes inconsistent spacing and colors                  |
+| `Component exports`       | Consume component types and shared symbols                           | Sync           | Prefer documented subpaths over deep internal imports                       |
+| `componentSignal()`       | Bridge `onCleanup` to an `AbortSignal` for headless primitive wiring | Sync           | Pass directly as `signal:` option; never store the result across re-renders |
 
 ## Package Entry Points
 
-| Import                                   | Purpose                                                                |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
+| Import                                 | Purpose                                                                |
+| -------------------------------------- | ---------------------------------------------------------------------- |
 | `@vielzeug/sigil`                      | Registers all published components and re-exports shared symbols/types |
 | `@vielzeug/sigil/types`                | Shared TypeScript types                                                |
 | `@vielzeug/sigil/styles`               | Global tokens and shared component styles                              |

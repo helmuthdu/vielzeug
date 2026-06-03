@@ -29,11 +29,11 @@ await db.putAll('users', [
 ]);
 
 // read
-const alice = await db.get('users', 1);         // User | undefined
-const all   = await db.getAll('users');          // User[]
-const count = await db.count('users');           // 3
-const live  = await db.has('users', 1);          // true
-const empty = await db.isEmpty('users');          // false — table has records
+const alice = await db.get('users', 1); // User | undefined
+const all = await db.getAll('users'); // User[]
+const count = await db.count('users'); // 3
+const live = await db.has('users', 1); // true
+const empty = await db.isEmpty('users'); // false — table has records
 
 // bulk read — preserves key order; missing keys yield undefined
 const [a, missing, c] = await db.getMany('users', [1, 99, 3]);
@@ -49,11 +49,11 @@ await db.upsert('users', 99, (existing) => ({
 }));
 
 // delete
-await db.delete('users', 1);                    // true if it existed
-await db.deleteMany('users', [2, 3, 99]);        // count of deleted records
-await db.clear('users');                         // removes all records
+await db.delete('users', 1); // true if it existed
+await db.deleteMany('users', [2, 3, 99]); // count of deleted records
+await db.clear('users'); // removes all records
 
-void alice, all, count, live, empty, missing, a, c, updated;
+(void alice, all, count, live, empty, missing, a, c, updated);
 ```
 
 ### Pitfalls

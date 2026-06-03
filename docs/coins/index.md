@@ -5,7 +5,22 @@ package: coins
 category: utilities
 keywords: [money, currency, exchange rate, formatting, bigint, locale, arithmetic, allocation]
 related: [arsenal, tempo]
-exports: [money, zero, toCurrencyCode, add, subtract, multiply, divide, allocate, splitEvenly, clamp, format, formatParts, exchange]
+exports:
+  [
+    money,
+    zero,
+    toCurrencyCode,
+    add,
+    subtract,
+    multiply,
+    divide,
+    allocate,
+    splitEvenly,
+    clamp,
+    format,
+    formatParts,
+    exchange,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -52,9 +67,7 @@ yarn add @vielzeug/coins
 ## Quick Start
 
 ```ts
-import {
-  add, allocate, exchange, format, money, multiply, toCurrencyCode,
-} from '@vielzeug/coins';
+import { add, allocate, exchange, format, money, multiply, toCurrencyCode } from '@vielzeug/coins';
 import type { CurrencyCode, ExchangeRate, Money } from '@vielzeug/coins';
 
 // Validate currency codes upfront (cached after first use)
@@ -62,25 +75,25 @@ const usd: CurrencyCode = toCurrencyCode('USD');
 const eur: CurrencyCode = toCurrencyCode('EUR');
 
 // Create money from decimal strings (lossless) or bigint minor units
-const price: Money = money('19.99', 'USD');   // { amount: 1999n, currency: 'USD' }
-const tax:   Money = money('1.60',  'USD');
-const total: Money = add(price, tax);         // { amount: 3559n, currency: 'USD' }
+const price: Money = money('19.99', 'USD'); // { amount: 1999n, currency: 'USD' }
+const tax: Money = money('1.60', 'USD');
+const total: Money = add(price, tax); // { amount: 3559n, currency: 'USD' }
 
 // Arithmetic
-multiply(total, '1.1');               // $39.15 (half-away-from-zero, default)
-multiply(total, '1.1', 'floor');      // explicit rounding mode
+multiply(total, '1.1'); // $39.15 (half-away-from-zero, default)
+multiply(total, '1.1', 'floor'); // explicit rounding mode
 
 // Lossless allocation — no minor unit is ever lost or gained
-allocate(money('10.00', 'USD'), [1, 1, 1]);  // [$3.34, $3.33, $3.33]
+allocate(money('10.00', 'USD'), [1, 1, 1]); // [$3.34, $3.33, $3.33]
 
 // Locale-aware formatting
-format(total)                          // '$35.59'
-format(total, { locale: 'de-DE' })     // '35,59 $'
-format(total, { style: 'code' })       // 'USD 35.59'
+format(total); // '$35.59'
+format(total, { locale: 'de-DE' }); // '35,59 $'
+format(total, { style: 'code' }); // 'USD 35.59'
 
 // Currency exchange — rate must be a decimal string (not a number)
 const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
-exchange(total, rate);                 // { amount: 3274n, currency: 'EUR' }
+exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 ```
 
 ## Why Coins?
@@ -89,26 +102,26 @@ Monetary arithmetic with `number` accumulates IEEE-754 rounding errors. These er
 
 ```ts
 // Before — float arithmetic
-const price = 10.1 + 10.2;  // 20.299999999999997, not 20.3
+const price = 10.1 + 10.2; // 20.299999999999997, not 20.3
 const [a, b, c] = [price / 3, price / 3, price / 3];
-a + b + c;  // 20.299999999999997 — penny lost
+a + b + c; // 20.299999999999997 — penny lost
 
 // After — bigint minor units
 import { add, allocate, money, toDecimal } from '@vielzeug/coins';
 const price = add(money('10.10', 'USD'), money('10.20', 'USD'));
 const [a, b, c] = allocate(price, [1, 1, 1]);
-a.amount + b.amount + c.amount === price.amount;  // true — always
+a.amount + b.amount + c.amount === price.amount; // true — always
 ```
 
-| Feature | Coins | Dinero.js v2 | currency.js |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="coins" type="size" /> | ~14 kB | ~2.5 kB |
-| Zero dependencies | ✅ | ✅ | ✅ |
-| `bigint` minor units | ✅ | ❌ (number) | ❌ (number) |
-| TypeScript-native | ✅ | ✅ | ⚠️ third-party types |
-| Validated currency codes | ✅ | ❌ | ❌ |
-| Locale-aware formatting | ✅ | ✅ | ⚠️ manual |
-| Largest Remainder allocation | ✅ | ✅ | ❌ |
+| Feature                      | Coins                                       | Dinero.js v2 | currency.js          |
+| ---------------------------- | ------------------------------------------- | ------------ | -------------------- |
+| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB       | ~2.5 kB              |
+| Zero dependencies            | ✅                                          | ✅           | ✅                   |
+| `bigint` minor units         | ✅                                          | ❌ (number)  | ❌ (number)          |
+| TypeScript-native            | ✅                                          | ✅           | ⚠️ third-party types |
+| Validated currency codes     | ✅                                          | ❌           | ❌                   |
+| Locale-aware formatting      | ✅                                          | ✅           | ⚠️ manual            |
+| Largest Remainder allocation | ✅                                          | ✅           | ❌                   |
 
 **Use Coins when** you need exact bigint arithmetic with validated currencies, typed allocation, and `Intl`-powered formatting in a single zero-dependency package.
 
@@ -129,13 +142,13 @@ a.amount + b.amount + c.amount === price.amount;  // true — always
 
 ## Compatibility
 
-| Environment | Support |
-| --- | --- |
-| Browser | ✅ |
-| Node.js | ✅ |
-| SSR | ✅ |
-| Deno | ✅ |
-| React Native | ✅ |
+| Environment  | Support |
+| ------------ | ------- |
+| Browser      | ✅      |
+| Node.js      | ✅      |
+| SSR          | ✅      |
+| Deno         | ✅      |
+| React Native | ✅      |
 
 ## Documentation
 

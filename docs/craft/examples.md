@@ -3,8 +3,6 @@ title: Craft — Examples
 description: Practical examples and recipes for craft.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Counter Component](./examples/counter-component.md)

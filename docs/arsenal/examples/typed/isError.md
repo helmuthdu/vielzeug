@@ -5,7 +5,7 @@ Returns `true` if the value is an instance of `Error`.
 ## Signature
 
 ```ts
-function isError(value: unknown): value is Error
+function isError(value: unknown): value is Error;
 ```
 
 ## Examples
@@ -40,8 +40,8 @@ const errors = results.filter(isError);
 import { isError } from '@vielzeug/arsenal';
 
 isError(new Error('oops')); // true
-isError(new TypeError());   // true
-isError('oops');            // false
+isError(new TypeError()); // true
+isError('oops'); // false
 isError({ message: 'x' }); // false
 ```
 

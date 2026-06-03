@@ -49,7 +49,7 @@ const machine = defineMachine<State, Context, Event>({
 const m = interpret(machine, { middleware: [logger, authGuard] });
 
 m.send({ type: 'ADMIN_ACTION' }); // Blocked by authGuard
-m.send({ type: 'GO' });           // Allowed — transitions to 'active'
+m.send({ type: 'GO' }); // Allowed — transitions to 'active'
 
 m[Symbol.dispose]();
 ```

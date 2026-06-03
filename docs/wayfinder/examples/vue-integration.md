@@ -78,11 +78,7 @@ const active = computed(() => {
 </script>
 
 <template>
-  <a
-    :aria-current="active ? 'page' : undefined"
-    :href="href"
-    @click.prevent="() => navigate({ name: props.name })"
-  >
+  <a :aria-current="active ? 'page' : undefined" :href="href" @click.prevent="() => navigate({ name: props.name })">
     <slot />
   </a>
 </template>

@@ -34,8 +34,6 @@ A customizable boolean form control with indeterminate state support, plus a gro
 <<< @/../packages/sigil/src/inputs/checkbox-group/checkbox-group.ts
 :::
 
----
-
 ## Checkbox
 
 ### Basic Usage
@@ -129,8 +127,6 @@ checkbox.addEventListener('change', (e) => {
   console.log('value:', e.detail.value);
 });
 ```
-
----
 
 ## Checkbox Group
 
@@ -317,8 +313,6 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
 </ComponentPreview>
 
----
-
 ## API Reference
 
 ### `bit-checkbox` Attributes
@@ -395,8 +389,6 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 | Event    | Detail                 | Description                                             |
 | -------- | ---------------------- | ------------------------------------------------------- |
 | `change` | `{ values: string[] }` | Full array of currently checked values after any toggle |
-
----
 
 ## Accessibility
 

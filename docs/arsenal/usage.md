@@ -99,7 +99,20 @@ console.log(withDefaults, changes, port, clean, parsed, publicUser, internalUser
 ### Functions
 
 ```ts
-import { assert, compose, debounce, memo, once, partial, pipe, runAll, throttle, allOf, noneOf, tap } from '@vielzeug/arsenal';
+import {
+  assert,
+  compose,
+  debounce,
+  memo,
+  once,
+  partial,
+  pipe,
+  runAll,
+  throttle,
+  allOf,
+  noneOf,
+  tap,
+} from '@vielzeug/arsenal';
 
 const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
@@ -242,7 +255,12 @@ key1 === key2; // true
 
 // Handles Dates, Sets, Maps, bigints, null, undefined
 stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
-stableStringify(new Map([['b', 2], ['a', 1]])); // '[Map:"a"=>1,"b"=>2]'
+stableStringify(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:"a"=>1,"b"=>2]'
 
 // Class instances: String(instance) by default; throw with strict: true
 stableStringify(new MyClass(), { strict: true }); // TypeError
@@ -387,5 +405,3 @@ const price = currency({ amount: 123456n, currency: 'USD' }); // $1,234.56
 - `isMatch` supports plain objects and arrays only — do not pass `Map` or `Set` as the source argument.
 - Use `isPlainObject` over the removed `isObject` for plain-object checks.
 - Reuse debounced/throttled functions instead of recreating them per render.
-
-

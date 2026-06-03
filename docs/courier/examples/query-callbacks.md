@@ -41,7 +41,6 @@ await retryingQc.fetch({
 });
 ```
 
-
 ### Pitfalls
 
 - The subscription callback fires on every successful response, including background revalidations. Avoid one-time side effects (analytics events, success toasts) inside it without a `hasNotified` guard.

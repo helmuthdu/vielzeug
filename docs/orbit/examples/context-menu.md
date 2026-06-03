@@ -23,8 +23,7 @@ document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
 
   const virtualRef = {
-    getBoundingClientRect: () =>
-      DOMRect.fromRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 }),
+    getBoundingClientRect: () => DOMRect.fromRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 }),
   };
 
   menu.style.display = 'block';
@@ -35,11 +34,15 @@ document.addEventListener('contextmenu', (e) => {
   menu.style.top = `${y}px`;
 });
 
-document.addEventListener('pointerdown', (e) => {
-  if (!menu.contains(e.target as Node)) {
-    menu.style.display = 'none';
-  }
-}, { capture: true });
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (!menu.contains(e.target as Node)) {
+      menu.style.display = 'none';
+    }
+  },
+  { capture: true },
+);
 ```
 
 ---

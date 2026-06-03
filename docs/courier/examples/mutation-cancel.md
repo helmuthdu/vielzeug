@@ -44,7 +44,6 @@ uploadFile.cancel(); // internal cancellation
 ac.abort();
 ```
 
-
 ### Pitfalls
 
 - Aborting a mutation does not roll back any optimistic state you already applied. Restore the previous value in the abort handler explicitly.

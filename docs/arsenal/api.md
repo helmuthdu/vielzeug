@@ -15,34 +15,34 @@ description: Complete API reference for the current Arsenal surface.
 
 <!-- markdownlint-disable MD060 -->
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `chunk(input, size?)` | Split array or string into pages | Sync | Returns `string[]` for string input, `T[][]` for arrays |
-| `filterMap(array, fn)` | Map + filter in one pass, skipping `undefined` | Sync | Return `undefined` to drop an item; `null` is kept |
-| `groupBy(array, selector)` | Group items into a record by key | Sync | Key must be a `PropertyKey` |
-| `search(array, query, options?)` | Fuzzy search with optional scored results | Sync | `mode: 'scored'` returns `ScoredResult<T>[]` sorted by relevance |
-| `sort(array, selectors)` | Multi-key sort without mutation | Sync | Pass an object `{ key: 'asc' }` or a comparator |
-| `uniq(array, selector?)` | Deduplicate by value or key | Sync | Uses deep equality without a selector |
-| `parallel(array, fn, options?)` | Bounded async fan-out | Async | `limit` defaults to unbounded |
-| `queue(options?)` | Serialise async jobs with concurrency cap | Async | `.onIdle()` resolves when queue drains |
-| `attempt(fn)` | Run an async function and return `AttemptResult` — never throws | Async | Returns `{ ok: true, value }` or `{ ok: false, error }` |
-| `retry(fn, options?)` | Retry a throwing async function with timeout and signal | Async | Rethrows on exhaustion; `shouldRetry` receives `(error, failureIndex)` — not called on the final attempt |
-| `allOf(...predicates)` | AND combinator — all must pass | Sync | Zero predicates → vacuous truth (always `true`) |
-| `anyOf(...predicates)` | OR combinator — at least one must pass | Sync | Zero predicates → vacuous falsity (always `false`) |
-| `noneOf(...predicates)` | NOR combinator — none must pass | Sync | Single predicate is equivalent to logical NOT |
-| `debounce(fn, delay?)` | Delay execution until input settles | Sync | Returns a new function; reuse it across renders |
-| `memo(fn, options?)` | Memoize with optional TTL and LRU size cap | Sync | Pass a `key` function when arguments are objects |
-| `partial(fn, ...args)` | Bind leading arguments | Sync | Type-safe — remaining params are inferred |
-| `assert(condition, message?, options?)` | Throw if condition is falsy; narrows type via `asserts condition` | Sync | Accepts `{ type: ErrorConstructor }` for custom error class |
-| `diff(before?, after?)` | Structural diff between two objects | Sync | Returns `DELETED` symbol for removed keys |
-| `parseJSON(json, options?)` | Safe JSON parse with fallback | Sync | Accepts `string \| null \| undefined`; returns `undefined` on failure |
-| `stash(options)` | TTL-aware key-value cache with stampede prevention | Sync | Use `store.has()` semantics — correctly handles `undefined` values |
-| `stableStringify(value, options?)` | Deterministic JSON-like string for any value | Sync | Pass `{ strict: true }` to throw on class instances instead of falling back to `String()` |
-| `getPath(item, path, default?, options?)` | Nested dot-notation access | Sync | **Dot notation only** — `'a.1.b'` not `'a[1].b'`; bracket notation throws `TypeError` |
-| `deepMerge(...items)` | Recursive object merge | Sync | Arrays are replaced by default; use `deepMergeWith` for concat strategy |
-| `isMatch(object, source)` | Partial deep structural comparison | Sync | `Map` and `Set` sources are never matched by key iteration — use `isEqual` for those |
-| `isEqual(a, b, options?)` | Deep or shallow equality | Sync | `depth: 'shallow'` compares one level by reference |
-| `backoff(attempt, maxMs?)` | Compute backoff delay for retry loops | Sync | Returns `min(1000 × 2ⁿ, maxMs)` — multiply by `Math.random()` for full-jitter |
+| Symbol                                    | Purpose                                                           | Execution | Common gotcha                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
+| `chunk(input, size?)`                     | Split array or string into pages                                  | Sync      | Returns `string[]` for string input, `T[][]` for arrays                                                  |
+| `filterMap(array, fn)`                    | Map + filter in one pass, skipping `undefined`                    | Sync      | Return `undefined` to drop an item; `null` is kept                                                       |
+| `groupBy(array, selector)`                | Group items into a record by key                                  | Sync      | Key must be a `PropertyKey`                                                                              |
+| `search(array, query, options?)`          | Fuzzy search with optional scored results                         | Sync      | `mode: 'scored'` returns `ScoredResult<T>[]` sorted by relevance                                         |
+| `sort(array, selectors)`                  | Multi-key sort without mutation                                   | Sync      | Pass an object `{ key: 'asc' }` or a comparator                                                          |
+| `uniq(array, selector?)`                  | Deduplicate by value or key                                       | Sync      | Uses deep equality without a selector                                                                    |
+| `parallel(array, fn, options?)`           | Bounded async fan-out                                             | Async     | `limit` defaults to unbounded                                                                            |
+| `queue(options?)`                         | Serialise async jobs with concurrency cap                         | Async     | `.onIdle()` resolves when queue drains                                                                   |
+| `attempt(fn)`                             | Run an async function and return `AttemptResult` — never throws   | Async     | Returns `{ ok: true, value }` or `{ ok: false, error }`                                                  |
+| `retry(fn, options?)`                     | Retry a throwing async function with timeout and signal           | Async     | Rethrows on exhaustion; `shouldRetry` receives `(error, failureIndex)` — not called on the final attempt |
+| `allOf(...predicates)`                    | AND combinator — all must pass                                    | Sync      | Zero predicates → vacuous truth (always `true`)                                                          |
+| `anyOf(...predicates)`                    | OR combinator — at least one must pass                            | Sync      | Zero predicates → vacuous falsity (always `false`)                                                       |
+| `noneOf(...predicates)`                   | NOR combinator — none must pass                                   | Sync      | Single predicate is equivalent to logical NOT                                                            |
+| `debounce(fn, delay?)`                    | Delay execution until input settles                               | Sync      | Returns a new function; reuse it across renders                                                          |
+| `memo(fn, options?)`                      | Memoize with optional TTL and LRU size cap                        | Sync      | Pass a `key` function when arguments are objects                                                         |
+| `partial(fn, ...args)`                    | Bind leading arguments                                            | Sync      | Type-safe — remaining params are inferred                                                                |
+| `assert(condition, message?, options?)`   | Throw if condition is falsy; narrows type via `asserts condition` | Sync      | Accepts `{ type: ErrorConstructor }` for custom error class                                              |
+| `diff(before?, after?)`                   | Structural diff between two objects                               | Sync      | Returns `DELETED` symbol for removed keys                                                                |
+| `parseJSON(json, options?)`               | Safe JSON parse with fallback                                     | Sync      | Accepts `string \| null \| undefined`; returns `undefined` on failure                                    |
+| `stash(options)`                          | TTL-aware key-value cache with stampede prevention                | Sync      | Use `store.has()` semantics — correctly handles `undefined` values                                       |
+| `stableStringify(value, options?)`        | Deterministic JSON-like string for any value                      | Sync      | Pass `{ strict: true }` to throw on class instances instead of falling back to `String()`                |
+| `getPath(item, path, default?, options?)` | Nested dot-notation access                                        | Sync      | **Dot notation only** — `'a.1.b'` not `'a[1].b'`; bracket notation throws `TypeError`                    |
+| `deepMerge(...items)`                     | Recursive object merge                                            | Sync      | Arrays are replaced by default; use `deepMergeWith` for concat strategy                                  |
+| `isMatch(object, source)`                 | Partial deep structural comparison                                | Sync      | `Map` and `Set` sources are never matched by key iteration — use `isEqual` for those                     |
+| `isEqual(a, b, options?)`                 | Deep or shallow equality                                          | Sync      | `depth: 'shallow'` compares one level by reference                                                       |
+| `backoff(attempt, maxMs?)`                | Compute backoff delay for retry loops                             | Sync      | Returns `min(1000 × 2ⁿ, maxMs)` — multiply by `Math.random()` for full-jitter                            |
 
 <!-- markdownlint-enable MD060 -->
 
@@ -299,11 +299,19 @@ export type Obj = Record<string, unknown>;
 export type Primitive = string | number | boolean;
 export type Unsubscribe = () => void;
 export type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
-export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & { clear(): void; invalidate(...args: Parameters<T>): void; readonly size: number };
+export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & {
+  clear(): void;
+  invalidate(...args: Parameters<T>): void;
+  readonly size: number;
+};
 export type TruncateOptions = { completeWords?: boolean; ellipsis?: string };
 export type DeepMergeOptions = { arrayStrategy?: 'concat' | 'replace' };
 export type ScoredResult<T> = { item: T; score: number };
-export type SearchOptions<T> = { fields?: ReadonlyArray<keyof T & string>; mode?: 'filter' | 'scored'; threshold?: number };
+export type SearchOptions<T> = {
+  fields?: ReadonlyArray<keyof T & string>;
+  mode?: 'filter' | 'scored';
+  threshold?: number;
+};
 export const DELETED: unique symbol;
 ```
 

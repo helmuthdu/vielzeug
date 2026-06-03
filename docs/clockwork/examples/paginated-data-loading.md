@@ -6,6 +6,7 @@ description: Use Sourcerer with Machine to manage async data loading, pagination
 ## Problem
 
 Paginated data interfaces need to coordinate:
+
 - Loading state (idle, loading, success, error)
 - Current page and page size
 - Search filters and sort order
@@ -138,7 +139,7 @@ const recordError = ({ context, event }: any) => {
 const userSource = createSource({
   async query(params) {
     const res = await fetch(
-      `/api/users?page=${params.page}&size=${params.pageSize}&q=${params.search}&sort=${params.sortField}:${params.sortOrder}`
+      `/api/users?page=${params.page}&size=${params.pageSize}&q=${params.search}&sort=${params.sortField}:${params.sortOrder}`,
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -178,13 +179,13 @@ async function fetchData() {
 }
 
 // Reactive state for UI bindings
-export const isLoading = machine.state.pipe(s => s === 'loading');
-export const hasError = machine.state.pipe(s => s === 'error' || s === 'failed');
-export const errorMessage = machine.context.pipe(c => c.error?.message || '');
-export const items = machine.context.pipe(c => c.items);
-export const currentPage = machine.context.pipe(c => c.page);
-export const pageCount = machine.context.pipe(c => Math.ceil(c.total / c.pageSize));
-export const searchQuery = machine.context.pipe(c => c.search);
+export const isLoading = machine.state.pipe((s) => s === 'loading');
+export const hasError = machine.state.pipe((s) => s === 'error' || s === 'failed');
+export const errorMessage = machine.context.pipe((c) => c.error?.message || '');
+export const items = machine.context.pipe((c) => c.items);
+export const currentPage = machine.context.pipe((c) => c.page);
+export const pageCount = machine.context.pipe((c) => Math.ceil(c.total / c.pageSize));
+export const searchQuery = machine.context.pipe((c) => c.search);
 
 // API for UI components
 export function loadData() {

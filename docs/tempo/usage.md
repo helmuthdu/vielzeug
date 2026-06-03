@@ -27,18 +27,28 @@ format(instant, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
 
 All common Temporal constructors have a tempo equivalent — import only from `@vielzeug/tempo`:
 
-| Instead of… | Use… |
-| --- | --- |
-| `Temporal.Now.instant()` | `nowInstant()` |
-| `Temporal.Now.zonedDateTimeISO(tz)` | `now(tz)` |
-| `Temporal.Instant.from(str)` | `parseInstant(str)` |
-| `Temporal.ZonedDateTime.from(str)` | `parseZoned(str)` |
-| `Temporal.PlainDateTime.from(str)` | `parsePlainDateTime(str)` |
-| `Temporal.PlainDate.from(str)` | `parsePlainDate(str)` |
+| Instead of…                                                 | Use…                              |
+| ----------------------------------------------------------- | --------------------------------- |
+| `Temporal.Now.instant()`                                    | `nowInstant()`                    |
+| `Temporal.Now.zonedDateTimeISO(tz)`                         | `now(tz)`                         |
+| `Temporal.Instant.from(str)`                                | `parseInstant(str)`               |
+| `Temporal.ZonedDateTime.from(str)`                          | `parseZoned(str)`                 |
+| `Temporal.PlainDateTime.from(str)`                          | `parsePlainDateTime(str)`         |
+| `Temporal.PlainDate.from(str)`                              | `parsePlainDate(str)`             |
 | `Temporal.ZonedDateTime.from` / `Temporal.Instant.from` / … | `parseDate(str)` (unknown format) |
 
 ```ts
-import { isValid, nowInstant, parseDate, parseInstant, parsePlainDateTime, parsePlainDate, parseZoned, toInstant, toZoned } from '@vielzeug/tempo';
+import {
+  isValid,
+  nowInstant,
+  parseDate,
+  parseInstant,
+  parsePlainDateTime,
+  parsePlainDate,
+  parseZoned,
+  toInstant,
+  toZoned,
+} from '@vielzeug/tempo';
 
 // Current instant
 const t = nowInstant();
@@ -59,9 +69,9 @@ const date = parsePlainDate('2026-03-21');
 
 // Unknown ISO format — picks the most specific type automatically
 parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
-parseDate('2026-03-21T10:00:00Z');                     // Instant
-parseDate('2026-03-21T10:00:00');                      // PlainDateTime
-parseDate('2026-03-21');                               // PlainDate
+parseDate('2026-03-21T10:00:00Z'); // Instant
+parseDate('2026-03-21T10:00:00'); // PlainDateTime
+parseDate('2026-03-21'); // PlainDate
 
 // Type guard — validate before passing to Tempo functions
 if (isValid(externalValue)) {
@@ -88,15 +98,11 @@ console.log(after.toString());
 ```ts
 import { clamp, difference, parseInstant, within } from '@vielzeug/tempo';
 
-const duration = difference(
-  parseInstant('2026-03-21T10:00:00Z'),
-  parseInstant('2026-03-21T12:30:00Z'),
-  {
-    tz: 'UTC',
-    largestUnit: 'hour',
-    smallestUnit: 'minute',
-  },
-);
+const duration = difference(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T12:30:00Z'), {
+  tz: 'UTC',
+  largestUnit: 'hour',
+  smallestUnit: 'minute',
+});
 
 const inWindow = within(
   parseInstant('2026-03-21T11:00:00Z'),
@@ -165,7 +171,16 @@ const weekStart = startOf(parseInstant('2026-03-21T10:15:30Z'), 'week', {
 Use `format()` for UI, `formatInstant()`/`formatZoned()` for machine output, `formatRelative()` for UX copy.
 
 ```ts
-import { format, formatInstant, formatParts, formatRange, formatRangeParts, formatRelative, formatZoned, parseInstant } from '@vielzeug/tempo';
+import {
+  format,
+  formatInstant,
+  formatParts,
+  formatRange,
+  formatRangeParts,
+  formatRelative,
+  formatZoned,
+  parseInstant,
+} from '@vielzeug/tempo';
 
 const instant = parseInstant('2026-03-21T10:15:30Z');
 
@@ -189,12 +204,12 @@ formatRelative(parseInstant('2026-03-21T12:00:00Z'), {
 const parts = formatParts(instant, { pattern: 'date-only', tz: 'UTC' });
 // [{ type: 'month', value: '3' }, { type: 'literal', value: '/' }, ...]
 
-const rangeParts = formatRangeParts(
-  parseInstant('2026-03-21T10:00:00Z'),
-  parseInstant('2026-03-21T12:00:00Z'),
-  { pattern: 'short', locale: 'en-US', tz: 'UTC' },
-);
-const startOnly = rangeParts.filter(p => p.source === 'startRange' || p.source === 'shared');
+const rangeParts = formatRangeParts(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T12:00:00Z'), {
+  pattern: 'short',
+  locale: 'en-US',
+  tz: 'UTC',
+});
+const startOnly = rangeParts.filter((p) => p.source === 'startRange' || p.source === 'shared');
 ```
 
 ## Duration Helpers
@@ -215,10 +230,10 @@ import { classify, expires, humanize, now, parseInstant, shift, timeDiff } from 
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days past
-  expired:     { days: 0 },   // any past date
-  critical:    { days: 3 },   // within 3 days
-  warning:     { days: 14 },  // within 14 days
-  safe:        { years: 100 },
+  expired: { days: 0 }, // any past date
+  critical: { days: 3 }, // within 3 days
+  warning: { days: 14 }, // within 14 days
+  safe: { years: 100 },
 } as const;
 
 // Use shift(now(tz), ...) for day-level offsets
@@ -233,10 +248,7 @@ const { key, diff } = classify(certificateExpiry, THRESHOLDS);
 
 // timeDiff — largest-unit human-readable time difference
 // No tz needed when both are Instants
-timeDiff(
-  parseInstant('2026-01-01T00:00:00Z'),
-  parseInstant('2027-06-01T00:00:00Z'),
-); // { unit: 'year', value: 1 }
+timeDiff(parseInstant('2026-01-01T00:00:00Z'), parseInstant('2027-06-01T00:00:00Z')); // { unit: 'year', value: 1 }
 
 // humanize converts a TimeDiffResult to a readable string
 humanize(timeDiff(expiresAt)); // '3 days', '1 hour', etc.
@@ -253,7 +265,7 @@ import { dateRange, recurrence } from '@vielzeug/tempo';
 
 // dateRange returns a Generator — use for...of or spread to collect
 const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
-const end   = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
+const end = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
 
 // ZonedDateTime inputs — tz inferred, no options needed
 for (const day of dateRange(start, end, { days: 1 })) {
@@ -264,11 +276,13 @@ for (const day of dateRange(start, end, { days: 1 })) {
 const days = [...dateRange(start, end, { days: 1 })];
 
 // Every Monday in a date range
-const mondays = [...dateRange(
-  Temporal.ZonedDateTime.from('2026-03-02T00:00:00[UTC]'),
-  Temporal.ZonedDateTime.from('2026-03-30T00:00:00[UTC]'),
-  { weeks: 1 },
-)];
+const mondays = [
+  ...dateRange(
+    Temporal.ZonedDateTime.from('2026-03-02T00:00:00[UTC]'),
+    Temporal.ZonedDateTime.from('2026-03-30T00:00:00[UTC]'),
+    { weeks: 1 },
+  ),
+];
 
 // recurrence — repeating dates with count or until
 const meetingStart = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
@@ -297,11 +311,7 @@ function DeadlineLabel({ iso }: { iso: string }) {
   const tomorrow = shift(now('UTC'), { days: 1 });
   const isUrgent = deadline.epochMilliseconds < tomorrow.toInstant().epochMilliseconds;
 
-  return (
-    <span className={isUrgent ? 'urgent' : ''}>
-      {format(deadline, { locale: navigator.language })}
-    </span>
-  );
+  return <span className={isUrgent ? 'urgent' : ''}>{format(deadline, { locale: navigator.language })}</span>;
 }
 ```
 

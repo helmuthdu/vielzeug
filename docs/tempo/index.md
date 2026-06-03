@@ -5,7 +5,40 @@ package: tempo
 category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
 related: [arsenal]
-exports: [now, parsePlainDateTime, parseInstant, parseDate, isValid, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, classify, timeDiff, humanize, dateRange, recurrence]
+exports:
+  [
+    now,
+    parsePlainDateTime,
+    parseInstant,
+    parseDate,
+    isValid,
+    toInstant,
+    toZoned,
+    shift,
+    difference,
+    within,
+    clamp,
+    isBefore,
+    isAfter,
+    isSame,
+    startOf,
+    endOf,
+    format,
+    formatParts,
+    formatRange,
+    formatRangeParts,
+    formatInstant,
+    formatZoned,
+    formatRelative,
+    parseDuration,
+    formatDuration,
+    expires,
+    classify,
+    timeDiff,
+    humanize,
+    dateRange,
+    recurrence,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -30,7 +63,6 @@ exports: [now, parsePlainDateTime, parseInstant, parseDate, isValid, toInstant, 
 </details>
 
 `@vielzeug/tempo` is a Temporal-first date/time library for TypeScript. It provides explicit helpers for parsing local values, timezone conversion, DST-safe arithmetic, comparison, boundaries, Intl-based formatting, expiry classification, and recurrence generation.
-
 
 ## Installation
 

@@ -40,8 +40,12 @@ const [a, b] = await Promise.all([container.resolve(Config), container.resolve(C
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Logger { log(msg: string): void }
-interface DbPool { query(sql: string): Promise<unknown[]> }
+interface Logger {
+  log(msg: string): void;
+}
+interface DbPool {
+  query(sql: string): Promise<unknown[]>;
+}
 
 const Logger = token<Logger>('Logger');
 const Db = token<DbPool>('Db');

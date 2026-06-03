@@ -27,7 +27,6 @@ async function waitForLogin(bus: Bus<AppEvents>) {
 }
 ```
 
-
 ### Pitfalls
 
 - Checking `err.message === 'Bus is disposed'` instead of `err instanceof BusDisposedError` breaks when the message changes or the class is minified. Always use `instanceof`.

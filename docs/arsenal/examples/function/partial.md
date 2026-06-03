@@ -8,7 +8,7 @@ Bind one or more leading arguments to a function, returning a new function that 
 function partial<Args extends unknown[], BoundArgs extends Partial<Args>, R>(
   fn: (...args: Args) => R,
   ...bound: BoundArgs
-): (...rest: RemainingArgs<Args, BoundArgs>) => R
+): (...rest: RemainingArgs<Args, BoundArgs>) => R;
 ```
 
 ## Examples
@@ -21,7 +21,7 @@ import { partial } from '@vielzeug/arsenal';
 const add = (a: number, b: number) => a + b;
 const add10 = partial(add, 10);
 
-add10(5);  // 15
+add10(5); // 15
 add10(20); // 30
 ```
 
@@ -30,8 +30,7 @@ add10(20); // 30
 ```ts
 import { partial } from '@vielzeug/arsenal';
 
-const greet = (greeting: string, name: string, punctuation: string) =>
-  `${greeting}, ${name}${punctuation}`;
+const greet = (greeting: string, name: string, punctuation: string) => `${greeting}, ${name}${punctuation}`;
 
 const hello = partial(greet, 'Hello');
 hello('Alice', '!'); // 'Hello, Alice!'

@@ -39,7 +39,7 @@ type Stash<T, K> = {
   entries(): IterableIterator<[K, T]>;
 };
 
-function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K>
+function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K>;
 ```
 
 ### Parameters

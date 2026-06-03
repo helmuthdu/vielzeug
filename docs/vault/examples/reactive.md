@@ -83,8 +83,7 @@ for await (const users of db.watch('users', { mode: 'all' })) {
 `watchStream` returns a Web Standard `ReadableStream`. Use it with WHATWG stream pipelines or any consumer that accepts a `ReadableStream`.
 
 ```ts
-db.watchStream('users')
-  .pipeTo(new WritableStream({ write: (users) => renderList(users) }));
+db.watchStream('users').pipeTo(new WritableStream({ write: (users) => renderList(users) }));
 ```
 
 Always cancel the stream when done to stop the underlying observer:

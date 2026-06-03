@@ -78,8 +78,7 @@ export function RouterLink({ children, name }: Props) {
       onClick={(event) => {
         event.preventDefault();
         void navigate({ name });
-      }}
-    >
+      }}>
       {children}
     </a>
   );

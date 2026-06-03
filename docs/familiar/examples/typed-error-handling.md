@@ -78,23 +78,21 @@ async function processItem(input: ProcessInput): Promise<ProcessOutput | null> {
 }
 
 // Usage
-const results = await Promise.allSettled(
-  items.map((item) => processItem(item)),
-);
+const results = await Promise.allSettled(items.map((item) => processItem(item)));
 
 pool.dispose();
 ```
 
 ### Error Hierarchy
 
-| Class | Code | Extra fields |
-| ----- | ---- | ------------ |
-| `WorkerTimeoutError` | `'timeout'` | `.timeoutMs: number` |
-| `WorkerTaskError` | `'task'` | `.cause: unknown` |
-| `WorkerQueueFullError` | `'queue_full'` | `.maxQueue: number` |
-| `WorkerTerminatedError` | `'terminated'` | — |
-| `WorkerRuntimeError` | `'worker'` | `.cause?: unknown` |
-| `WorkerInvalidOptionsError` | `'invalid_options'` | — |
+| Class                       | Code                | Extra fields         |
+| --------------------------- | ------------------- | -------------------- |
+| `WorkerTimeoutError`        | `'timeout'`         | `.timeoutMs: number` |
+| `WorkerTaskError`           | `'task'`            | `.cause: unknown`    |
+| `WorkerQueueFullError`      | `'queue_full'`      | `.maxQueue: number`  |
+| `WorkerTerminatedError`     | `'terminated'`      | —                    |
+| `WorkerRuntimeError`        | `'worker'`          | `.cause?: unknown`   |
+| `WorkerInvalidOptionsError` | `'invalid_options'` | —                    |
 
 All extend `WorkerError` — use it as a catch-all when you only need `err.code`:
 

@@ -5,7 +5,7 @@ Produces a deterministic, stable JSON-like string for any value. Object keys are
 ## Signature
 
 ```ts
-function stableStringify(value: unknown, options?: { strict?: boolean }): string
+function stableStringify(value: unknown, options?: { strict?: boolean }): string;
 ```
 
 ## Parameters
@@ -33,8 +33,13 @@ stableStringify({ z: 'last', a: 'first' }); // '{"a":"first","z":"last"}'
 ```ts
 import { stableStringify } from '@vielzeug/arsenal';
 
-stableStringify(new Set([3, 1, 2]));  // '[Set:1,2,3]'
-stableStringify(new Map([['b', 2], ['a', 1]]));  // '[Map:{"a":1,"b":2}]'
+stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
+stableStringify(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:{"a":1,"b":2}]'
 stableStringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
 stableStringify(42n); // '[BigInt:42]'
 stableStringify(/foo/gi); // '[RegExp:/foo/gi]'
@@ -57,7 +62,7 @@ import { stableStringify } from '@vielzeug/arsenal';
 
 class Foo {}
 
-stableStringify(new Foo());               // '[object Object]' (default)
+stableStringify(new Foo()); // '[object Object]' (default)
 stableStringify(new Foo(), { strict: true }); // throws TypeError
 ```
 

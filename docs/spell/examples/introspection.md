@@ -16,11 +16,13 @@ Use `toDescriptor()` as the canonical portable shape, then rebuild or export fro
 ```ts
 import { descriptorToJsonSchema, fromDescriptor, s } from '@vielzeug/spell';
 
-const Invoice = s.object({
-  id: s.string().uuid(),
-  notes: s.string().max(500).optional().nullable(),
-  total: s.number().positive().multipleOf(0.01),
-}).label('Invoice');
+const Invoice = s
+  .object({
+    id: s.string().uuid(),
+    notes: s.string().max(500).optional().nullable(),
+    total: s.number().positive().multipleOf(0.01),
+  })
+  .label('Invoice');
 
 const descriptor = Invoice.toDescriptor();
 const rebuilt = fromDescriptor(descriptor);

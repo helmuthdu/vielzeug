@@ -241,9 +241,9 @@ client.use(withLogging({ logger: (msg, meta) => structuredLogger.info(msg, meta)
 import { createQuery } from '@vielzeug/courier';
 
 const qc = createQuery({
-  staleTime: 0,      // ms to serve from cache before refetching (default: 0 = always stale)
-  gcTime: 300_000,   // ms before an unobserved entry is GC'd (default: 5 min)
-  times: 1,          // 1 = one try with no retries
+  staleTime: 0, // ms to serve from cache before refetching (default: 0 = always stale)
+  gcTime: 300_000, // ms before an unobserved entry is GC'd (default: 5 min)
+  times: 1, // 1 = one try with no retries
 });
 ```
 
@@ -261,17 +261,17 @@ const user = await qc.fetch({
 });
 ```
 
-| Option         | Type                                  | Default              | Description                                                                     |
-| -------------- | ------------------------------------- | -------------------- | ------------------------------------------------------------------------------- |
-| `key`          | `QueryKey`                            | required             | Cache identifier; serialized with stable key ordering                           |
-| `fn`           | `(ctx: QueryFnContext) => Promise<T>` | required             | Data-fetching function; receives `{ key, signal }`                              |
-| `staleTime`    | `number`                              | `0`                  | ms served from cache before the next `fetch()` call refetches                   |
-| `gcTime`       | `number`                              | `300000`             | ms before an unobserved entry is GC'd while unobserved                          |
-| `times`        | `number`                              | query-client default | Total attempts for this specific fetch; `1` means one try with no retries      |
-| `delay`        | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific fetch                                          |
-| `shouldRetry`  | `(error, attempt) => boolean`         | query-client default | Retry predicate for this specific fetch                                         |
-| `enabled`      | `boolean`                             | `true`               | Skip the fetch when `false`; existing cached data is returned                   |
-| `initialData`  | `T \| () => T \| undefined`           | —                    | Pre-seed the cache as a successful entry when no data exists                    |
+| Option        | Type                                  | Default              | Description                                                               |
+| ------------- | ------------------------------------- | -------------------- | ------------------------------------------------------------------------- |
+| `key`         | `QueryKey`                            | required             | Cache identifier; serialized with stable key ordering                     |
+| `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required             | Data-fetching function; receives `{ key, signal }`                        |
+| `staleTime`   | `number`                              | `0`                  | ms served from cache before the next `fetch()` call refetches             |
+| `gcTime`      | `number`                              | `300000`             | ms before an unobserved entry is GC'd while unobserved                    |
+| `times`       | `number`                              | query-client default | Total attempts for this specific fetch; `1` means one try with no retries |
+| `delay`       | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific fetch                                    |
+| `shouldRetry` | `(error, attempt) => boolean`         | query-client default | Retry predicate for this specific fetch                                   |
+| `enabled`     | `boolean`                             | `true`               | Skip the fetch when `false`; existing cached data is returned             |
+| `initialData` | `T \| () => T \| undefined`           | —                    | Pre-seed the cache as a successful entry when no data exists              |
 
 Per-fetch retry options override `createQuery()` defaults when provided.
 
@@ -495,14 +495,14 @@ qc.clear();
 
 **`PersistOptions`:**
 
-| Option     | Type                           | Default      | Description                                                                        |
-| ---------- | ------------------------------ | ------------ | ---------------------------------------------------------------------------------- |
-| `storage`  | `PersistStorage`               | required     | Any sync or async `getItem` / `setItem` / `removeItem` backend                    |
-| `keys`     | `QueryKey[]`                   | required     | Which keys to persist or hydrate                                                   |
-| `include`  | `(key: QueryKey) => boolean`   | all keys     | Predicate applied consistently in both persist and hydrate                         |
-| `prefix`   | `string`                       | `'courier:'` | Storage key namespace to avoid collisions                                          |
-| `maxAge`   | `number`                       | —           | Max entry age in ms during hydration; entries older than this are skipped          |
-| `onError`  | `(err, key) => void`           | silent       | Called when a storage read or write fails                                          |
+| Option    | Type                         | Default      | Description                                                               |
+| --------- | ---------------------------- | ------------ | ------------------------------------------------------------------------- |
+| `storage` | `PersistStorage`             | required     | Any sync or async `getItem` / `setItem` / `removeItem` backend            |
+| `keys`    | `QueryKey[]`                 | required     | Which keys to persist or hydrate                                          |
+| `include` | `(key: QueryKey) => boolean` | all keys     | Predicate applied consistently in both persist and hydrate                |
+| `prefix`  | `string`                     | `'courier:'` | Storage key namespace to avoid collisions                                 |
+| `maxAge`  | `number`                     | —            | Max entry age in ms during hydration; entries older than this are skipped |
+| `onError` | `(err, key) => void`         | silent       | Called when a storage read or write fails                                 |
 
 `hydrateQueryCache` restores the original `updatedAt` timestamp so staleTime checks after hydration are accurate — 55-second-old hydrated data with `staleTime: 60_000` will be refetched after 5 more seconds, not after a full 60 seconds.
 
@@ -530,25 +530,20 @@ await hydrateQueryCache(qc, {
 import { createBatcher } from '@vielzeug/courier';
 
 const userLoader = createBatcher({
-  resolve: async (ids: number[]) =>
-    api.post<User[]>('/users/batch', { body: { ids } }),
+  resolve: async (ids: number[]) => api.post<User[]>('/users/batch', { body: { ids } }),
 });
 
 // These three calls collapse into one POST /users/batch { ids: [1, 2, 3] }
-const [alice, bob, carol] = await Promise.all([
-  userLoader.load(1),
-  userLoader.load(2),
-  userLoader.load(3),
-]);
+const [alice, bob, carol] = await Promise.all([userLoader.load(1), userLoader.load(2), userLoader.load(3)]);
 ```
 
 **Options:**
 
-| Option     | Type                           | Default | Description                                                                                    |
-| ---------- | ------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
-| `resolve`  | `(keys: K[]) => Promise<V[]>`  | required | Execute a batch and return results **in the same order as `keys`**                           |
-| `maxSize`  | `number`                       | `25`    | Force-flush when the queue reaches this size                                                   |
-| `window`   | `number`                       | `0`     | Scheduling window in ms. `0` = next microtask; positive value coalesces across async ticks    |
+| Option    | Type                          | Default  | Description                                                                                |
+| --------- | ----------------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `resolve` | `(keys: K[]) => Promise<V[]>` | required | Execute a batch and return results **in the same order as `keys`**                         |
+| `maxSize` | `number`                      | `25`     | Force-flush when the queue reaches this size                                               |
+| `window`  | `number`                      | `0`      | Scheduling window in ms. `0` = next microtask; positive value coalesces across async ticks |
 
 ```ts
 // Custom window and batch size
@@ -607,11 +602,11 @@ const createUser = createMutation(
 
 Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run. Every callback receives the original `variables` passed to `mutate()`.
 
-| Callback    | Signature                                                           | Called when                                      |
-| ----------- | ------------------------------------------------------------------- | ------------------------------------------------ |
-| `onSuccess` | `(data: TData, variables: TVariables) => void \| Promise<void>`    | The run succeeds                                 |
-| `onError`   | `(error: Error, variables: TVariables) => void \| Promise<void>`   | The run fails; **not** called on abort           |
-| `onSettled` | `(data, error, variables: TVariables) => void \| Promise<void>`    | After every run including abort (`error` is `null` for success and abort) |
+| Callback    | Signature                                                        | Called when                                                               |
+| ----------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `onSuccess` | `(data: TData, variables: TVariables) => void \| Promise<void>`  | The run succeeds                                                          |
+| `onError`   | `(error: Error, variables: TVariables) => void \| Promise<void>` | The run fails; **not** called on abort                                    |
+| `onSettled` | `(data, error, variables: TVariables) => void \| Promise<void>`  | After every run including abort (`error` is `null` for success and abort) |
 
 ::: tip Concurrent mutations
 When multiple `mutate()` calls run simultaneously, state reflects the **latest** call. Each callback fires for its own call independently. Use `mutation.cancel()` before a new `mutate()` for last-call-wins semantics.
@@ -723,9 +718,8 @@ try {
 ```ts
 client.query.set<User>(['users', 1], (old) => ({ ...old!, name: 'New Name' }));
 
-const updateUser = client.mutation(
-  (input: Partial<User>, signal) =>
-    client.api.put<User>('/users/{id}', { params: { id: 1 }, body: input, signal }),
+const updateUser = client.mutation((input: Partial<User>, signal) =>
+  client.api.put<User>('/users/{id}', { params: { id: 1 }, body: input, signal }),
 );
 
 try {
@@ -927,7 +921,10 @@ const userStore = store<{ user: User | null; loading: boolean }>({ user: null, l
 
 async function loadUser(id: number) {
   userStore.patch({ loading: true });
-  const user = await qc.fetch({ key: ['users', id], fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }) });
+  const user = await qc.fetch({
+    key: ['users', id],
+    fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  });
   userStore.patch({ user, loading: false });
 }
 

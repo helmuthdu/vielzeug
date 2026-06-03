@@ -31,7 +31,6 @@ exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, createTestBu
 
 `@vielzeug/herald` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with payload inference.
 
-
 ## Installation
 
 ::: code-group
@@ -122,18 +121,18 @@ for await (const event of bus.events('cart:updated')) {
 } // async stream
 ```
 
-| Feature              | Herald                                      | mitt     | EventEmitter3 |
-| -------------------- | --------------------------------------------- | -------- | ------------- |
+| Feature              | Herald                                       | mitt     | EventEmitter3 |
+| -------------------- | -------------------------------------------- | -------- | ------------- |
 | Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
-| TypeScript inference | ✅ Full                                       | ⚠️ Basic | ⚠️ Basic      |
-| Async/await (`wait`) | ✅                                            | ❌       | ❌            |
-| Async streaming      | ✅                                            | ❌       | ❌            |
-| AbortSignal          | ✅                                            | ❌       | ❌            |
-| Event piping         | ✅                                            | ❌       | ❌            |
-| Wildcard (`onAny`)   | ✅                                            | ✅       | ❌            |
-| Disposal signal      | ✅                                            | ❌       | ❌            |
-| Error isolation      | ✅                                            | ❌       | ❌            |
-| Zero dependencies    | ✅                                            | ✅       | ✅            |
+| TypeScript inference | ✅ Full                                      | ⚠️ Basic | ⚠️ Basic      |
+| Async/await (`wait`) | ✅                                           | ❌       | ❌            |
+| Async streaming      | ✅                                           | ❌       | ❌            |
+| AbortSignal          | ✅                                           | ❌       | ❌            |
+| Event piping         | ✅                                           | ❌       | ❌            |
+| Wildcard (`onAny`)   | ✅                                           | ✅       | ❌            |
+| Disposal signal      | ✅                                           | ❌       | ❌            |
+| Error isolation      | ✅                                           | ❌       | ❌            |
+| Zero dependencies    | ✅                                           | ✅       | ✅            |
 
 **Use Herald when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
 

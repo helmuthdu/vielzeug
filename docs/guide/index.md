@@ -78,8 +78,7 @@ define('my-counter', () => {
 A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craft. Drop them straight into your project.
 
 ```html
-<bit-button variant="solid" color="primary">Save</bit-button>
-<bit-input label="Email"></bit-input>
+<bit-button variant="solid" color="primary">Save</bit-button> <bit-input label="Email"></bit-input>
 ```
 
 **Start here if** you want production-ready components without building from scratch.
@@ -197,10 +196,12 @@ const router = createRouter({
     userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
     notFound: { path: '*', handler: () => render404() },
   },
-  middleware: [async (ctx, next) => {
-    if (!isLoggedIn() && ctx.pathname !== '/login') return ctx.navigate({ path: '/login' });
-    await next();
-  }],
+  middleware: [
+    async (ctx, next) => {
+      if (!isLoggedIn() && ctx.pathname !== '/login') return ctx.navigate({ path: '/login' });
+      await next();
+    },
+  ],
 });
 ```
 
@@ -283,8 +284,34 @@ const authMachine = defineMachine({
   initial: 'idle',
   context: { token: '' },
   states: {
-    idle: { on: { LOGIN: [{ target: 'active', actions: [({ context, event }) => { context.token = event.token; }] }] } },
-    active: { on: { LOGOUT: [{ target: 'idle', actions: [({ context }) => { context.token = ''; }] }] } },
+    idle: {
+      on: {
+        LOGIN: [
+          {
+            target: 'active',
+            actions: [
+              ({ context, event }) => {
+                context.token = event.token;
+              },
+            ],
+          },
+        ],
+      },
+    },
+    active: {
+      on: {
+        LOGOUT: [
+          {
+            target: 'idle',
+            actions: [
+              ({ context }) => {
+                context.token = '';
+              },
+            ],
+          },
+        ],
+      },
+    },
   },
 });
 
@@ -299,35 +326,35 @@ console.log(auth.state.value); // 'active'
 
 ### Other Packages
 
-| Package                  | What it does                                                                                    |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| **[Rune](/rune/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
-| **[Lingua](/lingua/)**     | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
-| **[Herald](/herald/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
-| **[Familiar](/familiar/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
-| **[Grip](/grip/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
-| **[Orbit](/orbit/)**     | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
-| **[Sourcerer](/sourcerer/)**   | Typed local and remote data sources for pagination, filtering, sorting, and search              |
+| Package                      | What it does                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| **[Rune](/rune/)**           | Structured logging with scoped loggers, log levels, and styled console output                   |
+| **[Lingua](/lingua/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
+| **[Herald](/herald/)**       | Typed event bus for decoupled, reactive inter-module communication                              |
+| **[Familiar](/familiar/)**   | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
+| **[Grip](/grip/)**           | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
+| **[Orbit](/orbit/)**         | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
+| **[Sourcerer](/sourcerer/)** | Typed local and remote data sources for pagination, filtering, sorting, and search              |
 | **[Tempo](/tempo/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
-| **[Scroll](/scroll/)** | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
+| **[Scroll](/scroll/)**       | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
 
 ## Packages That Work Well Together
 
-| Combination           | Why                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------- |
-| **Ripple + Craft**       | Craft templates are powered by Ripple signals — same reactive primitives, zero glue                   |
-| **Spell + Forge**        | Pass a Spell schema directly as a field validator — one schema serves both form and API                |
-| **Courier + Ripple**       | Fetch remote data with caching, push results into a signal for reactive rendering                        |
-| **Vault + Courier**       | Persist query results in IndexedDB for offline-capable apps                                              |
-| **Ward + Wayfinder**      | Check permissions in router middleware before the route handler ever runs                                |
-| **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                |
-| **Sourcerer + Courier**      | Use Courier as the HTTP transport inside a `createRemoteSource` for pagination and search with caching   |
-| **Scroll + Orbit**     | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
-| **Grip + Scroll**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
-| **Sourcerer + Wayfinder**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
-| **Clockwork + Ripple**      | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates            |
-| **Clockwork + Ward**       | Call ward predicates inside clockwork guards to block unauthorized transitions                           |
-| **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                |
+| Combination               | Why                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Ripple + Craft**        | Craft templates are powered by Ripple signals — same reactive primitives, zero glue                    |
+| **Spell + Forge**         | Pass a Spell schema directly as a field validator — one schema serves both form and API                |
+| **Courier + Ripple**      | Fetch remote data with caching, push results into a signal for reactive rendering                      |
+| **Vault + Courier**       | Persist query results in IndexedDB for offline-capable apps                                            |
+| **Ward + Wayfinder**      | Check permissions in router middleware before the route handler ever runs                              |
+| **Conduit + Rune**        | Register a scoped logger per service in your DI container                                              |
+| **Sourcerer + Courier**   | Use Courier as the HTTP transport inside a `createRemoteSource` for pagination and search with caching |
+| **Scroll + Orbit**        | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
+| **Grip + Scroll**         | Combine sortable drag handles with a virtual list for large reorderable datasets                       |
+| **Sourcerer + Wayfinder** | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                 |
+| **Clockwork + Ripple**    | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates        |
+| **Clockwork + Ward**      | Call ward predicates inside clockwork guards to block unauthorized transitions                         |
+| **Clockwork + Herald**    | Publish state-change events to decouple multiple machines from each other                              |
 
 ## Philosophy
 

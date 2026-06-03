@@ -6,6 +6,7 @@ description: Use Ward RBAC with Clockwork to gate state transitions based on use
 ## Problem
 
 Workflows with role-based access control need to:
+
 - Prevent unauthorized state transitions
 - Show different UI based on user permissions
 - Guard state machine transitions with permission checks
@@ -124,8 +125,9 @@ const canReject = ({ context }: any) => {
 };
 
 const canCancel = ({ context }: any) => {
-  return rbac.can(context.userRole, 'cancel') &&
-    (context.userRole === 'admin' || context.userId === context.submitterId);
+  return (
+    rbac.can(context.userRole, 'cancel') && (context.userRole === 'admin' || context.userId === context.submitterId)
+  );
 };
 
 const recordSubmission = ({ context, event }: any) => {

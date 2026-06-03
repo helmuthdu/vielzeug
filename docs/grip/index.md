@@ -31,7 +31,6 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 
 `@vielzeug/grip` is a zero-dependency drag-and-drop library for the Document Object Model (DOM). It provides two focused primitives: a drop zone for file drag-and-drop with MIME type filtering and a sortable list for reordering elements. Both wrap the HTML Drag and Drop API with reliable hover state, full lifecycle management, and `using` keyword support.
 
-
 ## Installation
 
 ::: code-group
@@ -120,15 +119,15 @@ const zone = createDropZone({
 ```
 
 | Feature             | Grip                                       | SortableJS | dnd-kit |
-| ------------------- | -------------------------------------------- | ---------- | ------- |
+| ------------------- | ------------------------------------------ | ---------- | ------- |
 | Bundle size         | <PackageInfo package="grip" type="size" /> | ~15 kB     | ~30 kB  |
-| Framework agnostic  | ✅                                           | ✅         | ✅      |
-| MIME type filtering | ✅ Pre-validated                             | ❌         | ❌      |
-| Counter-based hover | ✅                                           | ❌         | N/A     |
-| Sortable lists      | ✅                                           | ✅         | ✅      |
-| Drag handles        | ✅                                           | ✅         | ✅      |
-| `using` support     | ✅                                           | ❌         | ❌      |
-| Zero dependencies   | ✅                                           | ✅         | ❌      |
+| Framework agnostic  | ✅                                         | ✅         | ✅      |
+| MIME type filtering | ✅ Pre-validated                           | ❌         | ❌      |
+| Counter-based hover | ✅                                         | ❌         | N/A     |
+| Sortable lists      | ✅                                         | ✅         | ✅      |
+| Drag handles        | ✅                                         | ✅         | ✅      |
+| `using` support     | ✅                                         | ❌         | ❌      |
+| Zero dependencies   | ✅                                         | ✅         | ❌      |
 
 **Use Grip when** you need reliable file drop zones with MIME filtering or sortable lists in a framework-agnostic environment.
 

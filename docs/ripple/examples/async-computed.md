@@ -42,7 +42,7 @@ effect(() => {
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch and re-runs
-user.dispose();      // cancel and detach
+user.dispose(); // cancel and detach
 ```
 
 #### With an Initial Loading Value
@@ -57,8 +57,7 @@ const q = signal('ripple');
 const results = asyncComputed(
   async (signal) => {
     const query = q.value; // tracked
-    return fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal })
-      .then((r) => r.json()) as Promise<string[]>;
+    return fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal }).then((r) => r.json()) as Promise<string[]>;
   },
   { initialValue: [] }, // shown as `value` while status === 'pending'
 );

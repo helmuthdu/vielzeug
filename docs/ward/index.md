@@ -5,7 +5,22 @@ package: ward
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, wayfinder, conduit]
-exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, guardRequestWith, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS, debugWard]
+exports:
+  [
+    createWard,
+    rule,
+    defineRules,
+    owns,
+    matchesPattern,
+    patternCovers,
+    guardRequest,
+    guardRequestWith,
+    createExpressGuard,
+    createHonoGuard,
+    WILDCARD,
+    ANONYMOUS,
+    debugWard,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -30,7 +45,6 @@ exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, gu
 </details>
 
 `@vielzeug/ward` is a small authorization engine for role/resource/action checks.
-
 
 ## Installation
 
@@ -57,7 +71,7 @@ import { ANONYMOUS, WILDCARD, createWard, owns } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
   // Multi-role rule: viewer and editor can both read
-  { role: ['viewer', 'editor'], resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow' },
   {
     role: 'editor',
     resource: 'posts',
@@ -78,7 +92,7 @@ if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'ex
 
 // Full decision trace — shows every matching candidate and why the winner was picked
 const trace = ward.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
-trace.candidates.forEach(c => console.log(c.rule.effect, c.score, c.won));
+trace.candidates.forEach((c) => console.log(c.rule.effect, c.score, c.won));
 
 // Detect policy conflicts at startup
 const conflicts = ward.detectConflicts();
@@ -106,15 +120,15 @@ bound.rulesInScope('posts');
 - Zero dependencies
 
 | Feature                           | Ward                                       | CASL    | AccessControl        |
-| --------------------------------- | -------------------------------------------- | ------- | -------------------- |
+| --------------------------------- | ------------------------------------------ | ------- | -------------------- |
 | Bundle size                       | <PackageInfo package="ward" type="size" /> | ~11 kB  | ~7 kB                |
-| Typed rule contracts              | ✅                                           | Partial | Partial              |
-| Deterministic deny precedence     | ✅                                           | ✅      | ✅                   |
-| Rule predicates with request data | ✅                                           | ✅      | ⚠️ (manual patterns) |
-| Wildcard action support           | ✅                                           | ✅      | ✅                   |
-| Principal-bound API               | ✅ (`forUser`)                               | Partial | ❌                   |
-| Explainable decisions             | ✅                                           | Partial | ❌                   |
-| Zero dependencies                 | ✅                                           | ❌      | ❌                   |
+| Typed rule contracts              | ✅                                         | Partial | Partial              |
+| Deterministic deny precedence     | ✅                                         | ✅      | ✅                   |
+| Rule predicates with request data | ✅                                         | ✅      | ⚠️ (manual patterns) |
+| Wildcard action support           | ✅                                         | ✅      | ✅                   |
+| Principal-bound API               | ✅ (`forUser`)                             | Partial | ❌                   |
+| Explainable decisions             | ✅                                         | Partial | ❌                   |
+| Zero dependencies                 | ✅                                         | ❌      | ❌                   |
 
 **Use Ward when** you want predictable authorization decisions with typed rules and explicit introspection APIs.
 

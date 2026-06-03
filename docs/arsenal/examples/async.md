@@ -19,17 +19,7 @@ description: Async utility examples for Arsenal.
 ## Common Patterns
 
 ```ts
-import {
-  abortable,
-  backoff,
-  isAbortError,
-  memo,
-  parallel,
-  queue,
-  retry,
-  sleep,
-  waitFor,
-} from '@vielzeug/arsenal';
+import { abortable, backoff, isAbortError, memo, parallel, queue, retry, sleep, waitFor } from '@vielzeug/arsenal';
 
 // Bounded concurrent fan-out
 const jobs = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });

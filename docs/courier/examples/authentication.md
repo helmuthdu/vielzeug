@@ -66,7 +66,6 @@ const stopRefreshing = api.use(async (ctx, next) => {
 });
 ```
 
-
 ### Pitfalls
 
 - Storing the auth token in a module-level variable leaks across requests in SSR environments. Use request-scoped storage (e.g., `AsyncLocalStorage`) in server contexts.
@@ -74,6 +73,7 @@ const stopRefreshing = api.use(async (ctx, next) => {
 - After a successful refresh, the interceptor must replay the original failed request with the new token — not just update the global header for future requests.
 
 ### Related
+
 - [Request Middleware Logging (Rune)](@vielzeug/rune/examples/request-middleware)
 - [RBAC Guards (Ward)](/ward/)
 

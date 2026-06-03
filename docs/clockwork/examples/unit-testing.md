@@ -37,7 +37,7 @@ const auth = defineMachine<State, Context, Event>({
     },
     loading: {
       on: {
-        AUTH_FAILED:  { target: 'error' },
+        AUTH_FAILED: { target: 'error' },
         AUTH_SUCCESS: { target: 'authenticated' },
       },
     },
@@ -52,8 +52,8 @@ const auth = defineMachine<State, Context, Event>({
 test('allows login with fewer than 3 attempts', () => {
   const result = resolveTransition(auth, {
     context: { attempts: 2, token: '' },
-    event:   { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state:   'unauthenticated',
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'unauthenticated',
   });
   expect(result?.target).toBe('loading');
 });
@@ -61,8 +61,8 @@ test('allows login with fewer than 3 attempts', () => {
 test('blocks login after 3 attempts', () => {
   const result = resolveTransition(auth, {
     context: { attempts: 3, token: '' },
-    event:   { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state:   'unauthenticated',
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'unauthenticated',
   });
   expect(result).toBeUndefined();
 });
@@ -70,8 +70,8 @@ test('blocks login after 3 attempts', () => {
 test('returns undefined for undefined event in state', () => {
   const result = resolveTransition(auth, {
     context: { attempts: 0, token: '' },
-    event:   { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state:   'loading', // LOGIN is not defined in loading
+    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+    state: 'loading', // LOGIN is not defined in loading
   });
   expect(result).toBeUndefined();
 });
@@ -85,13 +85,17 @@ test('returns undefined for undefined event in state', () => {
 test('reports guard evaluation', () => {
   const evaluations: Array<{ passed: boolean; target: string }> = [];
 
-  resolveTransition(auth, {
-    context: { attempts: 5, token: '' },
-    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state: 'unauthenticated',
-  }, (info) => {
-    evaluations.push({ passed: info.passed, target: info.target });
-  });
+  resolveTransition(
+    auth,
+    {
+      context: { attempts: 5, token: '' },
+      event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
+      state: 'unauthenticated',
+    },
+    (info) => {
+      evaluations.push({ passed: info.passed, target: info.target });
+    },
+  );
 
   expect(evaluations[0]).toEqual({ passed: false, target: 'loading' });
 });

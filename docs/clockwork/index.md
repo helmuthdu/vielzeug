@@ -64,7 +64,11 @@ const machine = defineMachine<'active' | 'idle', Context, Event>({
     active: {
       on: {
         COMPLETE: {
-          actions: [({ context, event }) => { context.count = event.result.length; }],
+          actions: [
+            ({ context, event }) => {
+              context.count = event.result.length;
+            },
+          ],
           target: 'idle',
         },
       },
@@ -77,13 +81,13 @@ const machine = defineMachine<'active' | 'idle', Context, Event>({
 
 const m = interpret(machine);
 
-console.log(m.state.value);        // 'idle'
+console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 0
 
 m.send({ type: 'START' });
 m.send({ type: 'COMPLETE', result: 'hello' });
 
-console.log(m.state.value);        // 'idle'
+console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 5
 ```
 
@@ -117,16 +121,16 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 // Now success && error is impossible. State is always valid.
 ```
 
-| Feature                    | Machine                                        | xstate              | zustand    |
-| -------------------------- | ---------------------------------------------- | ------------------- | ---------- |
-| Bundle size                | <PackageInfo package="clockwork" type="size" />  | ~15 KB              | ~2 KB      |
-| Zero dependencies          | ✅                                             | ❌ 5+ deps          | ✅         |
-| Typed discriminated events | ✅                                             | ⚠️ Partial          | ❌         |
-| Reactive signals           | ✅ Native                                      | ❌ Observer pattern | ✅ Native  |
-| Persistence adapter        | ✅ Pluggable                                   | ✅                  | ✅         |
-| Hierarchical states        | ✅ Compound + leaf resolution                  | ✅                  | ❌         |
-| Middleware pipeline        | ✅ Composable                                  | ❌                  | ✅         |
-| Context isolation          | ✅ Cloned on every transition                  | ✅                  | ❌         |
+| Feature                    | Machine                                         | xstate              | zustand   |
+| -------------------------- | ----------------------------------------------- | ------------------- | --------- |
+| Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
+| Zero dependencies          | ✅                                              | ❌ 5+ deps          | ✅        |
+| Typed discriminated events | ✅                                              | ⚠️ Partial          | ❌        |
+| Reactive signals           | ✅ Native                                       | ❌ Observer pattern | ✅ Native |
+| Persistence adapter        | ✅ Pluggable                                    | ✅                  | ✅        |
+| Hierarchical states        | ✅ Compound + leaf resolution                   | ✅                  | ❌        |
+| Middleware pipeline        | ✅ Composable                                   | ❌                  | ✅        |
+| Context isolation          | ✅ Cloned on every transition                   | ✅                  | ❌        |
 
 **Use Machine when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
 
@@ -153,9 +157,9 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/clockwork` | All exports and types |
+| Import                      | Purpose                                                 |
+| --------------------------- | ------------------------------------------------------- |
+| `@vielzeug/clockwork`       | All exports and types                                   |
 | `@vielzeug/clockwork/debug` | `debugInterpret` — pre-wired console logging (dev only) |
 
 ## Compatibility

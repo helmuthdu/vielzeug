@@ -5,11 +5,11 @@ Flatten a nested object to dot-notation paths and reconstruct it back. Includes 
 ## Signatures
 
 ```ts
-function flattenPaths(obj: Record<string, unknown>, prefix?: string, depth?: number): Record<string, unknown>
+function flattenPaths(obj: Record<string, unknown>, prefix?: string, depth?: number): Record<string, unknown>;
 
-function unflattenPaths(flat: Record<string, unknown>): Record<string, unknown>
+function unflattenPaths(flat: Record<string, unknown>): Record<string, unknown>;
 
-function isSafePath(key: string): boolean
+function isSafePath(key: string): boolean;
 ```
 
 ## Examples
@@ -31,7 +31,7 @@ flattenPaths({ user: { name: 'Alice', address: { city: 'Berlin' } } });
 ```ts
 import { unflattenPaths } from '@vielzeug/arsenal';
 
-unflattenPaths({ 'a.b': 1, 'a.c': 2, 'd': 3 });
+unflattenPaths({ 'a.b': 1, 'a.c': 2, d: 3 });
 // { a: { b: 1, c: 2 }, d: 3 }
 ```
 
@@ -53,8 +53,8 @@ const restored = unflattenPaths(flat);
 ```ts
 import { isSafePath } from '@vielzeug/arsenal';
 
-isSafePath('user.name');           // true
-isSafePath('__proto__.polluted');  // false
+isSafePath('user.name'); // true
+isSafePath('__proto__.polluted'); // false
 isSafePath('constructor.prototype'); // false
 ```
 

@@ -40,7 +40,6 @@ if (saved) virt.scrollToOffset(Number(saved));
 
 ---
 
-
 ### Pitfalls
 
 - `scrollToOffset()` is a no-op if the scroll container has not been laid out yet (height is 0). Call it inside `onMounted`/`firstUpdated` or after the next animation frame.

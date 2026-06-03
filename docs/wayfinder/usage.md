@@ -59,18 +59,18 @@ const router = createRouter({
 
 Each route can provide these fields:
 
-| Field          | Purpose                                                                    |
-| -------------- | -------------------------------------------------------------------------- |
-| `path`         | Match pattern                                                              |
-| `children`     | Nested child routes                                                        |
-| `index`        | Default child route that inherits the parent path                          |
-| `component`    | Optional view payload exposed on `match.component`                         |
-| `data`         | Abortable route data function. Result available as `match.data`. Supports streaming via `AsyncGenerator`. |
-| `lazy`         | Lazy-load the module. Called once; result fills `data`, `component`, and `meta`. |
-| `meta`         | Static metadata exposed on `match.meta`                                    |
-| `middleware`   | Route-specific middleware                                                  |
-| `onError`      | Per-route error boundary. Called when this route's `data()` throws; its return value becomes `match.data`. |
-| `redirect`     | Declarative permanent redirect. Resolved before middleware runs.           |
+| Field          | Purpose                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `path`         | Match pattern                                                                                                               |
+| `children`     | Nested child routes                                                                                                         |
+| `index`        | Default child route that inherits the parent path                                                                           |
+| `component`    | Optional view payload exposed on `match.component`                                                                          |
+| `data`         | Abortable route data function. Result available as `match.data`. Supports streaming via `AsyncGenerator`.                   |
+| `lazy`         | Lazy-load the module. Called once; result fills `data`, `component`, and `meta`.                                            |
+| `meta`         | Static metadata exposed on `match.meta`                                                                                     |
+| `middleware`   | Route-specific middleware                                                                                                   |
+| `onError`      | Per-route error boundary. Called when this route's `data()` throws; its return value becomes `match.data`.                  |
+| `redirect`     | Declarative permanent redirect. Resolved before middleware runs.                                                            |
 | `coerceSearch` | Coerce raw URL search strings into typed values. Return value replaces `ctx.query`. Throw to leave the raw query unchanged. |
 
 Use wildcard routes for fallback behavior:
@@ -211,10 +211,7 @@ removeGuard();
 Scope a guard to fire only when leaving specific routes:
 
 ```ts
-router.beforeLeave(
-  async () => confirm('Discard changes?'),
-  { routes: ['editor'] },
-);
+router.beforeLeave(async () => confirm('Discard changes?'), { routes: ['editor'] });
 ```
 
 Declarative `redirect` routes bypass all leave guards.
@@ -271,7 +268,7 @@ const routes = {
         items.push(...batch);
         yield items; // stream partial results
       }
-      return items;  // final settled value
+      return items; // final settled value
     },
   },
 };
@@ -408,10 +405,7 @@ removeGuard();
 Scope a guard to a specific route so it only fires when leaving that route:
 
 ```ts
-router.beforeLeave(
-  async () => confirm('Discard changes?'),
-  { routes: ['editor'] },
-);
+router.beforeLeave(async () => confirm('Discard changes?'), { routes: ['editor'] });
 ```
 
 ## URLs and Active State
@@ -476,13 +470,13 @@ Use `router.getSnapshot()` to read the current state synchronously:
 const { location, matches, status, error } = router.getSnapshot();
 
 location.pathname;
-location.query;        // raw parsed query strings (QueryParams)
+location.query; // raw parsed query strings (QueryParams)
 location.hash;
 location.historyState; // state from the current history entry
 
-matches;               // matched branch from root to leaf
-status;                // 'idle' | 'loading' | 'streaming' | 'error'
-error;                 // only set when status === 'error'
+matches; // matched branch from root to leaf
+status; // 'idle' | 'loading' | 'streaming' | 'error'
+error; // only set when status === 'error'
 ```
 
 Each match node also carries its own `status`:
@@ -616,7 +610,9 @@ const router = createRouter({
 
 // shallowRef — no need to deep-track immutable route state.
 const state = shallowRef(router.getSnapshot());
-router.subscribe((next) => { state.value = next; });
+router.subscribe((next) => {
+  state.value = next;
+});
 
 export function useRouter() {
   return {
@@ -690,7 +686,9 @@ Sync router state to a Ripple signal for reactive UI.
 import { createRouter } from '@vielzeug/wayfinder';
 import { signal } from '@vielzeug/ripple';
 
-const router = createRouter({ /* ... */ });
+const router = createRouter({
+  /* ... */
+});
 const currentRoute = signal(router.getSnapshot().matches.at(-1)?.name ?? '');
 
 router.subscribe((state) => {

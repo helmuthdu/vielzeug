@@ -35,7 +35,6 @@ export function requestLogger(req, res, next) {
 }
 ```
 
-
 ### Pitfalls
 
 - `withBindings()` returns a new instance — it does not mutate in place. Assigning it back to a module-level variable replaces the logger for all callers. Use `AsyncLocalStorage` to scope a logger per request.

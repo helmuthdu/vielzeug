@@ -44,7 +44,6 @@ function onDestroy() {
 
 ---
 
-
 ### Pitfalls
 
 - The old virtualizer must be destroyed before creating a new one for the same container. Two concurrent instances both write `style.height` on the list element, causing a conflict.

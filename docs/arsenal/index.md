@@ -31,7 +31,6 @@ related: [tempo, sourcerer, spell, coins]
 
 `@vielzeug/arsenal` is a compact utility package built for modern TypeScript projects. The API is intentionally small, composable, and fully tree-shakeable.
 
-
 ## Installation
 
 ::: code-group

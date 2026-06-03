@@ -29,11 +29,7 @@ type FetchEvent =
   | { type: 'RETRY' }
   | { type: 'GIVE_UP' };
 
-const fetchMachine = defineMachine<
-  'idle' | 'loading' | 'success' | 'failed' | 'error',
-  FetchContext,
-  FetchEvent
->({
+const fetchMachine = defineMachine<'idle' | 'loading' | 'success' | 'failed' | 'error', FetchContext, FetchEvent>({
   initial: 'idle',
   context: { data: '', error: '', retries: 0 },
   states: {
@@ -42,7 +38,12 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
+            actions: [
+              ({ context }) => {
+                context.retries = 0;
+                context.error = '';
+              },
+            ],
           },
         ],
       },
@@ -51,11 +52,10 @@ const fetchMachine = defineMachine<
       invoke: [
         {
           src: async () =>
-            fetch('/api/data', { signal: AbortSignal.timeout(5000) })
-              .then(r => {
-                if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                return r.text();
-              }),
+            fetch('/api/data', { signal: AbortSignal.timeout(5000) }).then((r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.text();
+            }),
           onDone: (data) => ({ type: 'SUCCESS', data }),
           onError: (error) => ({ type: 'FAILURE', error: String(error) }),
         },
@@ -64,7 +64,11 @@ const fetchMachine = defineMachine<
         SUCCESS: [
           {
             target: 'success',
-            actions: [({ context, event }) => { context.data = event.data; }],
+            actions: [
+              ({ context, event }) => {
+                context.data = event.data;
+              },
+            ],
           },
         ],
         FAILURE: [
@@ -85,7 +89,12 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
+            actions: [
+              ({ context }) => {
+                context.retries = 0;
+                context.error = '';
+              },
+            ],
           },
         ],
       },
@@ -106,7 +115,12 @@ const fetchMachine = defineMachine<
         FETCH: [
           {
             target: 'loading',
-            actions: [({ context }) => { context.retries = 0; context.error = ''; }],
+            actions: [
+              ({ context }) => {
+                context.retries = 0;
+                context.error = '';
+              },
+            ],
           },
         ],
       },

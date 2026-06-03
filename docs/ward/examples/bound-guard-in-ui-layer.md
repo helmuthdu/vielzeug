@@ -17,7 +17,7 @@ Call `forUser()` once when the user context is established. It returns a `BoundW
 import { createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'viewer', resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
   { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
 ]);
 
@@ -28,10 +28,10 @@ export function usePostActions(user: { id: string; roles: string[] }) {
 
   return {
     // Returns the subset of KNOWN_ACTIONS the user is allowed to perform
-    actions:       bound.allowedActions('posts', KNOWN_ACTIONS),
-    canRead:       bound.can('posts', 'read'),
-    canUpdate:     bound.can('posts', 'update'),
-    canDelete:     bound.can('posts', 'delete'),
+    actions: bound.allowedActions('posts', KNOWN_ACTIONS),
+    canRead: bound.can('posts', 'read'),
+    canUpdate: bound.can('posts', 'update'),
+    canDelete: bound.can('posts', 'delete'),
     explainDelete: bound.explain('posts', 'delete'),
   };
 }

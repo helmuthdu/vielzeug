@@ -43,7 +43,6 @@ export const appLog = Rune.child({
 });
 ```
 
-
 ### Pitfalls
 
 - JSON transport output is machine-readable but not human-readable. Do not enable it in development — always branch on `process.env.NODE_ENV`.

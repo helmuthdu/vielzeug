@@ -48,7 +48,6 @@ describe('cart module', () => {
 });
 ```
 
-
 ### Pitfalls
 
 - `createTestBus` delivers events synchronously. If your production code relies on microtask-level async delivery, the test may pass when the real code would fail. Verify the delivery timing matches production.

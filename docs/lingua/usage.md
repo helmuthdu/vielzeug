@@ -48,10 +48,10 @@ to avoid repeating the same key segment.
 
 ```ts
 const nav = i18n.scope('nav');
-nav.t('home');           // resolves 'nav.home'
-nav.t('menu.settings');  // resolves 'nav.menu.settings'
-nav.has('logout');       // checks 'nav.logout'
-nav.fmt.number(1234);    // same as i18n.fmt.number(1234)
+nav.t('home'); // resolves 'nav.home'
+nav.t('menu.settings'); // resolves 'nav.menu.settings'
+nav.has('logout'); // checks 'nav.logout'
+nav.fmt.number(1234); // same as i18n.fmt.number(1234)
 ```
 
 `scope()` creates a new object on each call — do not compare references.
@@ -126,8 +126,9 @@ Namespaces let you load partial catalogs on demand (e.g. per-route or per-featur
 
 ```ts
 // Register once at startup
-i18n.registerNamespace('settings', (locale) =>
-  () => import(`./locales/${locale}/settings.json`).then((m) => m.default),
+i18n.registerNamespace(
+  'settings',
+  (locale) => () => import(`./locales/${locale}/settings.json`).then((m) => m.default),
 );
 
 // Load when entering the settings route
@@ -342,7 +343,7 @@ const state = i18n.getState();
 // <script>window.__I18N__ = ${JSON.stringify(state)}</script>
 
 // Client
-const i18n = createI18n({ catalogs: { en: enMessages, de: () => import('./de.json').then(m => m.default) } });
+const i18n = createI18n({ catalogs: { en: enMessages, de: () => import('./de.json').then((m) => m.default) } });
 i18n.restoreState(window.__I18N__);
 // Catalogs from state are immediately available; no network request needed.
 ```
@@ -374,15 +375,23 @@ Pass `{ signal }` to `subscribe()` to unsubscribe automatically when an `AbortCo
 useEffect(() => {
   const controller = new AbortController();
 
-  i18n.subscribe(({ locale }) => {
-    document.documentElement.lang = locale;
-  }, { immediate: true, signal: controller.signal });
+  i18n.subscribe(
+    ({ locale }) => {
+      document.documentElement.lang = locale;
+    },
+    { immediate: true, signal: controller.signal },
+  );
 
   return () => controller.abort();
 }, []);
 
 // Svelte (onDestroy)
 const controller = new AbortController();
-i18n.subscribe(({ locale }) => { snapshot = locale; }, { signal: controller.signal });
+i18n.subscribe(
+  ({ locale }) => {
+    snapshot = locale;
+  },
+  { signal: controller.signal },
+);
 onDestroy(() => controller.abort());
 ```

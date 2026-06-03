@@ -48,9 +48,9 @@ const checkoutMachine = defineMachine<
             target: 'shopping',
             actions: [
               ({ context, event }) => {
-                const existing = context.items.find(i => i.id === event.id);
+                const existing = context.items.find((i) => i.id === event.id);
                 if (existing) {
-                  context.items = context.items.map(i => (i.id === event.id ? { ...i, qty: i.qty + 1 } : i));
+                  context.items = context.items.map((i) => (i.id === event.id ? { ...i, qty: i.qty + 1 } : i));
                 } else {
                   context.items = [...context.items, { id: event.id, name: event.name, price: event.price, qty: 1 }];
                 }
@@ -64,7 +64,7 @@ const checkoutMachine = defineMachine<
             target: 'shopping',
             actions: [
               ({ context, event }) => {
-                context.items = context.items.filter(i => i.id !== event.id);
+                context.items = context.items.filter((i) => i.id !== event.id);
                 context.total = context.items.reduce((sum, i) => sum + i.price * i.qty, 0);
               },
             ],
@@ -83,7 +83,11 @@ const checkoutMachine = defineMachine<
         ENTER_SHIPPING: [
           {
             target: 'payment',
-            actions: [({ context, event }) => { context.shippingAddress = event.address; }],
+            actions: [
+              ({ context, event }) => {
+                context.shippingAddress = event.address;
+              },
+            ],
           },
         ],
       },
@@ -93,7 +97,11 @@ const checkoutMachine = defineMachine<
         ENTER_PAYMENT: [
           {
             target: 'confirming',
-            actions: [({ context, event }) => { context.paymentId = event.paymentId; }],
+            actions: [
+              ({ context, event }) => {
+                context.paymentId = event.paymentId;
+              },
+            ],
           },
         ],
       },
@@ -109,7 +117,7 @@ const checkoutMachine = defineMachine<
                 address: context.shippingAddress,
                 paymentId: context.paymentId,
               }),
-            }).then(r => {
+            }).then((r) => {
               if (!r.ok) throw new Error('Payment failed');
               return r.json();
             }),

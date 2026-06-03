@@ -33,7 +33,7 @@ define('simple-counter', {
 
 ### Pitfalls
 
-- Returning a wrapper function `() => html\`...\`` instead of `html\`...\`` directly will silently render nothing. The setup function must return an `HTMLResult`.
+- Returning a wrapper function `() => html\`...\``instead of`html\`...\``directly will silently render nothing. The setup function must return an`HTMLResult`.
 - Signals used in template interpolation auto-track reactivity. Wrapping them in an unnecessary `computed()` adds overhead without benefit.
 
 ### Related

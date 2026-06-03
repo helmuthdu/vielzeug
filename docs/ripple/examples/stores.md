@@ -48,9 +48,12 @@ import { store, watch } from '@vielzeug/ripple';
 
 const user = store({ id: 1, name: 'Alice', role: 'admin' });
 
-const sub = watch(() => user.value.name, (name, prev) => {
-  console.log('name:', prev, '→', name);
-});
+const sub = watch(
+  () => user.value.name,
+  (name, prev) => {
+    console.log('name:', prev, '→', name);
+  },
+);
 
 user.patch({ role: 'editor' }); // ← does NOT fire (name unchanged)
 user.patch({ name: 'Bob' }); // → "name: Alice → Bob"
@@ -90,14 +93,14 @@ const settings = store({
 });
 
 // Lens for a top-level field
-const theme = settings.lens('theme');            // Signal<'light' | 'dark'>
+const theme = settings.lens('theme'); // Signal<'light' | 'dark'>
 theme.value = 'dark';
-console.log(settings.value.theme);              // 'dark'
+console.log(settings.value.theme); // 'dark'
 
 // Lens for a deeply nested path
 const city = settings.lens('user.address.city'); // Signal<string>
 city.value = 'Hamburg';
-console.log(settings.value.user.address.city);  // 'Hamburg'
+console.log(settings.value.user.address.city); // 'Hamburg'
 
 // Watch a single field directly
 const stopWatch = watch(theme, (next, prev) => {
@@ -117,6 +120,7 @@ stopWatch.dispose();
 - Creating a store inside a factory function called multiple times creates independent instances. This is correct for per-component stores but wrong for shared module stores — create module-level stores outside any function.
 
 ### Related
+
 - [Signals](./signals)
 - [Craft Reactivity](/craft/)
 

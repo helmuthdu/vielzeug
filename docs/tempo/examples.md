@@ -3,8 +3,6 @@ title: Tempo — Examples
 description: Practical examples and recipes for tempo.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [DST-Safe Arithmetic](./examples/dst-safe-arithmetic.md)

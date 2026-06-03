@@ -27,7 +27,6 @@ function renderList(scrollEl: HTMLElement, rows: string[]) {
 } // virt.destroy() is called automatically here
 ```
 
-
 ### Pitfalls
 
 - `using` only triggers `[Symbol.dispose]` when the declared variable goes out of scope. If you pass the virtualizer through a function before the `using` block ends, cleanup still happens at scope exit — not at the call site.

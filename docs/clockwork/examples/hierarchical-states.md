@@ -10,11 +10,7 @@ Compound states group related substates. Entering a compound state automatically
 ```ts
 import { defineMachine, interpret } from '@vielzeug/clockwork';
 
-type Event =
-  | { type: 'CANCEL' }
-  | { type: 'EDIT' }
-  | { type: 'SAVE' }
-  | { type: 'SAVED' };
+type Event = { type: 'CANCEL' } | { type: 'EDIT' } | { type: 'SAVE' } | { type: 'SAVED' };
 
 type Context = { draft: string };
 
@@ -35,13 +31,15 @@ const editor = defineMachine<'idle' | 'editing', Context, Event>({
           },
         },
         saving: {
-          invoke: [{
-            src: async ({ context, signal }) => {
-              await fetch('/api/save', { body: context.draft, method: 'POST', signal });
+          invoke: [
+            {
+              src: async ({ context, signal }) => {
+                await fetch('/api/save', { body: context.draft, method: 'POST', signal });
+              },
+              onDone: () => ({ type: 'SAVED' }),
+              onError: () => ({ type: 'CANCEL' }),
             },
-            onDone: () => ({ type: 'SAVED' }),
-            onError: () => ({ type: 'CANCEL' }),
-          }],
+          ],
           on: {
             SAVED: { target: 'idle' },
             CANCEL: { target: 'editing.draft' },
@@ -59,7 +57,7 @@ console.log(m.state.value); // 'idle'
 m.send({ type: 'EDIT' });
 console.log(m.state.value); // 'editing.draft' (auto-resolved to initial leaf)
 
-m.matches('editing');       // true — ancestor match
+m.matches('editing'); // true — ancestor match
 m.matches('editing.draft'); // true — exact match
 
 m[Symbol.dispose]();

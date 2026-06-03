@@ -23,7 +23,6 @@ const bus = createBus<WorkerEvents>();
 bus.on('message', (payload) => console.log(payload.body));
 ```
 
-
 ### Pitfalls
 
 - Calling `emit()` before any listener is registered silently discards the event. There is no event queue — register listeners before emitting.

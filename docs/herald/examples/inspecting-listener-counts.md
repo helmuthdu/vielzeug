@@ -31,7 +31,6 @@ bus.dispose();
 bus.listenerCount(); // 0
 ```
 
-
 ### Pitfalls
 
 - `listenerCount(event)` only counts listeners for that exact event name. Listeners registered under a different casing or alias are not included.

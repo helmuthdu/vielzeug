@@ -31,7 +31,6 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, d
 
 **Wayfinder** is a lightweight, framework-agnostic client-side router built around a declarative route table. Define routes once, then navigate, resolve, load route data, and build links by route name.
 
-
 ## Installation
 
 ::: code-group
@@ -115,25 +114,25 @@ router.subscribe((state) => {
 
 **Consider a framework's built-in router when** you are deep in a single framework ecosystem (React Router, Vue Router) and want first-class component binding with no adapter layer.
 
-| Feature                       | Wayfinder                                       | page.js | Navigo  |
-| ----------------------------- | --------------------------------------------- | ------- | ------- |
-| Bundle size                   | <PackageInfo package="wayfinder" type="size" /> | ~1 kB   | ~5 kB   |
-| History mode                  | ✅                                            | ✅      | ✅      |
-| Memory history (tests / non-browser) | ✅                                            | ❌      | ❌      |
-| Typed path params             | ✅                                            | ❌      | ❌      |
-| Named navigation              | ✅                                            | ❌      | Partial |
-| Middleware                    | ✅                                            | ✅      | ✅      |
-| Data loaders with AbortSignal | ✅                                            | ❌      | ❌      |
-| Lazy route loading            | ✅                                            | ❌      | ❌      |
-| Declarative redirects         | ✅                                            | ❌      | ❌      |
-| Search param validation       | ✅                                            | ❌      | ❌      |
-| Error in state                | ✅                                            | ❌      | ❌      |
-| History state in context      | ✅                                            | ❌      | ❌      |
-| Leave guards                  | ✅                                            | ❌      | ❌      |
-| Hover prefetching (`preload()`)   | ✅                                            | ❌      | ❌      |
-| Scroll restoration            | ✅                                            | ❌      | ❌      |
-| View Transition API           | ✅                                            | ❌      | ❌      |
-| Zero dependencies             | ✅                                            | ✅      | ✅      |
+| Feature                              | Wayfinder                                       | page.js | Navigo  |
+| ------------------------------------ | ----------------------------------------------- | ------- | ------- |
+| Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB   | ~5 kB   |
+| History mode                         | ✅                                              | ✅      | ✅      |
+| Memory history (tests / non-browser) | ✅                                              | ❌      | ❌      |
+| Typed path params                    | ✅                                              | ❌      | ❌      |
+| Named navigation                     | ✅                                              | ❌      | Partial |
+| Middleware                           | ✅                                              | ✅      | ✅      |
+| Data loaders with AbortSignal        | ✅                                              | ❌      | ❌      |
+| Lazy route loading                   | ✅                                              | ❌      | ❌      |
+| Declarative redirects                | ✅                                              | ❌      | ❌      |
+| Search param validation              | ✅                                              | ❌      | ❌      |
+| Error in state                       | ✅                                              | ❌      | ❌      |
+| History state in context             | ✅                                              | ❌      | ❌      |
+| Leave guards                         | ✅                                              | ❌      | ❌      |
+| Hover prefetching (`preload()`)      | ✅                                              | ❌      | ❌      |
+| Scroll restoration                   | ✅                                              | ❌      | ❌      |
+| View Transition API                  | ✅                                              | ❌      | ❌      |
+| Zero dependencies                    | ✅                                              | ✅      | ✅      |
 
 ## Features
 
@@ -162,12 +161,12 @@ router.subscribe((state) => {
 
 ## Compatibility
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅ (via `createMemoryHistory` + `match()`) |
-| SSR data prefetch | ✅ (via `match(url, signal?)`) |
-| Deno        | ✅ (via `createMemoryHistory` + `match()`) |
+| Environment       | Support                                    |
+| ----------------- | ------------------------------------------ |
+| Browser           | ✅                                         |
+| Node.js           | ✅ (via `createMemoryHistory` + `match()`) |
+| SSR data prefetch | ✅ (via `match(url, signal?)`)             |
+| Deno              | ✅ (via `createMemoryHistory` + `match()`) |
 
 ## Documentation
 

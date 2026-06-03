@@ -32,7 +32,6 @@ export function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
-
 ### Pitfalls
 
 - Creating a new logger inside the component body (not in a context) runs on every render, generating a new instance each time. Always create loggers outside the component or memoize them.

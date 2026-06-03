@@ -3,8 +3,6 @@ title: Spell — Examples
 description: Practical examples and recipes for spell.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Validating API Payloads](./examples/api.md)

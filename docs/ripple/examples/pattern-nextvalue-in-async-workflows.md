@@ -40,7 +40,10 @@ export async function openModal(): Promise<string | null> {
   modalStore.patch({ open: true, result: null });
 
   // Wait until result is set (modal closed with a value)
-  const result = await waitFor(() => modalStore.value.result, (v) => v !== null);
+  const result = await waitFor(
+    () => modalStore.value.result,
+    (v) => v !== null,
+  );
 
   modalStore.patch({ open: false });
   return result;
@@ -61,7 +64,6 @@ function onNextChange(cb: (value: 'idle' | 'loading' | 'done') => void) {
   });
 }
 ```
-
 
 ### Pitfalls
 

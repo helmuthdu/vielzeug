@@ -5,7 +5,7 @@ Lazily initialise a `Map` entry: returns the existing value if found, otherwise 
 ## Signature
 
 ```ts
-function getOrCreate<K, V>(map: Map<K, V>, key: K, build: () => V): V
+function getOrCreate<K, V>(map: Map<K, V>, key: K, build: () => V): V;
 ```
 
 ## Parameters
@@ -42,7 +42,11 @@ import { getOrCreate } from '@vielzeug/arsenal';
 
 const groups = new Map<string, number[]>();
 
-for (const item of [{ tag: 'a', n: 1 }, { tag: 'b', n: 2 }, { tag: 'a', n: 3 }]) {
+for (const item of [
+  { tag: 'a', n: 1 },
+  { tag: 'b', n: 2 },
+  { tag: 'a', n: 3 },
+]) {
   getOrCreate(groups, item.tag, () => []).push(item.n);
 }
 

@@ -3,8 +3,6 @@ title: Familiar — Examples
 description: Practical examples and recipes for familiar.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Fibonacci With Pool And Timeout](./examples/fibonacci-with-pool-and-timeout.md)

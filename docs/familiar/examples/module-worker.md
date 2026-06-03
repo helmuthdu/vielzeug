@@ -30,9 +30,7 @@ self.onmessage = async (event: MessageEvent) => {
   };
 
   // Send heartbeats if requested
-  const hb = heartbeatInterval
-    ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval)
-    : null;
+  const hb = heartbeatInterval ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval) : null;
 
   try {
     // Simulate work — replace with real computation
@@ -51,10 +49,10 @@ self.onmessage = async (event: MessageEvent) => {
 // main.ts
 import { createModuleWorker } from '@vielzeug/familiar';
 
-const pool = createModuleWorker<{ text: string }, number>(
-  new URL('./workers/hash-worker.ts', import.meta.url),
-  { concurrency: 4, timeout: 5000 },
-);
+const pool = createModuleWorker<{ text: string }, number>(new URL('./workers/hash-worker.ts', import.meta.url), {
+  concurrency: 4,
+  timeout: 5000,
+});
 
 await pool.prime(); // pre-spawn all 4 slots
 
@@ -71,14 +69,14 @@ pool.dispose();
 
 The message contract:
 
-| Direction    | Shape |
-| ------------ | ----- |
-| Host → Worker | `{ id, input, stream?, heartbeatInterval? }` |
-| Worker → Host (success) | `{ id, result }` |
-| Worker → Host (error) | `{ id, error: { name, message, stack? } }` |
-| Worker → Host (stream chunk) | `{ id, chunk }` |
-| Worker → Host (stream end) | `{ id, result: undefined }` |
-| Worker → Host (heartbeat) | `{ id, heartbeat: true }` |
+| Direction                    | Shape                                        |
+| ---------------------------- | -------------------------------------------- |
+| Host → Worker                | `{ id, input, stream?, heartbeatInterval? }` |
+| Worker → Host (success)      | `{ id, result }`                             |
+| Worker → Host (error)        | `{ id, error: { name, message, stack? } }`   |
+| Worker → Host (stream chunk) | `{ id, chunk }`                              |
+| Worker → Host (stream end)   | `{ id, result: undefined }`                  |
+| Worker → Host (heartbeat)    | `{ id, heartbeat: true }`                    |
 
 ### Pitfalls
 

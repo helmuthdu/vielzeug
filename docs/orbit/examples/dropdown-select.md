@@ -25,11 +25,7 @@ function open() {
   dropdown.setAttribute('data-open', '');
   handle = float(trigger, dropdown, {
     placement: 'bottom-start',
-    middleware: [
-      flip({ padding: 6 }),
-      shift({ padding: 6 }),
-      size({ padding: 6 }),
-    ],
+    middleware: [flip({ padding: 6 }), shift({ padding: 6 }), size({ padding: 6 })],
     apply(result) {
       // Match dropdown width to the trigger
       dropdown.style.width = `${trigger.getBoundingClientRect().width}px`;
@@ -37,7 +33,7 @@ function open() {
         dropdown.style.maxHeight = `${result.middlewareData.size.availableHeight}px`;
       }
       dropdown.style.left = `${result.x}px`;
-      dropdown.style.top  = `${result.y}px`;
+      dropdown.style.top = `${result.y}px`;
     },
   });
 }
@@ -50,7 +46,6 @@ function close() {
 ```
 
 ---
-
 
 ### Pitfalls
 

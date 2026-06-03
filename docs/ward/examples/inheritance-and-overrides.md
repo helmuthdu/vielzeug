@@ -18,15 +18,15 @@ import { createWard } from '@vielzeug/ward';
 
 const ward = createWard([
   // Staff can normally read posts
-  { role: 'staff',     resource: 'posts', action: 'read', effect: 'allow', priority: 10 },
+  { role: 'staff', resource: 'posts', action: 'read', effect: 'allow', priority: 10 },
   // Suspended overrides all allow rules via higher priority
-  { role: 'suspended', resource: 'posts', action: 'read', effect: 'deny',  priority: 100 },
+  { role: 'suspended', resource: 'posts', action: 'read', effect: 'deny', priority: 100 },
 ]);
 
 // Result is deterministic regardless of role array ordering on the principal
 ward.can({ id: 'u1', roles: ['staff', 'suspended'] }, 'posts', 'read'); // false
 ward.can({ id: 'u1', roles: ['suspended', 'staff'] }, 'posts', 'read'); // false
-ward.can({ id: 'u2', roles: ['staff'] },              'posts', 'read'); // true
+ward.can({ id: 'u2', roles: ['staff'] }, 'posts', 'read'); // true
 ```
 
 ### Pitfalls

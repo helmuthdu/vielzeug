@@ -13,15 +13,15 @@ Create a ward instance with an array of rules. Rules are compiled once at creati
 import { WILDCARD, createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'viewer',  resource: 'posts', action: 'read',   effect: 'allow' },
-  { role: 'editor',  resource: 'posts', action: 'update', effect: 'allow' },
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
   // High-priority deny blocks the blocked role from every action on posts
-  { role: 'blocked', resource: 'posts', action: WILDCARD,  effect: 'deny', priority: 100 },
+  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
 ]);
 
-ward.can({ id: 'u1', roles: ['viewer'] },  'posts', 'read');   // true
-ward.can({ id: 'u1', roles: ['viewer'] },  'posts', 'update'); // false
-ward.can({ id: 'u2', roles: ['blocked'] }, 'posts', 'read');   // false
+ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
+ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update'); // false
+ward.can({ id: 'u2', roles: ['blocked'] }, 'posts', 'read'); // false
 ```
 
 To update the policy, create a new instance — rules are immutable after creation.
@@ -72,21 +72,19 @@ const ward = createWard([
 ]);
 
 ward.can(editor, 'posts:456', 'update'); // true  — matches posts:*
-ward.can(viewer, 'posts:123', 'read');   // true  — exact match
-ward.can(viewer, 'posts:456', 'read');   // false — no matching rule
+ward.can(viewer, 'posts:123', 'read'); // true  — exact match
+ward.can(viewer, 'posts:456', 'read'); // false — no matching rule
 ```
 
 The same namespace-wildcard syntax works for actions (action hierarchy):
 
 ```ts
 // 'read:*' matches 'read:own', 'read:all', 'read:draft:1', etc.
-const ward = createWard([
-  { role: 'viewer', resource: 'posts', action: 'read:*', effect: 'allow' },
-]);
+const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read:*', effect: 'allow' }]);
 
 ward.can(viewer, 'posts', 'read:own'); // true
 ward.can(viewer, 'posts', 'read:all'); // true
-ward.can(viewer, 'posts', 'write');    // false
+ward.can(viewer, 'posts', 'write'); // false
 ```
 
 `matchesPattern(pattern, value)` is exported for custom integration code. `patternCovers(broad, narrow)` is exported to test whether one pattern statically covers another (used by `detectConflicts`).
@@ -153,19 +151,12 @@ const boundDecisions = bound.checkAll([
 
 ```ts
 // Returns the subset of the provided list that is allowed
-const actions = ward.allowedActions(
-  { id: 'u1', roles: ['admin'] },
-  'posts',
-  ['read', 'update', 'delete'],
-);
+const actions = ward.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'update', 'delete']);
 
 // With runtime data for predicate-gated rules
-const ownedActions = ward.allowedActions(
-  { id: 'u1', roles: ['editor'] },
-  'posts',
-  ['read', 'update', 'delete'],
-  { authorId: 'u1' },
-);
+const ownedActions = ward.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update', 'delete'], {
+  authorId: 'u1',
+});
 ```
 
 `allowedActions` does not invoke the logger — it is a side-effect-free enumeration helper.
@@ -199,11 +190,11 @@ if (!decision.allowed) {
 
 `explain()` returns a **3-variant discriminated union**:
 
-| Variant | `allowed` | `reason` | `rule` |
-|---|---|---|---|
-| Allow | `true` | — | The winning rule |
-| Explicit deny | `false` | `'explicit-deny'` | The winning deny rule |
-| No match | `false` | `'no-matching-rule'` | Not present |
+| Variant       | `allowed` | `reason`             | `rule`                |
+| ------------- | --------- | -------------------- | --------------------- |
+| Allow         | `true`    | —                    | The winning rule      |
+| Explicit deny | `false`   | `'explicit-deny'`    | The winning deny rule |
+| No match      | `false`   | `'no-matching-rule'` | Not present           |
 
 Use `'rule' in decision` to safely access the rule across all variants.
 
@@ -212,11 +203,7 @@ Use `'rule' in decision` to safely access the rule across all variants.
 `trace()` returns the complete decision trace: every rule that matched the request before the winner was selected, with per-candidate scoring details.
 
 ```ts
-const { decision, candidates } = ward.trace(
-  { id: 'u1', roles: ['editor'] },
-  'posts',
-  'read',
-);
+const { decision, candidates } = ward.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
 candidates.forEach(({ rule, priority, score, won }) => {
   console.log(rule.effect, priority, score, won ? '← winner' : '');
@@ -340,12 +327,12 @@ import { createWard } from '@vielzeug/ward';
 
 const ward = createWard([
   // One rule instead of three separate allow rules
-  { role: ['viewer', 'editor', 'admin'], resource: 'posts', action: 'read',   effect: 'allow' },
-  { role: ['editor', 'admin'],           resource: 'posts', action: 'update', effect: 'allow' },
-  { role: 'admin',                       resource: 'posts', action: 'delete', effect: 'allow' },
+  { role: ['viewer', 'editor', 'admin'], resource: 'posts', action: 'read', effect: 'allow' },
+  { role: ['editor', 'admin'], resource: 'posts', action: 'update', effect: 'allow' },
+  { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
 ]);
 
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');   // true
+ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
 ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'update'); // true
 ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'delete'); // false
 ```
@@ -355,13 +342,11 @@ ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'delete'); // false
 ```ts
 import { ANONYMOUS, createWard } from '@vielzeug/ward';
 
-const ward = createWard([
-  { role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' },
-]);
+const ward = createWard([{ role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' }]);
 
-ward.can(null, 'posts', 'read');                             // true (anonymous)
+ward.can(null, 'posts', 'read'); // true (anonymous)
 ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true (viewer)
-ward.can({ id: 'u2', roles: ['admin'] }, 'posts', 'read');  // false (not in list)
+ward.can({ id: 'u2', roles: ['admin'] }, 'posts', 'read'); // false (not in list)
 ```
 
 ## Anonymous and Wildcards
@@ -472,7 +457,7 @@ const ward = createWard([
 ]);
 
 function useWard(user: { value: User | null }, resource: string, action: string) {
-  return computed(() => user.value ? ward.can(user.value, resource, action) : false);
+  return computed(() => (user.value ? ward.can(user.value, resource, action) : false));
 }
 ```
 
@@ -497,7 +482,6 @@ function useWard(user: { value: User | null }, resource: string, action: string)
 
 :::
 
-
 ### Pitfalls
 
 - **React:** If `WardProvider` is placed inside a component that re-renders often, `createWard()` is called on every render. Memoize with `useMemo(() => createWard(...), [role])`.
@@ -513,25 +497,14 @@ Ward ships built-in middleware factories for Express-compatible and Hono-compati
 ```ts
 import { createWard, createExpressGuard } from '@vielzeug/ward';
 
-const ward = createWard([
-  { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
-]);
+const ward = createWard([{ role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' }]);
 
-const requireEdit = createExpressGuard(
-  ward,
-  (req) => req.user ?? null,
-  'posts:*',
-  'update',
-);
+const requireEdit = createExpressGuard(ward, (req) => req.user ?? null, 'posts:*', 'update');
 
 // With static data forwarded to when predicates:
-const requireEditOwn = createExpressGuard(
-  ward,
-  (req) => req.user ?? null,
-  'posts:*',
-  'update',
-  { data: resolvePostData() },
-);
+const requireEditOwn = createExpressGuard(ward, (req) => req.user ?? null, 'posts:*', 'update', {
+  data: resolvePostData(),
+});
 
 app.put('/posts/:id', requireEdit, handler);
 ```
@@ -543,25 +516,14 @@ On denial, returns `403 { reason: 'explicit-deny' | 'no-matching-rule' }`. Overr
 ```ts
 import { createWard, createHonoGuard } from '@vielzeug/ward';
 
-const ward = createWard([
-  { role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' },
-]);
+const ward = createWard([{ role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' }]);
 
-const requireEdit = createHonoGuard(
-  ward,
-  (c) => c.get('user') ?? null,
-  'posts:*',
-  'update',
-);
+const requireEdit = createHonoGuard(ward, (c) => c.get('user') ?? null, 'posts:*', 'update');
 
 // With static data:
-const requireEditOwn = createHonoGuard(
-  ward,
-  (c) => c.get('user') ?? null,
-  'posts:*',
-  'update',
-  { data: resolvePostData() },
-);
+const requireEditOwn = createHonoGuard(ward, (c) => c.get('user') ?? null, 'posts:*', 'update', {
+  data: resolvePostData(),
+});
 
 app.put('/posts/:id', requireEdit, handler);
 ```
@@ -598,9 +560,7 @@ import { createRouter } from '@vielzeug/wayfinder';
 
 type User = { id: string; roles: string[] };
 
-const ward = createWard([
-  { role: 'admin', resource: 'settings', action: 'read', effect: 'allow' },
-]);
+const ward = createWard([{ role: 'admin', resource: 'settings', action: 'read', effect: 'allow' }]);
 
 const router = createRouter({
   routes: {
@@ -609,13 +569,15 @@ const router = createRouter({
       handler: ({ data }) => renderSettings(data),
     },
   },
-  middleware: [(ctx, next) => {
-    const user: User = getSessionUser(); // your auth provider
-    if (!ward.can(user, 'settings', 'read')) {
-      return ctx.navigate({ path: '/login' });
-    }
-    return next();
-  }],
+  middleware: [
+    (ctx, next) => {
+      const user: User = getSessionUser(); // your auth provider
+      if (!ward.can(user, 'settings', 'read')) {
+        return ctx.navigate({ path: '/login' });
+      }
+      return next();
+    },
+  ],
 });
 ```
 
@@ -629,9 +591,14 @@ import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'ward' });
 
-const ward = createWard([/* rules */], {
-  logger: (decision) => log.info('access decision', decision),
-});
+const ward = createWard(
+  [
+    /* rules */
+  ],
+  {
+    logger: (decision) => log.info('access decision', decision),
+  },
+);
 ```
 
 ## Debug Mode
@@ -642,7 +609,7 @@ Import `debugWard` from the dedicated sub-path to create a ward with decision lo
 import { debugWard } from '@vielzeug/ward/debug';
 
 const permit = debugWard([
-  { role: 'viewer', resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
   { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
 ]);
 

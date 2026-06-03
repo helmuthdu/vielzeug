@@ -31,7 +31,6 @@ exports: [createI18n, createFormatter, validateCatalog]
 
 `@vielzeug/lingua` is a small localization runtime for typed translation keys, plural resolution, locale loading, and framework-friendly reactivity.
 
-
 ## Installation
 
 ::: code-group

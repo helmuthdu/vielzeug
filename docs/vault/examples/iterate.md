@@ -28,9 +28,9 @@ const db: IndexedDbAdapter<typeof schema> = createIndexedDB({
 
 // Seed some records
 await db.putAll('logs', [
-  { id: 1, level: 'info',  message: 'app started', timestamp: Date.now() },
-  { id: 2, level: 'warn',  message: 'slow query',  timestamp: Date.now() },
-  { id: 3, level: 'error', message: 'timeout',     timestamp: Date.now() },
+  { id: 1, level: 'info', message: 'app started', timestamp: Date.now() },
+  { id: 2, level: 'warn', message: 'slow query', timestamp: Date.now() },
+  { id: 3, level: 'error', message: 'timeout', timestamp: Date.now() },
 ]);
 
 // Stream records without loading the full table

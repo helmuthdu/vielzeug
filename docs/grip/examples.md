@@ -3,8 +3,6 @@ title: Grip — Examples
 description: Practical examples and recipes for grip.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Sortable List](./examples/sortable-list.md)

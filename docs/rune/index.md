@@ -5,7 +5,19 @@ package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, herald, familiar]
-exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, pipe, lazy, isLevelEnabled]
+exports:
+  [
+    createLogger,
+    consoleTransport,
+    remoteTransport,
+    jsonTransport,
+    batchTransport,
+    sampleTransport,
+    redactTransport,
+    pipe,
+    lazy,
+    isLevelEnabled,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -30,7 +42,6 @@ exports: [createLogger, consoleTransport, remoteTransport, jsonTransport, batchT
 </details>
 
 `@vielzeug/rune` is a zero-dependency logger built around a pluggable transport pipeline. It augments the native console with level filtering, namespace scopes, structured log entries, styled badges, lazy bindings, and flexible delivery via composable transport factories.
-
 
 ## Installation
 
@@ -113,24 +124,23 @@ import { consoleTransport, pipe, remoteTransport } from '@vielzeug/rune';
 
 const api = createLogger({
   namespace: 'api',
-  transports: [pipe(
-    consoleTransport({ level: 'debug' }),
-    remoteTransport({ handler: sendToCollector, level: 'error' }),
-  )],
+  transports: [
+    pipe(consoleTransport({ level: 'debug' }), remoteTransport({ handler: sendToCollector, level: 'error' })),
+  ],
 });
 api.info({ data }, 'GET /users');
 ```
 
-| Feature               | Rune                                        | Winston       | Pino       | console |
-| --------------------- | ------------------------------------------- | ------------- | ---------- | ------- |
-| Bundle size           | <PackageInfo package="rune" type="size" />  | ~44 kB        | ~4 kB      | 0 kB    |
-| Browser support       | ✅                                          | ❌            | ❌         | ✅      |
-| Scoped loggers        | ✅                                          | Manual        | Child      | ❌      |
-| Pluggable transports  | ✅ Built-in factories                       | ✅ Transports | ✅ Streams | ❌      |
-| Structured log entry  | ✅ `LogEntry` type                          | Partial       | ✅          | ❌      |
-| Lazy bindings         | ✅ `lazy(fn)`                               | ❌            | ❌         | ❌      |
-| Styled output         | ✅ CSS badges                               | Text only     | Text only  | Manual  |
-| Zero dependencies     | ✅                                          | ❌ (15+)      | ❌ (5+)    | N/A     |
+| Feature              | Rune                                       | Winston       | Pino       | console |
+| -------------------- | ------------------------------------------ | ------------- | ---------- | ------- |
+| Bundle size          | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
+| Browser support      | ✅                                         | ❌            | ❌         | ✅      |
+| Scoped loggers       | ✅                                         | Manual        | Child      | ❌      |
+| Pluggable transports | ✅ Built-in factories                      | ✅ Transports | ✅ Streams | ❌      |
+| Structured log entry | ✅ `LogEntry` type                         | Partial       | ✅         | ❌      |
+| Lazy bindings        | ✅ `lazy(fn)`                              | ❌            | ❌         | ❌      |
+| Styled output        | ✅ CSS badges                              | Text only     | Text only  | Manual  |
+| Zero dependencies    | ✅                                         | ❌ (15+)      | ❌ (5+)    | N/A     |
 
 **Use Rune when** you need isomorphic logging (browser + Node.js), namespaced module loggers, or remote error delivery without a heavy dependency chain.
 

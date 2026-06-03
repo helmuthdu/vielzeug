@@ -3,9 +3,32 @@ title: Ripple — Reactive signals and state management
 description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async, history]
+keywords:
+  [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async, history]
 related: [craft, forge, herald]
-exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, isSignal, isComputed, isStore, installDevTools, getSignalName, getDevToolsHook]
+exports:
+  [
+    signal,
+    computed,
+    effect,
+    effectAsync,
+    asyncComputed,
+    watch,
+    batch,
+    store,
+    storeWithHistory,
+    untrack,
+    scope,
+    asyncScope,
+    onCleanup,
+    readonly,
+    isSignal,
+    isComputed,
+    isStore,
+    installDevTools,
+    getSignalName,
+    getDevToolsHook,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -36,7 +59,6 @@ exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, st
 
 Both share the same `.value` access and `watch()` / `effect()` subscription model. A `Store<T>` **is** a `Signal<T>`, so every signal primitive works on stores too.
 
-
 ## Installation
 
 ::: code-group
@@ -61,7 +83,7 @@ yarn add @vielzeug/ripple
 import { signal, computed, effect, watch, batch } from '@vielzeug/ripple';
 
 const count = signal(0);
-const doubled = count.map((n) => n * 2);     // returns ComputedSignal<number>
+const doubled = count.map((n) => n * 2); // returns ComputedSignal<number>
 
 // Side-effect: runs immediately and re-runs on change
 const sub = effect(() => {
@@ -94,18 +116,18 @@ const counter = store({ count: 0, label: 'counter' });
 console.log(counter.value.count); // 0
 
 // Watch a typed lens — only fires when that path changes
-const countLens = counter.lens('count');      // Signal<number>
+const countLens = counter.lens('count'); // Signal<number>
 const stopWatch = watch(countLens, (next, prev) => {
   console.log('count:', prev, '→', next);
 });
 
 // Derived slice via combinator
-const label = counter.map((s) => s.label);   // ComputedSignal<string>
+const label = counter.map((s) => s.label); // ComputedSignal<string>
 
 // Mutations
-counter.patch({ count: 1 });                 // shallow merge
+counter.patch({ count: 1 }); // shallow merge
 counter.replace((s) => ({ ...s, count: s.count + 1 })); // replace via fn
-countLens.value = 10;                        // write directly through the lens
+countLens.value = 10; // write directly through the lens
 
 batch(() => {
   counter.patch({ count: 5 });
@@ -138,12 +160,12 @@ count.value = 1; // notifies automatically
 ```
 
 | Feature                 | Ripple                                       | Zustand | Jotai  | Nanostores |
-| ----------------------- | --------------------------------------------- | ------- | ------ | ---------- |
+| ----------------------- | -------------------------------------------- | ------- | ------ | ---------- |
 | Bundle size             | <PackageInfo package="ripple" type="size" /> | ~3.5 kB | ~7 kB  | ~2 kB      |
-| Framework-agnostic      | ✅                                            | ✅      | React  | ✅         |
-| Fine-grained reactivity | ✅                                            | ❌      | ✅     | ✅         |
-| Structured stores       | ✅                                            | ✅      | Manual | ❌         |
-| Zero dependencies       | ✅                                            | ❌      | ❌     | ✅         |
+| Framework-agnostic      | ✅                                           | ✅      | React  | ✅         |
+| Fine-grained reactivity | ✅                                           | ❌      | ✅     | ✅         |
+| Structured stores       | ✅                                           | ✅      | Manual | ❌         |
+| Zero dependencies       | ✅                                           | ❌      | ❌     | ✅         |
 
 **Use Ripple when** you need fine-grained reactivity without framework lock-in, or when building web components and vanilla JS apps.
 
@@ -182,11 +204,11 @@ count.value = 1; // notifies automatically
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/ripple` | All exports and types |
+| Import                   | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| `@vielzeug/ripple`       | All exports and types                              |
 | `@vielzeug/ripple/debug` | `debugEffect` — reactive source tracing (dev only) |
-| `@vielzeug/ripple/ssr` | No-op stubs for server-side rendering |
+| `@vielzeug/ripple/ssr`   | No-op stubs for server-side rendering              |
 
 ## Compatibility
 

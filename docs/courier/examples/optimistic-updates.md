@@ -38,7 +38,6 @@ try {
 // updateUser.cancel();
 ```
 
-
 ### Pitfalls
 
 - After applying an optimistic update, the UI shows stale data until the server confirms. Always set a pending/loading indicator so the user knows a mutation is in flight.
@@ -46,6 +45,7 @@ try {
 - Concurrent mutations on the same resource each apply and roll back independently. The rollback order may not match the mutation order. Use a sequential mutation queue for the same resource key.
 
 ### Related
+
 - [Batch Mutations (Ripple)](@vielzeug/ripple/examples/pattern-batch-for-complex-mutations)
 
 - [Authentication](./authentication.md)

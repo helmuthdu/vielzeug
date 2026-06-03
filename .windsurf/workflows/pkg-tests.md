@@ -28,18 +28,18 @@ You are a test engineer improving the Vitest test suite for a **Vielzeug** packa
 ### Step 1 — Test suite review & coverage gap analysis
 
 1. Read every file in `src/` (excluding `__tests__/`). For each exported symbol in `src/index.ts`:
-    - Is it tested at all?
-    - Are the **happy paths** covered?
-    - Are **error / edge cases** covered? (empty input, null/undefined, boundary values, invalid shapes at runtime)
-    - Are **async paths** covered? (resolved, rejected, timeout, cancellation if relevant)
+   - Is it tested at all?
+   - Are the **happy paths** covered?
+   - Are **error / edge cases** covered? (empty input, null/undefined, boundary values, invalid shapes at runtime)
+   - Are **async paths** covered? (resolved, rejected, timeout, cancellation if relevant)
 
 2. Review existing tests under `src/__tests__/` for:
-    - Organisation:
-        - Are tests grouped by feature/behaviour (`describe` blocks) in a way that matches the current architecture and concepts?
-    - Quality:
-        - Are there **obsolete**, **duplicated**, **brittle**, or **low-value** tests?
-        - Are there tests that over-mock or hide intent behind complex setup?
-        - Do tests assert multiple behaviours at once instead of staying focused?
+   - Organisation:
+     - Are tests grouped by feature/behaviour (`describe` blocks) in a way that matches the current architecture and concepts?
+   - Quality:
+     - Are there **obsolete**, **duplicated**, **brittle**, or **low-value** tests?
+     - Are there tests that over-mock or hide intent behind complex setup?
+     - Do tests assert multiple behaviours at once instead of staying focused?
 
 ### Step 2 — Identify missing and weak test categories
 
@@ -61,12 +61,12 @@ When restructuring:
 - Organise tests into `describe()` blocks named after the function/class or feature.
 - Keep each `it()` description a clear, specific statement (e.g. `'returns empty array when input is empty'`, not `'works'`).
 - Remove or rewrite:
-    - Obsolete tests that no longer match the implementation.
-    - Duplicated tests that assert the same behaviour.
-    - Brittle tests that rely heavily on internal implementation details.
+  - Obsolete tests that no longer match the implementation.
+  - Duplicated tests that assert the same behaviour.
+  - Brittle tests that rely heavily on internal implementation details.
 - Reduce unnecessary mocking and indirection:
-    - Prefer simple, deterministic tests with minimal setup.
-    - Keep setup reusable but not so abstract that intent is hidden.
+  - Prefer simple, deterministic tests with minimal setup.
+  - Keep setup reusable but not so abstract that intent is hidden.
 
 When adding or updating tests:
 
@@ -78,12 +78,14 @@ When adding or updating tests:
 After changes:
 
 // turbo
+
 - Run `pnpm vitest run packages/<name>/src/__tests__/` — all tests must pass.
 - If necessary, adjust tests to reflect intentional behaviour changes from the main codebase, but do not weaken tests to hide real bugs.
 
 ### Step 4 — Report
 
 Provide a summary:
+
 ```
 Package: <name>
 Exports tested before: N / M

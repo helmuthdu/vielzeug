@@ -3,8 +3,6 @@ title: Sourcerer — Examples
 description: Practical examples and recipes for sourcerer.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Local Pagination and Filtering](./examples/local-pagination-and-filtering.md)

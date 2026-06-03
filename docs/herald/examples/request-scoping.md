@@ -25,7 +25,6 @@ async function handleRequest(req: Request): Promise<Response> {
 } // requestBus.dispose() called automatically
 ```
 
-
 ### Pitfalls
 
 - Reusing one bus and calling `removeAllListeners()` between requests is not safe — it can remove listeners registered by a concurrent request. Create a new bus per request instead.
@@ -33,6 +32,7 @@ async function handleRequest(req: Request): Promise<Response> {
 - Passing the scoped bus through function arguments is safer than storing it on a shared object where concurrent requests can accidentally share a reference.
 
 ### Related
+
 - [Request Middleware (Rune)](@vielzeug/rune/examples/request-middleware)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)

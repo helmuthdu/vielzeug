@@ -36,8 +36,6 @@ Ask the user for:
 
 If the user chooses to start from a later phase (e.g. Docs), do not retroactively run earlier phases unless explicitly requested. Treat the chosen phase as a focused, standalone run.
 
----
-
 ## Phase execution guide
 
 ### Phase 1 — Plan × 3
@@ -129,8 +127,6 @@ Verify that:
 - No stale API usage remains in any REPL example file.
 - Examples align with the patterns documented in `usage.md` and `examples/*.md`.
 
----
-
 ## Final checklist
 
 Before declaring the workflow complete:
@@ -143,20 +139,18 @@ Before declaring the workflow complete:
 - [ ] No `TODO`, `FIXME`, or `HACK` comments left without a tracking issue
 - [ ] Show the Future Improvements and give suggestions for next steps
 
----
-
 ## Progress tracking
 
 Maintain a running status table as you work:
 
-| Phase           | Status | Notes |
-|-----------------|--------|-------|
-| 1. Plan × 3     | ⏳ / ✅ |       |
+| Phase            | Status  | Notes |
+| ---------------- | ------- | ----- |
+| 1. Plan × 3      | ⏳ / ✅ |       |
 | 2. Implement × 3 | ⏳ / ✅ |       |
-| 3. Review × 3   | ⏳ / ✅ |       |
-| 4. Security × 3 | ⏳ / ✅ |       |
-| 5. Tests        | ⏳ / ✅ |       |
-| 6. Docs         | ⏳ / ✅ |       |
-| 7. REPL         | ⏳ / ✅ |       |
+| 3. Review × 3    | ⏳ / ✅ |       |
+| 4. Security × 3  | ⏳ / ✅ |       |
+| 5. Tests         | ⏳ / ✅ |       |
+| 6. Docs          | ⏳ / ✅ |       |
+| 7. REPL          | ⏳ / ✅ |       |
 
 Update this table after each phase completes.

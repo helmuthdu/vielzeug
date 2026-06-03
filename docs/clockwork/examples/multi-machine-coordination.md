@@ -6,6 +6,7 @@ description: Use Herald to coordinate multiple independent Clockwork state machi
 ## Problem
 
 Complex features often require multiple interacting state machines:
+
 - A user machine (login, logout, profile updates)
 - A session machine (active, idle, expired)
 - A notification machine (checking, displaying, clearing)
@@ -21,15 +22,9 @@ import { defineMachine, interpret } from '@vielzeug/clockwork';
 import { createEventBus } from '@vielzeug/herald';
 
 // Shared event types
-type UserEvent =
-  | { type: 'LOGIN'; userId: string; token: string }
-  | { type: 'LOGOUT' }
-  | { type: 'SESSION_EXPIRED' };
+type UserEvent = { type: 'LOGIN'; userId: string; token: string } | { type: 'LOGOUT' } | { type: 'SESSION_EXPIRED' };
 
-type SessionEvent =
-  | { type: 'ACTIVITY' }
-  | { type: 'INACTIVITY_WARNING' }
-  | { type: 'EXPIRE' };
+type SessionEvent = { type: 'ACTIVITY' } | { type: 'INACTIVITY_WARNING' } | { type: 'EXPIRE' };
 
 type NotificationEvent =
   | { type: 'SHOW'; message: string; level: 'info' | 'warning' | 'error' }
@@ -287,8 +282,8 @@ setInterval(() => {
 
 export const userState = user.state;
 export const sessionState = session.state;
-export const notificationMessage = notification.context.pipe(c => c.message);
-export const notificationLevel = notification.context.pipe(c => c.level);
+export const notificationMessage = notification.context.pipe((c) => c.message);
+export const notificationLevel = notification.context.pipe((c) => c.level);
 
 export function login(userId: string, token: string) {
   user.send({ type: 'LOGIN', userId, token } as any);

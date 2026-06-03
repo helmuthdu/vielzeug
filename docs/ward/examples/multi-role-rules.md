@@ -18,15 +18,15 @@ import { ANONYMOUS, createWard } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update' | 'delete'>([
   // One rule instead of three separate allow rules
-  { role: ['viewer', 'editor', 'admin'], resource: 'posts', action: 'read',   effect: 'allow' },
-  { role: ['editor', 'admin'],           resource: 'posts', action: 'update', effect: 'allow' },
-  { role: 'admin',                       resource: 'posts', action: 'delete', effect: 'allow' },
+  { role: ['viewer', 'editor', 'admin'], resource: 'posts', action: 'read', effect: 'allow' },
+  { role: ['editor', 'admin'], resource: 'posts', action: 'update', effect: 'allow' },
+  { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
 ]);
 
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');   // true
+ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
 ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update'); // false
 ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'update'); // true
-ward.can({ id: 'u3', roles: ['admin'] },  'posts', 'delete'); // true
+ward.can({ id: 'u3', roles: ['admin'] }, 'posts', 'delete'); // true
 ```
 
 #### With ANONYMOUS in a Multi-Role Array
@@ -36,11 +36,9 @@ ward.can({ id: 'u3', roles: ['admin'] },  'posts', 'delete'); // true
 ```ts
 import { ANONYMOUS, createWard } from '@vielzeug/ward';
 
-const ward = createWard([
-  { role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' },
-]);
+const ward = createWard([{ role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' }]);
 
-ward.can(null, 'posts', 'read');                             // true — anonymous
+ward.can(null, 'posts', 'read'); // true — anonymous
 ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
 ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'read'); // false — editor not listed
 ```
@@ -53,12 +51,12 @@ A multi-role rule scores as specific (score 1) unless the array contains `WILDCA
 import { WILDCARD, createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: WILDCARD,             resource: 'posts', action: 'read', effect: 'deny',  priority: 0 },
+  { role: WILDCARD, resource: 'posts', action: 'read', effect: 'deny', priority: 0 },
   { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
 ]);
 
 ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true — specific rule wins
-ward.can({ id: 'u2', roles: ['guest'] },  'posts', 'read'); // false — wildcard deny applies
+ward.can({ id: 'u2', roles: ['guest'] }, 'posts', 'read'); // false — wildcard deny applies
 ```
 
 ### Pitfalls

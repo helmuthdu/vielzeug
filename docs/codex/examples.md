@@ -3,8 +3,6 @@ title: Codex — Examples
 description: Practical MCP tool-call examples for package discovery, docs lookup, and Sigil component queries.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [Listing Packages](./examples/listing-packages.md)
@@ -13,4 +11,3 @@ description: Practical MCP tool-call examples for package discovery, docs lookup
 - [Looking Up Components](./examples/looking-up-components.md)
 - [Reading Docs](./examples/reading-docs.md)
 - [Inspector](./examples/inspector.md)
-

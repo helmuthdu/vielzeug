@@ -3,8 +3,6 @@ title: Vault — Examples
 description: Practical examples and recipes for vault.
 ---
 
-[[toc]]
-
 ## Examples
 
 - [CRUD](./examples/crud.md)

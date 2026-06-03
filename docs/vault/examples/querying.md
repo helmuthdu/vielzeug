@@ -24,23 +24,23 @@ const schema = { products: table<Product>('id') };
 const db = createMemory({ schema });
 
 await db.putAll('products', [
-  { id: 1, name: 'Keyboard', price: 99,  category: 'peripherals' },
-  { id: 2, name: 'Mouse',    price: 49,  category: 'peripherals' },
-  { id: 3, name: 'Monitor',  price: 399, category: 'displays'    },
-  { id: 4, name: 'Mousepad', price: 19,  category: 'peripherals' },
+  { id: 1, name: 'Keyboard', price: 99, category: 'peripherals' },
+  { id: 2, name: 'Mouse', price: 49, category: 'peripherals' },
+  { id: 3, name: 'Monitor', price: 399, category: 'displays' },
+  { id: 4, name: 'Mousepad', price: 19, category: 'peripherals' },
 ]);
 
-const pageSize  = 2;
+const pageSize = 2;
 const pageIndex = 0;
 
 // Base query — shared between the page fetch and the total count
-const q = db
-  .query('products')
-  .equals('category', 'peripherals')
-  .orderBy('price', 'asc');
+const q = db.query('products').equals('category', 'peripherals').orderBy('price', 'asc');
 
 // Paginated fetch
-const page = await q.limit(pageSize).offset(pageIndex * pageSize).toArray();
+const page = await q
+  .limit(pageSize)
+  .offset(pageIndex * pageSize)
+  .toArray();
 // → [{ id: 4, ... price: 19 }, { id: 2, ... price: 49 }]
 
 // Total filtered count — ignores limit/offset/orderBy
@@ -59,15 +59,15 @@ const expensive = await db
   .toArray();
 
 // Case-insensitive prefix match
-const mice = await db
-  .query('products')
-  .startsWith('name', 'mou', { ignoreCase: true })
-  .toArray();
+const mice = await db.query('products').startsWith('name', 'mou', { ignoreCase: true }).toArray();
 
 // Delete via query — returns count of deleted records
-const deleted = await db.query('products').filter((p) => p.price < 25).delete();
+const deleted = await db
+  .query('products')
+  .filter((p) => p.price < 25)
+  .delete();
 
-void page, total, cheapest, expensive, mice, deleted;
+(void page, total, cheapest, expensive, mice, deleted);
 ```
 
 ### Pitfalls

@@ -16,8 +16,13 @@ Use `container.resolveSync()` after warming up the container asynchronously. `re
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Config { apiUrl: string; timeout: number }
-interface Logger { log(msg: string): void }
+interface Config {
+  apiUrl: string;
+  timeout: number;
+}
+interface Logger {
+  log(msg: string): void;
+}
 
 const Config = token<Config>('Config');
 const Logger = token<Logger>('Logger');
@@ -34,8 +39,8 @@ container.factory(Config, async () => {
 await container.resolve(Config);
 
 // Hot path — no Promise, no await
-const config = container.resolveSync(Config);  // cached singleton
-const logger = container.resolveSync(Logger);  // value: always available
+const config = container.resolveSync(Config); // cached singleton
+const logger = container.resolveSync(Logger); // value: always available
 logger.log(`connecting to ${config.apiUrl}`);
 ```
 
@@ -46,7 +51,9 @@ Combine `has()` with `resolveSync()` when an integration is optional.
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-interface Telemetry { track(event: string, data?: Record<string, unknown>): void }
+interface Telemetry {
+  track(event: string, data?: Record<string, unknown>): void;
+}
 
 const Telemetry = token<Telemetry>('Telemetry');
 const container = createContainer();
@@ -66,12 +73,7 @@ if (container.has(Telemetry)) {
 #### Handling errors
 
 ```ts
-import {
-  createContainer,
-  token,
-  ScopedResolutionError,
-  SyncResolutionError,
-} from '@vielzeug/conduit';
+import { createContainer, token, ScopedResolutionError, SyncResolutionError } from '@vielzeug/conduit';
 
 const Heavy = token<object>('Heavy');
 const Id = token<string>('Id');

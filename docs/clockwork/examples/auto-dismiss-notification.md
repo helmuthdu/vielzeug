@@ -20,7 +20,11 @@ const notification = defineMachine<'hidden' | 'visible', Context, Event>({
     hidden: {
       on: {
         SHOW: {
-          actions: [({ context, event }) => { context.message = event.message; }],
+          actions: [
+            ({ context, event }) => {
+              context.message = event.message;
+            },
+          ],
           target: 'visible',
         },
       },

@@ -65,11 +65,7 @@ const source = createLocalSource(products, {
 Inline composition keeps things explicit and avoids external dependencies:
 
 ```ts
-await source.setFilter(
-  (p) =>
-    p.name.toLowerCase().includes('a') &&
-    p.price <= 3,
-);
+await source.setFilter((p) => p.name.toLowerCase().includes('a') && p.price <= 3);
 ```
 
 ### Pitfalls

@@ -24,17 +24,20 @@ async function isEmailAvailable(value: string) {
 }
 
 const Account = s.object({
-  email: s.string().email().checkAsync(async (value, ctx) => {
-    const domain = value.split('@')[1] ?? '';
+  email: s
+    .string()
+    .email()
+    .checkAsync(async (value, ctx) => {
+      const domain = value.split('@')[1] ?? '';
 
-    if (bannedDomains.has(domain)) {
-      ctx.addIssue('custom', 'Email domain is blocked');
-    }
+      if (bannedDomains.has(domain)) {
+        ctx.addIssue('custom', 'Email domain is blocked');
+      }
 
-    if (!(await isEmailAvailable(value))) {
-      ctx.addIssue('custom', 'Email is already in use');
-    }
-  }),
+      if (!(await isEmailAvailable(value))) {
+        ctx.addIssue('custom', 'Email is already in use');
+      }
+    }),
   password: s.string().min(12),
 });
 

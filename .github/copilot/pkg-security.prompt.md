@@ -92,6 +92,7 @@ For pure client-side utility libraries, this section is often **N/A**, but note 
 ## Output format
 
 List every **finding** (concern or vulnerability) with:
+
 ```
 [STATUS] [SEVERITY] [CATEGORY]
 File: src/foo.ts:42
@@ -117,16 +118,16 @@ Be concrete about:
 End with an **Audit Summary** section containing:
 
 1. **Executive summary** (2–3 sentences)
-    - Overall security posture and notable high-level concerns.
+   - Overall security posture and notable high-level concerns.
 
 2. **Counts by status and severity**
-    - Number of `❌` and `⚠️` findings, broken down by severity (Critical/High/Medium/Low).
+   - Number of `❌` and `⚠️` findings, broken down by severity (Critical/High/Medium/Low).
 
 3. **Remediation priorities**
-    - A short-ordered list of what to fix first (e.g. “1. Critical injection in X; 2. Prototype pollution risk in Y; 3. Leaky error messages in Z”).
+   - A short-ordered list of what to fix first (e.g. “1. Critical injection in X; 2. Prototype pollution risk in Y; 3. Leaky error messages in Z”).
 
 4. **Overall risk rating**
-    - One of: **🟢 Low / 🟡 Medium / 🔴 High / 🔵 N/A**
-    - Use 🔵 N/A for cases where the library has effectively no direct attack surface (e.g. purely internal math, no user-facing I/O) and no meaningful security risks were found.
+   - One of: **🟢 Low / 🟡 Medium / 🔴 High / 🔵 N/A**
+   - Use 🔵 N/A for cases where the library has effectively no direct attack surface (e.g. purely internal math, no user-facing I/O) and no meaningful security risks were found.
 
 The user will tell you which package to audit. Use the checklist, then report findings and the summary as specified above.

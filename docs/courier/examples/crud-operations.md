@@ -58,7 +58,6 @@ await deleteUser.mutate(1);
 qc.invalidate(['users']);
 ```
 
-
 ### Pitfalls
 
 - Query keys must be stable across renders. Building them with `Date.now()` or random values bypasses the cache and triggers a fresh fetch on every call.
@@ -66,6 +65,7 @@ qc.invalidate(['users']);
 - `DELETE` responses often return 204 with no body. Attempting to parse an empty body as JSON throws. Handle the no-content case explicitly before parsing.
 
 ### Related
+
 - [Shared Module Store (Ripple)](@vielzeug/ripple/examples/pattern-shared-module-store)
 - [Optimistic Updates](./optimistic-updates)
 

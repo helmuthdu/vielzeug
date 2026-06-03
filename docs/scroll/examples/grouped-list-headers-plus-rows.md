@@ -19,9 +19,21 @@ import { createGroupedVirtualizer } from '@vielzeug/scroll';
 type Contact = { id: number; name: string };
 
 const sections = [
-  { label: 'A', items: [{ id: 1, name: 'Alice' }, { id: 2, name: 'Adam' }] },
+  {
+    label: 'A',
+    items: [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Adam' },
+    ],
+  },
   { label: 'B', items: [{ id: 3, name: 'Bob' }] },
-  { label: 'C', items: [{ id: 4, name: 'Carol' }, { id: 5, name: 'Chris' }] },
+  {
+    label: 'C',
+    items: [
+      { id: 4, name: 'Carol' },
+      { id: 5, name: 'Chris' },
+    ],
+  },
 ];
 
 const virt = createGroupedVirtualizer<Contact>(scrollEl, {

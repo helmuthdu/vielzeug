@@ -25,8 +25,8 @@ const router = createRouter({
   notFound: { component: NotFoundPage },
 });
 
-await router.navigate({ name: 'settings' });                          // uses transition
-await router.navigate({ name: 'home' }, { viewTransition: false });   // skips transition
+await router.navigate({ name: 'settings' }); // uses transition
+await router.navigate({ name: 'home' }, { viewTransition: false }); // skips transition
 ```
 
 Optional CSS:
@@ -41,13 +41,21 @@ Optional CSS:
 }
 
 @keyframes fade-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 ```
 

@@ -224,16 +224,16 @@ import { createWorker } from '@vielzeug/familiar';
 
 const pool = createWorker<number, number>((n) => n + 1, { concurrency: 4 });
 
-console.log(pool.completed);   // 0
-console.log(pool.failed);      // 0
+console.log(pool.completed); // 0
+console.log(pool.failed); // 0
 console.log(pool.utilization); // 0
-console.log(pool.active);      // 0
-console.log(pool.queued);      // 0
+console.log(pool.active); // 0
+console.log(pool.queued); // 0
 
 await pool.run(1);
-await pool.run(-1).catch(() => {});   // throws inside worker
-console.log(pool.completed);   // 1
-console.log(pool.failed);      // 1
+await pool.run(-1).catch(() => {}); // throws inside worker
+console.log(pool.completed); // 1
+console.log(pool.failed); // 1
 ```
 
 ## Batch Processing (`batch`)
@@ -449,9 +449,7 @@ self.onmessage = async (event) => {
   const { id, input, heartbeatInterval } = event.data;
 
   // Send heartbeats at the requested interval
-  const hb = heartbeatInterval
-    ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval)
-    : null;
+  const hb = heartbeatInterval ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval) : null;
 
   try {
     self.postMessage({ id, result: await heavyWork(input) });
@@ -522,10 +520,7 @@ self.onmessage = async (event) => {
 // main.ts
 import { createModuleWorker } from '@vielzeug/familiar';
 
-const pool = createModuleWorker<string, string>(
-  new URL('./my-worker.ts', import.meta.url),
-  { concurrency: 4 },
-);
+const pool = createModuleWorker<string, string>(new URL('./my-worker.ts', import.meta.url), { concurrency: 4 });
 
 const result = await pool.run('hello');
 pool.dispose();
@@ -546,10 +541,13 @@ import {
   WorkerTimeoutError,
 } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => {
-  if (n < 0) throw new RangeError('negative input');
-  return n * 2;
-}, { concurrency: 1, maxQueue: 5, timeout: 1000 });
+const pool = createWorker<number, number>(
+  (n) => {
+    if (n < 0) throw new RangeError('negative input');
+    return n * 2;
+  },
+  { concurrency: 1, maxQueue: 5, timeout: 1000 },
+);
 
 try {
   await pool.run(input);
@@ -679,7 +677,7 @@ describe('add worker', () => {
 
 ```ts
 type TestWorkerOptions = {
-  concurrency?: number;  // default: 1
+  concurrency?: number; // default: 1
   maxQueue?: number;
   onFull?: 'reject' | 'wait';
 };
@@ -689,10 +687,9 @@ The default `concurrency: 1` gives deterministic serial execution. Increase it o
 
 ```ts
 // Test that 3 tasks run truly in parallel
-const worker = createTestWorker<number, number>(
-  (n) => new Promise((r) => setTimeout(() => r(n), 20)),
-  { concurrency: 3 },
-);
+const worker = createTestWorker<number, number>((n) => new Promise((r) => setTimeout(() => r(n), 20)), {
+  concurrency: 3,
+});
 
 const start = Date.now();
 const results = await Promise.all([worker.run(1), worker.run(2), worker.run(3)]);
@@ -737,7 +734,9 @@ function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2
     const worker = createWorker(fn, { concurrency });
     void worker.prime();
     ref.current = worker;
-    return () => { worker.close(); };
+    return () => {
+      worker.close();
+    };
   }, []);
 
   return ref;

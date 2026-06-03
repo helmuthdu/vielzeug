@@ -31,7 +31,6 @@ exports: [createContainer, token, scope]
 
 `@vielzeug/conduit` is a compact dependency injection container built around typed symbol tokens, factory registration, and explicit container scopes.
 
-
 ## Installation
 
 ::: code-group
@@ -95,14 +94,14 @@ await container.dispose(); // all hooks run automatically
 ```
 
 | Feature                     | Conduit                                       | tsyringe                | InversifyJS                      |
-| --------------------------- | -------------------------------------------- | ----------------------- | -------------------------------- |
+| --------------------------- | --------------------------------------------- | ----------------------- | -------------------------------- |
 | Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                   | ~45 kB                           |
-| Typed token ergonomics      | ✅                                           | Partial                 | Partial                          |
-| Async-first resolution      | ✅                                           | Partial                 | Partial                          |
-| Child container scopes      | ✅                                           | ✅                      | ✅                               |
-| Explicit disposal lifecycle | ✅                                           | ❌                      | Partial                          |
-| Decorator-free usage        | ✅                                           | ❌ (decorator-oriented) | ⚠️ (commonly decorator-oriented) |
-| Zero dependencies           | ✅                                           | ✅                      | ❌                               |
+| Typed token ergonomics      | ✅                                            | Partial                 | Partial                          |
+| Async-first resolution      | ✅                                            | Partial                 | Partial                          |
+| Child container scopes      | ✅                                            | ✅                      | ✅                               |
+| Explicit disposal lifecycle | ✅                                            | ❌                      | Partial                          |
+| Decorator-free usage        | ✅                                            | ❌ (decorator-oriented) | ⚠️ (commonly decorator-oriented) |
+| Zero dependencies           | ✅                                            | ✅                      | ❌                               |
 
 **Use Conduit when** you need a compact typed container with explicit scopes and lifecycle control.
 

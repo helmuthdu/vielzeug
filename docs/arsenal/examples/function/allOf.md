@@ -5,9 +5,9 @@ Predicate combinators that compose multiple predicates into a single function us
 ## Signatures
 
 ```ts
-function allOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean
-function anyOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean
-function noneOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean
+function allOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
+function anyOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
+function noneOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
 ```
 
 ## Examples
@@ -23,7 +23,7 @@ const isAdultAdmin = allOf(
 );
 
 isAdultAdmin({ age: 25, role: 'admin' }); // true
-isAdultAdmin({ age: 25, role: 'user' });  // false
+isAdultAdmin({ age: 25, role: 'user' }); // false
 isAdultAdmin({ age: 16, role: 'admin' }); // false
 ```
 
@@ -37,9 +37,9 @@ const isPrivileged = anyOf(
   (u) => u.role === 'moderator',
 );
 
-isPrivileged({ role: 'admin' });     // true
+isPrivileged({ role: 'admin' }); // true
 isPrivileged({ role: 'moderator' }); // true
-isPrivileged({ role: 'user' });      // false
+isPrivileged({ role: 'user' }); // false
 ```
 
 ### noneOf — no predicate may pass
@@ -53,7 +53,7 @@ const isNotBanned = noneOf(
 );
 
 isNotBanned({ banned: false, suspended: false }); // true
-isNotBanned({ banned: true, suspended: false });  // false
+isNotBanned({ banned: true, suspended: false }); // false
 ```
 
 ### Filter arrays

@@ -7,7 +7,7 @@ description: 'Named scopes example for @vielzeug/conduit.'
 
 ### Problem
 
-Some dependencies need a distinct instance per logical scope (e.g., per HTTP request, per WebSocket session) — but `'scoped'` lifetime ties instances to the physical child container object. You want to be explicit about *which kind* of scope owns a lifetime, not just *any* child container.
+Some dependencies need a distinct instance per logical scope (e.g., per HTTP request, per WebSocket session) — but `'scoped'` lifetime ties instances to the physical child container object. You want to be explicit about _which kind_ of scope owns a lifetime, not just _any_ child container.
 
 ### Solution
 
@@ -27,11 +27,10 @@ const root = createContainer({ name: 'app' });
 
 // Register with the named scope as lifetime
 root.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
-root.factory(
-  RequestLogger,
-  (id) => ({ log: (msg) => console.log(`[${id}] ${msg}`) }),
-  { deps: [RequestId], lifetime: RequestScope },
-);
+root.factory(RequestLogger, (id) => ({ log: (msg) => console.log(`[${id}] ${msg}`) }), {
+  deps: [RequestId],
+  lifetime: RequestScope,
+});
 
 // Each request gets its own isolated scope container
 async function handleRequest(path: string) {
@@ -65,11 +64,10 @@ const root = createContainer();
 
 root.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
 root.factory(UserId, () => 'user-42', { lifetime: UserScope });
-root.factory(
-  AuditLog,
-  (reqId, userId) => ({ write: (msg) => console.log(`[${reqId}][${userId}] ${msg}`) }),
-  { deps: [RequestId, UserId], lifetime: RequestScope },
-);
+root.factory(AuditLog, (reqId, userId) => ({ write: (msg) => console.log(`[${reqId}][${userId}] ${msg}`) }), {
+  deps: [RequestId, UserId],
+  lifetime: RequestScope,
+});
 
 // Create nested scope containers
 const requestContainer = root.createScope(RequestScope);
