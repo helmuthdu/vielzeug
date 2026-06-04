@@ -1,207 +1,187 @@
 import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
 
-import type { ComponentSize, ThemeColor } from '../../types';
+import type { ComponentSize } from '../../types';
 
-import { sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, reducedMotionMixin } from '../../styles';
+import { sizableBundle } from '../../shared';
+import { reducedMotionMixin, tableBaseMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 
 /** Table component properties */
 export type BitTableProps = {
-  /** Show borders between rows and around the table */
+  /** Adds a thicker outer border */
   bordered?: boolean;
-  /** Visible caption text — also used as accessible label for the table group */
+  /** Visible caption text — also used as the accessible table label via `aria-label` */
   caption?: string;
-  /** Theme color applied to the header row background */
-  color?: ThemeColor;
-  /** Show a loading / busy state */
+  /** Expands the table to 100% of its container width */
+  fullwidth?: boolean;
+  /** Applies a busy/disabled state with reduced opacity */
   loading?: boolean;
-  /** Component size: 'sm' | 'md' | 'lg' */
+  /** Cell density: `sm` | `md` | `lg` */
   size?: ComponentSize;
-  /** Stick the header row to the top while the body scrolls */
+  /** Enables sticky column headers with a vertical scroll container */
   sticky?: boolean;
-  /** Alternating row stripe background */
+  /** Alternating row stripe backgrounds */
   striped?: boolean;
 };
 
-/* ── Sub-components (no shadow DOM) ─────────────────────────────────────── */
-
-// bit-tr, bit-th, bit-td are lightweight markers in the light DOM.
-// bit-table reads them and builds a fully-native shadow <table> so that
-// browser features that only work on real table elements (colspan/rowspan,
-// position:sticky on <th>, table layout algorithm) all work correctly.
+/* ── Child element markers ───────────────────────────────────────────────── */
+// bit-tr, bit-th, bit-td are lightweight light-DOM markers.
+// bit-table reads them and constructs a fully-native shadow <table> so that
+// browser features that require real table elements (colspan/rowspan,
+// position:sticky on <thead>, table layout algorithm) all work correctly.
+// Attributes on bit-th/bit-td are mirrored to the generated native cells.
 
 /**
  * Light-DOM row marker consumed by `<bit-table>`.
  *
  * @element bit-tr
- *
  * @attr {boolean} head - Places the row in the generated `<thead>` section
  * @attr {boolean} foot - Places the row in the generated `<tfoot>` section
  */
-class BitTableRowElement extends HTMLElement {}
-
-if (!customElements.get('bit-tr')) customElements.define('bit-tr', BitTableRowElement);
+if (!customElements.get('bit-tr')) customElements.define('bit-tr', class extends HTMLElement {});
 
 /**
  * Light-DOM header cell marker consumed by `<bit-table>`.
  *
  * @element bit-th
- *
- * @attr {number} colspan - Mirrors to native `<th colspan>`
- * @attr {number} rowspan - Mirrors to native `<th rowspan>`
- * @attr {string} scope - Mirrors to native `<th scope>`
- * @attr {string} headers - Mirrors to native `<th headers>`
+ * @attr {number} colspan  - Mirrors to native `<th colspan>`
+ * @attr {number} rowspan  - Mirrors to native `<th rowspan>`
+ * @attr {string} scope    - Mirrors to native `<th scope>`
+ * @attr {string} headers  - Mirrors to native `<th headers>`
  */
-class BitTableHeaderCellElement extends HTMLElement {}
-
-if (!customElements.get('bit-th')) customElements.define('bit-th', BitTableHeaderCellElement);
+if (!customElements.get('bit-th')) customElements.define('bit-th', class extends HTMLElement {});
 
 /**
  * Light-DOM data cell marker consumed by `<bit-table>`.
  *
  * @element bit-td
- *
- * @attr {number} colspan - Mirrors to native `<td colspan>`
- * @attr {number} rowspan - Mirrors to native `<td rowspan>`
- * @attr {string} headers - Mirrors to native `<td headers>`
+ * @attr {number} colspan  - Mirrors to native `<td colspan>`
+ * @attr {number} rowspan  - Mirrors to native `<td rowspan>`
+ * @attr {string} headers  - Mirrors to native `<td headers>`
  */
-class BitTableDataCellElement extends HTMLElement {}
+if (!customElements.get('bit-td')) customElements.define('bit-td', class extends HTMLElement {});
 
-if (!customElements.get('bit-td')) customElements.define('bit-td', BitTableDataCellElement);
+/* ── Proxy/mirror helpers ────────────────────────────────────────────────── */
 
-export const TR_TAG = 'bit-tr';
-export const TH_TAG = 'bit-th';
-export const TD_TAG = 'bit-td';
-
-/* ── Table proxy helpers ─────────────────────────────────────────────────── */
-
-// Attributes on bit-th / bit-td that should be forwarded to the native cell.
-const CELL_ATTRS = ['colspan', 'rowspan', 'scope', 'headers', 'abbr', 'axis', 'align', 'valign', 'width'];
+// Attributes forwarded from bit-th/bit-td to the generated native cell.
+// scope is intentionally excluded — it requires fallback logic and is handled separately.
+const CELL_ATTRS = ['colspan', 'rowspan', 'headers', 'abbr'];
 
 /**
- * Build (or rebuild) the entire native shadow table from the current light-DOM
- * bit-tr / bit-th / bit-td structure.  Returns a cleanup function that
- * disconnects all MutationObservers created during the build.
+ * Sync text content and tracked attributes from a light-DOM marker to its
+ * native mirror. `fallbackScope` is applied when the source element carries no
+ * explicit `scope` attribute, ensuring the auto-inferred value is always
+ * present and is restored if an explicit override is later removed.
+ */
+function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?: string): void {
+  const text = source.textContent ?? '';
+
+  if (native.textContent !== text) native.textContent = text;
+
+  for (const attr of CELL_ATTRS) {
+    const val = source.getAttribute(attr);
+
+    if (val !== null) native.setAttribute(attr, val);
+    else native.removeAttribute(attr);
+  }
+
+  // scope: explicit attribute wins; otherwise restore the inferred fallback.
+  const explicitScope = source.getAttribute('scope');
+
+  if (explicitScope !== null) native.setAttribute('scope', explicitScope);
+  else if (fallbackScope) native.scope = fallbackScope;
+  else native.removeAttribute('scope');
+}
+
+/** Entry stored in the cell map: native mirror element + its inferred scope fallback. */
+type CellEntry = { native: HTMLTableCellElement; inferredScope: string | undefined };
+
+/**
+ * (Re)build the entire native shadow table from the current light-DOM markers.
+ * Returns a WeakMap of source marker → CellEntry for targeted sync by the
+ * content observer. Storing `inferredScope` per cell ensures that removing an
+ * explicit `scope` attribute reverts to the auto-inferred value rather than
+ * dropping it entirely.
  */
 function buildTable(
   host: HTMLElement,
   thead: HTMLTableSectionElement,
   tbody: HTMLTableSectionElement,
   tfoot: HTMLTableSectionElement,
-): () => void {
-  const observers: MutationObserver[] = [];
+): WeakMap<Element, CellEntry> {
+  const cellMap = new WeakMap<Element, CellEntry>();
 
-  // Clear all sections first
   thead.textContent = '';
   tbody.textContent = '';
   tfoot.textContent = '';
 
-  /**
-   * Mirror one bit-td / bit-th → native td / th, keeping text content and
-   * relevant attributes in sync via a MutationObserver.
-   */
-  function mirrorCell(source: Element, into: HTMLTableSectionElement | HTMLTableRowElement): HTMLTableCellElement {
-    const isHeader = source.localName === 'bit-th';
-    const cell = document.createElement(isHeader ? 'th' : 'td');
-
-    // Forward allowed attributes
-    for (const attr of CELL_ATTRS) {
-      const val = source.getAttribute(attr);
-
-      if (val !== null) cell.setAttribute(attr, val);
-    }
-
-    cell.textContent = source.textContent ?? '';
-
-    // Keep text + attrs in sync
-    const obs = new MutationObserver(() => {
-      cell.textContent = source.textContent ?? '';
-      for (const attr of CELL_ATTRS) {
-        const val = source.getAttribute(attr);
-
-        if (val !== null) cell.setAttribute(attr, val);
-        else cell.removeAttribute(attr);
-      }
-    });
-
-    obs.observe(source, { attributes: true, characterData: true, childList: true, subtree: true });
-    observers.push(obs);
-
-    into.appendChild(cell);
-
-    return cell;
-  }
-
-  /**
-   * Mirror one bit-tr → native tr with all its cells.
-   */
-  function mirrorRow(source: Element, section: HTMLTableSectionElement): void {
-    const tr = document.createElement('tr');
-
-    for (const child of source.children) {
-      if (child.localName === 'bit-th' || child.localName === 'bit-td') {
-        mirrorCell(child, tr);
-      }
-    }
-    section.appendChild(tr);
-  }
-
-  // Walk all direct children of bit-table
   for (const child of host.children) {
     if (child.localName !== 'bit-tr') continue;
 
-    if (child.hasAttribute('head')) {
-      mirrorRow(child, thead);
-    } else if (child.hasAttribute('foot')) {
-      mirrorRow(child, tfoot);
-    } else {
-      mirrorRow(child, tbody);
+    const section = child.hasAttribute('head') ? thead : child.hasAttribute('foot') ? tfoot : tbody;
+    const tr = document.createElement('tr');
+
+    for (const cell of child.children) {
+      if (cell.localName !== 'bit-th' && cell.localName !== 'bit-td') continue;
+
+      const isHeader = cell.localName === 'bit-th';
+      const native = document.createElement(isHeader ? 'th' : 'td');
+      // Auto-infer scope for <th> elements; undefined for <td>.
+      const inferredScope = isHeader ? (section === thead ? 'col' : 'row') : undefined;
+
+      syncCell(cell, native, inferredScope);
+      cellMap.set(cell, { native, inferredScope });
+      tr.appendChild(native);
     }
+
+    section.appendChild(tr);
   }
 
-  return () => {
-    for (const obs of observers) obs.disconnect();
-  };
+  return cellMap;
 }
 
 /**
- * Data table component that projects light-DOM row/cell markers into a native shadow table.
+ * Data table component.
+ *
+ * Reads light-DOM `<bit-tr>`/`<bit-th>`/`<bit-td>` markers and projects them
+ * into a fully-native shadow `<table>`. Cell attributes (`colspan`, `rowspan`,
+ * `scope`, etc.) are mirrored. Changes are observed and synced incrementally.
+ *
+ * Native table features — sticky headers, colspan/rowspan, the table layout
+ * algorithm — all work because the shadow tree contains real table elements.
  *
  * @element bit-table
  *
- * @attr {boolean} bordered - Enables table border and clipped rounded corners
- * @attr {string} caption - Caption text rendered above the table
- * @attr {string} color - Theme color used by header tokens
- * @attr {boolean} loading - Applies busy state and disables pointer interaction
- * @attr {string} size - Cell density variant: `sm` | `md` | `lg`
- * @attr {boolean} sticky - Enables sticky table header with vertical scrolling
- * @attr {boolean} striped - Enables alternating row stripe backgrounds
- *
- * @slot - One or more `<bit-tr>` rows containing `<bit-th>`/`<bit-td>` markers
+ * @attr {boolean} bordered  - Thicker outer border
+ * @attr {string}  caption   - Caption text shown above the table
+ * @attr {boolean} fullwidth - Expands to 100% container width
+ * @attr {boolean} loading   - Busy state: reduced opacity, no pointer events
+ * @attr {string}  size      - Cell density: `sm` | `md` | `lg`
+ * @attr {boolean} sticky    - Sticky `<thead>` with scroll container
+ * @attr {boolean} striped   - Alternating row backgrounds
  *
  * @part scroll - Scroll container that hosts the generated native table
- * @part table - Generated native `<table>` element
- * @part head - Generated native `<thead>` section
- * @part body - Generated native `<tbody>` section
- * @part foot - Generated native `<tfoot>` section
+ * @part table  - Generated native `<table>` element
+ * @part head   - Generated native `<thead>` section
+ * @part body   - Generated native `<tbody>` section
+ * @part foot   - Generated native `<tfoot>` section
  *
- * @cssprop --table-radius - Border radius of the table container
- * @cssprop --table-shadow - Shadow applied to the table container
- * @cssprop --table-border - Border used by bordered mode and cell separators
- * @cssprop --table-bg - Background color of the generated native table
- * @cssprop --table-cell-padding - Cell padding for body/header cells
- * @cssprop --table-cell-font-size - Cell font size
- * @cssprop --table-cell-color - Text color for body cells
- * @cssprop --table-header-bg - Background for header and footer rows
- * @cssprop --table-header-color - Text color for header and footer rows
- * @cssprop --table-row-hover-bg - Hover background for body rows
- * @cssprop --table-stripe-bg - Stripe background for alternating rows
- * @cssprop --table-sticky-max-height - Max height used when `sticky` is enabled
- * @cssprop --table-sticky-header-bg - Background of sticky header cells
- * @cssprop --table-sticky-blur - Backdrop blur applied to sticky headers
+ * @cssprop --table-bg                - Table background color
+ * @cssprop --table-border-color      - Cell separator and outer border color
+ * @cssprop --table-radius            - Corner radius of the table container
+ * @cssprop --table-shadow            - Box shadow of the table container
+ * @cssprop --table-header-bg         - Background of header and footer rows
+ * @cssprop --table-accent            - Accent color for interactive states
+ * @cssprop --table-row-hover-bg      - Row hover background
+ * @cssprop --table-stripe-bg         - Even-row stripe background
+ * @cssprop --table-cell-padding-x    - Cell horizontal padding
+ * @cssprop --table-cell-padding-y    - Cell vertical padding
+ * @cssprop --table-font-size         - Base font size for cells
+ * @cssprop --table-sticky-max-height - Max height of the sticky scroll container
+ * @cssprop --table-sticky-header-bg  - Background of sticky header cells
+ * @cssprop --table-sticky-blur       - Backdrop blur applied to sticky headers
  *
  * @example
  * ```html
@@ -212,7 +192,7 @@ function buildTable(
  *   </bit-tr>
  *   <bit-tr>
  *     <bit-td>vielzeug/sigil</bit-td>
- *     <bit-td>1200</bit-td>
+ *     <bit-td>1 200</bit-td>
  *   </bit-tr>
  * </bit-table>
  * ```
@@ -220,10 +200,10 @@ function buildTable(
 export const TABLE_TAG = 'bit-table' as const;
 define<BitTableProps>(TABLE_TAG, {
   props: {
-    ...themableBundle,
     ...sizableBundle,
     bordered: prop.bool(false),
     caption: prop.string(),
+    fullwidth: prop.bool(false),
     loading: prop.bool(false),
     sticky: prop.bool(false),
     striped: prop.bool(false),
@@ -237,10 +217,9 @@ define<BitTableProps>(TABLE_TAG, {
       },
     });
 
-    // Build the fully-native shadow table via DOM APIs (not innerHTML) to avoid
-    // HTML-parser foster-parenting which would eject <slot> elements from table
-    // contexts.  All three issues — color themes, sticky headers, colspan —
-    // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
+    // Build the native shadow table via DOM APIs (not innerHTML) to avoid
+    // HTML-parser foster-parenting, which ejects table section elements from
+    // their intended positions in the tree.
     onMounted(() => {
       const scrollContainer = el.shadowRoot!.querySelector('.scroll-container')!;
 
@@ -250,9 +229,7 @@ define<BitTableProps>(TABLE_TAG, {
       const tbody = document.createElement('tbody');
       const tfoot = document.createElement('tfoot');
 
-      // Keep part assignment imperative so template typing stays strict.
       scrollContainer.setAttribute('part', 'scroll');
-
       table.setAttribute('part', 'table');
       thead.setAttribute('part', 'head');
       tbody.setAttribute('part', 'body');
@@ -260,29 +237,63 @@ define<BitTableProps>(TABLE_TAG, {
       table.append(captionEl, thead, tbody, tfoot);
       scrollContainer.appendChild(table);
 
-      // Sync caption text from prop
+      // Reactively sync caption text and visibility from prop.
       effect(() => {
-        captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
+        const text = props.caption.value ?? '';
+
+        captionEl.textContent = text;
+        captionEl.hidden = text === '';
       });
 
-      // Initial build
-      let cleanupCellObservers = buildTable(el, thead, tbody, tfoot);
+      // Initial full build.
+      let cellMap = buildTable(el, thead, tbody, tfoot);
 
-      // Rebuild whenever direct children change (rows added / removed / reordered)
+      // Content observer: syncs text/attribute changes inside bit-th/bit-td.
+      // Remains connected throughout the component lifetime — no
+      // disconnect/reconnect during structural rebuilds. Records that arrive
+      // for cells no longer in cellMap (after a rebuild) are silently ignored
+      // by the `if (entry)` guard, so there is no correctness risk.
+      const contentObserver = new MutationObserver((records) => {
+        for (const rec of records) {
+          const sourceCell = (rec.target instanceof Element ? rec.target : rec.target.parentElement)?.closest(
+            'bit-th, bit-td',
+          );
+
+          if (sourceCell) {
+            const entry = cellMap.get(sourceCell);
+
+            if (entry) syncCell(sourceCell, entry.native, entry.inferredScope);
+          }
+        }
+      });
+
+      contentObserver.observe(el, {
+        // Include 'scope' in attributeFilter so explicit scope changes are picked
+        // up and the fallback-restore logic in syncCell runs correctly.
+        attributeFilter: [...CELL_ATTRS, 'scope'],
+        attributes: true,
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+
+      // Structure observer: triggers a full rebuild when bit-tr elements are
+      // added, removed, or reordered. Scoped to direct children only so it
+      // never fires for cell-level mutations.
       const structureObserver = new MutationObserver(() => {
-        cleanupCellObservers();
-        cleanupCellObservers = buildTable(el, thead, tbody, tfoot);
+        cellMap = buildTable(el, thead, tbody, tfoot);
       });
 
       structureObserver.observe(el, { childList: true });
 
       return () => {
         structureObserver.disconnect();
-        cleanupCellObservers();
+        contentObserver.disconnect();
       };
     });
 
     return html`<div class="scroll-container"></div>`;
   },
-  styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
+
+  styles: [reducedMotionMixin, tableBaseMixin('table'), componentStyles],
 });

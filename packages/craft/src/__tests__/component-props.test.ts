@@ -224,4 +224,54 @@ describe('component props', () => {
 
     expect(query('.count')?.textContent).toBe('7');
   });
+
+  describe('prop.ref', () => {
+    it('defaults to undefined when no default is provided', async () => {
+      const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
+        componentOptions: { props: { getValue: prop.ref<() => string>() } },
+      });
+
+      expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
+    });
+
+    it('uses provided default value', async () => {
+      const defaultFn = (): string => 'hello';
+      const { element } = await mount((props) => html`<div>${() => props.getValue.value?.()}</div>`, {
+        componentOptions: { props: { getValue: prop.ref<() => string>(defaultFn) } },
+      });
+
+      expect((element as HTMLElement & { getValue: (() => string) | undefined }).getValue).toBe(defaultFn);
+    });
+
+    it('ignores HTML attribute — keeps value as-is', async () => {
+      const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
+        attrs: { getValue: 'should-be-ignored' },
+        componentOptions: { props: { getValue: prop.ref<() => string>() } },
+      });
+
+      expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
+    });
+
+    it('accepts a function set via JS property', async () => {
+      const fn = (): string => 'world';
+      const { element } = await mount((props) => html`<div class="out">${() => props.fn.value?.()}</div>`, {
+        componentOptions: { props: { fn: prop.ref<() => string>() } },
+      });
+      const el = element as HTMLElement & { fn?: () => string };
+
+      el.fn = fn;
+      await Promise.resolve();
+
+      expect(el.fn).toBe(fn);
+    });
+
+    it('does not reflect value back to an attribute', async () => {
+      const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
+        componentOptions: { props: { getValue: prop.ref<string>('test') } },
+      });
+
+      expect(element.hasAttribute('getValue')).toBe(false);
+      expect(element.hasAttribute('get-value')).toBe(false);
+    });
+  });
 });

@@ -109,6 +109,12 @@
       "require": "./dist/button-group.cjs",
       "types": "./dist/inputs/button-group/button-group.d.ts"
     },
+    "./calendar": {
+      "source": "./src/inputs/calendar/calendar.ts",
+      "import": "./dist/calendar.js",
+      "require": "./dist/calendar.cjs",
+      "types": "./dist/inputs/calendar/calendar.d.ts"
+    },
     "./card": {
       "source": "./src/content/card/card.ts",
       "import": "./dist/card.js",

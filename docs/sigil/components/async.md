@@ -251,8 +251,8 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 <bit-async status="loading" style="width: 100%;">
   <bit-table striped bordered caption="Members">
     <bit-tr head>
-      <bit-th scope="col">Name</bit-th>
-      <bit-th scope="col">Role</bit-th>
+      <bit-th>Name</bit-th>
+      <bit-th>Role</bit-th>
     </bit-tr>
     <bit-tr><bit-td>Alice</bit-td><bit-td>Admin</bit-td></bit-tr>
     <bit-tr><bit-td>Bob</bit-td><bit-td>Editor</bit-td></bit-tr>

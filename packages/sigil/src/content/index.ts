@@ -10,7 +10,7 @@ export { PAGINATION_TAG } from './pagination/pagination';
 export type { BitPaginationEvents, BitPaginationProps } from './pagination/pagination';
 export { SEPARATOR_TAG } from './separator/separator';
 export type { BitSeparatorProps } from './separator/separator';
-export { TABLE_TAG, TD_TAG, TH_TAG, TR_TAG } from './table/table';
+export { TABLE_TAG } from './table/table';
 export type { BitTableProps } from './table/table';
 export { TEXT_TAG } from './text/text';
 export type { BitTextProps } from './text/text';

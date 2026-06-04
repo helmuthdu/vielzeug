@@ -25,6 +25,8 @@ export {
 } from './mixins/theme.css';
 // Frost Mixin
 export { frostVariantMixin } from './mixins/variants.css';
+// Table Base Mixin
+export { tableBaseMixin } from './mixins/table-base.css';
 
 // ── Preset Arrays ─────────────────────────────────────────────────────────────
 

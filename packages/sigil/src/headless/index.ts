@@ -145,5 +145,6 @@ export {
   type DataGridControlOptions,
   type SelectionMode,
   type SortDirection,
+  type SortMode,
   type SortState,
 } from './datagrid';

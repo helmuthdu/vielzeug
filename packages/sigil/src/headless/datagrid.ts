@@ -1,4 +1,4 @@
-import { computed, signal } from '@vielzeug/craft';
+import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -7,17 +7,17 @@ export type SortDirection = 'asc' | 'desc' | 'none';
 
 /** Per-column sort state. */
 export type SortState = {
-  /** The column key being sorted. */
-  key: string;
   /** Current sort direction. */
   direction: SortDirection;
+  /** The column key being sorted. Empty string when unsorted. */
+  key: string;
 };
 
 /** Column definition for the datagrid. */
 export type DataGridColumn<T = Record<string, unknown>> = {
   /**
    * Custom cell renderer. Receives the row item and returns a string.
-   * Use for formatted values (e.g. dates, numbers).
+   * Use for formatted values (e.g. dates, currency, booleans).
    */
   cell?: (item: T) => string;
   /** Accessible label for the column header. Defaults to `label`. */
@@ -26,71 +26,86 @@ export type DataGridColumn<T = Record<string, unknown>> = {
   key: string;
   /** Display label for the column header. */
   label: string;
-  /** Column is not sortable. Defaults to `false`. */
+  /** Whether the column can be resized via a drag handle. Defaults to `false`. */
+  resizable?: boolean;
+  /** Whether the column is sortable. Defaults to `false`. */
   sortable?: boolean;
-  /** Column width (any valid CSS width value). */
+  /** Column width (any valid CSS width value, e.g. `'12rem'`). */
   width?: string;
 };
 
 /** Row selection mode. */
 export type SelectionMode = 'multi' | 'none' | 'single';
 
+/**
+ * Controls whether sorting is handled client-side (default) or server-side.
+ * - `'client'` — the control sorts `getItems()` automatically.
+ * - `'server'` — the control fires `onSortChange` but does NOT sort items.
+ *   The consumer is responsible for updating `getItems()` with pre-sorted data.
+ */
+export type SortMode = 'client' | 'server';
+
 export type DataGridControlOptions<T = Record<string, unknown>> = {
-  /** Column definitions — may be a static array or a getter that returns a reactive array. */
-  columns: DataGridColumn<T>[] | (() => DataGridColumn<T>[]);
-  /** Whether row clicking fires a selection change. */
+  /** Returns the current column definitions reactively. */
+  columns: () => DataGridColumn<T>[];
+  /** Returns the current row items reactively. */
   getItems: () => T[];
-  /** Return a unique string key for each row item. */
+  /** Returns a unique string key for each row item. */
   getRowKey: (item: T) => string;
-  /** Called when selection changes. */
+  /** Called when selection changes. Receives the full set of selected keys. */
   onSelectionChange?: (keys: Set<string>) => void;
   /** Called when sort state changes. */
   onSortChange?: (sort: SortState) => void;
-  /** Initial page size. Defaults to 10. */
-  pageSize?: number;
-  /** Row selection mode. Defaults to `'none'`. */
-  selectionMode?: SelectionMode;
+  /** Returns the current page size reactively. Use `0` to disable pagination. */
+  pageSize: () => number;
+  /** Returns the current selection mode reactively. */
+  selectionMode: () => SelectionMode;
+  /**
+   * Whether sorting is handled client-side or server-side.
+   * Defaults to `'client'`.
+   */
+  sortMode?: () => SortMode;
 };
 
 export type DataGridControl<T = Record<string, unknown>> = {
-  /** All column definitions. */
-  readonly columns: DataGridColumn<T>[];
-  /** Current page items (sorted + paginated). */
-  readonly currentPageItems: T[];
-  /** Whether there is a next page. */
-  readonly hasNextPage: boolean;
-  /** Whether there is a previous page. */
-  readonly hasPrevPage: boolean;
+  /** Deselect all rows. */
+  clearSelection(): void;
+  /** Current page items (sorted + paginated). Reactive signal. */
+  readonly currentPageItems: ReadonlySignal<T[]>;
+  /** Go to an absolute page index. */
+  goToPage(index: number): void;
+  /** Whether there is a next page. Reactive signal. */
+  readonly hasNextPage: ReadonlySignal<boolean>;
+  /** Whether there is a previous page. Reactive signal. */
+  readonly hasPrevPage: ReadonlySignal<boolean>;
   /** Whether all current-page rows are selected. */
   isAllSelected(): boolean;
   /** Whether a given row key is selected. */
   isSelected(key: string): boolean;
   /** Navigate to the next page. */
   nextPage(): void;
-  /** Total page count. */
-  readonly pageCount: number;
-  /** Current 0-based page index. */
-  readonly pageIndex: number;
+  /** Total page count. Reactive signal. */
+  readonly pageCount: ReadonlySignal<number>;
+  /** Current 0-based page index. Reactive signal. */
+  readonly pageIndex: ReadonlySignal<number>;
   /** Navigate to the previous page. */
   prevPage(): void;
-  /** Go to an absolute page index. */
-  goToPage(index: number): void;
-  /** Current selected row keys. */
-  readonly selectedKeys: Set<string>;
-  /** Current selection mode. */
-  readonly selectionMode: SelectionMode;
   /** Select all rows on the current page. */
   selectAll(): void;
-  /** Deselect all rows. */
-  clearSelection(): void;
-  /** Toggle selection for a single row. */
-  toggleRow(key: string): void;
-  /** Current sort state. */
-  readonly sortState: SortState;
+  /** Current selected row keys. Reactive signal. */
+  readonly selectedKeys: ReadonlySignal<Set<string>>;
+  /** All rows whose keys are in `selectedKeys`. */
+  readonly selectedRows: T[];
+  /** Set the selection to an explicit set of keys. */
+  setSelection(keys: Set<string>): void;
   /** Sort by the given column key — cycles asc → desc → none. */
   sortBy(key: string): void;
-  /** Total item count (all pages). */
-  readonly totalItems: number;
+  /** Current sort state. Reactive signal. */
+  readonly sortState: ReadonlySignal<SortState>;
+  /** Toggle selection for a single row. */
+  toggleRow(key: string): void;
+  /** Total item count across all pages. Reactive signal. */
+  readonly totalItems: ReadonlySignal<number>;
 };
 
 // ── Implementation ─────────────────────────────────────────────────────────────
@@ -98,26 +113,28 @@ export type DataGridControl<T = Record<string, unknown>> = {
 /**
  * Headless datagrid control — sorting, pagination, and row selection.
  *
- * All state is reactive. Pass reactive item sources via `getItems`.
+ * All mutable state is exposed as reactive `ReadonlySignal` values so
+ * consumers can bind directly in templates without manual invalidation.
  *
  * @example
  * ```ts
  * const ctrl = createDataGridControl({
- *   columns: [{ key: 'name', label: 'Name', sortable: true }],
+ *   columns: () => myColumns,
  *   getItems: () => myItems,
  *   getRowKey: (item) => item.id,
- *   selectionMode: 'multi',
- *   pageSize: 20,
+ *   selectionMode: () => 'multi',
+ *   pageSize: () => 20,
  * });
+ *
+ * // In template — subscribes automatically:
+ * ctrl.currentPageItems.value.map(...)
+ * ctrl.sortState.value.direction
+ * ctrl.selectedKeys.value.has(key)
  * ```
  */
 export const createDataGridControl = <T = Record<string, unknown>>(
   options: DataGridControlOptions<T>,
 ): DataGridControl<T> => {
-  const selectionMode: SelectionMode = options.selectionMode ?? 'none';
-  const resolveColumns = (): DataGridColumn<T>[] =>
-    typeof options.columns === 'function' ? options.columns() : options.columns;
-
   // ── Sorting ──────────────────────────────────────────────────────────────────
 
   const _sortKey = signal<string>('');
@@ -146,16 +163,15 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     const items = options.getItems();
     const key = _sortKey.value;
     const dir = _sortDir.value;
+    const mode = options.sortMode?.() ?? 'client';
 
-    if (!key || dir === 'none') return items.slice();
+    if (mode === 'server' || !key || dir === 'none') return items;
 
     return items.slice().sort((a, b) => {
       const av = (a as Record<string, unknown>)[key];
       const bv = (b as Record<string, unknown>)[key];
       const cmp =
-        typeof av === 'number' && typeof bv === 'number'
-          ? av - bv
-          : String(av ?? '').localeCompare(String(bv ?? ''));
+        typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av ?? '').localeCompare(String(bv ?? ''));
 
       return dir === 'asc' ? cmp : -cmp;
     });
@@ -163,22 +179,28 @@ export const createDataGridControl = <T = Record<string, unknown>>(
 
   // ── Pagination ────────────────────────────────────────────────────────────────
 
-  const resolvedPageSize = (): number => options.pageSize ?? 10;
-
   const _pageIndex = signal(0);
 
-  const pageCount = computed(() => Math.max(1, Math.ceil(sortedItems.value.length / resolvedPageSize())));
+  const pageCount = computed(() => {
+    const ps = options.pageSize();
+
+    return ps > 0 ? Math.max(1, Math.ceil(sortedItems.value.length / ps)) : 1;
+  });
 
   const safePage = computed(() => Math.min(_pageIndex.value, pageCount.value - 1));
 
   const currentPageItems = computed<T[]>(() => {
-    const start = safePage.value * resolvedPageSize();
+    const ps = options.pageSize();
 
-    return sortedItems.value.slice(start, start + resolvedPageSize());
+    if (ps <= 0) return sortedItems.value;
+
+    const start = safePage.value * ps;
+
+    return sortedItems.value.slice(start, start + ps);
   });
 
-  const hasNextPage = computed(() => safePage.value < pageCount.value - 1);
-  const hasPrevPage = computed(() => safePage.value > 0);
+  const hasNextPage = computed(() => options.pageSize() > 0 && safePage.value < pageCount.value - 1);
+  const hasPrevPage = computed(() => options.pageSize() > 0 && safePage.value > 0);
 
   const nextPage = (): void => {
     if (hasNextPage.value) _pageIndex.value = safePage.value + 1;
@@ -191,6 +213,8 @@ export const createDataGridControl = <T = Record<string, unknown>>(
   const goToPage = (index: number): void => {
     _pageIndex.value = Math.max(0, index);
   };
+
+  const totalItems = computed(() => sortedItems.value.length);
 
   // ── Selection ─────────────────────────────────────────────────────────────────
 
@@ -212,13 +236,15 @@ export const createDataGridControl = <T = Record<string, unknown>>(
   };
 
   const toggleRow = (key: string): void => {
-    if (selectionMode === 'none') return;
+    const mode = options.selectionMode();
+
+    if (mode === 'none') return;
 
     const next = new Set(_selectedKeys.value);
 
     if (next.has(key)) {
       next.delete(key);
-    } else if (selectionMode === 'single') {
+    } else if (mode === 'single') {
       next.clear();
       next.add(key);
     } else {
@@ -229,7 +255,7 @@ export const createDataGridControl = <T = Record<string, unknown>>(
   };
 
   const selectAll = (): void => {
-    if (selectionMode !== 'multi') return;
+    if (options.selectionMode() !== 'multi') return;
 
     const page = currentPageItems.value;
 
@@ -252,43 +278,31 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     _commitSelection(new Set());
   };
 
+  const setSelection = (keys: Set<string>): void => {
+    _commitSelection(new Set(keys));
+  };
+
   return {
-    get columns() {
-      return resolveColumns();
-    },
-    get currentPageItems() {
-      return currentPageItems.value;
-    },
-    get hasNextPage() {
-      return hasNextPage.value;
-    },
-    get hasPrevPage() {
-      return hasPrevPage.value;
-    },
+    clearSelection,
+    currentPageItems,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
     isAllSelected,
     isSelected,
     nextPage,
-    get pageCount() {
-      return pageCount.value;
-    },
-    get pageIndex() {
-      return safePage.value;
-    },
+    pageCount,
+    pageIndex: safePage,
     prevPage,
-    goToPage,
-    get selectedKeys() {
-      return _selectedKeys.value;
-    },
-    selectionMode,
     selectAll,
-    clearSelection,
-    toggleRow,
-    get sortState() {
-      return sortState.value;
+    selectedKeys: _selectedKeys,
+    get selectedRows(): T[] {
+      return options.getItems().filter((item) => _selectedKeys.value.has(options.getRowKey(item)));
     },
+    setSelection,
     sortBy,
-    get totalItems() {
-      return sortedItems.value.length;
-    },
+    sortState,
+    toggleRow,
+    totalItems,
   };
 };

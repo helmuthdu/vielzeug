@@ -1,31 +1,15 @@
 @layer sigil.base {
   :host {
-    --_bg: var(--datagrid-bg, var(--color-canvas));
-    --_border-color: var(--datagrid-border-color, var(--color-contrast-200));
-    --_radius: var(--datagrid-radius, var(--rounded-xl));
-    --_header-bg: var(--datagrid-header-bg, var(--color-contrast-50));
-    --_row-hover-bg: var(--datagrid-row-hover-bg, color-mix(in srgb, var(--_theme-focus) 6%, transparent));
-    --_row-selected-bg: var(--datagrid-row-selected-bg, color-mix(in srgb, var(--_theme-focus) 10%, transparent));
-    --_row-selected-border: var(--datagrid-row-selected-border, var(--_theme-focus));
-    --_stripe-bg: var(--datagrid-stripe-bg, color-mix(in srgb, var(--color-contrast-900) 3%, transparent));
-    --_cell-padding-x: var(--datagrid-cell-padding-x, var(--size-3));
-    --_cell-padding-y: var(--datagrid-cell-padding-y, var(--size-2-5));
-    --_font-size: var(--datagrid-font-size, var(--text-sm));
-
-    display: block;
-    overflow: hidden;
-    background: var(--_bg);
-    border: var(--border) solid var(--_border-color);
-    border-radius: var(--_radius);
-    box-shadow: var(--datagrid-shadow, var(--shadow-sm));
+    /* ── Datagrid-specific token overrides on top of tableBaseMixin ─────── */
+    --_row-selected-bg: var(--datagrid-row-selected-bg, color-mix(in srgb, var(--_accent) 10%, transparent));
+    --_row-selected-border: var(--datagrid-row-selected-border, var(--_accent));
   }
 
   /* ── Scroll wrapper ───────────────────────────────────────────────────────── */
 
   .dg-scroll {
-    overflow-x: auto;
-    overflow-y: auto;
     max-height: var(--datagrid-max-height, none);
+    overflow: auto;
   }
 
   /* ── Table ────────────────────────────────────────────────────────────────── */
@@ -33,8 +17,8 @@
   .dg-table {
     width: 100%;
     font-size: var(--_font-size);
-    border-collapse: collapse;
     table-layout: auto;
+    border-collapse: collapse;
   }
 
   /* ── Head ─────────────────────────────────────────────────────────────────── */
@@ -44,7 +28,7 @@
     top: 0;
     z-index: 2;
     background: var(--_header-bg);
-    border-block-end: var(--border) solid var(--_border-color);
+    box-shadow: inset 0 calc(var(--border) * -1) 0 var(--_border-color);
   }
 
   .dg-th {
@@ -70,18 +54,39 @@
     align-items: center;
   }
 
-  .dg-th[aria-sort] {
+  .dg-sort-btn {
+    display: flex;
+    gap: inherit;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    font: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
     cursor: pointer;
     outline: none;
+    background: transparent;
+    border: none;
   }
 
-  .dg-th[aria-sort]:hover {
+  .dg-sort-btn:hover:not(:disabled) {
     color: var(--color-contrast-800);
+  }
+
+  .dg-th[aria-sort]:has(.dg-sort-btn:hover):not(:has(.dg-sort-btn:disabled)) {
     background: color-mix(in srgb, var(--color-contrast-900) 5%, transparent);
   }
 
-  .dg-th[aria-sort]:focus-visible {
+  .dg-sort-btn:focus-visible {
     box-shadow: inset 0 0 0 2px var(--_row-selected-border);
+  }
+
+  .dg-sort-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 
   .dg-sort-icon {
@@ -95,7 +100,7 @@
 
   .dg-th[aria-sort='ascending'] .dg-sort-icon,
   .dg-th[aria-sort='descending'] .dg-sort-icon {
-    color: var(--_theme-focus);
+    color: var(--_accent);
   }
 
   /* Select-all checkbox cell */
@@ -106,7 +111,24 @@
     border-inline-end: var(--border) solid var(--_border-color);
   }
 
-  /* ── Body ─────────────────────────────────────────────────────────────────── */
+  /* Center the checkbox inside both header and body check cells */
+  .dg-th-check,
+  .dg-td-check {
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  /* bit-checkbox used for select-all and row checkboxes — label-less, compact */
+  .dg-check {
+    display: inline-flex;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    cursor: pointer;
+  }
+
+  /* ── Body rows ────────────────────────────────────────────────────────────── */
 
   .dg-body .dg-tr {
     border-block-end: var(--border) solid var(--_border-color);
@@ -117,9 +139,11 @@
     border-block-end: none;
   }
 
-  .dg-body .dg-tr:hover:not([data-disabled]):not([aria-selected='true']) {
+  .dg-body .dg-tr:hover:not([data-disabled], [aria-selected='true']) {
     background: var(--_row-hover-bg);
   }
+
+  /* ── Selection ─────────────────────────────────────────────────────────────── */
 
   .dg-body .dg-tr[aria-selected='true'] {
     background: var(--_row-selected-bg);
@@ -149,27 +173,21 @@
     background: var(--_row-selected-bg);
   }
 
+  /* ── Body cells ────────────────────────────────────────────────────────────── */
+
   .dg-td {
+    max-width: var(--datagrid-cell-max-width, 32ch);
     padding: var(--_cell-padding-y) var(--_cell-padding-x);
-    color: var(--color-contrast-800);
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: var(--datagrid-cell-max-width, 32ch);
-    border-inline-end: var(--border) solid var(--_border-color);
     vertical-align: middle;
+    color: var(--color-contrast-800);
+    white-space: nowrap;
+    border-inline-end: var(--border) solid var(--_border-color);
   }
 
   .dg-td:last-child {
     border-inline-end: none;
-  }
-
-  /* Checkbox cell in body */
-  .dg-td-check {
-    width: var(--size-10);
-    min-width: var(--size-10);
-    padding: var(--_cell-padding-y) var(--_cell-padding-x);
-    border-inline-end: var(--border) solid var(--_border-color);
   }
 
   /* ── Empty state ──────────────────────────────────────────────────────────── */
@@ -179,6 +197,40 @@
     font-size: var(--text-sm);
     color: var(--color-contrast-400);
     text-align: center;
+  }
+
+  /* ── Toolbar (search + filters) ──────────────────────────────────────────── */
+
+  .dg-toolbar {
+    display: flex;
+    gap: var(--size-3);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--size-2-5) var(--_cell-padding-x) var(--size-1-5);
+    background: var(--_header-bg);
+    border-block-end: var(--border) solid var(--_border-color);
+  }
+
+  .dg-toolbar-start {
+    flex: 0 1 20rem;
+    min-width: 0;
+  }
+
+  .dg-search {
+    width: 100%;
+  }
+
+  .dg-toolbar-filters {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: var(--size-3);
+    align-items: center;
+  }
+
+  .dg-filter {
+    display: block;
+    width: 9rem;
   }
 
   /* ── Footer / pagination bar ─────────────────────────────────────────────── */
@@ -197,6 +249,21 @@
 
   .dg-footer-info {
     white-space: nowrap;
+  }
+
+  .dg-footer-end {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+  }
+
+  .dg-page-size-select {
+    width: 80px;
+
+    --select-min-width: 0;
+    --select-height: var(--size-7);
+    --select-font-size: var(--text-xs);
+    --select-padding-x: var(--size-2);
   }
 
   .dg-pagination {
@@ -243,24 +310,36 @@
     white-space: nowrap;
   }
 
+  /* ── Column resize handle (F4) ───────────────────────────────────────────── */
+
+  .dg-col-resize {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: var(--size-1);
+    cursor: col-resize;
+    user-select: none;
+    background: transparent;
+    transition: background var(--transition-fast);
+  }
+
+  .dg-col-resize:hover,
+  .dg-col-resize:active {
+    background: var(--_accent, var(--color-contrast-300));
+  }
+
+  /* ── Cell keyboard focus (ARIA grid roving tabindex) ─────────────────────── */
+
+  .dg-td:focus-visible,
+  .dg-th:focus-visible {
+    outline: 2px solid var(--_row-selected-border);
+    outline-offset: -2px;
+  }
+
   /* ── Loading overlay ──────────────────────────────────────────────────────── */
 
   :host([loading]) .dg-scroll {
-    opacity: 0.5;
     pointer-events: none;
-  }
-}
-
-@layer sigil.sizes {
-  :host([size='sm']) {
-    --_cell-padding-x: var(--size-2);
-    --_cell-padding-y: var(--size-1-5);
-    --_font-size: var(--text-xs);
-  }
-
-  :host([size='lg']) {
-    --_cell-padding-x: var(--size-4);
-    --_cell-padding-y: var(--size-3-5);
-    --_font-size: var(--text-base);
+    opacity: 0.5;
   }
 }

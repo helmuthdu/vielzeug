@@ -1,11 +1,10 @@
 # Table
 
-A semantic, accessible data table component with striped rows, borders, sticky header, color-themed headers, and responsive horizontal scrolling. Use `<bit-tr head>` for header rows, `<bit-tr foot>` for footer rows, plain `<bit-tr>` for body rows, with `<bit-th>` and `<bit-td>` for cells.
+A semantic, accessible data table component with striped rows, borders, sticky header, and responsive horizontal scrolling. Use `<bit-tr head>` for header rows, `<bit-tr foot>` for footer rows, plain `<bit-tr>` for body rows, with `<bit-th>` and `<bit-td>` for cells.
 
 ## Features
 
 - 📋 **Flat row API**: Compose with `<bit-tr head>`, `<bit-tr>`, `<bit-tr foot>`, `<bit-th>`, `<bit-td>` — no wrapper elements needed
-- 🌈 **6 Color Themes**: primary, secondary, info, success, warning, error
 - 📏 **3 Size Variants**: sm, md, lg
 - 🦓 **Striped rows** for easier scanning of dense data
 - 🔲 **Bordered** variant with rounded outline
@@ -27,9 +26,9 @@ A semantic, accessible data table component with striped rows, borders, sticky h
 ```html
 <bit-table caption="Team Members">
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Role</bit-th>
-    <bit-th scope="col">Status</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Role</bit-th>
+    <bit-th>Status</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
@@ -64,8 +63,8 @@ The `striped` attribute applies alternating row backgrounds, making it easier to
 ```html
 <bit-table striped>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Email</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Email</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
@@ -93,56 +92,48 @@ The `bordered` attribute adds an outer border and radius around the whole table.
 ```html
 <bit-table bordered>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Score</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Email</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
-    <bit-td>98</bit-td>
+    <bit-td>alice@example.com</bit-td>
   </bit-tr>
   <bit-tr>
     <bit-td>Bob</bit-td>
-    <bit-td>85</bit-td>
+    <bit-td>bob@example.com</bit-td>
+  </bit-tr>
+  <bit-tr>
+    <bit-td>Carol</bit-td>
+    <bit-td>carol@example.com</bit-td>
   </bit-tr>
 </bit-table>
 ```
 
 </ComponentPreview>
 
-### Color Themes
+### Fullwidth
 
-Apply a `color` attribute to tint the header row background with a semantic theme color.
+The `fullwidth` attribute expands the table to fill 100% of its container width.
 
 <ComponentPreview>
 
 ```html
-<bit-table color="primary">
+<bit-table fullwidth>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Department</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Role</bit-th>
+    <bit-th>Status</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
-    <bit-td>Engineering</bit-td>
+    <bit-td>Admin</bit-td>
+    <bit-td>Active</bit-td>
   </bit-tr>
   <bit-tr>
     <bit-td>Bob</bit-td>
-    <bit-td>Design</bit-td>
-  </bit-tr>
-</bit-table>
-
-<bit-table color="success">
-  <bit-tr head>
-    <bit-th scope="col">Item</bit-th>
-    <bit-th scope="col">Status</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Server</bit-td>
-    <bit-td>Healthy</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Database</bit-td>
-    <bit-td>Healthy</bit-td>
+    <bit-td>Editor</bit-td>
+    <bit-td>Inactive</bit-td>
   </bit-tr>
 </bit-table>
 ```
@@ -159,8 +150,8 @@ Control cell padding and font size with the `size` attribute.
 <!-- Compact -->
 <bit-table size="sm">
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Value</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Value</bit-th>
   </bit-tr>
   <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
   <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
@@ -169,8 +160,8 @@ Control cell padding and font size with the `size` attribute.
 <!-- Default -->
 <bit-table size="md">
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Value</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Value</bit-th>
   </bit-tr>
   <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
   <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
@@ -179,8 +170,8 @@ Control cell padding and font size with the `size` attribute.
 <!-- Spacious -->
 <bit-table size="lg">
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Value</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Value</bit-th>
   </bit-tr>
   <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
   <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
@@ -196,11 +187,11 @@ Set `sticky` to keep the header row visible when the table body scrolls. Set `--
 <ComponentPreview>
 
 ```html
-<bit-table sticky style="--table-sticky-max-height: 10rem">
+<bit-table sticky style="--table-sticky-max-height: 20rem">
   <bit-tr head>
-    <bit-th scope="col">Rank</bit-th>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Score</bit-th>
+    <bit-th>Rank</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Score</bit-th>
   </bit-tr>
   <bit-tr><bit-td>1</bit-td><bit-td>Alice</bit-td><bit-td>98</bit-td></bit-tr>
   <bit-tr><bit-td>2</bit-td><bit-td>Bob</bit-td><bit-td>95</bit-td></bit-tr>
@@ -226,8 +217,8 @@ The `loading` attribute dims the table and sets `aria-busy="true"` while data is
 ```html
 <bit-table loading>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Email</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Email</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
@@ -245,11 +236,11 @@ The `caption` attribute renders a visible label above the table and also serves 
 <ComponentPreview>
 
 ```html
-<bit-table caption="Monthly Sales Report" striped color="primary">
+<bit-table caption="Monthly Sales Report" striped>
   <bit-tr head>
-    <bit-th scope="col">Month</bit-th>
-    <bit-th scope="col">Revenue</bit-th>
-    <bit-th scope="col">Growth</bit-th>
+    <bit-th>Month</bit-th>
+    <bit-th>Revenue</bit-th>
+    <bit-th>Growth</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>January</bit-td>
@@ -278,12 +269,12 @@ Mix attributes for a fully styled, accessible table.
 <ComponentPreview>
 
 ```html
-<bit-table caption="Active Users" color="primary" striped bordered sticky>
+<bit-table caption="Active Users" striped bordered sticky>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Email</bit-th>
-    <bit-th scope="col">Role</bit-th>
-    <bit-th scope="col">Last Active</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Email</bit-th>
+    <bit-th>Role</bit-th>
+    <bit-th>Last Active</bit-th>
   </bit-tr>
 
   <bit-tr>
@@ -317,65 +308,67 @@ Mix attributes for a fully styled, accessible table.
 
 ### Attributes
 
-| Attribute  | Type                                                                      | Default | Description                                        |
-| ---------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------------- |
-| `caption`  | `string`                                                                  | —       | Visible caption rendered above the table           |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Color theme applied to the header row              |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | —       | Cell padding and font size                         |
-| `striped`  | `boolean`                                                                 | `false` | Alternating row background                         |
-| `bordered` | `boolean`                                                                 | `false` | Outer border and rounded corners                   |
-| `sticky`   | `boolean`                                                                 | `false` | Stick the header row to the top while body scrolls |
-| `loading`  | `boolean`                                                                 | `false` | Dims the table and sets `aria-busy="true"`         |
+| Attribute   | Type                    | Default | Description                                        |
+| ----------- | ----------------------- | ------- | -------------------------------------------------- |
+| `caption`   | `string`                | —       | Visible caption rendered above the table           |
+| `size`      | `'sm' \| 'md' \| 'lg'` | —       | Cell padding and font size                         |
+| `striped`   | `boolean`               | `false` | Alternating row background                         |
+| `bordered`  | `boolean`               | `false` | Outer border and rounded corners                   |
+| `fullwidth` | `boolean`               | `false` | Expands the table to 100% of its container width   |
+| `sticky`    | `boolean`               | `false` | Stick the header row to the top while body scrolls |
+| `loading`   | `boolean`               | `false` | Dims the table and sets `aria-busy="true"`         |
 
-### Slots
+### Child Elements
 
-| Slot      | Description                                                               |
-| --------- | ------------------------------------------------------------------------- |
-| `head`    | A `<bit-tr head>` element containing header rows (`<bit-tr>`, `<bit-th>`) |
-| (default) | One or more `` elements containing body rows                              |
-| `foot`    | A `<bit-tr foot>` element containing footer rows                          |
+`bit-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`.
 
-### Sub-Components
+| Element         | Description                                                                   |
+| --------------- | ----------------------------------------------------------------------------- |
+| `<bit-tr head>` | Header row — projected into `<thead>`                                         |
+| `<bit-tr>`      | Body row — projected into `<tbody>`                                           |
+| `<bit-tr foot>` | Footer row — projected into `<tfoot>`                                         |
+| `<bit-th>`      | Header cell — mirrored as native `<th>`; `scope` is auto-inferred if omitted  |
+| `<bit-td>`      | Data cell — mirrored as native `<td>`; supports `colspan`, `rowspan`, etc.    |
 
-| Element         | Description                                                           |
-| --------------- | --------------------------------------------------------------------- |
-| `<bit-tr head>` | Table head section — slot assigned automatically, no attribute needed |
-| ``              | Table body section — goes in the default slot                         |
-| `<bit-tr foot>` | Table foot section — slot assigned automatically, no attribute needed |
-| `<bit-tr head>` | Header row — slotted into `<thead>` automatically                     |
-| `<bit-tr>`      | Body row — default slot                                               |
-| `<bit-tr foot>` | Footer row — slotted into `<tfoot>` automatically                     |
-| `<bit-th>`      | Header cell — supports `scope="col"` or `scope="row"`                 |
-| `<bit-td>`      | Data cell — supports standard HTML attributes like `colspan`          |
+### Mirrored Attributes
+
+Attributes on `<bit-th>` and `<bit-td>` are forwarded to the generated native `<th>`/`<td>` in the shadow tree.
+
+| Attribute  | Elements           | Description                                     |
+| ---------- | ------------------ | ----------------------------------------------- |
+| `colspan`  | `bit-th`, `bit-td` | Spans multiple columns                          |
+| `rowspan`  | `bit-th`, `bit-td` | Spans multiple rows                             |
+| `scope`    | `bit-th`           | Column/row association — auto-inferred if absent |
+| `headers`  | `bit-th`, `bit-td` | Associates cell with header IDs                 |
 
 ### Parts
 
-| Part      | Description                                         |
-| --------- | --------------------------------------------------- |
-| `root`    | Outermost wrapper element                           |
-| `caption` | Visible caption element rendered above the table    |
-| `scroll`  | Inner scroll container wrapping the slotted content |
-| `table`   | Native `<table>` element in shadow DOM              |
-| `head`    | Native `<thead>` element in shadow DOM              |
-| `body`    | Native `<tbody>` element in shadow DOM              |
-| `foot`    | Native `<tfoot>` element in shadow DOM              |
+| Part     | Description                                            |
+| -------- | ------------------------------------------------------ |
+| `scroll` | Overflow container — target for max-height / scrolling |
+| `table`  | Generated native `<table>` element                     |
+| `head`   | Generated native `<thead>` element                     |
+| `body`   | Generated native `<tbody>` element                     |
+| `foot`   | Generated native `<tfoot>` element                     |
 
 ### CSS Custom Properties
 
-| Property                    | Default                               | Description                              |
-| --------------------------- | ------------------------------------- | ---------------------------------------- |
-| `--table-bg`                | —                                     | Table background color                   |
-| `--table-border`            | `1px solid var(--color-contrast-300)` | Full border shorthand for row separators |
-| `--table-header-bg`         | `var(--color-contrast-100)`           | Header row background                    |
-| `--table-header-color`      | `var(--color-contrast-600)`           | Header cell text color                   |
-| `--table-cell-padding`      | `var(--size-3) var(--size-4)`         | Cell padding shorthand                   |
-| `--table-cell-font-size`    | `var(--text-sm)`                      | Cell font size                           |
-| `--table-cell-color`        | `var(--color-contrast-900)`           | Body cell text color                     |
-| `--table-stripe-bg`         | `var(--color-contrast-100)`           | Alternating row background (striped)     |
-| `--table-row-hover-bg`      | `var(--color-contrast-200)`           | Row background on hover                  |
-| `--table-radius`            | `var(--rounded-lg)`                   | Outer corner radius (bordered variant)   |
-| `--table-shadow`            | —                                     | Outer box shadow                         |
-| `--table-sticky-max-height` | `24rem`                               | Max height when `sticky` is active       |
+| Property                     | Description                                          |
+| ---------------------------- | ---------------------------------------------------- |
+| `--table-bg`                 | Table background color                               |
+| `--table-border-color`       | Cell separator and outer border color                |
+| `--table-radius`             | Corner radius (applied when `bordered`)              |
+| `--table-shadow`             | Box shadow on the host element                       |
+| `--table-header-bg`          | Background of `<thead>` and `<tfoot>`                |
+| `--table-accent`             | Accent color used for hover states                   |
+| `--table-row-hover-bg`       | Row background on hover                              |
+| `--table-stripe-bg`          | Even-row background when `striped`                   |
+| `--table-cell-padding-x`     | Horizontal cell padding                              |
+| `--table-cell-padding-y`     | Vertical cell padding                                |
+| `--table-font-size`          | Base font size for all cells                         |
+| `--table-sticky-max-height`  | Max height of the scroll container when `sticky`     |
+| `--table-sticky-header-bg`   | Background of the sticky `<thead>` (with blur)       |
+| `--table-sticky-blur`        | Backdrop blur intensity on the sticky header         |
 
 ## Customization
 
@@ -385,7 +378,6 @@ Mix attributes for a fully styled, accessible table.
 <bit-table
   style="
     --table-header-bg: #1e293b;
-    --table-header-color: #f8fafc;
     --table-stripe-bg: #f1f5f9;
     --table-row-hover-bg: #e2e8f0;
     --table-border-color: #cbd5e1;
@@ -394,8 +386,8 @@ Mix attributes for a fully styled, accessible table.
   striped
   bordered>
   <bit-tr head>
-    <bit-th scope="col">Name</bit-th>
-    <bit-th scope="col">Status</bit-th>
+    <bit-th>Name</bit-th>
+    <bit-th>Status</bit-th>
   </bit-tr>
   <bit-tr>
     <bit-td>Alice</bit-td>
@@ -424,8 +416,8 @@ The table component follows WCAG 2.1 Level AA standards.
 
 ✅ **Semantic Structure**
 
-- Use `scope="col"` on `<bit-th>` elements for proper column-header association.
-- Use `scope="row"` on row-header `<bit-th>` elements when applicable.
+- `<bit-th>` in a `<bit-tr head>` row automatically gets `scope="col"` on the native `<th>`.
+- `<bit-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
 - Use the `caption` attribute on `bit-table` to label the table for assistive technologies.
 
 ✅ **Keyboard Navigation**
@@ -434,10 +426,10 @@ The table component follows WCAG 2.1 Level AA standards.
 
 ## Best Practices
 
-1. Always use `<bit-th scope="col">` for column headers to establish proper associations.
-2. Use the `caption` attribute on `bit-table` to label every data table.
-3. Prefer `striped` for tables with many rows and few columns.
-4. Set `sticky` only when the table has enough rows to require scrolling.
-5. Use `loading` to indicate async data fetching instead of hiding the table.
-6. Prefer `size="sm"` for dense dashboard views over a separate `compact` attribute.
-7. Avoid placing interactive elements (buttons, inputs) in table cells without ensuring keyboard accessibility of those elements.
+1. Always use `<bit-th>` (not `<bit-td>`) for header cells — `scope` is inferred automatically.
+2. Use the `caption` attribute on every data table to give it an accessible label.
+3. Prefer `striped` for tables with many rows and few columns to aid row tracking.
+4. Set `sticky` only when the table has enough rows to require scrolling; pair with `--table-sticky-max-height`.
+5. Use `loading` to indicate async data fetching instead of hiding or removing the table.
+6. Prefer `size="sm"` for dense dashboard tables.
+7. Avoid placing interactive elements (buttons, inputs) inside cells without ensuring their keyboard accessibility.

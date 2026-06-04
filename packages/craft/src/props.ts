@@ -22,6 +22,19 @@ type PropFactory = {
   number<T extends number = number>(): PropDef<T | undefined>;
   number<T extends number = number>(defaultValue: number): PropDef<T>;
   oneOf<T extends string | undefined, D extends T = T>(allowed: readonly NonNullable<T>[], defaultValue: D): PropDef<T>;
+  /**
+   * JS-only property — never reads from or writes to an HTML attribute.
+   * Use for functions, complex objects, arrays containing functions, or any
+   * value that cannot be (de)serialised through an attribute.
+   *
+   * @example
+   * ```ts
+   * getRowKey: prop.ref<(row: T) => string>(),
+   * columns:   prop.ref<DataGridColumn[]>([]),
+   * ```
+   */
+  ref<T>(): PropDef<T | undefined>;
+  ref<T>(defaultValue: T): PropDef<T>;
   string<T extends string = string>(): PropDef<T | undefined>;
   string<T extends string = string>(defaultValue: string): PropDef<T>;
 };
@@ -69,6 +82,21 @@ export const prop: PropFactory = {
       parse: (value) => (value != null && allowed.includes(value as NonNullable<T>) ? (value as T) : defaultValue),
       reflect: true,
     };
+  },
+  ref<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
+    if (defaultValue !== undefined) {
+      return {
+        default: defaultValue,
+        parse: () => defaultValue,
+        reflect: false,
+      } as PropDef<T>;
+    }
+
+    return {
+      default: undefined,
+      parse: () => undefined,
+      reflect: false,
+    } as PropDef<T | undefined>;
   },
   string<T extends string = string>(defaultValue?: string): PropDef<T> | PropDef<T | undefined> {
     // When no default provided, undefined sentinel → attribute removed when value is absent

@@ -1,7 +1,7 @@
 @layer sigil.base {
   :host {
     display: inline-block;
-    min-width: 12rem;
+    min-width: var(--select-min-width, 12rem);
   }
 
   :host([fullwidth]) {

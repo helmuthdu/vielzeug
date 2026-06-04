@@ -1,80 +1,19 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-// Light DOM fixtures use the proxy API:
-//   bit-tr[head]  → mirrored into <thead> as native <tr>
-//   bit-tr        → mirrored into <tbody> as native <tr>
-//   bit-tr[foot]  → mirrored into <tfoot> as native <tr>
-//   bit-th / bit-td → mirrored as native <th> / <td> with forwarded attrs
-type MarkerCell = {
-  attrs?: Record<string, string>;
-  tag: 'bit-td' | 'bit-th';
-  text: string;
-};
+// ── API summary ───────────────────────────────────────────────────────────────
+// bit-table reads light-DOM bit-tr/bit-th/bit-td markers and projects them
+// into a fully-native shadow <table>. Tests query the shadow tree for the
+// generated native structure and the light DOM for the source markers.
+//
+// Light DOM consumer API:
+//   <bit-tr head><bit-th>…</bit-th></bit-tr>  → thead (scope="col" auto-inferred)
+//   <bit-tr><bit-td>…</bit-td></bit-tr>       → tbody
+//   <bit-tr foot><bit-td>…</bit-td></bit-tr>  → tfoot
 
-const createCell = (cell: MarkerCell): HTMLElement => {
-  const node = document.createElement(cell.tag);
-
-  for (const [name, value] of Object.entries(cell.attrs ?? {})) {
-    node.setAttribute(name, value);
-  }
-
-  node.textContent = cell.text;
-
-  return node;
-};
-
-const createRow = (cells: MarkerCell[], section?: 'body' | 'foot' | 'head'): HTMLElement => {
-  const row = document.createElement('bit-tr');
-
-  if (section === 'head') row.setAttribute('head', '');
-
-  if (section === 'foot') row.setAttribute('foot', '');
-
-  for (const cell of cells) {
-    row.appendChild(createCell(cell));
-  }
-
-  return row;
-};
-
-const rowsToHtml = (...rows: HTMLElement[]): string => {
-  const root = document.createElement('div');
-
-  for (const row of rows) {
-    root.appendChild(row);
-  }
-
-  return root.innerHTML;
-};
-
-const HEAD_ROW = rowsToHtml(
-  createRow(
-    [
-      { attrs: { scope: 'col' }, tag: 'bit-th', text: 'Name' },
-      { attrs: { scope: 'col' }, tag: 'bit-th', text: 'Email' },
-    ],
-    'head',
-  ),
-);
-const BODY_ROWS = rowsToHtml(
-  createRow([
-    { tag: 'bit-td', text: 'Alice' },
-    { tag: 'bit-td', text: 'alice@example.com' },
-  ]),
-  createRow([
-    { tag: 'bit-td', text: 'Bob' },
-    { tag: 'bit-td', text: 'bob@example.com' },
-  ]),
-);
-const FOOT_ROW = rowsToHtml(createRow([{ attrs: { colspan: '2' }, tag: 'bit-td', text: '2 users' }], 'foot'));
+const HEAD_ROW = `<bit-tr head><bit-th>Name</bit-th><bit-th>Email</bit-th></bit-tr>`;
+const BODY_ROWS = `<bit-tr><bit-td>Alice</bit-td><bit-td>alice@example.com</bit-td></bit-tr><bit-tr><bit-td>Bob</bit-td><bit-td>bob@example.com</bit-td></bit-tr>`;
+const FOOT_ROW = `<bit-tr foot><bit-td colspan="2">2 users</bit-td></bit-tr>`;
 const ALL_ROWS = HEAD_ROW + BODY_ROWS + FOOT_ROW;
-const HEAD_SCOPE_COL_ROW = rowsToHtml(createRow([{ attrs: { scope: 'col' }, tag: 'bit-th', text: 'Name' }], 'head'));
-const BODY_SCOPE_ROW_ROW = rowsToHtml(
-  createRow([
-    { attrs: { scope: 'row' }, tag: 'bit-th', text: 'Alice' },
-    { tag: 'bit-td', text: 'admin' },
-  ]),
-);
 
 describe('bit-table', () => {
   let fixture: Fixture<HTMLElement>;
@@ -87,28 +26,22 @@ describe('bit-table', () => {
     fixture?.destroy();
   });
 
-  // ─── Rendering ──────────────────────────────────────────────────────────────────
+  // ─── Shadow structure ─────────────────────────────────────────────────────────
 
-  describe('Rendering', () => {
-    it('renders the component element', async () => {
-      fixture = await mount('bit-table');
-
-      expect(fixture.element).toBeTruthy();
-    });
-
-    it('renders a scroll-container in shadow DOM', async () => {
+  describe('Shadow structure', () => {
+    it('renders a .scroll-container inside the shadow root', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.query('.scroll-container')).toBeTruthy();
     });
 
-    it('renders a native table element built via DOM APIs', async () => {
+    it('renders a native <table> inside .scroll-container', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.query('table')).toBeTruthy();
     });
 
-    it('renders thead/tbody/tfoot built via DOM APIs (no parser foster-parenting)', async () => {
+    it('renders <thead>, <tbody>, <tfoot> inside the table', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.query('thead')).toBeTruthy();
@@ -116,359 +49,366 @@ describe('bit-table', () => {
       expect(fixture.query('tfoot')).toBeTruthy();
     });
 
-    it('mirrors head rows into native thead', async () => {
-      fixture = await mount('bit-table', { html: HEAD_ROW });
-
-      expect(fixture.query('thead tr')).toBeTruthy();
-    });
-
-    it('mirrors body rows into native tbody', async () => {
-      fixture = await mount('bit-table', { html: BODY_ROWS });
-
-      expect(fixture.query('tbody tr')).toBeTruthy();
-    });
-
-    it('mirrors foot rows into native tfoot', async () => {
-      fixture = await mount('bit-table', { html: ALL_ROWS });
-
-      expect(fixture.query('tfoot tr')).toBeTruthy();
-    });
-
-    it('renders a native caption element built via DOM APIs', async () => {
+    it('renders a <caption> inside the table', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.query('caption')).toBeTruthy();
     });
+  });
 
-    it('hides caption element when caption attr is absent', async () => {
-      fixture = await mount('bit-table');
+  // ─── Row projection ───────────────────────────────────────────────────────────
+  // Verifies that bit-tr[head]/bit-tr/bit-tr[foot] markers are projected into
+  // the correct native section in the shadow <table>.
 
-      expect((fixture.query('caption') as HTMLElement | null)?.hidden).toBe(true);
-    });
-
-    it('shows caption element when caption attr is provided', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'Users' } });
-
-      expect((fixture.query('caption') as HTMLElement | null)?.hidden).toBe(false);
-    });
-
-    it('accepts head rows via bit-tr[head]', async () => {
+  describe('Row projection', () => {
+    it('projects bit-tr[head] cells into thead', async () => {
       fixture = await mount('bit-table', { html: HEAD_ROW });
 
-      expect(fixture.element.querySelector('bit-tr[head]')).toBeTruthy();
+      expect(fixture.query('thead tr')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeFalsy();
     });
 
-    it('accepts body rows via plain bit-tr', async () => {
+    it('projects plain bit-tr cells into tbody', async () => {
       fixture = await mount('bit-table', { html: BODY_ROWS });
 
-      expect(fixture.element.querySelector('bit-tr:not([head]):not([foot])')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeTruthy();
+      expect(fixture.query('thead tr')).toBeFalsy();
     });
 
-    it('accepts foot rows via bit-tr[foot]', async () => {
-      fixture = await mount('bit-table', { html: ALL_ROWS });
-
-      expect(fixture.element.querySelector('bit-tr[foot]')).toBeTruthy();
-    });
-
-    it('forwards colspan from bit-td to native td', async () => {
+    it('projects bit-tr[foot] cells into tfoot', async () => {
       fixture = await mount('bit-table', { html: FOOT_ROW });
 
-      expect(fixture.query<HTMLTableCellElement>('tfoot td')?.colSpan).toBe(2);
+      expect(fixture.query('tfoot tr')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeFalsy();
     });
 
-    it('forwards scope from bit-th to native th', async () => {
+    it('projects all three section types simultaneously', async () => {
+      fixture = await mount('bit-table', { html: ALL_ROWS });
+
+      expect(fixture.query('thead tr')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeTruthy();
+      expect(fixture.query('tfoot tr')).toBeTruthy();
+    });
+
+    it('mirrors colspan from bit-td to native td', async () => {
+      fixture = await mount('bit-table', { html: FOOT_ROW });
+
+      const td = fixture.query('td') as HTMLTableCellElement;
+
+      expect(td.getAttribute('colspan')).toBe('2');
+      expect(td.colSpan).toBe(2);
+    });
+
+    it('auto-infers scope="col" on bit-th in thead when omitted', async () => {
       fixture = await mount('bit-table', { html: HEAD_ROW });
 
-      expect(fixture.query<HTMLTableCellElement>('thead th')?.getAttribute('scope')).toBe('col');
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('col');
     });
 
-    it('mirrors cell text content into native cells', async () => {
+    it('mirrors text content from bit-td to native td', async () => {
       fixture = await mount('bit-table', { html: BODY_ROWS });
 
       expect(fixture.query('tbody td')?.textContent).toBe('Alice');
     });
-  });
 
-  // ─── Props & Attributes ──────────────────────────────────────────────────────────
+    it('generates two body rows for two bit-tr markers', async () => {
+      fixture = await mount('bit-table', { html: BODY_ROWS });
 
-  describe('Props', () => {
-    it('reflects caption attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'My Table' } });
-
-      expect(fixture.element.getAttribute('caption')).toBe('My Table');
-    });
-
-    it('reflects color attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { color: 'primary' } });
-
-      expect(fixture.element.getAttribute('color')).toBe('primary');
-    });
-
-    it('reflects striped boolean attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { striped: '' } });
-
-      expect(fixture.element.hasAttribute('striped')).toBe(true);
-    });
-
-    it('reflects bordered boolean attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { bordered: '' } });
-
-      expect(fixture.element.hasAttribute('bordered')).toBe(true);
-    });
-
-    it('reflects loading boolean attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { loading: '' } });
-
-      expect(fixture.element.hasAttribute('loading')).toBe(true);
-    });
-
-    it('reflects sticky boolean attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { sticky: '' } });
-
-      expect(fixture.element.hasAttribute('sticky')).toBe(true);
-    });
-
-    it('reflects size attribute on host', async () => {
-      fixture = await mount('bit-table', { attrs: { size: 'sm' } });
-
-      expect(fixture.element.getAttribute('size')).toBe('sm');
+      expect(fixture.queryAll('tbody tr').length).toBe(2);
     });
   });
 
-  // ─── Accessibility ───────────────────────────────────────────────────────────────
+  // ─── Cell sync ────────────────────────────────────────────────────────────────
+  // Verifies the MutationObserver keeps shadow cells in sync with light-DOM changes.
+
+  describe('Cell sync', () => {
+    it('syncs text content change on bit-td to native td', async () => {
+      fixture = await mount('bit-table', { html: BODY_ROWS });
+
+      const source = fixture.element.querySelector('bit-td') as HTMLElement;
+
+      source.textContent = 'Updated';
+      await fixture.flush();
+
+      expect(fixture.query('tbody td')?.textContent).toBe('Updated');
+    });
+
+    it('syncs colspan attribute change on bit-td to native td', async () => {
+      fixture = await mount('bit-table', { html: FOOT_ROW });
+
+      const source = fixture.element.querySelector('bit-td') as HTMLElement;
+
+      source.setAttribute('colspan', '3');
+      await fixture.flush();
+
+      expect((fixture.query('tfoot td') as HTMLTableCellElement).colSpan).toBe(3);
+    });
+
+    it('syncs scope attribute change on bit-th to native th', async () => {
+      fixture = await mount('bit-table', { html: HEAD_ROW });
+
+      const source = fixture.element.querySelector('bit-th') as HTMLElement;
+
+      source.setAttribute('scope', 'colgroup');
+      await fixture.flush();
+
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('colgroup');
+    });
+
+    it('removing explicit scope from bit-th reverts to inferred value', async () => {
+      fixture = await mount('bit-table', {
+        html: `<bit-tr head><bit-th scope="colgroup">Group</bit-th></bit-tr>`,
+      });
+
+      const source = fixture.element.querySelector('bit-th') as HTMLElement;
+
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('colgroup');
+
+      source.removeAttribute('scope');
+      await fixture.flush();
+
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('col');
+    });
+
+    it('removing explicit scope from tbody bit-th reverts to "row"', async () => {
+      fixture = await mount('bit-table', {
+        html: `<bit-tr><bit-th scope="colgroup">Label</bit-th><bit-td>value</bit-td></bit-tr>`,
+      });
+
+      const source = fixture.element.querySelector('bit-th') as HTMLElement;
+
+      source.removeAttribute('scope');
+      await fixture.flush();
+
+      expect(fixture.query('tbody th')?.getAttribute('scope')).toBe('row');
+    });
+  });
+
+  // ─── Structural reactivity ────────────────────────────────────────────────────
+  // Verifies full rebuild triggers on bit-tr add/remove.
+
+  describe('Structural reactivity', () => {
+    it('adding a bit-tr increases tbody row count', async () => {
+      fixture = await mount('bit-table', { html: BODY_ROWS });
+
+      const initialCount = fixture.queryAll('tbody tr').length;
+      const newRow = document.createElement('bit-tr');
+      const newCell = document.createElement('bit-td');
+
+      newCell.textContent = 'Charlie';
+      newRow.appendChild(newCell);
+      fixture.element.appendChild(newRow);
+      await fixture.flush();
+
+      expect(fixture.queryAll('tbody tr').length).toBe(initialCount + 1);
+    });
+
+    it('removing a bit-tr decreases tbody row count', async () => {
+      fixture = await mount('bit-table', { html: BODY_ROWS });
+
+      fixture.element.querySelector('bit-tr')?.remove();
+      await fixture.flush();
+
+      expect(fixture.queryAll('tbody tr').length).toBe(1);
+    });
+  });
+
+  // ─── Caption ──────────────────────────────────────────────────────────────────
+
+  describe('Caption', () => {
+    it('hides caption when caption attr is absent', async () => {
+      fixture = await mount('bit-table');
+
+      expect((fixture.query('caption') as HTMLElement).hidden).toBe(true);
+    });
+
+    it('shows caption when caption attr is set', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Users' } });
+
+      expect((fixture.query('caption') as HTMLElement).hidden).toBe(false);
+    });
+
+    it('hides caption for empty string', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: '' } });
+
+      expect((fixture.query('caption') as HTMLElement).hidden).toBe(true);
+    });
+
+    it('renders caption text content', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Weekly Report' } });
+
+      expect(fixture.query('caption')?.textContent?.trim()).toBe('Weekly Report');
+    });
+
+    it('updates caption text reactively', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Old' } });
+
+      await fixture.attr('caption', 'New');
+
+      expect(fixture.query('caption')?.textContent?.trim()).toBe('New');
+    });
+
+    it('hides caption when caption is cleared', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Initial' } });
+
+      await fixture.attr('caption', false);
+
+      expect((fixture.query('caption') as HTMLElement).hidden).toBe(true);
+    });
+  });
+
+  // ─── Accessibility ────────────────────────────────────────────────────────────
 
   describe('Accessibility', () => {
-    it('removes aria-busy on host when loading is absent', async () => {
+    it('does not set aria-busy when loading is absent', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
 
-    it('sets aria-busy=true on host when loading is set', async () => {
+    it('sets aria-busy="true" when loading is set', async () => {
       fixture = await mount('bit-table', { attrs: { loading: '' } });
 
       expect(fixture.element.getAttribute('aria-busy')).toBe('true');
     });
 
-    it('updates aria-busy reactively when loading changes', async () => {
+    it('updates aria-busy reactively', async () => {
       fixture = await mount('bit-table');
 
-      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
-
       await fixture.attr('loading', '');
-
       expect(fixture.element.getAttribute('aria-busy')).toBe('true');
 
       await fixture.attr('loading', false);
-
       expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
 
-    it('sets aria-label on host when caption is provided', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'Quarterly sales' } });
-
-      expect(fixture.element.getAttribute('aria-label')).toBe('Quarterly sales');
-    });
-
-    it('removes aria-label from host when caption is absent', async () => {
+    it('does not set aria-label when caption is absent', async () => {
       fixture = await mount('bit-table');
 
       expect(fixture.element.hasAttribute('aria-label')).toBe(false);
     });
 
-    it('updates aria-label reactively when caption changes', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'Initial' } });
+    it('sets aria-label from caption prop', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Quarterly sales' } });
 
-      expect(fixture.element.getAttribute('aria-label')).toBe('Initial');
+      expect(fixture.element.getAttribute('aria-label')).toBe('Quarterly sales');
+    });
+
+    it('updates aria-label reactively', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'Initial' } });
 
       await fixture.attr('caption', 'Updated');
 
       expect(fixture.element.getAttribute('aria-label')).toBe('Updated');
     });
 
-    it('allows scope="col" on header cells', async () => {
-      fixture = await mount('bit-table', {
-        html: HEAD_SCOPE_COL_ROW,
-      });
-
-      expect(fixture.element.querySelector('bit-th')?.getAttribute('scope')).toBe('col');
-    });
-
-    it('allows scope="row" on row header cells in body', async () => {
-      fixture = await mount('bit-table', {
-        html: BODY_SCOPE_ROW_ROW,
-      });
-
-      expect(fixture.element.querySelector('bit-th')?.getAttribute('scope')).toBe('row');
-    });
-
-    it('preserves accessible label when caption is provided', async () => {
-      fixture = await mount('bit-table', {
-        attrs: { caption: 'Sales Report' },
-      });
-
-      expect(fixture.element.getAttribute('aria-label')).toBe('Sales Report');
-    });
-  });
-
-  // ─── Caption ─────────────────────────────────────────────────────────────────────
-
-  describe('Caption', () => {
-    it('renders caption text in the shadow DOM caption element', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'Weekly Report' } });
-
-      expect(fixture.query('caption')?.textContent?.trim()).toBe('Weekly Report');
-    });
-
-    it('updates shadow DOM caption text reactively', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: 'Old Caption' } });
-
-      expect(fixture.query('caption')?.textContent?.trim()).toBe('Old Caption');
-
-      await fixture.attr('caption', 'Updated Caption');
-
-      expect(fixture.query('caption')?.textContent?.trim()).toBe('Updated Caption');
-    });
-
-    it('hides caption element when caption is cleared', async () => {
+    it('removes aria-label when caption is cleared', async () => {
       fixture = await mount('bit-table', { attrs: { caption: 'Initial' } });
-
-      expect((fixture.query('caption') as HTMLElement | null)?.hidden).toBe(false);
 
       await fixture.attr('caption', false);
 
-      expect((fixture.query('caption') as HTMLElement | null)?.hidden).toBe(true);
+      expect(fixture.element.hasAttribute('aria-label')).toBe(false);
     });
 
-    it('hides caption element for empty string caption', async () => {
-      fixture = await mount('bit-table', { attrs: { caption: '' } });
+    it('auto-infers scope="col" on thead bit-th when omitted', async () => {
+      fixture = await mount('bit-table', {
+        html: `<bit-tr head><bit-th>Name</bit-th></bit-tr>`,
+      });
 
-      expect((fixture.query('caption') as HTMLElement | null)?.hidden).toBe(true);
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('col');
+    });
+
+    it('auto-infers scope="row" on tbody bit-th when omitted', async () => {
+      fixture = await mount('bit-table', {
+        html: `<bit-tr><bit-th>Alice</bit-th><bit-td>admin</bit-td></bit-tr>`,
+      });
+
+      expect(fixture.query('tbody th')?.getAttribute('scope')).toBe('row');
+    });
+
+    it('respects explicit scope when provided on bit-th', async () => {
+      fixture = await mount('bit-table', {
+        html: `<bit-tr head><bit-th scope="colgroup">Group</bit-th></bit-tr>`,
+      });
+
+      expect(fixture.query('thead th')?.getAttribute('scope')).toBe('colgroup');
     });
   });
 
-  describe('Variants', () => {
-    it('applies striped attribute to host', async () => {
-      fixture = await mount('bit-table', { attrs: { striped: '' }, html: BODY_ROWS });
+  // ─── Props ────────────────────────────────────────────────────────────────────
 
-      expect(fixture.element.hasAttribute('striped')).toBe(true);
+  describe('Props', () => {
+    it.each([
+      ['striped', ''],
+      ['bordered', ''],
+      ['loading', ''],
+      ['sticky', ''],
+      ['fullwidth', ''],
+    ] as const)('reflects boolean prop "%s" as host attribute', async (prop, value) => {
+      fixture = await mount('bit-table', { attrs: { [prop]: value } });
+
+      expect(fixture.element.hasAttribute(prop)).toBe(true);
     });
 
-    it('does not add striped attribute when not specified', async () => {
-      fixture = await mount('bit-table', { html: BODY_ROWS });
+    it.each([['striped'], ['bordered'], ['loading'], ['sticky'], ['fullwidth']] as const)(
+      'boolean prop "%s" is absent by default',
+      async (prop) => {
+        fixture = await mount('bit-table');
 
-      expect(fixture.element.hasAttribute('striped')).toBe(false);
+        expect(fixture.element.hasAttribute(prop)).toBe(false);
+      },
+    );
+
+    it.each(['sm', 'md', 'lg'] as const)('reflects size="%s" as host attribute', async (size) => {
+      fixture = await mount('bit-table', { attrs: { size } });
+
+      expect(fixture.element.getAttribute('size')).toBe(size);
     });
 
-    it('applies bordered attribute to host', async () => {
-      fixture = await mount('bit-table', { attrs: { bordered: '' } });
+    it('reflects caption string as host attribute', async () => {
+      fixture = await mount('bit-table', { attrs: { caption: 'My Table' } });
 
-      expect(fixture.element.hasAttribute('bordered')).toBe(true);
+      expect(fixture.element.getAttribute('caption')).toBe('My Table');
     });
 
-    it('applies color attribute to host', async () => {
-      fixture = await mount('bit-table', { attrs: { color: 'success' } });
-
-      expect(fixture.element.getAttribute('color')).toBe('success');
-    });
-
-    it('applies sticky attribute to host', async () => {
+    it('allows combining multiple variants simultaneously', async () => {
       fixture = await mount('bit-table', {
-        attrs: { sticky: '' },
+        attrs: { bordered: '', size: 'sm', striped: '' },
         html: ALL_ROWS,
       });
 
-      expect(fixture.element.hasAttribute('sticky')).toBe(true);
-    });
-
-    it('applies size=sm attribute to host', async () => {
-      fixture = await mount('bit-table', { attrs: { size: 'sm' } });
-
-      expect(fixture.element.getAttribute('size')).toBe('sm');
-    });
-
-    it('applies size=lg attribute to host', async () => {
-      fixture = await mount('bit-table', { attrs: { size: 'lg' } });
-
-      expect(fixture.element.getAttribute('size')).toBe('lg');
-    });
-
-    it('allows combining multiple visual variants simultaneously', async () => {
-      fixture = await mount('bit-table', {
-        attrs: { bordered: '', color: 'primary', size: 'sm', striped: '' },
-        html: ALL_ROWS,
-      });
-
       expect(fixture.element.hasAttribute('striped')).toBe(true);
       expect(fixture.element.hasAttribute('bordered')).toBe(true);
-      expect(fixture.element.getAttribute('color')).toBe('primary');
       expect(fixture.element.getAttribute('size')).toBe('sm');
     });
   });
 
-  // ─── Loading State ────────────────────────────────────────────────────────────
-
-  describe('Loading State', () => {
-    it('sets aria-busy=true when loading is active', async () => {
-      fixture = await mount('bit-table', { attrs: { loading: '' }, html: BODY_ROWS });
-
-      expect(fixture.element.getAttribute('aria-busy')).toBe('true');
-    });
-
-    it('removes aria-busy when loading is inactive', async () => {
-      fixture = await mount('bit-table', { html: BODY_ROWS });
-
-      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
-    });
-
-    it('toggles aria-busy when loading attribute is added', async () => {
-      fixture = await mount('bit-table');
-
-      await fixture.attr('loading', '');
-
-      expect(fixture.element.getAttribute('aria-busy')).toBe('true');
-    });
-
-    it('toggles aria-busy when loading attribute is removed', async () => {
-      fixture = await mount('bit-table', { attrs: { loading: '' } });
-
-      await fixture.attr('loading', false);
-
-      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
-    });
-  });
-
-  // ─── Edge Cases ──────────────────────────────────────────────────────────────────
+  // ─── Edge Cases ───────────────────────────────────────────────────────────────
 
   describe('Edge Cases', () => {
-    it('renders with no slot content without errors', async () => {
+    it('renders with no rows', async () => {
       fixture = await mount('bit-table');
 
-      expect(fixture.query('.scroll-container')).toBeTruthy();
+      expect(fixture.query('table')).toBeTruthy();
+      expect(fixture.queryAll('tr').length).toBe(0);
     });
 
     it('renders with only head rows', async () => {
       fixture = await mount('bit-table', { html: HEAD_ROW });
 
-      expect(fixture.element.querySelector('bit-tr[head]')).toBeTruthy();
+      expect(fixture.query('thead tr')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeFalsy();
     });
 
-    it('renders with only body rows', async () => {
-      fixture = await mount('bit-table', { html: BODY_ROWS });
+    it('renders with only foot rows', async () => {
+      fixture = await mount('bit-table', { html: FOOT_ROW });
 
-      expect(fixture.element.querySelector('bit-tr:not([head]):not([foot])')).toBeTruthy();
+      expect(fixture.query('tfoot tr')).toBeTruthy();
+      expect(fixture.query('tbody tr')).toBeFalsy();
     });
 
-    it('renders with all three row types', async () => {
-      fixture = await mount('bit-table', { html: ALL_ROWS });
-
-      expect(fixture.element.querySelector('bit-tr[head]')).toBeTruthy();
-      expect(fixture.element.querySelector('bit-tr:not([head]):not([foot])')).toBeTruthy();
-      expect(fixture.element.querySelector('bit-tr[foot]')).toBeTruthy();
-    });
-
-    it('handles rapid attribute toggling without errors', async () => {
-      fixture = await mount('bit-table', { html: BODY_ROWS });
+    it('handles rapid loading attribute toggling', async () => {
+      fixture = await mount('bit-table');
 
       await fixture.attr('loading', '');
       await fixture.attr('loading', false);
@@ -477,7 +417,7 @@ describe('bit-table', () => {
       expect(fixture.element.getAttribute('aria-busy')).toBe('true');
     });
 
-    it('multiple instances do not interfere with each other', async () => {
+    it('multiple instances are isolated from each other', async () => {
       fixture = await mount('bit-table', {
         attrs: { caption: 'Table A', striped: '' },
         html: BODY_ROWS,
@@ -490,29 +430,10 @@ describe('bit-table', () => {
 
       expect(fixture.element.getAttribute('caption')).toBe('Table A');
       expect(f2.element.getAttribute('caption')).toBe('Table B');
-      expect(fixture.element.hasAttribute('striped')).toBe(true);
       expect(fixture.element.hasAttribute('bordered')).toBe(false);
       expect(f2.element.hasAttribute('bordered')).toBe(true);
 
       f2.destroy();
-    });
-
-    it('handles all color themes without errors', async () => {
-      for (const color of ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const) {
-        const f = await mount('bit-table', { attrs: { color } });
-
-        expect(f.element.getAttribute('color')).toBe(color);
-        f.destroy();
-      }
-    });
-
-    it('handles all size variants without errors', async () => {
-      for (const size of ['sm', 'md', 'lg'] as const) {
-        const f = await mount('bit-table', { attrs: { size } });
-
-        expect(f.element.getAttribute('size')).toBe(size);
-        f.destroy();
-      }
     });
   });
 });
