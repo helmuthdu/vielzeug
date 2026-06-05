@@ -22,7 +22,7 @@ A star-based rating input that lets users select a score. Supports hover preview
 ## Basic Usage
 
 ```html
-<bit-rating label="Product rating" value="3"></bit-rating>
+<sg-rating label="Product rating" value="3"></sg-rating>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -32,7 +32,7 @@ A star-based rating input that lets users select a score. Supports hover preview
 Listen for changes:
 
 ```html
-<bit-rating id="rating" label="Rate this article" color="warning"></bit-rating>
+<sg-rating id="rating" label="Rate this article" color="warning"></sg-rating>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -48,12 +48,12 @@ Listen for changes:
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" color="primary"></bit-rating>
-<bit-rating value="3" color="secondary"></bit-rating>
-<bit-rating value="3" color="info"></bit-rating>
-<bit-rating value="3" color="success"></bit-rating>
-<bit-rating value="3" color="warning"></bit-rating>
-<bit-rating value="3" color="error"></bit-rating>
+<sg-rating value="3" color="primary"></sg-rating>
+<sg-rating value="3" color="secondary"></sg-rating>
+<sg-rating value="3" color="info"></sg-rating>
+<sg-rating value="3" color="success"></sg-rating>
+<sg-rating value="3" color="warning"></sg-rating>
+<sg-rating value="3" color="error"></sg-rating>
 ```
 
 </ComponentPreview>
@@ -63,9 +63,9 @@ Listen for changes:
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" color="warning" size="sm"></bit-rating>
-<bit-rating value="3" color="warning" size="md"></bit-rating>
-<bit-rating value="3" color="warning" size="lg"></bit-rating>
+<sg-rating value="3" color="warning" size="sm"></sg-rating>
+<sg-rating value="3" color="warning" size="md"></sg-rating>
+<sg-rating value="3" color="warning" size="lg"></sg-rating>
 ```
 
 </ComponentPreview>
@@ -75,9 +75,9 @@ Listen for changes:
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" max="5" color="warning"></bit-rating>
-<bit-rating value="6" max="10" color="warning"></bit-rating>
-<bit-rating value="2" max="3" color="success"></bit-rating>
+<sg-rating value="3" max="5" color="warning"></sg-rating>
+<sg-rating value="6" max="10" color="warning"></sg-rating>
+<sg-rating value="2" max="3" color="success"></sg-rating>
 ```
 
 </ComponentPreview>
@@ -89,9 +89,9 @@ Use `readonly` to display a rating without allowing user interaction — useful 
 <ComponentPreview center>
 
 ```html
-<bit-rating value="4" color="warning" readonly></bit-rating>
-<bit-rating value="3" color="primary" readonly></bit-rating>
-<bit-rating value="2" color="success" readonly></bit-rating>
+<sg-rating value="4" color="warning" readonly></sg-rating>
+<sg-rating value="3" color="primary" readonly></sg-rating>
+<sg-rating value="2" color="success" readonly></sg-rating>
 ```
 
 </ComponentPreview>
@@ -103,7 +103,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" color="warning" solid></bit-rating> <bit-rating value="4" color="primary" solid></bit-rating>
+<sg-rating value="3" color="warning" solid></sg-rating> <sg-rating value="4" color="primary" solid></sg-rating>
 ```
 
 </ComponentPreview>
@@ -113,7 +113,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 <ComponentPreview center>
 
 ```html
-<bit-rating value="3" color="warning" disabled></bit-rating>
+<sg-rating value="3" color="warning" disabled></sg-rating>
 ```
 
 </ComponentPreview>
@@ -153,7 +153,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 The rating component follows WCAG 2.1 Level AA standards.
 
-### `bit-rating`
+### `sg-rating`
 
 ✅ **Keyboard Navigation**
 
@@ -177,7 +177,7 @@ The rating component follows WCAG 2.1 Level AA standards.
 
 **Don't:**
 
-- Use rating for non-numeric preference input — a `bit-select` or `bit-radio-group` conveys options more clearly.
+- Use rating for non-numeric preference input — a `sg-select` or `sg-radio-group` conveys options more clearly.
 - Omit the `label` attribute — an unlabelled rating group is inaccessible.
 
 ## Related Components

@@ -1,17 +1,15 @@
-import { define, html, onMounted, prop, type ReadonlySignal, signal, when } from '@vielzeug/craft';
+import { define, html, prop, type ReadonlySignal, signal, when } from '@vielzeug/craft';
 
-import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
-import '../skeleton/skeleton';
 import componentStyles from './async.css?inline';
 
 export type AsyncStatus = 'idle' | 'loading' | 'empty' | 'error' | 'success';
 
-export type BitAsyncEvents = {
+export type SgAsyncEvents = {
   retry: void;
 };
 
-export type BitAsyncProps = {
+export type SgAsyncProps = {
   'empty-description'?: string;
   'empty-label'?: string;
   'error-description'?: string;
@@ -24,7 +22,7 @@ export type BitAsyncProps = {
  * A container for handling asynchronous states (loading, empty, error, success).
  * Simplifies data fetching UI by providing consistent fallbacks.
  *
- * @element bit-async
+ * @element sg-async
  *
  * @attr {string} status - current state: 'idle' | 'loading' | 'empty' | 'error' | 'success' (default: 'success')
  * @attr {boolean} retryable - show retry button in error state (default: false)
@@ -33,7 +31,7 @@ export type BitAsyncProps = {
  * @attr {string} error-label - title for error state (default: 'Something went wrong')
  * @attr {string} error-description - optional text for error state
  *
- * @fires retry - when the retry button is clicked
+ * @fires retry - Emitted when the retry button is clicked (no detail payload)
  *
  * @slot - default content shown in 'success' state
  * @slot loading - custom loading UI (overrides default skeletons)
@@ -54,21 +52,23 @@ export type BitAsyncProps = {
  * @cssprop --rounded-md - Corner radius for default state surfaces and placeholders
  * @example
  * ```html
- * <bit-async status=${status} @retry=${fetchData}>
- *   <ul>...list items...</ul>
- * </bit-async>
+ * <!-- Success state: default slot is shown -->
+ * <sg-async status="success">
+ *   <ul><li>Item one</li><li>Item two</li></ul>
+ * </sg-async>
  *
- * <!-- Custom empty slot -->
- * <bit-async status="empty">
- *   <div slot="empty">
- *     <img src="/no-results.svg" alt="" />
- *     <p>Try adjusting your filters.</p>
- *   </div>
- * </bit-async>
+ * <!-- Loading state: shows skeleton placeholders -->
+ * <sg-async status="loading"></sg-async>
+ *
+ * <!-- Empty state with custom message -->
+ * <sg-async status="empty" empty-label="No results" empty-description="Try adjusting your filters."></sg-async>
+ *
+ * <!-- Error state with retry button -->
+ * <sg-async status="error" retryable error-label="Failed to load" error-description="Check your connection."></sg-async>
  * ```
  */
-export const ASYNC_TAG = 'bit-async' as const;
-define<BitAsyncProps, BitAsyncEvents>(ASYNC_TAG, {
+export const ASYNC_TAG = 'sg-async' as const;
+define<SgAsyncProps, SgAsyncEvents>(ASYNC_TAG, {
   props: {
     'empty-description': prop.string(),
     'empty-label': prop.string('No content yet'),
@@ -77,38 +77,19 @@ define<BitAsyncProps, BitAsyncEvents>(ASYNC_TAG, {
     retryable: prop.bool(false),
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup(props, { bind, el, emit, slots: _slots }) {
+  setup(props, { bind, emit }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);
 
-    /** Checks direct light-DOM children for named slot assignments. */
-    const checkSlots = () => {
-      hasLoadingSlot.value = el.querySelector('[slot="loading"]') !== null;
-      hasEmptySlot.value = el.querySelector('[slot="empty"]') !== null;
-      hasErrorSlot.value = el.querySelector('[slot="error"]') !== null;
-    };
-
-    checkSlots();
-
-    onMounted(() => {
-      checkSlots();
-
-      // Watch for child additions/removals and slot attribute changes on any descendant.
-      // subtree is needed because a direct child's slot attribute may be reassigned after mount.
-      const observer = new MutationObserver(checkSlots);
-
-      observer.observe(el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
-
-      return () => observer.disconnect();
-    });
-
-    // Keep host accessibility state in sync with async status.
+    // Reflect status onto the host so CSS can show/hide each region.
+    // ARIA attributes are driven reactively by bind().
     bind({
       attr: {
         ariaBusy: () => (props.status!.value === 'loading' ? 'true' : 'false'),
         ariaLabel: () => (props.status!.value === 'loading' ? 'Loading…' : null),
         ariaLive: () => (props.status!.value === 'error' ? 'assertive' : 'polite'),
+        status: props.status,
       },
     });
 
@@ -116,110 +97,86 @@ define<BitAsyncProps, BitAsyncEvents>(ASYNC_TAG, {
       (className: 'title' | 'description', text: ReadonlySignal<string | undefined> | undefined) => () =>
         text?.value ? html`<p class="${className}">${text}</p>` : '';
 
-    const renderDefaultState = ({
-      action,
-      description,
-      icon,
-      label,
-      role,
-      stateClass,
-    }: {
-      action?: () => unknown;
-      description: ReadonlySignal<string | undefined> | undefined;
-      icon: string;
-      label: ReadonlySignal<string | undefined> | undefined;
-      role: 'alert' | 'status';
-      stateClass: 'empty-state' | 'error-state';
-    }) => html`
-      <div class="${stateClass}" role="${role}">
-        <div class="icon">
-          <bit-icon name="${icon}" size="100%" stroke-width="1.75" aria-hidden="true"></bit-icon>
-        </div>
-        ${renderText('title', label)} ${renderText('description', description)} ${action?.()}
-      </div>
-    `;
+    // All four regions are always in the shadow DOM — CSS on :host([status="…"])
+    // toggles their visibility. This means:
+    // - No DOM churn on status transitions (no teardown/rebuild of slot elements).
+    // - Live regions are always present, so screen readers announce correctly.
+    // - focus is never lost across status changes.
+    return html`
+      <div class="region region-idle" role="presentation"></div>
 
-    const renderLoadingFallback = () => html`
-      <div class="loading-default" aria-hidden="true">
-        <bit-skeleton variant="text" lines="1" width="40%"></bit-skeleton>
-        <bit-skeleton variant="text" lines="3" width="100%"></bit-skeleton>
-        <bit-skeleton variant="text" lines="1" width="60%"></bit-skeleton>
+      <div class="region region-loading" role="status">
+        <slot
+          name="loading"
+          @slotchange=${(e: Event) => {
+            hasLoadingSlot.value = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+          }}></slot>
+        ${when(
+          hasLoadingSlot,
+          () => html``,
+          () => html`
+            <div class="loading-default" aria-hidden="true">
+              <sg-skeleton variant="text" lines="1" width="40%"></sg-skeleton>
+              <sg-skeleton variant="text" lines="3" width="100%"></sg-skeleton>
+              <sg-skeleton variant="text" lines="1" width="60%"></sg-skeleton>
+            </div>
+          `,
+        )}
       </div>
-    `;
 
-    const renderSuccess = () => html`
-      <div class="region" role="presentation">
+      <div class="region region-empty">
+        <slot
+          name="empty"
+          @slotchange=${(e: Event) => {
+            hasEmptySlot.value = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+          }}></slot>
+        ${when(
+          hasEmptySlot,
+          () => html``,
+          () => html`
+            <div class="empty-state" role="status">
+              <div class="icon">
+                <sg-icon name="inbox" size="100%" stroke-width="1.75" aria-hidden="true"></sg-icon>
+              </div>
+              ${renderText('title', props['empty-label'])} ${renderText('description', props['empty-description'])}
+            </div>
+          `,
+        )}
+      </div>
+
+      <div class="region region-error">
+        <slot
+          name="error"
+          @slotchange=${(e: Event) => {
+            hasErrorSlot.value = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+          }}></slot>
+        ${when(
+          hasErrorSlot,
+          () => html``,
+          () => html`
+            <div class="error-state" role="alert">
+              <div class="icon">
+                <sg-icon name="triangle-alert" size="100%" stroke-width="1.75" aria-hidden="true"></sg-icon>
+              </div>
+              ${renderText('title', props['error-label'])} ${renderText('description', props['error-description'])}
+              ${when(
+                () => Boolean(props.retryable!.value),
+                () => html`
+                  <button class="retry-btn" type="button" @click=${() => emit('retry')}>
+                    <sg-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></sg-icon>
+                    Try again
+                  </button>
+                `,
+              )}
+            </div>
+          `,
+        )}
+      </div>
+
+      <div class="region region-success" role="presentation">
         <slot></slot>
       </div>
     `;
-
-    const renderByStatus = () => {
-      const status = props.status!.value;
-
-      if (status === 'idle') {
-        return html`<div class="region" role="presentation"></div>`;
-      }
-
-      if (status === 'loading') {
-        return html`
-          <div class="region" role="status">
-            ${when(hasLoadingSlot, () => html`<slot name="loading"></slot>`, renderLoadingFallback)}
-          </div>
-        `;
-      }
-
-      if (status === 'empty') {
-        return html`
-          <div class="region">
-            ${when(
-              hasEmptySlot,
-              () => html`<slot name="empty"></slot>`,
-              () =>
-                renderDefaultState({
-                  description: props['empty-description'],
-                  icon: 'inbox',
-                  label: props['empty-label'],
-                  role: 'status',
-                  stateClass: 'empty-state',
-                }),
-            )}
-          </div>
-        `;
-      }
-
-      if (status === 'error') {
-        return html`
-          <div class="region">
-            ${when(
-              hasErrorSlot,
-              () => html`<slot name="error"></slot>`,
-              () =>
-                renderDefaultState({
-                  action: () =>
-                    when(
-                      () => Boolean(props.retryable!.value),
-                      () => html`
-                        <button class="retry-btn" type="button" @click=${() => emit('retry')}>
-                          <bit-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></bit-icon>
-                          Try again
-                        </button>
-                      `,
-                    ),
-                  description: props['error-description'],
-                  icon: 'triangle-alert',
-                  label: props['error-label'],
-                  role: 'alert',
-                  stateClass: 'error-state',
-                }),
-            )}
-          </div>
-        `;
-      }
-
-      return renderSuccess();
-    };
-
-    return html`${() => renderByStatus()}`;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

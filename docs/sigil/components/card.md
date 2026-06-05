@@ -24,16 +24,16 @@ A versatile and feature-rich card container component with purposeful variants, 
 ## Basic Usage
 
 ```html
-<bit-card>
+<sg-card>
   <img slot="media" src="/hero.jpg" alt="Card hero image" />
-  <bit-text slot="header" variant="heading" size="md">Card Title</bit-text>
-  <bit-text>This is the card content. It can contain any HTML elements.</bit-text>
-  <bit-text slot="footer" size="sm" variant="caption">Additional information</bit-text>
+  <sg-text slot="header" variant="heading" size="md">Card Title</sg-text>
+  <sg-text>This is the card content. It can contain any HTML elements.</sg-text>
+  <sg-text slot="footer" size="sm" variant="caption">Additional information</sg-text>
   <div slot="actions">
-    <bit-button size="sm">Primary</bit-button>
-    <bit-button size="sm" variant="ghost">Secondary</bit-button>
+    <sg-button size="sm">Primary</sg-button>
+    <sg-button size="sm" variant="ghost">Secondary</sg-button>
   </div>
-</bit-card>
+</sg-card>
 
 <script type="module">
   import '@vielzeug/sigil/card';
@@ -59,10 +59,10 @@ Use the `elevation` prop (0-5) to control shadow depth. Works with any variant.
 
 ```html
 <!-- No shadow -->
-<bit-card elevation="0">Flat appearance</bit-card>
+<sg-card elevation="0">Flat appearance</sg-card>
 
 <!-- High elevation -->
-<bit-card elevation="4">High shadow</bit-card>
+<sg-card elevation="4">High shadow</sg-card>
 ```
 
 :::
@@ -70,20 +70,20 @@ Use the `elevation` prop (0-5) to control shadow depth. Works with any variant.
 <ComponentPreview center>
 
 ```html
-<bit-card>
-  <bit-text slot="header" variant="heading" size="md">Default Card</bit-text>
-  <bit-text>Clean, subtle background with gentle borders. Use elevation prop for shadow depth.</bit-text>
-</bit-card>
+<sg-card>
+  <sg-text slot="header" variant="heading" size="md">Default Card</sg-text>
+  <sg-text>Clean, subtle background with gentle borders. Use elevation prop for shadow depth.</sg-text>
+</sg-card>
 
-<bit-card variant="solid" color="primary">
-  <bit-text slot="header" variant="heading" size="md">Solid Card</bit-text>
-  <bit-text>Filled with the theme color background.</bit-text>
-</bit-card>
+<sg-card variant="solid" color="primary">
+  <sg-text slot="header" variant="heading" size="md">Solid Card</sg-text>
+  <sg-text>Filled with the theme color background.</sg-text>
+</sg-card>
 
-<bit-card variant="flat" color="primary">
-  <bit-text slot="header" variant="heading" size="md">Flat Card</bit-text>
-  <bit-text>Subtle backdrop tint, low visual weight.</bit-text>
-</bit-card>
+<sg-card variant="flat" color="primary">
+  <sg-text slot="header" variant="heading" size="md">Flat Card</sg-text>
+  <sg-text>Subtle backdrop tint, low visual weight.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -102,13 +102,13 @@ Frost variant works best when placed over colorful backgrounds or images to show
 <ComponentPreview center>
 
 ```html
-<bit-card variant="frost" padding="lg">
-  <bit-text slot="header" variant="heading" size="md">Neutral Frost Card</bit-text>
-  <bit-text>Subtle canvas-based transparency with backdrop blur.</bit-text>
+<sg-card variant="frost" padding="lg">
+  <sg-text slot="header" variant="heading" size="md">Neutral Frost Card</sg-text>
+  <sg-text>Subtle canvas-based transparency with backdrop blur.</sg-text>
   <div slot="footer">
-    <bit-button variant="frost" size="sm">Learn More</bit-button>
+    <sg-button variant="frost" size="sm">Learn More</sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -120,30 +120,30 @@ Control the internal spacing of the card.
 <ComponentPreview center>
 
 ```html
-<bit-card padding="none" elevation="1">
-  <bit-text slot="header" variant="heading" size="md">No Padding</bit-text>
-  <bit-text>Content reaches the edges.</bit-text>
-</bit-card>
+<sg-card padding="none" elevation="1">
+  <sg-text slot="header" variant="heading" size="md">No Padding</sg-text>
+  <sg-text>Content reaches the edges.</sg-text>
+</sg-card>
 
-<bit-card padding="sm" elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Small Padding</bit-text>
-  <bit-text>Compact spacing.</bit-text>
-</bit-card>
+<sg-card padding="sm" elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Small Padding</sg-text>
+  <sg-text>Compact spacing.</sg-text>
+</sg-card>
 
-<bit-card padding="md" elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Medium Padding</bit-text>
-  <bit-text>Default spacing (if not specified).</bit-text>
-</bit-card>
+<sg-card padding="md" elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Medium Padding</sg-text>
+  <sg-text>Default spacing (if not specified).</sg-text>
+</sg-card>
 
-<bit-card padding="lg" elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Large Padding</bit-text>
-  <bit-text>Generous spacing.</bit-text>
-</bit-card>
+<sg-card padding="lg" elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Large Padding</sg-text>
+  <sg-text>Generous spacing.</sg-text>
+</sg-card>
 
-<bit-card padding="xl" elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Extra Large Padding</bit-text>
-  <bit-text>Maximum spacing for spacious layouts.</bit-text>
-</bit-card>
+<sg-card padding="xl" elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Extra Large Padding</sg-text>
+  <sg-text>Maximum spacing for spacious layouts.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -155,35 +155,35 @@ Apply semantic color themes to cards for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-card color="primary">
-  <bit-text slot="header" variant="heading" size="md">Primary Card</bit-text>
-  <bit-text>Uses the primary brand color.</bit-text>
-</bit-card>
+<sg-card color="primary">
+  <sg-text slot="header" variant="heading" size="md">Primary Card</sg-text>
+  <sg-text>Uses the primary brand color.</sg-text>
+</sg-card>
 
-<bit-card color="secondary">
-  <bit-text slot="header" variant="heading" size="md">Secondary Card</bit-text>
-  <bit-text>Uses the secondary brand color.</bit-text>
-</bit-card>
+<sg-card color="secondary">
+  <sg-text slot="header" variant="heading" size="md">Secondary Card</sg-text>
+  <sg-text>Uses the secondary brand color.</sg-text>
+</sg-card>
 
-<bit-card color="info">
-  <bit-text slot="header" variant="heading" size="md">Info Card</bit-text>
-  <bit-text>Perfect for positive messages.</bit-text>
-</bit-card>
+<sg-card color="info">
+  <sg-text slot="header" variant="heading" size="md">Info Card</sg-text>
+  <sg-text>Perfect for positive messages.</sg-text>
+</sg-card>
 
-<bit-card color="success">
-  <bit-text slot="header" variant="heading" size="md">Success Card</bit-text>
-  <bit-text>Perfect for positive messages.</bit-text>
-</bit-card>
+<sg-card color="success">
+  <sg-text slot="header" variant="heading" size="md">Success Card</sg-text>
+  <sg-text>Perfect for positive messages.</sg-text>
+</sg-card>
 
-<bit-card color="warning">
-  <bit-text slot="header" variant="heading" size="md">Warning Card</bit-text>
-  <bit-text>Great for caution messages.</bit-text>
-</bit-card>
+<sg-card color="warning">
+  <sg-text slot="header" variant="heading" size="md">Warning Card</sg-text>
+  <sg-text>Great for caution messages.</sg-text>
+</sg-card>
 
-<bit-card color="error">
-  <bit-text slot="header" variant="heading" size="md">Error Card</bit-text>
-  <bit-text>Ideal for error states.</bit-text>
-</bit-card>
+<sg-card color="error">
+  <sg-text slot="header" variant="heading" size="md">Error Card</sg-text>
+  <sg-text>Ideal for error states.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -195,35 +195,35 @@ Control shadow depth with explicit elevation levels (0-5).
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="0">
-  <bit-text slot="header" variant="heading" size="md">Elevation 0</bit-text>
-  <bit-text>No shadow - flat appearance.</bit-text>
-</bit-card>
+<sg-card elevation="0">
+  <sg-text slot="header" variant="heading" size="md">Elevation 0</sg-text>
+  <sg-text>No shadow - flat appearance.</sg-text>
+</sg-card>
 
-<bit-card elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Elevation 1</bit-text>
-  <bit-text>Subtle shadow.</bit-text>
-</bit-card>
+<sg-card elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Elevation 1</sg-text>
+  <sg-text>Subtle shadow.</sg-text>
+</sg-card>
 
-<bit-card elevation="2">
-  <bit-text slot="header" variant="heading" size="md">Elevation 2</bit-text>
-  <bit-text>Medium shadow (default).</bit-text>
-</bit-card>
+<sg-card elevation="2">
+  <sg-text slot="header" variant="heading" size="md">Elevation 2</sg-text>
+  <sg-text>Medium shadow (default).</sg-text>
+</sg-card>
 
-<bit-card elevation="3">
-  <bit-text slot="header" variant="heading" size="md">Elevation 3</bit-text>
-  <bit-text>Prominent shadow.</bit-text>
-</bit-card>
+<sg-card elevation="3">
+  <sg-text slot="header" variant="heading" size="md">Elevation 3</sg-text>
+  <sg-text>Prominent shadow.</sg-text>
+</sg-card>
 
-<bit-card elevation="4">
-  <bit-text slot="header" variant="heading" size="md">Elevation 4</bit-text>
-  <bit-text>High elevation.</bit-text>
-</bit-card>
+<sg-card elevation="4">
+  <sg-text slot="header" variant="heading" size="md">Elevation 4</sg-text>
+  <sg-text>High elevation.</sg-text>
+</sg-card>
 
-<bit-card elevation="5">
-  <bit-text slot="header" variant="heading" size="md">Elevation 5</bit-text>
-  <bit-text>Maximum elevation.</bit-text>
-</bit-card>
+<sg-card elevation="5">
+  <sg-text slot="header" variant="heading" size="md">Elevation 5</sg-text>
+  <sg-text>Maximum elevation.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -235,18 +235,18 @@ Set `orientation="horizontal"` for a side-by-side media + content layout. The ve
 <ComponentPreview center>
 
 ```html
-<bit-card orientation="horizontal" elevation="2" style="max-width: 600px;">
+<sg-card orientation="horizontal" elevation="2" style="max-width: 600px;">
   <div
     slot="media"
     style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📷
   </div>
-  <bit-text slot="header" variant="heading" size="md">Horizontal Card</bit-text>
-  <bit-text>Media appears on the left side, perfect for list items, product cards, and profile layouts.</bit-text>
+  <sg-text slot="header" variant="heading" size="md">Horizontal Card</sg-text>
+  <sg-text>Media appears on the left side, perfect for list items, product cards, and profile layouts.</sg-text>
   <div slot="actions">
-    <bit-button size="sm">View</bit-button>
+    <sg-button size="sm">View</sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -260,15 +260,15 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="2" style="max-width: 350px;">
+<sg-card elevation="2" style="max-width: 350px;">
   <img
     slot="media"
     src="https://images.unsplash.com/photo-1557683316-973673baf926?w=400"
     alt="Gradient"
     style="width: 100%; height: 200px; object-fit: cover;" />
-  <bit-text slot="header" variant="heading" size="md">Beautiful Gradient</bit-text>
-  <bit-text>Images automatically fill the media slot with proper sizing.</bit-text>
-</bit-card>
+  <sg-text slot="header" variant="heading" size="md">Beautiful Gradient</sg-text>
+  <sg-text>Images automatically fill the media slot with proper sizing.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -280,15 +280,15 @@ Separate slot for action buttons with automatic layout.
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="2">
-  <bit-text slot="header" variant="heading" size="md">Action Card</bit-text>
-  <bit-text>This card has multiple actions in a dedicated slot.</bit-text>
+<sg-card elevation="2">
+  <sg-text slot="header" variant="heading" size="md">Action Card</sg-text>
+  <sg-text>This card has multiple actions in a dedicated slot.</sg-text>
   <div slot="actions">
-    <bit-button color="primary" size="sm">Confirm</bit-button>
-    <bit-button variant="outline" color="primary" size="sm">Cancel</bit-button>
-    <bit-button variant="ghost" size="sm">Learn More</bit-button>
+    <sg-button color="primary" size="sm">Confirm</sg-button>
+    <sg-button variant="outline" color="primary" size="sm">Cancel</sg-button>
+    <sg-button variant="ghost" size="sm">Learn More</sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -302,13 +302,13 @@ Prevent interaction and show visual feedback.
 <ComponentPreview center>
 
 ```html
-<bit-card interactive disabled elevation="1">
-  <bit-text slot="header" variant="heading" size="md">Disabled Card</bit-text>
-  <bit-text>This card is disabled and cannot be interacted with.</bit-text>
+<sg-card interactive disabled elevation="1">
+  <sg-text slot="header" variant="heading" size="md">Disabled Card</sg-text>
+  <sg-text>This card is disabled and cannot be interacted with.</sg-text>
   <div slot="actions">
-    <bit-button size="sm">Action</bit-button>
+    <sg-button size="sm">Action</sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -320,10 +320,10 @@ Show an animated loading indicator while content is being fetched.
 <ComponentPreview center>
 
 ```html
-<bit-card loading color="primary" elevation="2">
-  <bit-text slot="header" variant="heading" size="md">Loading Content</bit-text>
-  <bit-text>An animated loading bar appears at the top of the card.</bit-text>
-</bit-card>
+<sg-card loading color="primary" elevation="2">
+  <sg-text slot="header" variant="heading" size="md">Loading Content</sg-text>
+  <sg-text>An animated loading bar appears at the top of the card.</sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -335,13 +335,13 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<bit-card interactive elevation="2">
-  <bit-text slot="header" variant="heading" size="md">Activate Me</bit-text>
-  <bit-text> This card supports keyboard activation and emits an 'activate' event with trigger metadata. </bit-text>
-</bit-card>
+<sg-card interactive elevation="2">
+  <sg-text slot="header" variant="heading" size="md">Activate Me</sg-text>
+  <sg-text> This card supports keyboard activation and emits an 'activate' event with trigger metadata. </sg-text>
+</sg-card>
 
 <script>
-  document.querySelector('bit-card[interactive]')?.addEventListener('activate', (e) => {
+  document.querySelector('sg-card[interactive]')?.addEventListener('activate', (e) => {
     console.log('Card activated', e.detail.trigger, e.detail.originalEvent);
   });
 </script>
@@ -356,22 +356,22 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<bit-card padding="lg" elevation="2" style="max-width: 320px">
+<sg-card padding="lg" elevation="2" style="max-width: 320px">
   <div slot="media" style="text-align: center; padding: var(--size-4) var(--size-4) 0;">
-    <bit-avatar initials="JD" color="primary" size="lg"></bit-avatar>
+    <sg-avatar initials="JD" color="primary" size="lg"></sg-avatar>
   </div>
   <div slot="header" style="text-align: center">
-    <bit-text variant="heading" size="xl">Jane Doe</bit-text>
-    <bit-text size="sm" variant="caption" color="muted">Software Engineer</bit-text>
+    <sg-text variant="heading" size="xl">Jane Doe</sg-text>
+    <sg-text size="sm" variant="caption" color="muted">Software Engineer</sg-text>
   </div>
-  <bit-text align="center" color="body"> Building beautiful web experiences with modern technologies. </bit-text>
+  <sg-text align="center" color="body"> Building beautiful web experiences with modern technologies. </sg-text>
   <div slot="actions" style="display: flex; width: 100%;">
-    <bit-button-group attached fullwidth>
-      <bit-button color="primary" style="flex: 1">Follow</bit-button>
-      <bit-button variant="outline" color="primary" style="flex: 1">Message</bit-button>
-    </bit-button-group>
+    <sg-button-group attached fullwidth>
+      <sg-button color="primary" style="flex: 1">Follow</sg-button>
+      <sg-button variant="outline" color="primary" style="flex: 1">Message</sg-button>
+    </sg-button-group>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -381,26 +381,26 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="2" interactive padding="none" style="max-width: 280px">
+<sg-card elevation="2" interactive padding="none" style="max-width: 280px">
   <div
     slot="media"
     style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📦
   </div>
   <div style="padding: var(--size-4)">
-    <bit-text variant="heading" size="lg">Premium Package</bit-text>
-    <bit-text color="muted" style="margin: var(--size-2) 0 var(--size-3) 0;">
+    <sg-text variant="heading" size="lg">Premium Package</sg-text>
+    <sg-text color="muted" style="margin: var(--size-2) 0 var(--size-3) 0;">
       Everything you need to get started with our platform.
-    </bit-text>
+    </sg-text>
     <div style="display: flex; align-items: baseline; gap: var(--size-2); margin-bottom: var(--size-3)">
       <span style="font-size: var(--text-2xl); font-weight: var(--font-bold);">$49</span>
       <span style="color: var(--color-contrast-500);">/month</span>
     </div>
   </div>
   <div slot="actions" style="padding: 0 var(--size-4) var(--size-4); width: 100%;">
-    <bit-button color="primary" fullwidth> Get Started </bit-button>
+    <sg-button color="primary" fullwidth> Get Started </sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -410,18 +410,18 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<bit-card color="success" variant="flat" elevation="1" padding="lg" style="max-width: 400px">
+<sg-card color="success" variant="flat" elevation="1" padding="lg" style="max-width: 400px">
   <div style="display: flex; align-items: start; gap: var(--size-3)">
     <div
       style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-success); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
       ✓
     </div>
     <div style="flex: 1">
-      <bit-text variant="heading" color="success"> Success! </bit-text>
-      <bit-text color="body"> Your changes have been saved successfully. </bit-text>
+      <sg-text variant="heading" color="success"> Success! </sg-text>
+      <sg-text color="body"> Your changes have been saved successfully. </sg-text>
     </div>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -431,15 +431,15 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
-  <bit-text color="primary" variant="heading" size="xl" style="margin-bottom: var(--size-2); display: block;">
+<sg-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
+  <sg-text color="primary" variant="heading" size="xl" style="margin-bottom: var(--size-2); display: block;">
     1,234
-  </bit-text>
-  <bit-text size="sm" color="secondary">Total Users</bit-text>
-  <bit-text size="sm" color="success" style="margin-top: var(--size-2); display: block;">
+  </sg-text>
+  <sg-text size="sm" color="secondary">Total Users</sg-text>
+  <sg-text size="sm" color="success" style="margin-top: var(--size-2); display: block;">
     ↑ 12% from last month
-  </bit-text>
-</bit-card>
+  </sg-text>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -452,33 +452,33 @@ Perfect for compact layouts and list views:
 
 ```html
 <div style="display: flex; flex-direction: column; gap: var(--size-3); max-width: 700px;">
-  <bit-card orientation="horizontal" variant="flat" elevation="1" interactive>
+  <sg-card orientation="horizontal" variant="flat" elevation="1" interactive>
     <div
       slot="media"
       style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       📱
     </div>
-    <bit-text slot="header" variant="heading" size="md">Smartphone Pro</bit-text>
-    <bit-text>Latest model with advanced features.</bit-text>
+    <sg-text slot="header" variant="heading" size="md">Smartphone Pro</sg-text>
+    <sg-text>Latest model with advanced features.</sg-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-      <bit-text weight="bold">$999</bit-text>
-      <bit-button size="sm" color="primary">Buy Now</bit-button>
+      <sg-text weight="bold">$999</sg-text>
+      <sg-button size="sm" color="primary">Buy Now</sg-button>
     </div>
-  </bit-card>
+  </sg-card>
 
-  <bit-card orientation="horizontal" variant="flat" elevation="1" interactive>
+  <sg-card orientation="horizontal" variant="flat" elevation="1" interactive>
     <div
       slot="media"
       style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       💻
     </div>
-    <bit-text slot="header" variant="heading" size="md">Laptop Elite</bit-text>
-    <bit-text>Powerful performance for professionals.</bit-text>
+    <sg-text slot="header" variant="heading" size="md">Laptop Elite</sg-text>
+    <sg-text>Powerful performance for professionals.</sg-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-      <bit-text weight="bold">$1,499</bit-text>
-      <bit-button size="sm" color="primary">Buy Now</bit-button>
+      <sg-text weight="bold">$1,499</sg-text>
+      <sg-button size="sm" color="primary">Buy Now</sg-button>
     </div>
-  </bit-card>
+  </sg-card>
 </div>
 ```
 
@@ -534,37 +534,37 @@ Perfect for compact layouts and list views:
 ### Custom Styling
 
 ```html
-<bit-card
+<sg-card
   style="
     --card-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --card-color: white;
     --card-radius: var(--rounded-2xl);
     --card-padding: var(--size-8);
   ">
-  <bit-text slot="header" variant="heading" size="md">Custom Styled Card</bit-text>
-  <bit-text>This card has custom colors and spacing.</bit-text>
-</bit-card>
+  <sg-text slot="header" variant="heading" size="md">Custom Styled Card</sg-text>
+  <sg-text>This card has custom colors and spacing.</sg-text>
+</sg-card>
 ```
 
 ### Custom Shadow
 
 ```html
-<bit-card
+<sg-card
   style="
     --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   "
   interactive>
-  <bit-text slot="header" variant="heading" size="md">Enhanced Shadow</bit-text>
-  <bit-text>Hover to see the custom shadow effect.</bit-text>
-</bit-card>
+  <sg-text slot="header" variant="heading" size="md">Enhanced Shadow</sg-text>
+  <sg-text>Hover to see the custom shadow effect.</sg-text>
+</sg-card>
 ```
 
 ## Accessibility
 
 The card component follows WCAG 2.1 Level AA standards.
 
-### `bit-card`
+### `sg-card`
 
 ✅ **Keyboard Navigation**
 

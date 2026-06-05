@@ -23,8 +23,8 @@ A loading placeholder component for representing content that has not loaded yet
 ## Basic Usage
 
 ```html
-<bit-skeleton></bit-skeleton>
-<bit-skeleton width="12rem" height="1rem"></bit-skeleton>
+<sg-skeleton></sg-skeleton>
+<sg-skeleton width="12rem" height="1rem"></sg-skeleton>
 
 <script type="module">
   import '@vielzeug/sigil/skeleton';
@@ -38,7 +38,7 @@ A loading placeholder component for representing content that has not loaded yet
 <ComponentPreview center vertical>
 
 ```html
-<bit-skeleton width="100%" height="1rem"></bit-skeleton> <bit-skeleton width="16rem" height="10rem"></bit-skeleton>
+<sg-skeleton width="100%" height="1rem"></sg-skeleton> <sg-skeleton width="16rem" height="10rem"></sg-skeleton>
 ```
 
 </ComponentPreview>
@@ -48,9 +48,9 @@ A loading placeholder component for representing content that has not loaded yet
 <ComponentPreview center>
 
 ```html
-<bit-skeleton variant="circle" size="sm"></bit-skeleton>
-<bit-skeleton variant="circle" size="lg"></bit-skeleton>
-<bit-skeleton variant="circle" width="3.5rem" height="3.5rem"></bit-skeleton>
+<sg-skeleton variant="circle" size="sm"></sg-skeleton>
+<sg-skeleton variant="circle" size="lg"></sg-skeleton>
+<sg-skeleton variant="circle" width="3.5rem" height="3.5rem"></sg-skeleton>
 ```
 
 </ComponentPreview>
@@ -60,8 +60,8 @@ A loading placeholder component for representing content that has not loaded yet
 <ComponentPreview center vertical>
 
 ```html
-<bit-skeleton variant="text" lines="3" width="100%"></bit-skeleton>
-<bit-skeleton variant="text" lines="2" width="70%"></bit-skeleton>
+<sg-skeleton variant="text" lines="3" width="100%"></sg-skeleton>
+<sg-skeleton variant="text" lines="2" width="70%"></sg-skeleton>
 ```
 
 </ComponentPreview>
@@ -71,9 +71,9 @@ A loading placeholder component for representing content that has not loaded yet
 <ComponentPreview center vertical>
 
 ```html
-<bit-skeleton size="sm" width="14rem"></bit-skeleton>
-<bit-skeleton size="md" width="14rem"></bit-skeleton>
-<bit-skeleton size="lg" width="14rem"></bit-skeleton>
+<sg-skeleton size="sm" width="14rem"></sg-skeleton>
+<sg-skeleton size="md" width="14rem"></sg-skeleton>
+<sg-skeleton size="lg" width="14rem"></sg-skeleton>
 ```
 
 </ComponentPreview>
@@ -85,10 +85,10 @@ A loading placeholder component for representing content that has not loaded yet
 <ComponentPreview center vertical>
 
 ```html
-<bit-card style="padding: var(--size-4); width: 20rem;">
-  <bit-skeleton width="100%" height="10rem" style="margin-bottom: var(--size-4)"></bit-skeleton>
-  <bit-skeleton variant="text" lines="3" width="100%"></bit-skeleton>
-</bit-card>
+<sg-card style="padding: var(--size-4); width: 20rem;">
+  <sg-skeleton width="100%" height="10rem" style="margin-bottom: var(--size-4)"></sg-skeleton>
+  <sg-skeleton variant="text" lines="3" width="100%"></sg-skeleton>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -100,10 +100,10 @@ A loading placeholder component for representing content that has not loaded yet
 ```html
 <div style="display: grid; gap: var(--size-3); width: 100%; max-width: 28rem;">
   <div style="display: flex; align-items: center; gap: var(--size-3);">
-    <bit-skeleton variant="circle" width="2.25rem" height="2.25rem"></bit-skeleton>
+    <sg-skeleton variant="circle" width="2.25rem" height="2.25rem"></sg-skeleton>
     <div style="flex: 1; display: grid; gap: var(--size-2);">
-      <bit-skeleton variant="text" width="40%"></bit-skeleton>
-      <bit-skeleton variant="text" width="70%"></bit-skeleton>
+      <sg-skeleton variant="text" width="40%"></sg-skeleton>
+      <sg-skeleton variant="text" width="70%"></sg-skeleton>
     </div>
   </div>
 </div>
@@ -118,8 +118,8 @@ Use `animated="false"` for static placeholders.
 <ComponentPreview center vertical>
 
 ```html
-<bit-skeleton width="16rem" height="1rem"></bit-skeleton>
-<bit-skeleton width="16rem" height="1rem" animated="false"></bit-skeleton>
+<sg-skeleton width="16rem" height="1rem"></sg-skeleton>
+<sg-skeleton width="16rem" height="1rem" animated="false"></sg-skeleton>
 ```
 
 </ComponentPreview>
@@ -131,27 +131,27 @@ Add `striped` to replace the shimmer with a diagonal stripe pattern. Useful for 
 <ComponentPreview center>
 
 ```html
-<bit-card padding="md" style="width: 280px;">
+<sg-card padding="md" style="width: 280px;">
   <!-- Hero image area -->
-  <bit-skeleton striped width="100%" height="160px" style="border-radius: 0; display: block;"></bit-skeleton>
+  <sg-skeleton striped width="100%" height="160px" style="border-radius: 0; display: block;"></sg-skeleton>
 
-  <bit-grid gap="md" style="margin-top: var(--size-4);">
+  <sg-grid gap="md" style="margin-top: var(--size-4);">
     <!-- Avatar + author line -->
     <div style="display: flex; align-items: center; gap: var(--size-2);">
-      <bit-skeleton striped variant="circle" width="2rem" height="2rem"></bit-skeleton>
-      <bit-skeleton striped variant="text" width="6rem"></bit-skeleton>
+      <sg-skeleton striped variant="circle" width="2rem" height="2rem"></sg-skeleton>
+      <sg-skeleton striped variant="text" width="6rem"></sg-skeleton>
     </div>
 
     <!-- Title -->
-    <bit-skeleton striped width="90%" height="1.125rem"></bit-skeleton>
+    <sg-skeleton striped width="90%" height="1.125rem"></sg-skeleton>
 
     <!-- Body text lines -->
-    <bit-skeleton striped variant="text" lines="3" width="98%"></bit-skeleton>
+    <sg-skeleton striped variant="text" lines="3" width="98%"></sg-skeleton>
 
     <!-- Action button -->
-    <bit-skeleton striped width="7rem" height="2rem" style="border-radius: var(--rounded-lg);"></bit-skeleton>
-  </bit-grid>
-</bit-card>
+    <sg-skeleton striped width="7rem" height="2rem" style="border-radius: var(--rounded-lg);"></sg-skeleton>
+  </sg-grid>
+</sg-card>
 ```
 
 </ComponentPreview>
@@ -159,7 +159,7 @@ Add `striped` to replace the shimmer with a diagonal stripe pattern. Useful for 
 The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS custom property:
 
 ```html
-<bit-skeleton striped width="100%" height="2rem" style="--skeleton-stripe-size: 16px"></bit-skeleton>
+<sg-skeleton striped width="100%" height="2rem" style="--skeleton-stripe-size: 16px"></sg-skeleton>
 ```
 
 ## API Reference
@@ -201,7 +201,7 @@ This component does not emit custom events.
 
 The skeleton component follows WAI-ARIA best practices.
 
-### `bit-skeleton`
+### `sg-skeleton`
 
 ✅ **Screen Readers**
 

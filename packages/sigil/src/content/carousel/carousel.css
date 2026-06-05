@@ -4,7 +4,6 @@
     --_radius: var(--carousel-radius, var(--rounded-xl));
     --_dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
     --_dot-active-bg: var(--carousel-dot-active-bg, var(--color-contrast-700));
-    --_duration: var(--carousel-transition-duration, 0.35s);
 
     position: relative;
     display: flex;
@@ -12,7 +11,7 @@
     width: 100%;
     min-height: var(--carousel-min-height, 240px);
     overflow: hidden;
-    touch-action: pan-y;
+    touch-action: auto;
     outline: none;
     background: var(--_bg);
     border-radius: var(--_radius);
@@ -43,8 +42,107 @@
 
   .nav-btn {
     pointer-events: auto;
-    transform: translateY(-50%);
   }
+
+  /* ── Variant-specific track styles ────────────────────────────────────── */
+
+  /* Gallery: flex row, fills host, shows active + two thumbnails */
+  :host([variant='gallery']) .track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-gallery-gap, var(--size-2));
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  :host([variant='gallery'][orientation='vertical']) .track {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Marquee: anchor top/bottom for definite height; width:max-content for -50% loop.
+     Host clips the overflow. */
+  :host([variant='marquee']) {
+    overflow: hidden;
+  }
+
+  :host([variant='marquee']) .track {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-marquee-gap, var(--size-4));
+    align-items: stretch;
+    width: max-content;
+    animation: carousel-marquee var(--_marquee-duration, 0s) linear infinite;
+  }
+
+  :host([variant='marquee'][orientation='vertical']) .track {
+    inset: 0 0 auto;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: max-content;
+    animation-name: carousel-marquee-v;
+  }
+
+  /* Filmstrip: flex row/column with absolute positioning to fill host */
+  :host([variant='filmstrip']) .track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-filmstrip-gap, var(--size-2));
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  :host([variant='filmstrip'][orientation='vertical']) .track {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* ── Vertical orientation ──────────────────────────────────────────────── */
+
+  :host([orientation='vertical']) {
+    --_slide-translate-before: translateY(-100%);
+    --_slide-translate-after: translateY(100%);
+  }
+
+  :host([orientation='vertical']) .controls {
+    inset-block: 0;
+    inset-inline: auto 0;
+    flex-direction: column;
+    gap: var(--size-1);
+    justify-content: center;
+    width: 0;
+    height: 100%;
+    padding-inline: 0;
+  }
+
+  :host([orientation='vertical']) .nav-btn {
+    transform: translateX(-90%) translateY(0);
+  }
+
+  :host([orientation='vertical']) .indicators {
+    inset-block: 0;
+    inset-block-end: auto;
+    inset-inline: var(--size-3) auto;
+    flex-direction: column;
+    width: auto;
+    height: 100%;
+    padding-block: var(--size-2);
+  }
+
+  :host([orientation='vertical']) .indicator {
+    width: var(--size-1-5) !important;
+    height: var(--size-8);
+  }
+
+  /* animation properties are inherited from .indicator-active::part(fill) below */
 
   /* ── Indicators (dots) ─────────────────────────────────────────────────── */
 
@@ -60,19 +158,15 @@
   }
 
   .indicator {
-    --progress-height: var(--size-1-5);
-    --progress-track-bg: var(--_dot-bg);
-    --progress-radius: var(--rounded-md);
-
-    width: var(--size-8) !important;
     flex-shrink: 0;
+    width: var(--size-8) !important;
     pointer-events: auto;
     cursor: pointer;
     transition: opacity var(--transition-fast);
   }
 
   .indicator:focus-visible {
-    outline: var(--border) solid currentColor;
+    outline: var(--border) solid currentcolor;
     outline-offset: 2px;
   }
 
@@ -96,7 +190,53 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    --carousel-transition-duration: 0s;
+  }
+
+  :host([variant='marquee']) .track,
+  :host([variant='marquee'][orientation='vertical']) .track {
+    animation: none;
+  }
+}
+
 @keyframes carousel-fill {
-  from { width: 0%; }
-  to   { width: 100%; }
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes carousel-fill-v {
+  from {
+    height: 0%;
+  }
+
+  to {
+    height: 100%;
+  }
+}
+
+@keyframes carousel-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes carousel-marquee-v {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
 }

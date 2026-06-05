@@ -10,7 +10,7 @@ type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outl
 type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 
 /** Badge component properties */
-export type BitBadgeProps = {
+export type SgBadgeProps = {
   /**
    * When set, switches to overlay mode: the host becomes `position:relative`
    * and the badge pins to a corner over the slotted content.
@@ -39,7 +39,7 @@ export type BitBadgeProps = {
  * A compact badge/chip for counts, statuses, and labels.
  * Supports numeric counts with overflow, dot mode, and icon slots.
  *
- * @element bit-badge
+ * @element sg-badge
  *
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'
@@ -66,15 +66,15 @@ export type BitBadgeProps = {
  * @part badge - Shadow part for the `badge` element.
  * @example
  * ```html
- * <bit-badge color="primary">New</bit-badge>
- * <bit-badge color="error" count="5"></bit-badge>
- * <bit-badge color="error" count="120" max="99"></bit-badge>
- * <bit-badge color="success" dot></bit-badge>
- * <bit-badge color="warning" variant="flat">Beta</bit-badge>
+ * <sg-badge color="primary">New</sg-badge>
+ * <sg-badge color="error" count="5"></sg-badge>
+ * <sg-badge color="error" count="120" max="99"></sg-badge>
+ * <sg-badge color="success" dot></sg-badge>
+ * <sg-badge color="warning" variant="flat">Beta</sg-badge>
  * ```
  */
-export const BADGE_TAG = 'bit-badge' as const;
-define<BitBadgeProps>(BADGE_TAG, {
+export const BADGE_TAG = 'sg-badge' as const;
+define<SgBadgeProps>(BADGE_TAG, {
   props: {
     ...themableBundle,
     size: prop.string<BadgeSize>(),

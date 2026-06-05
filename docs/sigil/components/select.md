@@ -25,16 +25,16 @@ A fully-featured, form-associated select widget that reads native `<option>` and
 
 ## Basic Usage
 
-Place `<option>` children directly inside `bit-select`.
+Place `<option>` children directly inside `sg-select`.
 
 ```html
-<bit-select label="Country">
+<sg-select label="Country">
   <option value="">Pick a country…</option>
   <option value="us">United States</option>
   <option value="uk">United Kingdom</option>
   <option value="de">Germany</option>
   <option value="jp">Japan</option>
-</bit-select>
+</sg-select>
 
 <script type="module">
   import '@vielzeug/sigil/select';
@@ -50,26 +50,26 @@ Six visual variants for different UI contexts and levels of emphasis.
 <ComponentPreview>
 
 ```html
-<bit-select variant="solid" placeholder="Solid">
+<sg-select variant="solid" placeholder="Solid">
   <option value="1">Option 1</option>
   <option value="2">Option 2</option>
-</bit-select>
-<bit-select variant="flat" placeholder="Flat">
+</sg-select>
+<sg-select variant="flat" placeholder="Flat">
   <option value="1">Option 1</option>
   <option value="2">Option 2</option>
-</bit-select>
-<bit-select variant="bordered" placeholder="Bordered">
+</sg-select>
+<sg-select variant="bordered" placeholder="Bordered">
   <option value="1">Option 1</option>
   <option value="2">Option 2</option>
-</bit-select>
-<bit-select variant="outline" placeholder="Outline">
+</sg-select>
+<sg-select variant="outline" placeholder="Outline">
   <option value="1">Option 1</option>
   <option value="2">Option 2</option>
-</bit-select>
-<bit-select variant="ghost" placeholder="Ghost">
+</sg-select>
+<sg-select variant="ghost" placeholder="Ghost">
   <option value="1">Option 1</option>
   <option value="2">Option 2</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -81,29 +81,29 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
-  <bit-select variant="flat" placeholder="Default">
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <sg-select variant="flat" placeholder="Default">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="primary" placeholder="Primary">
+  </sg-select>
+  <sg-select variant="flat" color="primary" placeholder="Primary">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="secondary" placeholder="Secondary">
+  </sg-select>
+  <sg-select variant="flat" color="secondary" placeholder="Secondary">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="info" placeholder="Info">
+  </sg-select>
+  <sg-select variant="flat" color="info" placeholder="Info">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="success" placeholder="Success">
+  </sg-select>
+  <sg-select variant="flat" color="success" placeholder="Success">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="warning" placeholder="Warning">
+  </sg-select>
+  <sg-select variant="flat" color="warning" placeholder="Warning">
     <option value="1">Option 1</option>
-  </bit-select>
-  <bit-select variant="flat" color="error" placeholder="Error">
+  </sg-select>
+  <sg-select variant="flat" color="error" placeholder="Error">
     <option value="1">Option 1</option>
-  </bit-select>
-</bit-grid>
+  </sg-select>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -113,15 +113,15 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Small" size="sm">
+<sg-select label="Small" size="sm">
   <option value="1">Option</option>
-</bit-select>
-<bit-select label="Medium (default)" size="md">
+</sg-select>
+<sg-select label="Medium (default)" size="md">
   <option value="1">Option</option>
-</bit-select>
-<bit-select label="Large" size="lg">
+</sg-select>
+<sg-select label="Large" size="lg">
   <option value="1">Option</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -131,14 +131,14 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Inset label (default)" label-placement="inset">
+<sg-select label="Inset label (default)" label-placement="inset">
   <option value="">Select…</option>
   <option value="a">Alpha</option>
-</bit-select>
-<bit-select label="Outside label" label-placement="outside">
+</sg-select>
+<sg-select label="Outside label" label-placement="outside">
   <option value="">Select…</option>
   <option value="a">Alpha</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -150,7 +150,7 @@ Use native `<optgroup>` elements to create labelled groups.
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Fruit or Vegetable">
+<sg-select label="Fruit or Vegetable">
   <optgroup label="Fruits">
     <option value="apple">Apple</option>
     <option value="banana">Banana</option>
@@ -160,25 +160,25 @@ Use native `<optgroup>` elements to create labelled groups.
     <option value="carrot">Carrot</option>
     <option value="broccoli">Broccoli</option>
   </optgroup>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
 
 ## Multiple Selection
 
-Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `bit-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown.
+Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `sg-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Skills" multiple color="primary">
+<sg-select label="Skills" multiple color="primary">
   <option value="ts">TypeScript</option>
   <option value="rust">Rust</option>
   <option value="go">Go</option>
   <option value="python">Python</option>
   <option value="java">Java</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -186,7 +186,7 @@ Add `multiple` to allow selecting more than one option. Each selected value is d
 The `change` event detail includes both `value` (comma-separated string) and `values` (array of selected values):
 
 ```js
-document.querySelector('bit-select').addEventListener('change', (e) => {
+document.querySelector('sg-select').addEventListener('change', (e) => {
   console.log('csv:', e.detail.value); // "ts,rust"
   console.log('array:', e.detail.values); // ["ts", "rust"]
 });
@@ -197,18 +197,18 @@ document.querySelector('bit-select').addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Role" helper="Choose the role that best fits.">
+<sg-select label="Role" helper="Choose the role that best fits.">
   <option value="">Select a role…</option>
   <option value="admin">Admin</option>
   <option value="editor">Editor</option>
   <option value="viewer">Viewer</option>
-</bit-select>
+</sg-select>
 
-<bit-select label="Priority" error="Please select a priority." color="error">
+<sg-select label="Priority" error="Please select a priority." color="error">
   <option value="">Select…</option>
   <option value="high">High</option>
   <option value="medium">Medium</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -218,13 +218,13 @@ document.querySelector('bit-select').addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Disabled select" disabled>
+<sg-select label="Disabled select" disabled>
   <option value="1">Option</option>
-</bit-select>
-<bit-select label="Required select" required>
+</sg-select>
+<sg-select label="Required select" required>
   <option value="">Choose…</option>
   <option value="a">Alpha</option>
-</bit-select>
+</sg-select>
 ```
 
 </ComponentPreview>
@@ -236,13 +236,13 @@ Set `loading` to show a loading indicator inside the dropdown while options are 
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Country" loading></bit-select>
+<sg-select label="Country" loading></sg-select>
 ```
 
 </ComponentPreview>
 
 ```js
-const select = document.querySelector('bit-select');
+const select = document.querySelector('sg-select');
 select.loading = true;
 const data = await fetch('/api/countries').then((r) => r.json());
 select.options = data.map((c) => ({ value: c.code, label: c.name }));
@@ -254,7 +254,7 @@ select.loading = false;
 For dynamic or large option lists, set the `options` property directly in JavaScript instead of using `<option>` children. Each item only needs a `value`; `label` falls back to the same string when omitted, and `group` remains optional.
 
 ```js
-const select = document.querySelector('bit-select');
+const select = document.querySelector('sg-select');
 select.options = [
   { value: 'us', label: 'United States' },
   { value: 'gb', label: 'United Kingdom', group: 'Europe' },
@@ -267,18 +267,18 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 ## In a Form
 
-`bit-select` is form-associated. Read the value via `FormData` or a `change` event.
+`sg-select` is form-associated. Read the value via `FormData` or a `change` event.
 
 ```html
-<bit-form id="myForm">
-  <bit-select name="category" label="Category" required>
+<sg-form id="myForm">
+  <sg-select name="category" label="Category" required>
     <option value="">Select a category…</option>
     <option value="tech">Technology</option>
     <option value="science">Science</option>
     <option value="art">Art</option>
-  </bit-select>
-  <bit-button type="submit">Submit</bit-button>
-</bit-form>
+  </sg-select>
+  <sg-button type="submit">Submit</sg-button>
+</sg-form>
 
 <script type="module">
   import '@vielzeug/sigil/form';
@@ -291,17 +291,17 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
     console.log('category:', data.get('category'));
   });
 
-  document.querySelector('bit-select').addEventListener('change', (e) => {
+  document.querySelector('sg-select').addEventListener('change', (e) => {
     console.log('Selected value:', e.detail.value);
     console.log('Selected labels:', e.detail.labels);
     // For multiple: e.detail.values (string[])
   });
 
-  document.querySelector('bit-select').addEventListener('open', (e) => {
+  document.querySelector('sg-select').addEventListener('open', (e) => {
     console.log('Opened because:', e.detail.reason); // 'trigger' | 'programmatic'
   });
 
-  document.querySelector('bit-select').addEventListener('close', (e) => {
+  document.querySelector('sg-select').addEventListener('close', (e) => {
     console.log('Closed because:', e.detail.reason); // 'escape' | 'outside-click' | 'programmatic' | 'trigger'
   });
 </script>
@@ -359,7 +359,7 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 The select component follows WCAG 2.1 Level AA standards.
 
-### `bit-select`
+### `sg-select`
 
 ✅ **Keyboard Navigation**
 

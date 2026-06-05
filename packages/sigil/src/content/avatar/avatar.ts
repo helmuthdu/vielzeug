@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<AvatarStatus, string> = {
 };
 
 /** Avatar component properties */
-export type BitAvatarProps = {
+export type SgAvatarProps = {
   /** Alt text for the image; also used to derive initials when no `initials` prop is given */
   alt?: string;
   /** Theme color (used for initials background) */
@@ -42,14 +42,14 @@ export type BitAvatarProps = {
 /**
  * Displays a user avatar: image → initials → generic fallback icon, in that priority order.
  *
- * @element bit-avatar
+ * @element sg-avatar
  *
  * @attr {string} src - Image source URL
  * @attr {string} alt - Image alt text (also used to derive initials)
  * @attr {string} initials - Explicit initials (up to 2 chars)
- * @attr {string} color - Theme color for initials background
+ * @attr {string} color - Theme color for initials background: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - 'sm' | 'md' | 'lg'
- * @attr {string} rounded - Border radius
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} status - 'online' | 'offline' | 'busy' | 'away'
  *
  * @slot - Fallback content shown when image and initials are unavailable.
@@ -68,13 +68,13 @@ export type BitAvatarProps = {
  * @part overflow - Overflow indicator element.
  * @example
  * ```html
- * <bit-avatar src="/jane.jpg" alt="Jane Doe"></bit-avatar>
- * <bit-avatar initials="JD" color="primary"></bit-avatar>
- * <bit-avatar alt="John Smith" status="online"></bit-avatar>
+ * <sg-avatar src="/jane.jpg" alt="Jane Doe"></sg-avatar>
+ * <sg-avatar initials="JD" color="primary"></sg-avatar>
+ * <sg-avatar alt="John Smith" status="online"></sg-avatar>
  * ```
  */
-export const AVATAR_TAG = 'bit-avatar' as const;
-define<BitAvatarProps>(AVATAR_TAG, {
+export const AVATAR_TAG = 'sg-avatar' as const;
+define<SgAvatarProps>(AVATAR_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -152,7 +152,7 @@ define<BitAvatarProps>(AVATAR_TAG, {
             : ''}
         ${() =>
           showFallback.value
-            ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
+            ? html`<sg-icon class="icon-fallback" part="fallback" name="user" size="50%"></sg-icon>`
             : ''}
       </span>
       ${() =>
@@ -178,7 +178,7 @@ define<BitAvatarProps>(AVATAR_TAG, {
 // ============================================
 
 /** AvatarGroup component properties */
-export type BitAvatarGroupProps = {
+export type SgAvatarGroupProps = {
   /** Maximum number of avatars to show before showing a +N badge */
   max?: number;
   /** Total count shown in the overflow badge (defaults to the actual hidden count) */
@@ -186,29 +186,29 @@ export type BitAvatarGroupProps = {
 };
 
 /**
- * Groups multiple `bit-avatar` elements in a stacked, overlapping row.
+ * Groups multiple `sg-avatar` elements in a stacked, overlapping row.
  *
- * @element bit-avatar-group
+ * @element sg-avatar-group
  *
  * @attr {number} max - Max visible avatars before overflow badge (default: 5)
  * @attr {number} total - Override the total count displayed in the badge
  *
- * @slot - `bit-avatar` elements
+ * @slot - `sg-avatar` elements
  *
  * @cssprop --avatar-group-overlap - Negative margin creating the overlap (default: -0.75rem)
  *
  * @example
  * ```html
- * <bit-avatar-group max="3">
- *   <bit-avatar src="/a.jpg" alt="Alice"></bit-avatar>
- *   <bit-avatar src="/b.jpg" alt="Bob"></bit-avatar>
- *   <bit-avatar src="/c.jpg" alt="Carol"></bit-avatar>
- *   <bit-avatar src="/d.jpg" alt="Dave"></bit-avatar>
- * </bit-avatar-group>
+ * <sg-avatar-group max="3">
+ *   <sg-avatar src="/a.jpg" alt="Alice"></sg-avatar>
+ *   <sg-avatar src="/b.jpg" alt="Bob"></sg-avatar>
+ *   <sg-avatar src="/c.jpg" alt="Carol"></sg-avatar>
+ *   <sg-avatar src="/d.jpg" alt="Dave"></sg-avatar>
+ * </sg-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = 'bit-avatar-group' as const;
-define<BitAvatarGroupProps>(AVATAR_GROUP_TAG, {
+export const AVATAR_GROUP_TAG = 'sg-avatar-group' as const;
+define<SgAvatarGroupProps>(AVATAR_GROUP_TAG, {
   props: {
     max: prop.number(5),
     total: prop.json(undefined as number | undefined),
@@ -217,7 +217,7 @@ define<BitAvatarGroupProps>(AVATAR_GROUP_TAG, {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {
-      const avatars = [...el.querySelectorAll('bit-avatar')];
+      const avatars = [...el.querySelectorAll('sg-avatar')];
       const max = Number(props.max.value) || 5;
       const hidden = Math.max(0, avatars.length - max);
 

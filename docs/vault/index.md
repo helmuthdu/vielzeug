@@ -14,13 +14,12 @@ exports:
     table,
     ttl,
     scheduleExpiredPrune,
+    defineMigration,
     VaultError,
     VaultDisposedError,
     VaultMigrationError,
     VaultQuotaError,
     VaultScopeError,
-    IndexedDbAdapter,
-    BaseAdapterOptions,
   ]
 ---
 

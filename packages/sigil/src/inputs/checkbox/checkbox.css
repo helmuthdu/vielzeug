@@ -4,11 +4,11 @@
        ======================================== */
 
   :host {
-    --_size: var(--bit-checkbox-size, var(--size-5));
-    --_radius: var(--bit-checkbox-radius, var(--rounded-lg));
-    --_font-size: var(--bit-checkbox-font-size, var(--text-sm));
-    --_bg: var(--bit-checkbox-bg, var(--color-contrast-200));
-    --_border: var(--bit-checkbox-border-color, var(--color-contrast-300));
+    --_size: var(--sg-checkbox-size, var(--size-5));
+    --_radius: var(--sg-checkbox-radius, var(--rounded-lg));
+    --_font-size: var(--sg-checkbox-font-size, var(--text-sm));
+    --_bg: var(--sg-checkbox-bg, var(--color-contrast-200));
+    --_border: var(--sg-checkbox-border-color, var(--color-contrast-300));
 
     display: inline-flex;
     flex-wrap: wrap;
@@ -102,8 +102,8 @@
 @layer sigil.overrides {
   /* Map theme variables to checkbox-specific variables */
   :host {
-    --_active-bg: var(--bit-checkbox-checked-bg, var(--_theme-base));
-    --_icon-color: var(--bit-checkbox-color, var(--_theme-contrast));
+    --_active-bg: var(--sg-checkbox-checked-bg, var(--_theme-base));
+    --_icon-color: var(--sg-checkbox-color, var(--_theme-contrast));
     --_focus-shadow: var(--_theme-shadow);
   }
 

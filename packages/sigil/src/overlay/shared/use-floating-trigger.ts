@@ -1,12 +1,12 @@
 import type { ReadonlySignal, Signal } from '@vielzeug/craft';
 import type { Placement } from '@vielzeug/orbit';
 
-import { signal, watch } from '@vielzeug/craft';
+import { onCleanup, signal, watch } from '@vielzeug/craft';
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 
 import type { DialogCloseReason, OverlayOpenReason } from '../../headless';
 
-import { createOverlayControl } from '../../headless';
+import { lifecycleSignal, createOverlayControl } from '../../headless';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -97,6 +97,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
     return typeof o === 'object' ? (o as ReadonlySignal<number>).value : o;
   };
+  const abortSignal = lifecycleSignal(onCleanup);
   const visible = signal(false);
   const isControlled = () => openProp.value !== undefined;
   let currentTrigger: HTMLElement | null = null;
@@ -122,6 +123,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
       if (next) showFloat();
       else hideFloat();
     },
+    signal: abortSignal,
   });
 
   function updatePosition(): void {

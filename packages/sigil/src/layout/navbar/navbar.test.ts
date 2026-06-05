@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-navbar', () => {
+describe('sg-navbar', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -12,25 +12,25 @@ describe('bit-navbar', () => {
   });
 
   it('renders a nav landmark with default label', async () => {
-    fixture = await mount('bit-navbar');
+    fixture = await mount('sg-navbar');
 
     expect(fixture.query('nav')?.getAttribute('aria-label')).toBe('Main navigation');
   });
 
   it('uses custom nav label', async () => {
-    fixture = await mount('bit-navbar', { attrs: { label: 'Application navigation' } });
+    fixture = await mount('sg-navbar', { attrs: { label: 'Application navigation' } });
 
     expect(fixture.query('nav')?.getAttribute('aria-label')).toBe('Application navigation');
   });
 
   it('supports floating mode', async () => {
-    fixture = await mount('bit-navbar', { attrs: { floating: '' } });
+    fixture = await mount('sg-navbar', { attrs: { floating: '' } });
 
     expect(fixture.element.getAttribute('data-mode')).toBe('floating');
   });
 
   it('supports sticky mode', async () => {
-    fixture = await mount('bit-navbar', { attrs: { sticky: '' } });
+    fixture = await mount('sg-navbar', { attrs: { sticky: '' } });
 
     expect(fixture.element.getAttribute('data-mode')).toBe('sticky');
   });
@@ -44,7 +44,7 @@ describe('bit-navbar', () => {
         value: 0,
       });
 
-      fixture = await mount('bit-navbar', { attrs: { floating: '', 'scroll-threshold': '20', sticky: '' } });
+      fixture = await mount('sg-navbar', { attrs: { floating: '', 'scroll-threshold': '20', sticky: '' } });
       expect(fixture.element.getAttribute('data-mode')).toBe('floating');
       expect(fixture.element.hasAttribute('data-scrolled')).toBe(false);
 
@@ -66,7 +66,7 @@ describe('bit-navbar', () => {
   });
 
   it('keeps menu closed when no mobile-menu slot is present', async () => {
-    fixture = await mount('bit-navbar');
+    fixture = await mount('sg-navbar');
 
     expect(fixture.query('[part="mobile-menu"]')?.hasAttribute('hidden')).toBe(true);
   });
@@ -81,7 +81,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar');
+      fixture = await mount('sg-navbar');
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
@@ -101,7 +101,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         html: '<div slot="mobile-menu"></div>',
       });
       await fixture.flush();
@@ -115,7 +115,7 @@ describe('bit-navbar', () => {
 
   it('shows mobile toggle and controls external sidebar when mobile-sidebar is set', async () => {
     const originalMatchMedia = window.matchMedia;
-    const sidebar = document.createElement('bit-sidebar') as HTMLElement & {
+    const sidebar = document.createElement('sg-sidebar') as HTMLElement & {
       toggleMobile?: () => void;
     };
 
@@ -133,7 +133,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         attrs: { 'mobile-sidebar': '#external-sidebar' },
       });
       await fixture.flush();
@@ -155,7 +155,7 @@ describe('bit-navbar', () => {
 
   it('follows external sidebar mobile mode changes', async () => {
     const originalMatchMedia = window.matchMedia;
-    const sidebar = document.createElement('bit-sidebar');
+    const sidebar = document.createElement('sg-sidebar');
 
     sidebar.id = 'external-sidebar-mode';
     sidebar.setAttribute('data-bottom-nav', '');
@@ -168,7 +168,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         attrs: { 'mobile-sidebar': '#external-sidebar-mode' },
       });
       await fixture.flush();
@@ -195,7 +195,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         html: '<div slot="mobile-menu">Menu</div>',
       });
 
@@ -231,7 +231,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         html: '<div slot="mobile-menu"></div>',
       });
 
@@ -259,7 +259,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         attrs: { floating: '' },
         html: '<div slot="mobile-menu">Menu</div>',
       });
@@ -281,7 +281,7 @@ describe('bit-navbar', () => {
   });
 
   it('emits mobile-menu-change when menu state changes', async () => {
-    fixture = await mount('bit-navbar', {
+    fixture = await mount('sg-navbar', {
       html: '<div slot="mobile-menu">Menu</div>',
     });
 
@@ -305,7 +305,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         attrs: { breakpoint: '(max-width: 1000px)' },
         html: '<div slot="mobile-menu">Menu</div>',
       });
@@ -336,7 +336,7 @@ describe('bit-navbar', () => {
     }));
 
     try {
-      fixture = await mount('bit-navbar', {
+      fixture = await mount('sg-navbar', {
         html: '<div slot="mobile-menu">Menu</div>',
       });
 
@@ -362,7 +362,7 @@ describe('bit-navbar', () => {
         value: 1,
       });
 
-      fixture = await mount('bit-navbar', { attrs: { floating: '', 'scroll-threshold': 'abc', sticky: '' } });
+      fixture = await mount('sg-navbar', { attrs: { floating: '', 'scroll-threshold': 'abc', sticky: '' } });
 
       Object.defineProperty(window, 'scrollY', {
         configurable: true,
@@ -382,7 +382,7 @@ describe('bit-navbar', () => {
   });
 });
 
-describe('bit-navbar-item', () => {
+describe('sg-navbar-item', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -394,32 +394,32 @@ describe('bit-navbar-item', () => {
   });
 
   it('renders an anchor when href is present', async () => {
-    fixture = await mount('bit-navbar-item', { attrs: { href: '/dashboard' } });
+    fixture = await mount('sg-navbar-item', { attrs: { href: '/dashboard' } });
 
     expect(fixture.query('a.item')).toBeTruthy();
   });
 
   it('renders a button when href is absent', async () => {
-    fixture = await mount('bit-navbar-item');
+    fixture = await mount('sg-navbar-item');
 
     expect(fixture.query('button.item')).toBeTruthy();
   });
 
   it('renders non-interactive item when disabled', async () => {
-    fixture = await mount('bit-navbar-item', { attrs: { disabled: '', href: '/dashboard' } });
+    fixture = await mount('sg-navbar-item', { attrs: { disabled: '', href: '/dashboard' } });
 
     expect(fixture.query('div.item')?.getAttribute('aria-disabled')).toBe('true');
     expect(fixture.query('a.item')).toBeFalsy();
   });
 
   it('applies aria-current=page when active', async () => {
-    fixture = await mount('bit-navbar-item', { attrs: { active: '', href: '/dashboard' } });
+    fixture = await mount('sg-navbar-item', { attrs: { active: '', href: '/dashboard' } });
 
     expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('page');
   });
 
   it('keeps semantic text content accessible', async () => {
-    fixture = await mount('bit-navbar-item', { html: 'Dashboard' });
+    fixture = await mount('sg-navbar-item', { html: 'Dashboard' });
 
     expect(fixture.element.textContent?.trim()).toBe('Dashboard');
   });

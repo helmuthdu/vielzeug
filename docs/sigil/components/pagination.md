@@ -21,7 +21,7 @@ A page-navigation control for splitting content across multiple pages. Renders n
 ## Basic Usage
 
 ```html
-<bit-pagination page="1" total-pages="10"></bit-pagination>
+<sg-pagination page="1" total-pages="10"></sg-pagination>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -31,7 +31,7 @@ A page-navigation control for splitting content across multiple pages. Renders n
 Listen for page changes:
 
 ```html
-<bit-pagination id="pager" page="1" total-pages="20" show-prev-next></bit-pagination>
+<sg-pagination id="pager" page="1" total-pages="20" show-prev-next></sg-pagination>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -47,12 +47,12 @@ Listen for page changes:
 <ComponentPreview vertical>
 
 ```html
-<bit-pagination page="3" total-pages="10" color="primary" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="secondary" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="info" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="success" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="warning" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="error" show-prev-next></bit-pagination>
+<sg-pagination page="3" total-pages="10" color="primary" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="secondary" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="info" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="success" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="warning" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="error" show-prev-next></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -64,48 +64,48 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview vertical>
 
 ```html
-<bit-pagination
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="ghost"
   show-prev-next
-  show-first-last></bit-pagination>
-<bit-pagination
+  show-first-last></sg-pagination>
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="solid"
   show-prev-next
-  show-first-last></bit-pagination>
-<bit-pagination
+  show-first-last></sg-pagination>
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="flat"
   show-prev-next
-  show-first-last></bit-pagination>
-<bit-pagination
+  show-first-last></sg-pagination>
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="bordered"
   show-prev-next
-  show-first-last></bit-pagination>
-<bit-pagination
+  show-first-last></sg-pagination>
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="outline"
   show-prev-next
-  show-first-last></bit-pagination>
-<bit-pagination
+  show-first-last></sg-pagination>
+<sg-pagination
   page="5"
   total-pages="12"
   color="primary"
   variant="text"
   show-prev-next
-  show-first-last></bit-pagination>
+  show-first-last></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -115,9 +115,9 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview vertical>
 
 ```html
-<bit-pagination page="3" total-pages="10" color="primary" size="sm" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="primary" size="md" show-prev-next></bit-pagination>
-<bit-pagination page="3" total-pages="10" color="primary" size="lg" show-prev-next></bit-pagination>
+<sg-pagination page="3" total-pages="10" color="primary" size="sm" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="primary" size="md" show-prev-next></sg-pagination>
+<sg-pagination page="3" total-pages="10" color="primary" size="lg" show-prev-next></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -129,7 +129,7 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview center>
 
 ```html
-<bit-pagination page="5" total-pages="12" color="primary" show-prev-next></bit-pagination>
+<sg-pagination page="5" total-pages="12" color="primary" show-prev-next></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -139,7 +139,7 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview center>
 
 ```html
-<bit-pagination page="5" total-pages="12" color="primary" show-first-last></bit-pagination>
+<sg-pagination page="5" total-pages="12" color="primary" show-first-last></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -149,7 +149,7 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview center>
 
 ```html
-<bit-pagination page="5" total-pages="12" color="primary" show-prev-next show-first-last></bit-pagination>
+<sg-pagination page="5" total-pages="12" color="primary" show-prev-next show-first-last></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -161,9 +161,9 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 <ComponentPreview vertical>
 
 ```html
-<bit-pagination page="10" total-pages="20" color="primary" siblings="1" show-prev-next></bit-pagination>
-<bit-pagination page="10" total-pages="20" color="primary" siblings="2" show-prev-next></bit-pagination>
-<bit-pagination page="10" total-pages="20" color="primary" siblings="3" show-prev-next></bit-pagination>
+<sg-pagination page="10" total-pages="20" color="primary" siblings="1" show-prev-next></sg-pagination>
+<sg-pagination page="10" total-pages="20" color="primary" siblings="2" show-prev-next></sg-pagination>
+<sg-pagination page="10" total-pages="20" color="primary" siblings="3" show-prev-next></sg-pagination>
 ```
 
 </ComponentPreview>
@@ -202,7 +202,7 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 
 The pagination component follows WAI-ARIA best practices.
 
-### `bit-pagination`
+### `sg-pagination`
 
 ✅ **Keyboard Navigation**
 

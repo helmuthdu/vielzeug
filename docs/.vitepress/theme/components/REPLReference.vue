@@ -3,7 +3,7 @@
     <div class="reference-header">
       <h3>{{ selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports' }}</h3>
       <div class="search-container">
-        <bit-input :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </bit-input>
+        <sg-input :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </sg-input>
       </div>
     </div>
     <div class="function-categories">
@@ -14,7 +14,7 @@
         class="category">
         <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
         <div class="function-list">
-          <bit-chip
+          <sg-chip
             v-for="fn in category.functions"
             :key="fn"
             mode="action"
@@ -22,14 +22,14 @@
             variant="outline"
             @click="emit('insert-function', fn)"
             title="Click to insert"
-            >{{ fn }}</bit-chip
+            >{{ fn }}</sg-chip
           >
         </div>
       </div>
       <div v-else class="category">
         <h4>Exports ({{ filteredExports.length }} available)</h4>
         <div class="function-list">
-          <bit-chip
+          <sg-chip
             v-for="ex in filteredExports"
             :key="ex"
             mode="static"
@@ -38,7 +38,7 @@
             style="cursor: pointer"
             @click="emit('insert-function', ex)"
             title="Click to insert"
-            >{{ ex }}</bit-chip
+            >{{ ex }}</sg-chip
           >
         </div>
       </div>

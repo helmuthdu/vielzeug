@@ -3,7 +3,9 @@ title: Permission-Based Access Control
 description: Use Ward RBAC with Clockwork to gate state transitions based on user permissions.
 ---
 
-## Problem
+## Permission-Based Access Control
+
+### Problem
 
 Workflows with role-based access control need to:
 
@@ -14,7 +16,7 @@ Workflows with role-based access control need to:
 
 Hardcoding permission logic in the state machine makes it inflexible and hard to test with different role configurations.
 
-## Solution
+### Solution
 
 Use Ward as the source of truth for authorization, and call Ward predicates in Clockwork guards. The machine enforces the happy path, while Ward ensures users can only take allowed actions.
 
@@ -186,7 +188,7 @@ export function allowedActions(state: string): string[] {
 }
 ```
 
-## Pitfalls
+### Pitfalls
 
 1. **Guard failures silently block transitions** - When a permission check fails, the machine stays in the current state with no error thrown. Users may not realize their action was denied. Emit a denied event or error for UI feedback.
 
@@ -196,7 +198,7 @@ export function allowedActions(state: string): string[] {
 
 4. **No audit trail** - Permission checks happen silently. Add logging to record who tried what action and whether it succeeded. Use debug hooks: `{ debug: { onTransition: (info) => log(info) } }`.
 
-## Related
+### Related
 
 - [Ward](../ward/) - RBAC engine with wildcards and predicates
 - [Ripple](../ripple/) - Reactive signals for user role synchronization

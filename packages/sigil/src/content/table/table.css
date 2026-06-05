@@ -1,19 +1,19 @@
-/* bit-table — shadow DOM (proxy/mirror).
+/* sg-table — shadow DOM (proxy/mirror).
  *
  * Shadow tree (managed by table.ts):
  *   :host                  display:block   — token host (tableBaseMixin)
  *   └─ .scroll-container   overflow:auto   — sticky / max-height context
  *       └─ table           display:table   — native table semantics
  *           ├─ caption                     — optional caption bar
- *           ├─ thead                       — rows built from bit-tr[head]
- *           ├─ tbody                       — rows built from plain bit-tr
- *           └─ tfoot                       — rows built from bit-tr[foot]
- *               └─ tr > th / td            — mirrored from bit-th / bit-td
+ *           ├─ thead                       — rows built from sg-tr[head]
+ *           ├─ tbody                       — rows built from plain sg-tr
+ *           └─ tfoot                       — rows built from sg-tr[foot]
+ *               └─ tr > th / td            — mirrored from sg-th / sg-td
  *
  * Light DOM (consumer):
- *   <bit-tr head><bit-th>…</bit-th></bit-tr>
- *   <bit-tr><bit-td>…</bit-td></bit-tr>
- *   <bit-tr foot><bit-td>…</bit-td></bit-tr>
+ *   <sg-tr head><sg-th>…</sg-th></sg-tr>
+ *   <sg-tr><sg-td>…</sg-td></sg-tr>
+ *   <sg-tr foot><sg-td>…</sg-td></sg-tr>
  *
  * tableBaseMixin('table') handles: :host tokens, .scroll-container,
  * table width/collapse, loading state, size variants, fullwidth, bordered,

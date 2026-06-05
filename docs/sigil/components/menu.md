@@ -1,6 +1,6 @@
 # Menu
 
-An action dropdown triggered by any slotted element. Presents a list of `bit-menu-item` actions in a floating panel using viewport-aware positioning. Supports full keyboard navigation and accessibility semantics.
+An action dropdown triggered by any slotted element. Presents a list of `sg-menu-item` actions in a floating panel using viewport-aware positioning. Supports full keyboard navigation and accessibility semantics.
 
 ## Features
 
@@ -8,9 +8,9 @@ An action dropdown triggered by any slotted element. Presents a list of `bit-men
 - ⌨️ **Full Keyboard Nav**: ArrowDown/Up, Enter/Space, Escape, Tab, Home/End
 - 📍 **Auto-positioning**: uses `@vielzeug/orbit` to flip when near viewport edges
 - 🔕 **Outside-click close**: dismiss by clicking anywhere outside
-- ➖ **Separator**: `bit-menu-separator` renders a visual divider between groups of items
-- ✅ **Checkable Items**: `bit-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
-- 🙅 **Disabled items**: individual `bit-menu-item` items can be disabled
+- ➖ **Separator**: `sg-menu-separator` renders a visual divider between groups of items
+- ✅ **Checkable Items**: `sg-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
+- 🙅 **Disabled items**: individual `sg-menu-item` items can be disabled
 - 🧩 **Icon slot**: each item supports a leading `icon` slot
 - 🎨 **Color Themes**: primary, secondary, info, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
@@ -24,15 +24,15 @@ An action dropdown triggered by any slotted element. Presents a list of `bit-men
 
 ## Basic Usage
 
-Place your trigger element in the `trigger` slot and add `bit-menu-item` children.
+Place your trigger element in the `trigger` slot and add `sg-menu-item` children.
 
 ```html
-<bit-menu>
-  <bit-button slot="trigger">Actions</bit-button>
-  <bit-menu-item value="edit">Edit</bit-menu-item>
-  <bit-menu-item value="duplicate">Duplicate</bit-menu-item>
-  <bit-menu-item value="delete">Delete</bit-menu-item>
-</bit-menu>
+<sg-menu>
+  <sg-button slot="trigger">Actions</sg-button>
+  <sg-menu-item value="edit">Edit</sg-menu-item>
+  <sg-menu-item value="duplicate">Duplicate</sg-menu-item>
+  <sg-menu-item value="delete">Delete</sg-menu-item>
+</sg-menu>
 
 <script type="module">
   import '@vielzeug/sigil/menu';
@@ -48,30 +48,30 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 <ComponentPreview center>
 
 ```html
-<bit-menu placement="bottom-start">
-  <bit-button slot="trigger" variant="outline" size="sm">Bottom Start ↙</bit-button>
-  <bit-menu-item value="a">Option A</bit-menu-item>
-  <bit-menu-item value="b">Option B</bit-menu-item>
-</bit-menu>
+<sg-menu placement="bottom-start">
+  <sg-button slot="trigger" variant="outline" size="sm">Bottom Start ↙</sg-button>
+  <sg-menu-item value="a">Option A</sg-menu-item>
+  <sg-menu-item value="b">Option B</sg-menu-item>
+</sg-menu>
 
-<bit-menu placement="bottom-end">
-  <bit-button slot="trigger" variant="outline" size="sm">Bottom End ↘</bit-button>
-  <bit-menu-item value="a">Option A</bit-menu-item>
-  <bit-menu-item value="b">Option B</bit-menu-item>
-</bit-menu>
+<sg-menu placement="bottom-end">
+  <sg-button slot="trigger" variant="outline" size="sm">Bottom End ↘</sg-button>
+  <sg-menu-item value="a">Option A</sg-menu-item>
+  <sg-menu-item value="b">Option B</sg-menu-item>
+</sg-menu>
 
-<bit-menu placement="top-start">
-  <bit-button slot="trigger" variant="outline" size="sm">Top Start ↖</bit-button>
-  <bit-menu-item value="a">Option A</bit-menu-item>
-  <bit-menu-item value="b">Option B</bit-menu-item>
-</bit-menu>
+<sg-menu placement="top-start">
+  <sg-button slot="trigger" variant="outline" size="sm">Top Start ↖</sg-button>
+  <sg-menu-item value="a">Option A</sg-menu-item>
+  <sg-menu-item value="b">Option B</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
 
 ## Items with Icons
 
-Use the `icon` named slot on each `bit-menu-item` for leading icons.
+Use the `icon` named slot on each `sg-menu-item` for leading icons.
 
 ::: tip Icons
 These examples use inline SVG slot content so they stay framework and icon-library agnostic.
@@ -80,58 +80,58 @@ These examples use inline SVG slot content so they stay framework and icon-libra
 <ComponentPreview vertical>
 
 ```html
-<bit-menu>
-  <bit-button slot="trigger">File</bit-button>
-  <bit-menu-item value="new">
-    <bit-icon slot="icon" name="file" size="18"></bit-icon>
+<sg-menu>
+  <sg-button slot="trigger">File</sg-button>
+  <sg-menu-item value="new">
+    <sg-icon slot="icon" name="file" size="18"></sg-icon>
     New File
-  </bit-menu-item>
-  <bit-menu-item value="open">
-    <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+  </sg-menu-item>
+  <sg-menu-item value="open">
+    <sg-icon slot="icon" name="folder" size="18"></sg-icon>
     Open…
-  </bit-menu-item>
-  <bit-menu-item value="save">
-    <bit-icon slot="icon" name="save" size="18"></bit-icon>
+  </sg-menu-item>
+  <sg-menu-item value="save">
+    <sg-icon slot="icon" name="save" size="18"></sg-icon>
     Save
-  </bit-menu-item>
-  <bit-menu-item value="delete" disabled>
-    <bit-icon slot="icon" name="trash-2" size="18"></bit-icon>
+  </sg-menu-item>
+  <sg-menu-item value="delete" disabled>
+    <sg-icon slot="icon" name="trash-2" size="18"></sg-icon>
     Delete (disabled)
-  </bit-menu-item>
-</bit-menu>
+  </sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
 
 ## Disabled Items
 
-Set `disabled` on a `bit-menu-item` to prevent selection. The item is still visible but non-interactive.
+Set `disabled` on a `sg-menu-item` to prevent selection. The item is still visible but non-interactive.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-menu>
-  <bit-button slot="trigger" variant="flat">More options</bit-button>
-  <bit-menu-item value="view">View details</bit-menu-item>
-  <bit-menu-item value="export">Export</bit-menu-item>
-  <bit-menu-item value="archive" disabled>Archive (no permission)</bit-menu-item>
-  <bit-menu-item value="delete" disabled>Delete (no permission)</bit-menu-item>
-</bit-menu>
+<sg-menu>
+  <sg-button slot="trigger" variant="flat">More options</sg-button>
+  <sg-menu-item value="view">View details</sg-menu-item>
+  <sg-menu-item value="export">Export</sg-menu-item>
+  <sg-menu-item value="archive" disabled>Archive (no permission)</sg-menu-item>
+  <sg-menu-item value="delete" disabled>Delete (no permission)</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
 
 ## Disabled Menu
 
-Set `disabled` on the `bit-menu` element to prevent the panel from opening at all.
+Set `disabled` on the `sg-menu` element to prevent the panel from opening at all.
 
 <ComponentPreview center>
 
 ```html
-<bit-menu disabled>
-  <bit-button slot="trigger" disabled>Disabled menu</bit-button>
-  <bit-menu-item value="a">Option A</bit-menu-item>
-</bit-menu>
+<sg-menu disabled>
+  <sg-button slot="trigger" disabled>Disabled menu</sg-button>
+  <sg-menu-item value="a">Option A</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
@@ -139,12 +139,12 @@ Set `disabled` on the `bit-menu` element to prevent the panel from opening at al
 ## Listening to Events
 
 ```html
-<bit-menu id="action-menu">
-  <bit-button slot="trigger">Actions</bit-button>
-  <bit-menu-item value="rename">Rename</bit-menu-item>
-  <bit-menu-item value="move">Move to folder</bit-menu-item>
-  <bit-menu-item value="delete">Delete</bit-menu-item>
-</bit-menu>
+<sg-menu id="action-menu">
+  <sg-button slot="trigger">Actions</sg-button>
+  <sg-menu-item value="rename">Rename</sg-menu-item>
+  <sg-menu-item value="move">Move to folder</sg-menu-item>
+  <sg-menu-item value="delete">Delete</sg-menu-item>
+</sg-menu>
 
 <script type="module">
   import '@vielzeug/sigil/menu';
@@ -187,35 +187,35 @@ Any element works as the trigger — including icon-only buttons.
 <ComponentPreview center>
 
 ```html
-<bit-menu>
-  <bit-button slot="trigger" variant="ghost" size="sm" aria-label="More options">
-    <bit-icon name="ellipsis" size="18"></bit-icon>
-  </bit-button>
-  <bit-menu-item value="edit">Edit</bit-menu-item>
-  <bit-menu-item value="copy">Copy link</bit-menu-item>
-  <bit-menu-item value="report">Report</bit-menu-item>
-</bit-menu>
+<sg-menu>
+  <sg-button slot="trigger" variant="ghost" size="sm" aria-label="More options">
+    <sg-icon name="ellipsis" size="18"></sg-icon>
+  </sg-button>
+  <sg-menu-item value="edit">Edit</sg-menu-item>
+  <sg-menu-item value="copy">Copy link</sg-menu-item>
+  <sg-menu-item value="report">Report</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
 
 ## Separator
 
-Use `bit-menu-separator` to add a horizontal divider between groups of related items.
+Use `sg-menu-separator` to add a horizontal divider between groups of related items.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-menu>
-  <bit-button slot="trigger">File</bit-button>
-  <bit-menu-item value="new">New File</bit-menu-item>
-  <bit-menu-item value="open">Open…</bit-menu-item>
-  <bit-menu-separator></bit-menu-separator>
-  <bit-menu-item value="save">Save</bit-menu-item>
-  <bit-menu-item value="save-as">Save As…</bit-menu-item>
-  <bit-menu-separator></bit-menu-separator>
-  <bit-menu-item value="delete" disabled>Delete</bit-menu-item>
-</bit-menu>
+<sg-menu>
+  <sg-button slot="trigger">File</sg-button>
+  <sg-menu-item value="new">New File</sg-menu-item>
+  <sg-menu-item value="open">Open…</sg-menu-item>
+  <sg-menu-separator></sg-menu-separator>
+  <sg-menu-item value="save">Save</sg-menu-item>
+  <sg-menu-item value="save-as">Save As…</sg-menu-item>
+  <sg-menu-separator></sg-menu-separator>
+  <sg-menu-item value="delete" disabled>Delete</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
@@ -224,17 +224,17 @@ Use `bit-menu-separator` to add a horizontal divider between groups of related i
 
 ### Checkbox Items
 
-Set `type="checkbox"` on a `bit-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
+Set `type="checkbox"` on a `sg-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-menu id="view-menu">
-  <bit-button slot="trigger">View</bit-button>
-  <bit-menu-item value="sidebar" type="checkbox" checked>Show Sidebar</bit-menu-item>
-  <bit-menu-item value="toolbar" type="checkbox">Show Toolbar</bit-menu-item>
-  <bit-menu-item value="statusbar" type="checkbox" checked>Show Status Bar</bit-menu-item>
-</bit-menu>
+<sg-menu id="view-menu">
+  <sg-button slot="trigger">View</sg-button>
+  <sg-menu-item value="sidebar" type="checkbox" checked>Show Sidebar</sg-menu-item>
+  <sg-menu-item value="toolbar" type="checkbox">Show Toolbar</sg-menu-item>
+  <sg-menu-item value="statusbar" type="checkbox" checked>Show Status Bar</sg-menu-item>
+</sg-menu>
 
 <script>
   document.getElementById('view-menu').addEventListener('select', (e) => {
@@ -252,19 +252,19 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 <ComponentPreview vertical>
 
 ```html
-<bit-menu id="sort-menu">
-  <bit-button slot="trigger">Sort By</bit-button>
-  <bit-menu-item value="name" type="radio" checked>Name</bit-menu-item>
-  <bit-menu-item value="date" type="radio">Date Modified</bit-menu-item>
-  <bit-menu-item value="size" type="radio">File Size</bit-menu-item>
-</bit-menu>
+<sg-menu id="sort-menu">
+  <sg-button slot="trigger">Sort By</sg-button>
+  <sg-menu-item value="name" type="radio" checked>Name</sg-menu-item>
+  <sg-menu-item value="date" type="radio">Date Modified</sg-menu-item>
+  <sg-menu-item value="size" type="radio">File Size</sg-menu-item>
+</sg-menu>
 ```
 
 </ComponentPreview>
 
 ## API Reference
 
-### `bit-menu` Attributes
+### `sg-menu` Attributes
 
 | Attribute   | Type                                                                              | Default          | Description                                                |
 | ----------- | --------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------- |
@@ -273,14 +273,14 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                 |
 | `disabled`  | `boolean`                                                                         | `false`          | Prevent the menu from opening                              |
 
-### `bit-menu` Slots
+### `sg-menu` Slots
 
 | Slot      | Description                                         |
 | --------- | --------------------------------------------------- |
 | `trigger` | The element that opens/closes the menu panel        |
-| (default) | `bit-menu-item` elements to display as menu options |
+| (default) | `sg-menu-item` elements to display as menu options |
 
-### `bit-menu-item` Attributes
+### `sg-menu-item` Attributes
 
 | Attribute  | Type                    | Default | Description                                                  |
 | ---------- | ----------------------- | ------- | ------------------------------------------------------------ |
@@ -289,7 +289,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `checked`  | `boolean`               | `false` | Whether a checkable item is currently checked                |
 | `disabled` | `boolean`               | `false` | Prevent the item from being selected                         |
 
-### `bit-menu-item` Slots
+### `sg-menu-item` Slots
 
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
@@ -304,7 +304,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                | Emitted when the panel opens.                                                                             |
 | `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                            |
 
-### CSS Custom Properties (`bit-menu`)
+### CSS Custom Properties (`sg-menu`)
 
 | Property                    | Description                | Default                |
 | --------------------------- | -------------------------- | ---------------------- |
@@ -319,7 +319,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 The menu component follows WAI-ARIA Menu Button Pattern best practices.
 
-### `bit-menu`
+### `sg-menu`
 
 ✅ **Keyboard Navigation**
 
@@ -332,7 +332,7 @@ The menu component follows WAI-ARIA Menu Button Pattern best practices.
 - The panel has `role="menu"` and `aria-orientation="vertical"`.
 - The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel.
 
-### `bit-menu-item`
+### `sg-menu-item`
 
 ✅ **Screen Readers**
 
@@ -348,7 +348,7 @@ Always provide a visible label or `aria-label` on an icon-only trigger button so
 **Do:**
 
 - Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
-- Use `value` on each item to handle selection in a single `bit-select` listener rather than per-item click handlers.
+- Use `value` on each item to handle selection in a single `sg-select` listener rather than per-item click handlers.
 - Use `disabled` on items for permissions that might change, rather than removing the item, to signal that the action exists but is unavailable.
 
 **Don't:**

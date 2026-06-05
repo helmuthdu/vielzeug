@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-icon', () => {
+describe('sg-icon', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -12,7 +12,7 @@ describe('bit-icon', () => {
   });
 
   it('renders an SVG element (not [object Object]) for a known icon', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'search' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'search' } });
 
     const shadow = fixture.element.shadowRoot;
 
@@ -23,13 +23,13 @@ describe('bit-icon', () => {
   });
 
   it('renders no SVG when name is omitted', async () => {
-    fixture = await mount('bit-icon', {});
+    fixture = await mount('sg-icon', {});
 
     expect(fixture.element.shadowRoot?.querySelector('svg')).toBeNull();
   });
 
   it('renders no SVG for an unknown icon name', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'not-a-real-icon-xyz' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'not-a-real-icon-xyz' } });
 
     const shadow = fixture.element.shadowRoot;
 
@@ -38,7 +38,7 @@ describe('bit-icon', () => {
   });
 
   it('updates the SVG reactively when name attribute changes', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'search' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'search' } });
 
     const shadow = fixture.element.shadowRoot!;
 
@@ -52,14 +52,14 @@ describe('bit-icon', () => {
   });
 
   it('sets aria-hidden on decorative icons (no label)', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'search' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'search' } });
 
     expect(fixture.element.getAttribute('aria-hidden')).toBe('true');
     expect(fixture.element.getAttribute('role')).toBeNull();
   });
 
   it('sets role=img and aria-label when label is provided', async () => {
-    fixture = await mount('bit-icon', { attrs: { label: 'Search', name: 'search' } });
+    fixture = await mount('sg-icon', { attrs: { label: 'Search', name: 'search' } });
 
     expect(fixture.element.getAttribute('role')).toBe('img');
     expect(fixture.element.getAttribute('aria-label')).toBe('Search');
@@ -67,7 +67,7 @@ describe('bit-icon', () => {
   });
 
   it('SVG has correct viewBox', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'search' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'search' } });
 
     const svg = fixture.element.shadowRoot?.querySelector('svg');
 
@@ -75,7 +75,7 @@ describe('bit-icon', () => {
   });
 
   it('applies custom size as px style', async () => {
-    fixture = await mount('bit-icon', { attrs: { name: 'search', size: '24' } });
+    fixture = await mount('sg-icon', { attrs: { name: 'search', size: '24' } });
 
     const svg = fixture.element.shadowRoot?.querySelector('svg');
     const style = svg?.getAttribute('style') ?? '';

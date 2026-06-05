@@ -4,14 +4,14 @@
        ======================================== */
 
   :host {
-    --_font-size: var(--bit-input-font-size, var(--text-sm));
-    --_gap: var(--bit-input-gap, var(--size-2));
-    --_field-height: var(--bit-input-height, var(--size-10));
-    --_padding: var(--bit-input-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--bit-input-radius, var(--rounded-lg));
-    --_placeholder: var(--bit-input-placeholder-color, var(--color-contrast-500));
-    --_bg: var(--bit-input-bg, var(--color-contrast-100));
-    --_border-color: var(--bit-input-border-color, var(--color-contrast-300));
+    --_font-size: var(--sg-input-font-size, var(--text-sm));
+    --_gap: var(--sg-input-gap, var(--size-2));
+    --_field-height: var(--sg-input-height, var(--size-10));
+    --_padding: var(--sg-input-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--sg-input-radius, var(--rounded-lg));
+    --_placeholder: var(--sg-input-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--sg-input-bg, var(--color-contrast-100));
+    --_border-color: var(--sg-input-border-color, var(--color-contrast-300));
 
     display: inline-flex;
     flex-direction: column;

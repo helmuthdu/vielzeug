@@ -30,7 +30,7 @@ Use component variants and semantic color tokens together with layout primitives
     );
     padding: 1rem;
   ">
-  <bit-badge color="info" variant="flat">New Workspace</bit-badge>
+  <sg-badge color="info" variant="flat">New Workspace</sg-badge>
   <h3 style="margin: 0.75rem 0 0.25rem 0; font-size: var(--text-xl);">Start your first project</h3>
   <p style="margin: 0 0 1rem 0; color: var(--text-color-secondary);">
     Create a starter layout, then add your first form field.
@@ -43,8 +43,8 @@ Use component variants and semantic color tokens together with layout primitives
   </ol>
 
   <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-    <bit-button variant="solid" color="primary">Create Project</bit-button>
-    <bit-button variant="ghost" color="secondary">See Walkthrough</bit-button>
+    <sg-button variant="solid" color="primary">Create Project</sg-button>
+    <sg-button variant="ghost" color="secondary">See Walkthrough</sg-button>
   </div>
 </section>
 ```
@@ -69,7 +69,7 @@ Use component variants and semantic color tokens together with layout primitives
     border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-contrast-300));
   ">
   <div>
-    <bit-badge color="warning" variant="solid">Launch Week</bit-badge>
+    <sg-badge color="warning" variant="solid">Launch Week</sg-badge>
     <h3 style="margin: 0.625rem 0 0.25rem 0; font-size: var(--text-2xl); line-height: var(--leading-tight);">
       Ship your campaign page today
     </h3>
@@ -79,7 +79,7 @@ Use component variants and semantic color tokens together with layout primitives
   </div>
 
   <div style="display: flex; gap: 0.625rem; flex-wrap: wrap;">
-    <bit-button
+    <sg-button
       variant="solid"
       color="primary"
       style="
@@ -88,8 +88,8 @@ Use component variants and semantic color tokens together with layout primitives
         --button-shadow: var(--shadow-lg);
       ">
       Publish Campaign
-    </bit-button>
-    <bit-button variant="outline" color="primary">Preview</bit-button>
+    </sg-button>
+    <sg-button variant="outline" color="primary">Preview</sg-button>
   </div>
 </div>
 ```
@@ -102,12 +102,12 @@ Use component variants and semantic color tokens together with layout primitives
 
 ```html
 <section style="max-width: 28rem; display: grid; gap: 0.75rem;">
-  <bit-input id="projectName" label="Project Name" placeholder="Acme Launch" clearable></bit-input>
-  <bit-button id="completeSetup" color="success">Finish Setup</bit-button>
+  <sg-input id="projectName" label="Project Name" placeholder="Acme Launch" clearable></sg-input>
+  <sg-button id="completeSetup" color="success">Finish Setup</sg-button>
 
-  <bit-alert id="setupDone" color="success" variant="flat" hidden>
+  <sg-alert id="setupDone" color="success" variant="flat" hidden>
     <strong>Nice work.</strong> Your workspace is ready.
-  </bit-alert>
+  </sg-alert>
 </section>
 
 <script>

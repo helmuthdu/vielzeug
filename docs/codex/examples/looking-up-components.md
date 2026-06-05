@@ -23,16 +23,16 @@ Result excerpt:
 
 ```json
 [
-  { "name": "Button", "tagName": "bit-button" },
-  { "name": "Input", "tagName": "bit-input" },
-  { "name": "Dialog", "tagName": "bit-dialog" }
+  { "name": "Button", "tagName": "sg-button" },
+  { "name": "Input", "tagName": "sg-input" },
+  { "name": "Dialog", "tagName": "sg-dialog" }
 ]
 ```
 
 #### Read one component declaration
 
 ```json
-{ "name": "get-component", "arguments": { "tagName": "bit-button" } }
+{ "name": "get-component", "arguments": { "tagName": "sg-button" } }
 ```
 
 The result is the full CEM declaration including `attributes`, `members`, `events`, `slots`, `cssParts`, and `cssProperties`.
@@ -40,7 +40,7 @@ The result is the full CEM declaration including `attributes`, `members`, `event
 ### Pitfalls
 
 - Both tools return `isError: true` when Sigil component metadata is not present in the snapshot. This happens in local monorepo builds when `@vielzeug/sigil` has not been built yet. Run `rush build --to sigil` then `pnpm run prepare:data` in `packages/codex`.
-- `get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"bit-button"` returns an error.
+- `get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"sg-button"` returns an error.
 - Published releases always include Sigil CEM; the missing-metadata error only occurs during local development.
 
 ### Related

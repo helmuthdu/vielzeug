@@ -9,12 +9,12 @@ import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMix
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './rating.css?inline';
 
-export type BitRatingEvents = {
+export type SgRatingEvents = {
   change: { originalEvent?: Event; value: number };
 };
 
 /** Rating props */
-export type BitRatingProps = {
+export type SgRatingProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -38,14 +38,14 @@ export type BitRatingProps = {
 /**
  * A star rating input.
  *
- * @element bit-rating
+ * @element sg-rating
  *
  * @attr {number} value - Current rating value (default: 0)
  * @attr {number} max - Maximum number of stars (default: 5)
  * @attr {boolean} readonly - Read-only display mode
  * @attr {boolean} disabled - Disabled state
  * @attr {string} label - aria-label for the group (default: 'Rating')
- * @attr {string} color - Theme color for filled stars
+ * @attr {string} color - Theme color for filled stars: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} name - Form field name
  * @attr {boolean} solid - Fill selected stars (outline remains default when omitted)
@@ -61,12 +61,12 @@ export type BitRatingProps = {
  * @part star - Star item element.
  * @example
  * ```html
- * <bit-rating value="3" max="5" color="warning"></bit-rating>
- * <bit-rating value="4" solid></bit-rating>
+ * <sg-rating value="3" max="5" color="warning"></sg-rating>
+ * <sg-rating value="4" solid></sg-rating>
  * ```
  */
-export const RATING_TAG = 'bit-rating' as const;
-define<BitRatingProps, BitRatingEvents>(RATING_TAG, {
+export const RATING_TAG = 'sg-rating' as const;
+define<SgRatingProps, SgRatingEvents>(RATING_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -204,7 +204,7 @@ define<BitRatingProps, BitRatingEvents>(RATING_TAG, {
                   hovered.value = null;
                 }}"
                 @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-                <bit-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></bit-icon>
+                <sg-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></sg-icon>
               </button>`,
           )}
         <div class="sparkle-layer"></div>

@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-textarea', () => {
+describe('sg-textarea', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -15,7 +15,7 @@ describe('bit-textarea', () => {
 
   describe('Rendering', () => {
     it('renders wrapper, field, and textarea elements', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       expect(fixture.query('.textarea-wrapper')).toBeTruthy();
       expect(fixture.query('.field')).toBeTruthy();
@@ -23,7 +23,7 @@ describe('bit-textarea', () => {
     });
 
     it('renders helper text when helper attribute is set', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { helper: 'Max 200 characters' },
       });
 
@@ -31,7 +31,7 @@ describe('bit-textarea', () => {
     });
 
     it('renders error message with role="alert"', async () => {
-      fixture = await mount('bit-textarea', { attrs: { error: 'Required' } });
+      fixture = await mount('sg-textarea', { attrs: { error: 'Required' } });
 
       expect(fixture.query('.helper-text')).toBeTruthy();
     });
@@ -41,13 +41,13 @@ describe('bit-textarea', () => {
 
   describe('Value Management', () => {
     it('sets initial value in textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { value: 'Hello World' } });
+      fixture = await mount('sg-textarea', { attrs: { value: 'Hello World' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('Hello World');
     });
 
     it('updates textarea value when attribute changes', async () => {
-      fixture = await mount('bit-textarea', { attrs: { value: 'initial' } });
+      fixture = await mount('sg-textarea', { attrs: { value: 'initial' } });
 
       await fixture.attr('value', 'updated');
 
@@ -55,7 +55,7 @@ describe('bit-textarea', () => {
     });
 
     it('handles empty string value', async () => {
-      fixture = await mount('bit-textarea', { attrs: { value: '' } });
+      fixture = await mount('sg-textarea', { attrs: { value: '' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('');
     });
@@ -65,13 +65,13 @@ describe('bit-textarea', () => {
 
   describe('Label and Placeholder', () => {
     it('sets name on textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { name: 'message' } });
+      fixture = await mount('sg-textarea', { attrs: { name: 'message' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.name).toBe('message');
     });
 
     it('sets placeholder on textarea', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { placeholder: 'Enter message' },
       });
 
@@ -83,13 +83,13 @@ describe('bit-textarea', () => {
 
   describe('Disabled State', () => {
     it('disables textarea when disabled', async () => {
-      fixture = await mount('bit-textarea', { attrs: { disabled: true } });
+      fixture = await mount('sg-textarea', { attrs: { disabled: true } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.disabled).toBe(true);
     });
 
     it('reflects disabled on host', async () => {
-      fixture = await mount('bit-textarea', { attrs: { disabled: true } });
+      fixture = await mount('sg-textarea', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
@@ -97,7 +97,7 @@ describe('bit-textarea', () => {
 
   describe('Readonly State', () => {
     it('sets readOnly on textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { readonly: true } });
+      fixture = await mount('sg-textarea', { attrs: { readonly: true } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.readOnly).toBe(true);
     });
@@ -105,7 +105,7 @@ describe('bit-textarea', () => {
 
   describe('Required State', () => {
     it('sets required on textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { required: true } });
+      fixture = await mount('sg-textarea', { attrs: { required: true } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.required).toBe(true);
     });
@@ -115,7 +115,7 @@ describe('bit-textarea', () => {
 
   describe('Error State', () => {
     it('renders error message text', async () => {
-      fixture = await mount('bit-textarea', { attrs: { error: 'Too short' } });
+      fixture = await mount('sg-textarea', { attrs: { error: 'Too short' } });
 
       const errorEl = fixture.query('.helper-text');
 
@@ -123,7 +123,7 @@ describe('bit-textarea', () => {
     });
 
     it('sets aria-invalid on textarea when error is set', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { error: 'Required', label: 'Comment', 'label-placement': 'outside' },
       });
 
@@ -131,7 +131,7 @@ describe('bit-textarea', () => {
     });
 
     it('does not set aria-invalid when no error', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           label: 'Comment',
           'label-placement': 'outside',
@@ -142,14 +142,14 @@ describe('bit-textarea', () => {
     });
 
     it('does not reflect an empty error attribute by default', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('error')).toBe(false);
     });
 
     it('removes the host error attribute when error becomes empty', async () => {
-      fixture = await mount('bit-textarea', { attrs: { error: 'Required' } });
+      fixture = await mount('sg-textarea', { attrs: { error: 'Required' } });
       await fixture.flush();
 
       expect(fixture.element.getAttribute('error')).toBe('Required');
@@ -161,7 +161,7 @@ describe('bit-textarea', () => {
     });
 
     it('prefers error text over helper text in merged assistive block', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { error: 'Too short', helper: 'At least 20 characters' },
       });
 
@@ -176,13 +176,13 @@ describe('bit-textarea', () => {
 
   describe('Rows and Resize', () => {
     it('sets rows attribute on textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { rows: '5' } });
+      fixture = await mount('sg-textarea', { attrs: { rows: '5' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.rows).toBe(5);
     });
 
     it('updates rows dynamically', async () => {
-      fixture = await mount('bit-textarea', { attrs: { rows: '2' } });
+      fixture = await mount('sg-textarea', { attrs: { rows: '2' } });
 
       await fixture.attr('rows', '8');
 
@@ -190,7 +190,7 @@ describe('bit-textarea', () => {
     });
 
     it('applies no-resize attribute on host', async () => {
-      fixture = await mount('bit-textarea', { attrs: { 'no-resize': true } });
+      fixture = await mount('sg-textarea', { attrs: { 'no-resize': true } });
 
       expect(fixture.element.hasAttribute('no-resize')).toBe(true);
     });
@@ -200,7 +200,7 @@ describe('bit-textarea', () => {
 
   describe('Events', () => {
     it('emits custom input event with value and originalEvent', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       const inputHandler = vi.fn();
 
@@ -217,7 +217,7 @@ describe('bit-textarea', () => {
     });
 
     it('emits custom change event with value', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       const changeHandler = vi.fn();
 
@@ -243,14 +243,14 @@ describe('bit-textarea', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-textarea', { attrs: { color } });
+        fixture = await mount('sg-textarea', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
 
     it('updates color dynamically', async () => {
-      fixture = await mount('bit-textarea', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-textarea', { attrs: { color: 'primary' } });
 
       await fixture.attr('color', 'error');
 
@@ -265,14 +265,14 @@ describe('bit-textarea', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-textarea', { attrs: { size } });
+        fixture = await mount('sg-textarea', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
     });
 
     it('updates size dynamically', async () => {
-      fixture = await mount('bit-textarea', { attrs: { size: 'sm' } });
+      fixture = await mount('sg-textarea', { attrs: { size: 'sm' } });
 
       await fixture.attr('size', 'lg');
 
@@ -284,19 +284,19 @@ describe('bit-textarea', () => {
 
   describe('Edge Cases', () => {
     it('handles fullwidth attribute', async () => {
-      fixture = await mount('bit-textarea', { attrs: { fullwidth: true } });
+      fixture = await mount('sg-textarea', { attrs: { fullwidth: true } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('handles maxlength attribute', async () => {
-      fixture = await mount('bit-textarea', { attrs: { maxlength: '100' } });
+      fixture = await mount('sg-textarea', { attrs: { maxlength: '100' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.maxLength).toBe(100);
     });
 
     it('sets near-limit counter class at 90% maxlength', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           maxlength: '10',
           value: '123456789',
@@ -311,7 +311,7 @@ describe('bit-textarea', () => {
     });
 
     it('sets at-limit counter class at maxlength', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           maxlength: '10',
           value: '1234567890',
@@ -326,7 +326,7 @@ describe('bit-textarea', () => {
     });
 
     it('updates counter when typing with maxlength', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           maxlength: '10',
         },
@@ -364,7 +364,7 @@ describe('bit-textarea', () => {
   });
 });
 
-describe('bit-textarea accessibility', () => {
+describe('sg-textarea accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -379,19 +379,19 @@ describe('bit-textarea accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('renders a native <textarea> element inside shadow DOM', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       expect(fixture.query('textarea')).toBeTruthy();
     });
 
     it('textarea is naturally focusable (no tabindex=-1)', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.tabIndex).not.toBe(-1);
     });
 
     it('error message has role="alert" for assistive technology', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { error: 'Field is required' },
       });
 
@@ -406,7 +406,7 @@ describe('bit-textarea accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('sets aria-invalid="true" on textarea when error is present', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { error: 'Invalid input', label: 'Message', 'label-placement': 'outside' },
       });
 
@@ -414,7 +414,7 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('updates aria-invalid when error is added dynamically', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           label: 'Message',
           'label-placement': 'outside',
@@ -428,7 +428,7 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('sets aria-labelledby pointing to label when outside label is set', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           label: 'Comment',
           'label-placement': 'outside',
@@ -445,7 +445,7 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('sets aria-describedby when helper text is present', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: { helper: 'Max 500 characters', label: 'Comment', 'label-placement': 'outside' },
       });
 
@@ -455,7 +455,7 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('sets required on textarea for assistive technology', async () => {
-      fixture = await mount('bit-textarea', { attrs: { required: true } });
+      fixture = await mount('sg-textarea', { attrs: { required: true } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.required).toBe(true);
     });
@@ -465,13 +465,13 @@ describe('bit-textarea accessibility', () => {
 
   describe('Accessibility of States', () => {
     it('disabled textarea is not reachable by keyboard', async () => {
-      fixture = await mount('bit-textarea', { attrs: { disabled: true } });
+      fixture = await mount('sg-textarea', { attrs: { disabled: true } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.disabled).toBe(true);
     });
 
     it('readonly textarea is keyboard-accessible but not editable', async () => {
-      fixture = await mount('bit-textarea', {
+      fixture = await mount('sg-textarea', {
         attrs: {
           readonly: true,
           value: 'Read only',
@@ -489,7 +489,7 @@ describe('bit-textarea accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('accepts typed input via keyboard', async () => {
-      fixture = await mount('bit-textarea');
+      fixture = await mount('sg-textarea');
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
 

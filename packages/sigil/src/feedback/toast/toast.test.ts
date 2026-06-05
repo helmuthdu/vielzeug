@@ -2,7 +2,7 @@ import { type Fixture, mount, waitFor } from '@vielzeug/craft/testing';
 
 import type { ToastItem } from './toast';
 
-describe('bit-toast', () => {
+describe('sg-toast', () => {
   let fixture: Fixture<HTMLElement & { add(toast: ToastItem): string; dismiss(id: string): void }>;
 
   beforeAll(async () => {
@@ -15,19 +15,19 @@ describe('bit-toast', () => {
 
   describe('Rendering', () => {
     it('renders toast container with live region', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[role="region"]')).toBeTruthy();
     });
 
     it('live region has aria-live polite', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[aria-live]')?.getAttribute('aria-live')).toBe('polite');
     });
 
     it('live region has accessible label', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[aria-label]')?.getAttribute('aria-label')).toBe('Notifications');
     });
@@ -35,13 +35,13 @@ describe('bit-toast', () => {
 
   describe('Props', () => {
     it('applies position attribute', async () => {
-      fixture = await mount('bit-toast', { attrs: { position: 'top-left' } });
+      fixture = await mount('sg-toast', { attrs: { position: 'top-left' } });
 
       expect(fixture.element.getAttribute('position')).toBe('top-left');
     });
 
     it('applies max attribute', async () => {
-      fixture = await mount('bit-toast', { attrs: { max: '3' } });
+      fixture = await mount('sg-toast', { attrs: { max: '3' } });
 
       expect(fixture.element.getAttribute('max')).toBe('3');
     });
@@ -49,7 +49,7 @@ describe('bit-toast', () => {
 
   describe('Push Method', () => {
     it('shows toast item after push', async () => {
-      fixture = (await mount('bit-toast')) as typeof fixture;
+      fixture = (await mount('sg-toast')) as typeof fixture;
 
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
@@ -57,12 +57,12 @@ describe('bit-toast', () => {
       await fixture.flush();
 
       await waitFor(() => {
-        expect(fixture.query('bit-alert')?.textContent?.trim()).toContain('Test notification');
+        expect(fixture.query('sg-alert')?.textContent?.trim()).toContain('Test notification');
       });
     });
 
     it('shows body text of toast', async () => {
-      fixture = (await mount('bit-toast')) as typeof fixture;
+      fixture = (await mount('sg-toast')) as typeof fixture;
 
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
@@ -70,19 +70,19 @@ describe('bit-toast', () => {
       await fixture.flush();
 
       await waitFor(() => {
-        expect(fixture.query('bit-alert')?.textContent?.trim()).toContain('Something happened');
+        expect(fixture.query('sg-alert')?.textContent?.trim()).toContain('Something happened');
       });
     });
 
     it('closes toast when alert dispatches dismiss', async () => {
-      fixture = (await mount('bit-toast')) as typeof fixture;
+      fixture = (await mount('sg-toast')) as typeof fixture;
 
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
       el.add({ dismissible: true, duration: 0, message: 'Closable' });
       await fixture.flush();
 
-      const alert = fixture.query<HTMLElement>('bit-alert');
+      const alert = fixture.query<HTMLElement>('sg-alert');
 
       expect(alert).toBeTruthy();
 
@@ -93,11 +93,11 @@ describe('bit-toast', () => {
       fixture.query<HTMLElement>('.toast-wrapper.exiting')?.dispatchEvent(new Event('animationend'));
       await fixture.flush();
 
-      expect(fixture.query('bit-alert')).toBeNull();
+      expect(fixture.query('sg-alert')).toBeNull();
     });
 
     it('does not leave active toasts stuck in exiting state on rapid remove + add', async () => {
-      fixture = (await mount('bit-toast')) as typeof fixture;
+      fixture = (await mount('sg-toast')) as typeof fixture;
 
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): string; dismiss(id: string): void };
 
@@ -128,7 +128,7 @@ describe('bit-toast', () => {
   describe('Positions', () => {
     for (const position of ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right']) {
       it(`accepts ${position} position`, async () => {
-        fixture = await mount('bit-toast', { attrs: { position } });
+        fixture = await mount('sg-toast', { attrs: { position } });
 
         expect(fixture.element.getAttribute('position')).toBe(position);
         fixture.destroy();
@@ -137,7 +137,7 @@ describe('bit-toast', () => {
   });
 });
 
-describe('bit-toast accessibility', () => {
+describe('sg-toast accessibility', () => {
   let fixture: Awaited<ReturnType<typeof mount>>;
 
   beforeAll(async () => {
@@ -150,19 +150,19 @@ describe('bit-toast accessibility', () => {
 
   describe('Live Region', () => {
     it('container has role region', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[role="region"]')).toBeTruthy();
     });
 
     it('has aria-live polite', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[aria-live]')?.getAttribute('aria-live')).toBe('polite');
     });
 
     it('has aria-relevant additions removals', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       const region = fixture.query('[aria-live]');
 
@@ -170,7 +170,7 @@ describe('bit-toast accessibility', () => {
     });
 
     it('has aria-atomic false for individual updates', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       const region = fixture.query('[aria-live]');
 
@@ -178,7 +178,7 @@ describe('bit-toast accessibility', () => {
     });
 
     it('region has accessible label Notifications', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       expect(fixture.query('[aria-label]')?.getAttribute('aria-label')).toBe('Notifications');
     });
@@ -186,7 +186,7 @@ describe('bit-toast accessibility', () => {
 
   describe('Toast Items', () => {
     it('pushed toast is announced in live region', async () => {
-      fixture = await mount('bit-toast');
+      fixture = await mount('sg-toast');
 
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
@@ -194,7 +194,7 @@ describe('bit-toast accessibility', () => {
       await fixture.flush();
 
       await waitFor(() => {
-        expect(fixture.query('bit-alert')?.textContent?.trim()).toContain('Success!');
+        expect(fixture.query('sg-alert')?.textContent?.trim()).toContain('Success!');
       });
     });
   });

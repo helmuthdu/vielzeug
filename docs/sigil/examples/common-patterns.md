@@ -19,15 +19,15 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 
 ```html
 <form id="userForm">
-  <bit-input type="text" name="username" placeholder="Username" required></bit-input>
-  <bit-input type="email" name="email" placeholder="Email" required></bit-input>
+  <sg-input type="text" name="username" placeholder="Username" required></sg-input>
+  <sg-input type="email" name="email" placeholder="Email" required></sg-input>
 
   <div class="form-actions" style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-    <bit-button type="submit" variant="solid" color="success"> Save </bit-button>
+    <sg-button type="submit" variant="solid" color="success"> Save </sg-button>
 
-    <bit-button type="reset" variant="outline" color="secondary"> Reset </bit-button>
+    <sg-button type="reset" variant="outline" color="secondary"> Reset </sg-button>
 
-    <bit-button type="button" variant="ghost" color="error"> Delete </bit-button>
+    <sg-button type="button" variant="ghost" color="error"> Delete </sg-button>
   </div>
 </form>
 ```
@@ -44,9 +44,9 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
   <p style="margin: 0 0 1.5rem 0; color: var(--text-color-secondary);">Are you sure you want to delete this item?</p>
 
   <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-    <bit-button variant="ghost" color="secondary"> Cancel </bit-button>
+    <sg-button variant="ghost" color="secondary"> Cancel </sg-button>
 
-    <bit-button variant="solid" color="error"> Delete </bit-button>
+    <sg-button variant="solid" color="error"> Delete </sg-button>
   </div>
 </div>
 ```
@@ -59,15 +59,15 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 
 ```html
 <div style="display: flex; align-items: center; gap: 0.5rem;">
-  <bit-button variant="ghost" size="sm" disabled> Previous </bit-button>
+  <sg-button variant="ghost" size="sm" disabled> Previous </sg-button>
 
-  <bit-button variant="text" size="sm">1</bit-button>
-  <bit-button variant="solid" size="sm">2</bit-button>
-  <bit-button variant="text" size="sm">3</bit-button>
-  <bit-button variant="text" size="sm">...</bit-button>
-  <bit-button variant="text" size="sm">10</bit-button>
+  <sg-button variant="text" size="sm">1</sg-button>
+  <sg-button variant="solid" size="sm">2</sg-button>
+  <sg-button variant="text" size="sm">3</sg-button>
+  <sg-button variant="text" size="sm">...</sg-button>
+  <sg-button variant="text" size="sm">10</sg-button>
 
-  <bit-button variant="ghost" size="sm"> Next </bit-button>
+  <sg-button variant="ghost" size="sm"> Next </sg-button>
 </div>
 ```
 
@@ -80,21 +80,21 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 ```html
 <div
   style="display: flex; gap: 0.25rem; padding: 0.5rem; background: var(--color-contrast-100); border-radius: 0.375rem;">
-  <bit-button variant="ghost" size="sm" icon-only aria-label="Bold">
+  <sg-button variant="ghost" size="sm" icon-only aria-label="Bold">
     <strong>B</strong>
-  </bit-button>
+  </sg-button>
 
-  <bit-button variant="ghost" size="sm" icon-only aria-label="Italic">
+  <sg-button variant="ghost" size="sm" icon-only aria-label="Italic">
     <em>I</em>
-  </bit-button>
+  </sg-button>
 
-  <bit-button variant="ghost" size="sm" icon-only aria-label="Underline">
+  <sg-button variant="ghost" size="sm" icon-only aria-label="Underline">
     <u>U</u>
-  </bit-button>
+  </sg-button>
 
   <div style="width: 1px; background: var(--color-contrast-300); margin: 0 0.25rem;"></div>
 
-  <bit-button variant="ghost" size="sm" icon-only aria-label="Link"> 🔗 </bit-button>
+  <sg-button variant="ghost" size="sm" icon-only aria-label="Link"> 🔗 </sg-button>
 </div>
 ```
 
@@ -106,11 +106,11 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 
 ```html
 <div style="display: flex; gap: 0.75rem;">
-  <bit-button variant="solid" color="primary"> Normal </bit-button>
+  <sg-button variant="solid" color="primary"> Normal </sg-button>
 
-  <bit-button variant="solid" color="primary" loading> Loading... </bit-button>
+  <sg-button variant="solid" color="primary" loading> Loading... </sg-button>
 
-  <bit-button variant="solid" color="primary" disabled> Disabled </bit-button>
+  <sg-button variant="solid" color="primary" disabled> Disabled </sg-button>
 </div>
 ```
 
@@ -121,11 +121,11 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 <ComponentPreview>
 
 ```html
-<bit-button-group attached>
-  <bit-button variant="bordered">Day</bit-button>
-  <bit-button variant="solid">Week</bit-button>
-  <bit-button variant="bordered">Month</bit-button>
-</bit-button-group>
+<sg-button-group attached>
+  <sg-button variant="bordered">Day</sg-button>
+  <sg-button variant="solid">Week</sg-button>
+  <sg-button variant="bordered">Month</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>

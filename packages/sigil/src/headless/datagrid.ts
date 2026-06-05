@@ -28,7 +28,7 @@ export type DataGridColumn<T = Record<string, unknown>> = {
   label: string;
   /**
    * Renders the expanded detail panel for a row. When provided on any column,
-   * `<bit-datagrid expandable>` shows a toggle button in each row.
+   * `<sg-datagrid expandable>` shows a toggle button in each row.
    * Receives the full row item and returns an HTML string.
    *
    * @example
@@ -51,21 +51,19 @@ export type DataGridColumn<T = Record<string, unknown>> = {
 /** Row selection mode. */
 export type SelectionMode = 'multi' | 'none' | 'single';
 
-/**
- * Controls whether sorting is handled client-side (default) or server-side.
- * - `'client'` — the control sorts `getItems()` automatically.
- * - `'server'` — the control fires `onSortChange` but does NOT sort items.
- *   The consumer is responsible for updating `getItems()` with pre-sorted data.
- */
-export type SortMode = 'client' | 'server';
-
 export type DataGridControlOptions<T = Record<string, unknown>> = {
   /** Returns the current column definitions reactively. */
   columns: () => DataGridColumn<T>[];
-  /** Returns the current row items reactively. */
-  getItems: () => T[];
   /** Returns a unique string key for each row item. */
   getRowKey: (item: T) => string;
+  /**
+   * Reactive signal of the current row items.
+   *
+   * For server-side sorting, pass a signal whose value is the pre-sorted result
+   * from your server. For client-side sorting, pass a plain signal wrapping your
+   * full dataset — the control will sort it automatically via `sortBy()`.
+   */
+  items: ReadonlySignal<T[]>;
   /** Called when selection changes. Receives the full set of selected keys. */
   onSelectionChange?: (keys: Set<string>) => void;
   /** Called when sort state changes. */
@@ -74,11 +72,8 @@ export type DataGridControlOptions<T = Record<string, unknown>> = {
   pageSize: () => number;
   /** Returns the current selection mode reactively. */
   selectionMode: () => SelectionMode;
-  /**
-   * Whether sorting is handled client-side or server-side.
-   * Defaults to `'client'`.
-   */
-  sortMode?: () => SortMode;
+  /** `AbortSignal` from the component lifecycle. */
+  signal: AbortSignal;
 };
 
 export type DataGridControl<T = Record<string, unknown>> = {
@@ -108,8 +103,8 @@ export type DataGridControl<T = Record<string, unknown>> = {
   selectAll(): void;
   /** Current selected row keys. Reactive signal. */
   readonly selectedKeys: ReadonlySignal<Set<string>>;
-  /** All rows whose keys are in `selectedKeys`. */
-  readonly selectedRows: T[];
+  /** All rows whose keys are in `selectedKeys`. Reactive signal. */
+  readonly selectedRows: ReadonlySignal<T[]>;
   /** Set the selection to an explicit set of keys. */
   setSelection(keys: Set<string>): void;
   /** Sort by the given column key — cycles asc → desc → none. */
@@ -130,14 +125,20 @@ export type DataGridControl<T = Record<string, unknown>> = {
  * All mutable state is exposed as reactive `ReadonlySignal` values so
  * consumers can bind directly in templates without manual invalidation.
  *
+ * Pass `items` as a `ReadonlySignal<T[]>`. For client-side sorting, wrap your
+ * full dataset; for server-side sorting, pass a signal whose value is the
+ * pre-sorted result. The control fires `onSortChange` in both cases.
+ *
  * @example
  * ```ts
+ * const rows = signal(myItems);
  * const ctrl = createDataGridControl({
  *   columns: () => myColumns,
- *   getItems: () => myItems,
+ *   items: rows,
  *   getRowKey: (item) => item.id,
  *   selectionMode: () => 'multi',
  *   pageSize: () => 20,
+ *   signal: lifecycleSignal(onCleanup),
  * });
  *
  * // In template — subscribes automatically:
@@ -174,12 +175,11 @@ export const createDataGridControl = <T = Record<string, unknown>>(
   // ── Sorted items ─────────────────────────────────────────────────────────────
 
   const sortedItems = computed<T[]>(() => {
-    const items = options.getItems();
+    const items = options.items.value;
     const key = _sortKey.value;
     const dir = _sortDir.value;
-    const mode = options.sortMode?.() ?? 'client';
 
-    if (mode === 'server' || !key || dir === 'none') return items;
+    if (!key || dir === 'none') return items;
 
     return items.slice().sort((a, b) => {
       const av = (a as Record<string, unknown>)[key];
@@ -197,11 +197,18 @@ export const createDataGridControl = <T = Record<string, unknown>>(
 
   const pageCount = computed(() => {
     const ps = options.pageSize();
+    const len = sortedItems.value.length;
 
-    return ps > 0 ? Math.max(1, Math.ceil(sortedItems.value.length / ps)) : 1;
+    if (ps <= 0 || len === 0) return 0;
+
+    return Math.ceil(len / ps);
   });
 
-  const safePage = computed(() => Math.min(_pageIndex.value, pageCount.value - 1));
+  const safePage = computed(() => {
+    const pc = pageCount.value;
+
+    return pc === 0 ? 0 : Math.min(_pageIndex.value, pc - 1);
+  });
 
   const currentPageItems = computed<T[]>(() => {
     const ps = options.pageSize();
@@ -296,6 +303,10 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     _commitSelection(new Set(keys));
   };
 
+  const selectedRows = computed<T[]>(() =>
+    options.items.value.filter((item) => _selectedKeys.value.has(options.getRowKey(item))),
+  );
+
   return {
     clearSelection,
     currentPageItems,
@@ -310,9 +321,7 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     prevPage,
     selectAll,
     selectedKeys: _selectedKeys,
-    get selectedRows(): T[] {
-      return options.getItems().filter((item) => _selectedKeys.value.has(options.getRowKey(item)));
-    },
+    selectedRows,
     setSelection,
     sortBy,
     sortState,

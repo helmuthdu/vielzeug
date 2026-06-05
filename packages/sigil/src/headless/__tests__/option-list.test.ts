@@ -29,6 +29,7 @@ function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
     handle = createOptionList<Item>({
       dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
       items: { getItems: () => ITEMS },
+      signal: new AbortController().signal,
       ...overrides,
     });
   };
@@ -111,7 +112,7 @@ describe('createOptionList()', () => {
     });
 
     it('open() is a no-op when disabled', async () => {
-      const { get, setup } = makeHandle({ behavior: { isDisabled: () => true } });
+      const { get, setup } = makeHandle({ isDisabled: () => true });
 
       await mount(() => {
         setup();
@@ -124,7 +125,7 @@ describe('createOptionList()', () => {
     });
 
     it('toggle() is a no-op when disabled', async () => {
-      const { get, setup } = makeHandle({ behavior: { isDisabled: () => true } });
+      const { get, setup } = makeHandle({ isDisabled: () => true });
 
       await mount(() => {
         setup();
@@ -288,20 +289,6 @@ describe('createOptionList()', () => {
     });
   });
 
-  describe('cleanup', () => {
-    it('cleanup() does not throw', async () => {
-      const { get, setup } = makeHandle();
-
-      await mount(() => {
-        setup();
-
-        return html`<div></div>`;
-      }, {});
-
-      expect(() => get().cleanup()).not.toThrow();
-    });
-  });
-
   describe('toggle close reason', () => {
     it('toggle uses click open and trigger close by default', async () => {
       const onOpen = vi.fn();
@@ -418,206 +405,8 @@ describe('createOptionList()', () => {
     });
   });
 
-  describe('ARIA management', () => {
-    it('sets aria-expanded on trigger element when getTrigger is provided', async () => {
-      let trigger!: HTMLElement;
-      let handle!: ReturnType<typeof createOptionList<Item>>;
-
-      await mount(() => {
-        trigger = document.createElement('button');
-        document.body.appendChild(trigger);
-
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          dom: {
-            getBoundary: () => boundary,
-            getPanel: () => panel,
-            getReference: () => reference,
-            getTrigger: () => trigger,
-          },
-          items: { getItems: () => ITEMS },
-        });
-
-        return html`<div></div>`;
-      }, {});
-
-      // Trigger fires only when isOpen changes (initial null state before first event).
-      handle.open();
-      expect(trigger.getAttribute('aria-expanded')).toBe('true');
-
-      handle.close();
-      expect(trigger.getAttribute('aria-expanded')).toBe('false');
-
-      trigger.remove();
-    });
-
-    it('does not set aria-expanded when manageAriaExpanded is false', async () => {
-      let trigger!: HTMLElement;
-      let handle!: ReturnType<typeof createOptionList<Item>>;
-
-      await mount(() => {
-        trigger = document.createElement('button');
-        document.body.appendChild(trigger);
-
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          behavior: { manageAriaExpanded: false },
-          dom: {
-            getBoundary: () => boundary,
-            getPanel: () => panel,
-            getReference: () => reference,
-            getTrigger: () => trigger,
-          },
-          items: { getItems: () => ITEMS },
-        });
-
-        return html`<div></div>`;
-      }, {});
-
-      handle.open();
-      expect(trigger.hasAttribute('aria-expanded')).toBe(false);
-
-      trigger.remove();
-    });
-
-    it('sets aria-activedescendant when getOptionId is provided and item is focused', async () => {
-      let trigger!: HTMLElement;
-      let handle!: ReturnType<typeof createOptionList<Item>>;
-
-      await mount(() => {
-        trigger = document.createElement('button');
-        document.body.appendChild(trigger);
-
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          behavior: { manageAriaExpanded: false },
-          dom: {
-            getBoundary: () => boundary,
-            getPanel: () => panel,
-            getReference: () => reference,
-            getTrigger: () => trigger,
-          },
-          items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
-        });
-
-        return html`<div></div>`;
-      }, {});
-
-      handle.open();
-      handle.set(1);
-      expect(trigger.getAttribute('aria-activedescendant')).toBe('opt-1');
-
-      handle.reset();
-      expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
-
-      handle.close();
-      expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
-
-      trigger.remove();
-    });
-
-    it('cleanup() removes aria-expanded from trigger element', async () => {
-      let trigger!: HTMLElement;
-      let handle!: ReturnType<typeof createOptionList<Item>>;
-
-      await mount(() => {
-        trigger = document.createElement('button');
-        document.body.appendChild(trigger);
-
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          dom: {
-            getBoundary: () => boundary,
-            getPanel: () => panel,
-            getReference: () => reference,
-            getTrigger: () => trigger,
-          },
-          items: { getItems: () => ITEMS },
-        });
-
-        return html`<div></div>`;
-      }, {});
-
-      handle.open();
-      expect(trigger.getAttribute('aria-expanded')).toBe('true');
-
-      handle.cleanup();
-      expect(trigger.hasAttribute('aria-expanded')).toBe(false);
-
-      trigger.remove();
-    });
-
-    it('cleanup() removes aria-activedescendant from trigger element', async () => {
-      let trigger!: HTMLElement;
-      let handle!: ReturnType<typeof createOptionList<Item>>;
-
-      await mount(() => {
-        trigger = document.createElement('button');
-        document.body.appendChild(trigger);
-
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          behavior: { manageAriaExpanded: false },
-          dom: {
-            getBoundary: () => boundary,
-            getPanel: () => panel,
-            getReference: () => reference,
-            getTrigger: () => trigger,
-          },
-          items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
-        });
-
-        return html`<div></div>`;
-      }, {});
-
-      handle.open();
-      handle.set(0);
-      expect(trigger.getAttribute('aria-activedescendant')).toBe('opt-0');
-
-      handle.cleanup();
-      expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
-
-      trigger.remove();
-    });
-  });
-
-  describe('cleanup() idempotency', () => {
-    it('calling cleanup() multiple times does not throw', async () => {
+  describe('ARIA signals', () => {
+    it('ariaExpanded reflects open/closed state as a string signal', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -626,38 +415,72 @@ describe('createOptionList()', () => {
         return html`<div></div>`;
       }, {});
 
-      expect(() => {
-        get().cleanup();
-        get().cleanup();
-        get().cleanup();
-      }).not.toThrow();
+      const handle = get();
+
+      expect(handle.ariaExpanded.value).toBe('false');
+
+      handle.open();
+      expect(handle.ariaExpanded.value).toBe('true');
+
+      handle.close();
+      expect(handle.ariaExpanded.value).toBe('false');
     });
 
-    it('AbortSignal teardown + manual cleanup() does not double-dispose', async () => {
-      const controller = new AbortController();
-      let handle!: ReturnType<typeof createOptionList<Item>>;
+    it('ariaActiveDescendant is null when no item is focused', async () => {
+      const { get, setup } = makeHandle({
+        items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
+      });
 
       await mount(() => {
-        const boundary = document.createElement('div');
-        const panel = document.createElement('ul');
-        const reference = document.createElement('button');
-
-        document.body.appendChild(boundary);
-        document.body.appendChild(panel);
-        document.body.appendChild(reference);
-
-        handle = createOptionList<Item>({
-          dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
-          items: { getItems: () => ITEMS },
-          signal: controller.signal,
-        });
+        setup();
 
         return html`<div></div>`;
       }, {});
 
-      controller.abort();
+      const handle = get();
 
-      expect(() => handle.cleanup()).not.toThrow();
+      handle.open();
+      expect(handle.ariaActiveDescendant.value).toBeNull();
+    });
+
+    it('ariaActiveDescendant reflects the focused option id when open', async () => {
+      const { get, setup } = makeHandle({
+        items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
+      });
+
+      await mount(() => {
+        setup();
+
+        return html`<div></div>`;
+      }, {});
+
+      const handle = get();
+
+      handle.open();
+      handle.set(1);
+      expect(handle.ariaActiveDescendant.value).toBe('opt-1');
+
+      handle.reset();
+      expect(handle.ariaActiveDescendant.value).toBeNull();
+
+      handle.close();
+      expect(handle.ariaActiveDescendant.value).toBeNull();
+    });
+
+    it('ariaActiveDescendant is null when getOptionId is not provided', async () => {
+      const { get, setup } = makeHandle();
+
+      await mount(() => {
+        setup();
+
+        return html`<div></div>`;
+      }, {});
+
+      const handle = get();
+
+      handle.open();
+      handle.set(0);
+      expect(handle.ariaActiveDescendant.value).toBeNull();
     });
   });
 

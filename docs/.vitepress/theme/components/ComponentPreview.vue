@@ -242,15 +242,15 @@ const backgroundStyle = computed(() => {
       </div>
 
       <!-- Tabs with proper slot structure -->
-      <bit-tabs :value="activeTab" variant="flat" class="preview-tabs">
-        <bit-tab-item slot="tabs" value="preview">Preview</bit-tab-item>
-        <bit-tab-item slot="tabs" value="code">Code</bit-tab-item>
+      <sg-tabs :value="activeTab" variant="flat" class="preview-tabs">
+        <sg-tab-item slot="tabs" value="preview">Preview</sg-tab-item>
+        <sg-tab-item slot="tabs" value="code">Code</sg-tab-item>
         <!-- Actions bar above tabs -->
         <div class="preview-actions" slot="tabs">
           <!-- Viewport size buttons -->
           <div class="viewport-controls">
-            <bit-button-group attached size="sm">
-              <bit-button
+            <sg-button-group attached size="sm">
+              <sg-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
@@ -268,8 +268,8 @@ const backgroundStyle = computed(() => {
                   <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
                   <path d="m 12,18 h 0.01" />
                 </svg>
-              </bit-button>
-              <bit-button
+              </sg-button>
+              <sg-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
@@ -287,8 +287,8 @@ const backgroundStyle = computed(() => {
                   <rect width="17.564447" height="20" x="3.2177763" y="2" rx="2" ry="2" />
                   <line x1="12" x2="12.01" y1="18" y2="18" />
                 </svg>
-              </bit-button>
-              <bit-button
+              </sg-button>
+              <sg-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
@@ -307,11 +307,11 @@ const backgroundStyle = computed(() => {
                   <line x1="8" x2="16" y1="21" y2="21" />
                   <line x1="12" x2="12" y1="17" y2="21" />
                 </svg>
-              </bit-button>
-            </bit-button-group>
+              </sg-button>
+            </sg-button-group>
           </div>
           <!-- Copy code button -->
-          <bit-button
+          <sg-button
             variant="bordered"
             size="sm"
             icon-only
@@ -335,20 +335,20 @@ const backgroundStyle = computed(() => {
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
               </g>
             </svg>
-          </bit-button>
+          </sg-button>
 
           <!-- LTR / RTL toggle button -->
-          <bit-button
+          <sg-button
             variant="bordered"
             size="sm"
             icon-only
             @click="toggleDirection"
             :title="isRtl ? 'Switch to LTR' : 'Switch to RTL'">
             <span style="font-weight: 600; font-size: 0.6275rem; line-height: 1rem">{{ isRtl ? 'LTR' : 'RTL' }}</span>
-          </bit-button>
+          </sg-button>
 
           <!-- Maximize button -->
-          <bit-button
+          <sg-button
             variant="ghost"
             size="sm"
             icon-only
@@ -386,11 +386,11 @@ const backgroundStyle = computed(() => {
               <path d="m 3,21 7,-7" />
               <path d="m 4,14 h 6 v 6" />
             </svg>
-          </bit-button>
+          </sg-button>
         </div>
 
         <!-- Preview tab panel -->
-        <bit-tab-panel value="preview" padding="none">
+        <sg-tab-panel value="preview" padding="none">
           <div class="preview-scroll-container" :class="{ 'is-centered': center }" :style="!isMaximized && props.height ? { height: props.height, minHeight: props.height } : {}">
             <div class="preview-container-wrapper" :style="{ width: getViewportWidth }">
               <div
@@ -407,16 +407,16 @@ const backgroundStyle = computed(() => {
               </div>
             </div>
           </div>
-        </bit-tab-panel>
+        </sg-tab-panel>
 
         <!-- Code tab panel -->
-        <bit-tab-panel value="code">
+        <sg-tab-panel value="code">
           <div class="preview-code">
             <!-- Use VitePress's already-processed code block -->
             <component v-if="processedCodeBlock" :is="processedCodeBlock" />
           </div>
-        </bit-tab-panel>
-      </bit-tabs>
+        </sg-tab-panel>
+      </sg-tabs>
     </div>
   </div>
 </template>
@@ -599,26 +599,26 @@ const backgroundStyle = computed(() => {
 /* Ensure @vielzeug/sigil components render properly within preview */
 .preview-demo
   :where(
-    bit-button,
-    bit-input,
-    bit-card,
-    bit-dialog,
-    bit-select,
-    bit-checkbox,
-    bit-radio,
-    bit-switch,
-    bit-slider,
-    bit-textarea,
-    bit-alert,
-    bit-dialog,
-    bit-tooltip,
-    bit-accordion,
-    bit-tabs,
-    bit-tab-item,
-    bit-tab-panel,
-    bit-file-input,
-    bit-button-group,
-    bit-grid
+    sg-button,
+    sg-input,
+    sg-card,
+    sg-dialog,
+    sg-select,
+    sg-checkbox,
+    sg-radio,
+    sg-switch,
+    sg-slider,
+    sg-textarea,
+    sg-alert,
+    sg-dialog,
+    sg-tooltip,
+    sg-accordion,
+    sg-tabs,
+    sg-tab-item,
+    sg-tab-panel,
+    sg-file-input,
+    sg-button-group,
+    sg-grid
   ) {
   /* Ensure components don't inherit problematic doc styles */
   all: revert-layer;

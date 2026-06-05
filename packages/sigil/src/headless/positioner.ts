@@ -31,7 +31,7 @@ const rtlPlacement = (p: Placement): Placement => {
 };
 
 /**
- * Creates an Orbit-powered positioner for dropdown overlays (select, combobox, menu).
+ * Creates an Orsg-powered positioner for dropdown overlays (select, combobox, menu).
  *
  * Uses flip + shift + optional width-matching middleware. Supports continuous
  * auto-update for repositioning on scroll or resize.

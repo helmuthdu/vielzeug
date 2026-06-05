@@ -4,7 +4,7 @@ import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
 /** Open the dropdown by clicking the trigger */
 async function open(fixture: Fixture<HTMLElement>): Promise<void> {
-  const trigger = fixture.query('bit-input.trigger');
+  const trigger = fixture.query('sg-input.trigger');
 
   fire.click(trigger!);
   await fixture.flush();
@@ -36,7 +36,7 @@ function clickOption(fixture: Fixture<HTMLElement>, columnLabel: string, text: s
 
 // ── Suite ──────────────────────────────────────────────────────────────────────
 
-describe('bit-time-picker', () => {
+describe('sg-time-picker', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -52,54 +52,54 @@ describe('bit-time-picker', () => {
   // ─── Rendering ───────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
-    it('renders a trigger (bit-input)', async () => {
-      fixture = await mount('bit-time-picker');
+    it('renders a trigger (sg-input)', async () => {
+      fixture = await mount('sg-time-picker');
 
-      expect(fixture.query('bit-input.trigger')).toBeTruthy();
+      expect(fixture.query('sg-input.trigger')).toBeTruthy();
     });
 
     it('renders a closed dropdown by default', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
       expect(getDropdown(fixture)).toBeNull();
     });
 
     it('renders with label prop', async () => {
-      fixture = await mount('bit-time-picker', { props: { label: 'Meeting time' } });
+      fixture = await mount('sg-time-picker', { props: { label: 'Meeting time' } });
 
-      const input = fixture.query('bit-input.trigger');
+      const input = fixture.query('sg-input.trigger');
 
       expect(input?.getAttribute('label')).toBe('Meeting time');
     });
 
     it('renders placeholder when no value', async () => {
-      fixture = await mount('bit-time-picker', { props: { placeholder: 'Pick a time' } });
+      fixture = await mount('sg-time-picker', { props: { placeholder: 'Pick a time' } });
 
-      const input = fixture.query('bit-input.trigger');
+      const input = fixture.query('sg-input.trigger');
 
       expect(input?.getAttribute('placeholder')).toBe('Pick a time');
     });
 
     it('displays formatted time in trigger when value set (24h)', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '09:30' } });
+      fixture = await mount('sg-time-picker', { props: { value: '09:30' } });
 
-      const input = fixture.query('bit-input.trigger');
+      const input = fixture.query('sg-input.trigger');
 
       expect(input?.getAttribute('value')).toBe('09:30');
     });
 
     it('displays formatted time in trigger when value set (12h)', async () => {
-      fixture = await mount('bit-time-picker', {
+      fixture = await mount('sg-time-picker', {
         props: { 'time-format': '12', value: '14:00' },
       });
 
-      const input = fixture.query('bit-input.trigger');
+      const input = fixture.query('sg-input.trigger');
 
       expect(input?.getAttribute('value')).toBe('02:00 PM');
     });
 
     it('renders hours and minutes columns when open', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       expect(getColumnOptions(fixture, 'Hours').length).toBeGreaterThan(0);
@@ -107,21 +107,21 @@ describe('bit-time-picker', () => {
     });
 
     it('renders AM/PM column in 12h mode', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '12' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
       expect(getColumnOptions(fixture, 'Period').length).toBe(2);
     });
 
     it('does not render AM/PM column in 24h mode', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '24' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '24' } });
       await open(fixture);
 
       expect(getColumnOptions(fixture, 'Period').length).toBe(0);
     });
 
     it('does not render an OK button', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       expect(fixture.query('.confirm-btn')).toBeNull();
@@ -132,24 +132,24 @@ describe('bit-time-picker', () => {
 
   describe('Open / close', () => {
     it('opens dropdown on trigger click', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       expect(getDropdown(fixture)).toBeTruthy();
     });
 
     it('closes dropdown on second trigger click', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
-      fire.click(fixture.query('bit-input.trigger')!);
+      fire.click(fixture.query('sg-input.trigger')!);
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeNull();
     });
 
     it('closes on Escape key in dropdown', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       fire.keyDown(fixture.query('.dropdown')!, { key: 'Escape' });
@@ -159,26 +159,26 @@ describe('bit-time-picker', () => {
     });
 
     it('closes on Escape key on trigger', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
-      fire.keyDown(fixture.query('bit-input.trigger')!, { key: 'Escape' });
+      fire.keyDown(fixture.query('sg-input.trigger')!, { key: 'Escape' });
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeNull();
     });
 
     it('opens on ArrowDown key on trigger', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
-      fire.keyDown(fixture.query('bit-input.trigger')!, { key: 'ArrowDown' });
+      fire.keyDown(fixture.query('sg-input.trigger')!, { key: 'ArrowDown' });
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeTruthy();
     });
 
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-time-picker', { props: { disabled: true } });
+      fixture = await mount('sg-time-picker', { props: { disabled: true } });
       await open(fixture);
 
       expect(getDropdown(fixture)).toBeNull();
@@ -189,7 +189,7 @@ describe('bit-time-picker', () => {
 
   describe('Time selection', () => {
     it('selecting an hour highlights it as aria-selected', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       clickOption(fixture, 'Hours', '10');
@@ -201,7 +201,7 @@ describe('bit-time-picker', () => {
     });
 
     it('selecting a minute commits the value immediately', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'minute-step': 15 } });
+      fixture = await mount('sg-time-picker', { props: { 'minute-step': 15 } });
       await open(fixture);
 
       const events: CustomEvent[] = [];
@@ -214,7 +214,7 @@ describe('bit-time-picker', () => {
     });
 
     it('clicking a minute option emits change event immediately', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       const events: CustomEvent[] = [];
@@ -230,7 +230,7 @@ describe('bit-time-picker', () => {
     });
 
     it('closes dropdown after clicking a minute option', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       clickOption(fixture, 'Minutes', '00');
@@ -240,7 +240,7 @@ describe('bit-time-picker', () => {
     });
 
     it('pre-selects value when reopened', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '14:30' } });
+      fixture = await mount('sg-time-picker', { props: { value: '14:30' } });
       await open(fixture);
 
       expect(getSelected(fixture, 'Hours')?.textContent?.trim()).toBe('14');
@@ -252,7 +252,7 @@ describe('bit-time-picker', () => {
 
   describe('12h format', () => {
     it('hour options range 01–12 in 12h mode', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '12' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours').map((o) => o.textContent?.trim());
@@ -263,7 +263,7 @@ describe('bit-time-picker', () => {
     });
 
     it('selecting PM and hour 02 emits 14:00', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '12' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
       const events: CustomEvent[] = [];
@@ -279,7 +279,7 @@ describe('bit-time-picker', () => {
     });
 
     it('selecting AM and 12 emits 00:00 (midnight)', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '12' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
       const events: CustomEvent[] = [];
@@ -299,7 +299,7 @@ describe('bit-time-picker', () => {
 
   describe('minute-step', () => {
     it('generates correct minute steps', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'minute-step': 15 } });
+      fixture = await mount('sg-time-picker', { props: { 'minute-step': 15 } });
       await open(fixture);
 
       const minutes = getColumnOptions(fixture, 'Minutes').map((o) => o.textContent?.trim());
@@ -308,7 +308,7 @@ describe('bit-time-picker', () => {
     });
 
     it('defaults to 5-minute step', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       const minutes = getColumnOptions(fixture, 'Minutes').map((o) => o.textContent?.trim());
@@ -323,7 +323,7 @@ describe('bit-time-picker', () => {
 
   describe('min / max bounds', () => {
     it('disables hours before min time', async () => {
-      fixture = await mount('bit-time-picker', { props: { min: '10:00' } });
+      fixture = await mount('sg-time-picker', { props: { min: '10:00' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours');
@@ -333,7 +333,7 @@ describe('bit-time-picker', () => {
     });
 
     it('disables hours after max time', async () => {
-      fixture = await mount('bit-time-picker', { props: { max: '17:00' } });
+      fixture = await mount('sg-time-picker', { props: { max: '17:00' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours');
@@ -343,7 +343,7 @@ describe('bit-time-picker', () => {
     });
 
     it('disabled options have aria-disabled="true"', async () => {
-      fixture = await mount('bit-time-picker', { props: { min: '10:00' } });
+      fixture = await mount('sg-time-picker', { props: { min: '10:00' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours');
@@ -357,7 +357,7 @@ describe('bit-time-picker', () => {
 
   describe('Keyboard navigation', () => {
     it('ArrowDown on hour column increments pending hour', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '08:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '08:00' } });
       await open(fixture);
 
       const selectedOption = getSelected(fixture, 'Hours');
@@ -372,7 +372,7 @@ describe('bit-time-picker', () => {
     });
 
     it('ArrowUp on hour column decrements pending hour', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '10:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '10:00' } });
       await open(fixture);
 
       const selectedOption = getSelected(fixture, 'Hours');
@@ -386,7 +386,7 @@ describe('bit-time-picker', () => {
     });
 
     it('ArrowDown on period toggles AM/PM', async () => {
-      fixture = await mount('bit-time-picker', {
+      fixture = await mount('sg-time-picker', {
         props: { 'time-format': '12', value: '09:00' },
       });
       await open(fixture);
@@ -406,39 +406,39 @@ describe('bit-time-picker', () => {
 
   describe('Accessibility', () => {
     it('trigger has role="combobox"', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
       expect(fixture.query('[role="combobox"]')).toBeTruthy();
     });
 
     it('trigger has aria-haspopup="listbox"', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
       expect(fixture.query('[aria-haspopup="listbox"]')).toBeTruthy();
     });
 
     it('trigger aria-expanded is "false" when closed', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
       expect(fixture.query('[aria-expanded="false"]')).toBeTruthy();
     });
 
     it('trigger aria-expanded is "true" when open', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       expect(fixture.query('[aria-expanded="true"]')).toBeTruthy();
     });
 
     it('dropdown has role="listbox"', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       expect(fixture.query('[role="listbox"]')).toBeTruthy();
     });
 
     it('columns have role="group"', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       const groups = fixture.queryAll('[role="group"]');
@@ -447,7 +447,7 @@ describe('bit-time-picker', () => {
     });
 
     it('options have role="option"', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
       await open(fixture);
 
       const options = fixture.queryAll('[role="option"]');
@@ -456,14 +456,14 @@ describe('bit-time-picker', () => {
     });
 
     it('selected option has aria-selected="true"', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '09:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '09:00' } });
       await open(fixture);
 
       expect(fixture.query('[aria-selected="true"]')).toBeTruthy();
     });
 
     it('trigger has aria-controls pointing to dropdown', async () => {
-      fixture = await mount('bit-time-picker');
+      fixture = await mount('sg-time-picker');
 
       const trigger = fixture.query('[role="combobox"]');
       const controls = trigger?.getAttribute('aria-controls');
@@ -474,13 +474,13 @@ describe('bit-time-picker', () => {
     });
 
     it('trigger has aria-disabled="true" when disabled', async () => {
-      fixture = await mount('bit-time-picker', { props: { disabled: true } });
+      fixture = await mount('sg-time-picker', { props: { disabled: true } });
 
       expect(fixture.query('[aria-disabled="true"]')).toBeTruthy();
     });
 
     it('non-selected options have tabindex="-1"', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '08:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '08:00' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours');
@@ -490,7 +490,7 @@ describe('bit-time-picker', () => {
     });
 
     it('selected option has tabindex="0"', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '08:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '08:00' } });
       await open(fixture);
 
       const hours = getColumnOptions(fixture, 'Hours');
@@ -504,16 +504,16 @@ describe('bit-time-picker', () => {
 
   describe('Disabled state', () => {
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-time-picker', { props: { disabled: true } });
+      fixture = await mount('sg-time-picker', { props: { disabled: true } });
       await open(fixture);
 
       expect(getDropdown(fixture)).toBeNull();
     });
 
-    it('passes disabled attribute to bit-input trigger', async () => {
-      fixture = await mount('bit-time-picker', { props: { disabled: true } });
+    it('passes disabled attribute to sg-input trigger', async () => {
+      fixture = await mount('sg-time-picker', { props: { disabled: true } });
 
-      expect(fixture.query('bit-input[disabled]')).toBeTruthy();
+      expect(fixture.query('sg-input[disabled]')).toBeTruthy();
     });
   });
 
@@ -521,17 +521,17 @@ describe('bit-time-picker', () => {
 
   describe('Edge cases', () => {
     it('handles invalid value prop gracefully (shows placeholder)', async () => {
-      fixture = await mount('bit-time-picker', {
+      fixture = await mount('sg-time-picker', {
         props: { placeholder: 'Pick a time', value: 'not-a-time' },
       });
 
-      const input = fixture.query('bit-input.trigger');
+      const input = fixture.query('sg-input.trigger');
 
       expect(input?.getAttribute('value')).toBe('Pick a time');
     });
 
     it('wraps hour selection from last to first (ArrowDown)', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '23:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '23:00' } });
       await open(fixture);
 
       const selectedOption = getSelected(fixture, 'Hours');
@@ -545,7 +545,7 @@ describe('bit-time-picker', () => {
     });
 
     it('wraps hour selection from first to last (ArrowUp)', async () => {
-      fixture = await mount('bit-time-picker', { props: { value: '00:00' } });
+      fixture = await mount('sg-time-picker', { props: { value: '00:00' } });
       await open(fixture);
 
       const selectedOption = getSelected(fixture, 'Hours');
@@ -559,14 +559,14 @@ describe('bit-time-picker', () => {
     });
 
     it('minute-step of 1 produces 60 options', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'minute-step': 1 } });
+      fixture = await mount('sg-time-picker', { props: { 'minute-step': 1 } });
       await open(fixture);
 
       expect(getColumnOptions(fixture, 'Minutes').length).toBe(60);
     });
 
     it('24h mode produces 24 hour options', async () => {
-      fixture = await mount('bit-time-picker', { props: { 'time-format': '24' } });
+      fixture = await mount('sg-time-picker', { props: { 'time-format': '24' } });
       await open(fixture);
 
       expect(getColumnOptions(fixture, 'Hours').length).toBe(24);

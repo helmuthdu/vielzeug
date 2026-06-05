@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-card', () => {
+describe('sg-card', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -12,43 +12,43 @@ describe('bit-card', () => {
   });
 
   it('renders card element', async () => {
-    fixture = await mount('bit-card');
+    fixture = await mount('sg-card');
 
     expect(fixture.element).toBeTruthy();
   });
 
   it('keeps non-interactive card out of tab flow', async () => {
-    fixture = await mount('bit-card');
+    fixture = await mount('sg-card');
 
     expect(fixture.element.getAttribute('role')).toBeNull();
     expect(fixture.element.getAttribute('tabindex')).toBeNull();
   });
 
   it('adds button semantics when interactive', async () => {
-    fixture = await mount('bit-card', { attrs: { interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { interactive: '' } });
 
     expect(fixture.element.getAttribute('role')).toBe('button');
     expect(fixture.element.getAttribute('tabindex')).toBe('0');
   });
 
   it('sets aria-disabled and tabindex -1 when interactive card is disabled', async () => {
-    fixture = await mount('bit-card', { attrs: { disabled: '', interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { disabled: '', interactive: '' } });
 
     expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
     expect(fixture.element.getAttribute('tabindex')).toBe('-1');
   });
 
   it('reflects loading state to aria-busy', async () => {
-    fixture = await mount('bit-card', { attrs: { loading: '' } });
+    fixture = await mount('sg-card', { attrs: { loading: '' } });
     expect(fixture.element.getAttribute('aria-busy')).toBe('true');
 
     fixture.destroy();
-    fixture = await mount('bit-card');
+    fixture = await mount('sg-card');
     expect(fixture.element.getAttribute('aria-busy')).toBe('false');
   });
 
   it('emits activate with pointer trigger on click', async () => {
-    fixture = await mount('bit-card', { attrs: { interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { interactive: '' } });
 
     const handler = vi.fn();
 
@@ -62,7 +62,7 @@ describe('bit-card', () => {
   });
 
   it('emits activate with keyboard trigger on Enter', async () => {
-    fixture = await mount('bit-card', { attrs: { interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { interactive: '' } });
 
     const handler = vi.fn();
 
@@ -77,7 +77,7 @@ describe('bit-card', () => {
   });
 
   it('emits activate with keyboard trigger on Space', async () => {
-    fixture = await mount('bit-card', { attrs: { interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { interactive: '' } });
 
     const handler = vi.fn();
 
@@ -91,7 +91,7 @@ describe('bit-card', () => {
   });
 
   it('does not emit activate when disabled', async () => {
-    fixture = await mount('bit-card', { attrs: { disabled: '', interactive: '' } });
+    fixture = await mount('sg-card', { attrs: { disabled: '', interactive: '' } });
 
     const handler = vi.fn();
 
@@ -105,7 +105,7 @@ describe('bit-card', () => {
   });
 
   it('does not emit activate when clicking nested interactive content', async () => {
-    fixture = await mount('bit-card', {
+    fixture = await mount('sg-card', {
       attrs: { interactive: '' },
       html: '<button slot="actions" id="inner-action">Inner action</button>',
     });
@@ -122,7 +122,7 @@ describe('bit-card', () => {
   });
 
   it('hides empty named sections and shows them when slots are populated', async () => {
-    fixture = await mount('bit-card', {
+    fixture = await mount('sg-card', {
       html: '<span slot="header">Title</span><span slot="footer">Footer</span>',
     });
     await Promise.resolve();
@@ -142,7 +142,7 @@ describe('bit-card', () => {
   });
 
   it('remains interactive with arbitrary visual attributes', async () => {
-    fixture = await mount('bit-card', {
+    fixture = await mount('sg-card', {
       attrs: {
         color: 'danger',
         interactive: '',
@@ -164,7 +164,7 @@ describe('bit-card', () => {
     expect(handler).toHaveBeenCalledTimes(1);
 
     fixture.destroy();
-    fixture = await mount('bit-card', {
+    fixture = await mount('sg-card', {
       attrs: {
         color: 'primary',
         interactive: '',

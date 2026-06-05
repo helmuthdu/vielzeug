@@ -15,7 +15,7 @@
     display: none;
   }
 
-  /* bit-input is readonly so pointer defaults to text — override to pointer */
+  /* sg-input is readonly so pointer defaults to text — override to pointer */
   .trigger {
     cursor: pointer;
   }
@@ -26,7 +26,7 @@
     user-select: none;
   }
 
-  /* Chips slot inside bit-input prefix */
+  /* Chips slot inside sg-input prefix */
   .chips-row {
     display: flex;
     flex-wrap: wrap;
@@ -66,14 +66,14 @@
     border: 2px solid currentcolor;
     border-inline-end-color: transparent;
     border-radius: 50%;
-    animation: var(--_motion-animation, bit-select-spin 0.6s linear infinite);
+    animation: var(--_motion-animation, sg-select-spin 0.6s linear infinite);
   }
 
   :host([loading]) .loader {
     display: inline-block;
   }
 
-  @keyframes bit-select-spin {
+  @keyframes sg-select-spin {
     to {
       transform: rotate(360deg);
     }

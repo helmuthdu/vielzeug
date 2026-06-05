@@ -9,13 +9,14 @@ import {
   prop,
   ref,
   signal,
+  createStableId,
   syncAria,
   watch,
 } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createSliderControl, createStableId } from '../../headless';
+import { createSliderControl } from '../../headless';
 import { disablableBundle, sizableBundle, SLIDER_SIZE_PRESET, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
@@ -29,11 +30,11 @@ const guard =
 
 /** Slider component properties */
 
-export type BitSliderEvents = {
+export type SgSliderEvents = {
   change: { from?: number; originalEvent?: Event; to?: number; value: number | { from: number; to: number } };
 };
 
-export type BitSliderProps = {
+export type SgSliderProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -69,7 +70,7 @@ export type BitSliderProps = {
  *
  * Add the boolean `range` attribute to activate two-thumb range mode.
  *
- * @element bit-slider
+ * @element sg-slider
  *
  * @attr {number}  min   - Minimum value (default: 0)
  * @attr {number}  max   - Maximum value (default: 100)
@@ -80,7 +81,7 @@ export type BitSliderProps = {
  * @attr {boolean} range - Activate range mode
  * @attr {boolean} disabled - Disable interaction
  * @attr {string}  name  - Form field name (single mode)
- * @attr {string}  color - Theme color
+ * @attr {string}  color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string}  size  - 'sm' | 'md' | 'lg'
  *
  * @fires change - detail always includes `value`; single mode: { value: number }, range mode: { value: { from, to }, from, to }, plus optional originalEvent
@@ -103,12 +104,12 @@ export type BitSliderProps = {
  *
  * @example
  * ```html
- * <bit-slider value="50" name="volume">Volume</bit-slider>
- * <bit-slider range from="20" to="80" color="primary">Price range</bit-slider>
+ * <sg-slider value="50" name="volume">Volume</sg-slider>
+ * <sg-slider range from="20" to="80" color="primary">Price range</sg-slider>
  * ```
  */
-export const SLIDER_TAG = 'bit-slider' as const;
-define<BitSliderProps, BitSliderEvents>(SLIDER_TAG, {
+export const SLIDER_TAG = 'sg-slider' as const;
+define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -507,7 +508,7 @@ define<BitSliderProps, BitSliderEvents>(SLIDER_TAG, {
     `;
   },
   styles: [
-    disabledStateMixin(),
+    disabledStateMixin,
     colorThemeMixin,
     sizeVariantMixin(SLIDER_SIZE_PRESET),
     componentStyles,

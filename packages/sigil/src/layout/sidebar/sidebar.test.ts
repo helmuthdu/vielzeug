@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-sidebar', () => {
+describe('sg-sidebar', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -12,31 +12,31 @@ describe('bit-sidebar', () => {
   });
 
   it('renders a nav landmark with default label', async () => {
-    fixture = await mount('bit-sidebar');
+    fixture = await mount('sg-sidebar');
 
     expect(fixture.query('nav')?.getAttribute('aria-label')).toBe('Sidebar navigation');
   });
 
   it('uses a custom nav label', async () => {
-    fixture = await mount('bit-sidebar', { attrs: { label: 'Main navigation' } });
+    fixture = await mount('sg-sidebar', { attrs: { label: 'Main navigation' } });
 
     expect(fixture.query('nav')?.getAttribute('aria-label')).toBe('Main navigation');
   });
 
   it('starts collapsed in uncontrolled mode with default-collapsed', async () => {
-    fixture = await mount('bit-sidebar', { attrs: { 'default-collapsed': '' } });
+    fixture = await mount('sg-sidebar', { attrs: { 'default-collapsed': '' } });
 
     expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
   });
 
   it('reflects collapsed state in controlled mode', async () => {
-    fixture = await mount('bit-sidebar', { attrs: { collapsed: '' } });
+    fixture = await mount('sg-sidebar', { attrs: { collapsed: '' } });
 
     expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
   });
 
   it('toggles in uncontrolled mode and emits collapsed-change', async () => {
-    fixture = await mount('bit-sidebar', { attrs: { collapsible: '' } });
+    fixture = await mount('sg-sidebar', { attrs: { collapsible: '' } });
 
     const handler = vi.fn();
 
@@ -50,7 +50,7 @@ describe('bit-sidebar', () => {
   });
 
   it('does not mutate collapsed UI in controlled mode when toggled', async () => {
-    fixture = await mount('bit-sidebar', {
+    fixture = await mount('sg-sidebar', {
       attrs: {
         collapsed: '',
         collapsible: '',
@@ -69,7 +69,7 @@ describe('bit-sidebar', () => {
   });
 
   it('supports setCollapsed() and toggle() imperative API', async () => {
-    fixture = await mount('bit-sidebar', { attrs: { collapsible: '' } });
+    fixture = await mount('sg-sidebar', { attrs: { collapsible: '' } });
 
     const el = fixture.element as HTMLElement & {
       setCollapsed(next: boolean): void;
@@ -98,7 +98,7 @@ describe('bit-sidebar', () => {
     }));
 
     try {
-      fixture = await mount('bit-sidebar', { attrs: { responsive: '(max-width: 768px)' } });
+      fixture = await mount('sg-sidebar', { attrs: { responsive: '(max-width: 768px)' } });
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
 
@@ -123,7 +123,7 @@ describe('bit-sidebar', () => {
     }));
 
     try {
-      fixture = await mount('bit-sidebar', { attrs: { 'bottom-nav-at': '(max-width: 768px)' } });
+      fixture = await mount('sg-sidebar', { attrs: { 'bottom-nav-at': '(max-width: 768px)' } });
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('data-bottom-nav')).toBe(true);
@@ -148,7 +148,7 @@ describe('bit-sidebar', () => {
     }));
 
     try {
-      fixture = await mount('bit-sidebar', {
+      fixture = await mount('sg-sidebar', {
         attrs: { 'bottom-nav-at': '(max-width: 768px)' },
       });
 
@@ -186,14 +186,14 @@ describe('bit-sidebar', () => {
     }));
 
     try {
-      fixture = await mount('bit-sidebar', {
+      fixture = await mount('sg-sidebar', {
         attrs: { 'bottom-nav-at': '(max-width: 768px)' },
         html: `
-          <bit-sidebar-item href="#" active>Home</bit-sidebar-item>
-          <bit-sidebar-item href="#">Search</bit-sidebar-item>
-          <bit-sidebar-group label="More">
-            <bit-sidebar-item href="#">Nested</bit-sidebar-item>
-          </bit-sidebar-group>
+          <sg-sidebar-item href="#" active>Home</sg-sidebar-item>
+          <sg-sidebar-item href="#">Search</sg-sidebar-item>
+          <sg-sidebar-group label="More">
+            <sg-sidebar-item href="#">Nested</sg-sidebar-item>
+          </sg-sidebar-group>
         `,
       });
       await fixture.flush();
@@ -211,7 +211,7 @@ describe('bit-sidebar', () => {
   });
 });
 
-describe('bit-sidebar-group', () => {
+describe('sg-sidebar-group', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -223,27 +223,27 @@ describe('bit-sidebar-group', () => {
   });
 
   it('uses native details/summary structure', async () => {
-    fixture = await mount('bit-sidebar-group', { attrs: { label: 'Main' } });
+    fixture = await mount('sg-sidebar-group', { attrs: { label: 'Main' } });
 
     expect(fixture.query('[part="group"]')?.tagName.toLowerCase()).toBe('details');
     expect(fixture.query('[part="group-header"]')?.tagName.toLowerCase()).toBe('summary');
   });
 
   it('keeps non-collapsible groups open', async () => {
-    fixture = await mount('bit-sidebar-group', { attrs: { label: 'Main' } });
+    fixture = await mount('sg-sidebar-group', { attrs: { label: 'Main' } });
 
     expect(fixture.query<HTMLDetailsElement>('[part="group"]')?.open).toBe(true);
   });
 
   it('starts closed in uncontrolled mode when default-open is false', async () => {
-    fixture = await mount('bit-sidebar-group', { attrs: { collapsible: '', 'default-open': 'false' } });
+    fixture = await mount('sg-sidebar-group', { attrs: { collapsible: '', 'default-open': 'false' } });
 
     expect(fixture.element.hasAttribute('open')).toBe(false);
     expect(fixture.query<HTMLDetailsElement>('[part="group"]')?.open).toBe(false);
   });
 
   it('does not mutate open state in controlled mode without external update', async () => {
-    fixture = await mount('bit-sidebar-group', { attrs: { collapsible: '', open: '' } });
+    fixture = await mount('sg-sidebar-group', { attrs: { collapsible: '', open: '' } });
 
     fixture.query<HTMLElement>('[part="group-header"]')?.click();
     await fixture.flush();
@@ -252,7 +252,7 @@ describe('bit-sidebar-group', () => {
   });
 });
 
-describe('bit-sidebar-item', () => {
+describe('sg-sidebar-item', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -264,13 +264,13 @@ describe('bit-sidebar-item', () => {
   });
 
   it('renders an anchor only when href is present and not disabled', async () => {
-    fixture = await mount('bit-sidebar-item', { attrs: { href: '/home' } });
+    fixture = await mount('sg-sidebar-item', { attrs: { href: '/home' } });
 
     expect(fixture.query('a.item')).toBeTruthy();
   });
 
   it('renders a button when disabled even if href is present', async () => {
-    fixture = await mount('bit-sidebar-item', { attrs: { disabled: '', href: '/home' } });
+    fixture = await mount('sg-sidebar-item', { attrs: { disabled: '', href: '/home' } });
 
     // Should render a <div class="item"> with aria-disabled and tabindex
     const divItem = fixture.query('div.item');
@@ -282,7 +282,7 @@ describe('bit-sidebar-item', () => {
   });
 
   it('applies aria-current="page" when active', async () => {
-    fixture = await mount('bit-sidebar-item', { attrs: { active: '', href: '/dashboard' } });
+    fixture = await mount('sg-sidebar-item', { attrs: { active: '', href: '/dashboard' } });
 
     expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('page');
   });

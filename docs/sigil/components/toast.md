@@ -1,6 +1,6 @@
 # Toast
 
-A fixed toast notification container with Time Machine-style stacking animation. Stacks toasts with a 3D effect when collapsed; expands the full list on hover or focus. Built on top of `bit-alert`.
+A fixed toast notification container with Time Machine-style stacking animation. Stacks toasts with a 3D effect when collapsed; expands the full list on hover or focus. Built on top of `sg-alert`.
 
 ## Features
 
@@ -27,7 +27,7 @@ A fixed toast notification container with Time Machine-style stacking animation.
 The recommended approach is the `toast` singleton service — no element reference needed.
 
 ```html
-<bit-toast position="bottom-right"></bit-toast>
+<sg-toast position="bottom-right"></sg-toast>
 
 <script type="module">
   import '@vielzeug/sigil/toast';
@@ -38,84 +38,84 @@ The recommended approach is the `toast` singleton service — no element referen
 </script>
 ```
 
-If no `<bit-toast>` element exists in the page, the service creates and appends one automatically.
+If no `<sg-toast>` element exists in the page, the service creates and appends one automatically.
 
 ## Position Options
 
 <ComponentPreview>
 
 ```html
-<bit-toast id="toast-tl" position="top-left"></bit-toast>
-<bit-toast id="toast-tc" position="top-center"></bit-toast>
-<bit-toast id="toast-tr" position="top-right"></bit-toast>
-<bit-toast id="toast-bl" position="bottom-left"></bit-toast>
-<bit-toast id="toast-bc" position="bottom-center"></bit-toast>
-<bit-toast id="toast-br" position="bottom-right"></bit-toast>
+<sg-toast id="toast-tl" position="top-left"></sg-toast>
+<sg-toast id="toast-tc" position="top-center"></sg-toast>
+<sg-toast id="toast-tr" position="top-right"></sg-toast>
+<sg-toast id="toast-bl" position="bottom-left"></sg-toast>
+<sg-toast id="toast-bc" position="bottom-center"></sg-toast>
+<sg-toast id="toast-br" position="bottom-right"></sg-toast>
 
-<bit-grid cols="3" gap="md" style="padding: var(--size-4);">
-  <bit-button
+<sg-grid cols="3" gap="md" style="padding: var(--size-4);">
+  <sg-button
     color="primary"
     onclick="document.getElementById('toast-tl').add({ message: 'Top Left',      color: 'primary',   duration: 3000 })"
-    >Top Left</bit-button
+    >Top Left</sg-button
   >
-  <bit-button
+  <sg-button
     color="secondary"
     onclick="document.getElementById('toast-tc').add({ message: 'Top Center',    color: 'secondary', duration: 3000 })"
-    >Top Center</bit-button
+    >Top Center</sg-button
   >
-  <bit-button
+  <sg-button
     color="info"
     onclick="document.getElementById('toast-tr').add({ message: 'Top Right',     color: 'info',      duration: 3000 })"
-    >Top Right</bit-button
+    >Top Right</sg-button
   >
-  <bit-button
+  <sg-button
     color="success"
     onclick="document.getElementById('toast-bl').add({ message: 'Bottom Left',   color: 'success',   duration: 3000 })"
-    >Bottom Left</bit-button
+    >Bottom Left</sg-button
   >
-  <bit-button
+  <sg-button
     color="warning"
     onclick="document.getElementById('toast-bc').add({ message: 'Bottom Center', color: 'warning',   duration: 3000 })"
-    >Bottom Center</bit-button
+    >Bottom Center</sg-button
   >
-  <bit-button
+  <sg-button
     color="error"
     onclick="document.getElementById('toast-br').add({ message: 'Bottom Right',  color: 'error',     duration: 3000 })"
-    >Bottom Right</bit-button
+    >Bottom Right</sg-button
   >
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
 
 ## Variants & Colors
 
-Toasts inherit all `bit-alert` variants and colors.
+Toasts inherit all `sg-alert` variants and colors.
 
 <ComponentPreview>
 
 ```html
-<bit-toast id="demo-variants" position="bottom-center"></bit-toast>
+<sg-toast id="demo-variants" position="bottom-center"></sg-toast>
 
-<bit-grid cols="3" gap="md" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
-  <bit-button
+<sg-grid cols="3" gap="md" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
+  <sg-button
     color="primary"
     variant="flat"
     onclick="document.getElementById('demo-variants').add({ message: 'Flat variant',     color: 'primary', variant: 'flat',     duration: 3000 })"
-    >Flat</bit-button
+    >Flat</sg-button
   >
-  <bit-button
+  <sg-button
     color="success"
     onclick="document.getElementById('demo-variants').add({ message: 'Solid variant',    color: 'success', variant: 'solid',    duration: 3000 })"
-    >Solid</bit-button
+    >Solid</sg-button
   >
-  <bit-button
+  <sg-button
     color="warning"
     variant="bordered"
     onclick="document.getElementById('demo-variants').add({ message: 'Bordered variant', color: 'warning', variant: 'bordered', duration: 3000 })"
-    >Bordered</bit-button
+    >Bordered</sg-button
   >
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -127,9 +127,9 @@ Use `heading` to add a bold title above the message, and `meta` for secondary in
 <ComponentPreview>
 
 ```html
-<bit-toast id="demo-heading" position="bottom-right"></bit-toast>
+<sg-toast id="demo-heading" position="bottom-right"></sg-toast>
 
-<bit-button
+<sg-button
   color="info"
   onclick="document.getElementById('demo-heading').add({
   color: 'info',
@@ -138,7 +138,7 @@ Use `heading` to add a bold title above the message, and `meta` for secondary in
   meta: '2 min ago',
   duration: 5000,
 })"
-  >Show toast with heading</bit-button
+  >Show toast with heading</sg-button
 >
 ```
 
@@ -151,12 +151,12 @@ Toasts can carry action buttons. Each button auto-dismisses the toast when click
 <ComponentPreview>
 
 ```html
-<bit-toast id="demo-actions" position="bottom-right"></bit-toast>
+<sg-toast id="demo-actions" position="bottom-right"></sg-toast>
 
-<bit-grid cols="2" gap="md" style="padding: 2rem;">
-  <bit-button color="warning" onclick="window.showConfirm()">Confirm actions</bit-button>
-  <bit-button color="info" onclick="window.showHorizontal()">Horizontal action</bit-button>
-</bit-grid>
+<sg-grid cols="2" gap="md" style="padding: 2rem;">
+  <sg-button color="warning" onclick="window.showConfirm()">Confirm actions</sg-button>
+  <sg-button color="info" onclick="window.showHorizontal()">Horizontal action</sg-button>
+</sg-grid>
 
 <script>
   window.showConfirm = () =>
@@ -276,7 +276,7 @@ When more than one toast is present, they stack with a 3D perspective. Only the 
 
 ## `toast` Singleton Service
 
-The `toast` export is the recommended imperative API. It finds the first `<bit-toast>` element in the document, or creates one if none exists.
+The `toast` export is the recommended imperative API. It finds the first `<sg-toast>` element in the document, or creates one if none exists.
 
 ```typescript
 import { toast } from '@vielzeug/sigil/toast';
@@ -312,14 +312,14 @@ toast.configure({ position: 'top-center', max: 3 });
 toast.add({ message: 'Ready!', color: 'success' });
 ```
 
-Options mirror the element attributes. Has no effect if a `<bit-toast>` already exists in the DOM.
+Options mirror the element attributes. Has no effect if a `<sg-toast>` already exists in the DOM.
 
 ## Element API
 
-The `<bit-toast>` element itself exposes the same operations for cases where you hold a direct reference.
+The `<sg-toast>` element itself exposes the same operations for cases where you hold a direct reference.
 
 ```javascript
-const toaster = document.querySelector('bit-toast');
+const toaster = document.querySelector('sg-toast');
 
 const id = toaster.add({ message: 'Hello!', color: 'success' }); // returns id
 toaster.update(id, { message: 'Updated!' });
@@ -369,7 +369,7 @@ toaster.clear(); // animated clear
 | `dismiss` | `{ id }` | Fired when a toast is removed |
 
 ```javascript
-document.querySelector('bit-toast').addEventListener('dismiss', (e) => {
+document.querySelector('sg-toast').addEventListener('dismiss', (e) => {
   console.log('dismissed:', e.detail.id);
 });
 ```
@@ -391,11 +391,11 @@ document.querySelector('bit-toast').addEventListener('dismiss', (e) => {
 
 The toast component follows WAI-ARIA best practices.
 
-### `bit-toast`
+### `sg-toast`
 
 ✅ **Screen Readers**
 
-- `bit-alert` carries `role="alert"` with `aria-live="polite"` (`assertive` for `error` color) — screen readers announce new toasts automatically.
+- `sg-alert` carries `role="alert"` with `aria-live="polite"` (`assertive` for `error` color) — screen readers announce new toasts automatically.
 
 ✅ **Keyboard Navigation**
 

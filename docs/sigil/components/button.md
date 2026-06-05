@@ -36,7 +36,7 @@ A versatile button component with multiple variants, colors, sizes, and states. 
 ### Standalone Button
 
 ```html
-<bit-button variant="solid" color="primary">Click me</bit-button>
+<sg-button variant="solid" color="primary">Click me</sg-button>
 
 <script type="module">
   import '@vielzeug/sigil/button';
@@ -46,11 +46,11 @@ A versatile button component with multiple variants, colors, sizes, and states. 
 ### Button Group
 
 ```html
-<bit-button-group>
-  <bit-button>First</bit-button>
-  <bit-button>Second</bit-button>
-  <bit-button>Third</bit-button>
-</bit-button-group>
+<sg-button-group>
+  <sg-button>First</sg-button>
+  <sg-button>Second</sg-button>
+  <sg-button>Third</sg-button>
+</sg-button-group>
 
 <script type="module">
   import '@vielzeug/sigil/button';
@@ -67,12 +67,12 @@ The button comes with eight visual variants to match different levels of emphasi
 <ComponentPreview center>
 
 ```html
-<bit-button variant="solid">Solid</bit-button>
-<bit-button variant="flat">Flat</bit-button>
-<bit-button variant="bordered">Bordered</bit-button>
-<bit-button variant="outline">Outline</bit-button>
-<bit-button variant="ghost">Ghost</bit-button>
-<bit-button variant="text">Text</bit-button>
+<sg-button variant="solid">Solid</sg-button>
+<sg-button variant="flat">Flat</sg-button>
+<sg-button variant="bordered">Bordered</sg-button>
+<sg-button variant="outline">Outline</sg-button>
+<sg-button variant="ghost">Ghost</sg-button>
+<sg-button variant="text">Text</sg-button>
 ```
 
 </ComponentPreview>
@@ -91,13 +91,13 @@ Frost variant works best when placed over colorful backgrounds or images to show
 <ComponentPreview center>
 
 ```html
-<bit-button variant="frost">Default</bit-button>
-<bit-button variant="frost" color="primary">Primary</bit-button>
-<bit-button variant="frost" color="secondary">Secondary</bit-button>
-<bit-button variant="frost" color="info">Info</bit-button>
-<bit-button variant="frost" color="success">Success</bit-button>
-<bit-button variant="frost" color="warning">Warning</bit-button>
-<bit-button variant="frost" color="error">Error</bit-button>
+<sg-button variant="frost">Default</sg-button>
+<sg-button variant="frost" color="primary">Primary</sg-button>
+<sg-button variant="frost" color="secondary">Secondary</sg-button>
+<sg-button variant="frost" color="info">Info</sg-button>
+<sg-button variant="frost" color="success">Success</sg-button>
+<sg-button variant="frost" color="warning">Warning</sg-button>
+<sg-button variant="frost" color="error">Error</sg-button>
 ```
 
 </ComponentPreview>
@@ -109,7 +109,7 @@ Animated rainbow border effect perfect for highlighting call-to-action buttons o
 <ComponentPreview center>
 
 ```html
-<bit-button rainbow variant="frost">Frost + Rainbow</bit-button>
+<sg-button rainbow variant="frost">Frost + Rainbow</sg-button>
 ```
 
 </ComponentPreview>
@@ -121,13 +121,13 @@ Six semantic colors for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-button variant="bordered">Default</bit-button>
-<bit-button variant="bordered" color="primary">Primary</bit-button>
-<bit-button variant="bordered" color="secondary">Secondary</bit-button>
-<bit-button variant="bordered" color="info">Info</bit-button>
-<bit-button variant="bordered" color="success">Success</bit-button>
-<bit-button variant="bordered" color="warning">Warning</bit-button>
-<bit-button variant="bordered" color="error">Error</bit-button>
+<sg-button variant="bordered">Default</sg-button>
+<sg-button variant="bordered" color="primary">Primary</sg-button>
+<sg-button variant="bordered" color="secondary">Secondary</sg-button>
+<sg-button variant="bordered" color="info">Info</sg-button>
+<sg-button variant="bordered" color="success">Success</sg-button>
+<sg-button variant="bordered" color="warning">Warning</sg-button>
+<sg-button variant="bordered" color="error">Error</sg-button>
 ```
 
 </ComponentPreview>
@@ -139,9 +139,9 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-button size="sm">Small</bit-button>
-<bit-button size="md">Medium</bit-button>
-<bit-button size="lg">Large</bit-button>
+<sg-button size="sm">Small</sg-button>
+<sg-button size="md">Medium</sg-button>
+<sg-button size="lg">Large</sg-button>
 ```
 
 </ComponentPreview>
@@ -155,7 +155,7 @@ Show a loading spinner and prevent interaction during async operations.
 <ComponentPreview center>
 
 ```html
-<bit-button loading>Loading...</bit-button>
+<sg-button loading>Loading...</sg-button>
 ```
 
 </ComponentPreview>
@@ -167,7 +167,7 @@ Prevent interaction and reduce opacity for unavailable actions.
 <ComponentPreview center>
 
 ```html
-<bit-button disabled>Disabled</bit-button>
+<sg-button disabled>Disabled</sg-button>
 ```
 
 </ComponentPreview>
@@ -181,17 +181,17 @@ Add prefix or suffix icons using slots.
 <ComponentPreview center>
 
 ```html
-<bit-button>
-  <bit-icon slot="prefix" name="arrow-left" size="18"></bit-icon>
+<sg-button>
+  <sg-icon slot="prefix" name="arrow-left" size="18"></sg-icon>
   Back
-</bit-button>
-<bit-button variant="outline" color="success">
+</sg-button>
+<sg-button variant="outline" color="success">
   Save
-  <bit-icon slot="suffix" name="save" size="18"></bit-icon>
-</bit-button>
-<bit-button icon-only label="Delete" color="error">
-  <bit-icon name="trash-2" size="18"></bit-icon>
-</bit-button>
+  <sg-icon slot="suffix" name="save" size="18"></sg-icon>
+</sg-button>
+<sg-button icon-only label="Delete" color="error">
+  <sg-icon name="trash-2" size="18"></sg-icon>
+</sg-button>
 
 <script type="module">
   import '@vielzeug/sigil/button';
@@ -209,21 +209,21 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 ```html
 <!-- Default/Full: Pill shape (9999px) -->
-<bit-button rounded>Pill Shape</bit-button>
+<sg-button rounded>Pill Shape</sg-button>
 
 <!-- Large: 0.5rem / 8px -->
-<bit-button rounded="lg">Large Radius</bit-button>
+<sg-button rounded="lg">Large Radius</sg-button>
 
 <!-- Extra Large: 0.75rem / 12px -->
-<bit-button rounded="xl">XL Radius</bit-button>
+<sg-button rounded="xl">XL Radius</sg-button>
 
 <!-- 2XL: 1rem / 16px -->
-<bit-button rounded="2xl">2XL Radius</bit-button>
+<sg-button rounded="2xl">2XL Radius</sg-button>
 
 <!-- Icon-only always uses perfect circle -->
-<bit-button rounded icon-only label="Check">
-  <bit-icon name="check" size="18"></bit-icon>
-</bit-button>
+<sg-button rounded icon-only label="Check">
+  <sg-icon name="check" size="18"></sg-icon>
+</sg-button>
 
 <script type="module">
   import '@vielzeug/sigil/button';
@@ -240,25 +240,25 @@ Button expands to fill the full width of its container.
 <ComponentPreview center vertical>
 
 ```html
-<bit-button fullwidth>Full Width Button</bit-button>
-<bit-button fullwidth variant="bordered" color="success">Full Width Bordered</bit-button>
+<sg-button fullwidth>Full Width Button</sg-button>
+<sg-button fullwidth variant="bordered" color="success">Full Width Bordered</sg-button>
 ```
 
 </ComponentPreview>
 
 ## Link Buttons
 
-When `href` is provided, `bit-button` renders as an `<a role="button">` element instead of `<button>`. All visual variants, sizes, states, and slots behave exactly the same.
+When `href` is provided, `sg-button` renders as an `<a role="button">` element instead of `<button>`. All visual variants, sizes, states, and slots behave exactly the same.
 
 <ComponentPreview center>
 
 ```html
-<bit-button href="#">Default Link</bit-button>
-<bit-button href="#" variant="outline">Outline Link</bit-button>
-<bit-button href="#" target="_blank" rel="noopener noreferrer" variant="ghost">
+<sg-button href="#">Default Link</sg-button>
+<sg-button href="#" variant="outline">Outline Link</sg-button>
+<sg-button href="#" target="_blank" rel="noopener noreferrer" variant="ghost">
   Open in new tab
-  <bit-icon slot="suffix" name="external-link" size="18"></bit-icon>
-</bit-button>
+  <sg-icon slot="suffix" name="external-link" size="18"></sg-icon>
+</sg-button>
 
 <script type="module">
   import '@vielzeug/sigil/button';
@@ -283,11 +283,11 @@ Group buttons in horizontal or vertical layouts.
 <ComponentPreview center>
 
 ```html
-<bit-button-group>
-  <bit-button>Left</bit-button>
-  <bit-button>Center</bit-button>
-  <bit-button>Right</bit-button>
-</bit-button-group>
+<sg-button-group>
+  <sg-button>Left</sg-button>
+  <sg-button>Center</sg-button>
+  <sg-button>Right</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>
@@ -297,11 +297,11 @@ Group buttons in horizontal or vertical layouts.
 <ComponentPreview center>
 
 ```html
-<bit-button-group orientation="vertical">
-  <bit-button>Top</bit-button>
-  <bit-button>Middle</bit-button>
-  <bit-button>Bottom</bit-button>
-</bit-button-group>
+<sg-button-group orientation="vertical">
+  <sg-button>Top</sg-button>
+  <sg-button>Middle</sg-button>
+  <sg-button>Bottom</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>
@@ -313,11 +313,11 @@ Remove spacing and connect buttons with shared borders for segmented controls.
 <ComponentPreview center>
 
 ```html
-<bit-button-group attached>
-  <bit-button variant="bordered">Day</bit-button>
-  <bit-button variant="solid">Week</bit-button>
-  <bit-button variant="bordered">Month</bit-button>
-</bit-button-group>
+<sg-button-group attached>
+  <sg-button variant="bordered">Day</sg-button>
+  <sg-button variant="solid">Week</sg-button>
+  <sg-button variant="bordered">Month</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>
@@ -329,11 +329,11 @@ Apply `size`, `variant`, or `color` to all child buttons automatically via the p
 <ComponentPreview vertical>
 
 ```html
-<bit-button-group variant="outline" size="sm" color="secondary">
-  <bit-button>Button 1</bit-button>
-  <bit-button>Button 2</bit-button>
-  <bit-button>Button 3</bit-button>
-</bit-button-group>
+<sg-button-group variant="outline" size="sm" color="secondary">
+  <sg-button>Button 1</sg-button>
+  <sg-button>Button 2</sg-button>
+  <sg-button>Button 3</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>
@@ -345,17 +345,17 @@ Buttons expand to fill the container equally.
 <ComponentPreview center>
 
 ```html
-<bit-button-group fullwidth attached>
-  <bit-button variant="bordered">Option A</bit-button>
-  <bit-button variant="bordered">Option B</bit-button>
-</bit-button-group>
+<sg-button-group fullwidth attached>
+  <sg-button variant="bordered">Option A</sg-button>
+  <sg-button variant="bordered">Option B</sg-button>
+</sg-button-group>
 ```
 
 </ComponentPreview>
 
 ## API Reference
 
-### `bit-button` Attributes
+### `sg-button` Attributes
 
 | Attribute   | Type                                                                           | Default     | Description                                                             |
 | ----------- | ------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------- |
@@ -374,7 +374,7 @@ Buttons expand to fill the container equally.
 | `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —           | Link target (requires `href`)                                           |
 | `rel`       | `string`                                                                       | —           | Link `rel` attribute (requires `href`)                                  |
 
-### `bit-button-group` Attributes
+### `sg-button-group` Attributes
 
 | Attribute     | Type                                                                           | Default        | Description                        |
 | ------------- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------- |
@@ -387,7 +387,7 @@ Buttons expand to fill the container equally.
 
 ### Slots
 
-#### `bit-button`
+#### `sg-button`
 
 | Slot      | Description                        |
 | --------- | ---------------------------------- |
@@ -395,7 +395,7 @@ Buttons expand to fill the container equally.
 | `prefix`  | Content before the main content    |
 | `suffix`  | Content after the main content     |
 
-#### `bit-button-group`
+#### `sg-button-group`
 
 | Slot      | Description           |
 | --------- | --------------------- |
@@ -403,19 +403,19 @@ Buttons expand to fill the container equally.
 
 ### Events
 
-#### `bit-button`
+#### `sg-button`
 
 | Event   | Detail       | Description                                                |
 | ------- | ------------ | ---------------------------------------------------------- |
 | `click` | `MouseEvent` | Native click event — standard `MouseEvent`, not suppressed |
 
-#### `bit-button-group`
+#### `sg-button-group`
 
 No events.
 
 ### CSS Custom Properties
 
-### `bit-button`
+### `sg-button`
 
 | Property           | Description      | Default           |
 | ------------------ | ---------------- | ----------------- |
@@ -424,7 +424,7 @@ No events.
 | `--button-radius`  | Border radius    | `0.375rem`        |
 | `--button-padding` | Inner padding    | Size-dependent    |
 
-### `bit-button-group`
+### `sg-button-group`
 
 | Property         | Description                                           | Default    |
 | ---------------- | ----------------------------------------------------- | ---------- |
@@ -435,7 +435,7 @@ No events.
 
 Both components follow WAI-ARIA best practices.
 
-### `bit-button`
+### `sg-button`
 
 ✅ **Keyboard Navigation**
 
@@ -449,7 +449,7 @@ Both components follow WAI-ARIA best practices.
 - `aria-busy` when loading.
 - Icon-only buttons require `label` attribute.
 
-### `bit-button-group`
+### `sg-button-group`
 
 ✅ **Semantic Structure**
 
@@ -466,7 +466,7 @@ Both components follow WAI-ARIA best practices.
 
 ## Best Practices
 
-### `bit-button`
+### `sg-button`
 
 **Do:**
 
@@ -479,7 +479,7 @@ Both components follow WAI-ARIA best practices.
 - Use multiple primary buttons in the same context.
 - Nest interactive elements inside buttons.
 
-### `bit-button-group`
+### `sg-button-group`
 
 **Do:**
 

@@ -2,8 +2,8 @@
 
 A customizable boolean form control with indeterminate state support, plus a group wrapper for managing multi-selection lists.
 
-- **`bit-checkbox`** — standalone checkbox for a single boolean value.
-- **`bit-checkbox-group`** — form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
+- **`sg-checkbox`** — standalone checkbox for a single boolean value.
+- **`sg-checkbox-group`** — form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
 
 ## Features
 
@@ -20,7 +20,7 @@ A customizable boolean form control with indeterminate state support, plus a gro
 
 - ↕️ **2 Orientations** — vertical & horizontal
 - 💬 **Validation Feedback** — `helper` and `error` text with ARIA wiring
-- 📝 **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `bit-form`
+- 📝 **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `sg-form`
 - 📡 **Context Propagation** — `color`, `size`, and `disabled` propagate to all child checkboxes
 - 🗂️ **Semantic Markup** — renders as `<fieldset>` + `<legend>` for proper screen reader grouping
 
@@ -39,7 +39,7 @@ A customizable boolean form control with indeterminate state support, plus a gro
 ### Basic Usage
 
 ```html
-<bit-checkbox>Accept terms and conditions</bit-checkbox>
+<sg-checkbox>Accept terms and conditions</sg-checkbox>
 
 <script type="module">
   import '@vielzeug/sigil/checkbox';
@@ -53,13 +53,13 @@ Six semantic colors to match your design language or validation state.
 <ComponentPreview center>
 
 ```html
-<bit-checkbox checked>Default</bit-checkbox>
-<bit-checkbox checked color="primary">Primary</bit-checkbox>
-<bit-checkbox checked color="secondary">Secondary</bit-checkbox>
-<bit-checkbox checked color="info">Info</bit-checkbox>
-<bit-checkbox checked color="success">Success</bit-checkbox>
-<bit-checkbox checked color="warning">Warning</bit-checkbox>
-<bit-checkbox checked color="error">Error</bit-checkbox>
+<sg-checkbox checked>Default</sg-checkbox>
+<sg-checkbox checked color="primary">Primary</sg-checkbox>
+<sg-checkbox checked color="secondary">Secondary</sg-checkbox>
+<sg-checkbox checked color="info">Info</sg-checkbox>
+<sg-checkbox checked color="success">Success</sg-checkbox>
+<sg-checkbox checked color="warning">Warning</sg-checkbox>
+<sg-checkbox checked color="error">Error</sg-checkbox>
 ```
 
 </ComponentPreview>
@@ -69,9 +69,9 @@ Six semantic colors to match your design language or validation state.
 <ComponentPreview center>
 
 ```html
-<bit-checkbox checked size="sm">Small</bit-checkbox>
-<bit-checkbox checked size="md">Medium</bit-checkbox>
-<bit-checkbox checked size="lg">Large</bit-checkbox>
+<sg-checkbox checked size="sm">Small</sg-checkbox>
+<sg-checkbox checked size="md">Medium</sg-checkbox>
+<sg-checkbox checked size="lg">Large</sg-checkbox>
 ```
 
 </ComponentPreview>
@@ -83,7 +83,7 @@ Use the indeterminate state for "select all" controls where only some items in a
 <ComponentPreview center>
 
 ```html
-<bit-checkbox indeterminate>Select all (partial)</bit-checkbox>
+<sg-checkbox indeterminate>Select all (partial)</sg-checkbox>
 ```
 
 </ComponentPreview>
@@ -95,9 +95,9 @@ Use the indeterminate state for "select all" controls where only some items in a
 <ComponentPreview center>
 
 ```html
-<bit-checkbox disabled>Disabled (unchecked)</bit-checkbox>
-<bit-checkbox checked disabled>Disabled (checked)</bit-checkbox>
-<bit-checkbox indeterminate disabled>Disabled (indeterminate)</bit-checkbox>
+<sg-checkbox disabled>Disabled (unchecked)</sg-checkbox>
+<sg-checkbox checked disabled>Disabled (checked)</sg-checkbox>
+<sg-checkbox indeterminate disabled>Disabled (indeterminate)</sg-checkbox>
 ```
 
 </ComponentPreview>
@@ -109,11 +109,11 @@ Provide contextual feedback directly below the checkbox.
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox helper="You can change this at any time in settings."> Send me marketing emails </bit-checkbox>
+<sg-checkbox helper="You can change this at any time in settings."> Send me marketing emails </sg-checkbox>
 
-<bit-checkbox color="error" error="You must accept the terms to continue.">
+<sg-checkbox color="error" error="You must accept the terms to continue.">
   I accept the terms of service
-</bit-checkbox>
+</sg-checkbox>
 ```
 
 </ComponentPreview>
@@ -121,7 +121,7 @@ Provide contextual feedback directly below the checkbox.
 ### Listening for Changes
 
 ```js
-const checkbox = document.querySelector('bit-checkbox');
+const checkbox = document.querySelector('sg-checkbox');
 checkbox.addEventListener('change', (e) => {
   console.log('checked:', e.detail.checked);
   console.log('value:', e.detail.value);
@@ -130,16 +130,16 @@ checkbox.addEventListener('change', (e) => {
 
 ## Checkbox Group
 
-`bit-checkbox-group` wraps `bit-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form.
+`sg-checkbox-group` wraps `sg-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form.
 
 ### Basic Usage
 
 ```html
-<bit-checkbox-group label="Interests" values="sport,music">
-  <bit-checkbox value="sport">Sport</bit-checkbox>
-  <bit-checkbox value="music">Music</bit-checkbox>
-  <bit-checkbox value="travel">Travel</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Interests" values="sport,music">
+  <sg-checkbox value="sport">Sport</sg-checkbox>
+  <sg-checkbox value="music">Music</sg-checkbox>
+  <sg-checkbox value="travel">Travel</sg-checkbox>
+</sg-checkbox-group>
 
 <script type="module">
   import '@vielzeug/sigil/checkbox-group';
@@ -152,19 +152,19 @@ checkbox.addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox-group label="Notifications (vertical)">
-  <bit-checkbox value="email">Email</bit-checkbox>
-  <bit-checkbox value="push">Push</bit-checkbox>
-  <bit-checkbox value="sms">SMS</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Notifications (vertical)">
+  <sg-checkbox value="email">Email</sg-checkbox>
+  <sg-checkbox value="push">Push</sg-checkbox>
+  <sg-checkbox value="sms">SMS</sg-checkbox>
+</sg-checkbox-group>
 
-<bit-checkbox-group label="Working days (horizontal)" orientation="horizontal">
-  <bit-checkbox value="mon">Mon</bit-checkbox>
-  <bit-checkbox value="tue">Tue</bit-checkbox>
-  <bit-checkbox value="wed">Wed</bit-checkbox>
-  <bit-checkbox value="thu">Thu</bit-checkbox>
-  <bit-checkbox value="fri">Fri</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Working days (horizontal)" orientation="horizontal">
+  <sg-checkbox value="mon">Mon</sg-checkbox>
+  <sg-checkbox value="tue">Tue</sg-checkbox>
+  <sg-checkbox value="wed">Wed</sg-checkbox>
+  <sg-checkbox value="thu">Thu</sg-checkbox>
+  <sg-checkbox value="fri">Fri</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 </ComponentPreview>
@@ -176,18 +176,18 @@ checkbox.addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" values="a">
-  <bit-checkbox value="a">Option A</bit-checkbox>
-  <bit-checkbox value="b">Option B</bit-checkbox>
-</bit-checkbox-group>
-<bit-checkbox-group label="Medium · Success" size="md" color="success" orientation="horizontal" values="a">
-  <bit-checkbox value="a">Option A</bit-checkbox>
-  <bit-checkbox value="b">Option B</bit-checkbox>
-</bit-checkbox-group>
-<bit-checkbox-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" values="a">
-  <bit-checkbox value="a">Option A</bit-checkbox>
-  <bit-checkbox value="b">Option B</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" values="a">
+  <sg-checkbox value="a">Option A</sg-checkbox>
+  <sg-checkbox value="b">Option B</sg-checkbox>
+</sg-checkbox-group>
+<sg-checkbox-group label="Medium · Success" size="md" color="success" orientation="horizontal" values="a">
+  <sg-checkbox value="a">Option A</sg-checkbox>
+  <sg-checkbox value="b">Option B</sg-checkbox>
+</sg-checkbox-group>
+<sg-checkbox-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" values="a">
+  <sg-checkbox value="a">Option A</sg-checkbox>
+  <sg-checkbox value="b">Option B</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 </ComponentPreview>
@@ -197,16 +197,16 @@ checkbox.addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox-group label="Interests" helper="Select all that apply.">
-  <bit-checkbox value="sport">Sport</bit-checkbox>
-  <bit-checkbox value="music">Music</bit-checkbox>
-  <bit-checkbox value="travel">Travel</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Interests" helper="Select all that apply.">
+  <sg-checkbox value="sport">Sport</sg-checkbox>
+  <sg-checkbox value="music">Music</sg-checkbox>
+  <sg-checkbox value="travel">Travel</sg-checkbox>
+</sg-checkbox-group>
 
-<bit-checkbox-group label="Agreements" error="Please accept all required policies." color="error">
-  <bit-checkbox value="terms">I accept the terms of service</bit-checkbox>
-  <bit-checkbox value="privacy">I accept the privacy policy</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Agreements" error="Please accept all required policies." color="error">
+  <sg-checkbox value="terms">I accept the terms of service</sg-checkbox>
+  <sg-checkbox value="privacy">I accept the privacy policy</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 </ComponentPreview>
@@ -218,30 +218,30 @@ Disabling the group propagates to all child checkboxes.
 <ComponentPreview>
 
 ```html
-<bit-checkbox-group label="Disabled group" disabled values="a,c">
-  <bit-checkbox value="a">Option A</bit-checkbox>
-  <bit-checkbox value="b">Option B</bit-checkbox>
-  <bit-checkbox value="c">Option C</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Disabled group" disabled values="a,c">
+  <sg-checkbox value="a">Option A</sg-checkbox>
+  <sg-checkbox value="b">Option B</sg-checkbox>
+  <sg-checkbox value="c">Option C</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 </ComponentPreview>
 
 ### Form Integration
 
-The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `bit-form`.
+The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `sg-form`.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-form id="prefs-form" novalidate>
-  <bit-checkbox-group name="contact" label="Preferred contact" required>
-    <bit-checkbox value="email">Email</bit-checkbox>
-    <bit-checkbox value="phone">Phone</bit-checkbox>
-    <bit-checkbox value="sms">SMS</bit-checkbox>
-  </bit-checkbox-group>
-  <bit-button type="submit">Save Preferences</bit-button>
-</bit-form>
+<sg-form id="prefs-form" novalidate>
+  <sg-checkbox-group name="contact" label="Preferred contact" required>
+    <sg-checkbox value="email">Email</sg-checkbox>
+    <sg-checkbox value="phone">Phone</sg-checkbox>
+    <sg-checkbox value="sms">SMS</sg-checkbox>
+  </sg-checkbox-group>
+  <sg-button type="submit">Save Preferences</sg-button>
+</sg-form>
 
 <script type="module">
   import '@vielzeug/sigil/form';
@@ -253,7 +253,7 @@ The group's checked values are stored in the `values` attribute and submitted un
     console.log('contact:', e.detail.formData.get('contact'));
   });
 
-  document.querySelector('bit-checkbox-group').addEventListener('change', (e) => {
+  document.querySelector('sg-checkbox-group').addEventListener('change', (e) => {
     console.log('Checked values:', e.detail.values);
   });
 </script>
@@ -263,17 +263,17 @@ The group's checked values are stored in the `values` attribute and submitted un
 
 ### Select All Pattern
 
-Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to build a "select all" control.
+Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to build a "select all" control.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox id="select-all" indeterminate>Select all</bit-checkbox>
-<bit-checkbox-group id="options" label="Options" values="a">
-  <bit-checkbox value="a">Option A</bit-checkbox>
-  <bit-checkbox value="b">Option B</bit-checkbox>
-  <bit-checkbox value="c">Option C</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox id="select-all" indeterminate>Select all</sg-checkbox>
+<sg-checkbox-group id="options" label="Options" values="a">
+  <sg-checkbox value="a">Option A</sg-checkbox>
+  <sg-checkbox value="b">Option B</sg-checkbox>
+  <sg-checkbox value="c">Option C</sg-checkbox>
+</sg-checkbox-group>
 
 <script type="module">
   import '@vielzeug/sigil/checkbox';
@@ -315,7 +315,7 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
 ## API Reference
 
-### `bit-checkbox` Attributes
+### `sg-checkbox` Attributes
 
 | Attribute       | Type                                                                      | Default | Description                             |
 | --------------- | ------------------------------------------------------------------------- | ------- | --------------------------------------- |
@@ -329,13 +329,13 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 | `helper`        | `string`                                                                  | `''`    | Helper text displayed below             |
 | `error`         | `string`                                                                  | `''`    | Error message (marks field invalid)     |
 
-### `bit-checkbox` Slots
+### `sg-checkbox` Slots
 
 | Slot      | Description         |
 | --------- | ------------------- |
 | (default) | Checkbox label text |
 
-### `bit-checkbox` Parts
+### `sg-checkbox` Parts
 
 | Part       | Description                  |
 | ---------- | ---------------------------- |
@@ -343,13 +343,13 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 | `box`      | The visual checkbox square   |
 | `label`    | The label text element       |
 
-### `bit-checkbox` Events
+### `sg-checkbox` Events
 
 | Event    | Detail                                | Description                            |
 | -------- | ------------------------------------- | -------------------------------------- |
 | `change` | `{ checked: boolean, value: string }` | Emitted when the checked state changes |
 
-### `bit-checkbox` CSS Custom Properties
+### `sg-checkbox` CSS Custom Properties
 
 | Property                  | Description                        |
 | ------------------------- | ---------------------------------- |
@@ -363,7 +363,7 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
 ---
 
-### `bit-checkbox-group` Attributes
+### `sg-checkbox-group` Attributes
 
 | Attribute     | Type                                                                      | Default      | Description                                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------ |
@@ -378,13 +378,13 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 | `error`       | `string`                                                                  | `''`         | Error message shown below the group (also sets ARIA invalid) |
 | `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)                     |
 
-### `bit-checkbox-group` Slots
+### `sg-checkbox-group` Slots
 
 | Slot      | Description                        |
 | --------- | ---------------------------------- |
-| (default) | Place `bit-checkbox` elements here |
+| (default) | Place `sg-checkbox` elements here |
 
-### `bit-checkbox-group` Events
+### `sg-checkbox-group` Events
 
 | Event    | Detail                 | Description                                             |
 | -------- | ---------------------- | ------------------------------------------------------- |
@@ -394,7 +394,7 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
 The checkbox components follow WCAG 2.1 Level AA standards.
 
-### `bit-checkbox`
+### `sg-checkbox`
 
 ✅ **Keyboard Navigation**
 
@@ -406,7 +406,7 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 - `aria-labelledby` links the label; `aria-describedby` links helper text; `aria-errormessage` links error text.
 - `aria-disabled` reflects the disabled state.
 
-### `bit-checkbox-group`
+### `sg-checkbox-group`
 
 ✅ **Semantic Structure**
 
@@ -432,6 +432,6 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 
 **Don't:**
 
-- Use `bit-checkbox-group` for mutually exclusive choices — use [`bit-radio-group`](./radio) instead.
+- Use `sg-checkbox-group` for mutually exclusive choices — use [`sg-radio-group`](./radio) instead.
 - Omit the `label` attribute on the group; without it the fieldset has no accessible name.
-- Place non-`bit-checkbox` elements as direct children of `bit-checkbox-group`.
+- Place non-`sg-checkbox` elements as direct children of `sg-checkbox-group`.

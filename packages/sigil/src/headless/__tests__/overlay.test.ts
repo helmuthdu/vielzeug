@@ -3,6 +3,16 @@ import { signal } from '@vielzeug/ripple';
 import { createOverlayControl } from '../index';
 
 describe('createOverlayControl', () => {
+  let controller: AbortController;
+
+  beforeEach(() => {
+    controller = new AbortController();
+  });
+
+  afterEach(() => {
+    controller.abort();
+  });
+
   it('opens with programmatic reason by default', () => {
     const openState = signal(false);
     const transitions: Array<{ next: boolean; reason: string }> = [];
@@ -14,6 +24,7 @@ describe('createOverlayControl', () => {
         openState.value = next;
         transitions.push({ next, reason });
       },
+      signal: controller.signal,
     });
 
     overlay.open();
@@ -30,6 +41,7 @@ describe('createOverlayControl', () => {
       getBoundary: () => document.body,
       isOpen: () => openState.value,
       setOpen,
+      signal: controller.signal,
     });
 
     overlay.open('click');
@@ -45,6 +57,7 @@ describe('createOverlayControl', () => {
       getBoundary: () => document.body,
       isOpen: () => openState.value,
       setOpen,
+      signal: controller.signal,
     });
 
     overlay.close('programmatic');
@@ -70,6 +83,7 @@ describe('createOverlayControl', () => {
       setOpen: (next) => {
         openState.value = next;
       },
+      signal: controller.signal,
     });
 
     other.focus();
@@ -98,6 +112,7 @@ describe('createOverlayControl', () => {
       setOpen: (next) => {
         openState.value = next;
       },
+      signal: controller.signal,
     });
 
     other.focus();
@@ -120,6 +135,7 @@ describe('createOverlayControl', () => {
         openState.value = next;
         reasons.push(reason);
       },
+      signal: controller.signal,
     });
 
     overlay.toggle();
@@ -139,6 +155,7 @@ describe('createOverlayControl', () => {
         openState.value = next;
         reasons.push(reason);
       },
+      signal: controller.signal,
     });
 
     overlay.toggle('keyboard', 'escape');
@@ -157,6 +174,7 @@ describe('createOverlayControl', () => {
       setOpen: (next) => {
         openState.value = next;
       },
+      signal: controller.signal,
     });
 
     overlay.open('click');
@@ -189,6 +207,7 @@ describe('createOverlayControl', () => {
       setOpen: (next) => {
         openState.value = next;
       },
+      signal: controller.signal,
     });
 
     overlay.open('click');
@@ -263,6 +282,7 @@ describe('createOverlayControl', () => {
       setOpen: (next) => {
         openState.value = next;
       },
+      signal: controller.signal,
     });
 
     overlay.open('click');

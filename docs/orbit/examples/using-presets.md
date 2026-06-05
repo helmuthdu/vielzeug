@@ -5,9 +5,15 @@ description: 'Drop-in preset examples for common tooltip, dropdown, popover, and
 
 ## Using Presets
 
-The `@vielzeug/orbit/presets` sub-path exports four ready-made middleware stacks for the most common patterns. Spread them directly into `float()` or `computePosition()`.
+### Problem
 
-### Tooltip
+Manually composing `offset`, `flip`, `shift`, and `size` middleware for every tooltip, dropdown, or popover is boilerplate. Common patterns diverge over time as different developers copy slightly different configurations.
+
+### Solution
+
+Use the `@vielzeug/orbit/presets` sub-path which exports four ready-made middleware stacks. Spread them directly into `float()` or `computePosition()`.
+
+#### Tooltip
 
 ```ts
 import { float } from '@vielzeug/orbit';
@@ -19,7 +25,7 @@ handle.cleanup(); // on teardown
 
 Default: `placement: 'top'`, `offset(8)`, `flip({ padding: 6 })`, `shift({ padding: 6 })`.
 
-### Dropdown
+#### Dropdown
 
 ```ts
 import { float } from '@vielzeug/orbit';
@@ -30,7 +36,7 @@ const handle = float(trigger, menu, dropdown());
 
 Default: `placement: 'bottom-start'`, `flip`, `shift`, `size` (constrains height).
 
-### Popover
+#### Popover
 
 ```ts
 import { float } from '@vielzeug/orbit';
@@ -41,7 +47,7 @@ const handle = float(trigger, popoverEl, popover());
 
 Default: `placement: 'top'`, `offset(12)`, `flip`, `shift`.
 
-### Context Menu
+#### Context Menu
 
 ```ts
 import { computePosition } from '@vielzeug/orbit';
@@ -63,9 +69,7 @@ document.addEventListener('contextmenu', (e) => {
 
 Default: `placement: 'bottom-start'`, `flip`, `shift`.
 
----
-
-### Customising Presets
+#### Customising Presets
 
 All preset factories accept `PresetOptions`:
 
@@ -82,7 +86,7 @@ const custom: PresetOptions = {
 const handle = float(trigger, panel, dropdown(custom));
 ```
 
-### Extending Presets
+#### Extending Presets
 
 Spread the preset to add or override middleware:
 
@@ -102,3 +106,15 @@ const handle = float(trigger, tooltipEl, {
   },
 });
 ```
+
+### Pitfalls
+
+- **Preset `placement` defaults are opinionated** — always pass `{ placement: '...' }` explicitly when the default doesn't match your layout.
+- **`contextMenu` uses `computePosition`, not `float`** — it does not auto-update on scroll; call it again on each `contextmenu` event.
+- **Spreading a preset does not deep-merge middleware** — use `[...tooltip().middleware, yourMiddleware]` to extend the stack rather than replacing it.
+
+### Related
+
+- [Orbit API Reference](/orbit/api.md)
+- [Reactive Adapter](./reactive-adapter.md)
+- [SSR Setup](./ssr-setup.md)

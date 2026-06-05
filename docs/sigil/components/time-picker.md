@@ -26,7 +26,7 @@ An accessible, keyboard-navigable time picker with a scrollable clock dropdown. 
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker label="Meeting time"></bit-time-picker>
+<sg-time-picker label="Meeting time"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -34,7 +34,7 @@ An accessible, keyboard-navigable time picker with a scrollable clock dropdown. 
 Listen for the `change` event to react to selections:
 
 ```js
-document.querySelector('bit-time-picker').addEventListener('change', (e) => {
+document.querySelector('sg-time-picker').addEventListener('change', (e) => {
   console.log(e.detail.value); // '09:30'
 });
 ```
@@ -46,7 +46,7 @@ Set `value` to an `HH:MM` (24-hour) string to initialise the selection.
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker label="Start time" value="09:30"></bit-time-picker>
+<sg-time-picker label="Start time" value="09:30"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -58,7 +58,7 @@ Use `time-format="12"` to show an AM/PM period column. The `change` event still 
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker label="Appointment" time-format="12" value="14:00"></bit-time-picker>
+<sg-time-picker label="Appointment" time-format="12" value="14:00"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -70,7 +70,7 @@ Control the minute increment with `minute-step`. Common values: `1`, `5`, `10`, 
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker label="Duration" minute-step="15"></bit-time-picker>
+<sg-time-picker label="Duration" minute-step="15"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -82,24 +82,24 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker
+<sg-time-picker
   label="Office hours"
   min="09:00"
   max="17:00">
-</bit-time-picker>
+</sg-time-picker>
 ```
 
 </ComponentPreview>
 
 ## Form Integration
 
-`bit-time-picker` is form-associated. The submitted value is the 24-hour `HH:MM` string, or an empty string when nothing is selected.
+`sg-time-picker` is form-associated. The submitted value is the 24-hour `HH:MM` string, or an empty string when nothing is selected.
 
 <ComponentPreview height="400px">
 
 ```html
 <form>
-  <bit-time-picker name="meeting_time" label="Meeting time" required></bit-time-picker>
+  <sg-time-picker name="meeting_time" label="Meeting time" required></sg-time-picker>
   <button type="submit">Submit</button>
 </form>
 ```
@@ -111,9 +111,9 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker size="sm" label="Small"></bit-time-picker>
-<bit-time-picker size="md" label="Medium"></bit-time-picker>
-<bit-time-picker size="lg" label="Large"></bit-time-picker>
+<sg-time-picker size="sm" label="Small"></sg-time-picker>
+<sg-time-picker size="md" label="Medium"></sg-time-picker>
+<sg-time-picker size="lg" label="Large"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -123,10 +123,10 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview>
 
 ```html
-<bit-time-picker variant="flat"     placeholder="Flat"></bit-time-picker>
-<bit-time-picker variant="bordered" placeholder="Bordered"></bit-time-picker>
-<bit-time-picker variant="outline"  placeholder="Outline"></bit-time-picker>
-<bit-time-picker variant="ghost"    placeholder="Ghost"></bit-time-picker>
+<sg-time-picker variant="flat"     placeholder="Flat"></sg-time-picker>
+<sg-time-picker variant="bordered" placeholder="Bordered"></sg-time-picker>
+<sg-time-picker variant="outline"  placeholder="Outline"></sg-time-picker>
+<sg-time-picker variant="ghost"    placeholder="Ghost"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -136,12 +136,12 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview>
 
 ```html
-<bit-time-picker placeholder="Default"></bit-time-picker>
-<bit-time-picker color="primary"   placeholder="Primary"></bit-time-picker>
-<bit-time-picker color="secondary" placeholder="Secondary"></bit-time-picker>
-<bit-time-picker color="success"   placeholder="Success"></bit-time-picker>
-<bit-time-picker color="warning"   placeholder="Warning"></bit-time-picker>
-<bit-time-picker color="error"     placeholder="Error"></bit-time-picker>
+<sg-time-picker placeholder="Default"></sg-time-picker>
+<sg-time-picker color="primary"   placeholder="Primary"></sg-time-picker>
+<sg-time-picker color="secondary" placeholder="Secondary"></sg-time-picker>
+<sg-time-picker color="success"   placeholder="Success"></sg-time-picker>
+<sg-time-picker color="warning"   placeholder="Warning"></sg-time-picker>
+<sg-time-picker color="error"     placeholder="Error"></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -151,16 +151,16 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker
+<sg-time-picker
   label="Departure time"
   helper="Must be between 06:00 and 22:00">
-</bit-time-picker>
+</sg-time-picker>
 
-<bit-time-picker
+<sg-time-picker
   label="Return time"
   error="A valid time is required"
   color="error">
-</bit-time-picker>
+</sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -170,7 +170,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 <ComponentPreview height="400px">
 
 ```html
-<bit-time-picker label="Read-only time" value="10:00" disabled></bit-time-picker>
+<sg-time-picker label="Read-only time" value="10:00" disabled></sg-time-picker>
 ```
 
 </ComponentPreview>
@@ -221,14 +221,14 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 | Part       | Description                                  |
 | ---------- | -------------------------------------------- |
-| `field`    | The trigger field (`bit-input`)              |
+| `field`    | The trigger field (`sg-input`)              |
 | `dropdown` | The floating time dropdown panel             |
 | `column`   | A scrollable column (hours / minutes / period) |
 | `option`   | An individual time option cell               |
 
 ## Accessibility
 
-`bit-time-picker` follows the [ARIA Combobox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) for the trigger and [Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) for the dropdown.
+`sg-time-picker` follows the [ARIA Combobox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) for the trigger and [Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) for the dropdown.
 
 - The trigger has `role="combobox"`, `aria-haspopup="listbox"`, and `aria-expanded` reflecting open/closed state.
 - The dropdown has `role="listbox"` with an `aria-label` derived from the component label.

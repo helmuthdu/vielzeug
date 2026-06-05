@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
 import { createCounterState, createErrorHelperState } from '../field-base';
-import { componentSignal } from '../scope';
+import { lifecycleSignal } from '../index';
 import { createTextField } from '../text-field';
 
 describe('field controls', () => {
@@ -18,6 +18,7 @@ describe('field controls', () => {
         () => {
           handle = createTextField({
             prefix: 'field',
+            signal: new AbortController().signal,
             value: signal(''),
           });
 
@@ -30,7 +31,7 @@ describe('field controls', () => {
       expect(handle.fieldId).toMatch(/^field-/);
       expect(handle.errorId).toMatch(/^error-/);
       expect(handle.assistiveId).toMatch(/^helper-/);
-      expect(handle.label.id).toMatch(/^label-/);
+      expect(handle.labelId).toMatch(/^label-/);
     });
 
     it('syncs its local value from the source signal', async () => {
@@ -42,6 +43,7 @@ describe('field controls', () => {
           value = signal('hello');
           handle = createTextField({
             prefix: 'test',
+            signal: new AbortController().signal,
             value,
           });
 
@@ -62,6 +64,7 @@ describe('field controls', () => {
         () => {
           handle = createTextField({
             prefix: 'test',
+            signal: new AbortController().signal,
             value: signal<string | undefined>(undefined),
           });
 
@@ -82,6 +85,7 @@ describe('field controls', () => {
           value = signal('01234567');
           handle = createTextField({
             prefix: 'test',
+            signal: new AbortController().signal,
             value,
           });
 
@@ -109,6 +113,7 @@ describe('field controls', () => {
           handle = createTextField({
             disabled: localDisabled,
             prefix: 'model',
+            signal: new AbortController().signal,
             value: signal('a'),
           });
 
@@ -133,6 +138,7 @@ describe('field controls', () => {
           handle = createChoiceField({
             multiple: signal(true),
             prefix: 'choice',
+            signal: new AbortController().signal,
             value: signal('us, gb ,, de'),
           });
 
@@ -160,6 +166,7 @@ describe('field controls', () => {
             helper: signal<string | undefined>('Hint'),
             multiple,
             prefix: 'choice',
+            signal: new AbortController().signal,
             value: signal('alpha'),
           });
 
@@ -194,6 +201,7 @@ describe('field controls', () => {
             disabled: signal(false),
             multiple: signal(true),
             prefix: 'choice-remove',
+            signal: new AbortController().signal,
             value: signal(['alpha', 'beta', 'gamma']),
           });
 
@@ -215,6 +223,7 @@ describe('field controls', () => {
             disabled: signal(false),
             multiple: signal(true),
             prefix: 'choice-clear',
+            signal: new AbortController().signal,
             value: signal(['alpha', 'beta']),
           });
 
@@ -237,6 +246,7 @@ describe('field controls', () => {
             disabled: signal(false),
             multiple: signal(true),
             prefix: 'choice-dedup',
+            signal: new AbortController().signal,
             value: signal(['alpha']),
           });
 
@@ -315,6 +325,7 @@ describe('field controls', () => {
         const tf = createTextField({
           onChange: changeSpy,
           prefix: 'test',
+          signal: new AbortController().signal,
           value: signal(''),
         });
 
@@ -340,6 +351,7 @@ describe('field controls', () => {
         const tf = createTextField({
           onFocus: focusSpy,
           prefix: 'test',
+          signal: new AbortController().signal,
           value: signal(''),
         });
 
@@ -360,7 +372,7 @@ describe('field controls', () => {
     it('does not attach focus listener when onFocus is omitted', async () => {
       // Should not throw — absence of onFocus is a valid case.
       const fixture = await mount(() => {
-        const tf = createTextField({ prefix: 'test', value: signal('') });
+        const tf = createTextField({ prefix: 'test', signal: new AbortController().signal, value: signal('') });
 
         return html`<input
           ref=${(el: HTMLInputElement | null) => {
@@ -387,10 +399,9 @@ describe('field controls', () => {
           handle = createCheckable({
             checked,
             helper: signal<string | undefined>('Check helper'),
-            host: document.createElement('div'),
             indeterminate,
             prefix: 'test',
-            role: 'checkbox',
+            signal: new AbortController().signal,
             value: signal('opt'),
           });
 
@@ -416,9 +427,8 @@ describe('field controls', () => {
         () => {
           handle = createCheckable({
             checked: signal(false),
-            host: document.createElement('div'),
             prefix: 'test',
-            role: 'checkbox',
+            signal: new AbortController().signal,
             value: signal('opt'),
           });
 
@@ -442,10 +452,9 @@ describe('field controls', () => {
           handle = createCheckable({
             checked: signal(false),
             clearIndeterminateFirst: true,
-            host: document.createElement('div'),
             indeterminate: signal(true),
             prefix: 'test',
-            role: 'checkbox',
+            signal: new AbortController().signal,
             value: signal('opt'),
           });
 
@@ -467,9 +476,8 @@ describe('field controls', () => {
           handle = createCheckable({
             checked: signal(false),
             disabled: signal(true),
-            host: document.createElement('div'),
             prefix: 'test',
-            role: 'checkbox',
+            signal: new AbortController().signal,
             value: signal('opt'),
           });
 
@@ -492,11 +500,10 @@ describe('field controls', () => {
           handle = createCheckable({
             checked: signal(false),
             group: { toggle },
-            host: document.createElement('div'),
             indeterminate: signal(true),
             onToggle,
             prefix: 'test',
-            role: 'checkbox',
+            signal: new AbortController().signal,
             value: signal('val'),
           });
 
@@ -529,6 +536,7 @@ describe('field controls', () => {
           handle = createTextField({
             hasLabel,
             prefix: 'field',
+            signal: new AbortController().signal,
             value: signal(''),
           });
 
@@ -537,15 +545,15 @@ describe('field controls', () => {
         { componentOptions: { formAssociated: true } },
       );
 
-      // hasLabel=true → label visible, aria.labelledBy non-null
-      expect(handle.label.show.value).toBe(true);
-      expect(handle.aria.labelledBy.value).not.toBeNull();
+      // hasLabel=true → label visible, ariaLabelledBy non-null
+      expect(handle.labelVisible.value).toBe(true);
+      expect(handle.ariaLabelledBy.value).not.toBeNull();
 
       hasLabel.value = false;
 
-      // hasLabel=false → label hidden, aria.labelledBy null
-      expect(handle.label.show.value).toBe(false);
-      expect(handle.aria.labelledBy.value).toBeNull();
+      // hasLabel=false → label hidden, ariaLabelledBy null
+      expect(handle.labelVisible.value).toBe(false);
+      expect(handle.ariaLabelledBy.value).toBeNull();
     });
 
     it('hasLabel takes precedence over the label text signal', async () => {
@@ -559,6 +567,7 @@ describe('field controls', () => {
             hasLabel,
             label,
             prefix: 'field',
+            signal: new AbortController().signal,
             value: signal(''),
           });
 
@@ -568,10 +577,10 @@ describe('field controls', () => {
       );
 
       // label prop is empty, but hasLabel override forces it visible
-      expect(handle.label.show.value).toBe(true);
+      expect(handle.labelVisible.value).toBe(true);
 
       hasLabel.value = false;
-      expect(handle.label.show.value).toBe(false);
+      expect(handle.labelVisible.value).toBe(false);
     });
   });
 
@@ -618,6 +627,7 @@ describe('field controls', () => {
             onChange: changeSpy,
             onInput: inputSpy,
             prefix: 'clear-test',
+            signal: new AbortController().signal,
             value: signal('hello'),
           });
 
@@ -665,15 +675,17 @@ describe('field controls', () => {
       expect(handle.selectedValue.value).toBe('a');
     });
 
-    it('manual cleanup() disposes subscriptions and is idempotent', async () => {
+    it('aborts cleanly without re-syncing after abort', async () => {
       let handle!: ReturnType<typeof createChoiceField>;
       let valueSignal!: ReturnType<typeof signal<string>>;
+      const controller = new AbortController();
 
       await mount(
         () => {
           valueSignal = signal('x');
           handle = createChoiceField({
-            prefix: 'choice-manual-cleanup',
+            prefix: 'choice-abort',
+            signal: controller.signal,
             value: valueSignal,
           });
 
@@ -684,13 +696,10 @@ describe('field controls', () => {
 
       expect(handle.selectedValue.value).toBe('x');
 
-      handle.cleanup();
+      controller.abort();
 
       valueSignal.value = 'y';
       expect(handle.selectedValue.value).toBe('x');
-
-      // Second call must not throw
-      expect(() => handle.cleanup()).not.toThrow();
     });
   });
 
@@ -702,6 +711,7 @@ describe('field controls', () => {
         const tf = createTextField({
           onChange: changeSpy,
           prefix: 'test',
+          signal: new AbortController().signal,
           value: signal(''),
         });
 
@@ -735,6 +745,7 @@ describe('field controls', () => {
         const tf = createTextField({
           onChange: changeSpy,
           prefix: 'test',
+          signal: new AbortController().signal,
           value: signal(''),
         });
 
@@ -763,16 +774,16 @@ describe('field controls', () => {
   });
 });
 
-describe('componentSignal()', () => {
+describe('lifecycleSignal()', () => {
   it('returns an AbortSignal that is not yet aborted', () => {
-    const sig = componentSignal(() => {});
+    const sig = lifecycleSignal(() => {});
 
     expect(sig.aborted).toBe(false);
   });
 
   it('aborts the signal when the onCleanup callback is invoked', () => {
     let cleanup!: () => void;
-    const sig = componentSignal((fn) => {
+    const sig = lifecycleSignal((fn) => {
       cleanup = fn;
     });
 
@@ -785,10 +796,10 @@ describe('componentSignal()', () => {
     let cleanup1!: () => void;
     let cleanup2!: () => void;
 
-    const sig1 = componentSignal((fn) => {
+    const sig1 = lifecycleSignal((fn) => {
       cleanup1 = fn;
     });
-    const sig2 = componentSignal((fn) => {
+    const sig2 = lifecycleSignal((fn) => {
       cleanup2 = fn;
     });
 

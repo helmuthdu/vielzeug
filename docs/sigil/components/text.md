@@ -25,7 +25,7 @@ A versatile typography component with semantic variants for consistent text styl
 ## Basic Usage
 
 ```html
-<bit-text>Regular paragraph text</bit-text>
+<sg-text>Regular paragraph text</sg-text>
 
 <script type="module">
   import '@vielzeug/sigil/text';
@@ -41,10 +41,10 @@ Normal paragraph text with standard line height. The default variant for general
 <ComponentPreview center vertical>
 
 ```html
-<bit-text>
+<sg-text>
   This is body text with normal styling. It's perfect for paragraphs, descriptions, and general content throughout your
   application.
-</bit-text>
+</sg-text>
 ```
 
 </ComponentPreview>
@@ -60,13 +60,13 @@ Emphasized text for headings with tighter line height and semibold weight. Defau
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="heading">Default heading (md — 24px)</bit-text>
-<bit-text variant="heading" size="xs">Heading xs (14px)</bit-text>
-<bit-text variant="heading" size="sm">Heading sm (16px)</bit-text>
-<bit-text variant="heading" size="md">Heading md (24px)</bit-text>
-<bit-text variant="heading" size="lg">Heading lg (32px)</bit-text>
-<bit-text variant="heading" size="xl">Heading xl (48px)</bit-text>
-<bit-text variant="heading" size="2xl">Heading 2xl (64px)</bit-text>
+<sg-text variant="heading">Default heading (md — 24px)</sg-text>
+<sg-text variant="heading" size="xs">Heading xs (14px)</sg-text>
+<sg-text variant="heading" size="sm">Heading sm (16px)</sg-text>
+<sg-text variant="heading" size="md">Heading md (24px)</sg-text>
+<sg-text variant="heading" size="lg">Heading lg (32px)</sg-text>
+<sg-text variant="heading" size="xl">Heading xl (48px)</sg-text>
+<sg-text variant="heading" size="2xl">Heading 2xl (64px)</sg-text>
 ```
 
 </ComponentPreview>
@@ -78,9 +78,9 @@ Medium weight text for form labels and UI labels.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="label">Email Address</bit-text>
-<bit-text variant="label">Password</bit-text>
-<bit-text variant="label">Remember me</bit-text>
+<sg-text variant="label">Email Address</sg-text>
+<sg-text variant="label">Password</sg-text>
+<sg-text variant="label">Remember me</sg-text>
 ```
 
 </ComponentPreview>
@@ -92,9 +92,9 @@ Smaller, secondary text for additional context or metadata.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="caption" color="muted"> Last updated 2 hours ago </bit-text>
-<bit-text variant="caption" color="muted"> Optional field </bit-text>
-<bit-text variant="caption" color="muted"> File size: 2.4 MB </bit-text>
+<sg-text variant="caption" color="muted"> Last updated 2 hours ago </sg-text>
+<sg-text variant="caption" color="muted"> Optional field </sg-text>
+<sg-text variant="caption" color="muted"> File size: 2.4 MB </sg-text>
 ```
 
 </ComponentPreview>
@@ -106,9 +106,9 @@ Uppercase text with letter spacing, ideal for categories or eyebrow text.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="overline" size="xs">Featured</bit-text>
-<bit-text variant="overline" size="xs">New Release</bit-text>
-<bit-text variant="overline" size="xs">Trending</bit-text>
+<sg-text variant="overline" size="xs">Featured</sg-text>
+<sg-text variant="overline" size="xs">New Release</sg-text>
+<sg-text variant="overline" size="xs">Trending</sg-text>
 ```
 
 </ComponentPreview>
@@ -120,9 +120,9 @@ Monospace text for inline code snippets.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="code">npm install @vielzeug/sigil</bit-text>
-<bit-text variant="code">const foo = 'bar';</bit-text>
-<bit-text variant="code">git commit -m "Initial commit"</bit-text>
+<sg-text variant="code">npm install @vielzeug/sigil</sg-text>
+<sg-text variant="code">const foo = 'bar';</sg-text>
+<sg-text variant="code">git commit -m "Initial commit"</sg-text>
 ```
 
 </ComponentPreview>
@@ -145,12 +145,12 @@ Choose from 6 size steps. The token scale resolved depends on the active variant
 <ComponentPreview center vertical>
 
 ```html
-<bit-text size="xs">Extra small text (xs)</bit-text>
-<bit-text size="sm">Small text (sm)</bit-text>
-<bit-text size="md">Medium text (md)</bit-text>
-<bit-text size="lg">Large text (lg)</bit-text>
-<bit-text size="xl">Extra large text (xl)</bit-text>
-<bit-text size="2xl">2XL text (2xl)</bit-text>
+<sg-text size="xs">Extra small text (xs)</sg-text>
+<sg-text size="sm">Small text (sm)</sg-text>
+<sg-text size="md">Medium text (md)</sg-text>
+<sg-text size="lg">Large text (lg)</sg-text>
+<sg-text size="xl">Extra large text (xl)</sg-text>
+<sg-text size="2xl">2XL text (2xl)</sg-text>
 ```
 
 </ComponentPreview>
@@ -164,12 +164,12 @@ Use semantic colors to convey meaning and maintain consistency.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text color="primary">Primary colored text</bit-text>
-<bit-text color="secondary">Secondary colored text</bit-text>
-<bit-text color="info">Info colored text</bit-text>
-<bit-text color="success">Success colored text</bit-text>
-<bit-text color="warning">Warning colored text</bit-text>
-<bit-text color="error">Error colored text</bit-text>
+<sg-text color="primary">Primary colored text</sg-text>
+<sg-text color="secondary">Secondary colored text</sg-text>
+<sg-text color="info">Info colored text</sg-text>
+<sg-text color="success">Success colored text</sg-text>
+<sg-text color="warning">Warning colored text</sg-text>
+<sg-text color="error">Error colored text</sg-text>
 ```
 
 </ComponentPreview>
@@ -190,12 +190,12 @@ Automatic text colors that adapt to your theme. Each value maps to a semantic `-
 <ComponentPreview center vertical>
 
 ```html
-<bit-text color="heading">Heading color (highest contrast)</bit-text>
-<bit-text color="body">Body text color (default)</bit-text>
-<bit-text color="muted">Muted/secondary text</bit-text>
-<bit-text color="tertiary">Tertiary text</bit-text>
-<bit-text color="disabled">Disabled text</bit-text>
-<bit-text color="contrast">Contrast text (for colored backgrounds)</bit-text>
+<sg-text color="heading">Heading color (highest contrast)</sg-text>
+<sg-text color="body">Body text color (default)</sg-text>
+<sg-text color="muted">Muted/secondary text</sg-text>
+<sg-text color="tertiary">Tertiary text</sg-text>
+<sg-text color="disabled">Disabled text</sg-text>
+<sg-text color="contrast">Contrast text (for colored backgrounds)</sg-text>
 ```
 
 </ComponentPreview>
@@ -207,10 +207,10 @@ Four weight options for emphasis control.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text weight="normal">Normal weight (400)</bit-text>
-<bit-text weight="medium">Medium weight (500)</bit-text>
-<bit-text weight="semibold">Semibold weight (600)</bit-text>
-<bit-text weight="bold">Bold weight (700)</bit-text>
+<sg-text weight="normal">Normal weight (400)</sg-text>
+<sg-text weight="medium">Medium weight (500)</sg-text>
+<sg-text weight="semibold">Semibold weight (600)</sg-text>
+<sg-text weight="bold">Bold weight (700)</sg-text>
 ```
 
 </ComponentPreview>
@@ -220,27 +220,27 @@ Four weight options for emphasis control.
 Control text alignment for layout purposes.
 
 ::: info Display behaviour
-`bit-text` is `display: block` by default. `as="span"`, `as="label"`, and `as="code"` switch it to `display: inline`. The `align` attribute has no effect on these inline variants unless `display: block` is also applied.
+`sg-text` is `display: block` by default. `as="span"`, `as="label"`, and `as="code"` switch it to `display: inline`. The `align` attribute has no effect on these inline variants unless `display: block` is also applied.
 :::
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-box style="width: 100%">
-  <bit-text align="left">Left aligned text</bit-text>
-</bit-box>
-<bit-box style="width: 100%;">
-  <bit-text align="center">Centered text</bit-text>
-</bit-box>
-<bit-box style="width: 100%;">
-  <bit-text align="right">Right aligned text</bit-text>
-</bit-box>
-<bit-box style="width: 100%;">
-  <bit-text align="justify">
+<sg-box style="width: 100%">
+  <sg-text align="left">Left aligned text</sg-text>
+</sg-box>
+<sg-box style="width: 100%;">
+  <sg-text align="center">Centered text</sg-text>
+</sg-box>
+<sg-box style="width: 100%;">
+  <sg-text align="right">Right aligned text</sg-text>
+</sg-box>
+<sg-box style="width: 100%;">
+  <sg-text align="justify">
     Justified text distributes words evenly across the line width. This is useful for formal documents or
     newspaper-style layouts.
-  </bit-text>
-</bit-box>
+  </sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -254,12 +254,12 @@ Enable single-line truncation with ellipsis for overflow text.
 <ComponentPreview center vertical>
 
 ```html
-<bit-box style="width: 100%; max-width: 400px;">
-  <bit-text truncate>
+<sg-box style="width: 100%; max-width: 400px;">
+  <sg-text truncate>
     This is a very long text that will be truncated with an ellipsis when it exceeds the width of its container. The
     truncation happens automatically using CSS text-overflow.
-  </bit-text>
-</bit-box>
+  </sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -275,12 +275,12 @@ Clamp text to a fixed number of lines with an ellipsis — ideal for card descri
 <ComponentPreview center vertical>
 
 ```html
-<bit-box style="width: 100%; max-width: 400px;">
-  <bit-text lines="2">
+<sg-box style="width: 100%; max-width: 400px;">
+  <sg-text lines="2">
     This long description will be clamped to exactly two lines regardless of how much text is provided. The overflow is
     hidden with a trailing ellipsis, keeping layouts consistent without JavaScript.
-  </bit-text>
-</bit-box>
+  </sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -296,9 +296,9 @@ Apply italic styling to text.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text italic>Italic text</bit-text>
-<bit-text italic weight="bold">Bold italic text</bit-text>
-<bit-text italic color="primary">Italic colored text</bit-text>
+<sg-text italic>Italic text</sg-text>
+<sg-text italic weight="bold">Bold italic text</sg-text>
+<sg-text italic color="primary">Italic colored text</sg-text>
 ```
 
 </ComponentPreview>
@@ -313,15 +313,15 @@ Block elements (`p`, `div`, `h1`–`h6`) render as `display: block`. Inline elem
 
 ```html
 <!-- Block-level — role="heading" + aria-level set automatically -->
-<bit-text as="h1" variant="heading" size="2xl">H1 Heading</bit-text>
-<bit-text as="h2" variant="heading" size="xl">H2 Heading</bit-text>
-<bit-text as="p">Paragraph with proper semantics</bit-text>
-<bit-text as="div">Div container</bit-text>
+<sg-text as="h1" variant="heading" size="2xl">H1 Heading</sg-text>
+<sg-text as="h2" variant="heading" size="xl">H2 Heading</sg-text>
+<sg-text as="p">Paragraph with proper semantics</sg-text>
+<sg-text as="div">Div container</sg-text>
 
 <!-- Inline — renders as display: inline -->
-<bit-text as="span">Inline span</bit-text>
-<bit-text as="label">Form label</bit-text>
-<bit-text as="code" variant="code">inline code</bit-text>
+<sg-text as="span">Inline span</sg-text>
+<sg-text as="label">Form label</sg-text>
+<sg-text as="code" variant="code">inline code</sg-text>
 ```
 
 </ComponentPreview>
@@ -335,17 +335,17 @@ Combine multiple text components for rich layouts.
 <ComponentPreview center vertical>
 
 ```html
-<bit-box style="width: 100%;">
-  <bit-text variant="overline" color="primary" size="xs">Featured Product</bit-text>
-  <bit-text variant="heading" size="xl" as="h2" style="margin-top: var(--size-2);"> Premium Headphones </bit-text>
-  <bit-text variant="caption" color="muted" style="display: block; margin-top: var(--size-1);">
+<sg-box style="width: 100%;">
+  <sg-text variant="overline" color="primary" size="xs">Featured Product</sg-text>
+  <sg-text variant="heading" size="xl" as="h2" style="margin-top: var(--size-2);"> Premium Headphones </sg-text>
+  <sg-text variant="caption" color="muted" style="display: block; margin-top: var(--size-1);">
     Added 2 days ago • Electronics
-  </bit-text>
-  <bit-text style="display: block; margin-top: var(--size-3);">
+  </sg-text>
+  <sg-text style="display: block; margin-top: var(--size-3);">
     High-quality wireless headphones with active noise cancellation, 40-hour battery life, and premium comfort for
     all-day wear.
-  </bit-text>
-</bit-box>
+  </sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -358,11 +358,11 @@ Label with helper text pattern.
 
 ```html
 <div>
-  <bit-text variant="label" as="label" style="display: block; margin-bottom: var(--size-1);"> Email Address </bit-text>
-  <bit-text variant="caption" color="muted" size="xs" style="display: block; margin-bottom: var(--size-2);">
+  <sg-text variant="label" as="label" style="display: block; margin-bottom: var(--size-1);"> Email Address </sg-text>
+  <sg-text variant="caption" color="muted" size="xs" style="display: block; margin-bottom: var(--size-2);">
     We'll never share your email with anyone else
-  </bit-text>
-  <bit-input type="email" placeholder="you@example.com" />
+  </sg-text>
+  <sg-input type="email" placeholder="you@example.com" />
 </div>
 ```
 
@@ -375,13 +375,13 @@ Use semantic colors for feedback.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text color="success" weight="medium" style="display: block; margin-bottom: var(--size-2);">
+<sg-text color="success" weight="medium" style="display: block; margin-bottom: var(--size-2);">
   ✓ Your changes have been saved successfully
-</bit-text>
-<bit-text color="warning" weight="medium" style="display: block; margin-bottom: var(--size-2);">
+</sg-text>
+<sg-text color="warning" weight="medium" style="display: block; margin-bottom: var(--size-2);">
   ⚠ Please review the highlighted fields
-</bit-text>
-<bit-text color="error" weight="medium" style="display: block;"> ✗ An error occurred. Please try again </bit-text>
+</sg-text>
+<sg-text color="error" weight="medium" style="display: block;"> ✗ An error occurred. Please try again </sg-text>
 ```
 
 </ComponentPreview>
@@ -393,14 +393,14 @@ Show file information with truncation using width constraints.
 <ComponentPreview center vertical>
 
 ```html
-<bit-box style="max-width: 250px;">
-  <bit-text truncate color="primary" weight="medium">
+<sg-box style="max-width: 250px;">
+  <sg-text truncate color="primary" weight="medium">
     very-long-document-name-that-needs-truncation-for-display.pdf
-  </bit-text>
-  <bit-text variant="caption" color="muted" size="xs" style="display: block; margin-top: var(--size-1);">
+  </sg-text>
+  <sg-text variant="caption" color="muted" size="xs" style="display: block; margin-top: var(--size-1);">
     2.4 MB • PDF Document
-  </bit-text>
-</bit-box>
+  </sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -452,7 +452,7 @@ Show file information with truncation using width constraints.
 
 The text component follows WAI-ARIA best practices.
 
-### `bit-text`
+### `sg-text`
 
 ✅ **Automatic Heading ARIA**
 
@@ -489,6 +489,6 @@ Always set `as` for headings and form labels. For page titles, pair `as="h1"` wi
 
 - Forget that `variant="heading"` uses the heading scale — `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem.
 - Rely on `color` alone to convey meaning — always pair with a descriptive text label.
-- Use `bit-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.
+- Use `sg-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.
 - Set both `truncate` and `lines` on the same element; use one or the other.
 - Use `color="muted"` for headings — it resolves to `--text-color-secondary` (contrast-600) which may not meet AAA for small heading sizes.

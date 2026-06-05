@@ -15,7 +15,7 @@ Sigil is built on native Web Components standards and works in every framework t
 
 ## React
 
-React 18 and earlier do not forward custom events dispatched by web components through JSX props. Use a `ref` and `addEventListener` for `bit-*` events, or use the native DOM `onClick` (which maps to the browser's `click` event) for simple click actions.
+React 18 and earlier do not forward custom events dispatched by web components through JSX props. Use a `ref` and `addEventListener` for `sg-*` events, or use the native DOM `onClick` (which maps to the browser's `click` event) for simple click actions.
 
 ### Basic Usage
 
@@ -26,10 +26,10 @@ import '@vielzeug/sigil/input';
 function ContactForm() {
   return (
     <form>
-      <bit-input label="Email" type="email" required />
-      <bit-button variant="solid" color="primary" type="submit">
+      <sg-input label="Email" type="email" required />
+      <sg-button variant="solid" color="primary" type="submit">
         Send
-      </bit-button>
+      </sg-button>
     </form>
   );
 }
@@ -37,7 +37,7 @@ function ContactForm() {
 
 ### Custom Event Handling
 
-Custom events (like `bit-change`) are not forwarded through JSX props. Use a `ref` and `addEventListener`:
+Custom events (like `sg-change`) are not forwarded through JSX props. Use a `ref` and `addEventListener`:
 
 ```tsx
 import { useEffect, useRef } from 'react';
@@ -55,11 +55,11 @@ function SearchBox() {
       console.log('Search:', value);
     };
 
-    el.addEventListener('bit-change', handleChange);
-    return () => el.removeEventListener('bit-change', handleChange);
+    el.addEventListener('sg-change', handleChange);
+    return () => el.removeEventListener('sg-change', handleChange);
   }, []);
 
-  return <bit-input ref={inputRef} label="Search" />;
+  return <sg-input ref={inputRef} label="Search" />;
 }
 ```
 
@@ -72,14 +72,14 @@ Register custom elements in a global type declaration so TypeScript recognises t
 declare namespace React {
   namespace JSX {
     interface IntrinsicElements {
-      'bit-button': React.HTMLAttributes<HTMLElement> & {
+      'sg-button': React.HTMLAttributes<HTMLElement> & {
         variant?: 'solid' | 'outline' | 'ghost';
         color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
         size?: 'sm' | 'md' | 'lg';
         loading?: boolean;
         disabled?: boolean;
       };
-      'bit-input': React.HTMLAttributes<HTMLElement> & {
+      'sg-input': React.HTMLAttributes<HTMLElement> & {
         label?: string;
         type?: string;
         required?: boolean;
@@ -93,7 +93,7 @@ declare namespace React {
 
 ### Vite + React Setup
 
-In Vite projects, tell the React plugin to treat `bit-*` tags as custom elements so it doesn't warn about unknown elements:
+In Vite projects, tell the React plugin to treat `sg-*` tags as custom elements so it doesn't warn about unknown elements:
 
 ```typescript
 // vite.config.ts
@@ -110,7 +110,7 @@ export default defineConfig({
 ```
 
 ::: tip React 19+
-React 19 added first-class support for web component custom events via JSX props. If you are on React 19, `on-bit-change` style props work without `addEventListener`.
+React 19 added first-class support for web component custom events via JSX props. If you are on React 19, `on-sg-change` style props work without `addEventListener`.
 :::
 
 ## Vue 3
@@ -121,8 +121,8 @@ Vue 3 has excellent native support for Web Components. No extra configuration is
 
 ```vue
 <template>
-  <bit-input label="Email" type="email" :disabled="isLoading" @bit-change="handleChange" />
-  <bit-button variant="solid" color="primary" :loading="isLoading" @click="submit"> Submit </bit-button>
+  <sg-input label="Email" type="email" :disabled="isLoading" @sg-change="handleChange" />
+  <sg-button variant="solid" color="primary" :loading="isLoading" @click="submit"> Submit </sg-button>
 </template>
 
 <script setup lang="ts">
@@ -144,7 +144,7 @@ function submit() {
 
 ### Vite + Vue Setup
 
-Tell the Vue compiler to treat `bit-*` tags as custom elements to suppress template warnings:
+Tell the Vue compiler to treat `sg-*` tags as custom elements to suppress template warnings:
 
 ```typescript
 // vite.config.ts
@@ -156,7 +156,7 @@ export default defineConfig({
     vue({
       template: {
         compilerOptions: {
-          isCustomElement: (tag) => tag.startsWith('bit-'),
+          isCustomElement: (tag) => tag.startsWith('sg-'),
         },
       },
     }),
@@ -166,10 +166,10 @@ export default defineConfig({
 
 ### Two-Way Binding
 
-Vue's `v-model` doesn't work directly on web components. Bind `:value` and `@bit-change` manually:
+Vue's `v-model` doesn't work directly on web components. Bind `:value` and `@sg-change` manually:
 
 ```vue
-<bit-input :value="email" @bit-change="email = $event.detail.value" label="Email" />
+<sg-input :value="email" @sg-change="email = $event.detail.value" label="Email" />
 ```
 
 ## Svelte
@@ -186,14 +186,14 @@ Svelte handles Web Components natively without any extra configuration.
   let email = $state('');
 </script>
 
-<bit-input
+<sg-input
   label="Email"
   value={email}
-  onbit-change={(e) => (email = e.detail.value)}
+  onsg-change={(e) => (email = e.detail.value)}
 />
-<bit-button variant="solid" color="primary" onclick={() => console.log(email)}>
+<sg-button variant="solid" color="primary" onclick={() => console.log(email)}>
   Submit
-</bit-button>
+</sg-button>
 ```
 
 ### Svelte 4
@@ -204,9 +204,9 @@ Svelte handles Web Components natively without any extra configuration.
   let count = 0;
 </script>
 
-<bit-button on:click={() => count++}>
+<sg-button on:click={() => count++}>
   Clicked {count} times
-</bit-button>
+</sg-button>
 ```
 
 ## Angular
@@ -223,8 +223,8 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
   standalone: true,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
-    <bit-input label="Email" [attr.value]="email" (bit-change)="onEmailChange($event)"></bit-input>
-    <bit-button [attr.loading]="isLoading || null" (click)="submit()">Submit</bit-button>
+    <sg-input label="Email" [attr.value]="email" (sg-change)="onEmailChange($event)"></sg-input>
+    <sg-button [attr.loading]="isLoading || null" (click)="submit()">Submit</sg-button>
   `,
 })
 export class AppComponent {

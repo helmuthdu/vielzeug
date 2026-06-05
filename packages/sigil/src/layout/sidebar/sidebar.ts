@@ -53,7 +53,7 @@ const parseMaxWidthPx = (query: string | undefined): number | undefined => {
 const resolveContainerElement = (el: HTMLElement): HTMLElement | null => {
   let container = el.parentElement;
 
-  while (container?.tagName.toLowerCase() === 'bit-grid-item') {
+  while (container?.tagName.toLowerCase() === 'sg-grid-item') {
     container = container.parentElement;
   }
 
@@ -68,7 +68,7 @@ const readContainerWidth = (el: HTMLElement): number => {
   return el.offsetWidth;
 };
 
-/** Context provided by `bit-sidebar` to its `bit-sidebar-group` and `bit-sidebar-item` children. */
+/** Context provided by `sg-sidebar` to its `sg-sidebar-group` and `sg-sidebar-item` children. */
 export type SidebarContext = {
   collapsed: ReadonlySignal<boolean>;
   mobileOpen: ReadonlySignal<boolean>;
@@ -79,11 +79,11 @@ export type SidebarContext = {
 /** Injection key for the sidebar context. */
 export const SIDEBAR_CTX = createContext<SidebarContext>('SidebarContext');
 
-// ─── bit-sidebar styles ──────────────────────────────────────────────────────
+// ─── sg-sidebar styles ──────────────────────────────────────────────────────
 
-/** bit-sidebar element interface */
+/** sg-sidebar element interface */
 export type SidebarElement = HTMLElement &
-  BitSidebarProps & {
+  SgSidebarProps & {
     /** Close the drawer in bottom-nav mode. */
     closeMobile(): void;
     /** Open the drawer in bottom-nav mode. */
@@ -98,16 +98,16 @@ export type SidebarElement = HTMLElement &
 
 /** Sidebar component properties */
 
-export type BitSidebarEvents = {
+export type SgSidebarEvents = {
   'collapsed-change': { collapsed: boolean; source: SidebarCollapseSource };
   'mobile-open-change': { open: boolean; source: SidebarMobileSource };
 };
 
-export type BitSidebarGroupEvents = {
+export type SgSidebarGroupEvents = {
   'open-change': { open: boolean };
 };
 
-export type BitSidebarProps = {
+export type SgSidebarProps = {
   /** CSS media query that switches the sidebar to bottom navigation mode */
   'bottom-nav-at'?: string;
   /** Controlled collapsed state */
@@ -135,9 +135,11 @@ export type BitSidebarProps = {
 };
 
 /**
- * `bit-sidebar` — A collapsible navigation sidebar with group and item support.
+ * `sg-sidebar` — A collapsible navigation sidebar with group and item support.
  *
- * @element bit-sidebar
+ * @element sg-sidebar
+ * @element sg-sidebar-group - Labelled group of navigation items
+ * @element sg-sidebar-item - Individual navigation link or button
  *
  * @attr {boolean} collapsed - Controlled collapsed state
  * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
@@ -145,10 +147,11 @@ export type BitSidebarProps = {
  * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
  *
- * @fires collapsed-change - Fired when collapsed state changes
+ * @fires collapsed-change - Fired when collapsed state changes. detail: { collapsed: boolean; source: string }
+ * @fires mobile-open-change - Fired when mobile overlay open state changes. detail: { open: boolean; source: string }
  *
  * @slot header - Branding or logo content above the nav
- * @slot - Navigation content (bit-sidebar-group / bit-sidebar-item)
+ * @slot - Navigation content (sg-sidebar-group / sg-sidebar-item)
  * @slot footer - Footer content below the nav (user info, settings, etc.)
  *
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
@@ -174,20 +177,20 @@ export type BitSidebarProps = {
  * @part item - Item root element.
  * @example
  * ```html
- * <bit-sidebar collapsible label="App navigation">
+ * <sg-sidebar collapsible label="App navigation">
  *   <span slot="header">My App</span>
- *   <bit-sidebar-group label="Main">
- *     <bit-sidebar-item href="/dashboard" active>Dashboard</bit-sidebar-item>
- *     <bit-sidebar-item href="/settings">Settings</bit-sidebar-item>
- *   </bit-sidebar-group>
- * </bit-sidebar>
+ *   <sg-sidebar-group label="Main">
+ *     <sg-sidebar-item href="/dashboard" active>Dashboard</sg-sidebar-item>
+ *     <sg-sidebar-item href="/settings">Settings</sg-sidebar-item>
+ *   </sg-sidebar-group>
+ * </sg-sidebar>
  *
  * <!-- Auto-collapse on mobile -->
- * <bit-sidebar collapsible responsive="(max-width: 768px)">...</bit-sidebar>
+ * <sg-sidebar collapsible responsive="(max-width: 768px)">...</sg-sidebar>
  * ```
  */
-export const SIDEBAR_TAG = 'bit-sidebar' as const;
-define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
+export const SIDEBAR_TAG = 'sg-sidebar' as const;
+define<SgSidebarProps, SgSidebarEvents>(SIDEBAR_TAG, {
   props: {
     'bottom-nav-at': prop.string(),
     collapsed: prop.bool(false),
@@ -248,15 +251,15 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
       const next = slots
         .elements()
         .value.filter(
-          (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'bit-sidebar-item',
+          (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'sg-sidebar-item',
         )
         .map((el, index) => {
           const iconSlotEl =
             (el.querySelector(':scope > [slot="icon"]') as HTMLElement | null) ??
             (el.querySelector('[slot="icon"]') as HTMLElement | null);
           const directIconName =
-            iconSlotEl?.tagName.toLowerCase() === 'bit-icon' ? iconSlotEl.getAttribute('name') : null;
-          const nestedIconName = iconSlotEl?.querySelector('bit-icon')?.getAttribute('name') ?? null;
+            iconSlotEl?.tagName.toLowerCase() === 'sg-icon' ? iconSlotEl.getAttribute('name') : null;
+          const nestedIconName = iconSlotEl?.querySelector('sg-icon')?.getAttribute('name') ?? null;
           const rawLabel = (el.textContent ?? '').trim();
 
           return {
@@ -531,7 +534,7 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
         slots.elements(),
         (elements) => {
           const directItems = elements.filter(
-            (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'bit-sidebar-item',
+            (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'sg-sidebar-item',
           );
 
           bindItemObservers(directItems);
@@ -579,7 +582,7 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
             aria-expanded="${() => !isCollapsed()}"
             @click="${doToggle}">
             <span class="toggle-icon" aria-hidden="true">
-              <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+              <sg-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></sg-icon>
             </span>
           </button>
         </div>
@@ -604,7 +607,7 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
                   aria-current="${item.active ? 'page' : null}"
                   data-active="${item.active ? 'true' : null}">
                   <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
-                    <bit-icon :name="${item.iconName}" size="18" stroke-width="2"></bit-icon>
+                    <sg-icon :name="${item.iconName}" size="18" stroke-width="2"></sg-icon>
                   </span>
                   <span class="bottom-tab-label">${item.label}</span>
                 </a>
@@ -620,7 +623,7 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
                 data-active="${item.active ? 'true' : null}"
                 @click=${() => item.source.click()}>
                 <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
-                  <bit-icon :name="${item.iconName}" size="18" stroke-width="2"></bit-icon>
+                  <sg-icon :name="${item.iconName}" size="18" stroke-width="2"></sg-icon>
                 </span>
                 <span class="bottom-tab-label">${item.label}</span>
               </button>
@@ -632,10 +635,10 @@ define<BitSidebarProps, BitSidebarEvents>(SIDEBAR_TAG, {
   styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
 });
 
-// ─── bit-sidebar-group styles ────────────────────────────────────────────────
+// ─── sg-sidebar-group styles ────────────────────────────────────────────────
 
 /** Sidebar group properties */
-export type BitSidebarGroupProps = {
+export type SgSidebarGroupProps = {
   /** Whether this group can be collapsed */
   collapsible?: boolean;
   /** Initial open state in uncontrolled mode */
@@ -647,29 +650,29 @@ export type BitSidebarGroupProps = {
 };
 
 /**
- * `bit-sidebar-group` — A labelled section within `bit-sidebar`.
+ * `sg-sidebar-group` — A labelled section within `sg-sidebar`.
  *
- * @element bit-sidebar-group
+ * @element sg-sidebar-group
  *
  * @attr {string} label - Group label text
  * @attr {boolean} collapsible - Whether this group can be toggled open/closed
  * @attr {boolean} open - Controlled expanded state
  * @attr {boolean} default-open - Initial expanded state in uncontrolled mode
  *
- * @fires open-change - Fired when the group open state changes (collapsible groups only)
+ * @fires open-change - Fired when the group open state changes (collapsible groups only). detail: { open: boolean }
  *
- * @slot - Navigation items (`bit-sidebar-item`)
+ * @slot - Navigation items (`sg-sidebar-item`)
  * @slot icon - Icon displayed before the label
  *
  * @example
  * ```html
- * <bit-sidebar-group label="Main" collapsible open>
- *   <bit-sidebar-item href="/home">Home</bit-sidebar-item>
- * </bit-sidebar-group>
+ * <sg-sidebar-group label="Main" collapsible open>
+ *   <sg-sidebar-item href="/home">Home</sg-sidebar-item>
+ * </sg-sidebar-group>
  * ```
  */
-export const SIDEBAR_GROUP_TAG = 'bit-sidebar-group' as const;
-define<BitSidebarGroupProps, BitSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
+export const SIDEBAR_GROUP_TAG = 'sg-sidebar-group' as const;
+define<SgSidebarGroupProps, SgSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
   props: {
     collapsible: prop.bool(false),
     'default-open': prop.bool(true),
@@ -730,7 +733,7 @@ define<BitSidebarGroupProps, BitSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
           </span>
           <span class="group-label" part="group-label">${props.label}</span>
           <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
-            <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></sg-icon>
           </span>
         </summary>
         <div class="group-items" part="group-items" role="list">
@@ -742,10 +745,10 @@ define<BitSidebarGroupProps, BitSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
   styles: [reducedMotionMixin, groupStyles],
 });
 
-// ─── bit-sidebar-item styles ─────────────────────────────────────────────────
+// ─── sg-sidebar-item styles ─────────────────────────────────────────────────
 
 /** Sidebar item properties */
-export type BitSidebarItemProps = {
+export type SgSidebarItemProps = {
   /** Whether this item represents the current page/section */
   active?: boolean;
   /** Whether this item is disabled */
@@ -765,12 +768,12 @@ export type BitSidebarItemProps = {
 };
 
 /**
- * `bit-sidebar-item` — An individual navigation item in a `bit-sidebar`.
+ * `sg-sidebar-item` — An individual navigation item in a `sg-sidebar`.
  *
  * Renders as an `<a>` when `href` is provided, otherwise as a `<button>`.
  * Marks the active page via `aria-current="page"` when the `active` attribute is set.
  *
- * @element bit-sidebar-item
+ * @element sg-sidebar-item
  *
  * @attr {string} href - Link URL; renders an anchor when set
  * @attr {boolean} active - Marks the item as the current page
@@ -796,20 +799,20 @@ export type BitSidebarItemProps = {
  *
  * @example
  * ```html
- * <bit-sidebar-item href="/dashboard" active>
+ * <sg-sidebar-item href="/dashboard" active>
  *   <span slot="icon">🏠</span>
  *   Dashboard
- * </bit-sidebar-item>
+ * </sg-sidebar-item>
  *
- * <bit-sidebar-item href="/users">
+ * <sg-sidebar-item href="/users">
  *   <span slot="icon">👤</span>
  *   Users
- *   <bit-badge slot="end" color="primary">3</bit-badge>
- * </bit-sidebar-item>
+ *   <sg-badge slot="end" color="primary">3</sg-badge>
+ * </sg-sidebar-item>
  * ```
  */
-export const SIDEBAR_ITEM_TAG = 'bit-sidebar-item' as const;
-define<BitSidebarItemProps>(SIDEBAR_ITEM_TAG, {
+export const SIDEBAR_ITEM_TAG = 'sg-sidebar-item' as const;
+define<SgSidebarItemProps>(SIDEBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     disabled: prop.bool(false),

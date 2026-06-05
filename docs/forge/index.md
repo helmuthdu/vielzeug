@@ -5,7 +5,7 @@ package: forge
 category: forms
 keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
 related: [spell, ripple, courier]
-exports: [createForm]
+exports: [createForm, toFormData, ValidationModes, FORM_ERROR]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createForm]
 
 **Package:** `@vielzeug/forge` &nbsp;·&nbsp; **Category:** Forms
 
-**Key exports:** `createForm`
+**Key exports:** `createForm` · `toFormData` · `ValidationModes` · `FORM_ERROR`
 
 **When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
 

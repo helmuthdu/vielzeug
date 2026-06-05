@@ -1,73 +1,11 @@
-import { type ReadonlySignal, type Signal, signal, untrack, watch } from '@vielzeug/ripple';
+import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
-import {
-  type CounterState,
-  createCounterState,
-  createField,
-  type FieldHandle,
-  type FieldOptions,
-  type ValidationTrigger,
-} from './field-base';
+import { type CounterState, createCounterState, createField, type FieldHandle, type FieldOptions } from './field-base';
+import { syncedSignal } from './utils';
 
 // Re-export types from field-base for consumers that need them directly.
 export type { CounterOptions, CounterState, ErrorHelperOptions, ErrorHelperState } from './field-base';
 export { createCounterState, createErrorHelperState } from './field-base';
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
-
-type TextFieldListenerOptions = {
-  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-  /**
-   * Called synchronously before value extraction on every input event.
-   * Use only for DOM side-effects (e.g. auto-resize measurement) that must
-   * run before the reactive value is updated.
-   */
-  onBeforeInput?: (event: Event) => void;
-  onBlur?: (event: FocusEvent) => void;
-  onChange?: (event: Event, value: string) => void;
-  onFocus?: (event: FocusEvent) => void;
-  onInput?: (event: Event, value: string) => void;
-  triggerValidation?: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
-};
-
-const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => void) => {
-  const { element, onBeforeInput, onBlur, onChange, onFocus, onInput, triggerValidation } = options;
-  const cleanups: Array<() => void> = [];
-
-  const on = <E extends Event>(type: string, handler: (event: E) => void): void => {
-    element.addEventListener(type, handler as EventListener);
-    cleanups.push(() => element.removeEventListener(type, handler as EventListener));
-  };
-
-  if (onFocus) {
-    on('focus', (event: Event) => {
-      onFocus(event as FocusEvent);
-    });
-  }
-
-  if (onInput || onBeforeInput) {
-    on('input', (event: Event) => {
-      event.stopPropagation();
-      onBeforeInput?.(event);
-      onInput?.(event, element.value);
-    });
-  }
-
-  on('change', (event: Event) => {
-    event.stopPropagation();
-    onChange?.(event, element.value);
-    triggerValidation?.('change');
-  });
-
-  on('blur', (event: Event) => {
-    onBlur?.(event as FocusEvent);
-    triggerValidation?.('blur');
-  });
-
-  return () => {
-    for (const dispose of cleanups) dispose();
-  };
-};
 
 // ── Text field ────────────────────────────────────────────────────────────────
 
@@ -86,14 +24,8 @@ export type TextFieldOptions = FieldOptions & {
   onChange?: (event: Event, value: string) => void;
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
-  /**
-   * Optional `AbortSignal` tied to the component lifecycle.
-   * When provided, the internal value-sync watcher is disposed automatically
-   * on abort — no need to call `cleanup()` manually.
-   *
-   * Obtain via `componentSignal(onCleanup)` inside a craft `setup()` function.
-   */
-  signal?: AbortSignal;
+  /** `AbortSignal` from the component lifecycle. The internal value-sync watcher is disposed on abort. */
+  signal: AbortSignal;
   value: ReadonlySignal<string | undefined>;
 };
 
@@ -122,14 +54,7 @@ export type TextFieldHandle = FieldHandle & {
 };
 
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
-  // Inline synced signal: local writable value kept in sync with external prop.
-  const value = signal<string>(untrack(() => String(options.value.value ?? '')));
-  const valueSub = watch(options.value, (next) => {
-    value.value = String(next ?? '');
-  });
-
-  // Wire cleanup to component lifecycle signal if provided.
-  options.signal?.addEventListener('abort', () => valueSub.dispose(), { once: true });
+  const value = syncedSignal(options.value, options.signal, (v) => String(v ?? ''));
 
   const field = createField(options);
   const counter = options.maxLength ? createCounterState({ maxLength: options.maxLength, value }) : null;
@@ -143,31 +68,43 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
   };
 
   const wire = (element: HTMLInputElement | HTMLTextAreaElement, signal?: AbortSignal): TextFieldDetach => {
-    let detached = false;
+    const cleanups: Array<() => void> = [];
+    const on = (type: string, handler: EventListener): void => {
+      element.addEventListener(type, handler);
+      cleanups.push(() => element.removeEventListener(type, handler));
+    };
 
-    const rawDetach = attachTextFieldListeners({
-      element,
-      onBeforeInput: options.onBeforeInput,
-      onBlur: options.onBlur,
-      onChange: (event, nextValue) => {
-        value.value = nextValue;
-        options.onChange?.(event, nextValue);
-      },
-      onFocus: options.onFocus,
-      onInput: (event, nextValue) => {
-        value.value = nextValue;
-        options.onInput?.(event, nextValue);
-      },
-      triggerValidation: field.triggerValidation,
+    if (options.onFocus) {
+      on('focus', (e) => options.onFocus!(e as FocusEvent));
+    }
+
+    if (options.onInput || options.onBeforeInput) {
+      on('input', (e) => {
+        e.stopPropagation();
+        options.onBeforeInput?.(e);
+        value.value = element.value;
+        options.onInput?.(e, element.value);
+      });
+    }
+
+    on('change', (e) => {
+      e.stopPropagation();
+      value.value = element.value;
+      options.onChange?.(e, element.value);
+      field.triggerValidation('change');
     });
 
-    // F4: Guard against double-detach — calling the returned function more than
-    // once (e.g. from both a manual call and the signal abort) is a no-op.
+    on('blur', (e) => {
+      options.onBlur?.(e as FocusEvent);
+      field.triggerValidation('blur');
+    });
+
+    let detached = false;
     const detach = (): void => {
       if (detached) return;
 
       detached = true;
-      rawDetach();
+      for (const dispose of cleanups) dispose();
     };
 
     signal?.addEventListener('abort', detach, { once: true });

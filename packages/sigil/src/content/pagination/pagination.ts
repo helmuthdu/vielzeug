@@ -8,11 +8,11 @@ import { sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './pagination.css?inline';
 
-export type BitPaginationEvents = {
+export type SgPaginationEvents = {
   change: { page: number };
 };
 
-export type BitPaginationProps = {
+export type SgPaginationProps = {
   color?: ThemeColor;
   label?: string;
   page?: number;
@@ -59,14 +59,14 @@ function buildPageRange(
 /**
  * Page-based navigation control.
  *
- * @element bit-pagination
+ * @element sg-pagination
  *
  * @attr {number} page - Current page (1-indexed, default: 1)
  * @attr {number} total-pages - Total number of pages (required)
  * @attr {number} siblings - Sibling pages around current (default: 1)
  * @attr {boolean} show-first-last - Show first/last page buttons (default: false)
  * @attr {boolean} show-prev-next - Show prev/next buttons (default: false)
- * @attr {string} color - Theme color
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant for nav buttons: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass' (default: 'ghost')
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} label - Accessible nav label (default: 'Pagination')
@@ -86,11 +86,18 @@ function buildPageRange(
  * @part last-btn - Last page button.
  * @example
  * ```html
- * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>
+ * <!-- Basic -->
+ * <sg-pagination page="3" total-pages="10" color="primary"></sg-pagination>
+ *
+ * <!-- With prev/next and first/last buttons -->
+ * <sg-pagination page="5" total-pages="20" show-prev-next show-first-last siblings="2"></sg-pagination>
+ *
+ * <!-- Compact size -->
+ * <sg-pagination page="1" total-pages="5" size="sm" variant="ghost"></sg-pagination>
  * ```
  */
-export const PAGINATION_TAG = 'bit-pagination' as const;
-define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
+export const PAGINATION_TAG = 'sg-pagination' as const;
+define<SgPaginationProps, SgPaginationEvents>(PAGINATION_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -151,7 +158,7 @@ define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
                     aria-label="First page"
                     ?disabled=${isFirst}
                     @click=${() => goTo(1)}>
-                    <bit-icon name="chevrons-left" size="16" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevrons-left" size="16" aria-hidden="true"></sg-icon>
                   </button>
                 </li>`
               : ''}
@@ -165,7 +172,7 @@ define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
                     aria-label="Previous page"
                     ?disabled=${isFirst}
                     @click=${() => goTo((props.page.value || 1) - 1)}>
-                    <bit-icon name="chevron-left" size="16" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevron-left" size="16" aria-hidden="true"></sg-icon>
                   </button>
                 </li>`
               : ''}
@@ -197,7 +204,7 @@ define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
                     aria-label="Next page"
                     ?disabled=${isLast}
                     @click=${() => goTo((props.page.value || 1) + 1)}>
-                    <bit-icon name="chevron-right" size="16" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevron-right" size="16" aria-hidden="true"></sg-icon>
                   </button>
                 </li>`
               : ''}
@@ -211,7 +218,7 @@ define<BitPaginationProps, BitPaginationEvents>(PAGINATION_TAG, {
                     aria-label="Last page"
                     ?disabled=${isLast}
                     @click=${() => goTo(props['total-pages'].value || 1)}>
-                    <bit-icon name="chevrons-right" size="16" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevrons-right" size="16" aria-hidden="true"></sg-icon>
                   </button>
                 </li>`
               : ''}

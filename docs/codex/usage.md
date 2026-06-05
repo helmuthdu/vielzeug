@@ -105,7 +105,7 @@ For Sigil component queries:
 
 ```
 list-components                              → enumerate available tag names
-get-component { tagName: "bit-input" }       → full CEM declaration
+get-component { tagName: "sg-input" }       → full CEM declaration
 ```
 
 ## Programmatic Usage

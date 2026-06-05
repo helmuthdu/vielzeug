@@ -53,15 +53,13 @@ const Article = s.object({
 });
 ```
 
-Use the `sXxx` exports when you want tree shaking per factory.
-
 ```ts
-import { sArray, sBoolean, sObject, sString } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
 
-const Todo = sObject({
-  done: sBoolean(),
-  tags: sArray(sString().min(1)).default(() => []),
-  title: sString().min(1),
+const Todo = s.object({
+  done: s.boolean(),
+  tags: s.array(s.string().min(1)).default(() => []),
+  title: s.string().min(1),
 });
 ```
 
@@ -172,13 +170,13 @@ Spell strips stateful `/g` and `/y` flags from `regex()` patterns before validat
 Use coercion when input arrives as strings, query parameters, or form values.
 
 ```ts
-import { s, sCoerce } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
 
 const Query = s.object({
-  draft: sCoerce.boolean().default(false),
-  limit: sCoerce.number().int().positive().default(20),
-  publishedAt: sCoerce.date().nullable(),
-  search: sCoerce.string().trim().min(1).optional(),
+  draft: s.coerce.boolean().default(false),
+  limit: s.coerce.number().int().positive().default(20),
+  publishedAt: s.coerce.date().nullable(),
+  search: s.coerce.string().trim().min(1).optional(),
 });
 
 const parsed = Query.parse({

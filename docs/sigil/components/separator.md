@@ -20,7 +20,7 @@ A simple visual divider for separating sections of content. Supports horizontal 
 
 ```html
 <p>Section one content.</p>
-<bit-separator></bit-separator>
+<sg-separator></sg-separator>
 <p>Section two content.</p>
 
 <script type="module">
@@ -34,7 +34,7 @@ A simple visual divider for separating sections of content. Supports horizontal 
 
 ```html
 <p>Above the separator</p>
-<bit-separator></bit-separator>
+<sg-separator></sg-separator>
 <p>Below the separator</p>
 ```
 
@@ -49,9 +49,9 @@ Set `orientation="vertical"` for inline use. The separator stretches to match th
 ```html
 <div style="display:flex; align-items:center; gap: 0.75rem;">
   <span>Home</span>
-  <bit-separator orientation="vertical" style="height: 1.25rem;"></bit-separator>
+  <sg-separator orientation="vertical" style="height: 1.25rem;"></sg-separator>
   <span>Docs</span>
-  <bit-separator orientation="vertical" style="height: 1.25rem;"></bit-separator>
+  <sg-separator orientation="vertical" style="height: 1.25rem;"></sg-separator>
   <span>Blog</span>
 </div>
 ```
@@ -65,9 +65,9 @@ Add a centered label to split the line into two segments.
 <ComponentPreview vertical>
 
 ```html
-<bit-separator label="or"></bit-separator>
-<bit-separator label="continue with"></bit-separator>
-<bit-separator label="Section 2"></bit-separator>
+<sg-separator label="or"></sg-separator>
+<sg-separator label="continue with"></sg-separator>
+<sg-separator label="Section 2"></sg-separator>
 ```
 
 </ComponentPreview>
@@ -77,11 +77,11 @@ Add a centered label to split the line into two segments.
 <ComponentPreview vertical>
 
 ```html
-<bit-separator color="primary"></bit-separator>
-<bit-separator color="secondary"></bit-separator>
-<bit-separator color="success"></bit-separator>
-<bit-separator color="warning"></bit-separator>
-<bit-separator color="error"></bit-separator>
+<sg-separator color="primary"></sg-separator>
+<sg-separator color="secondary"></sg-separator>
+<sg-separator color="success"></sg-separator>
+<sg-separator color="warning"></sg-separator>
+<sg-separator color="error"></sg-separator>
 ```
 
 </ComponentPreview>
@@ -91,9 +91,9 @@ Add a centered label to split the line into two segments.
 <ComponentPreview vertical>
 
 ```html
-<bit-separator color="primary" label="primary"></bit-separator>
-<bit-separator color="success" label="success"></bit-separator>
-<bit-separator color="error" label="error"></bit-separator>
+<sg-separator color="primary" label="primary"></sg-separator>
+<sg-separator color="success" label="success"></sg-separator>
+<sg-separator color="error" label="error"></sg-separator>
 ```
 
 </ComponentPreview>
@@ -103,7 +103,7 @@ Add a centered label to split the line into two segments.
 By default the separator is decorative (`aria-hidden="true"`). Set `decorative="false"` for sections where the separator carries structural meaning.
 
 ```html
-<bit-separator decorative="false" aria-label="End of navigation"></bit-separator>
+<sg-separator decorative="false" aria-label="End of navigation"></sg-separator>
 ```
 
 ## API Reference
@@ -129,7 +129,7 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 
 The separator component follows WAI-ARIA best practices.
 
-### `bit-separator`
+### `sg-separator`
 
 ✅ **Screen Readers**
 

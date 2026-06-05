@@ -14,12 +14,12 @@ type DialogElevation = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 /** Dialog component properties */
 
-export type BitDialogEvents = {
+export type SgDialogEvents = {
   close: OverlayCloseDetail;
   open: OverlayOpenDetail;
 };
 
-export type BitDialogProps = {
+export type SgDialogProps = {
   /** Backdrop style — 'blur' (default): dark overlay + blur; 'opaque': dark overlay only; 'transparent': no overlay */
   backdrop?: DialogBackdrop;
   /** Show a close (×) button in the header */
@@ -56,14 +56,14 @@ export type BitDialogProps = {
  * `Escape`. Built on the native `<dialog>` element for correct top-layer stacking
  * and browser-managed accessibility.
  *
- * @element bit-dialog
+ * @element sg-dialog
  *
  * @attr {boolean} open - Open/close the dialog
  * @attr {string} label - Dialog title (also used as aria-label)
  * @attr {string} size - Size: 'sm' | 'md' | 'lg' | 'xl' | 'full'
  * @attr {boolean} dismissible - Show a close (×) button in the header
  * @attr {boolean} persistent - Prevent backdrop-click from closing
- * @attr {string} rounded - Border radius size
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {string} elevation - Panel shadow: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
  * @attr {string} padding - Padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
@@ -94,17 +94,17 @@ export type BitDialogProps = {
  * @part footer - Footer container.
  * @example
  * ```html
- * <bit-dialog label="Confirm action" dismissible>
+ * <sg-dialog label="Confirm action" dismissible>
  *   <p>Are you sure you want to delete this item?</p>
  *   <div slot="footer">
- *     <bit-button variant="ghost" id="cancel">Cancel</bit-button>
- *     <bit-button color="error" id="confirm">Delete</bit-button>
+ *     <sg-button variant="ghost" id="cancel">Cancel</sg-button>
+ *     <sg-button color="error" id="confirm">Delete</sg-button>
  *   </div>
- * </bit-dialog>
+ * </sg-dialog>
  *
  * <script type="module">
  *   import '@vielzeug/sigil/dialog';
- *   const dialog = document.querySelector('bit-dialog');
+ *   const dialog = document.querySelector('sg-dialog');
  *   document.querySelector('#open-btn').addEventListener('click', () => {
  *     dialog.setAttribute('open', '');
  *   });
@@ -115,8 +115,8 @@ export type BitDialogProps = {
  * ```
  */
 
-export const DIALOG_TAG = 'bit-dialog' as const;
-define<BitDialogProps, BitDialogEvents>(DIALOG_TAG, {
+export const DIALOG_TAG = 'sg-dialog' as const;
+define<SgDialogProps, SgDialogEvents>(DIALOG_TAG, {
   props: {
     backdrop: prop.string<DialogBackdrop>(),
     dismissible: prop.bool(false),
@@ -181,7 +181,7 @@ define<BitDialogProps, BitDialogEvents>(DIALOG_TAG, {
               aria-label="Close dialog"
               ?hidden=${() => !props.dismissible.value}
               @click=${handleDismiss}>
-              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+              <sg-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></sg-icon>
             </button>
           </div>
           <div class="body" part="body">

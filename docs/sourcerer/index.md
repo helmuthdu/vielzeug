@@ -27,7 +27,6 @@ exports:
     sortBy,
     encodeQuery,
     decodeQuery,
-    FetchMiddleware,
   ]
 ---
 

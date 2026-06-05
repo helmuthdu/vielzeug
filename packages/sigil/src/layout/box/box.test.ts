@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-box', () => {
+describe('sg-box', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-box', () => {
 
   describe('Rendering', () => {
     it('renders box container', async () => {
-      fixture = await mount('bit-box');
+      fixture = await mount('sg-box');
 
       expect(fixture.query('[part="box"]')).toBeTruthy();
     });
 
     it('renders slot content', async () => {
-      fixture = await mount('bit-box', { html: '<p>Content</p>' });
+      fixture = await mount('sg-box', { html: '<p>Content</p>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Content');
     });
@@ -27,43 +27,43 @@ describe('bit-box', () => {
 
   describe('Props', () => {
     it('applies variant', async () => {
-      fixture = await mount('bit-box', { attrs: { variant: 'glass' } });
+      fixture = await mount('sg-box', { attrs: { variant: 'glass' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('glass');
     });
 
     it('applies color', async () => {
-      fixture = await mount('bit-box', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-box', { attrs: { color: 'primary' } });
 
       expect(fixture.element.getAttribute('color')).toBe('primary');
     });
 
     it('applies padding', async () => {
-      fixture = await mount('bit-box', { attrs: { padding: 'lg' } });
+      fixture = await mount('sg-box', { attrs: { padding: 'lg' } });
 
       expect(fixture.element.getAttribute('padding')).toBe('lg');
     });
 
     it('applies elevation', async () => {
-      fixture = await mount('bit-box', { attrs: { elevation: '2' } });
+      fixture = await mount('sg-box', { attrs: { elevation: '2' } });
 
       expect(fixture.element.getAttribute('elevation')).toBe('2');
     });
 
     it('applies rounded', async () => {
-      fixture = await mount('bit-box', { attrs: { rounded: 'md' } });
+      fixture = await mount('sg-box', { attrs: { rounded: 'md' } });
 
       expect(fixture.element.getAttribute('rounded')).toBe('md');
     });
 
     it('applies fullwidth', async () => {
-      fixture = await mount('bit-box', { attrs: { fullwidth: '' } });
+      fixture = await mount('sg-box', { attrs: { fullwidth: '' } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('applies rainbow', async () => {
-      fixture = await mount('bit-box', { attrs: { rainbow: '' } });
+      fixture = await mount('sg-box', { attrs: { rainbow: '' } });
 
       expect(fixture.element.hasAttribute('rainbow')).toBe(true);
     });
@@ -72,7 +72,7 @@ describe('bit-box', () => {
   describe('Variants', () => {
     for (const variant of ['solid', 'flat', 'glass', 'frost']) {
       it(`applies ${variant} variant`, async () => {
-        fixture = await mount('bit-box', { attrs: { variant } });
+        fixture = await mount('sg-box', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
         fixture.destroy();
@@ -81,7 +81,7 @@ describe('bit-box', () => {
   });
 });
 
-describe('bit-box accessibility', () => {
+describe('sg-box accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -94,13 +94,13 @@ describe('bit-box accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('box has no implicit interactive role', async () => {
-      fixture = await mount('bit-box');
+      fixture = await mount('sg-box');
 
       expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
     it('box is not focusable by default', async () => {
-      fixture = await mount('bit-box');
+      fixture = await mount('sg-box');
 
       expect(fixture.element.getAttribute('tabindex')).toBeNull();
     });
@@ -108,13 +108,13 @@ describe('bit-box accessibility', () => {
 
   describe('Content Accessibility', () => {
     it('slot content is accessible', async () => {
-      fixture = await mount('bit-box', { html: '<p>Accessible content</p>' });
+      fixture = await mount('sg-box', { html: '<p>Accessible content</p>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Accessible content');
     });
 
     it('color variant does not hide content', async () => {
-      fixture = await mount('bit-box', { attrs: { color: 'primary' }, html: 'Visible' });
+      fixture = await mount('sg-box', { attrs: { color: 'primary' }, html: 'Visible' });
 
       expect(fixture.element.textContent?.trim()).toBe('Visible');
     });

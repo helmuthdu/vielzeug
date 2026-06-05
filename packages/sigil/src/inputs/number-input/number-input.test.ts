@@ -1,18 +1,18 @@
 import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
 function getInput(fixture: Fixture<HTMLElement>): HTMLInputElement | null {
-  const bitInput = fixture.query('bit-input.field');
+  const bitInput = fixture.query('sg-input.field');
 
   return bitInput?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
 }
 
 function getLabel(fixture: Fixture<HTMLElement>): HTMLElement | null {
-  const bitInput = fixture.query('bit-input.field');
+  const bitInput = fixture.query('sg-input.field');
 
   return bitInput?.shadowRoot?.querySelector<HTMLElement>('label') ?? null;
 }
 
-describe('bit-number-input', () => {
+describe('sg-number-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -29,32 +29,32 @@ describe('bit-number-input', () => {
 
   describe('Rendering', () => {
     it('renders a spinbutton control div', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[role="spinbutton"]')).toBeTruthy();
     });
 
     it('renders a decrease button', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[aria-label="Decrease"]')).toBeTruthy();
     });
 
     it('renders an increase button', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[aria-label="Increase"]')).toBeTruthy();
     });
 
     it('renders a native input with part="input"', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
       await fixture.flush();
 
       expect(getInput(fixture)).toBeTruthy();
     });
 
     it('renders a label element when label prop is set', async () => {
-      fixture = await mount('bit-number-input', { attrs: { label: 'Quantity' } });
+      fixture = await mount('sg-number-input', { attrs: { label: 'Quantity' } });
       await fixture.flush();
 
       const label = getLabel(fixture);
@@ -63,10 +63,10 @@ describe('bit-number-input', () => {
     });
 
     it('does not render a visible label when label prop is absent', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
       await fixture.flush();
 
-      const bitInput = fixture.query('bit-input.field');
+      const bitInput = fixture.query('sg-input.field');
       const labels = Array.from(bitInput?.shadowRoot?.querySelectorAll('label') ?? []);
 
       expect(labels.every((l) => l.hidden)).toBe(true);
@@ -77,32 +77,32 @@ describe('bit-number-input', () => {
 
   describe('Props', () => {
     it('reflects value attribute on host', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '42' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '42' } });
 
       expect(fixture.element.getAttribute('value')).toBe('42');
     });
 
     it('reflects disabled attribute on host', async () => {
-      fixture = await mount('bit-number-input', { attrs: { disabled: '' } });
+      fixture = await mount('sg-number-input', { attrs: { disabled: '' } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
 
     it('reflects readonly attribute on host', async () => {
-      fixture = await mount('bit-number-input', { attrs: { readonly: '' } });
+      fixture = await mount('sg-number-input', { attrs: { readonly: '' } });
 
       expect(fixture.element.hasAttribute('readonly')).toBe(true);
     });
 
     it('applies placeholder to inner input', async () => {
-      fixture = await mount('bit-number-input', { attrs: { placeholder: '0' } });
+      fixture = await mount('sg-number-input', { attrs: { placeholder: '0' } });
       await fixture.flush();
 
       expect(getInput(fixture)?.getAttribute('placeholder')).toBe('0');
     });
 
     it('inner input uses inputmode="decimal"', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
       await fixture.flush();
 
       expect(getInput(fixture)?.getAttribute('inputmode')).toBe('decimal');
@@ -113,7 +113,7 @@ describe('bit-number-input', () => {
 
   describe('Increment / Decrement', () => {
     it('clicking increase button increments value by default step', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '3' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '3' } });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
@@ -125,7 +125,7 @@ describe('bit-number-input', () => {
     });
 
     it('clicking decrease button decrements value by default step', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '5' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '5' } });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
 
@@ -137,7 +137,7 @@ describe('bit-number-input', () => {
     });
 
     it('respects custom step value', async () => {
-      fixture = await mount('bit-number-input', { attrs: { step: '5', value: '0' } });
+      fixture = await mount('sg-number-input', { attrs: { step: '5', value: '0' } });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
@@ -149,7 +149,7 @@ describe('bit-number-input', () => {
     });
 
     it('clamps increase to max value', async () => {
-      fixture = await mount('bit-number-input', { attrs: { max: '10', value: '9' } });
+      fixture = await mount('sg-number-input', { attrs: { max: '10', value: '9' } });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
@@ -161,7 +161,7 @@ describe('bit-number-input', () => {
     });
 
     it('clamps decrease to min value', async () => {
-      fixture = await mount('bit-number-input', { attrs: { min: '0', value: '1' } });
+      fixture = await mount('sg-number-input', { attrs: { min: '0', value: '1' } });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
 
@@ -173,7 +173,7 @@ describe('bit-number-input', () => {
     });
 
     it('increase button is disabled when at max', async () => {
-      fixture = await mount('bit-number-input', {
+      fixture = await mount('sg-number-input', {
         attrs: { max: '10', value: '10' },
       });
 
@@ -183,7 +183,7 @@ describe('bit-number-input', () => {
     });
 
     it('decrease button is disabled when at min', async () => {
-      fixture = await mount('bit-number-input', { attrs: { min: '0', value: '0' } });
+      fixture = await mount('sg-number-input', { attrs: { min: '0', value: '0' } });
 
       const btn = fixture.query('[aria-label="Decrease"]');
 
@@ -191,7 +191,7 @@ describe('bit-number-input', () => {
     });
 
     it('does not change value when disabled', async () => {
-      fixture = await mount('bit-number-input', {
+      fixture = await mount('sg-number-input', {
         attrs: {
           disabled: '',
           value: '5',
@@ -212,7 +212,7 @@ describe('bit-number-input', () => {
 
   describe('Events', () => {
     it('fires change when the value is committed', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '1' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '1' } });
 
       const handler = vi.fn();
 
@@ -228,7 +228,7 @@ describe('bit-number-input', () => {
     });
 
     it('change event detail carries the new value', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '3' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '3' } });
 
       let detail: { originalEvent?: Event; value: number | null } | undefined;
 
@@ -250,7 +250,7 @@ describe('bit-number-input', () => {
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
-describe('bit-number-input accessibility', () => {
+describe('sg-number-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -265,13 +265,13 @@ describe('bit-number-input accessibility', () => {
 
   describe('WAI-ARIA Spinbutton Pattern', () => {
     it('control div has role="spinbutton"', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[role="spinbutton"]')).toBeTruthy();
     });
 
     it('spinbutton has aria-label when label prop is set', async () => {
-      fixture = await mount('bit-number-input', { attrs: { label: 'Quantity' } });
+      fixture = await mount('sg-number-input', { attrs: { label: 'Quantity' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -279,7 +279,7 @@ describe('bit-number-input accessibility', () => {
     });
 
     it('spinbutton has aria-valuenow when value is set', async () => {
-      fixture = await mount('bit-number-input', { attrs: { value: '7' } });
+      fixture = await mount('sg-number-input', { attrs: { value: '7' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -287,7 +287,7 @@ describe('bit-number-input accessibility', () => {
     });
 
     it('spinbutton has aria-valuemin when min is set', async () => {
-      fixture = await mount('bit-number-input', { attrs: { min: '1' } });
+      fixture = await mount('sg-number-input', { attrs: { min: '1' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -295,7 +295,7 @@ describe('bit-number-input accessibility', () => {
     });
 
     it('spinbutton has aria-valuemax when max is set', async () => {
-      fixture = await mount('bit-number-input', { attrs: { max: '100' } });
+      fixture = await mount('sg-number-input', { attrs: { max: '100' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -303,7 +303,7 @@ describe('bit-number-input accessibility', () => {
     });
 
     it('spinbutton has aria-disabled when disabled', async () => {
-      fixture = await mount('bit-number-input', { attrs: { disabled: '' } });
+      fixture = await mount('sg-number-input', { attrs: { disabled: '' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -311,7 +311,7 @@ describe('bit-number-input accessibility', () => {
     });
 
     it('spinbutton has aria-readonly when readonly', async () => {
-      fixture = await mount('bit-number-input', { attrs: { readonly: '' } });
+      fixture = await mount('sg-number-input', { attrs: { readonly: '' } });
 
       const control = fixture.query('[role="spinbutton"]');
 
@@ -321,13 +321,13 @@ describe('bit-number-input accessibility', () => {
 
   describe('Button Labels', () => {
     it('decrease button has aria-label="Decrease"', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[aria-label="Decrease"]')).toBeTruthy();
     });
 
     it('increase button has aria-label="Increase"', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
 
       expect(fixture.query('[aria-label="Increase"]')).toBeTruthy();
     });
@@ -335,7 +335,7 @@ describe('bit-number-input accessibility', () => {
 
   describe('Input accessible to AT', () => {
     it('inner input is not aria-hidden', async () => {
-      fixture = await mount('bit-number-input');
+      fixture = await mount('sg-number-input');
       await fixture.flush();
 
       expect(getInput(fixture)?.getAttribute('aria-hidden')).toBeNull();

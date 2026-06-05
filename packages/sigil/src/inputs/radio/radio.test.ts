@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-radio', () => {
+describe('sg-radio', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -15,7 +15,7 @@ describe('bit-radio', () => {
 
   describe('Rendering', () => {
     it('renders shadow DOM structure with circle and dot', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       expect(fixture.query('.radio-wrapper')).toBeTruthy();
       expect(fixture.query('.circle')).toBeTruthy();
@@ -23,13 +23,13 @@ describe('bit-radio', () => {
     });
 
     it('renders label slot', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       expect(fixture.query('.label slot')).toBeTruthy();
     });
 
     it('renders label text from slot content', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
       fixture.element.textContent = 'Option A';
       await fixture.flush();
 
@@ -43,19 +43,19 @@ describe('bit-radio', () => {
 
   describe('Checked State', () => {
     it('is unchecked by default', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
 
     it('reflects checked attribute on initial render', async () => {
-      fixture = await mount('bit-radio', { attrs: { checked: true } });
+      fixture = await mount('sg-radio', { attrs: { checked: true } });
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
     it('becomes checked on click', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp' } });
 
       await user.click(fixture.element);
 
@@ -63,7 +63,7 @@ describe('bit-radio', () => {
     });
 
     it('stays checked when clicked again (radio cannot uncheck itself)', async () => {
-      fixture = await mount('bit-radio', { attrs: { checked: true, name: 'grp2' } });
+      fixture = await mount('sg-radio', { attrs: { checked: true, name: 'grp2' } });
 
       await user.click(fixture.element);
 
@@ -71,7 +71,7 @@ describe('bit-radio', () => {
     });
 
     it('updates checked state dynamically via attribute', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       await fixture.attr('checked', true);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
@@ -85,19 +85,19 @@ describe('bit-radio', () => {
 
   describe('Disabled State', () => {
     it('reflects disabled attribute', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
 
     it('does not have tabindex when disabled', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
     });
 
     it('does not toggle checked when disabled', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true, name: 'grp3' } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true, name: 'grp3' } });
 
       const changeHandler = vi.fn();
 
@@ -110,7 +110,7 @@ describe('bit-radio', () => {
     });
 
     it('preserves checked state when disabled', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: { checked: true, disabled: true },
       });
 
@@ -119,7 +119,7 @@ describe('bit-radio', () => {
     });
 
     it('restores tabindex when re-enabled', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true } });
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
 
       await fixture.attr('disabled', false);
@@ -131,7 +131,7 @@ describe('bit-radio', () => {
 
   describe('Events', () => {
     it('emits change with checked=true on click', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'ev', value: 'yes' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'ev', value: 'yes' } });
 
       const changeHandler = vi.fn();
 
@@ -148,7 +148,7 @@ describe('bit-radio', () => {
     });
 
     it('includes originalEvent in change detail', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'ev2', value: 'yes' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'ev2', value: 'yes' } });
 
       const changeHandler = vi.fn();
 
@@ -163,7 +163,7 @@ describe('bit-radio', () => {
     });
 
     it('does not emit change when disabled', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true, name: 'ev3' } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true, name: 'ev3' } });
 
       const changeHandler = vi.fn();
 
@@ -175,7 +175,7 @@ describe('bit-radio', () => {
     });
 
     it('emits change via Space key', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'ev4' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'ev4' } });
 
       const changeHandler = vi.fn();
 
@@ -188,7 +188,7 @@ describe('bit-radio', () => {
     });
 
     it('emits change via Enter key', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'ev5' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'ev5' } });
 
       const changeHandler = vi.fn();
 
@@ -204,19 +204,19 @@ describe('bit-radio', () => {
 
   describe('Form Integration', () => {
     it('exposes name attribute', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'size-choice' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'size-choice' } });
 
       expect(fixture.element.getAttribute('name')).toBe('size-choice');
     });
 
     it('exposes value attribute', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp', value: 'large' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp', value: 'large' } });
 
       expect(fixture.element.getAttribute('value')).toBe('large');
     });
 
     it('updates name dynamically', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'old-group' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'old-group' } });
 
       await fixture.attr('name', 'new-group');
 
@@ -231,14 +231,14 @@ describe('bit-radio', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-radio', { attrs: { color } });
+        fixture = await mount('sg-radio', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
 
     it('updates color dynamically', async () => {
-      fixture = await mount('bit-radio', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-radio', { attrs: { color: 'primary' } });
 
       await fixture.attr('color', 'error');
 
@@ -253,14 +253,14 @@ describe('bit-radio', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-radio', { attrs: { size } });
+        fixture = await mount('sg-radio', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
     });
 
     it('updates size dynamically', async () => {
-      fixture = await mount('bit-radio', { attrs: { size: 'sm' } });
+      fixture = await mount('sg-radio', { attrs: { size: 'sm' } });
 
       await fixture.attr('size', 'lg');
 
@@ -272,25 +272,25 @@ describe('bit-radio', () => {
 
   describe('Accessibility', () => {
     it('has role="radio" on host', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       expect(fixture.element.getAttribute('role')).toBe('radio');
     });
 
     it('has tabindex="-1" when unchecked (roving tabindex)', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'a11y' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'a11y' } });
 
       expect(fixture.element.getAttribute('tabindex')).toBe('-1');
     });
 
     it('has tabindex="0" when checked', async () => {
-      fixture = await mount('bit-radio', { attrs: { checked: true, name: 'a11y2' } });
+      fixture = await mount('sg-radio', { attrs: { checked: true, name: 'a11y2' } });
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
     });
 
     it('has no tabindex when disabled', async () => {
-      fixture = await mount('bit-radio', { attrs: { disabled: true } });
+      fixture = await mount('sg-radio', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
     });
@@ -300,7 +300,7 @@ describe('bit-radio', () => {
 
   describe('Edge Cases', () => {
     it('handles missing name attribute (no group behavior)', async () => {
-      fixture = await mount('bit-radio', { attrs: { value: 'standalone' } });
+      fixture = await mount('sg-radio', { attrs: { value: 'standalone' } });
 
       const changeHandler = vi.fn();
 
@@ -313,13 +313,13 @@ describe('bit-radio', () => {
     });
 
     it('handles missing value attribute', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'no-val' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'no-val' } });
 
       expect(fixture.element.getAttribute('value') || '').toBe('');
     });
 
     it('does not emit duplicate events when clicking an already-checked radio', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'grp-dup',
@@ -337,7 +337,7 @@ describe('bit-radio', () => {
   });
 });
 
-describe('bit-radio accessibility', () => {
+describe('sg-radio accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -352,13 +352,13 @@ describe('bit-radio accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('has role="radio" identifying it as a radio button', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp', value: 'opt1' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp', value: 'opt1' } });
 
       expect(fixture.element.getAttribute('role')).toBe('radio');
     });
 
     it('renders visual circle and dot inside shadow DOM', async () => {
-      fixture = await mount('bit-radio');
+      fixture = await mount('sg-radio');
 
       expect(fixture.query('.circle')).toBeTruthy();
       expect(fixture.query('.dot')).toBeTruthy();
@@ -369,13 +369,13 @@ describe('bit-radio accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('has aria-checked="false" when unchecked', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp', value: 'opt1' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp', value: 'opt1' } });
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
     });
 
     it('has aria-checked="true" when checked', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'grp',
@@ -387,7 +387,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('updates aria-checked to "true" when checked dynamically', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp', value: 'opt1' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp', value: 'opt1' } });
 
       await fixture.attr('checked', true);
 
@@ -395,7 +395,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('updates aria-checked to "false" when unchecked dynamically', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'grp',
@@ -409,7 +409,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('sets aria-labelledby when label text is provided', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: { name: 'grp', value: 'opt1' },
         html: 'Option 1',
       });
@@ -422,13 +422,13 @@ describe('bit-radio accessibility', () => {
 
   describe('Roving Tabindex', () => {
     it('has tabindex="-1" when unchecked (not initial focus target)', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp', value: 'opt1' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp', value: 'opt1' } });
 
       expect(fixture.element.getAttribute('tabindex')).toBe('-1');
     });
 
     it('has tabindex="0" when checked (initial focus target)', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'grp',
@@ -440,7 +440,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('removes tabindex entirely when disabled', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           disabled: true,
           name: 'grp',
@@ -452,7 +452,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('updates tabindex="0" when becoming checked', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp2' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp2' } });
       expect(fixture.element.getAttribute('tabindex')).toBe('-1');
 
       await fixture.attr('checked', true);
@@ -461,7 +461,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('updates tabindex="-1" when unchecked', async () => {
-      fixture = await mount('bit-radio', { attrs: { checked: true, name: 'grp2' } });
+      fixture = await mount('sg-radio', { attrs: { checked: true, name: 'grp2' } });
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
 
       await fixture.attr('checked', false);
@@ -470,7 +470,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('removes tabindex when disabled dynamically', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'grp3' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'grp3' } });
       expect(fixture.element.hasAttribute('tabindex')).toBe(true);
 
       await fixture.attr('disabled', true);
@@ -483,7 +483,7 @@ describe('bit-radio accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('selects radio on Space key', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'kb-grp' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'kb-grp' } });
 
       await user.press(fixture.element, ' ');
 
@@ -491,7 +491,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('selects radio on Enter key', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'kb-grp2' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'kb-grp2' } });
 
       await user.press(fixture.element, 'Enter');
 
@@ -499,14 +499,14 @@ describe('bit-radio accessibility', () => {
     });
 
     it('navigates to next radio with ArrowDown and selects it', async () => {
-      const f1 = await mount('bit-radio', {
+      const f1 = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'nav-grp',
           value: 'a',
         },
       });
-      const f2 = await mount('bit-radio', { attrs: { name: 'nav-grp', value: 'b' } });
+      const f2 = await mount('sg-radio', { attrs: { name: 'nav-grp', value: 'b' } });
 
       f1.element.focus();
       await user.press(f1.element, 'ArrowDown');
@@ -519,14 +519,14 @@ describe('bit-radio accessibility', () => {
     });
 
     it('navigates to next radio with ArrowRight and selects it', async () => {
-      const f1 = await mount('bit-radio', {
+      const f1 = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'nav-grp2',
           value: 'a',
         },
       });
-      const f2 = await mount('bit-radio', {
+      const f2 = await mount('sg-radio', {
         attrs: { name: 'nav-grp2', value: 'b' },
       });
 
@@ -541,10 +541,10 @@ describe('bit-radio accessibility', () => {
     });
 
     it('navigates to previous radio with ArrowUp and selects it', async () => {
-      const f1 = await mount('bit-radio', {
+      const f1 = await mount('sg-radio', {
         attrs: { name: 'nav-grp3', value: 'a' },
       });
-      const f2 = await mount('bit-radio', {
+      const f2 = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'nav-grp3',
@@ -563,7 +563,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('does not respond to keyboard when disabled', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           disabled: true,
           name: 'kb-disabled',
@@ -580,7 +580,7 @@ describe('bit-radio accessibility', () => {
 
   describe('Dynamic State Announcements', () => {
     it('reflects checked state change to assistive technology via aria-checked', async () => {
-      fixture = await mount('bit-radio', { attrs: { name: 'dyn-grp' } });
+      fixture = await mount('sg-radio', { attrs: { name: 'dyn-grp' } });
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
 
       await user.click(fixture.element);
@@ -589,7 +589,7 @@ describe('bit-radio accessibility', () => {
     });
 
     it('clears checked state via attribute removal (aria-checked updates)', async () => {
-      fixture = await mount('bit-radio', {
+      fixture = await mount('sg-radio', {
         attrs: {
           checked: true,
           name: 'dyn-grp2',

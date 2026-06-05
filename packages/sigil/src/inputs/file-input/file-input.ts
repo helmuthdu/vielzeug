@@ -11,21 +11,14 @@ import {
   prop,
   ref,
   signal,
+  createStableId,
 } from '@vielzeug/craft';
 import { createDropZone, matchesAccept } from '@vielzeug/grip';
 import { watch } from '@vielzeug/ripple';
 
-import { createInteraction, createStableId } from '../../headless';
+import { createInteraction } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledLoadingMixin,
-  forcedColorsFocusMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './file-input.css?inline';
 
@@ -42,7 +35,7 @@ const formatBytes = (bytes: number) => {
 const isFileSizeAllowed = (file: File, maxSize?: number) => !maxSize || file.size <= maxSize;
 
 /** File input component properties */
-export type BitFileInputProps = {
+export type SgFileInputProps = {
   /** Accepted file types (comma-separated, e.g. '.jpg, .png, image/*') */
   accept?: string;
   /** Theme color tint */
@@ -77,7 +70,7 @@ export type BitFileInputProps = {
 };
 
 /** Events emitted by the file-input component */
-export type BitFileInputEvents = {
+export type SgFileInputEvents = {
   /** Emitted when files are added or removed */
   change: { files: File[]; originalEvent?: Event; value: File[] };
   /** Emitted when a specific file is removed */
@@ -87,7 +80,7 @@ export type BitFileInputEvents = {
 /**
  * A file upload field with drag-and-drop support and built-in validation messaging.
  *
- * @element bit-file-input
+ * @element sg-file-input
  *
  * @attr {string} accept - Comma-separated file extensions or MIME types
  * @attr {boolean} multiple - Enable multiple files selection
@@ -120,13 +113,13 @@ export type BitFileInputEvents = {
  * @part error - Error message shown beneath the field
  * @example
  * ```html
- * <bit-file-input label="Upload files" accept="image/*" multiple />
- * <bit-file-input label="Resume" accept=".pdf,.doc,.docx" max-size="5242880" />
- * <bit-file-input variant="bordered" color="primary" />
+ * <sg-file-input label="Upload files" accept="image/*" multiple />
+ * <sg-file-input label="Resume" accept=".pdf,.doc,.docx" max-size="5242880" />
+ * <sg-file-input variant="bordered" color="primary" />
  * ```
  */
-export const FILE_INPUT_TAG = 'bit-file-input' as const;
-define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
+export const FILE_INPUT_TAG = 'sg-file-input' as const;
+define<SgFileInputProps, SgFileInputEvents>(FILE_INPUT_TAG, {
   formAssociated: true,
   props: {
     accept: prop.string(),
@@ -356,7 +349,7 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
             tabindex="-1" />
           <div class="dropzone-content">
             <span class="dropzone-icon" aria-hidden="true">
-              <bit-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></bit-icon>
+              <sg-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></sg-icon>
             </span>
             <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
             <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
@@ -368,7 +361,7 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
               (file: File) => html`
                 <li class="file-item">
                   <span class="file-icon" aria-hidden="true">
-                    <bit-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></bit-icon>
+                    <sg-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></sg-icon>
                   </span>
                   <span class="file-meta">
                     <span class="file-name" title="${file.name}">${file.name}</span>
@@ -379,7 +372,7 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
                     type="button"
                     aria-label="${`Remove ${file.name}`}"
                     @click=${(e: Event) => removeFile(file, e)}>
-                    <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+                    <sg-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></sg-icon>
                   </button>
                 </li>
               `,
@@ -401,12 +394,8 @@ define<BitFileInputProps, BitFileInputEvents>(FILE_INPUT_TAG, {
   },
   shadow: { delegatesFocus: true },
   styles: [
-    colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    roundedVariantMixin,
+    ...fieldMixins,
     sizeVariantMixin(FILE_INPUT_SIZE_PRESET),
-    disabledLoadingMixin(),
     forcedColorsFocusMixin('.dropzone'),
     componentStyles,
   ],

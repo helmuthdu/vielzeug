@@ -25,9 +25,9 @@ Default box with canvas background and gentle border.
 <ComponentPreview>
 
 ```html
-<bit-box>
-  <bit-text>Basic box container</bit-text>
-</bit-box>
+<sg-box>
+  <sg-text>Basic box container</sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -44,13 +44,13 @@ Four variants cover the full range from solid to translucent.
 <ComponentPreview>
 
 ```html
-<bit-box>
-  <bit-text>Default</bit-text>
-</bit-box>
+<sg-box>
+  <sg-text>Default</sg-text>
+</sg-box>
 
-<bit-box variant="flat" color="primary">
-  <bit-text>Flat</bit-text>
-</bit-box>
+<sg-box variant="flat" color="primary">
+  <sg-text>Flat</sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -66,14 +66,14 @@ Glass and frost look best over colorful backgrounds or images to make the blur a
 <ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
-<bit-box variant="glass" fullwidth>
-  <bit-text variant="heading" size="md">Glass Effect</bit-text>
-  <bit-text>Vibrant glass with saturated colors and brightness boost</bit-text>
-</bit-box>
-<bit-box variant="frost" fullwidth>
-  <bit-text variant="heading" size="md">Frost Effect</bit-text>
-  <bit-text>Frosted glass with muted tones and stronger blur</bit-text>
-</bit-box>
+<sg-box variant="glass" fullwidth>
+  <sg-text variant="heading" size="md">Glass Effect</sg-text>
+  <sg-text>Vibrant glass with saturated colors and brightness boost</sg-text>
+</sg-box>
+<sg-box variant="frost" fullwidth>
+  <sg-text variant="heading" size="md">Frost Effect</sg-text>
+  <sg-text>Frosted glass with muted tones and stronger blur</sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -85,15 +85,15 @@ Six semantic colors for different contexts. Hover state is included for `solid` 
 <ComponentPreview>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
-  <bit-box>Default</bit-box>
-  <bit-box color="primary">Primary</bit-box>
-  <bit-box color="secondary">Secondary</bit-box>
-  <bit-box color="info">Info</bit-box>
-  <bit-box color="success">Success</bit-box>
-  <bit-box color="warning">Warning</bit-box>
-  <bit-box color="error">Error</bit-box>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
+  <sg-box>Default</sg-box>
+  <sg-box color="primary">Primary</sg-box>
+  <sg-box color="secondary">Secondary</sg-box>
+  <sg-box color="info">Info</sg-box>
+  <sg-box color="success">Success</sg-box>
+  <sg-box color="warning">Warning</sg-box>
+  <sg-box color="error">Error</sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -105,26 +105,26 @@ Control shadow depth with elevation levels from 0 to 5.
 <ComponentPreview>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
-  <bit-box elevation="0" color="primary">
-    <bit-text size="sm">Elevation 0</bit-text>
-  </bit-box>
-  <bit-box elevation="1" color="primary">
-    <bit-text size="sm">Elevation 1</bit-text>
-  </bit-box>
-  <bit-box elevation="2" color="primary">
-    <bit-text size="sm">Elevation 2</bit-text>
-  </bit-box>
-  <bit-box elevation="3" color="primary">
-    <bit-text size="sm">Elevation 3</bit-text>
-  </bit-box>
-  <bit-box elevation="4" color="primary">
-    <bit-text size="sm">Elevation 4</bit-text>
-  </bit-box>
-  <bit-box elevation="5" color="primary">
-    <bit-text size="sm">Elevation 5</bit-text>
-  </bit-box>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
+  <sg-box elevation="0" color="primary">
+    <sg-text size="sm">Elevation 0</sg-text>
+  </sg-box>
+  <sg-box elevation="1" color="primary">
+    <sg-text size="sm">Elevation 1</sg-text>
+  </sg-box>
+  <sg-box elevation="2" color="primary">
+    <sg-text size="sm">Elevation 2</sg-text>
+  </sg-box>
+  <sg-box elevation="3" color="primary">
+    <sg-text size="sm">Elevation 3</sg-text>
+  </sg-box>
+  <sg-box elevation="4" color="primary">
+    <sg-text size="sm">Elevation 4</sg-text>
+  </sg-box>
+  <sg-box elevation="5" color="primary">
+    <sg-text size="sm">Elevation 5</sg-text>
+  </sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -136,23 +136,23 @@ Choose from five padding sizes.
 <ComponentPreview>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
-  <bit-box padding="none" color="secondary" elevation="1">
-    <bit-text size="sm">No padding</bit-text>
-  </bit-box>
-  <bit-box padding="sm" color="secondary" elevation="1">
-    <bit-text size="sm">Small</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary" elevation="1">
-    <bit-text size="sm">Medium (default)</bit-text>
-  </bit-box>
-  <bit-box padding="lg" color="secondary" elevation="1">
-    <bit-text size="sm">Large</bit-text>
-  </bit-box>
-  <bit-box padding="xl" color="secondary" elevation="1">
-    <bit-text size="sm">Extra large</bit-text>
-  </bit-box>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
+  <sg-box padding="none" color="secondary" elevation="1">
+    <sg-text size="sm">No padding</sg-text>
+  </sg-box>
+  <sg-box padding="sm" color="secondary" elevation="1">
+    <sg-text size="sm">Small</sg-text>
+  </sg-box>
+  <sg-box padding="md" color="secondary" elevation="1">
+    <sg-text size="sm">Medium (default)</sg-text>
+  </sg-box>
+  <sg-box padding="lg" color="secondary" elevation="1">
+    <sg-text size="sm">Large</sg-text>
+  </sg-box>
+  <sg-box padding="xl" color="secondary" elevation="1">
+    <sg-text size="sm">Extra large</sg-text>
+  </sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -164,14 +164,14 @@ Animated rainbow border effect — works on any variant.
 <ComponentPreview center>
 
 ```html
-<bit-box
+<sg-box
   variant="frost"
   rainbow
   padding="lg"
   style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
-  <bit-text variant="heading" size="lg">Rainbow Box</bit-text>
-  <bit-text size="sm">Animated rainbow border with glow effect</bit-text>
-</bit-box>
+  <sg-text variant="heading" size="lg">Rainbow Box</sg-text>
+  <sg-text size="sm">Animated rainbow border with glow effect</sg-text>
+</sg-box>
 ```
 
 </ComponentPreview>
@@ -220,7 +220,7 @@ CSS custom properties work regardless of whether a `color` attribute is set.
 
 The box component follows WAI-ARIA best practices.
 
-### `bit-box`
+### `sg-box`
 
 ✅ **Semantic Structure**
 
@@ -235,7 +235,7 @@ The box component follows WAI-ARIA best practices.
 
 **Do:**
 
-- Wrap `bit-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it.
+- Wrap `sg-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it.
 - Combine `color` and `elevation` to create visual hierarchy without custom CSS.
 - Use `glass` and `frost` variants only over rich backgrounds where the blur effect is visible.
 - Use `--box-*` custom properties on a parent for contextual theming instead of inline styles.
@@ -243,4 +243,4 @@ The box component follows WAI-ARIA best practices.
 **Don't:**
 
 - Rely only on `color` to convey meaning — box is a container, not a status indicator.
-- Nest too many `bit-box` elements — keep structural depth reasonable for maintainability.
+- Nest too many `sg-box` elements — keep structural depth reasonable for maintainability.

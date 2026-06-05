@@ -6,32 +6,32 @@ import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
 
-export type BitTabItemProps = {
-  /** Whether this tab is currently selected (set by bit-tabs) */
+export type SgTabItemProps = {
+  /** Whether this tab is currently selected (set by sg-tabs) */
   active?: boolean;
-  /** Theme color (inherited from bit-tabs) */
+  /** Theme color (inherited from sg-tabs) */
   color?: ThemeColor;
   /** Disable this tab */
   disabled?: boolean;
-  /** Size (inherited from bit-tabs) */
+  /** Size (inherited from sg-tabs) */
   size?: ComponentSize;
-  /** Unique value identifier — must match a bit-tab-panel value */
+  /** Unique value identifier — must match a sg-tab-panel value */
   value: string;
-  /** Visual variant (inherited from bit-tabs) */
+  /** Visual variant (inherited from sg-tabs) */
   variant?: VisualVariant;
 };
 
 /**
- * Individual tab trigger. Must be placed in the `tabs` slot of `bit-tabs`.
+ * Individual tab trigger. Must be placed in the `tabs` slot of `sg-tabs`.
  *
- * @element bit-tab-item
+ * @element sg-tab-item
  *
- * @attr {string} value - Unique identifier, matches the corresponding bit-tab-panel value
- * @attr {boolean} active - Set by the parent bit-tabs when this tab is selected
+ * @attr {string} value - Unique identifier, matches the corresponding sg-tab-panel value
+ * @attr {boolean} active - Set by the parent sg-tabs when this tab is selected
  * @attr {boolean} disabled - Prevents selection
  * @attr {string} size - 'sm' | 'md' | 'lg'
- * @attr {string} variant - Inherited from bit-tabs
- * @attr {string} color - Inherited from bit-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} variant - Inherited from sg-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost' | 'underline'
+ * @attr {string} color - Inherited from sg-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @slot prefix - Icon or content before the label
  * @slot - Tab label
@@ -52,12 +52,12 @@ export type BitTabItemProps = {
  * @part tab - Tab trigger element.
  * @example
  * ```html
- * <bit-tab-item slot="tabs" value="overview">Overview</bit-tab-item>
- * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
+ * <sg-tab-item slot="tabs" value="overview">Overview</sg-tab-item>
+ * <sg-tab-item slot="tabs" value="settings" disabled>Settings</sg-tab-item>
  * ```
  */
-export const TAB_ITEM_TAG = 'bit-tab-item' as const;
-define<BitTabItemProps>(TAB_ITEM_TAG, {
+export const TAB_ITEM_TAG = 'sg-tab-item' as const;
+define<SgTabItemProps>(TAB_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     color: prop.string<ThemeColor>(),

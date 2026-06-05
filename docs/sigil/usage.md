@@ -12,7 +12,7 @@ description: Import patterns, slots, events, and accessibility for Sigil compone
 Once registered, components are available as custom elements:
 
 ```html
-<bit-button>Click me</bit-button>
+<sg-button>Click me</sg-button>
 ```
 
 ### Setting Attributes
@@ -20,21 +20,21 @@ Once registered, components are available as custom elements:
 Set attributes directly on the custom element:
 
 ```html
-<bit-button variant="outline" color="secondary" size="lg" disabled> Large Outline Button </bit-button>
+<sg-button variant="outline" color="secondary" size="lg" disabled> Large Outline Button </sg-button>
 ```
 
 ### Event Handling
 
-Components emit DOM events. Many use familiar event names like `click`, `input`, `change`, `open`, and `close`. A few intentionally use namespaced custom events where collision avoidance matters, such as `bit-select` on `bit-menu`.
+Components emit DOM events. Many use familiar event names like `click`, `input`, `change`, `open`, and `close`. A few intentionally use namespaced custom events where collision avoidance matters, such as `sg-select` on `sg-menu`.
 
 ```javascript
-const button = document.querySelector('bit-button');
+const button = document.querySelector('sg-button');
 
 button.addEventListener('click', () => {
   console.log('Button clicked');
 });
 
-const input = document.querySelector('bit-input');
+const input = document.querySelector('sg-input');
 
 input.addEventListener('change', (event) => {
   console.log('Input value:', event.detail.value);
@@ -52,7 +52,7 @@ Sigil components use named and default slots for content projection. Slots let y
 Content placed directly inside the element fills the default slot:
 
 ```html
-<bit-button>Save Changes</bit-button> <bit-card>Any HTML content here</bit-card>
+<sg-button>Save Changes</sg-button> <sg-card>Any HTML content here</sg-card>
 ```
 
 ### Named Slots
@@ -60,29 +60,29 @@ Content placed directly inside the element fills the default slot:
 Components that have distinct regions expose them as named slots:
 
 ```html
-<bit-card>
+<sg-card>
   <span slot="header">Card Heading</span>
   <p>Main card body content fills the default slot.</p>
   <div slot="footer">
-    <bit-button size="sm" variant="outline">Cancel</bit-button>
-    <bit-button size="sm">Confirm</bit-button>
+    <sg-button size="sm" variant="outline">Cancel</sg-button>
+    <sg-button size="sm">Confirm</sg-button>
   </div>
-</bit-card>
+</sg-card>
 ```
 
 ### Icon Slots
 
-Many interactive components expose leading or trailing content slots. For example, `bit-button` and `bit-input` use `prefix` and `suffix`:
+Many interactive components expose leading or trailing content slots. For example, `sg-button` and `sg-input` use `prefix` and `suffix`:
 
 ```html
-<bit-button>
+<sg-button>
   <svg slot="prefix" aria-hidden="true"><!-- ... --></svg>
   Submit
-</bit-button>
+</sg-button>
 
-<bit-input label="Search">
+<sg-input label="Search">
   <svg slot="suffix" aria-hidden="true"><!-- search icon --></svg>
-</bit-input>
+</sg-input>
 ```
 
 Slot availability varies by component; see the component pages in the Sigil sidebar and the **[API Reference](./api.md)** for the currently published surface.
@@ -95,14 +95,14 @@ Sigil components are designed to meet **WCAG 2.1 AA** standards out-of-the-box. 
 
 | Component type  | Key                       | Behavior                                 |
 | --------------- | ------------------------- | ---------------------------------------- |
-| `bit-button`    | `Space` / `Enter`         | Activates the button                     |
-| `bit-checkbox`  | `Space`                   | Toggles checked state                    |
-| `bit-radio`     | `Arrow Up` / `Arrow Down` | Moves focus between options in the group |
-| `bit-select`    | `Enter` / `Space`         | Opens/closes the listbox                 |
-| `bit-select`    | `Arrow Up` / `Arrow Down` | Navigates options                        |
-| `bit-accordion` | `Enter` / `Space`         | Expands/collapses panel                  |
-| `bit-tabs`      | `Arrow Left` / `Right`    | Moves focus between tab triggers         |
-| `bit-tooltip`   | `Escape`                  | Dismisses an open tooltip                |
+| `sg-button`    | `Space` / `Enter`         | Activates the button                     |
+| `sg-checkbox`  | `Space`                   | Toggles checked state                    |
+| `sg-radio`     | `Arrow Up` / `Arrow Down` | Moves focus between options in the group |
+| `sg-select`    | `Enter` / `Space`         | Opens/closes the listbox                 |
+| `sg-select`    | `Arrow Up` / `Arrow Down` | Navigates options                        |
+| `sg-accordion` | `Enter` / `Space`         | Expands/collapses panel                  |
+| `sg-tabs`      | `Arrow Left` / `Right`    | Moves focus between tab triggers         |
+| `sg-tooltip`   | `Escape`                  | Dismisses an open tooltip                |
 
 ### ARIA Attributes
 
@@ -110,10 +110,10 @@ Components manage their ARIA roles and states automatically. You can override sp
 
 ```html
 <!-- Custom label when visual label is not enough -->
-<bit-button aria-label="Delete item">×</bit-button>
+<sg-button aria-label="Delete item">×</sg-button>
 
 <!-- Associate an input with external help text -->
-<bit-input label="Password" aria-describedby="pwd-hint" />
+<sg-input label="Password" aria-describedby="pwd-hint" />
 <p id="pwd-hint">Minimum 8 characters, one uppercase, one number.</p>
 ```
 
@@ -121,7 +121,7 @@ Components manage their ARIA roles and states automatically. You can override sp
 
 - All interactive components participate in the native tab order.
 - Use `disabled` to remove a component from the tab order. Disabled elements are not focusable.
-- Modal-style overlays such as `bit-dialog` and `bit-drawer` manage focus entry and restoration automatically.
+- Modal-style overlays such as `sg-dialog` and `sg-drawer` manage focus entry and restoration automatically.
 
 ### Screen Readers
 
@@ -158,9 +158,9 @@ import '@vielzeug/sigil';
 ### 3. Control Appearance with CSS Custom Properties
 
 ```css
-bit-button {
-  --bit-button-radius: 4px;
-  --bit-button-font-size: 0.875rem;
+sg-button {
+  --sg-button-radius: 4px;
+  --sg-button-font-size: 0.875rem;
 }
 ```
 
@@ -168,10 +168,10 @@ bit-button {
 
 ```html
 <!-- ✅ prefer attribute-driven state -->
-<bit-button loading disabled>Saving…</bit-button>
+<sg-button loading disabled>Saving…</sg-button>
 
 <!-- ❌ avoid manual DOM manipulation when an attribute exists -->
-<bit-button id="btn">Save</bit-button>
+<sg-button id="btn">Save</sg-button>
 <script>
   document.getElementById('btn').setAttribute('loading', '');
 </script>
@@ -180,6 +180,6 @@ bit-button {
 ### 5. Listen to Component Events
 
 ```js
-const input = document.querySelector('bit-input');
+const input = document.querySelector('sg-input');
 input.addEventListener('change', (e) => console.log(e.detail.value));
 ```

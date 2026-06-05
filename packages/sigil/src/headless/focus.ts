@@ -36,9 +36,15 @@ export type FocusManager = {
  */
 export function createFocusManager(options: FocusManagerOptions): FocusManager {
   let returnFocusEl: HTMLElement | null = null;
+  let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
 
   return {
     applyInitialFocus() {
+      if (rafHandle !== null) {
+        cancelAnimationFrame(rafHandle);
+        rafHandle = null;
+      }
+
       const selector = options.getInitialFocusSelector();
 
       if (selector) {
@@ -55,7 +61,12 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
           return;
         }
 
-        if (target) requestAnimationFrame(() => target.focus());
+        if (target) {
+          rafHandle = requestAnimationFrame(() => {
+            rafHandle = null;
+            target.focus();
+          });
+        }
       }
     },
 

@@ -2,8 +2,8 @@
 <template>
   <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
     <!-- Library Selector Card Grid -->
-    <bit-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem">
-      <bit-card
+    <sg-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem">
+      <sg-card
         v-for="(desc, lib) in libraryDescriptions"
         :key="lib"
         interactive
@@ -23,8 +23,8 @@
             <p class="card-desc">{{ desc }}</p>
           </div>
         </div>
-      </bit-card>
-    </bit-grid>
+      </sg-card>
+    </sg-grid>
 
     <!-- Editor and Output Component -->
     <REPLEditor
@@ -703,7 +703,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Card body layout inside bit-card */
+/* Card body layout inside sg-card */
 .lib-card-body {
   display: flex;
   align-items: flex-start;

@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-otp-input', () => {
+describe('sg-otp-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -15,37 +15,37 @@ describe('bit-otp-input', () => {
 
   describe('Rendering', () => {
     it('renders a group container', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       expect(fixture.query('[role="group"]')).toBeTruthy();
     });
 
     it('renders 6 input cells by default', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       expect(fixture.shadow?.querySelectorAll('input.cell').length).toBe(6);
     });
 
     it('renders custom number of cells via length prop', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
+      fixture = await mount('sg-otp-input', { attrs: { length: '4' } });
 
       expect(fixture.shadow?.querySelectorAll('input.cell').length).toBe(4);
     });
 
     it('each cell has part="cell"', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       expect(fixture.shadow?.querySelectorAll('[part="cell"]').length).toBe(6);
     });
 
     it('renders separator when separator prop is set', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { separator: '-' } });
+      fixture = await mount('sg-otp-input', { attrs: { separator: '-' } });
 
       expect(fixture.query('.separator')).toBeTruthy();
     });
 
     it('does not render separator when separator prop is absent', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       expect(fixture.query('.separator')).toBeFalsy();
     });
@@ -55,7 +55,7 @@ describe('bit-otp-input', () => {
 
   describe('Props', () => {
     it('applies disabled attribute to all cells', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { disabled: '' } });
+      fixture = await mount('sg-otp-input', { attrs: { disabled: '' } });
 
       const cells = fixture.shadow?.querySelectorAll<HTMLInputElement>('input.cell') ?? [];
 
@@ -65,7 +65,7 @@ describe('bit-otp-input', () => {
     });
 
     it('uses password type when masked prop is set', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { masked: '' } });
+      fixture = await mount('sg-otp-input', { attrs: { masked: '' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
 
@@ -73,7 +73,7 @@ describe('bit-otp-input', () => {
     });
 
     it('uses text type by default (not masked)', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
 
@@ -81,7 +81,7 @@ describe('bit-otp-input', () => {
     });
 
     it('uses numeric inputmode for numeric type', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { type: 'numeric' } });
+      fixture = await mount('sg-otp-input', { attrs: { type: 'numeric' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
 
@@ -89,7 +89,7 @@ describe('bit-otp-input', () => {
     });
 
     it('uses text inputmode for alphanumeric type', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { type: 'alphanumeric' } });
+      fixture = await mount('sg-otp-input', { attrs: { type: 'alphanumeric' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
 
@@ -97,7 +97,7 @@ describe('bit-otp-input', () => {
     });
 
     it('first cell has autocomplete="one-time-code"', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
 
@@ -109,7 +109,7 @@ describe('bit-otp-input', () => {
 
   describe('Events', () => {
     it('fires change after paste with complete=true', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
+      fixture = await mount('sg-otp-input', { attrs: { length: '4' } });
 
       let detail: { complete: boolean; originalEvent?: Event; value: string } | undefined;
 
@@ -132,7 +132,7 @@ describe('bit-otp-input', () => {
     });
 
     it('fires complete when all cells are filled via paste', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
+      fixture = await mount('sg-otp-input', { attrs: { length: '4' } });
 
       const handler = vi.fn();
 
@@ -159,7 +159,7 @@ describe('bit-otp-input', () => {
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
-describe('bit-otp-input accessibility', () => {
+describe('sg-otp-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -172,13 +172,13 @@ describe('bit-otp-input accessibility', () => {
 
   describe('WAI-ARIA Group Pattern', () => {
     it('container has role="group"', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       expect(fixture.query('[role="group"]')).toBeTruthy();
     });
 
     it('group has the default aria-label "One-time password"', async () => {
-      fixture = await mount('bit-otp-input');
+      fixture = await mount('sg-otp-input');
 
       const group = fixture.query('[role="group"]');
 
@@ -186,7 +186,7 @@ describe('bit-otp-input accessibility', () => {
     });
 
     it('group aria-label reflects label prop', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { label: 'Security code' } });
+      fixture = await mount('sg-otp-input', { attrs: { label: 'Security code' } });
 
       const group = fixture.query('[role="group"]');
 
@@ -196,7 +196,7 @@ describe('bit-otp-input accessibility', () => {
 
   describe('Cell Labels', () => {
     it('each cell has a descriptive aria-label', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '3' } });
+      fixture = await mount('sg-otp-input', { attrs: { length: '3' } });
 
       const cells = fixture.shadow?.querySelectorAll('input.cell') ?? [];
 
@@ -206,7 +206,7 @@ describe('bit-otp-input accessibility', () => {
     });
 
     it('cell label total reflects the length prop', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '6' } });
+      fixture = await mount('sg-otp-input', { attrs: { length: '6' } });
 
       const lastCell = fixture.shadow?.querySelectorAll('input.cell')[5];
 
@@ -216,7 +216,7 @@ describe('bit-otp-input accessibility', () => {
 
   describe('Separator Accessibility', () => {
     it('separator span has aria-hidden="true"', async () => {
-      fixture = await mount('bit-otp-input', {
+      fixture = await mount('sg-otp-input', {
         attrs: {
           length: '6',
           separator: '-',

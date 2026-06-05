@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { sigilCemPlugin } from './cem-plugin-sigil.mjs';
+
 /**
  * Ordered inventory of published sigil component entry points.
  * Keep this list as the single internal source of truth for component subpaths.
@@ -91,7 +93,7 @@ export const customElementsManifestConfig = {
   litelement: false,
   outdir: 'dist',
   packagejson: true,
-  plugins: [],
+  plugins: [sigilCemPlugin()],
   stencil: false,
   watch: false,
   catalyst: false,

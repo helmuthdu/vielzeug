@@ -22,7 +22,7 @@ A customizable text input component with multiple types, variants, and validatio
 ## Basic Usage
 
 ```html
-<bit-input type="text" placeholder="Enter your name"></bit-input>
+<sg-input type="text" placeholder="Enter your name"></sg-input>
 
 <script type="module">
   import '@vielzeug/sigil/input';
@@ -39,12 +39,12 @@ Six visual variants for different UI contexts and levels of emphasis.
 <ComponentPreview>
 
 ```html
-<bit-input variant="solid" placeholder="Solid"></bit-input>
-<bit-input variant="flat" placeholder="Flat"></bit-input>
-<bit-input variant="bordered" placeholder="Bordered"></bit-input>
-<bit-input variant="outline" placeholder="Outline"></bit-input>
-<bit-input variant="ghost" placeholder="Ghost"></bit-input>
-<bit-input variant="text" placeholder="Text"></bit-input>
+<sg-input variant="solid" placeholder="Solid"></sg-input>
+<sg-input variant="flat" placeholder="Flat"></sg-input>
+<sg-input variant="bordered" placeholder="Bordered"></sg-input>
+<sg-input variant="outline" placeholder="Outline"></sg-input>
+<sg-input variant="ghost" placeholder="Ghost"></sg-input>
+<sg-input variant="text" placeholder="Text"></sg-input>
 ```
 
 </ComponentPreview>
@@ -56,15 +56,15 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
-  <bit-input variant="flat" placeholder="Default"></bit-input>
-  <bit-input variant="flat" color="primary" placeholder="Primary"></bit-input>
-  <bit-input variant="flat" color="secondary" placeholder="Secondary"></bit-input>
-  <bit-input variant="flat" color="info" placeholder="Info"></bit-input>
-  <bit-input variant="flat" color="success" placeholder="Success"></bit-input>
-  <bit-input variant="flat" color="warning" placeholder="Warning"></bit-input>
-  <bit-input variant="flat" color="error" placeholder="Error"></bit-input>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <sg-input variant="flat" placeholder="Default"></sg-input>
+  <sg-input variant="flat" color="primary" placeholder="Primary"></sg-input>
+  <sg-input variant="flat" color="secondary" placeholder="Secondary"></sg-input>
+  <sg-input variant="flat" color="info" placeholder="Info"></sg-input>
+  <sg-input variant="flat" color="success" placeholder="Success"></sg-input>
+  <sg-input variant="flat" color="warning" placeholder="Warning"></sg-input>
+  <sg-input variant="flat" color="error" placeholder="Error"></sg-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -76,12 +76,12 @@ Different input types for various use cases.
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
-  <bit-input variant="bordered" color="secondary" type="text" placeholder="Text input"></bit-input>
-  <bit-input variant="bordered" color="success" type="email" placeholder="email@example.com"></bit-input>
-  <bit-input variant="bordered" color="warning" type="password" placeholder="Password"></bit-input>
-  <bit-input variant="bordered" color="error" type="number" placeholder="123"></bit-input>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <sg-input variant="bordered" color="secondary" type="text" placeholder="Text input"></sg-input>
+  <sg-input variant="bordered" color="success" type="email" placeholder="email@example.com"></sg-input>
+  <sg-input variant="bordered" color="warning" type="password" placeholder="Password"></sg-input>
+  <sg-input variant="bordered" color="error" type="number" placeholder="123"></sg-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -93,14 +93,14 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="3">
-  <bit-input variant="flat" size="sm" placeholder="Small"></bit-input>
-  <bit-input variant="flat" size="md" placeholder="Medium"></bit-input>
-  <bit-input variant="flat" size="lg" placeholder="Large"></bit-input>
-  <bit-input variant="flat" size="sm" label="Small" placeholder="Small"></bit-input>
-  <bit-input variant="flat" size="md" label="Medium" placeholder="Medium"></bit-input>
-  <bit-input variant="flat" size="lg" label="Large" placeholder="Large"></bit-input>
-</bit-grid>
+<sg-grid cols="3">
+  <sg-input variant="flat" size="sm" placeholder="Small"></sg-input>
+  <sg-input variant="flat" size="md" placeholder="Medium"></sg-input>
+  <sg-input variant="flat" size="lg" placeholder="Large"></sg-input>
+  <sg-input variant="flat" size="sm" label="Small" placeholder="Small"></sg-input>
+  <sg-input variant="flat" size="md" label="Medium" placeholder="Medium"></sg-input>
+  <sg-input variant="flat" size="lg" label="Large" placeholder="Large"></sg-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -113,24 +113,24 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 ```html
 <!-- Default/Full: Pill shape (9999px) -->
-<bit-input rounded placeholder="Search..." variant="flat">
-  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
-</bit-input>
+<sg-input rounded placeholder="Search..." variant="flat">
+  <sg-icon slot="prefix" name="search" size="18"></sg-icon>
+</sg-input>
 
 <!-- Large: 0.5rem / 8px -->
-<bit-input rounded="lg" placeholder="Enter email" variant="bordered" label="Email"></bit-input>
+<sg-input rounded="lg" placeholder="Enter email" variant="bordered" label="Email"></sg-input>
 
 <!-- Extra Large: 0.75rem / 12px -->
-<bit-input rounded="xl" placeholder="Amount" variant="outline" size="lg">
+<sg-input rounded="xl" placeholder="Amount" variant="outline" size="lg">
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
-</bit-input>
+</sg-input>
 
 <!-- 2XL: 1rem / 16px -->
-<bit-input rounded="2xl" placeholder="Full Name" variant="flat" color="error"></bit-input>
+<sg-input rounded="2xl" placeholder="Full Name" variant="flat" color="error"></sg-input>
 
 <!-- 3XL: 1.5rem / 24px -->
-<bit-input rounded="3xl" placeholder="Website" variant="ghost"></bit-input>
+<sg-input rounded="3xl" placeholder="Website" variant="ghost"></sg-input>
 ```
 
 </ComponentPreview>
@@ -144,13 +144,13 @@ Add prefix or suffix content like icons or clear buttons using slots.
 <ComponentPreview center>
 
 ```html
-<bit-input placeholder="Search...">
-  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
-</bit-input>
-<bit-input placeholder="Enter amount">
+<sg-input placeholder="Search...">
+  <sg-icon slot="prefix" name="search" size="18"></sg-icon>
+</sg-input>
+<sg-input placeholder="Enter amount">
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
-</bit-input>
+</sg-input>
 ```
 
 </ComponentPreview>
@@ -162,11 +162,11 @@ Use the `label` attribute to render an inset label inside the input field, creat
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
-  <bit-input label="Full Name" placeholder="Jane Doe" value="Jane Doe"></bit-input>
-  <bit-input label="Email Address" type="email" placeholder="you@example.com"></bit-input>
-  <bit-input label="Phone Number" type="tel" value="+1 (555) 123-4567"></bit-input>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <sg-input label="Full Name" placeholder="Jane Doe" value="Jane Doe"></sg-input>
+  <sg-input label="Email Address" type="email" placeholder="you@example.com"></sg-input>
+  <sg-input label="Phone Number" type="tel" value="+1 (555) 123-4567"></sg-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -178,14 +178,14 @@ Labels work seamlessly with all variants and colors.
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
-  <bit-input variant="solid" label="Username" value="johndoe"></bit-input>
-  <bit-input variant="flat" color="secondary" label="Company" placeholder="Enter company name"></bit-input>
-  <bit-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></bit-input>
-  <bit-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></bit-input>
-  <bit-input variant="ghost" label="Country" color="error" value="Germany"></bit-input>
-  <bit-input variant="text" label="Notes" placeholder="Add your notes here"></bit-input>
-</bit-grid>
+<sg-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <sg-input variant="solid" label="Username" value="johndoe"></sg-input>
+  <sg-input variant="flat" color="secondary" label="Company" placeholder="Enter company name"></sg-input>
+  <sg-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></sg-input>
+  <sg-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></sg-input>
+  <sg-input variant="ghost" label="Country" color="error" value="Germany"></sg-input>
+  <sg-input variant="text" label="Notes" placeholder="Add your notes here"></sg-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -197,16 +197,16 @@ Combine labels with prefix and suffix slots for rich input fields.
 <ComponentPreview center>
 
 ```html
-<bit-input label="Search" placeholder="Type to search...">
-  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
-</bit-input>
-<bit-input label="Amount" value="1250">
+<sg-input label="Search" placeholder="Type to search...">
+  <sg-icon slot="prefix" name="search" size="18"></sg-icon>
+</sg-input>
+<sg-input label="Amount" value="1250">
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
-</bit-input>
-<bit-input label="Website" type="url" value="example.com">
-  <bit-icon slot="prefix" name="globe" size="18"></bit-icon>
-</bit-input>
+</sg-input>
+<sg-input label="Website" type="url" value="example.com">
+  <sg-icon slot="prefix" name="globe" size="18"></sg-icon>
+</sg-input>
 ```
 
 </ComponentPreview>
@@ -218,8 +218,8 @@ Labels can be placed inside the input field (default) or above it.
 <ComponentPreview center>
 
 ```html
-<bit-input label="Inset Label" value="default behavior"></bit-input>
-<bit-input label="Outside Label" label-placement="outside" value="placed above"></bit-input>
+<sg-input label="Inset Label" value="default behavior"></sg-input>
+<sg-input label="Outside Label" label-placement="outside" value="placed above"></sg-input>
 ```
 
 </ComponentPreview>
@@ -231,13 +231,7 @@ Provide additional context or validation messages below the input using the `hel
 <ComponentPreview center>
 
 ```html
-<bit-input label="Password" type="password" helper="Must be at least 8 characters long"></bit-input>
-<bit-input label="Email Address">
-  <div slot="helper" style="color: var(--color-primary); font-weight: 500;">
-    <bit-icon name="lightbulb" size="16"></bit-icon>
-    Verification link will be sent to this address
-  </div>
-</bit-input>
+<sg-input label="Password" type="password" helper="Must be at least 8 characters long"></sg-input>
 ```
 
 </ComponentPreview>
@@ -251,7 +245,7 @@ Prevent interaction or modification of the input.
 <ComponentPreview center>
 
 ```html
-<bit-input disabled placeholder="Disabled input"></bit-input> <bit-input readonly value="Read-only value"></bit-input>
+<sg-input disabled placeholder="Disabled input"></sg-input> <sg-input readonly value="Read-only value"></sg-input>
 ```
 
 </ComponentPreview>
@@ -304,7 +298,7 @@ Prevent interaction or modification of the input.
 
 The input component follows WCAG 2.1 Level AA standards.
 
-### `bit-input`
+### `sg-input`
 
 ✅ **Keyboard Navigation**
 
@@ -326,23 +320,23 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 
 ```html
 <div style="display: grid; gap: 0.75rem; max-width: 26rem; width: 100%;">
-  <bit-input
+  <sg-input
     label="Workspace name"
     placeholder="Acme Marketing"
     helper="This appears in invites and email notifications."
-    clearable></bit-input>
+    clearable></sg-input>
 
-  <bit-input
+  <sg-input
     type="email"
     label="Owner email"
     placeholder="you@company.com"
-    helper="We will send setup instructions to this address."></bit-input>
+    helper="We will send setup instructions to this address."></sg-input>
 
-  <bit-input
+  <sg-input
     type="text"
     label="Project key"
     value="acme space"
-    error="Use lowercase letters, numbers, and dashes only."></bit-input>
+    error="Use lowercase letters, numbers, and dashes only."></sg-input>
 </div>
 ```
 

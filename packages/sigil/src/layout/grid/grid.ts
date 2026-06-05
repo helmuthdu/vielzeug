@@ -37,7 +37,7 @@ const BP_FALLBACKS: Record<string, number> = {
 type ColCount = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
 
 /** Grid component properties */
-export type BitGridProps = {
+export type SgGridProps = {
   /** Align items vertically */
   align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
   /** CSS grid-template-areas value */
@@ -81,14 +81,14 @@ export type BitGridProps = {
 };
 
 /**
- * bit-grid — Flexible grid layout with responsive column control.
+ * sg-grid — Flexible grid layout with responsive column control.
  *
  * Columns are computed in JS and applied as `--_cols` inline, so they respond
  * to the element's own width via ResizeObserver. CSS custom properties
  * `--grid-cols`, `--grid-rows`, `--grid-gap`, `--grid-row-gap`, `--grid-col-gap`
  * are honoured as fallbacks when no attribute is set.
  *
- * @element bit-grid
+ * @element sg-grid
  *
  * @attr {string} cols - Column count: '1'–'12' | 'auto'
  * @attr {string} cols-sm - Columns when width ≥ 640px
@@ -120,26 +120,26 @@ export type BitGridProps = {
  * @cssprop --grid-col-gap - Fallback column gap
  *
  * @example
- * <bit-grid cols="1" cols-sm="2" cols-lg="4" gap="md">
+ * <sg-grid cols="1" cols-sm="2" cols-lg="4" gap="md">
  *   <div>Item</div>
- * </bit-grid>
+ * </sg-grid>
  *
  * @example
  * <!-- Responsive auto-fit -->
- * <bit-grid responsive min-col-width="200px" gap="sm">
+ * <sg-grid responsive min-col-width="200px" gap="sm">
  *   <div>Card</div>
- * </bit-grid>
+ * </sg-grid>
  *
  * @example
  * <!-- Named grid areas -->
- * <bit-grid cols="2" rows="2" areas="'header header' 'nav main'">
+ * <sg-grid cols="2" rows="2" areas="'header header' 'nav main'">
  *   <header style="grid-area: header">Header</header>
  *   <nav style="grid-area: nav">Nav</nav>
  *   <main style="grid-area: main">Main</main>
- * </bit-grid>
+ * </sg-grid>
  */
-export const GRID_TAG = 'bit-grid' as const;
-define<BitGridProps>(GRID_TAG, {
+export const GRID_TAG = 'sg-grid' as const;
+define<SgGridProps>(GRID_TAG, {
   props: {
     align: prop.string<'start' | 'center' | 'end' | 'stretch' | 'baseline'>(),
     areas: prop.string(),

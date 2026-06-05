@@ -1,6 +1,4 @@
-import { computed, define, html, onMounted, prop, signal, watch } from '@vielzeug/craft';
-
-import type { ComponentSize } from '../../shared';
+import { computed, define, html, onCleanup, onMounted, prop, signal, watch } from '@vielzeug/craft';
 
 import '../../content/icon/icon';
 import '../../inputs/checkbox/checkbox';
@@ -8,19 +6,21 @@ import '../../inputs/combobox/combobox';
 import '../../inputs/input/input';
 import '../../inputs/select/select';
 import {
+  lifecycleSignal,
   createDataGridControl,
   type DataGridColumn,
   type DataGridControl,
   type SelectionMode,
   type SortDirection,
-  type SortMode,
   type SortState,
 } from '../../headless';
-import { disablableBundle, loadableBundle, sizableBundle } from '../../shared';
+import { disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
 import { COLUMN_OBSERVED_ATTRS, parseColumnChildren } from './datagrid-column';
 import { type GridNavHandle, createGridNav } from './datagrid-nav';
 import componentStyles from './datagrid.css?inline';
+
+type SortMode = 'client' | 'server';
 
 export { COLUMN_TAG } from './datagrid-column';
 
@@ -50,7 +50,7 @@ export function ariaSortValue(state: SortState, key: string): 'ascending' | 'des
 
 export type FilterDef = { key: string; label: string; options: { label?: string; value: string }[] };
 
-export type BitDataGridEvents<T = Record<string, unknown>> = {
+export type SgDataGridEvents<T = Record<string, unknown>> = {
   /** Fired when the active page changes. */
   'page-change': { pageIndex: number; pageSize: number };
   /** Fired when a row is expanded or collapsed. */
@@ -61,11 +61,11 @@ export type BitDataGridEvents<T = Record<string, unknown>> = {
   'sort-change': { direction: SortDirection; key: string };
 };
 
-export type BitDataGridProps<T = Record<string, unknown>> = {
+export type SgDataGridProps<T = Record<string, unknown>> = {
   /**
-   * Column definitions (imperative API). Takes precedence over `<bit-column>` children.
+   * Column definitions (imperative API). Takes precedence over `<sg-column>` children.
    * Passing `[]` explicitly clears declarative children.
-   * Pass `undefined` (or omit) to use `<bit-column>` children instead.
+   * Pass `undefined` (or omit) to use `<sg-column>` children instead.
    * @example
    * ```js
    * grid.columns = [
@@ -75,6 +75,8 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
    * ```
    */
   columns?: DataGridColumn<T>[];
+  /** Cell density: `'compact'` | `'cozy'` (default) | `'comfortable'` */
+  density?: 'compact' | 'cozy' | 'comfortable';
   /** Disable all interaction. */
   disabled?: boolean;
   /** Text shown when there are no rows. */
@@ -85,7 +87,7 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
    */
   expandable?: boolean;
   /**
-   * Column filter definitions. Each entry renders a `bit-combobox` (multi-select) in the toolbar.
+   * Column filter definitions. Each entry renders a `sg-combobox` (multi-select) in the toolbar.
    * The toolbar renders automatically when filters are set, independent of the `searchable` prop.
    * @example
    * ```js
@@ -110,7 +112,7 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
   'page-size'?: number;
   /**
    * Options for the per-page size selector rendered in the footer.
-   * When provided, a `bit-select` is shown next to the pagination controls.
+   * When provided, a `sg-select` is shown next to the pagination controls.
    * @example `grid['page-size-options'] = [10, 25, 50, 100]`
    */
   'page-size-options'?: number[];
@@ -133,8 +135,6 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
   'selected-keys'?: string[];
   /** Row selection mode. */
   'selection-mode'?: SelectionMode;
-  /** Component size. */
-  size?: ComponentSize;
   /**
    * Whether sorting is client-side (default) or server-side.
    * When `'server'`, `sort-change` fires but items are not sorted by the control.
@@ -148,7 +148,8 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  * An accessible, keyboard-navigable data grid with sorting, pagination,
  * and single/multi row selection.
  *
- * @element bit-datagrid
+ * @element sg-datagrid
+ * @element sg-column - Optional declarative column definition child
  *
  * @attr {boolean} disabled - Disable all interaction
  * @attr {boolean} loading - Show busy/loading state
@@ -159,7 +160,7 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  * @attr {number} page-size - Rows per page (0 = no pagination, default 10)
  * @attr {string} selection-mode - Row selection: 'none' | 'single' | 'multi'
  * @attr {string} sort-mode - Sorting: 'client' (default) | 'server'
- * @attr {string} size - Component size: sm | md | lg
+ * @attr {string} density - Cell density: compact | cozy (default) | comfortable
  * @attr {string} empty-text - Text shown when there are no rows
  * @attr {string} label - Accessible label for the grid
  *
@@ -191,7 +192,7 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  *
  * @example
  * ```html
- * <bit-datagrid id="grid" label="Users" selection-mode="multi"></bit-datagrid>
+ * <sg-datagrid id="grid" label="Users" selection-mode="multi"></sg-datagrid>
  * <script>
  *   const grid = document.getElementById('grid');
  *   grid.columns = [
@@ -205,11 +206,11 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  * </script>
  * ```
  */
-export const DATAGRID_TAG = 'bit-datagrid' as const;
+export const DATAGRID_TAG = 'sg-datagrid' as const;
 
-define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
+define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
   props: {
-    ...sizableBundle,
+    density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
     ...disablableBundle,
     ...loadableBundle,
     columns: prop.ref<DataGridColumn[]>(),
@@ -260,8 +261,8 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
       },
     );
 
-    // ── Declarative bit-column children ─────────────────────────────────────
-    // A writable signal holding columns parsed from <bit-column> children.
+    // ── Declarative sg-column children ─────────────────────────────────────
+    // A writable signal holding columns parsed from <sg-column> children.
     // Updated on mount and whenever children change. The JS `columns` prop
     // takes precedence when explicitly set (non-empty).
     const declarativeColumns = signal<DataGridColumn[]>([]);
@@ -302,7 +303,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
       if (id == null) {
         console.warn(
-          '[bit-datagrid] Row missing `id`. Keys will collide — provide `getRowKey` or add a unique `id` field.',
+          '[sg-datagrid] Row missing `id`. Keys will collide — provide `getRowKey` or add a unique `id` field.',
           item,
         );
 
@@ -374,17 +375,17 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
     const ctrl: DataGridControl = createDataGridControl({
       columns: () => resolvedColumns.value,
-      getItems: () => filteredRows.value,
       getRowKey: resolveKey,
+      items: filteredRows,
       onSelectionChange: (keys: Set<string>) => {
-        emit('selection-change', { keys: [...keys], rows: ctrl.selectedRows as Record<string, unknown>[] });
+        emit('selection-change', { keys: [...keys], rows: ctrl.selectedRows.value as Record<string, unknown>[] });
       },
       onSortChange: (sort) => {
         emit('sort-change', sort);
       },
       pageSize: () => pageSize.value,
       selectionMode: () => selectionMode.value,
-      sortMode: () => props['sort-mode'].value ?? 'client',
+      signal: lifecycleSignal(onCleanup),
     });
 
     // ── Sync external selected-keys prop into ctrl ────────────────────────────
@@ -447,6 +448,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     // ── Pagination handlers ───────────────────────────────────────────────────
 
     function handlePage(direction: 'next' | 'prev'): void {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       direction === 'prev' ? ctrl.prevPage() : ctrl.nextPage();
       emit('page-change', { pageIndex: ctrl.pageIndex.value, pageSize: pageSize.value });
     }
@@ -488,6 +490,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
       const next = new Set(expandedKeys.value);
       const expanded = !next.has(key);
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       expanded ? next.add(key) : next.delete(key);
       expandedKeys.value = next;
       emit('row-expand', { expanded, key });
@@ -529,7 +532,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
               ${() =>
                 props.searchable.value
                   ? html`<div class="dg-toolbar-start">
-                      <bit-input
+                      <sg-input
                         class="dg-search"
                         type="search"
                         :placeholder="${() => props['search-placeholder'].value ?? 'Search…'}"
@@ -537,7 +540,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                         clearable
                         @input="${(e: CustomEvent<{ value: string }>) => {
                           searchQuery.value = e.detail.value;
-                        }}"></bit-input>
+                        }}"></sg-input>
                     </div>`
                   : html``}
               ${() => {
@@ -546,7 +549,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                 return html`<div class="dg-toolbar-filters">
                   ${filterDefs.value.map(
                     (f) =>
-                      html`<bit-combobox
+                      html`<sg-combobox
                         class="dg-filter"
                         :placeholder="${() => f.label}"
                         :options="${() => f.options}"
@@ -554,7 +557,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                         multiple
                         @change="${(e: CustomEvent<{ values: string[] }>) => {
                           setFilter(f.key, e.detail.values);
-                        }}"></bit-combobox>`,
+                        }}"></sg-combobox>`,
                   )}
                 </div>`;
               }}
@@ -583,7 +586,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                         checkOffset.value >= 1
                           ? '0'
                           : '-1'}">
-                      <bit-checkbox
+                      <sg-checkbox
                         class="dg-check"
                         :checked="${() => ctrl.isAllSelected()}"
                         :indeterminate="${isSomeSelected}"
@@ -591,7 +594,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                         aria-label="Select all rows on this page"
                         @change="${() => {
                           if (!isDisabled.value) ctrl.selectAll();
-                        }}"></bit-checkbox>
+                        }}"></sg-checkbox>
                     </th>`
                   : html``}
               ${() =>
@@ -628,10 +631,10 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                               <span class="dg-sort-label">
                                 ${col.label}
                                 <span class="dg-sort-icon" aria-hidden="true">
-                                  <bit-icon
+                                  <sg-icon
                                     :name="${() => sortIconName(ctrl.sortState.value, col.key)}"
                                     size="14"
-                                    stroke-width="2"></bit-icon>
+                                    stroke-width="2"></sg-icon>
                                 </span>
                               </span>
                             </button>`
@@ -698,7 +701,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                         ${() =>
                           selectionMode.value === 'multi'
                             ? html`<td class="dg-td dg-td-check" role="gridcell">
-                                <bit-checkbox
+                                <sg-checkbox
                                   class="dg-check"
                                   :checked="${() => ctrl.selectedKeys.value.has(key)}"
                                   ?disabled="${isDisabled}"
@@ -707,7 +710,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                                   @click="${(e: MouseEvent) => e.stopPropagation()}"
                                   @change="${() => {
                                     if (!isDisabled.value) ctrl.toggleRow(key);
-                                  }}"></bit-checkbox>
+                                  }}"></sg-checkbox>
                               </td>`
                             : html``}
                         ${resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
@@ -742,11 +745,11 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
                                     if (!isDisabled.value) toggleExpand(key);
                                   }}">
-                                  <bit-icon
+                                  <sg-icon
                                     :name="${() => (expandedKeys.value.has(key) ? 'chevron-up' : 'chevron-down')}"
                                     size="14"
                                     stroke-width="2"
-                                    aria-hidden="true"></bit-icon>
+                                    aria-hidden="true"></sg-icon>
                                 </button>
                               </td>`
                             : html``}
@@ -784,7 +787,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                   const opts = props['page-size-options'].value ?? [];
 
                   return opts.length
-                    ? html`<bit-select
+                    ? html`<sg-select
                         class="dg-page-size-select"
                         fullwidth
                         aria-label="Rows per page"
@@ -798,7 +801,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                             pageSize.value = n;
                             emit('page-change', { pageIndex: 0, pageSize: n });
                           }
-                        }}"></bit-select>`
+                        }}"></sg-select>`
                     : html``;
                 }}
                 <div class="dg-pagination" role="group" aria-label="Page navigation">
@@ -808,7 +811,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                     aria-label="Previous page"
                     ?disabled="${() => !ctrl.hasPrevPage.value || isDisabled.value}"
                     @click="${() => handlePage('prev')}">
-                    <bit-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
                   </button>
                   <span class="dg-page-label" dir="ltr" aria-current="page">
                     ${() => `${ctrl.pageIndex.value + 1} / ${ctrl.pageCount.value}`}
@@ -819,7 +822,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                     aria-label="Next page"
                     ?disabled="${() => !ctrl.hasNextPage.value || isDisabled.value}"
                     @click="${() => handlePage('next')}">
-                    <bit-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+                    <sg-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
                   </button>
                 </div>
               </div>

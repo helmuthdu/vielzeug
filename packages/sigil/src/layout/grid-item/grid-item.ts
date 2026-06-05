@@ -3,7 +3,7 @@ import { computed, define, html, prop } from '@vielzeug/craft';
 import styles from './grid-item.css?inline';
 
 /** Grid item component properties */
-export type BitGridItemProps = {
+export type SgGridItemProps = {
   /** Align self vertically within the grid cell */
   align?: 'start' | 'center' | 'end' | 'stretch';
   /** Named grid area to place the item into. */
@@ -21,13 +21,13 @@ export type BitGridItemProps = {
 };
 
 /**
- * bit-grid-item — A grid cell with declarative placement and span control.
+ * sg-grid-item — A grid cell with declarative placement and span control.
  *
  * Use `col-span` / `row-span` for the common case of spanning columns/rows.
  * Use `col` / `row` for full CSS grid-column / grid-row shorthand power
  * (e.g. explicit placement, mixed span + start, negative lines).
  *
- * @element bit-grid-item
+ * @element sg-grid-item
  *
  * @attr {string} area - CSS grid-area value for named-area placement
  * @attr {string} col-span - Columns to span: '1'–'12' | 'full'
@@ -41,22 +41,22 @@ export type BitGridItemProps = {
  *
  * @example
  * <!-- Span 2 columns -->
- * <bit-grid-item col-span="2">Wide</bit-grid-item>
+ * <sg-grid-item col-span="2">Wide</sg-grid-item>
  *
  * @example
  * <!-- Full-width row -->
- * <bit-grid-item col-span="full">Banner</bit-grid-item>
+ * <sg-grid-item col-span="full">Banner</sg-grid-item>
  *
  * @example
  * <!-- Named area placement -->
- * <bit-grid-item area="sidebar">Nav</bit-grid-item>
+ * <sg-grid-item area="sidebar">Nav</sg-grid-item>
  *
  * @example
  * <!-- Explicit placement -->
- * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
+ * <sg-grid-item col="2 / 5" row="1 / 3">Placed</sg-grid-item>
  */
-export const GRID_ITEM_TAG = 'bit-grid-item' as const;
-define<BitGridItemProps>(GRID_ITEM_TAG, {
+export const GRID_ITEM_TAG = 'sg-grid-item' as const;
+define<SgGridItemProps>(GRID_ITEM_TAG, {
   props: {
     align: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
     area: prop.string(),

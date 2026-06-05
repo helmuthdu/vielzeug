@@ -25,15 +25,15 @@ A modal dialog that blocks page interaction, traps focus, and dismisses on `Esca
 Use the `open` attribute to show the dialog and remove it (or set it to `false`) to close it.
 
 ```html
-<bit-button id="open-btn">Open dialog</bit-button>
+<sg-button id="open-btn">Open dialog</sg-button>
 
-<bit-dialog label="Confirm action" dismissible id="dialog">
+<sg-dialog label="Confirm action" dismissible id="dialog">
   <p>Are you sure you want to delete this item? This action cannot be undone.</p>
   <div slot="footer">
-    <bit-button variant="ghost" id="cancel-btn">Cancel</bit-button>
-    <bit-button color="error" id="confirm-btn">Delete</bit-button>
+    <sg-button variant="ghost" id="cancel-btn">Cancel</sg-button>
+    <sg-button color="error" id="confirm-btn">Delete</sg-button>
   </div>
-</bit-dialog>
+</sg-dialog>
 
 <script type="module">
   import '@vielzeug/sigil/dialog';
@@ -59,31 +59,31 @@ Use the `open` attribute to show the dialog and remove it (or set it to `false`)
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-size-sm">Small</bit-button>
-<bit-button id="open-size-md">Medium</bit-button>
-<bit-button id="open-size-lg">Large</bit-button>
-<bit-button id="open-size-xl">Extra large</bit-button>
-<bit-button id="open-size-full">Full</bit-button>
+<sg-button id="open-size-sm">Small</sg-button>
+<sg-button id="open-size-md">Medium</sg-button>
+<sg-button id="open-size-lg">Large</sg-button>
+<sg-button id="open-size-xl">Extra large</sg-button>
+<sg-button id="open-size-full">Full</sg-button>
 
-<bit-dialog id="dialog-size-sm" label="Small dialog" size="sm" dismissible>
+<sg-dialog id="dialog-size-sm" label="Small dialog" size="sm" dismissible>
   <p>A compact dialog for brief confirmations.</p>
-</bit-dialog>
+</sg-dialog>
 
-<bit-dialog id="dialog-size-md" label="Medium dialog" size="md" dismissible>
+<sg-dialog id="dialog-size-md" label="Medium dialog" size="md" dismissible>
   <p>The default size, suitable for most use cases.</p>
-</bit-dialog>
+</sg-dialog>
 
-<bit-dialog id="dialog-size-lg" label="Large dialog" size="lg" dismissible>
+<sg-dialog id="dialog-size-lg" label="Large dialog" size="lg" dismissible>
   <p>More room for forms or detailed content.</p>
-</bit-dialog>
+</sg-dialog>
 
-<bit-dialog id="dialog-size-xl" label="Extra large dialog" size="xl" dismissible>
+<sg-dialog id="dialog-size-xl" label="Extra large dialog" size="xl" dismissible>
   <p>Ideal for data-heavy views or complex forms.</p>
-</bit-dialog>
+</sg-dialog>
 
-<bit-dialog id="dialog-size-full" label="Full dialog" size="full" dismissible>
+<sg-dialog id="dialog-size-full" label="Full dialog" size="full" dismissible>
   <p>Expands to near full-screen width and height.</p>
-</bit-dialog>
+</sg-dialog>
 
 <script>
   ['sm', 'md', 'lg', 'xl', 'full'].forEach(function (size) {
@@ -103,15 +103,15 @@ Add `dismissible` to show a close (×) button in the top-right corner of the hea
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-dismissible-btn">Open dialog</bit-button>
+<sg-button id="open-dismissible-btn">Open dialog</sg-button>
 
-<bit-dialog id="dismissible-dialog" label="Update available" dismissible>
+<sg-dialog id="dismissible-dialog" label="Update available" dismissible>
   <p>A new version is ready to install. Restart now to apply the update.</p>
   <div slot="footer">
-    <bit-button variant="ghost" id="dismissible-later-btn">Later</bit-button>
-    <bit-button color="primary">Restart now</bit-button>
+    <sg-button variant="ghost" id="dismissible-later-btn">Later</sg-button>
+    <sg-button color="primary">Restart now</sg-button>
   </div>
-</bit-dialog>
+</sg-dialog>
 
 <script>
   document.getElementById('open-dismissible-btn').addEventListener('click', function () {
@@ -132,18 +132,18 @@ Control the backdrop appearance with the `backdrop` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-backdrop-opaque">opaque</bit-button>
-<bit-button id="open-backdrop-blur">blur</bit-button>
-<bit-button id="open-backdrop-transparent">transparent</bit-button>
+<sg-button id="open-backdrop-opaque">opaque</sg-button>
+<sg-button id="open-backdrop-blur">blur</sg-button>
+<sg-button id="open-backdrop-transparent">transparent</sg-button>
 
-<bit-dialog id="dialog-backdrop-opaque" label="opaque" backdrop="opaque" dismissible
-  ><p>Dark overlay, no blur.</p></bit-dialog
+<sg-dialog id="dialog-backdrop-opaque" label="opaque" backdrop="opaque" dismissible
+  ><p>Dark overlay, no blur.</p></sg-dialog
 >
-<bit-dialog id="dialog-backdrop-blur" label="blur" backdrop="blur" dismissible
-  ><p>Dark overlay with 4 px blur — the default.</p></bit-dialog
+<sg-dialog id="dialog-backdrop-blur" label="blur" backdrop="blur" dismissible
+  ><p>Dark overlay with 4 px blur — the default.</p></sg-dialog
 >
-<bit-dialog id="dialog-backdrop-transparent" label="transparent" backdrop="transparent" dismissible
-  ><p>No overlay and no blur.</p></bit-dialog
+<sg-dialog id="dialog-backdrop-transparent" label="transparent" backdrop="transparent" dismissible
+  ><p>No overlay and no blur.</p></sg-dialog
 >
 
 <script>
@@ -164,26 +164,26 @@ Control the panel drop shadow with the `elevation` attribute. Defaults to `xl`.
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-elev-none">None</bit-button>
-<bit-button id="open-elev-sm">sm</bit-button>
-<bit-button id="open-elev-md">md</bit-button>
-<bit-button id="open-elev-lg">lg</bit-button>
-<bit-button id="open-elev-xl">xl</bit-button>
-<bit-button id="open-elev-2xl">2xl</bit-button>
+<sg-button id="open-elev-none">None</sg-button>
+<sg-button id="open-elev-sm">sm</sg-button>
+<sg-button id="open-elev-md">md</sg-button>
+<sg-button id="open-elev-lg">lg</sg-button>
+<sg-button id="open-elev-xl">xl</sg-button>
+<sg-button id="open-elev-2xl">2xl</sg-button>
 
-<bit-dialog id="dialog-elev-none" label="No shadow" elevation="none" dismissible
-  ><p>Panel has no drop shadow.</p></bit-dialog
+<sg-dialog id="dialog-elev-none" label="No shadow" elevation="none" dismissible
+  ><p>Panel has no drop shadow.</p></sg-dialog
 >
-<bit-dialog id="dialog-elev-sm" label="sm elevation" elevation="sm" dismissible><p>Subtle shadow.</p></bit-dialog>
-<bit-dialog id="dialog-elev-md" label="md elevation (default)" elevation="md" dismissible
-  ><p>Normal shadow.</p></bit-dialog
+<sg-dialog id="dialog-elev-sm" label="sm elevation" elevation="sm" dismissible><p>Subtle shadow.</p></sg-dialog>
+<sg-dialog id="dialog-elev-md" label="md elevation (default)" elevation="md" dismissible
+  ><p>Normal shadow.</p></sg-dialog
 >
-<bit-dialog id="dialog-elev-lg" label="lg elevation" elevation="lg" dismissible><p>Stronger shadow.</p></bit-dialog>
-<bit-dialog id="dialog-elev-xl" label="xl elevation" elevation="xl" dismissible
-  ><p>Default shadow level.</p></bit-dialog
+<sg-dialog id="dialog-elev-lg" label="lg elevation" elevation="lg" dismissible><p>Stronger shadow.</p></sg-dialog>
+<sg-dialog id="dialog-elev-xl" label="xl elevation" elevation="xl" dismissible
+  ><p>Default shadow level.</p></sg-dialog
 >
-<bit-dialog id="dialog-elev-2xl" label="2xl elevation" elevation="2xl" dismissible
-  ><p>Maximum shadow depth.</p></bit-dialog
+<sg-dialog id="dialog-elev-2xl" label="2xl elevation" elevation="2xl" dismissible
+  ><p>Maximum shadow depth.</p></sg-dialog
 >
 
 <script>
@@ -205,23 +205,23 @@ Control the internal padding of the header, body, and footer with the `padding` 
 
 ```html
 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-  <bit-button id="open-pad-none">none</bit-button>
-  <bit-button id="open-pad-sm">sm</bit-button>
-  <bit-button id="open-pad-md">md</bit-button>
-  <bit-button id="open-pad-lg">lg</bit-button>
-  <bit-button id="open-pad-xl">xl</bit-button>
+  <sg-button id="open-pad-none">none</sg-button>
+  <sg-button id="open-pad-sm">sm</sg-button>
+  <sg-button id="open-pad-md">md</sg-button>
+  <sg-button id="open-pad-lg">lg</sg-button>
+  <sg-button id="open-pad-xl">xl</sg-button>
 </div>
 
-<bit-dialog id="dialog-pad-none" label="Padding: none" padding="none" dismissible
-  ><p>No padding around the content.</p></bit-dialog
+<sg-dialog id="dialog-pad-none" label="Padding: none" padding="none" dismissible
+  ><p>No padding around the content.</p></sg-dialog
 >
-<bit-dialog id="dialog-pad-sm" label="Padding: sm" padding="sm" dismissible><p>Small padding (12 px).</p></bit-dialog>
-<bit-dialog id="dialog-pad-md" label="Padding: md" padding="md" dismissible
-  ><p>Medium padding — the default (16 px).</p></bit-dialog
+<sg-dialog id="dialog-pad-sm" label="Padding: sm" padding="sm" dismissible><p>Small padding (12 px).</p></sg-dialog>
+<sg-dialog id="dialog-pad-md" label="Padding: md" padding="md" dismissible
+  ><p>Medium padding — the default (16 px).</p></sg-dialog
 >
-<bit-dialog id="dialog-pad-lg" label="Padding: lg" padding="lg" dismissible><p>Large padding (24 px).</p></bit-dialog>
-<bit-dialog id="dialog-pad-xl" label="Padding: xl" padding="xl" dismissible
-  ><p>Extra-large padding (32 px).</p></bit-dialog
+<sg-dialog id="dialog-pad-lg" label="Padding: lg" padding="lg" dismissible><p>Large padding (24 px).</p></sg-dialog>
+<sg-dialog id="dialog-pad-xl" label="Padding: xl" padding="xl" dismissible
+  ><p>Extra-large padding (32 px).</p></sg-dialog
 >
 
 <script>
@@ -242,19 +242,19 @@ Use the `header` slot to replace the default title + close-button layout entirel
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-custom-header-btn">Open dialog</bit-button>
+<sg-button id="open-custom-header-btn">Open dialog</sg-button>
 
-<bit-dialog id="custom-header-dialog" dismissible>
+<sg-dialog id="custom-header-dialog" dismissible>
   <div slot="header" style="display:flex;align-items:center;gap:0.5rem;">
-    <bit-icon name="info" size="20"></bit-icon>
+    <sg-icon name="info" size="20"></sg-icon>
     <strong>Session timeout</strong>
   </div>
   <p>Your session will expire in 2 minutes. Do you want to stay signed in?</p>
   <div slot="footer">
-    <bit-button variant="ghost" id="custom-header-signout-btn">Sign out</bit-button>
-    <bit-button color="primary" id="custom-header-stay-btn">Stay signed in</bit-button>
+    <sg-button variant="ghost" id="custom-header-signout-btn">Sign out</sg-button>
+    <sg-button color="primary" id="custom-header-stay-btn">Stay signed in</sg-button>
   </div>
-</bit-dialog>
+</sg-dialog>
 
 <script type="module">
   document.getElementById('open-custom-header-btn').addEventListener('click', function () {
@@ -278,14 +278,14 @@ Set `persistent` to prevent the dialog from closing when the user clicks outside
 <ComponentPreview center>
 
 ```html
-<bit-button id="open-persistent-btn">Open dialog</bit-button>
+<sg-button id="open-persistent-btn">Open dialog</sg-button>
 
-<bit-dialog id="persistent-dialog" label="Required setup" persistent dismissible>
+<sg-dialog id="persistent-dialog" label="Required setup" persistent dismissible>
   <p>
     Please complete the onboarding before continuing. Click outside the panel — nothing happens. Use the × button to
     dismiss.
   </p>
-</bit-dialog>
+</sg-dialog>
 
 <script>
   document.getElementById('open-persistent-btn').addEventListener('click', function () {
@@ -299,7 +299,7 @@ Set `persistent` to prevent the dialog from closing when the user clicks outside
 ## Listening to Events
 
 ```javascript
-const dialog = document.querySelector('bit-dialog');
+const dialog = document.querySelector('sg-dialog');
 
 dialog.addEventListener('open', (e) => {
   console.log('Dialog opened because:', e.detail.reason);
@@ -367,7 +367,7 @@ dialog.addEventListener('close-request', (e) => {
 
 The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) and is built on the native `<dialog>` element for WCAG 2.1 Level AA compliance.
 
-### `bit-dialog`
+### `sg-dialog`
 
 ✅ **Keyboard Navigation**
 
@@ -410,5 +410,5 @@ When using `persistent`, always include an accessible way to dismiss — either 
 **Don't:**
 
 - Nest dialogs; stack them in a queue instead.
-- Use dialogs for non-blocking notifications — use `bit-alert` or a toast component instead.
+- Use dialogs for non-blocking notifications — use `sg-alert` or a toast component instead.
 - Open dialogs without user intent (e.g. on page load) — this is disorienting for screen reader users.

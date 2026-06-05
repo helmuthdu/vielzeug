@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-input', () => {
+describe('sg-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -15,7 +15,7 @@ describe('bit-input', () => {
 
   describe('Rendering', () => {
     it('renders wrapper, field, and input elements', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       expect(fixture.query('.input-wrapper')).toBeTruthy();
       expect(fixture.query('.field')).toBeTruthy();
@@ -23,20 +23,20 @@ describe('bit-input', () => {
     });
 
     it('renders with default type "text"', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       expect(fixture.query<HTMLInputElement>('input')?.type).toBe('text');
     });
 
     it('renders prefix and suffix slots', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       expect(fixture.query('slot[name="prefix"]')).toBeTruthy();
       expect(fixture.query('slot[name="suffix"]')).toBeTruthy();
     });
 
     it('renders label when label-placement is "outside"', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           label: 'Email',
           'label-placement': 'outside',
@@ -47,7 +47,7 @@ describe('bit-input', () => {
     });
 
     it('renders label when label-placement is "inset"', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           label: 'Email',
           'label-placement': 'inset',
@@ -58,7 +58,7 @@ describe('bit-input', () => {
     });
 
     it('renders helper text when helper attribute is set', async () => {
-      fixture = await mount('bit-input', { attrs: { helper: 'Enter your email' } });
+      fixture = await mount('sg-input', { attrs: { helper: 'Enter your email' } });
 
       const helperEl = fixture.query('.helper-text');
 
@@ -66,7 +66,7 @@ describe('bit-input', () => {
     });
 
     it('renders error message when error attribute is set', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: { error: 'This field is required' },
       });
 
@@ -83,20 +83,20 @@ describe('bit-input', () => {
 
     types.forEach((type) => {
       it(`forwards type="${type}" to inner input`, async () => {
-        fixture = await mount('bit-input', { attrs: { type } });
+        fixture = await mount('sg-input', { attrs: { type } });
 
         expect(fixture.query<HTMLInputElement>('input')?.type).toBe(type);
       });
     });
 
     it('falls back to "text" for invalid type', async () => {
-      fixture = await mount('bit-input', { attrs: { type: 'invalid' } });
+      fixture = await mount('sg-input', { attrs: { type: 'invalid' } });
 
       expect(fixture.query<HTMLInputElement>('input')?.type).toBe('text');
     });
 
     it('updates type dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { type: 'text' } });
+      fixture = await mount('sg-input', { attrs: { type: 'text' } });
 
       await fixture.attr('type', 'email');
 
@@ -108,13 +108,13 @@ describe('bit-input', () => {
 
   describe('Value Management', () => {
     it('sets initial value in inner input', async () => {
-      fixture = await mount('bit-input', { attrs: { value: 'hello world' } });
+      fixture = await mount('sg-input', { attrs: { value: 'hello world' } });
 
       expect(fixture.query<HTMLInputElement>('input')?.value).toBe('hello world');
     });
 
     it('updates inner input value when attribute changes', async () => {
-      fixture = await mount('bit-input', { attrs: { value: 'initial' } });
+      fixture = await mount('sg-input', { attrs: { value: 'initial' } });
 
       await fixture.attr('value', 'updated');
       await fixture.flush();
@@ -123,7 +123,7 @@ describe('bit-input', () => {
     });
 
     it('handles empty string value', async () => {
-      fixture = await mount('bit-input', { attrs: { value: '' } });
+      fixture = await mount('sg-input', { attrs: { value: '' } });
 
       expect(fixture.query<HTMLInputElement>('input')?.value).toBe('');
     });
@@ -133,13 +133,13 @@ describe('bit-input', () => {
 
   describe('Label and Placeholder', () => {
     it('sets name on inner input', async () => {
-      fixture = await mount('bit-input', { attrs: { name: 'email' } });
+      fixture = await mount('sg-input', { attrs: { name: 'email' } });
 
       expect(fixture.query<HTMLInputElement>('input')?.name).toBe('email');
     });
 
     it('updates name dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { name: 'old' } });
+      fixture = await mount('sg-input', { attrs: { name: 'old' } });
 
       await fixture.attr('name', 'new-name');
 
@@ -147,13 +147,13 @@ describe('bit-input', () => {
     });
 
     it('sets placeholder on inner input', async () => {
-      fixture = await mount('bit-input', { attrs: { placeholder: 'Enter email' } });
+      fixture = await mount('sg-input', { attrs: { placeholder: 'Enter email' } });
 
       expect(fixture.query<HTMLInputElement>('input')?.placeholder).toBe('Enter email');
     });
 
     it('updates placeholder dynamically', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       await fixture.attr('placeholder', 'Enter username');
 
@@ -165,19 +165,19 @@ describe('bit-input', () => {
 
   describe('Disabled State', () => {
     it('disables inner input when disabled', async () => {
-      fixture = await mount('bit-input', { attrs: { disabled: true } });
+      fixture = await mount('sg-input', { attrs: { disabled: true } });
 
       expect(fixture.query<HTMLInputElement>('input')?.disabled).toBe(true);
     });
 
     it('reflects disabled on host', async () => {
-      fixture = await mount('bit-input', { attrs: { disabled: true } });
+      fixture = await mount('sg-input', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
 
     it('enables inner input when disabled is removed', async () => {
-      fixture = await mount('bit-input', { attrs: { disabled: true } });
+      fixture = await mount('sg-input', { attrs: { disabled: true } });
 
       await fixture.attr('disabled', false);
 
@@ -187,13 +187,13 @@ describe('bit-input', () => {
 
   describe('Readonly State', () => {
     it('sets readOnly on inner input when readonly', async () => {
-      fixture = await mount('bit-input', { attrs: { readonly: true } });
+      fixture = await mount('sg-input', { attrs: { readonly: true } });
 
       expect(fixture.query<HTMLInputElement>('input')?.readOnly).toBe(true);
     });
 
     it('updates readonly dynamically', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       await fixture.attr('readonly', true);
 
@@ -203,13 +203,13 @@ describe('bit-input', () => {
 
   describe('Required State', () => {
     it('sets required on inner input', async () => {
-      fixture = await mount('bit-input', { attrs: { required: true } });
+      fixture = await mount('sg-input', { attrs: { required: true } });
 
       expect(fixture.query<HTMLInputElement>('input')?.required).toBe(true);
     });
 
     it('updates required dynamically', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       await fixture.attr('required', true);
 
@@ -221,7 +221,7 @@ describe('bit-input', () => {
 
   describe('Error State', () => {
     it('renders error message element with role="alert"', async () => {
-      fixture = await mount('bit-input', { attrs: { error: 'Required' } });
+      fixture = await mount('sg-input', { attrs: { error: 'Required' } });
 
       const errorEl = fixture.query('.helper-text[role="alert"]');
 
@@ -230,14 +230,14 @@ describe('bit-input', () => {
     });
 
     it('sets aria-invalid="true" on inner input when error', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: { error: 'Invalid email', label: 'Email', 'label-placement': 'outside' },
       });
 
       expect(fixture.query('input')?.getAttribute('aria-invalid')).toBe('true');
     });
     it('does not set aria-invalid when no error', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           label: 'Email',
           'label-placement': 'outside',
@@ -248,14 +248,14 @@ describe('bit-input', () => {
     });
 
     it('does not reflect an empty error attribute by default', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('error')).toBe(false);
     });
 
     it('removes the host error attribute when error becomes empty', async () => {
-      fixture = await mount('bit-input', { attrs: { error: 'Required' } });
+      fixture = await mount('sg-input', { attrs: { error: 'Required' } });
       await fixture.flush();
 
       expect(fixture.element.getAttribute('error')).toBe('Required');
@@ -267,7 +267,7 @@ describe('bit-input', () => {
     });
 
     it('hides helper text when error is present', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           error: 'Required',
           helper: 'Enter your email',
@@ -287,7 +287,7 @@ describe('bit-input', () => {
 
   describe('Events', () => {
     it('emits custom input event with value and originalEvent', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       const inputHandler = vi.fn();
 
@@ -304,7 +304,7 @@ describe('bit-input', () => {
     });
 
     it('emits custom change event with value and originalEvent', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       const changeHandler = vi.fn();
 
@@ -331,14 +331,14 @@ describe('bit-input', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-input', { attrs: { color } });
+        fixture = await mount('sg-input', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
 
     it('updates color dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-input', { attrs: { color: 'primary' } });
 
       await fixture.attr('color', 'error');
 
@@ -353,14 +353,14 @@ describe('bit-input', () => {
 
     variants.forEach((variant) => {
       it(`applies ${variant} variant`, async () => {
-        fixture = await mount('bit-input', { attrs: { variant } });
+        fixture = await mount('sg-input', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
       });
     });
 
     it('updates variant dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { variant: 'solid' } });
+      fixture = await mount('sg-input', { attrs: { variant: 'solid' } });
 
       await fixture.attr('variant', 'outline');
 
@@ -375,14 +375,14 @@ describe('bit-input', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-input', { attrs: { size } });
+        fixture = await mount('sg-input', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
     });
 
     it('updates size dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { size: 'sm' } });
+      fixture = await mount('sg-input', { attrs: { size: 'sm' } });
 
       await fixture.attr('size', 'lg');
 
@@ -394,7 +394,7 @@ describe('bit-input', () => {
 
   describe('Edge Cases', () => {
     it('handles multiple attribute changes at once', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       await fixture.attrs({ placeholder: 'Enter email', required: true, size: 'lg', type: 'email' });
 
@@ -407,19 +407,19 @@ describe('bit-input', () => {
     });
 
     it('handles fullwidth attribute', async () => {
-      fixture = await mount('bit-input', { attrs: { fullwidth: true } });
+      fixture = await mount('sg-input', { attrs: { fullwidth: true } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('handles rounded attribute', async () => {
-      fixture = await mount('bit-input', { attrs: { rounded: 'full' } });
+      fixture = await mount('sg-input', { attrs: { rounded: 'full' } });
 
       expect(fixture.element.getAttribute('rounded')).toBe('full');
     });
 
     it('marks char counter as near-limit at 90% maxlength', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           maxlength: '10',
           value: '123456789',
@@ -435,7 +435,7 @@ describe('bit-input', () => {
     });
 
     it('marks char counter as at-limit at maxlength', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           maxlength: '10',
           value: '1234567890',
@@ -452,7 +452,7 @@ describe('bit-input', () => {
   });
 });
 
-describe('bit-input accessibility', () => {
+describe('sg-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -467,19 +467,19 @@ describe('bit-input accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('renders a native <input> element inside shadow DOM', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       expect(fixture.query('input')).toBeTruthy();
     });
 
     it('input is naturally focusable (no tabindex=-1)', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       expect(fixture.query<HTMLInputElement>('input')?.tabIndex).not.toBe(-1);
     });
 
     it('error message has role="alert" for assistive technology announcements', async () => {
-      fixture = await mount('bit-input', { attrs: { error: 'Required field' } });
+      fixture = await mount('sg-input', { attrs: { error: 'Required field' } });
 
       const errorEl = fixture.query('[role="alert"]');
 
@@ -492,7 +492,7 @@ describe('bit-input accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('sets aria-invalid="true" on inner input when error is present', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: { error: 'Invalid email', label: 'Email', 'label-placement': 'outside' },
       });
 
@@ -500,7 +500,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('updates aria-invalid when error is added dynamically', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           label: 'Email',
           'label-placement': 'outside',
@@ -514,7 +514,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('clears aria-invalid when error is removed', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: { error: 'Required', label: 'Email', 'label-placement': 'outside' },
       });
       expect(fixture.query('input')?.getAttribute('aria-invalid')).toBe('true');
@@ -525,7 +525,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('sets aria-labelledby pointing to label when outside label is set', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           label: 'Username',
           'label-placement': 'outside',
@@ -542,7 +542,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('sets aria-describedby when helper text is present', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: { helper: 'Enter your email', label: 'Email', 'label-placement': 'outside' },
       });
 
@@ -552,7 +552,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('sets required on input for assistive technology', async () => {
-      fixture = await mount('bit-input', { attrs: { required: true } });
+      fixture = await mount('sg-input', { attrs: { required: true } });
 
       expect(fixture.query<HTMLInputElement>('input')?.required).toBe(true);
     });
@@ -562,13 +562,13 @@ describe('bit-input accessibility', () => {
 
   describe('Accessibility of States', () => {
     it('disabled input is not reachable by keyboard', async () => {
-      fixture = await mount('bit-input', { attrs: { disabled: true } });
+      fixture = await mount('sg-input', { attrs: { disabled: true } });
 
       expect(fixture.query<HTMLInputElement>('input')?.disabled).toBe(true);
     });
 
     it('readonly input is keyboard-accessible but not editable', async () => {
-      fixture = await mount('bit-input', {
+      fixture = await mount('sg-input', {
         attrs: {
           readonly: true,
           value: 'Read only',
@@ -589,7 +589,7 @@ describe('bit-input accessibility', () => {
 
     types.forEach((type) => {
       it(`forwards type="${type}" to inner input for correct keyboard behavior`, async () => {
-        fixture = await mount('bit-input', { attrs: { type } });
+        fixture = await mount('sg-input', { attrs: { type } });
 
         expect(fixture.query<HTMLInputElement>('input')?.type).toBe(type);
       });
@@ -600,7 +600,7 @@ describe('bit-input accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('accepts typed input via keyboard', async () => {
-      fixture = await mount('bit-input');
+      fixture = await mount('sg-input');
 
       const inputEl = fixture.query<HTMLInputElement>('input')!;
 
@@ -610,7 +610,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('clear button is accessible with aria-label="Clear"', async () => {
-      fixture = await mount('bit-input', { attrs: { value: 'some text' } });
+      fixture = await mount('sg-input', { attrs: { value: 'some text' } });
       await fixture.flush();
 
       const clearBtn = fixture.query('.clear-btn');

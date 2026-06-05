@@ -1,6 +1,6 @@
 # Chip
 
-A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, five variants, and three sizes. Used internally by `bit-select` and `bit-combobox` in multiselect mode.
+A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, five variants, and three sizes. Used internally by `sg-select` and `sg-combobox` in multiselect mode.
 
 ## Features
 
@@ -24,11 +24,11 @@ A compact, styled label for tags, filters, and selected values. Supports a leadi
 <ComponentPreview center>
 
 ```html
-<bit-chip>Design</bit-chip>
-<bit-chip color="primary">TypeScript</bit-chip>
-<bit-chip color="success">Approved</bit-chip>
-<bit-chip color="warning">Pending</bit-chip>
-<bit-chip color="error">Rejected</bit-chip>
+<sg-chip>Design</sg-chip>
+<sg-chip color="primary">TypeScript</sg-chip>
+<sg-chip color="success">Approved</sg-chip>
+<sg-chip color="warning">Pending</sg-chip>
+<sg-chip color="error">Rejected</sg-chip>
 ```
 
 </ComponentPreview>
@@ -40,11 +40,11 @@ Five visual variants for different levels of emphasis.
 <ComponentPreview center>
 
 ```html
-<bit-chip color="primary" variant="solid">Solid</bit-chip>
-<bit-chip color="primary" variant="flat">Flat</bit-chip>
-<bit-chip color="primary" variant="bordered">Bordered</bit-chip>
-<bit-chip color="primary" variant="outline">Outline</bit-chip>
-<bit-chip color="primary" variant="ghost">Ghost</bit-chip>
+<sg-chip color="primary" variant="solid">Solid</sg-chip>
+<sg-chip color="primary" variant="flat">Flat</sg-chip>
+<sg-chip color="primary" variant="bordered">Bordered</sg-chip>
+<sg-chip color="primary" variant="outline">Outline</sg-chip>
+<sg-chip color="primary" variant="ghost">Ghost</sg-chip>
 ```
 
 </ComponentPreview>
@@ -54,13 +54,13 @@ Five visual variants for different levels of emphasis.
 <ComponentPreview center>
 
 ```html
-<bit-chip variant="flat">Default</bit-chip>
-<bit-chip variant="flat" color="primary">Primary</bit-chip>
-<bit-chip variant="flat" color="secondary">Secondary</bit-chip>
-<bit-chip variant="flat" color="info">Info</bit-chip>
-<bit-chip variant="flat" color="success">Success</bit-chip>
-<bit-chip variant="flat" color="warning">Warning</bit-chip>
-<bit-chip variant="flat" color="error">Error</bit-chip>
+<sg-chip variant="flat">Default</sg-chip>
+<sg-chip variant="flat" color="primary">Primary</sg-chip>
+<sg-chip variant="flat" color="secondary">Secondary</sg-chip>
+<sg-chip variant="flat" color="info">Info</sg-chip>
+<sg-chip variant="flat" color="success">Success</sg-chip>
+<sg-chip variant="flat" color="warning">Warning</sg-chip>
+<sg-chip variant="flat" color="error">Error</sg-chip>
 ```
 
 </ComponentPreview>
@@ -70,9 +70,9 @@ Five visual variants for different levels of emphasis.
 <ComponentPreview center>
 
 ```html
-<bit-chip color="primary" size="sm">Small</bit-chip>
-<bit-chip color="primary" size="md">Medium</bit-chip>
-<bit-chip color="primary" size="lg">Large</bit-chip>
+<sg-chip color="primary" size="sm">Small</sg-chip>
+<sg-chip color="primary" size="md">Medium</sg-chip>
+<sg-chip color="primary" size="lg">Large</sg-chip>
 ```
 
 </ComponentPreview>
@@ -84,15 +84,15 @@ Set `mode="removable"` to show a × button. Listen for `remove` to handle remova
 <ComponentPreview center>
 
 ```html
-<bit-chip color="primary" variant="flat" mode="removable" value="ts">TypeScript</bit-chip>
-<bit-chip color="success" variant="flat" mode="removable" value="go">Go</bit-chip>
-<bit-chip color="warning" variant="flat" mode="removable" value="rust">Rust</bit-chip>
+<sg-chip color="primary" variant="flat" mode="removable" value="ts">TypeScript</sg-chip>
+<sg-chip color="success" variant="flat" mode="removable" value="go">Go</sg-chip>
+<sg-chip color="warning" variant="flat" mode="removable" value="rust">Rust</sg-chip>
 ```
 
 </ComponentPreview>
 
 ```js
-document.querySelectorAll('bit-chip').forEach((chip) => {
+document.querySelectorAll('sg-chip').forEach((chip) => {
   chip.addEventListener('remove', (e) => {
     console.log('removed:', e.detail.value, 'source event:', e.detail.originalEvent?.type);
     e.target.remove();
@@ -107,14 +107,14 @@ Set `mode="selectable"` to make the chip behave like a checkbox-like toggle. Use
 <ComponentPreview center>
 
 ```html
-<bit-chip mode="selectable" value="design">Design</bit-chip>
-<bit-chip mode="selectable" default-checked value="ux">UX</bit-chip>
+<sg-chip mode="selectable" value="design">Design</sg-chip>
+<sg-chip mode="selectable" default-checked value="ux">UX</sg-chip>
 ```
 
 </ComponentPreview>
 
 ```js
-document.querySelectorAll('bit-chip[mode="selectable"]').forEach((chip) => {
+document.querySelectorAll('sg-chip[mode="selectable"]').forEach((chip) => {
   chip.addEventListener('change', (e) => {
     console.log('checked:', e.detail.checked, 'value:', e.detail.value, 'source:', e.detail.originalEvent?.type);
   });
@@ -128,15 +128,15 @@ Set `mode="action"` to make the chip behave like a button — it fires a `click`
 <ComponentPreview center>
 
 ```html
-<bit-chip mode="action" value="add">Add Tag</bit-chip>
-<bit-chip mode="action" color="primary" variant="flat" value="star">
-  <bit-icon slot="icon" name="star" size="12"></bit-icon>
+<sg-chip mode="action" value="add">Add Tag</sg-chip>
+<sg-chip mode="action" color="primary" variant="flat" value="star">
+  <sg-icon slot="icon" name="star" size="12"></sg-icon>
   Favourite
-</bit-chip>
-<bit-chip mode="action" color="error" variant="ghost" value="delete" aria-label="Delete item">
-  <bit-icon slot="icon" name="trash-2" size="12"></bit-icon>
+</sg-chip>
+<sg-chip mode="action" color="error" variant="ghost" value="delete" aria-label="Delete item">
+  <sg-icon slot="icon" name="trash-2" size="12"></sg-icon>
   Remove
-</bit-chip>
+</sg-chip>
 
 <script type="module">
   import '@vielzeug/sigil/chip';
@@ -147,7 +147,7 @@ Set `mode="action"` to make the chip behave like a button — it fires a `click`
 </ComponentPreview>
 
 ```js
-document.querySelectorAll('bit-chip[mode="action"]').forEach((chip) => {
+document.querySelectorAll('sg-chip[mode="action"]').forEach((chip) => {
   chip.addEventListener('click', (e) => {
     console.log('action:', e.detail.value, 'source:', e.detail.originalEvent?.type);
   });
@@ -161,14 +161,14 @@ Use the `icon` named slot to prepend a leading icon or glyph.
 <ComponentPreview center>
 
 ```html
-<bit-chip color="success" variant="flat">
-  <bit-icon slot="icon" name="check" size="12"></bit-icon>
+<sg-chip color="success" variant="flat">
+  <sg-icon slot="icon" name="check" size="12"></sg-icon>
   Verified
-</bit-chip>
-<bit-chip color="primary" variant="bordered">
-  <bit-icon slot="icon" name="clock" size="12"></bit-icon>
+</sg-chip>
+<sg-chip color="primary" variant="bordered">
+  <sg-icon slot="icon" name="clock" size="12"></sg-icon>
   Pending
-</bit-chip>
+</sg-chip>
 
 <script type="module">
   import '@vielzeug/sigil/chip';
@@ -185,11 +185,11 @@ Override the border radius with the `rounded` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-chip variant="bordered" color="primary" rounded="none">None</bit-chip>
-<bit-chip variant="bordered" color="primary" rounded="sm">Small</bit-chip>
-<bit-chip variant="bordered" color="primary" rounded="md">Medium</bit-chip>
-<bit-chip variant="bordered" color="primary" rounded="lg">Large</bit-chip>
-<bit-chip variant="bordered" color="primary" rounded="full">Full</bit-chip>
+<sg-chip variant="bordered" color="primary" rounded="none">None</sg-chip>
+<sg-chip variant="bordered" color="primary" rounded="sm">Small</sg-chip>
+<sg-chip variant="bordered" color="primary" rounded="md">Medium</sg-chip>
+<sg-chip variant="bordered" color="primary" rounded="lg">Large</sg-chip>
+<sg-chip variant="bordered" color="primary" rounded="full">Full</sg-chip>
 ```
 
 </ComponentPreview>
@@ -199,22 +199,22 @@ Override the border radius with the `rounded` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-chip color="primary" variant="flat" disabled mode="removable">Disabled chip</bit-chip>
+<sg-chip color="primary" variant="flat" disabled mode="removable">Disabled chip</sg-chip>
 ```
 
 </ComponentPreview>
 
 ## Building a Tag Input
 
-Chips are designed to compose with form controls. Here is a minimal tag-input pattern built on top of `bit-chip`:
+Chips are designed to compose with form controls. Here is a minimal tag-input pattern built on top of `sg-chip`:
 
 <ComponentPreview vertical>
 
 ```html
 <div id="tag-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-  <bit-chip color="primary" variant="flat" mode="removable" value="design">Design</bit-chip>
-  <bit-chip color="primary" variant="flat" mode="removable" value="ux">UX</bit-chip>
-  <bit-chip color="primary" variant="flat" mode="removable" value="a11y">Accessibility</bit-chip>
+  <sg-chip color="primary" variant="flat" mode="removable" value="design">Design</sg-chip>
+  <sg-chip color="primary" variant="flat" mode="removable" value="ux">UX</sg-chip>
+  <sg-chip color="primary" variant="flat" mode="removable" value="a11y">Accessibility</sg-chip>
 </div>
 ```
 
@@ -277,7 +277,7 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 The chip component follows WAI-ARIA best practices.
 
-### `bit-chip`
+### `sg-chip`
 
 ✅ **Keyboard Navigation**
 

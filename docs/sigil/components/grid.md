@@ -12,7 +12,7 @@ A flexible CSS Grid layout component with element-width responsive columns, name
 - 🔄 **Flow Control**: Row, column, and dense packing modes
 - 📊 **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
 - 🧲 **Alignment Control**: Align and justify items with CSS Grid properties
-- 🎨 **Grid Item Component**: Precise placement with `bit-grid-item` using named areas, spans, or raw CSS grid shorthand
+- 🎨 **Grid Item Component**: Precise placement with `sg-grid-item` using named areas, spans, or raw CSS grid shorthand
 - 🔧 **Customizable**: CSS custom properties available as fallbacks
 
 ## Source Code
@@ -28,11 +28,11 @@ A flexible CSS Grid layout component with element-width responsive columns, name
 ## Basic Usage
 
 ```html
-<bit-grid cols="3" gap="md">
-  <bit-card>Item 1</bit-card>
-  <bit-card>Item 2</bit-card>
-  <bit-card>Item 3</bit-card>
-</bit-grid>
+<sg-grid cols="3" gap="md">
+  <sg-card>Item 1</sg-card>
+  <sg-card>Item 2</sg-card>
+  <sg-card>Item 3</sg-card>
+</sg-grid>
 
 <script type="module">
   import '@vielzeug/sigil/grid';
@@ -49,14 +49,14 @@ Create grids with a fixed number of columns from 1 to 12.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" gap="md" style="width: 100%;">
-  <bit-card padding="md"><bit-text>Item 1</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 4</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 5</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 6</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="3" gap="md" style="width: 100%;">
+  <sg-card padding="md"><sg-text>Item 1</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 2</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 3</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 4</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 5</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 6</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -68,16 +68,16 @@ Use `cols-sm`, `cols-md`, `cols-lg`, `cols-xl`, and `cols-2xl` attributes for ex
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="1" cols-sm="2" cols-md="3" cols-lg="4" gap="md" style="width: 100%;">
-  <bit-card padding="md" color="primary"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="md" color="secondary"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="md" color="success"><bit-text>3</bit-text></bit-card>
-  <bit-card padding="md" color="warning"><bit-text>4</bit-text></bit-card>
-  <bit-card padding="md" color="error"><bit-text>5</bit-text></bit-card>
-  <bit-card padding="md" color="info"><bit-text>6</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>7</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>8</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="1" cols-sm="2" cols-md="3" cols-lg="4" gap="md" style="width: 100%;">
+  <sg-card padding="md" color="primary"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="md" color="secondary"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="md" color="success"><sg-text>3</sg-text></sg-card>
+  <sg-card padding="md" color="warning"><sg-text>4</sg-text></sg-card>
+  <sg-card padding="md" color="error"><sg-text>5</sg-text></sg-card>
+  <sg-card padding="md" color="info"><sg-text>6</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>7</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>8</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -111,14 +111,14 @@ Define explicit row counts for dashboard-style layouts.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" rows="2" gap="md" style="width: 100%;">
-  <bit-card padding="md"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>3</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>4</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>5</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>6</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="3" rows="2" gap="md" style="width: 100%;">
+  <sg-card padding="md"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>3</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>4</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>5</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>6</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -130,33 +130,33 @@ Control spacing between grid items.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text size="sm">Gap: none</bit-text>
-<bit-grid cols="3" gap="none" style="width: 100%;">
-  <bit-card padding="sm"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>3</bit-text></bit-card>
-</bit-grid>
+<sg-text size="sm">Gap: none</sg-text>
+<sg-grid cols="3" gap="none" style="width: 100%;">
+  <sg-card padding="sm"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>3</sg-text></sg-card>
+</sg-grid>
 
-<bit-text size="sm">Gap: sm</bit-text>
-<bit-grid cols="3" gap="sm" style="width: 100%;">
-  <bit-card padding="sm"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>3</bit-text></bit-card>
-</bit-grid>
+<sg-text size="sm">Gap: sm</sg-text>
+<sg-grid cols="3" gap="sm" style="width: 100%;">
+  <sg-card padding="sm"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>3</sg-text></sg-card>
+</sg-grid>
 
-<bit-text size="sm">Gap: md</bit-text>
-<bit-grid cols="3" gap="md" style="width: 100%;">
-  <bit-card padding="sm"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>3</bit-text></bit-card>
-</bit-grid>
+<sg-text size="sm">Gap: md</sg-text>
+<sg-grid cols="3" gap="md" style="width: 100%;">
+  <sg-card padding="sm"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>3</sg-text></sg-card>
+</sg-grid>
 
-<bit-text size="sm">Gap: xl</bit-text>
-<bit-grid cols="3" gap="xl" style="width: 100%;">
-  <bit-card padding="sm"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="sm"><bit-text>3</bit-text></bit-card>
-</bit-grid>
+<sg-text size="sm">Gap: xl</sg-text>
+<sg-grid cols="3" gap="xl" style="width: 100%;">
+  <sg-card padding="sm"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="sm"><sg-text>3</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -182,12 +182,12 @@ Control how items flow into the grid.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" rows="2" flow="row" gap="md" style="width: 100%;">
-  <bit-card padding="md" color="primary"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="md" color="secondary"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="md" color="success"><bit-text>3</bit-text></bit-card>
-  <bit-card padding="md" color="warning"><bit-text>4</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="3" rows="2" flow="row" gap="md" style="width: 100%;">
+  <sg-card padding="md" color="primary"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="md" color="secondary"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="md" color="success"><sg-text>3</sg-text></sg-card>
+  <sg-card padding="md" color="warning"><sg-text>4</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -197,12 +197,12 @@ Control how items flow into the grid.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" rows="2" flow="column" gap="md" style="width: 100%;">
-  <bit-card padding="md" color="primary"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="md" color="secondary"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="md" color="success"><bit-text>3</bit-text></bit-card>
-  <bit-card padding="md" color="warning"><bit-text>4</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="3" rows="2" flow="column" gap="md" style="width: 100%;">
+  <sg-card padding="md" color="primary"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="md" color="secondary"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="md" color="success"><sg-text>3</sg-text></sg-card>
+  <sg-card padding="md" color="warning"><sg-text>4</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -214,17 +214,17 @@ Automatically fill gaps with smaller items that come later.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="5" flow="row-dense" gap="md" style="width: 100%;">
-  <bit-grid-item col-span="3">
-    <bit-card padding="lg" color="primary"><bit-text>Wide (3 cols)</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-card padding="md"><bit-text>A</bit-text></bit-card>
-  <bit-grid-item col-span="3">
-    <bit-card padding="lg" color="secondary"><bit-text>Wide (3 cols)</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-card padding="md" color="success"><bit-text>B</bit-text></bit-card>
-  <bit-card padding="md" color="warning"><bit-text>C</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="5" flow="row-dense" gap="md" style="width: 100%;">
+  <sg-grid-item col-span="3">
+    <sg-card padding="lg" color="primary"><sg-text>Wide (3 cols)</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-card padding="md"><sg-text>A</sg-text></sg-card>
+  <sg-grid-item col-span="3">
+    <sg-card padding="lg" color="secondary"><sg-text>Wide (3 cols)</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-card padding="md" color="success"><sg-text>B</sg-text></sg-card>
+  <sg-card padding="md" color="warning"><sg-text>C</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -240,13 +240,13 @@ With `flow="row-dense"`, item B fills the gap after the first wide item, rather 
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" align="center" gap="md" style="width: 100%; height: 200px;">
-  <bit-card padding="sm"><bit-text>Short</bit-text></bit-card>
-  <bit-card padding="lg"
-    ><bit-text>Tall Item<br />Multiple<br />Lines</bit-text></bit-card
+<sg-grid cols="3" align="center" gap="md" style="width: 100%; height: 200px;">
+  <sg-card padding="sm"><sg-text>Short</sg-text></sg-card>
+  <sg-card padding="lg"
+    ><sg-text>Tall Item<br />Multiple<br />Lines</sg-text></sg-card
   >
-  <bit-card padding="sm"><bit-text>Short</bit-text></bit-card>
-</bit-grid>
+  <sg-card padding="sm"><sg-text>Short</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -256,18 +256,18 @@ With `flow="row-dense"`, item B fills the gap after the first wide item, rather 
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" justify="center" gap="md" style="width: 100%;">
-  <bit-card padding="md" style="width: 80px;"><bit-text>1</bit-text></bit-card>
-  <bit-card padding="md" style="width: 80px;"><bit-text>2</bit-text></bit-card>
-  <bit-card padding="md" style="width: 80px;"><bit-text>3</bit-text></bit-card>
-</bit-grid>
+<sg-grid cols="3" justify="center" gap="md" style="width: 100%;">
+  <sg-card padding="md" style="width: 80px;"><sg-text>1</sg-text></sg-card>
+  <sg-card padding="md" style="width: 80px;"><sg-text>2</sg-text></sg-card>
+  <sg-card padding="md" style="width: 80px;"><sg-text>3</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
 
 ## Grid Items
 
-Use `bit-grid-item` for precise placement and span control within a `bit-grid`.
+Use `sg-grid-item` for precise placement and span control within a `sg-grid`.
 
 ### Named Area Placement
 
@@ -276,25 +276,25 @@ When your grid uses `areas`, assign children with the `area` attribute instead o
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid
+<sg-grid
   cols="3"
   rows="3"
   areas="'header header header' 'nav main main' 'footer footer footer'"
   gap="md"
   style="width: 100%; min-height: 300px;">
-  <bit-grid-item area="header">
-    <bit-box padding="md" color="primary"><bit-text>Header</bit-text></bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="nav">
-    <bit-box padding="md" color="secondary"><bit-text>Nav</bit-text></bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="main">
-    <bit-box padding="md" color="success"><bit-text>Main</bit-text></bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="footer">
-    <bit-box padding="md" color="warning"><bit-text>Footer</bit-text></bit-box>
-  </bit-grid-item>
-</bit-grid>
+  <sg-grid-item area="header">
+    <sg-box padding="md" color="primary"><sg-text>Header</sg-text></sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="nav">
+    <sg-box padding="md" color="secondary"><sg-text>Nav</sg-text></sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="main">
+    <sg-box padding="md" color="success"><sg-text>Main</sg-text></sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="footer">
+    <sg-box padding="md" color="warning"><sg-text>Footer</sg-text></sg-box>
+  </sg-grid-item>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -306,23 +306,23 @@ When your grid uses `areas`, assign children with the `area` attribute instead o
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="6" gap="md" style="width: 100%;">
-  <bit-grid-item col-span="2">
-    <bit-card padding="md" color="primary"><bit-text>Spans 2</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item col-span="4">
-    <bit-card padding="md" color="secondary"><bit-text>Spans 4</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item col-span="3">
-    <bit-card padding="md" color="success"><bit-text>Spans 3</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item col-span="3">
-    <bit-card padding="md" color="warning"><bit-text>Spans 3</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item col-span="full">
-    <bit-card padding="md" color="info"><bit-text>Full width</bit-text></bit-card>
-  </bit-grid-item>
-</bit-grid>
+<sg-grid cols="6" gap="md" style="width: 100%;">
+  <sg-grid-item col-span="2">
+    <sg-card padding="md" color="primary"><sg-text>Spans 2</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item col-span="4">
+    <sg-card padding="md" color="secondary"><sg-text>Spans 4</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item col-span="3">
+    <sg-card padding="md" color="success"><sg-text>Spans 3</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item col-span="3">
+    <sg-card padding="md" color="warning"><sg-text>Spans 3</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item col-span="full">
+    <sg-card padding="md" color="info"><sg-text>Full width</sg-text></sg-card>
+  </sg-grid-item>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -334,71 +334,71 @@ Use the `col` and `row` attributes to set raw CSS `grid-column` / `grid-row` val
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="4" rows="3" gap="md" style="width: 100%;">
-  <bit-grid-item col="1 / 3" row="1 / 3">
-    <bit-card padding="lg" color="primary"
-      ><bit-text>2×2 item<br />(col 1–2, row 1–2)</bit-text></bit-card
+<sg-grid cols="4" rows="3" gap="md" style="width: 100%;">
+  <sg-grid-item col="1 / 3" row="1 / 3">
+    <sg-card padding="lg" color="primary"
+      ><sg-text>2×2 item<br />(col 1–2, row 1–2)</sg-text></sg-card
     >
-  </bit-grid-item>
-  <bit-card padding="md"><bit-text>A</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>B</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>C</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>D</bit-text></bit-card>
-</bit-grid>
+  </sg-grid-item>
+  <sg-card padding="md"><sg-text>A</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>B</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>C</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>D</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
 
 ### Item Alignment
 
-Use `align` and `justify` on `bit-grid-item` to override the grid's default alignment for a single cell.
+Use `align` and `justify` on `sg-grid-item` to override the grid's default alignment for a single cell.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="3" gap="md" style="width: 100%; height: 160px;">
-  <bit-grid-item align="start" justify="start">
-    <bit-card padding="sm" style="width: 80px;"><bit-text>start</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item align="center" justify="center">
-    <bit-card padding="sm" style="width: 80px;"><bit-text>center</bit-text></bit-card>
-  </bit-grid-item>
-  <bit-grid-item align="end" justify="end">
-    <bit-card padding="sm" style="width: 80px;"><bit-text>end</bit-text></bit-card>
-  </bit-grid-item>
-</bit-grid>
+<sg-grid cols="3" gap="md" style="width: 100%; height: 160px;">
+  <sg-grid-item align="start" justify="start">
+    <sg-card padding="sm" style="width: 80px;"><sg-text>start</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item align="center" justify="center">
+    <sg-card padding="sm" style="width: 80px;"><sg-text>center</sg-text></sg-card>
+  </sg-grid-item>
+  <sg-grid-item align="end" justify="end">
+    <sg-card padding="sm" style="width: 80px;"><sg-text>end</sg-text></sg-card>
+  </sg-grid-item>
+</sg-grid>
 ```
 
 </ComponentPreview>
 
 ## Named Grid Areas
 
-Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `areas-xl`, `areas-2xl`) to define named regions on the grid. The active value is resolved from the element's own width via `ResizeObserver`, identical to how `cols-*` breakpoints work. Children can be placed into regions with `area="name"` on `bit-grid-item`.
+Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `areas-xl`, `areas-2xl`) to define named regions on the grid. The active value is resolved from the element's own width via `ResizeObserver`, identical to how `cols-*` breakpoints work. Children can be placed into regions with `area="name"` on `sg-grid-item`.
 
 ### Basic Areas
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid
+<sg-grid
   cols="3"
   rows="3"
   areas="'header header header' 'nav main main' 'footer footer footer'"
   gap="md"
   style="width: 100%; min-height: 300px;">
-  <bit-box padding="md" color="primary" style="grid-area: header;">
-    <bit-text variant="heading" size="md">Header</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="warning" style="grid-area: nav;">
-    <bit-text variant="heading" size="md">Nav</bit-text>
-  </bit-box>
-  <bit-box padding="md" style="grid-area: main;">
-    <bit-text variant="heading" size="md">Main</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary" style="grid-area: footer;">
-    <bit-text variant="heading" size="md">Footer</bit-text>
-  </bit-box>
-</bit-grid>
+  <sg-box padding="md" color="primary" style="grid-area: header;">
+    <sg-text variant="heading" size="md">Header</sg-text>
+  </sg-box>
+  <sg-box padding="md" color="warning" style="grid-area: nav;">
+    <sg-text variant="heading" size="md">Nav</sg-text>
+  </sg-box>
+  <sg-box padding="md" style="grid-area: main;">
+    <sg-text variant="heading" size="md">Main</sg-text>
+  </sg-box>
+  <sg-box padding="md" color="secondary" style="grid-area: footer;">
+    <sg-text variant="heading" size="md">Footer</sg-text>
+  </sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -410,34 +410,34 @@ Provide different area templates at each breakpoint. The grid switches between t
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid
+<sg-grid
   cols-sm="3"
   areas="'header' 'nav' 'main' 'footer'"
   areas-sm="'header header header' 'nav main main' 'footer footer footer'"
   gap="md"
   style="width: 100%; min-height: 300px;">
-  <bit-grid-item area="header">
-    <bit-box padding="md" color="primary">
-      <bit-text variant="heading" size="md">Header</bit-text>
-    </bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="nav">
-    <bit-box padding="md" color="warning">
-      <bit-text variant="heading" size="md">Navigation</bit-text>
-    </bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="main">
-    <bit-box padding="md" color="success">
-      <bit-text variant="heading" size="md">Main content</bit-text>
-    </bit-box>
-  </bit-grid-item>
-  <bit-grid-item area="footer">
-    <bit-box padding="md" color="secondary">
-      <bit-text variant="heading" size="md">Footer</bit-text>
-    </bit-box>
-  </bit-grid-item>
-  </bit-box>
-</bit-grid>
+  <sg-grid-item area="header">
+    <sg-box padding="md" color="primary">
+      <sg-text variant="heading" size="md">Header</sg-text>
+    </sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="nav">
+    <sg-box padding="md" color="warning">
+      <sg-text variant="heading" size="md">Navigation</sg-text>
+    </sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="main">
+    <sg-box padding="md" color="success">
+      <sg-text variant="heading" size="md">Main content</sg-text>
+    </sg-box>
+  </sg-grid-item>
+  <sg-grid-item area="footer">
+    <sg-box padding="md" color="secondary">
+      <sg-text variant="heading" size="md">Footer</sg-text>
+    </sg-box>
+  </sg-grid-item>
+  </sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -449,14 +449,14 @@ Use `responsive` to let the grid fit as many columns as possible based on a mini
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid responsive min-col-width="180px" gap="md" style="width: 100%;">
-  <bit-card padding="md"><bit-text>Item 1</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 4</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 5</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 6</bit-text></bit-card>
-</bit-grid>
+<sg-grid responsive min-col-width="180px" gap="md" style="width: 100%;">
+  <sg-card padding="md"><sg-text>Item 1</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 2</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 3</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 4</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 5</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 6</sg-text></sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -522,24 +522,24 @@ These are fallback values — attributes take precedence when set.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="1" cols-md="2" cols-lg="4" gap="lg" style="width: 100%;">
-  <bit-card padding="lg" elevation="2">
-    <bit-text variant="heading" size="lg">128</bit-text>
-    <bit-text size="sm" color="muted">Total Users</bit-text>
-  </bit-card>
-  <bit-card padding="lg" elevation="2">
-    <bit-text variant="heading" size="lg">$12,345</bit-text>
-    <bit-text size="sm" color="muted">Revenue</bit-text>
-  </bit-card>
-  <bit-card padding="lg" elevation="2">
-    <bit-text variant="heading" size="lg">89%</bit-text>
-    <bit-text size="sm" color="muted">Satisfaction</bit-text>
-  </bit-card>
-  <bit-card padding="lg" elevation="2">
-    <bit-text variant="heading" size="lg">1,432</bit-text>
-    <bit-text size="sm" color="muted">Sales</bit-text>
-  </bit-card>
-</bit-grid>
+<sg-grid cols="1" cols-md="2" cols-lg="4" gap="lg" style="width: 100%;">
+  <sg-card padding="lg" elevation="2">
+    <sg-text variant="heading" size="lg">128</sg-text>
+    <sg-text size="sm" color="muted">Total Users</sg-text>
+  </sg-card>
+  <sg-card padding="lg" elevation="2">
+    <sg-text variant="heading" size="lg">$12,345</sg-text>
+    <sg-text size="sm" color="muted">Revenue</sg-text>
+  </sg-card>
+  <sg-card padding="lg" elevation="2">
+    <sg-text variant="heading" size="lg">89%</sg-text>
+    <sg-text size="sm" color="muted">Satisfaction</sg-text>
+  </sg-card>
+  <sg-card padding="lg" elevation="2">
+    <sg-text variant="heading" size="lg">1,432</sg-text>
+    <sg-text size="sm" color="muted">Sales</sg-text>
+  </sg-card>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -549,20 +549,20 @@ These are fallback values — attributes take precedence when set.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid cols="4" gap="md" style="width: 100%;">
-  <bit-grid-item col-span="3">
-    <bit-card padding="lg" color="primary">
-      <bit-text variant="heading" size="lg">Featured Content</bit-text>
-      <bit-text>This is the main featured area.</bit-text>
-    </bit-card>
-  </bit-grid-item>
-  <bit-card padding="md" color="secondary"> <bit-text variant="heading" size="md">✨ Side</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
-  <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
-  <bit-grid-item col-span="2">
-    <bit-card padding="md"><bit-text>Spans 2</bit-text></bit-card>
-  </bit-grid-item>
-</bit-grid>
+<sg-grid cols="4" gap="md" style="width: 100%;">
+  <sg-grid-item col-span="3">
+    <sg-card padding="lg" color="primary">
+      <sg-text variant="heading" size="lg">Featured Content</sg-text>
+      <sg-text>This is the main featured area.</sg-text>
+    </sg-card>
+  </sg-grid-item>
+  <sg-card padding="md" color="secondary"> <sg-text variant="heading" size="md">✨ Side</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 2</sg-text></sg-card>
+  <sg-card padding="md"><sg-text>Item 3</sg-text></sg-card>
+  <sg-grid-item col-span="2">
+    <sg-card padding="md"><sg-text>Spans 2</sg-text></sg-card>
+  </sg-grid-item>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -572,24 +572,24 @@ These are fallback values — attributes take precedence when set.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid
+<sg-grid
   cols="4"
   rows="3"
   areas="'hero hero hero side' 'hero hero hero side' 'a b c d'"
   gap="md"
   style="width: 100%; min-height: 400px;">
-  <bit-box padding="xl" color="primary" style="grid-area: hero;">
-    <bit-text variant="heading" size="lg">🎯 Main Feature</bit-text>
-    <bit-text>Large hero section for your most important content.</bit-text>
-  </bit-box>
-  <bit-box padding="lg" color="secondary" style="grid-area: side;">
-    <bit-text variant="heading" size="md">✨ Side</bit-text>
-  </bit-box>
-  <bit-box padding="md" style="grid-area: a;"><bit-text variant="heading" size="md">A</bit-text></bit-box>
-  <bit-box padding="md" style="grid-area: b;"><bit-text variant="heading" size="md">B</bit-text></bit-box>
-  <bit-box padding="md" style="grid-area: c;"><bit-text variant="heading" size="md">C</bit-text></bit-box>
-  <bit-box padding="md" style="grid-area: d;"><bit-text variant="heading" size="md">D</bit-text></bit-box>
-</bit-grid>
+  <sg-box padding="xl" color="primary" style="grid-area: hero;">
+    <sg-text variant="heading" size="lg">🎯 Main Feature</sg-text>
+    <sg-text>Large hero section for your most important content.</sg-text>
+  </sg-box>
+  <sg-box padding="lg" color="secondary" style="grid-area: side;">
+    <sg-text variant="heading" size="md">✨ Side</sg-text>
+  </sg-box>
+  <sg-box padding="md" style="grid-area: a;"><sg-text variant="heading" size="md">A</sg-text></sg-box>
+  <sg-box padding="md" style="grid-area: b;"><sg-text variant="heading" size="md">B</sg-text></sg-box>
+  <sg-box padding="md" style="grid-area: c;"><sg-text variant="heading" size="md">C</sg-text></sg-box>
+  <sg-box padding="md" style="grid-area: d;"><sg-text variant="heading" size="md">D</sg-text></sg-box>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -598,7 +598,7 @@ These are fallback values — attributes take precedence when set.
 
 The grid component follows WAI-ARIA best practices.
 
-### `bit-grid`
+### `sg-grid`
 
 ✅ **Semantic Structure**
 
@@ -620,7 +620,7 @@ When using `flow="row-dense"` or `flow="column-dense"`, items may appear in a di
 
 - Start mobile-first: set `cols="1"` as the base and scale up with `cols-sm`, `cols-md`, etc.
 - Use `responsive` mode for content-driven layouts where column count should adjust automatically to available space.
-- Use `bit-grid-item` with `col-span` for featured items that need to span multiple columns.
+- Use `sg-grid-item` with `col-span` for featured items that need to span multiple columns.
 - Use `areas` with named regions for complex or asymmetric page layouts.
 
 **Don't:**

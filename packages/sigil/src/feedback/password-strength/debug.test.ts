@@ -10,7 +10,7 @@ describe('attributeChangedCallback diagnostic', () => {
     fixture?.destroy();
   });
   it('diagnostic: setAttribute triggers update?', async () => {
-    fixture = await mount('bit-password-strength', { attrs: { score: '1' } });
+    fixture = await mount('sg-password-strength', { attrs: { score: '1' } });
     console.log('Before update:');
     console.log('  data-level:', fixture.element.getAttribute('data-level'));
     console.log('  score attr:', fixture.element.getAttribute('score'));
@@ -28,7 +28,7 @@ describe('attributeChangedCallback diagnostic', () => {
     // Try the helper method
   });
   it('diagnostic: using fixture.attr helper', async () => {
-    fixture = await mount('bit-password-strength', { attrs: { score: '1' } });
+    fixture = await mount('sg-password-strength', { attrs: { score: '1' } });
     console.log('Before update:');
     console.log('  data-level:', fixture.element.getAttribute('data-level'));
     await fixture.attr('score', '4');

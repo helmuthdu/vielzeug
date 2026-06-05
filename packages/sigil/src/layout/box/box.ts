@@ -6,7 +6,7 @@ import { frostVariantMixin, rainbowEffectMixin, surfaceMixins } from '../../styl
 import componentStyles from './box.css?inline';
 
 /** Box component properties */
-export type BitBoxProps = {
+export type SgBoxProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Shadow elevation level (0–5) */
@@ -24,9 +24,9 @@ export type BitBoxProps = {
 };
 
 /**
- * bit-box — A foundational layout primitive with theming support.
+ * sg-box — A foundational layout primitive with theming support.
  *
- * @element bit-box
+ * @element sg-box
  *
  * @attr {string} variant - Style variant: 'solid' | 'flat' | 'glass' | 'frost'
  * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -50,13 +50,13 @@ export type BitBoxProps = {
  *
  * @example
  * ```html
- * <bit-box padding="lg" elevation="2">Simple content</bit-box>
- * <bit-box variant="glass" color="primary">Glass effect</bit-box>
- * <bit-box variant="frost" rainbow>Frosted glass</bit-box>
+ * <sg-box padding="lg" elevation="2">Simple content</sg-box>
+ * <sg-box variant="glass" color="primary">Glass effect</sg-box>
+ * <sg-box variant="frost" rainbow>Frosted glass</sg-box>
  * ```
  */
-export const BOX_TAG = 'bit-box' as const;
-define<BitBoxProps>(BOX_TAG, {
+export const BOX_TAG = 'sg-box' as const;
+define<SgBoxProps>(BOX_TAG, {
   props: {
     color: prop.string<ThemeColor>(),
     elevation: prop.number<ElevationLevel>(),

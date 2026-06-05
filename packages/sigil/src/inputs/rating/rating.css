@@ -64,11 +64,11 @@
     color: var(--_color-filled);
   }
 
-  :host([solid]) .star-btn bit-icon::part(svg) {
+  :host([solid]) .star-btn sg-icon::part(svg) {
     fill: none;
   }
 
-  :host([solid]) .star-btn[data-filled] bit-icon::part(svg) {
+  :host([solid]) .star-btn[data-filled] sg-icon::part(svg) {
     fill: currentcolor;
   }
 

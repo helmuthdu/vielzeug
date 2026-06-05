@@ -25,7 +25,7 @@ A segmented one-time password input that renders individual cells for each digit
 ## Basic Usage
 
 ```html
-<bit-otp-input label="Verification code" color="primary"></bit-otp-input>
+<sg-otp-input label="Verification code" color="primary"></sg-otp-input>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -35,7 +35,7 @@ A segmented one-time password input that renders individual cells for each digit
 Listen for completion:
 
 ```html
-<bit-otp-input id="otp" label="Enter OTP" color="primary"></bit-otp-input>
+<sg-otp-input id="otp" label="Enter OTP" color="primary"></sg-otp-input>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -51,9 +51,9 @@ Listen for completion:
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input label="4-digit PIN" length="4" color="primary"></bit-otp-input>
-<bit-otp-input label="6-digit OTP (default)" length="6" color="primary"></bit-otp-input>
-<bit-otp-input label="8-digit code" length="8" color="primary"></bit-otp-input>
+<sg-otp-input label="4-digit PIN" length="4" color="primary"></sg-otp-input>
+<sg-otp-input label="6-digit OTP (default)" length="6" color="primary"></sg-otp-input>
+<sg-otp-input label="8-digit code" length="8" color="primary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -63,8 +63,8 @@ Listen for completion:
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input label="Numeric (default)" type="numeric" color="primary"></bit-otp-input>
-<bit-otp-input label="Alphanumeric" type="alphanumeric" color="secondary"></bit-otp-input>
+<sg-otp-input label="Numeric (default)" type="numeric" color="primary"></sg-otp-input>
+<sg-otp-input label="Alphanumeric" type="alphanumeric" color="secondary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -76,7 +76,7 @@ Use `masked` to hide the entered values (useful for PINs).
 <ComponentPreview center>
 
 ```html
-<bit-otp-input label="PIN" masked color="primary"></bit-otp-input>
+<sg-otp-input label="PIN" masked color="primary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -88,8 +88,8 @@ Use `separator` to add a visual divider between cells.
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input label="With separator (6 cells)" separator color="primary"></bit-otp-input>
-<bit-otp-input label="Masked with separator" separator masked length="4" color="secondary"></bit-otp-input>
+<sg-otp-input label="With separator (6 cells)" separator color="primary"></sg-otp-input>
+<sg-otp-input label="Masked with separator" separator masked length="4" color="secondary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -99,9 +99,9 @@ Use `separator` to add a visual divider between cells.
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input label="Small" size="sm" color="primary"></bit-otp-input>
-<bit-otp-input label="Medium" size="md" color="primary"></bit-otp-input>
-<bit-otp-input label="Large" size="lg" color="primary"></bit-otp-input>
+<sg-otp-input label="Small" size="sm" color="primary"></sg-otp-input>
+<sg-otp-input label="Medium" size="md" color="primary"></sg-otp-input>
+<sg-otp-input label="Large" size="lg" color="primary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -111,11 +111,11 @@ Use `separator` to add a visual divider between cells.
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input color="primary"></bit-otp-input>
-<bit-otp-input color="secondary"></bit-otp-input>
-<bit-otp-input color="success"></bit-otp-input>
-<bit-otp-input color="warning"></bit-otp-input>
-<bit-otp-input color="error"></bit-otp-input>
+<sg-otp-input color="primary"></sg-otp-input>
+<sg-otp-input color="secondary"></sg-otp-input>
+<sg-otp-input color="success"></sg-otp-input>
+<sg-otp-input color="warning"></sg-otp-input>
+<sg-otp-input color="error"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -125,11 +125,11 @@ Use `separator` to add a visual divider between cells.
 <ComponentPreview vertical>
 
 ```html
-<bit-otp-input></bit-otp-input>
-<bit-otp-input variant="flat"></bit-otp-input>
-<bit-otp-input variant="bordered" color="primary"></bit-otp-input>
-<bit-otp-input variant="outline"></bit-otp-input>
-<bit-otp-input variant="ghost"></bit-otp-input>
+<sg-otp-input></sg-otp-input>
+<sg-otp-input variant="flat"></sg-otp-input>
+<sg-otp-input variant="bordered" color="primary"></sg-otp-input>
+<sg-otp-input variant="outline"></sg-otp-input>
+<sg-otp-input variant="ghost"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -139,7 +139,7 @@ Use `separator` to add a visual divider between cells.
 <ComponentPreview center>
 
 ```html
-<bit-otp-input label="Disabled" disabled value="123456" color="primary"></bit-otp-input>
+<sg-otp-input label="Disabled" disabled value="123456" color="primary"></sg-otp-input>
 ```
 
 </ComponentPreview>
@@ -184,7 +184,7 @@ Use `separator` to add a visual divider between cells.
 
 The OTP input component follows WCAG 2.1 Level AA standards.
 
-### `bit-otp-input`
+### `sg-otp-input`
 
 ✅ **Keyboard Navigation**
 

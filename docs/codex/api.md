@@ -154,8 +154,8 @@ Returns Sigil component tag names from bundled CEM metadata.
 
 ```json
 [
-  { "name": "Button", "tagName": "bit-button" },
-  { "name": "Input", "tagName": "bit-input" }
+  { "name": "Button", "tagName": "sg-button" },
+  { "name": "Input", "tagName": "sg-input" }
 ]
 ```
 
@@ -171,7 +171,7 @@ Returns one full CEM declaration for a Sigil component.
 
 | Field     | Type     | Required | Description                                  |
 | --------- | -------- | -------- | -------------------------------------------- |
-| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"bit-button"` |
+| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"sg-button"` |
 
 **Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS properties.
 

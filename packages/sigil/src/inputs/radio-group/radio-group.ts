@@ -1,5 +1,6 @@
 import {
   createContext,
+  createStableId,
   define,
   defineField,
   effect,
@@ -16,14 +17,11 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
   type ChoiceChangeDetail,
-  componentSignal,
+  lifecycleSignal,
   createChoiceField,
   createListControl,
-  createStableId,
   getChoiceLabel,
   getLightChildrenByTag,
-  setBooleanAttribute,
-  setMaybeAttribute,
 } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
@@ -31,7 +29,7 @@ import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
-export type BitRadioGroupProps = {
+export type SgRadioGroupProps = {
   /** Theme color tint */
   color?: ThemeColor;
   /** Disabled state */
@@ -63,10 +61,10 @@ export type RadioGroupContext = {
   value: ReadonlySignal<string | undefined>;
 };
 
-export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('BitRadioGroup');
+export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('SgRadioGroup');
 
 /** Events emitted by the radio-group component */
-export type BitRadioGroupEvents = {
+export type SgRadioGroupEvents = {
   /** Emitted when the selection changes */
   change: ChoiceChangeDetail;
 };
@@ -75,7 +73,7 @@ export type BitRadioGroupEvents = {
  * A group of radio buttons that allows users to select a single option from a set.
  * Supports keyboard navigation (arrows) and automatic value management.
  *
- * @element bit-radio-group
+ * @element sg-radio-group
  *
  * @attr {string} value - Selected value
  * @attr {string} name - Form field name
@@ -85,7 +83,7 @@ export type BitRadioGroupEvents = {
  *
  * @fires change - Emitted when a radio is selected. detail: { values: string[], labels: string[], originalEvent?: Event }
  *
- * @slot - Place `bit-radio` elements here
+ * @slot - Place `sg-radio` elements here
  *
  * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
  * @cssprop --color-contrast-600 - Contrast color token for text and surfaces.
@@ -101,11 +99,19 @@ export type BitRadioGroupEvents = {
  * @part items - Items container.
  * @example
  * ```html
- * <bit-radio-group></bit-radio-group>
+ * <sg-radio-group name="plan" label="Choose a plan" value="free" required>
+ *   <sg-radio value="free">Free</sg-radio>
+ *   <sg-radio value="pro">Pro</sg-radio>
+ *   <sg-radio value="enterprise">Enterprise</sg-radio>
+ * </sg-radio-group>
+ * <sg-radio-group name="direction" orientation="horizontal" color="primary">
+ *   <sg-radio value="left">Left</sg-radio>
+ *   <sg-radio value="right">Right</sg-radio>
+ * </sg-radio-group>
  * ```
  */
-export const RADIO_GROUP_TAG = 'bit-radio-group' as const;
-define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
+export const RADIO_GROUP_TAG = 'sg-radio-group' as const;
+define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -129,7 +135,7 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       helper: props.helper,
       label: props.label,
       prefix: 'radio-group',
-      signal: componentSignal(onCleanup),
+      signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
@@ -148,7 +154,7 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       },
     });
 
-    const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-radio');
+    const getSlottedRadios = (): HTMLElement[] => getLightChildrenByTag(el, 'sg-radio');
 
     const getEnabledRadios = (): HTMLElement[] =>
       isDisabled.value ? [] : getSlottedRadios().filter((radio) => !radio.hasAttribute('disabled'));
@@ -174,7 +180,7 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       value: selectedValue,
     });
 
-    // Sync name/color/size/disabled/checked onto slotted bit-radio children.
+    // Sync name/color/size/disabled/checked onto slotted sg-radio children.
     effect(() => {
       void slots.elements().value;
       void selectedValue.value;
@@ -184,11 +190,18 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       for (const radio of radios) {
         const val = radio.getAttribute('value') ?? '';
 
-        setBooleanAttribute(radio, 'checked', val === selectedValue.value);
-        setMaybeAttribute(radio, 'name', props.name.value);
-        setMaybeAttribute(radio, 'color', props.color.value);
-        setMaybeAttribute(radio, 'size', props.size.value);
-        setBooleanAttribute(radio, 'disabled', isDisabled.value);
+        radio.toggleAttribute('checked', val === selectedValue.value);
+
+        if (props.name.value) radio.setAttribute('name', props.name.value);
+        else radio.removeAttribute('name');
+
+        if (props.color.value) radio.setAttribute('color', props.color.value);
+        else radio.removeAttribute('color');
+
+        if (props.size.value) radio.setAttribute('size', props.size.value);
+        else radio.removeAttribute('size');
+
+        radio.toggleAttribute('disabled', isDisabled.value);
       }
     });
 
@@ -222,7 +235,7 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       onNavigate: (_action, _index, event) => {
         const activeRadio = document.activeElement as HTMLElement | null;
 
-        if (activeRadio?.tagName === 'BIT-RADIO') {
+        if (activeRadio?.tagName === 'SG-RADIO') {
           selectRadio(activeRadio.getAttribute('value') ?? '', event);
         }
       },
@@ -257,16 +270,15 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       },
     });
 
-    const { aria } = choice;
     const legendId = createStableId('radio-group-legend');
 
     return html`
       <fieldset
         role="radiogroup"
         aria-required="${() => String(Boolean(props.required.value))}"
-        :aria-invalid="${aria.invalid}"
-        :aria-errormessage="${aria.errorMessage}"
-        :aria-describedby="${aria.describedBy}">
+        :aria-invalid="${choice.ariaInvalid}"
+        :aria-errormessage="${choice.ariaErrorMessage}"
+        :aria-describedby="${choice.ariaDescribedBy}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${props.label}${when(
             () => Boolean(props.required.value),
@@ -288,5 +300,5 @@ define<BitRadioGroupProps, BitRadioGroupEvents>(RADIO_GROUP_TAG, {
       </fieldset>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
+  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin, componentStyles],
 });

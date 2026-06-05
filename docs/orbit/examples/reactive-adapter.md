@@ -3,11 +3,17 @@ title: Reactive Adapter
 description: Use the @vielzeug/orbit/reactive adapter to drive tooltip positioning with ripple signals.
 ---
 
-# Reactive Adapter
+## Reactive Adapter
 
-The `@vielzeug/orbit/reactive` sub-path wraps `float()` and exposes the position as a `@vielzeug/ripple` `Signal`. This lets you consume position changes reactively in any code that reads `Signal.value`.
+### Problem
 
-## Basic Usage
+You need tooltip/popover positioning to drive reactive UI updates — but `float()` uses an `apply` callback, not a signal. Manually wiring `apply` into your signal graph creates boilerplate.
+
+### Solution
+
+Use `createFloatState()` from `@vielzeug/orbit/reactive`. It wraps `float()` and exposes position as a Ripple `Signal<ComputePositionResult | null>`:
+
+#### Basic Usage
 
 ```ts
 import { effect } from '@vielzeug/ripple';
@@ -39,7 +45,7 @@ function onHide() {
 
 `position` is `null` on creation. It becomes a `ComputePositionResult` after the first update and tracks every subsequent repositioning.
 
-## With CSS Anchor Positioning
+#### With CSS Anchor Positioning
 
 When `preferCssAnchor: true` is passed and the browser supports it, `position` will remain `null` permanently — CSS handles it instead of JS. Use `cssAnchor` to branch accordingly:
 
@@ -59,7 +65,7 @@ if (!cssAnchor) {
 }
 ```
 
-## In a Craft Component
+#### In a Craft Component
 
 ```ts
 import { computed, effect, signal } from '@vielzeug/ripple';
@@ -96,7 +102,7 @@ define('my-tooltip', {
 });
 ```
 
-## Accessing Middleware Data
+#### Accessing Middleware Data
 
 All middleware data is available through the signal:
 
@@ -124,3 +130,15 @@ effect(() => {
   }
 });
 ```
+
+### Pitfalls
+
+- **`position` is `null` before first update** — always guard `if (!pos) return` in effects.
+- **Must call `cleanup()` on teardown** — forgetting it leaks the `autoUpdate` observer.
+- **When `preferCssAnchor: true` and the browser supports it, `position` stays `null` permanently** — use the `cssAnchor` return value to branch between CSS and JS positioning.
+
+### Related
+
+- [Orbit API Reference](/orbit/api.md)
+- [SSR Setup](./ssr-setup.md)
+- [Using Presets](./using-presets.md)

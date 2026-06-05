@@ -3,9 +3,15 @@ title: Hierarchical States
 description: Use compound states with automatic leaf resolution.
 ---
 
-# Hierarchical States
+## Hierarchical States
 
-Compound states group related substates. Entering a compound state automatically resolves to its `initial` child:
+### Problem
+
+Related states share common transitions and data but differ in their sub-behaviour. Flattening them into sibling states leads to duplicated event handlers and state explosion.
+
+### Solution
+
+Use compound states to group related substates. Entering a compound state automatically resolves to its `initial` child. Shared transitions on the parent apply to all substates:
 
 ```ts
 import { defineMachine, interpret } from '@vielzeug/clockwork';
@@ -62,3 +68,13 @@ m.matches('editing.draft'); // true — exact match
 
 m[Symbol.dispose]();
 ```
+
+### Pitfalls
+
+- **`matches('parent')` returns `true` for any child state** — use `state.value` for exact matching, `matches()` for ancestor checks.
+- **Transitions on a compound state apply to all children** — if you add a transition on the parent, every substate will handle that event. Use child-level `on` to restrict scope.
+
+### Related
+
+- [Clockwork Examples](/clockwork/examples.md)
+- [Unit Testing with resolveTransition](./unit-testing.md)

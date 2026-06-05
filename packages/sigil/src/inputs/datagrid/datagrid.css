@@ -142,7 +142,7 @@
     padding: var(--size-1) 0 0;
   }
 
-  /* bit-checkbox used for select-all and row checkboxes — label-less, compact */
+  /* sg-checkbox used for select-all and row checkboxes — label-less, compact */
   .dg-check {
     display: inline-flex;
     gap: 0;

@@ -5,7 +5,7 @@ package: familiar
 category: workers
 keywords: [web-workers, pool, concurrency, offload, background, threading, timeout, streaming, priority]
 related: [arsenal, ripple, herald]
-exports: [createWorker, createModuleWorker, createTestWorker]
+exports: [createWorker, createModuleWorker, createTestWorker, WorkerError, WorkerTimeoutError, WorkerTaskError, WorkerQueueFullError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

@@ -3,7 +3,7 @@ import { define, html, prop } from '@vielzeug/craft';
 import styles from './text.css?inline';
 
 /** Text component properties */
-export type BitTextProps = {
+export type SgTextProps = {
   /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
   /** Semantic HTML element to render as — sets the correct ARIA role/level on the host */
@@ -39,7 +39,7 @@ export type BitTextProps = {
 /**
  * A typography component with semantic variants and responsive sizing.
  *
- * @element bit-text
+ * @element sg-text
  *
  * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
  * @attr {string} size - Font size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'. Maps to --text-* tokens for body variants and --heading-* tokens for the heading variant.
@@ -61,16 +61,16 @@ export type BitTextProps = {
  *
  * @example
  * ```html
- * <bit-text variant="heading" size="3xl" weight="bold">Welcome</bit-text>
- * <bit-text as="h2" variant="heading" size="xl">Section title</bit-text>
- * <bit-text color="primary" weight="semibold">Important notice</bit-text>
- * <bit-text variant="code">npm install</bit-text>
- * <bit-text lines="2">Long paragraph that clamps at two lines…</bit-text>
+ * <sg-text variant="heading" size="3xl" weight="bold">Welcome</sg-text>
+ * <sg-text as="h2" variant="heading" size="xl">Section title</sg-text>
+ * <sg-text color="primary" weight="semibold">Important notice</sg-text>
+ * <sg-text variant="code">npm install</sg-text>
+ * <sg-text lines="2">Long paragraph that clamps at two lines…</sg-text>
  * ```
  */
 
-export const TEXT_TAG = 'bit-text' as const;
-define<BitTextProps>(TEXT_TAG, {
+export const TEXT_TAG = 'sg-text' as const;
+define<SgTextProps>(TEXT_TAG, {
   props: {
     align: prop.string<'left' | 'center' | 'right' | 'justify'>(),
     as: prop.string<'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'>(),

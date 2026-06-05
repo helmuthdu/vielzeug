@@ -19,7 +19,7 @@ import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
 import styles from './tabs.css?inline';
 
-/** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
+/** Context provided by sg-tabs to its sg-tab-item and sg-tab-panel children. */
 export type TabsContext = {
   color: ReadonlySignal<ThemeColor | undefined>;
   orientation: ReadonlySignal<'horizontal' | 'vertical'>;
@@ -30,11 +30,11 @@ export type TabsContext = {
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');
 
-export type BitTabsEvents = {
+export type SgTabsEvents = {
   change: { value: string };
 };
 
-export type BitTabsProps = {
+export type SgTabsProps = {
   /**
    * Keyboard activation mode.
    * - `'auto'` (default): Selecting a tab on arrow-key focus immediately activates it (ARIA recommendation for most cases).
@@ -58,9 +58,9 @@ export type BitTabsProps = {
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
  *
- * @element bit-tabs
- * @element bit-tab-item - Child element for tab buttons (auto-discovered)
- * @element bit-tab-panel - Child element for tab content (auto-discovered)
+ * @element sg-tabs
+ * @element sg-tab-item - Child element for tab buttons (auto-discovered)
+ * @element sg-tab-panel - Child element for tab content (auto-discovered)
  *
  * @attr {string} value - The value of the currently selected tab
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
@@ -69,8 +69,8 @@ export type BitTabsProps = {
  *
  * @fires change - Emitted when the active tab changes with detail: { value: string }
  *
- * @slot tabs - Place `bit-tab-item` elements here
- * @slot - Place `bit-tab-panel` elements here
+ * @slot tabs - Place `sg-tab-item` elements here
+ * @slot - Place `sg-tab-panel` elements here
  *
  * @cssprop --blur-lg - Backdrop blur for frosted tab variants
  * @cssprop --border - Border token used by tablist and panel separators
@@ -89,16 +89,16 @@ export type BitTabsProps = {
  * @part panels - Container that holds tab panel content
  * @example
  * ```html
- * <bit-tabs value="tab1" variant="underline">
- *   <bit-tab-item slot="tabs" value="tab1">Overview</bit-tab-item>
- *   <bit-tab-item slot="tabs" value="tab2">Settings</bit-tab-item>
- *   <bit-tab-panel value="tab1"><p>Overview content</p></bit-tab-panel>
- *   <bit-tab-panel value="tab2"><p>Settings content</p></bit-tab-panel>
- * </bit-tabs>
+ * <sg-tabs value="tab1" variant="underline">
+ *   <sg-tab-item slot="tabs" value="tab1">Overview</sg-tab-item>
+ *   <sg-tab-item slot="tabs" value="tab2">Settings</sg-tab-item>
+ *   <sg-tab-panel value="tab1"><p>Overview content</p></sg-tab-panel>
+ *   <sg-tab-panel value="tab2"><p>Settings content</p></sg-tab-panel>
+ * </sg-tabs>
  * ```
  */
-export const TABS_TAG = 'bit-tabs' as const;
-define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
+export const TABS_TAG = 'sg-tabs' as const;
+define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -123,7 +123,7 @@ define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
       },
     });
 
-    const getTabs = () => [...el.querySelectorAll<HTMLElement>(':scope > bit-tab-item[slot="tabs"]')];
+    const getTabs = () => [...el.querySelectorAll<HTMLElement>(':scope > sg-tab-item[slot="tabs"]')];
     const getEnabledTabs = () => getTabs().filter((t) => !t.hasAttribute('disabled'));
     const focusTab = (tab: HTMLElement | undefined) => {
       if (!tab) return;
@@ -173,20 +173,8 @@ define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
       getIndex: () => focusedIndex.value,
       getItems: () => getEnabledTabs(),
       isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
-      keys: () => {
-        if (isVertical()) {
-          return {
-            next: ['ArrowDown'],
-            prev: ['ArrowUp'],
-          };
-        }
-
-        return {
-          next: ['ArrowRight', 'ArrowDown'],
-          prev: ['ArrowLeft', 'ArrowUp'],
-        };
-      },
       loop: true,
+      orientation: () => (isVertical() ? 'vertical' : 'both'),
       setIndex: (index) => {
         focusedIndex.value = index;
 
@@ -258,12 +246,12 @@ define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
     const handleTabClick = (e: Event) => {
       const tab = e
         .composedPath()
-        .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'bit-tab-item');
+        .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'sg-tab-item');
 
       if (!tab || tab.hasAttribute('disabled')) return;
 
       // Guard: only respond to tab-items that belong to THIS tabs instance
-      if (tab.closest('bit-tabs') !== el) return;
+      if (tab.closest('sg-tabs') !== el) return;
 
       const value = tab.getAttribute('value');
 
@@ -294,7 +282,7 @@ define<BitTabsProps, BitTabsEvents>(TABS_TAG, {
 
       const path = e.composedPath();
       const activeTabFromEvent = path.find(
-        (node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'bit-tab-item',
+        (node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'sg-tab-item',
       );
 
       const focused = activeTabFromEvent ? tabs.indexOf(activeTabFromEvent) : -1;

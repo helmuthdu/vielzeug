@@ -3,7 +3,9 @@ title: Multi-Machine Coordination with Events
 description: Use Herald to coordinate multiple independent Clockwork state machines.
 ---
 
-## Problem
+## Multi-Machine Coordination with Events
+
+### Problem
 
 Complex features often require multiple interacting state machines:
 
@@ -13,7 +15,7 @@ Complex features often require multiple interacting state machines:
 
 Hard-coding dependencies between machines creates tight coupling and race conditions. Changes to one machine break assumptions in another.
 
-## Solution
+### Solution
 
 Use Herald as a message bus to decouple machines. Each machine publishes events about state changes, and other machines subscribe and react accordingly. This creates a pub/sub pattern where machines are independent but coordinated.
 
@@ -294,7 +296,7 @@ export function logout() {
 }
 ```
 
-## Pitfalls
+### Pitfalls
 
 1. **Circular event loops** - If machine A publishes event that notifies B, and B publishes back to A, infinite loops occur. Always use directed dependencies: User → Session → Notification, never cycle back.
 
@@ -306,7 +308,7 @@ export function logout() {
 
 5. **Hard to debug multi-machine state** - When machines coordinate, debugging requires tracking all states simultaneously. Enable debug hooks on each machine and log to a central registry: `debug: { onTransition: (info) => log({ clockwork: 'session', ...info }) }`.
 
-## Related
+### Related
 
 - [Herald](../herald/) - Typed event bus and pub/sub
 - [Ripple](../ripple/) - Reactive signals for UI synchronization

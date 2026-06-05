@@ -3,21 +3,21 @@ import { define, effect, html, prop } from '@vielzeug/craft';
 import itemStyles from './breadcrumb-item.css?inline';
 import componentStyles from './breadcrumb.css?inline';
 
-export type BitBreadcrumbProps = {
+export type SgBreadcrumbProps = {
   label?: string;
   separator?: string;
 };
 
-export type BitBreadcrumbItemProps = {
+export type SgBreadcrumbItemProps = {
   active?: boolean;
   href?: string;
   separator?: string;
 };
 
 /**
- * A single breadcrumb entry rendered inside `<bit-breadcrumb>`.
+ * A single breadcrumb entry rendered inside `<sg-breadcrumb>`.
  *
- * @element bit-breadcrumb-item
+ * @element sg-breadcrumb-item
  *
  * @attr {boolean} active - Marks this item as the current page (`aria-current="page"`)
  * @attr {string} href - Link target for this breadcrumb item
@@ -31,12 +31,12 @@ export type BitBreadcrumbItemProps = {
  *
  * @example
  * ```html
- * <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
- * <bit-breadcrumb-item active>Current Page</bit-breadcrumb-item>
+ * <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+ * <sg-breadcrumb-item active>Current Page</sg-breadcrumb-item>
  * ```
  */
-export const BREADCRUMB_ITEM_TAG = 'bit-breadcrumb-item' as const;
-define<BitBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
+export const BREADCRUMB_ITEM_TAG = 'sg-breadcrumb-item' as const;
+define<SgBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
   props: {
     active: prop.bool(),
     href: prop.string(),
@@ -68,12 +68,12 @@ define<BitBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
 /**
  * Accessible breadcrumb navigation container.
  *
- * @element bit-breadcrumb
+ * @element sg-breadcrumb
  *
  * @attr {string} label - Accessible label for the internal `<nav>` landmark
- * @attr {string} separator - Separator text propagated to child `<bit-breadcrumb-item>` elements
+ * @attr {string} separator - Separator text propagated to child `<sg-breadcrumb-item>` elements
  *
- * @slot - One or more `<bit-breadcrumb-item>` children
+ * @slot - One or more `<sg-breadcrumb-item>` children
  *
  * @part nav - Internal navigation landmark element
  * @part list - Internal ordered list container
@@ -82,15 +82,15 @@ define<BitBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
  *
  * @example
  * ```html
- * <bit-breadcrumb label="Page breadcrumb">
- *   <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
- *   <bit-breadcrumb-item href="/blog">Blog</bit-breadcrumb-item>
- *   <bit-breadcrumb-item active>My Post</bit-breadcrumb-item>
- * </bit-breadcrumb>
+ * <sg-breadcrumb label="Page breadcrumb">
+ *   <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+ *   <sg-breadcrumb-item href="/blog">Blog</sg-breadcrumb-item>
+ *   <sg-breadcrumb-item active>My Post</sg-breadcrumb-item>
+ * </sg-breadcrumb>
  * ```
  */
-export const BREADCRUMB_TAG = 'bit-breadcrumb' as const;
-define<BitBreadcrumbProps>(BREADCRUMB_TAG, {
+export const BREADCRUMB_TAG = 'sg-breadcrumb' as const;
+define<SgBreadcrumbProps>(BREADCRUMB_TAG, {
   props: {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),
@@ -100,7 +100,7 @@ define<BitBreadcrumbProps>(BREADCRUMB_TAG, {
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────
 
-    const getItems = (): HTMLElement[] => Array.from(el.getElementsByTagName('bit-breadcrumb-item'));
+    const getItems = (): HTMLElement[] => Array.from(el.getElementsByTagName('sg-breadcrumb-item'));
 
     const syncItems = () => {
       const sep = props.separator.value || '/';

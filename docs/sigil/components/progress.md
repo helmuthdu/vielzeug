@@ -26,7 +26,7 @@ For loading placeholders before progress can be determined, see [Skeleton](./ske
 ## Basic Usage
 
 ```html
-<bit-progress value="45"></bit-progress>
+<sg-progress value="45"></sg-progress>
 
 <script type="module">
   import '@vielzeug/sigil/progress';
@@ -42,10 +42,10 @@ Show a known value between 0 and `max` (default: 100).
 <ComponentPreview vertical>
 
 ```html
-<bit-progress value="0"></bit-progress>
-<bit-progress value="25"></bit-progress>
-<bit-progress value="60"></bit-progress>
-<bit-progress value="100"></bit-progress>
+<sg-progress value="0"></sg-progress>
+<sg-progress value="25"></sg-progress>
+<sg-progress value="60"></sg-progress>
+<sg-progress value="100"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -57,7 +57,7 @@ Use `indeterminate` when the duration of an operation is unknown. The bar animat
 <ComponentPreview vertical>
 
 ```html
-<bit-progress indeterminate></bit-progress> <bit-progress indeterminate color="primary"></bit-progress>
+<sg-progress indeterminate></sg-progress> <sg-progress indeterminate color="primary"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -76,9 +76,9 @@ The `label` attribute renders visible text and doubles as the accessible `aria-l
 <ComponentPreview vertical>
 
 ```html
-<bit-progress value="40" label="40%"></bit-progress>
-<bit-progress value="70" color="primary" label="70 / 100 tasks"></bit-progress>
-<bit-progress value="100" color="success" label="Complete"></bit-progress>
+<sg-progress value="40" label="40%"></sg-progress>
+<sg-progress value="70" color="primary" label="70 / 100 tasks"></sg-progress>
+<sg-progress value="100" color="success" label="Complete"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -95,10 +95,10 @@ The `title` attribute provides contextual text.
 
 ```html
 <!-- Title only -->
-<bit-progress value="60" title="Uploading files…"></bit-progress>
+<sg-progress value="60" title="Uploading files…"></sg-progress>
 
 <!-- Title + label in header row -->
-<bit-progress value="60" color="primary" title="Uploading files…" label="60%"></bit-progress>
+<sg-progress value="60" color="primary" title="Uploading files…" label="60%"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -110,8 +110,8 @@ The `floating-label` attribute renders a chip **above the fill endpoint**, cente
 <ComponentPreview vertical>
 
 ```html
-<bit-progress value="40" floating-label="40%"></bit-progress>
-<bit-progress value="65" color="primary" floating-label="65 pts"></bit-progress>
+<sg-progress value="40" floating-label="40%"></sg-progress>
+<sg-progress value="65" color="primary" floating-label="65 pts"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -125,10 +125,10 @@ Set `type="circular"` to render a circular progress ring. The default diameter i
 <ComponentPreview center>
 
 ```html
-<bit-progress type="circular" value="25"></bit-progress>
-<bit-progress type="circular" value="50" color="primary"></bit-progress>
-<bit-progress type="circular" value="75" color="success"></bit-progress>
-<bit-progress type="circular" value="100" color="info"></bit-progress>
+<sg-progress type="circular" value="25"></sg-progress>
+<sg-progress type="circular" value="50" color="primary"></sg-progress>
+<sg-progress type="circular" value="75" color="success"></sg-progress>
+<sg-progress type="circular" value="100" color="info"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -141,13 +141,13 @@ Use `label` for the primary value text centered inside the ring, and `title` for
 
 ```html
 <!-- Label only -->
-<bit-progress type="circular" value="75" color="primary" label="75%"></bit-progress>
+<sg-progress type="circular" value="75" color="primary" label="75%"></sg-progress>
 
 <!-- Label + title -->
-<bit-progress type="circular" value="512" max="1024" color="warning" label="50%" title="Storage"></bit-progress>
+<sg-progress type="circular" value="512" max="1024" color="warning" label="50%" title="Storage"></sg-progress>
 
 <!-- lg size -->
-<bit-progress type="circular" size="lg" value="3" max="10" color="success" label="3 / 10" title="Steps"></bit-progress>
+<sg-progress type="circular" size="lg" value="3" max="10" color="success" label="3 / 10" title="Steps"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -157,9 +157,9 @@ Use `label` for the primary value text centered inside the ring, and `title` for
 <ComponentPreview center>
 
 ```html
-<bit-progress type="circular" indeterminate></bit-progress>
-<bit-progress type="circular" indeterminate color="primary"></bit-progress>
-<bit-progress type="circular" indeterminate color="warning"></bit-progress>
+<sg-progress type="circular" indeterminate></sg-progress>
+<sg-progress type="circular" indeterminate color="primary"></sg-progress>
+<sg-progress type="circular" indeterminate color="warning"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -169,13 +169,13 @@ Use `label` for the primary value text centered inside the ring, and `title` for
 <ComponentPreview center>
 
 ```html
-<bit-progress value="60"></bit-progress>
-<bit-progress value="60" color="primary"></bit-progress>
-<bit-progress value="60" color="secondary"></bit-progress>
-<bit-progress value="60" color="info"></bit-progress>
-<bit-progress value="60" color="success"></bit-progress>
-<bit-progress value="60" color="warning"></bit-progress>
-<bit-progress value="60" color="error"></bit-progress>
+<sg-progress value="60"></sg-progress>
+<sg-progress value="60" color="primary"></sg-progress>
+<sg-progress value="60" color="secondary"></sg-progress>
+<sg-progress value="60" color="info"></sg-progress>
+<sg-progress value="60" color="success"></sg-progress>
+<sg-progress value="60" color="warning"></sg-progress>
+<sg-progress value="60" color="error"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -187,9 +187,9 @@ Three sizes that affect bar height (linear) or ring diameter (circular). Default
 <ComponentPreview vertical>
 
 ```html
-<bit-progress size="sm" value="60"></bit-progress>
-<bit-progress size="md" value="60"></bit-progress>
-<bit-progress size="lg" value="60"></bit-progress>
+<sg-progress size="sm" value="60"></sg-progress>
+<sg-progress size="md" value="60"></sg-progress>
+<sg-progress size="lg" value="60"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -198,11 +198,11 @@ Three sizes that affect bar height (linear) or ring diameter (circular). Default
 
 ```html
 <!-- sm: 4rem -->
-<bit-progress type="circular" size="sm" value="60" label="60%"></bit-progress>
+<sg-progress type="circular" size="sm" value="60" label="60%"></sg-progress>
 <!-- md: 6rem (default) -->
-<bit-progress type="circular" size="md" value="60" label="60%"></bit-progress>
+<sg-progress type="circular" size="md" value="60" label="60%"></sg-progress>
 <!-- lg: 9rem -->
-<bit-progress type="circular" size="lg" value="60" label="60%"></bit-progress>
+<sg-progress type="circular" size="lg" value="60" label="60%"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -214,8 +214,8 @@ The default `max` is 100. Use `max` to track different units (e.g. steps, bytes)
 <ComponentPreview vertical>
 
 ```html
-<bit-progress value="3" max="10" color="primary" title="Step 3 of 10" label="3 / 10"></bit-progress>
-<bit-progress type="circular" value="750" max="1000" color="success" label="750 MB of 1 GB"></bit-progress>
+<sg-progress value="3" max="10" color="primary" title="Step 3 of 10" label="3 / 10"></sg-progress>
+<sg-progress type="circular" value="750" max="1000" color="success" label="750 MB of 1 GB"></sg-progress>
 ```
 
 </ComponentPreview>
@@ -225,7 +225,7 @@ The default `max` is 100. Use `max` to track different units (e.g. steps, bytes)
 Update `value` programmatically to reflect real progress.
 
 ```js
-const bar = document.querySelector('bit-progress');
+const bar = document.querySelector('sg-progress');
 let progress = 0;
 
 const interval = setInterval(() => {
@@ -274,7 +274,7 @@ const interval = setInterval(() => {
 
 The progress component follows WAI-ARIA best practices.
 
-### `bit-progress`
+### `sg-progress`
 
 ✅ **Screen Readers**
 

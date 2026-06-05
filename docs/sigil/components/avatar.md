@@ -20,7 +20,7 @@ A circular (or shaped) user representation that renders an image, falls back to 
 ## Basic Usage
 
 ```html
-<bit-avatar src="https://i.pravatar.cc/150?img=1" alt="Jane Doe"></bit-avatar>
+<sg-avatar src="https://i.pravatar.cc/150?img=1" alt="Jane Doe"></sg-avatar>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -34,10 +34,10 @@ When no image is provided (or the image fails to load), the avatar displays init
 <ComponentPreview center>
 
 ```html
-<bit-avatar alt="Jane Doe"></bit-avatar>
-<bit-avatar initials="JD" color="primary"></bit-avatar>
-<bit-avatar initials="AB" color="success"></bit-avatar>
-<bit-avatar initials="XY" color="warning"></bit-avatar>
+<sg-avatar alt="Jane Doe"></sg-avatar>
+<sg-avatar initials="JD" color="primary"></sg-avatar>
+<sg-avatar initials="AB" color="success"></sg-avatar>
+<sg-avatar initials="XY" color="warning"></sg-avatar>
 ```
 
 </ComponentPreview>
@@ -49,12 +49,12 @@ Use `color` to apply one of the semantic theme colors to the initials background
 <ComponentPreview center>
 
 ```html
-<bit-avatar initials="PR" color="primary"></bit-avatar>
-<bit-avatar initials="SE" color="secondary"></bit-avatar>
-<bit-avatar initials="IN" color="info"></bit-avatar>
-<bit-avatar initials="SU" color="success"></bit-avatar>
-<bit-avatar initials="WA" color="warning"></bit-avatar>
-<bit-avatar initials="ER" color="error"></bit-avatar>
+<sg-avatar initials="PR" color="primary"></sg-avatar>
+<sg-avatar initials="SE" color="secondary"></sg-avatar>
+<sg-avatar initials="IN" color="info"></sg-avatar>
+<sg-avatar initials="SU" color="success"></sg-avatar>
+<sg-avatar initials="WA" color="warning"></sg-avatar>
+<sg-avatar initials="ER" color="error"></sg-avatar>
 ```
 
 </ComponentPreview>
@@ -64,9 +64,9 @@ Use `color` to apply one of the semantic theme colors to the initials background
 <ComponentPreview center>
 
 ```html
-<bit-avatar initials="SM" size="sm"></bit-avatar>
-<bit-avatar initials="MD" size="md"></bit-avatar>
-<bit-avatar initials="LG" size="lg"></bit-avatar>
+<sg-avatar initials="SM" size="sm"></sg-avatar>
+<sg-avatar initials="MD" size="md"></sg-avatar>
+<sg-avatar initials="LG" size="lg"></sg-avatar>
 ```
 
 </ComponentPreview>
@@ -78,10 +78,10 @@ Control the border-radius with `rounded`. Defaults to `full` (circular).
 <ComponentPreview center>
 
 ```html
-<bit-avatar initials="SM" rounded="sm"></bit-avatar>
-<bit-avatar initials="MD" rounded="md"></bit-avatar>
-<bit-avatar initials="LG" rounded="lg"></bit-avatar>
-<bit-avatar initials="FL" rounded="full"></bit-avatar>
+<sg-avatar initials="SM" rounded="sm"></sg-avatar>
+<sg-avatar initials="MD" rounded="md"></sg-avatar>
+<sg-avatar initials="LG" rounded="lg"></sg-avatar>
+<sg-avatar initials="FL" rounded="full"></sg-avatar>
 ```
 
 </ComponentPreview>
@@ -93,10 +93,10 @@ Add a colored status dot with the `status` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-avatar initials="ON" color="primary" status="online"></bit-avatar>
-<bit-avatar initials="OF" status="offline"></bit-avatar>
-<bit-avatar initials="BU" color="error" status="busy"></bit-avatar>
-<bit-avatar initials="AW" color="warning" status="away"></bit-avatar>
+<sg-avatar initials="ON" color="primary" status="online"></sg-avatar>
+<sg-avatar initials="OF" status="offline"></sg-avatar>
+<sg-avatar initials="BU" color="error" status="busy"></sg-avatar>
+<sg-avatar initials="AW" color="warning" status="away"></sg-avatar>
 ```
 
 </ComponentPreview>
@@ -109,19 +109,19 @@ Stack multiple avatars by applying a negative margin via CSS. You can use `--ava
 
 ```html
 <div style="display:flex; align-items:center;">
-  <bit-avatar initials="AA" color="primary" style="--avatar-border: 2px solid; z-index:4;"></bit-avatar>
-  <bit-avatar
+  <sg-avatar initials="AA" color="primary" style="--avatar-border: 2px solid; z-index:4;"></sg-avatar>
+  <sg-avatar
     initials="BB"
     color="secondary"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:3;"></bit-avatar>
-  <bit-avatar
+    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:3;"></sg-avatar>
+  <sg-avatar
     initials="CC"
     color="success"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:2;"></bit-avatar>
-  <bit-avatar
+    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:2;"></sg-avatar>
+  <sg-avatar
     initials="DD"
     color="warning"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:1;"></bit-avatar>
+    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:1;"></sg-avatar>
 </div>
 ```
 
@@ -158,7 +158,7 @@ Stack multiple avatars by applying a negative margin via CSS. You can use `--ava
 
 The avatar component follows WAI-ARIA best practices.
 
-### `bit-avatar`
+### `sg-avatar`
 
 ✅ **Screen Readers**
 

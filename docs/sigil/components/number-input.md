@@ -22,7 +22,7 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 ## Basic Usage
 
 ```html
-<bit-number-input label="Quantity" value="1" min="0" max="100"></bit-number-input>
+<sg-number-input label="Quantity" value="1" min="0" max="100"></sg-number-input>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -34,9 +34,9 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 <ComponentPreview center>
 
 ```html
-<bit-number-input label="0–10, step 1" min="0" max="10" step="1" value="5"></bit-number-input>
-<bit-number-input label="0–100, step 10" min="0" max="100" step="10" value="50"></bit-number-input>
-<bit-number-input label="0.0–1.0, step 0.1" min="0" max="1" step="0.1" value="0.5"></bit-number-input>
+<sg-number-input label="0–10, step 1" min="0" max="10" step="1" value="5"></sg-number-input>
+<sg-number-input label="0–100, step 10" min="0" max="100" step="10" value="50"></sg-number-input>
+<sg-number-input label="0.0–1.0, step 0.1" min="0" max="1" step="0.1" value="0.5"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -46,9 +46,9 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 <ComponentPreview center>
 
 ```html
-<bit-number-input label="Small" size="sm" value="1"></bit-number-input>
-<bit-number-input label="Medium" size="md" value="1"></bit-number-input>
-<bit-number-input label="Large" size="lg" value="1"></bit-number-input>
+<sg-number-input label="Small" size="sm" value="1"></sg-number-input>
+<sg-number-input label="Medium" size="md" value="1"></sg-number-input>
+<sg-number-input label="Large" size="lg" value="1"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -58,10 +58,10 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 <ComponentPreview center>
 
 ```html
-<bit-number-input color="primary" value="1"></bit-number-input>
-<bit-number-input color="secondary" value="1"></bit-number-input>
-<bit-number-input color="success" value="1"></bit-number-input>
-<bit-number-input color="error" value="1"></bit-number-input>
+<sg-number-input color="primary" value="1"></sg-number-input>
+<sg-number-input color="secondary" value="1"></sg-number-input>
+<sg-number-input color="success" value="1"></sg-number-input>
+<sg-number-input color="error" value="1"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -71,11 +71,11 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 <ComponentPreview center>
 
 ```html
-<bit-number-input value="5"></bit-number-input>
-<bit-number-input variant="flat" value="5"></bit-number-input>
-<bit-number-input variant="bordered" value="5" color="primary"></bit-number-input>
-<bit-number-input variant="outline" value="5"></bit-number-input>
-<bit-number-input variant="ghost" value="5"></bit-number-input>
+<sg-number-input value="5"></sg-number-input>
+<sg-number-input variant="flat" value="5"></sg-number-input>
+<sg-number-input variant="bordered" value="5" color="primary"></sg-number-input>
+<sg-number-input variant="outline" value="5"></sg-number-input>
+<sg-number-input variant="ghost" value="5"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -85,8 +85,8 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 <ComponentPreview center>
 
 ```html
-<bit-number-input label="Disabled" value="5" disabled></bit-number-input>
-<bit-number-input label="Readonly" value="5" readonly></bit-number-input>
+<sg-number-input label="Disabled" value="5" disabled></sg-number-input>
+<sg-number-input label="Readonly" value="5" readonly></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -98,22 +98,22 @@ Set `label-placement="outside"` to render the label outside the control box, abo
 <ComponentPreview center>
 
 ```html
-<bit-number-input label="Quantity" label-placement="outside" value="1" min="0" max="99"></bit-number-input>
-<bit-number-input
+<sg-number-input label="Quantity" label-placement="outside" value="1" min="0" max="99"></sg-number-input>
+<sg-number-input
   label="Quantity"
   label-placement="outside"
   variant="flat"
   value="1"
   min="0"
-  max="99"></bit-number-input>
-<bit-number-input
+  max="99"></sg-number-input>
+<sg-number-input
   label="Quantity"
   label-placement="outside"
   variant="bordered"
   color="primary"
   value="1"
   min="0"
-  max="99"></bit-number-input>
+  max="99"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -125,14 +125,14 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 <ComponentPreview>
 
 ```html
-<bit-number-input label="Full Width" fullwidth value="1" min="0" max="99"></bit-number-input>
-<bit-number-input
+<sg-number-input label="Full Width" fullwidth value="1" min="0" max="99"></sg-number-input>
+<sg-number-input
   label="Inset + Full Width"
   label-placement="inset"
   fullwidth
   value="1"
   min="0"
-  max="99"></bit-number-input>
+  max="99"></sg-number-input>
 ```
 
 </ComponentPreview>
@@ -140,7 +140,7 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 ## Handling Change Events
 
 ```html
-<bit-number-input id="qty" label="Quantity" value="1" min="1" max="99"></bit-number-input>
+<sg-number-input id="qty" label="Quantity" value="1" min="1" max="99"></sg-number-input>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -196,7 +196,7 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 
 The number input component follows WCAG 2.1 Level AA standards.
 
-### `bit-number-input`
+### `sg-number-input`
 
 ✅ **Keyboard Navigation**
 

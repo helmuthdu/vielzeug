@@ -2,7 +2,7 @@ import type { ComboboxOptionItem } from './combobox.types';
 
 export function parseSlottedOptions(elements: Element[]): ComboboxOptionItem[] {
   return elements
-    .filter((el) => el.localName === 'bit-combobox-option')
+    .filter((el) => el.localName === 'sg-combobox-option')
     .map((el) => ({
       disabled: el.hasAttribute('disabled'),
       iconEl: el.querySelector('[slot="icon"]'),

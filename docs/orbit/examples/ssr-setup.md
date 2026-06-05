@@ -3,13 +3,17 @@ title: SSR Setup
 description: Server-side rendering with @vielzeug/orbit/ssr no-op stubs.
 ---
 
-# SSR Setup
+## SSR Setup
 
-`@vielzeug/orbit` uses browser APIs (`getBoundingClientRect`, `ResizeObserver`, etc.) that are not available on the server. Importing the main package in a server bundle will cause build-time errors or runtime crashes.
+### Problem
 
-Use the `@vielzeug/orbit/ssr` sub-path to get no-op stubs that have the same TypeScript signature but perform no DOM operations.
+`@vielzeug/orbit` uses browser APIs (`getBoundingClientRect`, `ResizeObserver`, etc.) that are not available on the server. Importing the main package in an SSR bundle causes build-time errors or runtime crashes.
 
-## Vite / Rollup Alias
+### Solution
+
+Use the `@vielzeug/orbit/ssr` sub-path to get no-op stubs with the same TypeScript signatures that perform no DOM operations.
+
+#### Vite / Rollup Alias
 
 The simplest approach is a build-time alias that swaps the import when bundling for SSR:
 
@@ -24,7 +28,7 @@ export default defineConfig({
 });
 ```
 
-## Manual Import Guard
+#### Manual Import Guard
 
 If you need both SSR and client functionality in the same file, import conditionally:
 
@@ -39,7 +43,7 @@ async function getFloat() {
 }
 ```
 
-## What the Stubs Return
+#### What the Stubs Return
 
 | Export            | SSR Return Value                                                                         |
 | ----------------- | ---------------------------------------------------------------------------------------- |
@@ -49,7 +53,7 @@ async function getFloat() {
 
 The stub `FloatHandle` is fully typed — consuming code that calls `handle.cleanup()` or reads `handle.cssAnchor` will work identically on the server and the client.
 
-## SvelteKit Example
+#### SvelteKit Example
 
 ```ts
 // src/lib/orbit.ts
@@ -93,3 +97,14 @@ export async function loadFloat() {
 <button bind:this={triggerEl}>Hover me</button>
 <div bind:this={tooltipEl} role="tooltip">Content</div>
 ```
+
+### Pitfalls
+
+- **Stubs always return zero-coordinate positions** — do not run layout-dependent logic on the server using the stub's return value.
+- **Dynamic imports add async overhead** — prefer the build-time alias when possible; reserve the async guard for edge cases.
+
+### Related
+
+- [Orbit API Reference](/orbit/api.md)
+- [Reactive Adapter](./reactive-adapter.md)
+- [Using Presets](./using-presets.md)

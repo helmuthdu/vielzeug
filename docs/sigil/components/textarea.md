@@ -22,7 +22,7 @@ A multi-line text input with integrated label, helper text, character counter, a
 ## Basic Usage
 
 ```html
-<bit-textarea label="Message" placeholder="Write something..."></bit-textarea>
+<sg-textarea label="Message" placeholder="Write something..."></sg-textarea>
 
 <script type="module">
   import '@vielzeug/sigil/textarea';
@@ -36,11 +36,11 @@ A multi-line text input with integrated label, helper text, character counter, a
 <ComponentPreview center>
 
 ```html
-<bit-textarea variant="solid" label="Solid" rows="2"></bit-textarea>
-<bit-textarea variant="flat" label="Flat" rows="2"></bit-textarea>
-<bit-textarea variant="bordered" label="Bordered" rows="2" color="primary"></bit-textarea>
-<bit-textarea variant="outline" label="Outline" rows="2"></bit-textarea>
-<bit-textarea variant="ghost" label="Ghost" rows="2"></bit-textarea>
+<sg-textarea variant="solid" label="Solid" rows="2"></sg-textarea>
+<sg-textarea variant="flat" label="Flat" rows="2"></sg-textarea>
+<sg-textarea variant="bordered" label="Bordered" rows="2" color="primary"></sg-textarea>
+<sg-textarea variant="outline" label="Outline" rows="2"></sg-textarea>
+<sg-textarea variant="ghost" label="Ghost" rows="2"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -50,11 +50,11 @@ A multi-line text input with integrated label, helper text, character counter, a
 <ComponentPreview center>
 
 ```html
-<bit-textarea variant="flat" label="Default" rows="2"></bit-textarea>
-<bit-textarea variant="flat" color="primary" label="Primary" rows="2"></bit-textarea>
-<bit-textarea variant="flat" color="success" label="Success" rows="2"></bit-textarea>
-<bit-textarea variant="flat" color="warning" label="Warning" rows="2"></bit-textarea>
-<bit-textarea variant="flat" color="error" label="Error" rows="2"></bit-textarea>
+<sg-textarea variant="flat" label="Default" rows="2"></sg-textarea>
+<sg-textarea variant="flat" color="primary" label="Primary" rows="2"></sg-textarea>
+<sg-textarea variant="flat" color="success" label="Success" rows="2"></sg-textarea>
+<sg-textarea variant="flat" color="warning" label="Warning" rows="2"></sg-textarea>
+<sg-textarea variant="flat" color="error" label="Error" rows="2"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -64,9 +64,9 @@ A multi-line text input with integrated label, helper text, character counter, a
 <ComponentPreview center>
 
 ```html
-<bit-textarea size="sm" label="Small" rows="2"></bit-textarea>
-<bit-textarea size="md" label="Medium" rows="2"></bit-textarea>
-<bit-textarea size="lg" label="Large" rows="2"></bit-textarea>
+<sg-textarea size="sm" label="Small" rows="2"></sg-textarea>
+<sg-textarea size="md" label="Medium" rows="2"></sg-textarea>
+<sg-textarea size="lg" label="Large" rows="2"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -80,7 +80,7 @@ The label floats inside the field as a compact top label.
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Bio" placeholder="Tell us about yourself"></bit-textarea>
+<sg-textarea label="Bio" placeholder="Tell us about yourself"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -92,7 +92,7 @@ The label is placed above the field.
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Bio" label-placement="outside" placeholder="Tell us about yourself"></bit-textarea>
+<sg-textarea label="Bio" label-placement="outside" placeholder="Tell us about yourself"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -102,8 +102,8 @@ The label is placed above the field.
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Description" helper="Briefly describe the issue you are experiencing."></bit-textarea>
-<bit-textarea label="Notes" error="This field is required." value=""></bit-textarea>
+<sg-textarea label="Description" helper="Briefly describe the issue you are experiencing."></sg-textarea>
+<sg-textarea label="Notes" error="This field is required." value=""></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -115,7 +115,7 @@ Set `maxlength` to enable a live character counter. The counter turns amber near
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Bio" maxlength="160" placeholder="160 characters max"></bit-textarea>
+<sg-textarea label="Bio" maxlength="160" placeholder="160 characters max"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -127,7 +127,7 @@ Set `auto-resize` to let the textarea grow vertically with its content. Manual r
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Notes" auto-resize placeholder="Start typing — the field will grow"></bit-textarea>
+<sg-textarea label="Notes" auto-resize placeholder="Start typing — the field will grow"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -139,10 +139,10 @@ Control the resize handle with the `resize` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-textarea label="Vertical (default)" resize="vertical" rows="2"></bit-textarea>
-<bit-textarea label="Horizontal" resize="horizontal" rows="2"></bit-textarea>
-<bit-textarea label="Both" resize="both" rows="2"></bit-textarea>
-<bit-textarea label="None" resize="none" rows="2"></bit-textarea>
+<sg-textarea label="Vertical (default)" resize="vertical" rows="2"></sg-textarea>
+<sg-textarea label="Horizontal" resize="horizontal" rows="2"></sg-textarea>
+<sg-textarea label="Both" resize="both" rows="2"></sg-textarea>
+<sg-textarea label="None" resize="none" rows="2"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -152,8 +152,8 @@ Control the resize handle with the `resize` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-textarea disabled label="Disabled" value="Cannot edit this"></bit-textarea>
-<bit-textarea readonly label="Read-only" value="Cannot change this"></bit-textarea>
+<sg-textarea disabled label="Disabled" value="Cannot edit this"></sg-textarea>
+<sg-textarea readonly label="Read-only" value="Cannot change this"></sg-textarea>
 ```
 
 </ComponentPreview>
@@ -215,7 +215,7 @@ Control the resize handle with the `resize` attribute.
 
 The textarea component follows WCAG 2.1 Level AA standards.
 
-### `bit-textarea`
+### `sg-textarea`
 
 ✅ **Keyboard Navigation**
 

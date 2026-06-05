@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-drawer', () => {
+describe('sg-drawer', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -28,25 +28,25 @@ describe('bit-drawer', () => {
 
   describe('Rendering', () => {
     it('renders a native dialog element', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('dialog')).toBeTruthy();
     });
 
     it('renders the panel div inside the dialog', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('.panel')).toBeTruthy();
     });
 
     it('renders a close button', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('[aria-label="Close"]')).toBeTruthy();
     });
 
     it('renders default slots', async () => {
-      fixture = await mount('bit-drawer', {
+      fixture = await mount('sg-drawer', {
         html: '<p>Body content</p>',
       });
 
@@ -54,7 +54,7 @@ describe('bit-drawer', () => {
     });
 
     it('renders header slot content', async () => {
-      fixture = await mount('bit-drawer', {
+      fixture = await mount('sg-drawer', {
         html: '<span slot="header">Title</span>',
       });
 
@@ -62,25 +62,25 @@ describe('bit-drawer', () => {
     });
 
     it('renders title prop as header fallback text', async () => {
-      fixture = await mount('bit-drawer', { attrs: { title: 'Settings' } });
+      fixture = await mount('sg-drawer', { attrs: { title: 'Settings' } });
 
       expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings');
     });
 
     it('renders label prop as header fallback text', async () => {
-      fixture = await mount('bit-drawer', { attrs: { label: 'Settings panel' } });
+      fixture = await mount('sg-drawer', { attrs: { label: 'Settings panel' } });
 
       expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings panel');
     });
 
     it('does not render undefined text in header when no label or title is provided', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('.header')?.textContent).not.toContain('undefined');
     });
 
     it('renders footer slot content', async () => {
-      fixture = await mount('bit-drawer', {
+      fixture = await mount('sg-drawer', {
         html: '<button slot="footer">Save</button>',
       });
 
@@ -92,7 +92,7 @@ describe('bit-drawer', () => {
 
   describe('Props', () => {
     it('dialog is hidden when open is false', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       const dialog = fixture.query('dialog');
 
@@ -100,31 +100,31 @@ describe('bit-drawer', () => {
     });
 
     it('dialog is open when open prop is set', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
 
     it('reflects placement attribute on host', async () => {
-      fixture = await mount('bit-drawer', { attrs: { placement: 'left' } });
+      fixture = await mount('sg-drawer', { attrs: { placement: 'left' } });
 
       expect(fixture.element.getAttribute('placement')).toBe('left');
     });
 
     it('reflects size attribute on host', async () => {
-      fixture = await mount('bit-drawer', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-drawer', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('reflects backdrop attribute on host', async () => {
-      fixture = await mount('bit-drawer', { attrs: { backdrop: 'transparent' } });
+      fixture = await mount('sg-drawer', { attrs: { backdrop: 'transparent' } });
 
       expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
     });
 
     it('reflects drag-handle-placement attribute on host', async () => {
-      fixture = await mount('bit-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
+      fixture = await mount('sg-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
 
       expect(fixture.element.getAttribute('drag-handle-placement')).toBe('inset');
     });
@@ -134,7 +134,7 @@ describe('bit-drawer', () => {
 
   describe('Open / Close', () => {
     it('opens when open attribute is added', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       await fixture.attr('open', '');
 
@@ -142,7 +142,7 @@ describe('bit-drawer', () => {
     });
 
     it('closes when open attribute is removed', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       // Use the close button to trigger close
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
@@ -161,7 +161,7 @@ describe('bit-drawer', () => {
     });
 
     it('keeps outward drag position when swipe-close overshoots panel size', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       const panel = fixture.query<HTMLElement>('.panel');
       const dragHandle = fixture.query<HTMLElement>('.drag-handle');
@@ -183,7 +183,7 @@ describe('bit-drawer', () => {
     });
 
     it('commits close on pointerup when release crosses swipe threshold', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       const panel = fixture.query<HTMLElement>('.panel');
       const dragHandle = fixture.query<HTMLElement>('.drag-handle');
@@ -212,7 +212,7 @@ describe('bit-drawer', () => {
 
   describe('Events', () => {
     it('fires open when the drawer opens', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       const handler = vi.fn();
 
@@ -224,7 +224,7 @@ describe('bit-drawer', () => {
     });
 
     it('open event detail contains placement and reason', async () => {
-      fixture = await mount('bit-drawer', { attrs: { placement: 'left' } });
+      fixture = await mount('sg-drawer', { attrs: { placement: 'left' } });
 
       let detail: unknown;
 
@@ -239,7 +239,7 @@ describe('bit-drawer', () => {
     });
 
     it('fires close after the drawer closes', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       const handler = vi.fn();
 
@@ -259,7 +259,7 @@ describe('bit-drawer', () => {
     });
 
     it('fires close-request when close button is clicked', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       const handler = vi.fn();
 
@@ -271,7 +271,7 @@ describe('bit-drawer', () => {
     });
 
     it('close-request detail contains reason and placement', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '', placement: 'left' } });
 
       let detail: unknown;
 
@@ -286,7 +286,7 @@ describe('bit-drawer', () => {
     });
 
     it('close-request reason is outsideClick for backdrop clicks', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '', placement: 'left' } });
 
       let detail: unknown;
 
@@ -302,7 +302,7 @@ describe('bit-drawer', () => {
     });
 
     it('close-request reason is escape for cancel events', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'right' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '', placement: 'right' } });
 
       let detail: unknown;
 
@@ -320,7 +320,7 @@ describe('bit-drawer', () => {
     });
 
     it('close reason is programmatic when open is removed externally', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       let detail: unknown;
 
@@ -335,7 +335,7 @@ describe('bit-drawer', () => {
     });
 
     it('preventing close-request keeps the drawer open', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
       fixture.element.addEventListener('close-request', (e) => e.preventDefault());
 
       fixture.query<HTMLButtonElement>('[aria-label="Close"]')?.click();
@@ -349,7 +349,7 @@ describe('bit-drawer', () => {
 
   describe('Methods', () => {
     it('show() opens the drawer', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       const el = fixture.element as typeof fixture.element & { show(): void };
 
@@ -360,7 +360,7 @@ describe('bit-drawer', () => {
     });
 
     it('hide() closes the drawer', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '' } });
 
       const el = fixture.element as typeof fixture.element & { hide(): void };
 
@@ -378,7 +378,7 @@ describe('bit-drawer', () => {
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
-describe('bit-drawer accessibility', () => {
+describe('sg-drawer accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -404,13 +404,13 @@ describe('bit-drawer accessibility', () => {
 
   describe('Native Dialog Semantics', () => {
     it('uses native <dialog> element for built-in modal semantics', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('dialog')).toBeTruthy();
     });
 
     it('dialog has aria-label when label prop is set', async () => {
-      fixture = await mount('bit-drawer', { attrs: { label: 'Settings panel' } });
+      fixture = await mount('sg-drawer', { attrs: { label: 'Settings panel' } });
 
       const dialog = fixture.query('dialog');
 
@@ -418,7 +418,7 @@ describe('bit-drawer accessibility', () => {
     });
 
     it('dialog has aria-labelledby when label prop is absent', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       const dialog = fixture.query('dialog');
 
@@ -426,7 +426,7 @@ describe('bit-drawer accessibility', () => {
     });
 
     it('dialog aria-labelledby and aria-label are mutually exclusive', async () => {
-      fixture = await mount('bit-drawer', { attrs: { label: 'My drawer' } });
+      fixture = await mount('sg-drawer', { attrs: { label: 'My drawer' } });
 
       const dialog = fixture.query('dialog');
 
@@ -437,7 +437,7 @@ describe('bit-drawer accessibility', () => {
 
   describe('aria-modal', () => {
     it('dialog has aria-modal="true"', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('dialog')?.getAttribute('aria-modal')).toBe('true');
     });
@@ -445,21 +445,21 @@ describe('bit-drawer accessibility', () => {
 
   describe('Close Button', () => {
     it('close button has aria-label="Close"', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       expect(fixture.query('[aria-label="Close"]')).toBeTruthy();
     });
 
     it('close button icon has aria-hidden="true"', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
-      const icon = fixture.query('button[aria-label="Close"] bit-icon');
+      const icon = fixture.query('button[aria-label="Close"] sg-icon');
 
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('close button is visible by default (dismissible defaults to true)', async () => {
-      fixture = await mount('bit-drawer');
+      fixture = await mount('sg-drawer');
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
 
@@ -469,7 +469,7 @@ describe('bit-drawer accessibility', () => {
 
   describe('persistent', () => {
     it('backdrop click does not close when persistent is set', async () => {
-      fixture = await mount('bit-drawer', { attrs: { open: '', persistent: '' } });
+      fixture = await mount('sg-drawer', { attrs: { open: '', persistent: '' } });
 
       const dialog = fixture.query<HTMLDialogElement>('dialog');
 
@@ -484,7 +484,7 @@ describe('bit-drawer accessibility', () => {
   describe('Placement Variants', () => {
     for (const placement of ['left', 'right', 'top', 'bottom'] as const) {
       it(`reflects placement="${placement}" as host attribute`, async () => {
-        fixture = await mount('bit-drawer', { attrs: { placement } });
+        fixture = await mount('sg-drawer', { attrs: { placement } });
 
         expect(fixture.element.getAttribute('placement')).toBe(placement);
       });

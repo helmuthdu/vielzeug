@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, debugRouter]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

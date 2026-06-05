@@ -69,7 +69,7 @@ const parseMaxWidthPx = (query: string | undefined): number | undefined => {
 const resolveContainerElement = (el: HTMLElement): HTMLElement | null => {
   let container = el.parentElement;
 
-  while (container?.tagName.toLowerCase() === 'bit-grid-item') {
+  while (container?.tagName.toLowerCase() === 'sg-grid-item') {
     container = container.parentElement;
   }
 
@@ -101,7 +101,7 @@ const findScrollContainer = (start: HTMLElement): HTMLElement | null => {
   return null;
 };
 
-/** Context provided by `bit-navbar` to `bit-navbar-item` children. */
+/** Context provided by `sg-navbar` to `sg-navbar-item` children. */
 export type NavbarContext = {
   isMobile: ReadonlySignal<boolean>;
   mobileMenuOpen: ReadonlySignal<boolean>;
@@ -111,13 +111,13 @@ export type NavbarContext = {
 export const NAVBAR_CTX = createContext<NavbarContext>('NavbarContext');
 
 /** Navbar component events */
-export type BitNavbarEvents = {
+export type SgNavbarEvents = {
   'mobile-menu-change': { open: boolean };
 };
 
 /** Navbar component element interface */
 export type NavbarElement = HTMLElement &
-  BitNavbarProps & {
+  SgNavbarProps & {
     closeMobileMenu(): void;
     openMobileMenu(): void;
     toggleMobileMenu(): void;
@@ -130,7 +130,7 @@ type MobileSidebarElement = HTMLElement & {
 };
 
 /** Navbar component properties */
-export type BitNavbarProps = {
+export type SgNavbarProps = {
   /** CSS media query used for mobile layout switching */
   breakpoint?: string;
   /** Theme color */
@@ -156,7 +156,7 @@ export type BitNavbarProps = {
 };
 
 /** Navbar item properties */
-export type BitNavbarItemProps = {
+export type SgNavbarItemProps = {
   /** Whether this item represents the current page */
   active?: boolean;
   /** Whether this item is disabled */
@@ -170,9 +170,10 @@ export type BitNavbarItemProps = {
 };
 
 /**
- * `bit-navbar` — Responsive navigation with sticky/floating modes and a mobile overflow panel.
+ * `sg-navbar` — Responsive navigation with sticky/floating modes and a mobile overflow panel.
  *
- * @element bit-navbar
+ * @element sg-navbar
+ * @element sg-navbar-item - Navigation link or button placed in the default or mobile-menu slot
  *
  * @attr {string} label - Accessible nav landmark label
  * @attr {boolean} sticky - Makes navbar sticky at top
@@ -180,12 +181,12 @@ export type BitNavbarItemProps = {
  * @attr {number} scroll-threshold - Scroll threshold for floating+sticky transition
  * @attr {string} breakpoint - CSS media query used for mobile mode
  * @attr {boolean} container-breakpoints - Evaluates parseable max-width breakpoints against container width
- * @attr {string} variant - Visual variant
- * @attr {string} color - Theme color
- * @attr {string} rounded - Border radius token
- * @attr {string} elevation - Shadow elevation level
+ * @attr {string} variant - Visual variant: 'flat' | 'solid' | 'bordered' | 'outline' | 'frost' | 'glass'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
+ * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
  *
- * @fires mobile-menu-change - Emitted when mobile menu open state changes
+ * @fires mobile-menu-change - Emitted when mobile menu open state changes. detail: { open: boolean }
  *
  * @slot logo - Brand/logo content rendered at the leading edge
  * @slot start - Content rendered in the left/start region
@@ -219,11 +220,16 @@ export type BitNavbarItemProps = {
  * @part item - Clickable navbar item root
  * @example
  * ```html
- * <bit-navbar></bit-navbar>
+ * <sg-navbar sticky elevation="1">
+ *   <a href="/" slot="logo"><strong>MyApp</strong></a>
+ *   <sg-navbar-item href="/dashboard">Dashboard</sg-navbar-item>
+ *   <sg-navbar-item href="/docs">Docs</sg-navbar-item>
+ *   <sg-button slot="end" variant="solid" color="primary" size="sm">Sign in</sg-button>
+ * </sg-navbar>
  * ```
  */
-export const NAVBAR_TAG = 'bit-navbar' as const;
-define<BitNavbarProps, BitNavbarEvents>(NAVBAR_TAG, {
+export const NAVBAR_TAG = 'sg-navbar' as const;
+define<SgNavbarProps, SgNavbarEvents>(NAVBAR_TAG, {
   props: {
     breakpoint: prop.string('(max-width: 768px)'),
     color: prop.string<ThemeColor>(),
@@ -638,11 +644,11 @@ define<BitNavbarProps, BitNavbarEvents>(NAVBAR_TAG, {
             aria-expanded="${() => String(hasMobileMenu() ? isMobileMenuOpen.value : isExternalMobileOpen.value)}"
             ?hidden=${() => !isMobile.value || (!hasMobileMenu() && !mobileSidebarTarget.value)}
             @click="${toggleMobileMenu}">
-            <bit-icon
+            <sg-icon
               name="${() => ((hasMobileMenu() ? isMobileMenuOpen.value : isExternalMobileOpen.value) ? 'x' : 'menu')}"
               size="18"
               stroke-width="2.5"
-              aria-hidden="true"></bit-icon>
+              aria-hidden="true"></sg-icon>
           </button>
         </div>
 
@@ -670,14 +676,31 @@ define<BitNavbarProps, BitNavbarEvents>(NAVBAR_TAG, {
 });
 
 /**
- * `bit-navbar-item` — Navigation item for navbar slots.
+ * `sg-navbar-item` — Navigation item for navbar slots.
  *
  * Renders as an anchor when `href` is provided and item is not disabled.
  *
- * @element bit-navbar-item
+ * @element sg-navbar-item
+ *
+ * @attr {boolean} active - Marks item as the current active route
+ * @attr {boolean} disabled - Disables interaction
+ * @attr {string} href - Link URL; renders as `<a>` when set
+ * @attr {string} rel - Anchor `rel` attribute (links only)
+ * @attr {string} target - Anchor `target` attribute (links only)
+ *
+ * @slot - Item label
+ * @slot icon - Optional icon before the label
+ *
+ * @example
+ * ```html
+ * <sg-navbar-item href="/home">Home</sg-navbar-item>
+ * <sg-navbar-item href="/docs" active>Docs</sg-navbar-item>
+ * <sg-navbar-item href="/about" target="_blank" rel="noopener">About</sg-navbar-item>
+ * <sg-navbar-item disabled>Disabled</sg-navbar-item>
+ * ```
  */
-export const NAVBAR_ITEM_TAG = 'bit-navbar-item' as const;
-define<BitNavbarItemProps>(NAVBAR_ITEM_TAG, {
+export const NAVBAR_ITEM_TAG = 'sg-navbar-item' as const;
+define<SgNavbarItemProps>(NAVBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
     disabled: prop.bool(false),

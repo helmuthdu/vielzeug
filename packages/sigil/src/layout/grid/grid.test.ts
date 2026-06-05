@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-grid', () => {
+describe('sg-grid', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-grid', () => {
 
   describe('Rendering', () => {
     it('renders grid element', async () => {
-      fixture = await mount('bit-grid');
+      fixture = await mount('sg-grid');
 
       expect(fixture.element).toBeTruthy();
     });
 
     it('renders slot content', async () => {
-      fixture = await mount('bit-grid', { html: '<div>Item</div>' });
+      fixture = await mount('sg-grid', { html: '<div>Item</div>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Item');
     });
@@ -27,37 +27,37 @@ describe('bit-grid', () => {
 
   describe('Props', () => {
     it('applies cols attribute', async () => {
-      fixture = await mount('bit-grid', { attrs: { cols: '3' } });
+      fixture = await mount('sg-grid', { attrs: { cols: '3' } });
 
       expect(fixture.element.getAttribute('cols')).toBe('3');
     });
 
     it('applies gap attribute', async () => {
-      fixture = await mount('bit-grid', { attrs: { gap: 'md' } });
+      fixture = await mount('sg-grid', { attrs: { gap: 'md' } });
 
       expect(fixture.element.getAttribute('gap')).toBe('md');
     });
 
     it('applies align attribute', async () => {
-      fixture = await mount('bit-grid', { attrs: { align: 'center' } });
+      fixture = await mount('sg-grid', { attrs: { align: 'center' } });
 
       expect(fixture.element.getAttribute('align')).toBe('center');
     });
 
     it('applies justify attribute', async () => {
-      fixture = await mount('bit-grid', { attrs: { justify: 'center' } });
+      fixture = await mount('sg-grid', { attrs: { justify: 'center' } });
 
       expect(fixture.element.getAttribute('justify')).toBe('center');
     });
 
     it('applies responsive', async () => {
-      fixture = await mount('bit-grid', { attrs: { responsive: '' } });
+      fixture = await mount('sg-grid', { attrs: { responsive: '' } });
 
       expect(fixture.element.hasAttribute('responsive')).toBe(true);
     });
 
     it('applies flow attribute', async () => {
-      fixture = await mount('bit-grid', { attrs: { flow: 'column' } });
+      fixture = await mount('sg-grid', { attrs: { flow: 'column' } });
 
       expect(fixture.element.getAttribute('flow')).toBe('column');
     });
@@ -66,7 +66,7 @@ describe('bit-grid', () => {
   describe('Column Counts', () => {
     for (const cols of ['1', '2', '3', '4', '6', '12']) {
       it(`applies cols=${cols}`, async () => {
-        fixture = await mount('bit-grid', { attrs: { cols } });
+        fixture = await mount('sg-grid', { attrs: { cols } });
 
         expect(fixture.element.getAttribute('cols')).toBe(cols);
         fixture.destroy();
@@ -77,7 +77,7 @@ describe('bit-grid', () => {
   describe('Gap Sizes', () => {
     for (const gap of ['none', 'xs', 'sm', 'md', 'lg', 'xl']) {
       it(`applies gap=${gap}`, async () => {
-        fixture = await mount('bit-grid', { attrs: { gap } });
+        fixture = await mount('sg-grid', { attrs: { gap } });
 
         expect(fixture.element.getAttribute('gap')).toBe(gap);
         fixture.destroy();
@@ -86,7 +86,7 @@ describe('bit-grid', () => {
   });
 });
 
-describe('bit-grid accessibility', () => {
+describe('sg-grid accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -99,13 +99,13 @@ describe('bit-grid accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('has no implicit interactive role', async () => {
-      fixture = await mount('bit-grid');
+      fixture = await mount('sg-grid');
 
       expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
     it('is not focusable by default', async () => {
-      fixture = await mount('bit-grid');
+      fixture = await mount('sg-grid');
 
       expect(fixture.element.getAttribute('tabindex')).toBeNull();
     });
@@ -113,13 +113,13 @@ describe('bit-grid accessibility', () => {
 
   describe('Content Accessibility', () => {
     it('slot content is accessible', async () => {
-      fixture = await mount('bit-grid', { html: '<div>Grid content</div>' });
+      fixture = await mount('sg-grid', { html: '<div>Grid content</div>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Grid content');
     });
 
     it('accepts aria-label for grid description', async () => {
-      fixture = await mount('bit-grid', { attrs: { 'aria-label': 'Product grid' } });
+      fixture = await mount('sg-grid', { attrs: { 'aria-label': 'Product grid' } });
 
       expect(fixture.element.getAttribute('aria-label')).toBe('Product grid');
     });

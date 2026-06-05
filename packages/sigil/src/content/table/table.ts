@@ -1,25 +1,22 @@
 import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
 
-import type { ComponentSize } from '../../types';
-
-import { sizableBundle } from '../../shared';
 import { reducedMotionMixin, tableBaseMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 
 /** Table component properties */
-export type BitTableProps = {
+export type SgTableProps = {
   /** Adds a thicker outer border */
   bordered?: boolean;
   /** Visible caption text — also used as the accessible table label via `aria-label` */
   caption?: string;
+  /** Cell density: `'compact'` | `'cozy'` (default) | `'comfortable'` */
+  density?: 'compact' | 'cozy' | 'comfortable';
   /** Expands the table to 100% of its container width */
   fullwidth?: boolean;
   /** Applies a busy/disabled state with reduced opacity */
   loading?: boolean;
-  /** Cell density: `sm` | `md` | `lg` */
-  size?: ComponentSize;
   /** Enables sticky column headers with a vertical scroll container */
   sticky?: boolean;
   /** Alternating row stripe backgrounds */
@@ -27,45 +24,69 @@ export type BitTableProps = {
 };
 
 /* ── Child element markers ───────────────────────────────────────────────── */
-// bit-tr, bit-th, bit-td are lightweight light-DOM markers.
-// bit-table reads them and constructs a fully-native shadow <table> so that
+// sg-tr, sg-th, sg-td are lightweight light-DOM markers.
+// sg-table reads them and constructs a fully-native shadow <table> so that
 // browser features that require real table elements (colspan/rowspan,
 // position:sticky on <thead>, table layout algorithm) all work correctly.
-// Attributes on bit-th/bit-td are mirrored to the generated native cells.
+// Attributes on sg-th/sg-td are mirrored to the generated native cells.
 
 /**
- * Light-DOM row marker consumed by `<bit-table>`.
+ * Light-DOM row marker consumed by `<sg-table>`.
  *
- * @element bit-tr
+ * @element sg-tr
  * @attr {boolean} head - Places the row in the generated `<thead>` section
  * @attr {boolean} foot - Places the row in the generated `<tfoot>` section
+ *
+ * @example
+ * ```html
+ * <sg-table>
+ *   <sg-tr head><sg-th>Name</sg-th><sg-th>Role</sg-th></sg-tr>
+ *   <sg-tr><sg-td>Alice</sg-td><sg-td>Admin</sg-td></sg-tr>
+ * </sg-table>
+ * ```
  */
-if (!customElements.get('bit-tr')) customElements.define('bit-tr', class extends HTMLElement {});
+if (!customElements.get('sg-tr')) customElements.define('sg-tr', class extends HTMLElement {});
 
 /**
- * Light-DOM header cell marker consumed by `<bit-table>`.
+ * Light-DOM header cell marker consumed by `<sg-table>`.
  *
- * @element bit-th
+ * @element sg-th
  * @attr {number} colspan  - Mirrors to native `<th colspan>`
  * @attr {number} rowspan  - Mirrors to native `<th rowspan>`
- * @attr {string} scope    - Mirrors to native `<th scope>`
+ * @attr {string} scope    - Mirrors to native `<th scope>`: 'col' | 'row' | 'colgroup' | 'rowgroup'
  * @attr {string} headers  - Mirrors to native `<th headers>`
+ *
+ * @example
+ * ```html
+ * <sg-tr head>
+ *   <sg-th scope="col">Name</sg-th>
+ *   <sg-th scope="col" colspan="2">Address</sg-th>
+ * </sg-tr>
+ * ```
  */
-if (!customElements.get('bit-th')) customElements.define('bit-th', class extends HTMLElement {});
+if (!customElements.get('sg-th')) customElements.define('sg-th', class extends HTMLElement {});
 
 /**
- * Light-DOM data cell marker consumed by `<bit-table>`.
+ * Light-DOM data cell marker consumed by `<sg-table>`.
  *
- * @element bit-td
+ * @element sg-td
  * @attr {number} colspan  - Mirrors to native `<td colspan>`
  * @attr {number} rowspan  - Mirrors to native `<td rowspan>`
  * @attr {string} headers  - Mirrors to native `<td headers>`
+ *
+ * @example
+ * ```html
+ * <sg-tr>
+ *   <sg-td>Alice</sg-td>
+ *   <sg-td colspan="2">123 Main St, Springfield</sg-td>
+ * </sg-tr>
+ * ```
  */
-if (!customElements.get('bit-td')) customElements.define('bit-td', class extends HTMLElement {});
+if (!customElements.get('sg-td')) customElements.define('sg-td', class extends HTMLElement {});
 
 /* ── Proxy/mirror helpers ────────────────────────────────────────────────── */
 
-// Attributes forwarded from bit-th/bit-td to the generated native cell.
+// Attributes forwarded from sg-th/sg-td to the generated native cell.
 // scope is intentionally excluded — it requires fallback logic and is handled separately.
 const CELL_ATTRS = ['colspan', 'rowspan', 'headers', 'abbr'];
 
@@ -76,9 +97,19 @@ const CELL_ATTRS = ['colspan', 'rowspan', 'headers', 'abbr'];
  * present and is restored if an explicit override is later removed.
  */
 function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?: string): void {
-  const text = source.textContent ?? '';
+  if (source.childElementCount > 0) {
+    // Source has element children — deep-clone them into the native cell so
+    // components like sg-skeleton render correctly inside the shadow table.
+    native.textContent = '';
 
-  if (native.textContent !== text) native.textContent = text;
+    for (const child of source.childNodes) {
+      native.appendChild(child.cloneNode(true));
+    }
+  } else {
+    const text = source.textContent ?? '';
+
+    if (native.textContent !== text) native.textContent = text;
+  }
 
   for (const attr of CELL_ATTRS) {
     const val = source.getAttribute(attr);
@@ -118,19 +149,20 @@ function buildTable(
   tfoot.textContent = '';
 
   for (const child of host.children) {
-    if (child.localName !== 'bit-tr') continue;
+    if (child.localName !== 'sg-tr') continue;
 
     const section = child.hasAttribute('head') ? thead : child.hasAttribute('foot') ? tfoot : tbody;
     const tr = document.createElement('tr');
 
     for (const cell of child.children) {
-      if (cell.localName !== 'bit-th' && cell.localName !== 'bit-td') continue;
+      if (cell.localName !== 'sg-th' && cell.localName !== 'sg-td') continue;
 
-      const isHeader = cell.localName === 'bit-th';
+      const isHeader = cell.localName === 'sg-th';
       const native = document.createElement(isHeader ? 'th' : 'td');
       // Auto-infer scope for <th> elements; undefined for <td>.
       const inferredScope = isHeader ? (section === thead ? 'col' : 'row') : undefined;
 
+      native.setAttribute('part', section === tbody ? 'cell' : 'header-cell');
       syncCell(cell, native, inferredScope);
       cellMap.set(cell, { inferredScope, native });
       tr.appendChild(native);
@@ -145,28 +177,30 @@ function buildTable(
 /**
  * Data table component.
  *
- * Reads light-DOM `<bit-tr>`/`<bit-th>`/`<bit-td>` markers and projects them
+ * Reads light-DOM `<sg-tr>`/`<sg-th>`/`<sg-td>` markers and projects them
  * into a fully-native shadow `<table>`. Cell attributes (`colspan`, `rowspan`,
  * `scope`, etc.) are mirrored. Changes are observed and synced incrementally.
  *
  * Native table features — sticky headers, colspan/rowspan, the table layout
  * algorithm — all work because the shadow tree contains real table elements.
  *
- * @element bit-table
+ * @element sg-table
  *
  * @attr {boolean} bordered  - Thicker outer border
  * @attr {string}  caption   - Caption text shown above the table
  * @attr {boolean} fullwidth - Expands to 100% container width
  * @attr {boolean} loading   - Busy state: reduced opacity, no pointer events
- * @attr {string}  size      - Cell density: `sm` | `md` | `lg`
+ * @attr {string}  density   - Cell density: 'compact' | 'cozy' | 'comfortable' (default: 'cozy')
  * @attr {boolean} sticky    - Sticky `<thead>` with scroll container
  * @attr {boolean} striped   - Alternating row backgrounds
  *
- * @part scroll - Scroll container that hosts the generated native table
- * @part table  - Generated native `<table>` element
- * @part head   - Generated native `<thead>` section
- * @part body   - Generated native `<tbody>` section
- * @part foot   - Generated native `<tfoot>` section
+ * @part scroll       - Scroll container that hosts the generated native table
+ * @part table        - Generated native `<table>` element
+ * @part head         - Generated native `<thead>` section
+ * @part body         - Generated native `<tbody>` section
+ * @part foot         - Generated native `<tfoot>` section
+ * @part cell         - Every native `<td>` in `<tbody>` rows
+ * @part header-cell  - Every native `<th>` / `<td>` in `<thead>` and `<tfoot>` rows
  *
  * @cssprop --table-bg                - Table background color
  * @cssprop --table-border-color      - Cell separator and outer border color
@@ -185,24 +219,24 @@ function buildTable(
  *
  * @example
  * ```html
- * <bit-table caption="Top repositories" striped bordered sticky>
- *   <bit-tr head>
- *     <bit-th>Repository</bit-th>
- *     <bit-th>Stars</bit-th>
- *   </bit-tr>
- *   <bit-tr>
- *     <bit-td>vielzeug/sigil</bit-td>
- *     <bit-td>1 200</bit-td>
- *   </bit-tr>
- * </bit-table>
+ * <sg-table caption="Top repositories" striped bordered sticky>
+ *   <sg-tr head>
+ *     <sg-th>Repository</sg-th>
+ *     <sg-th>Stars</sg-th>
+ *   </sg-tr>
+ *   <sg-tr>
+ *     <sg-td>vielzeug/sigil</sg-td>
+ *     <sg-td>1 200</sg-td>
+ *   </sg-tr>
+ * </sg-table>
  * ```
  */
-export const TABLE_TAG = 'bit-table' as const;
-define<BitTableProps>(TABLE_TAG, {
+export const TABLE_TAG = 'sg-table' as const;
+define<SgTableProps>(TABLE_TAG, {
   props: {
-    ...sizableBundle,
     bordered: prop.bool(false),
     caption: prop.string(),
+    density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
     fullwidth: prop.bool(false),
     loading: prop.bool(false),
     sticky: prop.bool(false),
@@ -248,7 +282,7 @@ define<BitTableProps>(TABLE_TAG, {
       // Initial full build.
       let cellMap = buildTable(el, thead, tbody, tfoot);
 
-      // Content observer: syncs text/attribute changes inside bit-th/bit-td.
+      // Content observer: syncs text/attribute changes inside sg-th/sg-td.
       // Remains connected throughout the component lifetime — no
       // disconnect/reconnect during structural rebuilds. Records that arrive
       // for cells no longer in cellMap (after a rebuild) are silently ignored
@@ -256,7 +290,7 @@ define<BitTableProps>(TABLE_TAG, {
       const contentObserver = new MutationObserver((records) => {
         for (const rec of records) {
           const sourceCell = (rec.target instanceof Element ? rec.target : rec.target.parentElement)?.closest(
-            'bit-th, bit-td',
+            'sg-th, sg-td',
           );
 
           if (sourceCell) {
@@ -277,7 +311,7 @@ define<BitTableProps>(TABLE_TAG, {
         subtree: true,
       });
 
-      // Structure observer: triggers a full rebuild when bit-tr elements are
+      // Structure observer: triggers a full rebuild when sg-tr elements are
       // added, removed, or reordered. Scoped to direct children only so it
       // never fires for cell-level mutations.
       const structureObserver = new MutationObserver(() => {

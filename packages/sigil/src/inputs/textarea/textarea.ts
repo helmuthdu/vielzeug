@@ -4,28 +4,20 @@ import { watch } from '@vielzeug/ripple';
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
+import { lifecycleSignal, createTextField } from '../../headless';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledLoadingMixin,
-  forcedColorsFocusMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { useTextField } from '../shared/use-field';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
 
-export type BitTextareaEvents = {
+export type SgTextareaEvents = {
   change: { originalEvent: Event; value: string };
   input: { originalEvent: Event; value: string };
 };
 
-export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>> & {
+export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>> & {
   /** Allow auto-grow with content */
   'auto-resize'?: boolean;
   /** Maximum character count; shows a counter when set */
@@ -48,7 +40,7 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
 /**
  * A multi-line text input with label, helper text, character counter, and auto-resize.
  *
- * @element bit-textarea
+ * @element sg-textarea
  *
  * @attr {string} label - Label text
  * @attr {string} label-placement - 'inset' | 'outside'
@@ -65,13 +57,13 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
  * @attr {boolean} no-resize - Disable manual resize
  * @attr {boolean} auto-resize - Grow with content
  * @attr {string} resize - Resize direction: 'none' | 'horizontal' | 'both' | 'vertical'
- * @attr {string} color - Theme color
- * @attr {string} variant - Visual variant
- * @attr {string} size - Component size
- * @attr {string} rounded - Border radius
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *
- * @fires input - Fired on every keystroke with current value
- * @fires change - Fired on blur with changed value
+ * @fires input - Fired on every keystroke with current value. detail: { value: string; originalEvent: Event }
+ * @fires change - Fired on blur with changed value. detail: { value: string; originalEvent: Event }
  *
  * @slot helper - Complex helper content
  *
@@ -89,11 +81,11 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
  * @cssprop --font-medium - Font-weight token.
  * @example
  * ```html
- * <bit-textarea></bit-textarea>
+ * <sg-textarea></sg-textarea>
  * ```
  */
-export const TEXTAREA_TAG = 'bit-textarea' as const;
-define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
+export const TEXTAREA_TAG = 'sg-textarea' as const;
+define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -133,29 +125,41 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
       textareaEl.style.height = `${textareaEl.scrollHeight}px`;
     };
 
-    const tf = useTextField(
-      {
-        disabled: fCtxProps.disabled,
-        error: props.error,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        maxLength: props.maxlength,
-        onBeforeInput: autoGrow,
-        onChange: (event: Event, value: string) => {
-          emit('change', { originalEvent: event, value });
-        },
-        onInput: (event: Event, value: string) => {
-          emit('input', { originalEvent: event, value });
-        },
-        prefix: 'textarea',
-        validateOn: formCtx?.validateOn,
-        value: props.value,
+    const abortSignal = lifecycleSignal(onCleanup);
+    const tf = createTextField({
+      disabled: fCtxProps.disabled,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      maxLength: props.maxlength,
+      onBeforeInput: autoGrow,
+      onChange: (event: Event, value: string) => {
+        emit('change', { originalEvent: event, value });
       },
-      defineField,
-      onCleanup,
-    );
-    const { assistive, assistiveId, counter, fieldId: textareaId } = tf;
+      onInput: (event: Event, value: string) => {
+        emit('input', { originalEvent: event, value });
+      },
+      prefix: 'textarea',
+      signal: abortSignal,
+      validateOn: formCtx?.validateOn,
+      value: props.value,
+    });
+
+    tf.bindFormField(defineField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value }));
+
+    const {
+      ariaDescribedBy,
+      ariaErrorMessage,
+      ariaInvalid,
+      ariaLabelledBy,
+      assistive,
+      assistiveId,
+      counter,
+      fieldId: textareaId,
+      labelId,
+      labelVisible,
+    } = tf;
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
@@ -191,7 +195,6 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
       },
     });
 
-    const { aria, label } = tf;
     const counterClass = () =>
       counter?.value.counterAtLimit
         ? 'counter at-limit'
@@ -205,7 +208,7 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
 
     return html`
       <div class="textarea-wrapper">
-        <label class="label" for="${textareaId}" id="${label.id}" ?hidden="${() => !label.show.value}"
+        <label class="label" for="${textareaId}" id="${labelId}" ?hidden="${() => !labelVisible.value}"
           >${props.label}</label
         >
         <div class="field">
@@ -220,10 +223,10 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
             ?readonly="${props.readonly}"
             ?required="${props.required}"
             :value="${live(tf.value)}"
-            :aria-describedby="${aria.describedBy}"
-            :aria-errormessage="${aria.errorMessage}"
-            :aria-invalid="${aria.invalid}"
-            :aria-labelledby="${aria.labelledBy}"></textarea>
+            :aria-describedby="${ariaDescribedBy}"
+            :aria-errormessage="${ariaErrorMessage}"
+            :aria-invalid="${ariaInvalid}"
+            :aria-labelledby="${ariaLabelledBy}"></textarea>
         </div>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
         <div id="${assistiveId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
@@ -231,14 +234,5 @@ define<BitTextareaProps, BitTextareaEvents>(TEXTAREA_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [
-    colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    roundedVariantMixin,
-    sizeVariantMixin(TEXTAREA_SIZE_PRESET),
-    disabledLoadingMixin(),
-    forcedColorsFocusMixin('textarea'),
-    componentStyles,
-  ],
+  styles: [...fieldMixins, sizeVariantMixin(TEXTAREA_SIZE_PRESET), forcedColorsFocusMixin('textarea'), componentStyles],
 });

@@ -88,6 +88,28 @@ describe('createFocusTrap()', () => {
 
       expect(() => trap.deactivate()).not.toThrow();
     });
+
+    it('aborting the signal auto-deactivates an active trap', () => {
+      const container = makeContainer();
+      const controller = new AbortController();
+      const trap = createFocusTrap(() => container, { signal: controller.signal });
+
+      trap.activate();
+      expect(trap.active).toBe(true);
+
+      controller.abort();
+
+      expect(trap.active).toBe(false);
+    });
+
+    it('aborting the signal is a no-op when the trap is already inactive', () => {
+      const container = makeContainer();
+      const controller = new AbortController();
+      const trap = createFocusTrap(() => container, { signal: controller.signal });
+
+      expect(() => controller.abort()).not.toThrow();
+      expect(trap.active).toBe(false);
+    });
   });
 
   describe('Tab wrapping', () => {

@@ -2,7 +2,7 @@ import { computed, define, defineField, html, inject, onCleanup, prop } from '@v
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, componentSignal, createCheckable, createListControl } from '../../headless';
+import { type CheckableChangePayload, lifecycleSignal, createCheckable, createListControl } from '../../headless';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -18,11 +18,11 @@ import componentStyles from './radio.css?inline';
 
 /** Radio component properties */
 
-export type BitRadioEvents = {
+export type SgRadioEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitRadioProps = CheckableProps & {
+export type SgRadioProps = CheckableProps & {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -38,7 +38,7 @@ export type BitRadioProps = CheckableProps & {
 /**
  * A customizable radio button component for mutually exclusive selections.
  *
- * @element bit-radio
+ * @element sg-radio
  *
  * @attr {boolean} checked - Checked state
  * @attr {boolean} disabled - Disable radio interaction
@@ -72,11 +72,13 @@ export type BitRadioProps = CheckableProps & {
  *
  * @example
  * ```html
- * <bit-radio></bit-radio>
+ * <sg-radio name="plan" value="free">Free</sg-radio>
+ * <sg-radio name="plan" value="pro" checked color="primary">Pro</sg-radio>
+ * <sg-radio name="plan" value="enterprise" disabled>Enterprise</sg-radio>
  * ```
  */
-export const RADIO_TAG = 'bit-radio' as const;
-define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
+export const RADIO_TAG = 'sg-radio' as const;
+define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -107,7 +109,7 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
 
       if (!radioName) return [];
 
-      return Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
+      return Array.from(document.querySelectorAll<HTMLElement>(`sg-radio[name="${radioName}"]`)).filter(
         (r) => !r.hasAttribute('disabled'),
       );
     };
@@ -157,17 +159,15 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
       helper: props.helper,
-      host: el,
       onToggle: (payload) => {
         emit('change', payload);
       },
       prefix: 'radio',
-      role: 'radio',
-      signal: componentSignal(onCleanup),
+      signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistiveId, checked, disabled, labelId, toggle } = checkable;
+    const { assistive, assistiveId, checked, disabled, labelId, toggle } = checkable;
 
     checkable.bindFormField(
       defineField<string | null>({
@@ -179,10 +179,16 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
 
     bind({
       attr: {
+        ariaChecked: () => (checked.value ? 'true' : 'false'),
+        ariaDescribedby: () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : null),
+        ariaDisabled: () => (disabled.value ? 'true' : null),
+        ariaInvalid: () => (assistive.value.errorText ? 'true' : null),
+        ariaLabelledby: labelId,
         checked,
         color: effectiveColor,
         disabled: () => (disabled.value ? true : undefined),
         name: () => effectiveName.value || undefined,
+        role: 'radio',
         size: effectiveSize,
         tabindex: () => {
           if (disabled.value) return undefined;
@@ -205,7 +211,7 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
 
             if (!checked.value) {
               const radioName = props.name.value;
-              const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
+              const allRadios = document.querySelectorAll<HTMLElement>(`sg-radio[name="${radioName}"]`);
 
               allRadios.forEach((radio) => {
                 if (radio !== el) radio.removeAttribute('checked');
@@ -242,16 +248,14 @@ define<BitRadioProps, BitRadioEvents>(RADIO_TAG, {
           <div class="dot" part="dot"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
-        ><slot></slot
-      ></span>
-      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
+      <span class="label" part="label" id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, assistive)}
     `;
   },
   styles: [
     colorThemeMixin,
     forcedColorsFormControlMixin,
-    disabledStateMixin(),
+    disabledStateMixin,
     coarsePointerMixin,
     sizeVariantMixin(CONTROL_SIZE_PRESET),
     componentStyles,

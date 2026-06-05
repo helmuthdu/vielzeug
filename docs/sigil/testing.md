@@ -100,23 +100,23 @@ Typed wrappers catch prop-name typos at compile time and avoid manual HTML seria
 
 ```ts
 import {
-  mountBitButton,
-  mountBitButtonGroup,
-  mountBitCheckbox,
-  mountBitCheckboxGroup,
-  mountBitCombobox,
-  mountBitFileInput,
-  mountBitForm,
-  mountBitInput,
-  mountBitNumberInput,
-  mountBitOtpInput,
-  mountBitRadio,
-  mountBitRadioGroup,
-  mountBitRating,
-  mountBitSelect,
-  mountBitSlider,
-  mountBitSwitch,
-  mountBitTextarea,
+  mountSgButton,
+  mountSgButtonGroup,
+  mountSgCheckbox,
+  mountSgCheckboxGroup,
+  mountSgCombobox,
+  mountSgFileInput,
+  mountSgForm,
+  mountSgInput,
+  mountSgNumberInput,
+  mountSgOtpInput,
+  mountSgRadio,
+  mountSgRadioGroup,
+  mountSgRating,
+  mountSgSelect,
+  mountSgSlider,
+  mountSgSwitch,
+  mountSgTextarea,
 } from '@vielzeug/sigil/testing';
 ```
 
@@ -131,7 +131,7 @@ mountBit<Component>(props?, opts?)
 Example:
 
 ```ts
-const fixture = await mountBitInput({ label: 'Name', required: true });
+const fixture = await mountSgInput({ label: 'Name', required: true });
 const input = queryInShadow(fixture.el, 'input')!;
 
 expect(isAriaRequired(input)).toBe(true);
@@ -140,8 +140,8 @@ expect(isAriaRequired(input)).toBe(true);
 Pass slot content via `opts.innerHTML`:
 
 ```ts
-const fixture = await mountBitSelect(
+const fixture = await mountSgSelect(
   { label: 'Country' },
-  { innerHTML: '<bit-option value="us">United States</bit-option>' },
+  { innerHTML: '<sg-option value="us">United States</sg-option>' },
 );
 ```

@@ -37,16 +37,16 @@ type ChipBaseProps = {
   variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
 };
 
-type BitChipMode = 'static' | 'removable' | 'selectable' | 'action';
+type SgChipMode = 'static' | 'removable' | 'selectable' | 'action';
 
 /** Read-only presentation chip */
 type StaticChipProps = {
-  mode?: Extract<BitChipMode, 'static'>;
+  mode?: Extract<SgChipMode, 'static'>;
 };
 
 /** Removable chip mode */
 type RemovableChipProps = {
-  mode: Extract<BitChipMode, 'removable'>;
+  mode: Extract<SgChipMode, 'removable'>;
 };
 
 /** Selectable chip mode */
@@ -55,34 +55,34 @@ type SelectableChipProps = {
   checked?: boolean | undefined;
   /** Initial checked state for uncontrolled `mode="selectable"` */
   'default-checked'?: boolean;
-  mode: Extract<BitChipMode, 'selectable'>;
+  mode: Extract<SgChipMode, 'selectable'>;
 };
 
 /** Action chip mode — behaves like a button, fires a click event without maintaining state */
 type ActionChipProps = {
-  mode: Extract<BitChipMode, 'action'>;
+  mode: Extract<SgChipMode, 'action'>;
 };
 
-type BitChipComponentProps = ChipBaseProps & {
+type SgChipComponentProps = ChipBaseProps & {
   checked?: boolean | undefined;
   'default-checked'?: boolean;
-  mode?: BitChipMode;
+  mode?: SgChipMode;
 };
 
-export type BitChipEvents = {
+export type SgChipEvents = {
   change: { checked: boolean; originalEvent: Event; value: string | undefined };
   click: { originalEvent: MouseEvent; value: string | undefined };
   remove: { originalEvent: MouseEvent; value: string | undefined };
 };
 
-export type BitChipProps = ChipBaseProps &
+export type SgChipProps = ChipBaseProps &
   (StaticChipProps | RemovableChipProps | SelectableChipProps | ActionChipProps);
 
 /**
  * A compact, styled label element. Supports icons, a remove button, colors, sizes, and variants.
  * Commonly used to represent tags, filters, or selected options in a multiselect field.
  *
- * @element bit-chip
+ * @element sg-chip
  *
  * @attr {string}  label     - Accessible label (required for icon-only chips)
  * @attr {string}  color     - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -95,9 +95,9 @@ export type BitChipProps = ChipBaseProps &
  * @attr {boolean} checked   - Controlled checked state for selectable chips
  * @attr {boolean} default-checked - Initial checked state for uncontrolled selectable chips
  *
- * @event remove - Fired when the remove button is clicked, with `detail.value` and `detail.originalEvent`
- * @event change - Fired when a selectable chip toggles, with `detail.checked`, `detail.value`, and `detail.originalEvent`
- * @event click  - Fired when an action chip is clicked, with `detail.value` and `detail.originalEvent`
+ * @fires remove - Fired when the remove button is clicked. detail: { value: string, originalEvent: MouseEvent }
+ * @fires change - Fired when a selectable chip toggles. detail: { checked: boolean, value: string, originalEvent: Event }
+ * @fires click  - Fired when an action chip is clicked. detail: { value: string, originalEvent: MouseEvent }
  *
  * @slot         - Chip label text
  * @slot icon    - Leading icon or decoration
@@ -118,40 +118,40 @@ export type BitChipProps = ChipBaseProps &
  * @example
  * ```html
  * <!-- Static chip (read-only) -->
- * <bit-chip color="primary">Design</bit-chip>
+ * <sg-chip color="primary">Design</sg-chip>
  *
  * <!-- Removable chip -->
- * <bit-chip color="success" variant="flat" mode="removable" value="ts">
+ * <sg-chip color="success" variant="flat" mode="removable" value="ts">
  *   TypeScript
- * </bit-chip>
+ * </sg-chip>
  *
  * <!-- Selectable chip (controlled) -->
- * <bit-chip color="info" variant="flat" mode="selectable" checked value="ui">
+ * <sg-chip color="info" variant="flat" mode="selectable" checked value="ui">
  *   UI
- * </bit-chip>
+ * </sg-chip>
  *
  * <!-- Selectable chip (uncontrolled) -->
- * <bit-chip color="info" variant="flat" mode="selectable" default-checked value="ui">
+ * <sg-chip color="info" variant="flat" mode="selectable" default-checked value="ui">
  *   UI
- * </bit-chip>
+ * </sg-chip>
  *
  * <!-- Action chip (acts like a button) -->
- * <bit-chip color="warning" mode="action" value="add">
+ * <sg-chip color="warning" mode="action" value="add">
  *   <svg slot="icon" ...></svg>
  *   Add Item
- * </bit-chip>
+ * </sg-chip>
  *
  * <!-- Icon-only chip -->
- * <bit-chip color="error" mode="action" label="Delete">
+ * <sg-chip color="error" mode="action" label="Delete">
  *   <svg slot="icon" ...></svg>
- * </bit-chip>
+ * </sg-chip>
  * ```
  */
-export const CHIP_TAG = 'bit-chip' as const;
-define<BitChipComponentProps, BitChipEvents>(CHIP_TAG, {
+export const CHIP_TAG = 'sg-chip' as const;
+define<SgChipComponentProps, SgChipEvents>(CHIP_TAG, {
   props: {
     checked: {
-      default: undefined as BitChipComponentProps['checked'],
+      default: undefined as SgChipComponentProps['checked'],
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
       reflect: false,
     },
@@ -249,7 +249,7 @@ define<BitChipComponentProps, BitChipEvents>(CHIP_TAG, {
         ?hidden="${() => props.mode.value !== 'removable'}"
         :disabled="${props.disabled}"
         @click="${handleRemove}">
-        <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        <sg-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></sg-icon>
       </button>
     `;
 
@@ -304,7 +304,7 @@ define<BitChipComponentProps, BitChipEvents>(CHIP_TAG, {
   },
   styles: [
     colorThemeMixin,
-    disabledStateMixin(),
+    disabledStateMixin,
     roundedVariantMixin,
     sizeVariantMixin({
       lg: {

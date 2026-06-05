@@ -2,7 +2,7 @@ import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/cr
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, componentSignal, createCheckable } from '../../headless';
+import { type CheckableChangePayload, lifecycleSignal, createCheckable } from '../../headless';
 import { disablableBundle, sizableBundle, SWITCH_SIZE_PRESET, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
 import { applyCheckableBinding } from '../shared/field-binding';
@@ -10,11 +10,11 @@ import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './switch.css?inline';
 
-export type BitSwitchEvents = {
+export type SgSwitchEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitSwitchProps = CheckableProps & {
+export type SgSwitchProps = CheckableProps & {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -30,7 +30,7 @@ export type BitSwitchProps = CheckableProps & {
 /**
  * A toggle switch component for binary on/off states.
  *
- * @element bit-switch
+ * @element sg-switch
  *
  * @attr {boolean} checked - Checked/on state
  * @attr {boolean} disabled - Disable switch interaction
@@ -65,11 +65,13 @@ export type BitSwitchProps = CheckableProps & {
  *
  * @example
  * ```html
- * <bit-switch></bit-switch>
+ * <sg-switch name="notifications" checked color="primary">Enable notifications</sg-switch>
+ * <sg-switch name="darkMode" size="sm">Dark mode</sg-switch>
+ * <sg-switch disabled helper="Contact admin to change">Admin only</sg-switch>
  * ```
  */
-export const SWITCH_TAG = 'bit-switch' as const;
-define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
+export const SWITCH_TAG = 'sg-switch' as const;
+define<SgSwitchProps, SgSwitchEvents>(SWITCH_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -81,7 +83,7 @@ define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 
@@ -91,18 +93,16 @@ define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
       disabled: fCtxProps.disabled,
       error: props.error,
       helper: props.helper,
-      host: el,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
         emit('change', payload);
       },
       prefix: 'switch',
-      role: 'switch',
-      signal: componentSignal(onCleanup),
+      signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistiveId, checked, disabled, handleClick, handleKeydown, labelId } = checkable;
+    const { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, labelId } = checkable;
 
     checkable.bindFormField(
       defineField<string | null>({
@@ -112,7 +112,12 @@ define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
       }),
     );
 
-    applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown });
+    applyCheckableBinding(
+      bind,
+      fCtxProps.size,
+      { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, labelId },
+      'switch',
+    );
 
     return html`
       <div class="switch-wrapper" part="switch">
@@ -120,16 +125,14 @@ define<BitSwitchProps, BitSwitchEvents>(SWITCH_TAG, {
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
-        ><slot></slot
-      ></span>
-      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
+      <span class="label" part="label" id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, assistive)}
     `;
   },
   styles: [
     colorThemeMixin,
     forcedColorsFormControlMixin,
-    disabledStateMixin(),
+    disabledStateMixin,
     sizeVariantMixin(SWITCH_SIZE_PRESET),
     componentStyles,
   ],

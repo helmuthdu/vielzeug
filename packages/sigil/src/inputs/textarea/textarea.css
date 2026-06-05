@@ -1,15 +1,15 @@
 @layer sigil.base {
   :host {
-    --_font-size: var(--bit-textarea-font-size, var(--text-sm));
-    --_gap: var(--bit-textarea-gap, var(--size-2));
-    --_padding: var(--bit-textarea-padding, var(--size-2) var(--size-3));
-    --_radius: var(--bit-textarea-radius, var(--rounded-lg));
-    --_placeholder: var(--bit-textarea-placeholder-color, var(--color-contrast-500));
-    --_bg: var(--bit-textarea-bg, var(--color-contrast-100));
-    --_border-color: var(--bit-textarea-border-color, var(--color-contrast-300));
-    --_min-height: var(--bit-textarea-min-height, var(--size-24));
-    --_max-height: var(--bit-textarea-max-height, none);
-    --_resize: var(--bit-textarea-resize, vertical);
+    --_font-size: var(--sg-textarea-font-size, var(--text-sm));
+    --_gap: var(--sg-textarea-gap, var(--size-2));
+    --_padding: var(--sg-textarea-padding, var(--size-2) var(--size-3));
+    --_radius: var(--sg-textarea-radius, var(--rounded-lg));
+    --_placeholder: var(--sg-textarea-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--sg-textarea-bg, var(--color-contrast-100));
+    --_border-color: var(--sg-textarea-border-color, var(--color-contrast-300));
+    --_min-height: var(--sg-textarea-min-height, var(--size-24));
+    --_max-height: var(--sg-textarea-max-height, none);
+    --_resize: var(--sg-textarea-resize, vertical);
 
     display: inline-flex;
     flex-direction: column;

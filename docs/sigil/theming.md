@@ -170,7 +170,7 @@ Used by default for all non-heading text:
 
 ### Heading Scale (`--heading-*`)
 
-Used exclusively by `variant="heading"` on `<bit-text>`:
+Used exclusively by `variant="heading"` on `<sg-text>`:
 
 | Token           | Value           | Usage                  |
 | --------------- | --------------- | ---------------------- |
@@ -301,14 +301,14 @@ Override the default theme by setting CSS variables in your root stylesheet. A p
 Each component exposes specific CSS custom properties for fine-tuned control. Set them inline or in a stylesheet scoped to your component.
 
 ```html
-<bit-button
+<sg-button
   style="
     --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --button-radius: 20px;
     --button-padding: 0.75rem 2rem;
   ">
   Gradient Button
-</bit-button>
+</sg-button>
 ```
 
 ### Component-Specific Variables
@@ -318,14 +318,14 @@ Refer to each component's documentation for the complete list of CSS custom prop
 :::
 
 ```css
-/* bit-text */
+/* sg-text */
 --text-size           /* font-size */
 --text-weight         /* font-weight */
 --text-color          /* color */
 --text-line-height    /* line-height */
 --text-letter-spacing /* letter-spacing */
 
-/* bit-button */
+/* sg-button */
 --button-bg
 --button-color
 --button-hover-bg
@@ -333,14 +333,14 @@ Refer to each component's documentation for the complete list of CSS custom prop
 --button-radius
 --button-padding
 
-/* bit-input */
+/* sg-input */
 --input-bg
 --input-color
 --input-border-color
 --input-placeholder-color
 --input-radius
 
-/* bit-checkbox */
+/* sg-checkbox */
 --checkbox-size
 --checkbox-bg
 --checkbox-checked-bg

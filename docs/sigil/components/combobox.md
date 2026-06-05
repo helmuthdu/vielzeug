@@ -19,7 +19,7 @@ An autocomplete input that combines a text field with a filterable dropdown list
 - 🔲 **Multiselect** — `multiple` mode shows selected values as removable chips
 - 🖼️ **Option Icons** — each option supports a leading `icon` named slot
 - 🚫 **No-Filter Mode** — keeps all options visible for server-side search
-- 🧩 **Component Options** — place `<bit-combobox-option>` children for rich, slot-based option content
+- 🧩 **Component Options** — place `<sg-combobox-option>` children for rich, slot-based option content
 
 ## Source Code
 
@@ -29,18 +29,18 @@ An autocomplete input that combines a text field with a filterable dropdown list
 
 ## Basic Usage
 
-Place `<bit-combobox-option>` elements inside `<bit-combobox>`. The `value` attribute is what gets submitted; the text content is the label used for display and filtering.
+Place `<sg-combobox-option>` elements inside `<sg-combobox>`. The `value` attribute is what gets submitted; the text content is the label used for display and filtering.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Country" placeholder="Search countries…">
-  <bit-combobox-option value="us">United States</bit-combobox-option>
-  <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-  <bit-combobox-option value="de">Germany</bit-combobox-option>
-  <bit-combobox-option value="fr">France</bit-combobox-option>
-  <bit-combobox-option value="jp">Japan</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Country" placeholder="Search countries…">
+  <sg-combobox-option value="us">United States</sg-combobox-option>
+  <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+  <sg-combobox-option value="de">Germany</sg-combobox-option>
+  <sg-combobox-option value="fr">France</sg-combobox-option>
+  <sg-combobox-option value="jp">Japan</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -52,55 +52,55 @@ Five visual variants for different UI contexts and levels of emphasis.
 <ComponentPreview>
 
 ```html
-<bit-combobox variant="solid" placeholder="Solid">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="flat" placeholder="Flat">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" placeholder="Bordered">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="outline" placeholder="Outline">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="ghost" placeholder="Ghost">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
+<sg-combobox variant="solid" placeholder="Solid">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="flat" placeholder="Flat">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" placeholder="Bordered">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="outline" placeholder="Outline">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="ghost" placeholder="Ghost">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
 
 ## Options with Icons
 
-Add an `icon` named slot inside any `<bit-combobox-option>` for a leading icon. The icon is rendered in the dropdown alongside the label.
+Add an `icon` named slot inside any `<sg-combobox-option>` for a leading icon. The icon is rendered in the dropdown alongside the label.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Role" placeholder="Select a role…">
-  <bit-combobox-option value="admin">
+<sg-combobox label="Role" placeholder="Select a role…">
+  <sg-combobox-option value="admin">
     <span slot="icon">👑</span>
     Administrator
-  </bit-combobox-option>
-  <bit-combobox-option value="editor">
+  </sg-combobox-option>
+  <sg-combobox-option value="editor">
     <span slot="icon">✏️</span>
     Editor
-  </bit-combobox-option>
-  <bit-combobox-option value="viewer">
+  </sg-combobox-option>
+  <sg-combobox-option value="viewer">
     <span slot="icon">👁️</span>
     Viewer
-  </bit-combobox-option>
-  <bit-combobox-option value="guest" disabled>
+  </sg-combobox-option>
+  <sg-combobox-option value="guest" disabled>
     <span slot="icon">🚫</span>
     Guest (disabled)
-  </bit-combobox-option>
-</bit-combobox>
+  </sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -110,34 +110,34 @@ Add an `icon` named slot inside any `<bit-combobox-option>` for a leading icon. 
 <ComponentPreview center>
 
 ```html
-<bit-combobox variant="bordered" label="Default">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Primary" color="primary">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Secondary" color="secondary">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Info" color="info">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Warning" color="warning">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Success" color="success">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox variant="bordered" label="Error" color="error">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
+<sg-combobox variant="bordered" label="Default">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Primary" color="primary">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Secondary" color="secondary">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Info" color="info">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Warning" color="warning">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Success" color="success">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox variant="bordered" label="Error" color="error">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -147,18 +147,18 @@ Add an `icon` named slot inside any `<bit-combobox-option>` for a leading icon. 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Small" size="sm">
-  <bit-combobox-option value="a">Alpha</bit-combobox-option>
-  <bit-combobox-option value="b">Beta</bit-combobox-option>
-</bit-combobox>
-<bit-combobox label="Medium (default)" size="md">
-  <bit-combobox-option value="a">Alpha</bit-combobox-option>
-  <bit-combobox-option value="b">Beta</bit-combobox-option>
-</bit-combobox>
-<bit-combobox label="Large" size="lg">
-  <bit-combobox-option value="a">Alpha</bit-combobox-option>
-  <bit-combobox-option value="b">Beta</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Small" size="sm">
+  <sg-combobox-option value="a">Alpha</sg-combobox-option>
+  <sg-combobox-option value="b">Beta</sg-combobox-option>
+</sg-combobox>
+<sg-combobox label="Medium (default)" size="md">
+  <sg-combobox-option value="a">Alpha</sg-combobox-option>
+  <sg-combobox-option value="b">Beta</sg-combobox-option>
+</sg-combobox>
+<sg-combobox label="Large" size="lg">
+  <sg-combobox-option value="a">Alpha</sg-combobox-option>
+  <sg-combobox-option value="b">Beta</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -170,14 +170,14 @@ The label can be placed **inset** (inside the field, above the input — default
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Inset label (default)" label-placement="inset">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
-<bit-combobox label="Outside label" label-placement="outside">
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-  <bit-combobox-option value="b">Option B</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Inset label (default)" label-placement="inset">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
+<sg-combobox label="Outside label" label-placement="outside">
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+  <sg-combobox-option value="b">Option B</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -189,34 +189,34 @@ Add `clearable` to show a clear (×) button whenever a value is selected.
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Clearable combobox" clearable>
-  <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
-  <bit-combobox-option value="js">JavaScript</bit-combobox-option>
-  <bit-combobox-option value="rust">Rust</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Clearable combobox" clearable>
+  <sg-combobox-option value="ts">TypeScript</sg-combobox-option>
+  <sg-combobox-option value="js">JavaScript</sg-combobox-option>
+  <sg-combobox-option value="rust">Rust</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
 
 ## Multiselect
 
-Add `multiple` to allow selecting more than one option. Each selected value is shown as a removable `bit-chip` inside the field. Pressing **Backspace** on an empty input removes the last chip.
+Add `multiple` to allow selecting more than one option. Each selected value is shown as a removable `sg-chip` inside the field. Pressing **Backspace** on an empty input removes the last chip.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox
+<sg-combobox
   id="combobox-multiselect-demo"
   label="Technologies"
   multiple
   placeholder="Search…"
   style="max-width: 300px;">
-  <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
-  <bit-combobox-option value="rust">Rust</bit-combobox-option>
-  <bit-combobox-option value="go">Go</bit-combobox-option>
-  <bit-combobox-option value="python">Python</bit-combobox-option>
-  <bit-combobox-option value="java">Java</bit-combobox-option>
-</bit-combobox>
+  <sg-combobox-option value="ts">TypeScript</sg-combobox-option>
+  <sg-combobox-option value="rust">Rust</sg-combobox-option>
+  <sg-combobox-option value="go">Go</sg-combobox-option>
+  <sg-combobox-option value="python">Python</sg-combobox-option>
+  <sg-combobox-option value="java">Java</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -224,7 +224,7 @@ Add `multiple` to allow selecting more than one option. Each selected value is s
 In multiple mode the `change` event detail includes both `value` (comma-separated) and `values` (array):
 
 ```js
-document.querySelector('bit-combobox').addEventListener('change', (e) => {
+document.querySelector('sg-combobox').addEventListener('change', (e) => {
   console.log('csv:', e.detail.value); // "ts,rust,go"
   console.log('array:', e.detail.values); // ["ts", "rust", "go"]
 });
@@ -235,33 +235,33 @@ document.querySelector('bit-combobox').addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Language" helper="Start typing to filter available languages.">
-  <bit-combobox-option value="en">English</bit-combobox-option>
-  <bit-combobox-option value="de">German</bit-combobox-option>
-  <bit-combobox-option value="fr">French</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Language" helper="Start typing to filter available languages.">
+  <sg-combobox-option value="en">English</sg-combobox-option>
+  <sg-combobox-option value="de">German</sg-combobox-option>
+  <sg-combobox-option value="fr">French</sg-combobox-option>
+</sg-combobox>
 
-<bit-combobox label="Country" error="Please select a valid country." color="error">
-  <bit-combobox-option value="us">United States</bit-combobox-option>
-  <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Country" error="Please select a valid country." color="error">
+  <sg-combobox-option value="us">United States</sg-combobox-option>
+  <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
 
 ## Disabled Options
 
-Add the `disabled` attribute on a `<bit-combobox-option>` to prevent selection of individual options.
+Add the `disabled` attribute on a `<sg-combobox-option>` to prevent selection of individual options.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Role">
-  <bit-combobox-option value="admin">Admin</bit-combobox-option>
-  <bit-combobox-option value="editor">Editor</bit-combobox-option>
-  <bit-combobox-option value="viewer" disabled>Viewer (no permission)</bit-combobox-option>
-  <bit-combobox-option value="guest" disabled>Guest (no permission)</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Role">
+  <sg-combobox-option value="admin">Admin</sg-combobox-option>
+  <sg-combobox-option value="editor">Editor</sg-combobox-option>
+  <sg-combobox-option value="viewer" disabled>Viewer (no permission)</sg-combobox-option>
+  <sg-combobox-option value="guest" disabled>Guest (no permission)</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -271,25 +271,25 @@ Add the `disabled` attribute on a `<bit-combobox-option>` to prevent selection o
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Disabled combobox" disabled>
-  <bit-combobox-option value="a">Option A</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Disabled combobox" disabled>
+  <sg-combobox-option value="a">Option A</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
 
 ## No-Filter Mode (Server-Side Search)
 
-Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<bit-combobox-option>` children based on the `search` event.
+Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<sg-combobox-option>` children based on the `search` event.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="User search" no-filter id="user-cb" placeholder="Type to search…">
-  <bit-combobox-option value="1">Alice Johnson</bit-combobox-option>
-  <bit-combobox-option value="2">Bob Smith</bit-combobox-option>
-  <bit-combobox-option value="3">Carol White</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="User search" no-filter id="user-cb" placeholder="Type to search…">
+  <sg-combobox-option value="1">Alice Johnson</sg-combobox-option>
+  <sg-combobox-option value="2">Bob Smith</sg-combobox-option>
+  <sg-combobox-option value="3">Carol White</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -300,9 +300,9 @@ For a real server-side integration, replace options dynamically on `search`:
 const cb = document.getElementById('user-cb');
 cb.addEventListener('search', async (e) => {
   const results = await fetch(`/api/users?q=${encodeURIComponent(e.detail.query)}`).then((r) => r.json());
-  cb.querySelectorAll('bit-combobox-option').forEach((el) => el.remove());
+  cb.querySelectorAll('sg-combobox-option').forEach((el) => el.remove());
   for (const user of results) {
-    const opt = document.createElement('bit-combobox-option');
+    const opt = document.createElement('sg-combobox-option');
     opt.setAttribute('value', user.id);
     opt.textContent = user.name;
     cb.appendChild(opt);
@@ -312,22 +312,22 @@ cb.addEventListener('search', async (e) => {
 
 ## Creatable Options
 
-Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create “X”** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `bit-change` event like any normal selection.
+Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create “X”** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `sg-change` event like any normal selection.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Tags" creatable placeholder="Search or create a tag…">
-  <bit-combobox-option value="typescript">TypeScript</bit-combobox-option>
-  <bit-combobox-option value="rust">Rust</bit-combobox-option>
-  <bit-combobox-option value="go">Go</bit-combobox-option>
-</bit-combobox>
+<sg-combobox label="Tags" creatable placeholder="Search or create a tag…">
+  <sg-combobox-option value="typescript">TypeScript</sg-combobox-option>
+  <sg-combobox-option value="rust">Rust</sg-combobox-option>
+  <sg-combobox-option value="go">Go</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
 
 ```js
-document.querySelector('bit-combobox').addEventListener('change', (e) => {
+document.querySelector('sg-combobox').addEventListener('change', (e) => {
   // Both selected and newly created options fire change
   console.log('Selected/created:', e.detail.value, e.detail.labels);
 });
@@ -340,13 +340,13 @@ Set `loading` to show a loading indicator inside the dropdown while options are 
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Server search" no-filter loading placeholder="Fetching options…"> </bit-combobox>
+<sg-combobox label="Server search" no-filter loading placeholder="Fetching options…"> </sg-combobox>
 ```
 
 </ComponentPreview>
 
 ```js
-const cb = document.querySelector('bit-combobox');
+const cb = document.querySelector('sg-combobox');
 cb.addEventListener('search', async (e) => {
   cb.loading = true;
   const results = await fetch(`/api/items?q=${encodeURIComponent(e.detail.query)}`).then((r) => r.json());
@@ -357,30 +357,30 @@ cb.addEventListener('search', async (e) => {
 
 ## JavaScript Options
 
-Set the `options` property directly in JavaScript to provide options without using `<bit-combobox-option>` children. Each item only needs a `value`; `label` falls back to the same string when omitted, while `disabled` remains optional.
+Set the `options` property directly in JavaScript to provide options without using `<sg-combobox-option>` children. Each item only needs a `value`; `label` falls back to the same string when omitted, while `disabled` remains optional.
 
 ```js
-const cb = document.querySelector('bit-combobox');
+const cb = document.querySelector('sg-combobox');
 cb.options = [{ value: 'ts' }, { value: 'rust', label: 'Rust' }, { value: 'go', label: 'Go', disabled: true }];
 ```
 
-Assigning a new array to `options` updates the dropdown immediately. When both `<bit-combobox-option>` children and `options` are present, the JS property takes precedence.
+Assigning a new array to `options` updates the dropdown immediately. When both `<sg-combobox-option>` children and `options` are present, the JS property takes precedence.
 
 ## In a Form
 
-`bit-combobox` is form-associated — its `name` attribute participates in `FormData` submissions.
+`sg-combobox` is form-associated — its `name` attribute participates in `FormData` submissions.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-form id="myForm">
-  <bit-combobox name="country" label="Country" placeholder="Search countries…">
-    <bit-combobox-option value="us">United States</bit-combobox-option>
-    <bit-combobox-option value="de">Germany</bit-combobox-option>
-    <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-  </bit-combobox>
-  <bit-button type="submit">Submit</bit-button>
-</bit-form>
+<sg-form id="myForm">
+  <sg-combobox name="country" label="Country" placeholder="Search countries…">
+    <sg-combobox-option value="us">United States</sg-combobox-option>
+    <sg-combobox-option value="de">Germany</sg-combobox-option>
+    <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+  </sg-combobox>
+  <sg-button type="submit">Submit</sg-button>
+</sg-form>
 ```
 
 </ComponentPreview>
@@ -398,11 +398,11 @@ document.getElementById('myForm').addEventListener('submit', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox id="my-cb" label="Programming language">
-  <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
-  <bit-combobox-option value="rs">Rust</bit-combobox-option>
-  <bit-combobox-option value="go">Go</bit-combobox-option>
-</bit-combobox>
+<sg-combobox id="my-cb" label="Programming language">
+  <sg-combobox-option value="ts">TypeScript</sg-combobox-option>
+  <sg-combobox-option value="rs">Rust</sg-combobox-option>
+  <sg-combobox-option value="go">Go</sg-combobox-option>
+</sg-combobox>
 ```
 
 </ComponentPreview>
@@ -434,7 +434,7 @@ cb.addEventListener('close', (e) => {
 
 ## API Reference
 
-### `bit-combobox` Attributes
+### `sg-combobox` Attributes
 
 | Attribute         | Type                                                                      | Default   | Description                                                 |
 | ----------------- | ------------------------------------------------------------------------- | --------- | ----------------------------------------------------------- |
@@ -457,21 +457,21 @@ cb.addEventListener('close', (e) => {
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
 
-### `bit-combobox` Slots
+### `sg-combobox` Slots
 
 | Slot      | Description                                             |
 | --------- | ------------------------------------------------------- |
-| (default) | `bit-combobox-option` elements defining the option list |
+| (default) | `sg-combobox-option` elements defining the option list |
 
-### `bit-combobox-option` Attributes
+### `sg-combobox-option` Attributes
 
 | Attribute  | Type      | Default | Description                                                                             |
 | ---------- | --------- | ------- | --------------------------------------------------------------------------------------- |
-| `value`    | `string`  | `''`    | The value submitted to the form and emitted in `bit-change`                             |
+| `value`    | `string`  | `''`    | The value submitted to the form and emitted in `sg-change`                             |
 | `label`    | `string`  | —       | Explicit text used for display and filtering; falls back to the element's `textContent` |
 | `disabled` | `boolean` | `false` | Prevent this option from being selected                                                 |
 
-### `bit-combobox-option` Slots
+### `sg-combobox-option` Slots
 
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
@@ -502,7 +502,7 @@ cb.addEventListener('close', (e) => {
 
 The combobox component follows WCAG 2.1 Level AA standards.
 
-### `bit-combobox`
+### `sg-combobox`
 
 ✅ **Keyboard Navigation**
 
@@ -523,10 +523,10 @@ The combobox component follows WCAG 2.1 Level AA standards.
 
 - Use `placeholder` to hint at the expected input (e.g. _"Search countries…"_).
 - Use `clearable` when the field is optional and users might want to reset their choice.
-- Use `no-filter` + `bit-input` for server-side search with large datasets.
+- Use `no-filter` + `sg-input` for server-side search with large datasets.
 - Pair with `error` text and `color="error"` for form validation feedback.
 
 **Don't:**
 
-- Use combobox for short lists (< 6 items) — a plain `bit-select` is simpler.
+- Use combobox for short lists (< 6 items) — a plain `sg-select` is simpler.
 - Rely on the dropdown alone: always provide a visible label so the purpose is clear when the list is hidden.

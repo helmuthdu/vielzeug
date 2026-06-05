@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-tab-item', () => {
+describe('sg-tab-item', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-tab-item', () => {
 
   describe('Core Functionality', () => {
     it('renders interactive button with role tab', async () => {
-      fixture = await mount('bit-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
+      fixture = await mount('sg-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
 
       expect(fixture.query('button[role="tab"]')).toBeTruthy();
     });
 
     it('dispatches click with value on click', async () => {
-      fixture = await mount('bit-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
+      fixture = await mount('sg-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
 
       const handler = vi.fn();
 
@@ -34,19 +34,19 @@ describe('bit-tab-item', () => {
 
   describe('Accessibility', () => {
     it('links tab to panel via aria-controls', async () => {
-      fixture = await mount('bit-tab-item', { attrs: { value: 'settings' }, html: 'Settings' });
+      fixture = await mount('sg-tab-item', { attrs: { value: 'settings' }, html: 'Settings' });
 
       expect(fixture.query('button')?.getAttribute('aria-controls')).toBe('tabpanel-settings');
     });
 
     it('sets aria-disabled when disabled', async () => {
-      fixture = await mount('bit-tab-item', { attrs: { disabled: '', value: 'settings' }, html: 'Settings' });
+      fixture = await mount('sg-tab-item', { attrs: { disabled: '', value: 'settings' }, html: 'Settings' });
 
       expect(fixture.query('button')?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('uses roving tabindex attributes', async () => {
-      fixture = await mount('bit-tab-item', { attrs: { value: 'settings' }, html: 'Settings' });
+      fixture = await mount('sg-tab-item', { attrs: { value: 'settings' }, html: 'Settings' });
 
       const tabindex = fixture.query('button')?.getAttribute('tabindex');
 

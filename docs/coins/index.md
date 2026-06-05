@@ -17,9 +17,22 @@ exports:
     allocate,
     splitEvenly,
     clamp,
+    sum,
+    min,
+    max,
+    abs,
+    negate,
+    compare,
+    isZero,
+    isPositive,
+    isNegative,
     format,
     formatParts,
     exchange,
+    toDecimal,
+    toNumber,
+    toJSON,
+    fromJSON,
   ]
 ---
 

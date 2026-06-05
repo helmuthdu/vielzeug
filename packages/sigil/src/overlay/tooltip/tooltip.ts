@@ -1,10 +1,10 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { computed, define, html, onMounted, prop, signal, syncAria } from '@vielzeug/craft';
+import { computed, createStableId, define, html, onMounted, prop, signal, syncAria } from '@vielzeug/craft';
 
 import type { ComponentSize } from '../../types';
 
-import { createStableId, parseStringTriggers } from '../../headless';
+import { parseStringTriggers } from '../../headless';
 import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
@@ -32,7 +32,7 @@ const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =
   parseStringTriggers(value, VALID_TOOLTIP_TRIGGERS, DEFAULT_TOOLTIP_TRIGGERS);
 
 /** Tooltip component properties */
-export type BitTooltipProps = {
+export type SgTooltipProps = {
   /** Hide delay in ms */
   'close-delay'?: number;
   /** Tooltip text content */
@@ -56,7 +56,7 @@ export type BitTooltipProps = {
 /**
  * A lightweight tooltip shown on hover/focus/click relative to the slotted trigger.
  *
- * @element bit-tooltip
+ * @element sg-tooltip
  *
  * @attr {string} content - Tooltip text content
  * @attr {string} placement - 'top' | 'bottom' | 'left' | 'right' (default: 'top')
@@ -74,13 +74,33 @@ export type BitTooltipProps = {
  * @part tooltip - Tooltip container.
  * @example
  * ```html
- * <bit-tooltip content="Copy to clipboard">
+ * <!-- Simple text tooltip -->
+ * <sg-tooltip content="Copy to clipboard">
  *   <button>Copy</button>
- * </bit-tooltip>
+ * </sg-tooltip>
+ *
+ * <!-- Placement and delay -->
+ * <sg-tooltip content="Save your work" placement="right" delay="300">
+ *   <sg-icon name="save"></sg-icon>
+ * </sg-tooltip>
+ *
+ * <!-- Hover + focus trigger -->
+ * <sg-tooltip content="Required field" trigger="hover,focus" placement="top">
+ *   <sg-input label="Email" type="email"></sg-input>
+ * </sg-tooltip>
+ *
+ * <!-- Rich content slot -->
+ * <sg-tooltip>
+ *   <sg-button>Help</sg-button>
+ *   <div slot="content">
+ *     <strong>Keyboard shortcuts</strong>
+ *     <p>Press Ctrl+S to save.</p>
+ *   </div>
+ * </sg-tooltip>
  * ```
  */
-export const TOOLTIP_TAG = 'bit-tooltip' as const;
-define<BitTooltipProps>(TOOLTIP_TAG, {
+export const TOOLTIP_TAG = 'sg-tooltip' as const;
+define<SgTooltipProps>(TOOLTIP_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,

@@ -36,7 +36,10 @@ export function reportRuntimeError(error: CraftitError, element: HTMLElement): v
 // ─── Error message constants ─────────────────────────────────────────────────
 
 export const CRAFTIT_ERRORS = {
-  defineDuplicate: (tag: string): string => `define('${tag}') was called more than once`,
+  defineDuplicate: (tag: string): string =>
+    `define('${tag}') was called more than once. ` +
+    `This is usually caused by importing the same component file via two different module paths (aliasing or HMR). ` +
+    `Ensure each custom element tag is registered exactly once.`,
   defineFieldRequiresFormAssociated: (tag: string): string =>
     `defineField() requires define('${tag}', { formAssociated: true })`,
   defineRequiresTag: 'define() requires a non-empty tag name',

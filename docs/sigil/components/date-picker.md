@@ -27,7 +27,7 @@ An accessible, keyboard-navigable date picker with an inline calendar popup. Sup
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker label="Appointment date"></bit-date-picker>
+<sg-date-picker label="Appointment date"></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -35,7 +35,7 @@ An accessible, keyboard-navigable date picker with an inline calendar popup. Sup
 Listen for the `change` event to react to selections:
 
 ```js
-document.querySelector('bit-date-picker').addEventListener('change', (e) => {
+document.querySelector('sg-date-picker').addEventListener('change', (e) => {
   console.log(e.detail.isoValue); // '2025-06-15'
   console.log(e.detail.value);    // Date object
 });
@@ -48,11 +48,11 @@ Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker
+<sg-date-picker
   label="Conference date"
   min="2025-09-01"
   max="2025-09-30">
-</bit-date-picker>
+</sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -64,10 +64,10 @@ Pass comma-separated day-of-week indices (0 = Sunday, 6 = Saturday) to `weekend-
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker
+<sg-date-picker
   label="Business day"
   weekend-days="0,6">
-</bit-date-picker>
+</sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -79,8 +79,8 @@ Override the display locale with any BCP 47 tag. Day and month names update auto
 <ComponentPreview>
 
 ```html
-<bit-date-picker label="Datum" locale="de-DE"></bit-date-picker>
-<bit-date-picker label="日付" locale="ja-JP"></bit-date-picker>
+<sg-date-picker label="Datum" locale="de-DE"></sg-date-picker>
+<sg-date-picker label="日付" locale="ja-JP"></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -92,20 +92,20 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker label="Start date" value="2025-06-15"></bit-date-picker>
+<sg-date-picker label="Start date" value="2025-06-15"></sg-date-picker>
 ```
 
 </ComponentPreview>
 
 ## Form Integration
 
-`bit-date-picker` is form-associated. The submitted value is the ISO 8601 string or empty string when no date is selected.
+`sg-date-picker` is form-associated. The submitted value is the ISO 8601 string or empty string when no date is selected.
 
 <ComponentPreview vertical height="400px">
 
 ```html
 <form>
-  <bit-date-picker name="booking_date" label="Booking date" required></bit-date-picker>
+  <sg-date-picker name="booking_date" label="Booking date" required></sg-date-picker>
   <button type="submit">Submit</button>
 </form>
 ```
@@ -117,9 +117,9 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker size="sm" placeholder="Small"></bit-date-picker>
-<bit-date-picker size="md" placeholder="Medium"></bit-date-picker>
-<bit-date-picker size="lg" placeholder="Large"></bit-date-picker>
+<sg-date-picker size="sm" placeholder="Small"></sg-date-picker>
+<sg-date-picker size="md" placeholder="Medium"></sg-date-picker>
+<sg-date-picker size="lg" placeholder="Large"></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -129,10 +129,10 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview>
 
 ```html
-<bit-date-picker variant="flat"     placeholder="Flat"></bit-date-picker>
-<bit-date-picker variant="bordered" placeholder="Bordered"></bit-date-picker>
-<bit-date-picker variant="outline"  placeholder="Outline"></bit-date-picker>
-<bit-date-picker variant="ghost"    placeholder="Ghost"></bit-date-picker>
+<sg-date-picker variant="flat"     placeholder="Flat"></sg-date-picker>
+<sg-date-picker variant="bordered" placeholder="Bordered"></sg-date-picker>
+<sg-date-picker variant="outline"  placeholder="Outline"></sg-date-picker>
+<sg-date-picker variant="ghost"    placeholder="Ghost"></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -142,15 +142,15 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-grid cols="2" cols-sm="3" cols-md="4" gap="md">
-  <bit-date-picker placeholder="Default"></bit-date-picker>
-  <bit-date-picker color="primary"   placeholder="Primary"></bit-date-picker>
-  <bit-date-picker color="secondary" placeholder="Secondary"></bit-date-picker>
-  <bit-date-picker color="info"      placeholder="Info"></bit-date-picker>
-  <bit-date-picker color="success"   placeholder="Success"></bit-date-picker>
-  <bit-date-picker color="warning"   placeholder="Warning"></bit-date-picker>
-  <bit-date-picker color="error"     placeholder="Error"></bit-date-picker>
-</bit-grid>
+<sg-grid cols="2" cols-sm="3" cols-md="4" gap="md">
+  <sg-date-picker placeholder="Default"></sg-date-picker>
+  <sg-date-picker color="primary"   placeholder="Primary"></sg-date-picker>
+  <sg-date-picker color="secondary" placeholder="Secondary"></sg-date-picker>
+  <sg-date-picker color="info"      placeholder="Info"></sg-date-picker>
+  <sg-date-picker color="success"   placeholder="Success"></sg-date-picker>
+  <sg-date-picker color="warning"   placeholder="Warning"></sg-date-picker>
+  <sg-date-picker color="error"     placeholder="Error"></sg-date-picker>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -160,16 +160,16 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker
+<sg-date-picker
   label="Return date"
   helper="Pick a date within the next 30 days">
-</bit-date-picker>
+</sg-date-picker>
 
-<bit-date-picker
+<sg-date-picker
   label="Departure date"
   error="A valid date is required"
   color="error">
-</bit-date-picker>
+</sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -179,7 +179,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 <ComponentPreview vertical height="400px">
 
 ```html
-<bit-date-picker label="Read-only date" value="2025-01-01" disabled></bit-date-picker>
+<sg-date-picker label="Read-only date" value="2025-01-01" disabled></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -239,7 +239,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Accessibility
 
-`bit-date-picker` follows the [ARIA Date Picker Dialog Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/).
+`sg-date-picker` follows the [ARIA Date Picker Dialog Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/).
 
 - The trigger has `role="combobox"` and `aria-haspopup="dialog"`.
 - The calendar panel has `role="dialog"` and `aria-modal="true"`.

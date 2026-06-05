@@ -2,13 +2,13 @@
 title: Checkbox Group
 ---
 
-`bit-checkbox-group` is a form-associated fieldset wrapper for `bit-checkbox` items. It owns the selection state for all child checkboxes, mirrors that state into the `values` attribute as a comma-separated string, and submits that string under the group's `name` in native forms and `bit-form`.
+`sg-checkbox-group` is a form-associated fieldset wrapper for `sg-checkbox` items. It owns the selection state for all child checkboxes, mirrors that state into the `values` attribute as a comma-separated string, and submits that string under the group's `name` in native forms and `sg-form`.
 
 ## Features
 
 - Form-associated group submission through `name`
 - Comma-separated `values` state for preselection and controlled updates
-- Propagation of `color`, `size`, and `disabled` to child `bit-checkbox` elements
+- Propagation of `color`, `size`, and `disabled` to child `sg-checkbox` elements
 - `fieldset` and `legend` semantics with helper and error text wiring
 - Vertical and horizontal layouts
 
@@ -21,11 +21,11 @@ title: Checkbox Group
 ## Basic Usage
 
 ```html
-<bit-checkbox-group label="Interests" values="sport,music">
-  <bit-checkbox value="sport">Sport</bit-checkbox>
-  <bit-checkbox value="music">Music</bit-checkbox>
-  <bit-checkbox value="travel">Travel</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Interests" values="sport,music">
+  <sg-checkbox value="sport">Sport</sg-checkbox>
+  <sg-checkbox value="music">Music</sg-checkbox>
+  <sg-checkbox value="travel">Travel</sg-checkbox>
+</sg-checkbox-group>
 
 <script type="module">
   import '@vielzeug/sigil/checkbox-group';
@@ -38,14 +38,14 @@ title: Checkbox Group
 Set `name` on the group when you want its selected values to submit with a form. The submitted value is a comma-separated string such as `email,sms`.
 
 ```html
-<bit-form id="prefs-form" novalidate>
-  <bit-checkbox-group name="contact" label="Preferred contact" values="email,sms">
-    <bit-checkbox value="email">Email</bit-checkbox>
-    <bit-checkbox value="phone">Phone</bit-checkbox>
-    <bit-checkbox value="sms">SMS</bit-checkbox>
-  </bit-checkbox-group>
-  <bit-button type="submit">Save Preferences</bit-button>
-</bit-form>
+<sg-form id="prefs-form" novalidate>
+  <sg-checkbox-group name="contact" label="Preferred contact" values="email,sms">
+    <sg-checkbox value="email">Email</sg-checkbox>
+    <sg-checkbox value="phone">Phone</sg-checkbox>
+    <sg-checkbox value="sms">SMS</sg-checkbox>
+  </sg-checkbox-group>
+  <sg-button type="submit">Save Preferences</sg-button>
+</sg-form>
 
 <script type="module">
   import '@vielzeug/sigil/form';
@@ -62,34 +62,34 @@ Set `name` on the group when you want its selected values to submit with a form.
 ## Orientation
 
 ```html
-<bit-checkbox-group label="Notifications (vertical)">
-  <bit-checkbox value="email">Email</bit-checkbox>
-  <bit-checkbox value="push">Push</bit-checkbox>
-  <bit-checkbox value="sms">SMS</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Notifications (vertical)">
+  <sg-checkbox value="email">Email</sg-checkbox>
+  <sg-checkbox value="push">Push</sg-checkbox>
+  <sg-checkbox value="sms">SMS</sg-checkbox>
+</sg-checkbox-group>
 
-<bit-checkbox-group label="Working days (horizontal)" orientation="horizontal" values="mon,wed,fri">
-  <bit-checkbox value="mon">Mon</bit-checkbox>
-  <bit-checkbox value="tue">Tue</bit-checkbox>
-  <bit-checkbox value="wed">Wed</bit-checkbox>
-  <bit-checkbox value="thu">Thu</bit-checkbox>
-  <bit-checkbox value="fri">Fri</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Working days (horizontal)" orientation="horizontal" values="mon,wed,fri">
+  <sg-checkbox value="mon">Mon</sg-checkbox>
+  <sg-checkbox value="tue">Tue</sg-checkbox>
+  <sg-checkbox value="wed">Wed</sg-checkbox>
+  <sg-checkbox value="thu">Thu</sg-checkbox>
+  <sg-checkbox value="fri">Fri</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 ## Validation Feedback
 
 ```html
-<bit-checkbox-group label="Interests" helper="Select all that apply.">
-  <bit-checkbox value="sport">Sport</bit-checkbox>
-  <bit-checkbox value="music">Music</bit-checkbox>
-  <bit-checkbox value="travel">Travel</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Interests" helper="Select all that apply.">
+  <sg-checkbox value="sport">Sport</sg-checkbox>
+  <sg-checkbox value="music">Music</sg-checkbox>
+  <sg-checkbox value="travel">Travel</sg-checkbox>
+</sg-checkbox-group>
 
-<bit-checkbox-group label="Agreements" error="Please accept all required policies." color="error">
-  <bit-checkbox value="terms">I accept the terms of service</bit-checkbox>
-  <bit-checkbox value="privacy">I accept the privacy policy</bit-checkbox>
-</bit-checkbox-group>
+<sg-checkbox-group label="Agreements" error="Please accept all required policies." color="error">
+  <sg-checkbox value="terms">I accept the terms of service</sg-checkbox>
+  <sg-checkbox value="privacy">I accept the privacy policy</sg-checkbox>
+</sg-checkbox-group>
 ```
 
 ## API Reference
@@ -115,4 +115,4 @@ Set `name` on the group when you want its selected values to submit with a form.
 
 - Put `name` on the group instead of individual child checkboxes when you want one submitted field.
 - Update `values`, not child `checked` attributes, when you want to control the group from outside.
-- Use `bit-radio-group` instead when the user must pick exactly one option.
+- Use `sg-radio-group` instead when the user must pick exactly one option.

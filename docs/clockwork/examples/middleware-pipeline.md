@@ -3,9 +3,15 @@ title: Middleware Pipeline
 description: Intercept and transform events with composable middleware.
 ---
 
-# Middleware Pipeline
+## Middleware Pipeline
 
-Middleware functions intercept events before processing. Use them for logging, analytics, event filtering, or authorization:
+### Problem
+
+You need to intercept machine events for cross-cutting concerns — logging, analytics, authorization — without polluting state transition logic.
+
+### Solution
+
+Pass a `middleware` array to `interpret()`. Each middleware receives the event, a snapshot, and a `next()` function. Call `next()` to continue the chain; return `false` to swallow the event:
 
 ```ts
 import { defineMachine, interpret, type MiddlewareFn } from '@vielzeug/clockwork';
@@ -53,3 +59,14 @@ m.send({ type: 'GO' }); // Allowed — transitions to 'active'
 
 m[Symbol.dispose]();
 ```
+
+### Pitfalls
+
+- **Middleware order matters** — Clockwork composes left-to-right: the first middleware in the array is the outermost wrapper.
+- **Returning `false` swallows the event silently** — the machine stays in its current state. Emit a side-channel signal or log if you need UI feedback.
+- **Middleware runs synchronously** — do not `await` inside middleware; use entry/exit actions for async side effects.
+
+### Related
+
+- [Clockwork Examples](/clockwork/examples.md)
+- [Debugging Transitions](./debugging-transitions.md)

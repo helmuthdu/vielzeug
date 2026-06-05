@@ -1,8 +1,8 @@
-import { define, html, onEvent, onMounted, prop, ref } from '@vielzeug/craft';
+import { createStableId, define, html, onEvent, onMounted, prop, ref } from '@vielzeug/craft';
 
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 
-import { createStableId, createSwipeControl } from '../../headless';
+import { createSwipeControl } from '../../headless';
 import '../../content/icon/icon';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -41,8 +41,8 @@ const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   },
 };
 
-/** Element interface exposing the imperative API for `bit-drawer`. */
-export interface DrawerElement extends HTMLElement, Omit<BitDrawerProps, 'title'> {
+/** Element interface exposing the imperative API for `sg-drawer`. */
+export interface DrawerElement extends HTMLElement, Omit<SgDrawerProps, 'title'> {
   /** Programmatically open the drawer. Equivalent to setting `open`. */
   show(): void;
   /** Programmatically close the drawer with the exit animation. */
@@ -51,12 +51,12 @@ export interface DrawerElement extends HTMLElement, Omit<BitDrawerProps, 'title'
 
 /** Drawer component properties */
 
-export type BitDrawerEvents = {
+export type SgDrawerEvents = {
   close: OverlayCloseDetail & { placement: DrawerPlacement };
   open: OverlayOpenDetail & { placement: DrawerPlacement };
 };
 
-export type BitDrawerProps = {
+export type SgDrawerProps = {
   /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
   backdrop?: DrawerBackdrop;
   /** Show the close (×) button in the header (default: true) */
@@ -98,7 +98,7 @@ export type BitDrawerProps = {
 /**
  * A panel that slides in from any edge of the screen, built on the native `<dialog>` element.
  *
- * @element bit-drawer
+ * @element sg-drawer
  *
  * @attr {boolean} open - Controlled open/close state
  * @attr {string} placement - 'left' | 'right' (default) | 'top' | 'bottom'
@@ -131,20 +131,20 @@ export type BitDrawerProps = {
  * @example
  * ```html
  * <!-- With visible title -->
- * <bit-drawer open title="Settings" placement="right">
+ * <sg-drawer open title="Settings" placement="right">
  *   <p>Settings content here.</p>
- * </bit-drawer>
+ * </sg-drawer>
  *
  * <!-- With custom header slot -->
- * <bit-drawer open placement="right">
+ * <sg-drawer open placement="right">
  *   <span slot="header">Settings</span>
  *   <p>Settings content here.</p>
- * </bit-drawer>
+ * </sg-drawer>
  * ```
  */
 
-export const DRAWER_TAG = 'bit-drawer' as const;
-define<BitDrawerProps, BitDrawerEvents>(DRAWER_TAG, {
+export const DRAWER_TAG = 'sg-drawer' as const;
+define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
   props: {
     backdrop: prop.string<DrawerBackdrop>(),
     dismissible: prop.bool(true),
@@ -437,7 +437,7 @@ define<BitDrawerProps, BitDrawerEvents>(DRAWER_TAG, {
               aria-label="Close"
               ?hidden=${() => !props.dismissible.value}
               @click=${handleCloseButtonClick}>
-              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+              <sg-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></sg-icon>
             </button>
           </div>
           <div class="body" part="body">

@@ -26,11 +26,11 @@ function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
 
 /** Card component properties */
 
-export type BitCardEvents = {
+export type SgCardEvents = {
   activate: { originalEvent: MouseEvent | KeyboardEvent; trigger: 'pointer' | 'keyboard' };
 };
 
-export type BitCardProps = {
+export type SgCardProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -52,7 +52,7 @@ export type BitCardProps = {
 /**
  * A versatile card container with semantic slots for media, header, body, footer, and actions.
  *
- * @element bit-card
+ * @element sg-card
  *
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'glass' | 'frost'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -63,7 +63,7 @@ export type BitCardProps = {
  * @attr {boolean} disabled - Disable card interaction
  * @attr {boolean} loading - Show loading progress bar
  *
- * @fires activate - Emitted when an interactive card is activated
+ * @fires activate - Emitted when an interactive card is activated. detail: { originalEvent: MouseEvent | KeyboardEvent; trigger: 'pointer' | 'keyboard' }
  *
  * @slot media - Media content displayed at top/left
  * @slot header - Card header (title, subtitle)
@@ -90,13 +90,13 @@ export type BitCardProps = {
  * @part actions - Actions slot container.
  * @example
  * ```html
- * <bit-card elevation="2"><h3 slot="header">Title</h3><p>Content</p></bit-card>
- * <bit-card interactive color="primary"><h3 slot="header">Click me</h3></bit-card>
- * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
+ * <sg-card elevation="2"><h3 slot="header">Title</h3><p>Content</p></sg-card>
+ * <sg-card interactive color="primary"><h3 slot="header">Click me</h3></sg-card>
+ * <sg-card variant="frost" color="secondary">Frosted card</sg-card>
  * ```
  */
-export const CARD_TAG = 'bit-card' as const;
-define<BitCardProps, BitCardEvents>(CARD_TAG, {
+export const CARD_TAG = 'sg-card' as const;
+define<SgCardProps, SgCardEvents>(CARD_TAG, {
   props: {
     ...themableBundle,
     ...disablableBundle,

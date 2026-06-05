@@ -4,10 +4,10 @@
        ======================================== */
 
   :host {
-    --_size: var(--bit-radio-size, var(--size-5));
-    --_font-size: var(--bit-radio-font-size, var(--text-sm));
-    --_bg: var(--bit-radio-bg, var(--color-contrast-200));
-    --_border: var(--bit-radio-border-color, var(--color-contrast-300));
+    --_size: var(--sg-radio-size, var(--size-5));
+    --_font-size: var(--sg-radio-font-size, var(--text-sm));
+    --_bg: var(--sg-radio-bg, var(--color-contrast-200));
+    --_border: var(--sg-radio-border-color, var(--color-contrast-300));
 
     display: inline-flex;
     flex-wrap: wrap;
@@ -96,8 +96,8 @@
 @layer sigil.overrides {
   /* Map theme variables to radio-specific variables */
   :host {
-    --_active-bg: var(--bit-radio-checked-bg, var(--_theme-base));
-    --_dot-color: var(--bit-radio-color, var(--_theme-contrast));
+    --_active-bg: var(--sg-radio-checked-bg, var(--_theme-base));
+    --_dot-color: var(--sg-radio-color, var(--_theme-contrast));
     --_focus-shadow: var(--_theme-shadow);
   }
 

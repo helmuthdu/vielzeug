@@ -1,4 +1,5 @@
 import { dispatchKeyboardAction } from './keyboard';
+import { createTypeahead } from './typeahead';
 
 // ── Private array search helpers ────────────────────────────────────────────
 const findForward = <T>(items: T[], start: number, predicate: (item: T, index: number) => boolean): number => {
@@ -93,23 +94,20 @@ export type ListNavigationOptions<T> = {
   getItemLabel?: (item: T, index: number) => string;
   getItems: () => T[];
   isItemDisabled?: (item: T, index: number) => boolean;
-  /**
-   * Override default key bindings for navigation actions.
-   * Pass a static object for the common case; pass a function when bindings
-   * must change at runtime.
-   */
-  keys?: Partial<Record<ListNavigationAction, string[]>> | (() => Partial<Record<ListNavigationAction, string[]>>);
+  /** Override default key bindings for navigation actions. */
+  keys?: Partial<Record<ListNavigationAction, string[]>>;
   loop?: boolean;
   onNavigate?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
   /**
    * Axis the list navigates along. Controls which arrow keys are treated as
    * `next`/`prev` when no explicit `keys` override is provided.
+   * Pass a getter function for dynamic/reactive orientation (e.g. driven by a prop signal).
    *
    * - `'vertical'` (default): ↑↓ arrows
    * - `'horizontal'`: ←→ arrows
    * - `'both'`: all four arrow keys
    */
-  orientation?: 'both' | 'horizontal' | 'vertical';
+  orientation?: 'both' | 'horizontal' | 'vertical' | (() => 'both' | 'horizontal' | 'vertical');
   setIndex: (index: number) => void;
 };
 
@@ -236,25 +234,23 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
 
   const isKeyDisabled = (): boolean => Boolean(options.disabled?.());
 
-  const resolveKeys = (): Record<ListNavigationAction, string[]> => {
-    const keys = typeof options.keys === 'function' ? options.keys() : options.keys;
-    const orientationDefaults = DEFAULT_KEYS[options.orientation ?? 'vertical'];
+  const resolveOrientation = (): 'both' | 'horizontal' | 'vertical' =>
+    typeof options.orientation === 'function' ? options.orientation() : (options.orientation ?? 'vertical');
 
-    return {
+  const buildKeymap = (): Record<string, (keyboardEvent: KeyboardEvent) => void> => {
+    const keys = options.keys;
+    const orientationDefaults = DEFAULT_KEYS[resolveOrientation()];
+    const resolved = {
       first: keys?.first ?? orientationDefaults.first,
       last: keys?.last ?? orientationDefaults.last,
       next: keys?.next ?? orientationDefaults.next,
       prev: keys?.prev ?? orientationDefaults.prev,
     };
-  };
-
-  const buildKeymap = (): Record<string, (keyboardEvent: KeyboardEvent) => void> => {
-    const keys = resolveKeys();
-    const keymap: Record<string, (keyboardEvent: KeyboardEvent) => void> = {};
+    const km: Record<string, (keyboardEvent: KeyboardEvent) => void> = {};
 
     for (const action of ['next', 'prev', 'first', 'last'] as const) {
-      for (const key of keys[action]) {
-        keymap[key] = (keyboardEvent: KeyboardEvent) => {
+      for (const key of resolved[action]) {
+        km[key] = (keyboardEvent: KeyboardEvent) => {
           const index = { first, last, next, prev }[action]();
 
           options.onNavigate?.(action, index, keyboardEvent);
@@ -262,77 +258,39 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
       }
     }
 
-    return keymap;
+    return km;
   };
 
   // ── Typeahead ──────────────────────────────────────────────────────────────
-  // Accumulates printable keystrokes into a buffer; on each keystroke searches
-  // for the first enabled item whose label starts with the buffer. Cycles past
-  // the current item on repeated same-character presses. Buffer resets after
-  // 500 ms of inactivity (the ARIA APG recommended window).
 
-  const TYPEAHEAD_DELAY = 500;
-  let _typeBuffer = '';
-  let _typeTimer: ReturnType<typeof setTimeout> | null = null;
+  const typeahead = options.getItemLabel
+    ? createTypeahead({
+        getIndex: options.getIndex,
+        getItemLabel: options.getItemLabel,
+        getItems: options.getItems,
+        isItemDisabled: (item, index) => isDisabled(item, index),
+        onNavigate: (index, event) => {
+          if (!isKeyDisabled()) {
+            commitIndex(index);
+            options.onNavigate?.('typeahead', index, event);
+          }
+        },
+      })
+    : null;
 
-  const resetTypeBuffer = (): void => {
-    _typeBuffer = '';
-
-    if (_typeTimer !== null) {
-      clearTimeout(_typeTimer);
-      _typeTimer = null;
-    }
-  };
-
-  const handleTypeahead = (event: KeyboardEvent): boolean => {
-    if (!options.getItemLabel) return false;
-
-    if (isKeyDisabled()) return false;
-
-    // Single printable character only; exclude modifier combos (Ctrl+key, Alt+key, Meta+key).
-    if (event.key.length !== 1 || event.ctrlKey || event.altKey || event.metaKey) return false;
-
-    _typeBuffer += event.key.toLowerCase();
-
-    if (_typeTimer !== null) clearTimeout(_typeTimer);
-
-    _typeTimer = setTimeout(resetTypeBuffer, TYPEAHEAD_DELAY);
-
-    const items = options.getItems();
-    const current = options.getIndex();
-
-    // Search forward from the item after current, wrapping circularly.
-    const startAfter = current >= 0 ? current + 1 : 0;
-
-    for (let n = 0; n < items.length; n++) {
-      const i = (startAfter + n) % items.length;
-
-      if (isDisabled(items[i], i)) continue;
-
-      if (options.getItemLabel(items[i], i).toLowerCase().startsWith(_typeBuffer)) {
-        commitIndex(i);
-        options.onNavigate?.('typeahead', i, event);
-
-        return true;
-      }
-    }
-
-    return false;
-  };
-
-  // Cache the keymap when keys is not dynamic. The 99% case is a static config
-  // declared at call time — building it once avoids a closure allocation and
-  // a 4-entry loop on every keydown event.
-  const staticKeymap = typeof options.keys !== 'function' ? buildKeymap() : null;
+  const _staticKeymap: Record<string, (e: KeyboardEvent) => void> | null =
+    typeof options.orientation === 'function' ? null : buildKeymap();
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
-    if (dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap: staticKeymap ?? buildKeymap() })) return true;
+    const keymap = _staticKeymap ?? buildKeymap();
 
-    return handleTypeahead(event);
+    if (dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap })) return true;
+
+    return typeahead?.handleKeydown(event) ?? false;
   };
 
   return {
-    cleanup: resetTypeBuffer,
+    cleanup: () => typeahead?.reset(),
     first,
     getActiveItem,
     handleKeydown,

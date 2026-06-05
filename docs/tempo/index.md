@@ -8,8 +8,11 @@ related: [arsenal]
 exports:
   [
     now,
+    nowInstant,
+    parsePlainDate,
     parsePlainDateTime,
     parseInstant,
+    parseZoned,
     parseDate,
     isValid,
     toInstant,

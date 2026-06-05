@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-form', () => {
+describe('sg-form', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -14,13 +14,13 @@ describe('bit-form', () => {
 
   describe('Core Functionality', () => {
     it('renders native form element in shadow DOM', async () => {
-      fixture = await mount('bit-form');
+      fixture = await mount('sg-form');
 
       expect(fixture.query('form')).toBeTruthy();
     });
 
     it('emits submit event with formData payload', async () => {
-      fixture = await mount('bit-form');
+      fixture = await mount('sg-form');
 
       const onSubmit = vi.fn();
 
@@ -37,7 +37,7 @@ describe('bit-form', () => {
     });
 
     it('emits reset event', async () => {
-      fixture = await mount('bit-form');
+      fixture = await mount('sg-form');
 
       const onReset = vi.fn();
 
@@ -51,25 +51,25 @@ describe('bit-form', () => {
 
   describe('Accessibility', () => {
     it('sets aria-disabled when disabled', async () => {
-      fixture = await mount('bit-form', { attrs: { disabled: '' } });
+      fixture = await mount('sg-form', { attrs: { disabled: '' } });
 
       expect(fixture.query('form')?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('supports novalidate mode for custom validation messaging', async () => {
-      fixture = await mount('bit-form', { attrs: { novalidate: '' } });
+      fixture = await mount('sg-form', { attrs: { novalidate: '' } });
 
       expect(fixture.query('form')?.hasAttribute('novalidate')).toBe(true);
     });
 
     it('defaults to vertical orientation', async () => {
-      fixture = await mount('bit-form');
+      fixture = await mount('sg-form');
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     });
 
     it('supports horizontal orientation', async () => {
-      fixture = await mount('bit-form', { attrs: { orientation: 'horizontal' } });
+      fixture = await mount('sg-form', { attrs: { orientation: 'horizontal' } });
 
       expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
     });
@@ -77,14 +77,14 @@ describe('bit-form', () => {
 
   describe('Context Propagation', () => {
     it('propagates disabled/size/variant to child controls', async () => {
-      fixture = await mount('bit-form', {
+      fixture = await mount('sg-form', {
         attrs: { disabled: '', size: 'lg', variant: 'flat' },
-        html: '<bit-input></bit-input>',
+        html: '<sg-input></sg-input>',
       });
 
       await fixture.flush();
 
-      const child = fixture.element.querySelector('bit-input');
+      const child = fixture.element.querySelector('sg-input');
 
       expect(child?.hasAttribute('disabled')).toBe(true);
       expect(child?.getAttribute('size')).toBe('lg');
@@ -92,14 +92,14 @@ describe('bit-form', () => {
     });
 
     it('does not override explicit child size/variant', async () => {
-      fixture = await mount('bit-form', {
+      fixture = await mount('sg-form', {
         attrs: { size: 'lg', variant: 'flat' },
-        html: '<bit-input size="sm" variant="bordered"></bit-input>',
+        html: '<sg-input size="sm" variant="bordered"></sg-input>',
       });
 
       await fixture.flush();
 
-      const child = fixture.element.querySelector('bit-input');
+      const child = fixture.element.querySelector('sg-input');
 
       expect(child?.getAttribute('size')).toBe('sm');
       expect(child?.getAttribute('variant')).toBe('bordered');

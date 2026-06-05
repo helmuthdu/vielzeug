@@ -6,7 +6,7 @@ import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptio
 
 describe('parseSlottedOptions', () => {
   function makeOption(attrs: Record<string, string | null> = {}, textContent = ''): Element {
-    const el = document.createElement('bit-combobox-option');
+    const el = document.createElement('sg-combobox-option');
 
     for (const [key, value] of Object.entries(attrs)) {
       if (value !== null) el.setAttribute(key, value);
@@ -21,7 +21,7 @@ describe('parseSlottedOptions', () => {
     expect(parseSlottedOptions([])).toEqual([]);
   });
 
-  it('filters out non-bit-combobox-option elements', () => {
+  it('filters out non-sg-combobox-option elements', () => {
     const div = document.createElement('div');
     const option = makeOption({ value: 'a' }, 'Alpha');
 

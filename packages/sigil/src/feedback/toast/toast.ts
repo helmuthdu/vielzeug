@@ -11,12 +11,12 @@ import componentStyles from './toast.css?inline';
 
 /** Toast container properties */
 
-export type BitToastEvents = {
+export type SgToastEvents = {
   add: { id: string };
   dismiss: { id: string };
 };
 
-export type BitToastProps = {
+export type SgToastProps = {
   max?: number;
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 };
@@ -56,7 +56,7 @@ export type ToastItem = {
 
 type NormalizedToast = ToastItem & { id: string };
 
-/** Public API of the bit-toast element */
+/** Public API of the sg-toast element */
 export interface ToastElement extends HTMLElement {
   add: (toast: ToastItem) => string;
   update: (id: string, updates: Partial<ToastItem>) => void;
@@ -68,7 +68,7 @@ export interface ToastElement extends HTMLElement {
  * An accessible toast stack with polite/assertive live regions and hover expansion.
  * Stacks up to 3 notifications with a 3D effect.
  *
- * @element bit-toast
+ * @element sg-toast
  *
  * @attr {string} position - 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'
  * @attr {number} max - Max toasts in DOM at once (default: 5)
@@ -76,7 +76,7 @@ export interface ToastElement extends HTMLElement {
  * @fires add - When a toast is added `{ id }`
  * @fires dismiss - When a toast is dismissed `{ id }`
  *
- * @slot - Manually placed `bit-alert` elements
+ * @slot - Manually placed `sg-alert` elements
  *
  * @cssprop --toast-position - Position type (default: fixed)
  * @cssprop --toast-inset-top - Top inset
@@ -90,7 +90,7 @@ export interface ToastElement extends HTMLElement {
  * @example
  * ```html
  * <!-- Declarative: place once in HTML -->
- * <bit-toast position="bottom-right"></bit-toast>
+ * <sg-toast position="bottom-right"></sg-toast>
  *
  * <!-- Programmatic: use the singleton service -->
  * <script type="module">
@@ -107,7 +107,7 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
     <div slot="actions" class="toast-actions">
       ${toast.actions.map(
         (action) => html`
-          <bit-button
+          <sg-button
             size="sm"
             color=${action.color || toast.color || 'primary'}
             variant=${action.variant || 'solid'}
@@ -115,7 +115,7 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
               action.onClick?.();
               onDismiss();
             }}
-            >${action.label}</bit-button
+            >${action.label}</sg-button
           >
         `,
       )}
@@ -123,8 +123,8 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   `;
 }
 
-export const TOAST_TAG = 'bit-toast' as const;
-define<BitToastProps, BitToastEvents>(TOAST_TAG, {
+export const TOAST_TAG = 'sg-toast' as const;
+define<SgToastProps, SgToastEvents>(TOAST_TAG, {
   props: {
     max: prop.number(5),
     position: prop.oneOf(
@@ -144,7 +144,7 @@ define<BitToastProps, BitToastEvents>(TOAST_TAG, {
       createSwipeControl({
         axis: () => 'x',
         // Do not capture pointers for toast swipe gestures; capture can steal
-        // close-button clicks inside bit-alert when the gesture does not move.
+        // close-button clicks inside sg-alert when the gesture does not move.
         captureTarget: () => null,
         disabled: () => !(toasts.value.find((t) => t.id === id)?.dismissible ?? true),
         onCancel: ({ event }) => {
@@ -386,7 +386,7 @@ define<BitToastProps, BitToastEvents>(TOAST_TAG, {
         @pointermove=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerMove(e)}
         @pointerup=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerUp(e)}
         @pointercancel=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerCancel(e)}>
-        <bit-alert
+        <sg-alert
           color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
           variant=${toast.variant || 'solid'}
           size=${toast.size || 'md'}
@@ -397,7 +397,7 @@ define<BitToastProps, BitToastEvents>(TOAST_TAG, {
           @dismiss=${() => removeToast(toast.id)}>
           ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''} ${toast.message}
           ${renderToastActions(toast, () => removeToast(toast.id))}
-        </bit-alert>
+        </sg-alert>
       </div>
     `;
 
@@ -455,10 +455,10 @@ define<BitToastProps, BitToastEvents>(TOAST_TAG, {
 // ─── Singleton toast service ─────────────────────────────────────────────────
 
 const getHost = (): ToastElement => {
-  let el = document.querySelector<ToastElement>('bit-toast');
+  let el = document.querySelector<ToastElement>('sg-toast');
 
   if (!el) {
-    el = document.createElement('bit-toast') as ToastElement;
+    el = document.createElement('sg-toast') as ToastElement;
     document.body.appendChild(el);
   }
 
@@ -495,7 +495,7 @@ export const toast = {
     getHost().clear();
   },
   /** Configure the auto-created container. Call before the first `add()` if the defaults need to change. */
-  configure(config: BitToastProps): void {
+  configure(config: SgToastProps): void {
     const el = getHost();
 
     if (config.position) el.setAttribute('position', config.position);

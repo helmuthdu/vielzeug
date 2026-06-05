@@ -28,7 +28,7 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 
 Headless controller primitives (`createTextField`, `createChoiceField`, `createCheckable`, `createListControl`, `createOverlayControl`, and others) are exported from `@vielzeug/sigil` alongside the component types — no separate subpath is needed. Use `componentSignal(onCleanup)` to wire an `AbortSignal` from a craft component's `onCleanup` callback into any headless primitive that accepts a `signal` option.
 
-The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountBitInput`, `mountBitSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
+The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountSgInput`, `mountSgSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
 
 ## Runtime Registration Imports
 
@@ -110,7 +110,7 @@ Notable root exports include:
 
 - tag constants like `BUTTON_TAG`, `INPUT_TAG`, `DIALOG_TAG`
 - context constants like `FORM_CTX`, `TABS_CTX`, `CHECKBOX_GROUP_CTX`
-- component prop/event types like `BitButtonProps`, `BitInputEvents`
+- component prop/event types like `SgButtonProps`, `SgInputEvents`
 - toast runtime API: `toast`
 
 ## Component Documentation Index
@@ -125,7 +125,7 @@ Use the following pages as the canonical per-component API source.
 ### Feedback
 
 - [Alert](./components/alert.md)
-- [Async (bit-async)](./components/async.md)
+- [Async (sg-async)](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
 - [Password Strength](./components/password-strength.md)
@@ -210,7 +210,7 @@ Previously, calling `cleanup()` on an open overlay would invoke the `onClose` ca
 
 ### `createChoiceField` — `signal` and `cleanup()` added
 
-`ChoiceFieldOptions` now accepts an optional `signal?: AbortSignal` to auto-dispose internal `watch()` subscriptions on component unmount. A `cleanup()` method is also exposed on `ChoiceFieldHandle` for manual teardown. All component consumers (`bit-select`, `bit-combobox`, `bit-checkbox-group`, `bit-radio-group`) now pass their `componentSignal` automatically.
+`ChoiceFieldOptions` now accepts an optional `signal?: AbortSignal` to auto-dispose internal `watch()` subscriptions on component unmount. A `cleanup()` method is also exposed on `ChoiceFieldHandle` for manual teardown. All component consumers (`sg-select`, `sg-combobox`, `sg-checkbox-group`, `sg-radio-group`) now pass their `componentSignal` automatically.
 
 ```ts
 // Before — subscriptions leaked on unmount

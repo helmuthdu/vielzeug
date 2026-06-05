@@ -4,9 +4,6 @@ import { clamp as clampRange } from '@vielzeug/arsenal';
 
 import { toFiniteNumberOr, toPositiveStep } from './numbers';
 
-/** Returns `value` if finite, otherwise `fallback`. Slider-local utility. */
-const normalizeFinite = (value: number, fallback: number): number => (Number.isFinite(value) ? value : fallback);
-
 // ── Slider control ────────────────────────────────────────────────────────────
 
 export type SliderControlOptions = {
@@ -41,22 +38,20 @@ export const createSliderControl = (options: SliderControlOptions): SliderContro
   const clamp = (value: number): number => {
     const minValue = min();
     const maxValue = max();
-    const normalized = normalizeFinite(value, minValue);
 
-    return clampRange(normalized, minValue, maxValue);
+    return clampRange(toFiniteNumberOr(value, minValue), minValue, maxValue);
   };
 
   const snap = (value: number): number => {
     const minValue = min();
-    const normalized = normalizeFinite(value, minValue);
 
-    return clamp(Math.round(normalized / step()) * step());
+    return clamp(Math.round(toFiniteNumberOr(value, minValue) / step()) * step());
   };
 
   const toPercent = (value: number): number => {
     const minValue = min();
     const maxValue = max();
-    const normalized = normalizeFinite(value, minValue);
+    const normalized = toFiniteNumberOr(value, minValue);
 
     if (maxValue <= minValue) return 0;
 
@@ -74,7 +69,7 @@ export const createSliderControl = (options: SliderControlOptions): SliderContro
   };
 
   const nextFromKey = (key: string, current: number): number | null => {
-    const normalized = normalizeFinite(current, min());
+    const normalized = toFiniteNumberOr(current, min());
 
     if (key === 'ArrowRight' || key === 'ArrowUp') return clamp(normalized + step());
 

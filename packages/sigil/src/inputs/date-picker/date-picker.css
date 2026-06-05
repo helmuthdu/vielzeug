@@ -17,7 +17,7 @@
     --_day-today-color: var(--date-picker-day-today-color, var(--_theme-base));
   }
 
-  /* Make the trigger look like a button — bit-input is readonly so pointer changes to text by default */
+  /* Make the trigger look like a button — sg-input is readonly so pointer changes to text by default */
   .trigger {
     cursor: pointer;
   }

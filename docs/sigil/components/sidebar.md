@@ -4,10 +4,10 @@ A collapsible navigation sidebar with labelled groups and individual items. It u
 
 ## Features
 
-- 🗂️ **3 Sub-components**: `bit-sidebar`, `bit-sidebar-group`, `bit-sidebar-item`
+- 🗂️ **3 Sub-components**: `sg-sidebar`, `sg-sidebar-group`, `sg-sidebar-item`
 - 🔄 **Collapsible**: smooth icon-only mode with animated width transition
 - 🎨 **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
-- 🔗 **Link or button**: `bit-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
+- 🔗 **Link or button**: `sg-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
 - 📌 **Active indicator**: visual pill indicator for the current page item
 - 🔘 **Collapsible groups**: native `<details>/<summary>` interaction with optional toggle event
 - ♿ **Accessible**: `role="navigation"`, `aria-current="page"`, `aria-expanded`, keyboard navigation
@@ -21,16 +21,16 @@ A collapsible navigation sidebar with labelled groups and individual items. It u
 
 ## Basic Usage
 
-Wrap groups and items inside `bit-sidebar`. Mark the current page with `active`.
+Wrap groups and items inside `sg-sidebar`. Mark the current page with `active`.
 
 ```html
-<bit-sidebar label="App navigation">
-  <bit-sidebar-group label="Main">
-    <bit-sidebar-item href="/dashboard" active>Dashboard</bit-sidebar-item>
-    <bit-sidebar-item href="/projects">Projects</bit-sidebar-item>
-    <bit-sidebar-item href="/settings">Settings</bit-sidebar-item>
-  </bit-sidebar-group>
-</bit-sidebar>
+<sg-sidebar label="App navigation">
+  <sg-sidebar-group label="Main">
+    <sg-sidebar-item href="/dashboard" active>Dashboard</sg-sidebar-item>
+    <sg-sidebar-item href="/projects">Projects</sg-sidebar-item>
+    <sg-sidebar-item href="/settings">Settings</sg-sidebar-item>
+  </sg-sidebar-group>
+</sg-sidebar>
 
 <script type="module">
   import '@vielzeug/sigil/sidebar';
@@ -44,31 +44,31 @@ Add the `collapsible` attribute to show the collapse toggle button. Items will a
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
-  <bit-sidebar collapsible label="App navigation" style="grid-area: sidebar;">
-    <bit-icon slot="logo" name="rocket" size="24"></bit-icon>
+  <sg-sidebar collapsible label="App navigation" style="grid-area: sidebar;">
+    <sg-icon slot="logo" name="rocket" size="24"></sg-icon>
     <span slot="header">My App</span>
-    <bit-sidebar-group label="Main">
-      <bit-sidebar-item href="#" active>
-        <bit-icon slot="icon" name="home" size="18"></bit-icon>
+    <sg-sidebar-group label="Main">
+      <sg-sidebar-item href="#" active>
+        <sg-icon slot="icon" name="home" size="18"></sg-icon>
         Dashboard
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="folder" size="18"></sg-icon>
         Projects
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="settings" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="settings" size="18"></sg-icon>
         Settings
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Main content area</main>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -105,7 +105,7 @@ Use two breakpoints to get the full three-state behavior:
       --grid-cols: auto minmax(0, 1fr);
     }
 
-    .sidebar-shell-preview .shell-grid > bit-grid-item {
+    .sidebar-shell-preview .shell-grid > sg-grid-item {
       min-width: 0;
       min-height: 0;
     }
@@ -122,18 +122,18 @@ Use two breakpoints to get the full three-state behavior:
     }
   </style>
 
-  <bit-navbar sticky breakpoint="(max-width: 640px)" mobile-sidebar="#docs-shell-sidebar" label="Workspace navigation">
+  <sg-navbar sticky breakpoint="(max-width: 640px)" mobile-sidebar="#docs-shell-sidebar" label="Workspace navigation">
     <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
-    <bit-navbar-item slot="start" href="#" active>Dashboard</bit-navbar-item>
-    <bit-navbar-item href="#">Projects</bit-navbar-item>
-    <bit-navbar-item href="#">Reports</bit-navbar-item>
-    <bit-navbar-item slot="end" href="#">Account</bit-navbar-item>
-  </bit-navbar>
+    <sg-navbar-item slot="start" href="#" active>Dashboard</sg-navbar-item>
+    <sg-navbar-item href="#">Projects</sg-navbar-item>
+    <sg-navbar-item href="#">Reports</sg-navbar-item>
+    <sg-navbar-item slot="end" href="#">Account</sg-navbar-item>
+  </sg-navbar>
 
   <div class="shell-body">
-    <bit-grid class="shell-grid" areas="'sidebar main'" fullwidth gap="none">
-      <bit-grid-item area="sidebar">
-        <bit-sidebar
+    <sg-grid class="shell-grid" areas="'sidebar main'" fullwidth gap="none">
+      <sg-grid-item area="sidebar">
+        <sg-sidebar
           id="docs-shell-sidebar"
           class="shell-sidebar"
           container-breakpoints
@@ -141,42 +141,42 @@ Use two breakpoints to get the full three-state behavior:
           label="Workspace sidebar"
           responsive="(max-width: 1200px)"
           bottom-nav-at="(max-width: 640px)">
-          <bit-icon slot="logo" name="rocket" size="20"></bit-icon>
+          <sg-icon slot="logo" name="rocket" size="20"></sg-icon>
           <span slot="header">Workspace</span>
 
-          <bit-sidebar-item href="#" active>
-            <bit-icon slot="icon" name="layout-dashboard" size="18"></bit-icon>
+          <sg-sidebar-item href="#" active>
+            <sg-icon slot="icon" name="layout-dashboard" size="18"></sg-icon>
             Dashboard
-          </bit-sidebar-item>
-          <bit-sidebar-item href="#">
-            <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+          </sg-sidebar-item>
+          <sg-sidebar-item href="#">
+            <sg-icon slot="icon" name="folder" size="18"></sg-icon>
             Projects
-          </bit-sidebar-item>
-          <bit-sidebar-item href="#">
-            <bit-icon slot="icon" name="bar-chart-3" size="18"></bit-icon>
+          </sg-sidebar-item>
+          <sg-sidebar-item href="#">
+            <sg-icon slot="icon" name="bar-chart-3" size="18"></sg-icon>
             Reports
-          </bit-sidebar-item>
+          </sg-sidebar-item>
 
-          <bit-sidebar-group label="Admin" collapsible>
-            <bit-sidebar-item href="#">
-              <bit-icon slot="icon" name="users" size="18"></bit-icon>
+          <sg-sidebar-group label="Admin" collapsible>
+            <sg-sidebar-item href="#">
+              <sg-icon slot="icon" name="users" size="18"></sg-icon>
               Team
-            </bit-sidebar-item>
-            <bit-sidebar-item href="#">
-              <bit-icon slot="icon" name="settings" size="18"></bit-icon>
+            </sg-sidebar-item>
+            <sg-sidebar-item href="#">
+              <sg-icon slot="icon" name="settings" size="18"></sg-icon>
               Settings
-            </bit-sidebar-item>
-          </bit-sidebar-group>
-        </bit-sidebar>
-      </bit-grid-item>
+            </sg-sidebar-item>
+          </sg-sidebar-group>
+        </sg-sidebar>
+      </sg-grid-item>
 
-      <bit-grid-item area="main" class="shell-content">
-        <bit-text>
+      <sg-grid-item area="main" class="shell-content">
+        <sg-text>
           Resize preview width: desktop uses full sidebar, tablet collapses, and mobile turns sidebar into bottom tabs.
           The navbar hamburger opens the mobile drawer.
-        </bit-text>
-      </bit-grid-item>
-    </bit-grid>
+        </sg-text>
+      </sg-grid-item>
+    </sg-grid>
   </div>
 </div>
 ```
@@ -185,51 +185,51 @@ Use two breakpoints to get the full three-state behavior:
 
 ### Integration Notes
 
-- Bottom navigation tabs are derived from direct `bit-sidebar-item` children only.
-- `bit-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `bit-navbar mobile-sidebar` trigger.
+- Bottom navigation tabs are derived from direct `sg-sidebar-item` children only.
+- `sg-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `sg-navbar mobile-sidebar` trigger.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
 
 ## Groups
 
-Use `bit-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
+Use `sg-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
 
-`bit-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior.
+`sg-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior.
 
 Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally.
 
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
-  <bit-sidebar label="App navigation" style="grid-area: sidebar;">
+  <sg-sidebar label="App navigation" style="grid-area: sidebar;">
     <span slot="header">My App</span>
-    <bit-sidebar-group label="Main">
-      <bit-sidebar-item href="#" active>
-        <bit-icon slot="icon" name="home" size="18"></bit-icon>
+    <sg-sidebar-group label="Main">
+      <sg-sidebar-item href="#" active>
+        <sg-icon slot="icon" name="home" size="18"></sg-icon>
         Dashboard
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="chart-column" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="chart-column" size="18"></sg-icon>
         Analytics
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-    <bit-sidebar-group label="Settings" collapsible open>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="user" size="18"></bit-icon>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+    <sg-sidebar-group label="Settings" collapsible open>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="user" size="18"></sg-icon>
         Profile
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="bell" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="bell" size="18"></sg-icon>
         Notifications
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-  </bit-grid>
+  </sg-grid>
   </div>
 ```
 
@@ -237,36 +237,36 @@ Set `default-open="false"` for uncontrolled groups that start collapsed, or pass
 
 ## Items with Badges
 
-Use the `end` slot on `bit-sidebar-item` for trailing content such as notification counts or keyboard shortcuts.
+Use the `end` slot on `sg-sidebar-item` for trailing content such as notification counts or keyboard shortcuts.
 
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="none"
   style="height: 300px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
-  <bit-sidebar label="App navigation" style="grid-area: sidebar;">
-    <bit-sidebar-group label="Inbox">
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="inbox" size="18"></bit-icon>
+  <sg-sidebar label="App navigation" style="grid-area: sidebar;">
+    <sg-sidebar-group label="Inbox">
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="inbox" size="18"></sg-icon>
         Inbox
-        <bit-badge slot="end" color="primary">12</bit-badge>
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="star" size="18"></bit-icon>
+        <sg-badge slot="end" color="primary">12</sg-badge>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="star" size="18"></sg-icon>
         Starred
-        <bit-badge slot="end">4</bit-badge>
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="trash-2" size="18"></bit-icon>
+        <sg-badge slot="end">4</sg-badge>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="trash-2" size="18"></sg-icon>
         Trash
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -280,25 +280,25 @@ Uses the same drawer-inspired panel surface with a stronger floating presentatio
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="sm"
   style="height: 300px; --grid-cols: auto 1fr; background: var(--color-contrast-50); overflow: hidden; padding: var(--size-2);">
-  <bit-sidebar variant="floating" label="Floating sidebar" style="grid-area: sidebar;">
-    <bit-sidebar-group label="Navigation">
-      <bit-sidebar-item href="#" active>
-        <bit-icon slot="icon" name="home" size="18"></bit-icon>
+  <sg-sidebar variant="floating" label="Floating sidebar" style="grid-area: sidebar;">
+    <sg-sidebar-group label="Navigation">
+      <sg-sidebar-item href="#" active>
+        <sg-icon slot="icon" name="home" size="18"></sg-icon>
         Home
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="folder" size="18"></sg-icon>
         Files
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <div style="grid-area: main; padding: var(--size-4);">Content</div>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -310,21 +310,21 @@ A subtle variant with a slightly tinted background and no visible border or elev
 <ComponentPreview>
 
 ```html
-<bit-grid areas="'sidebar main'" fullwidth gap="none" style="height: 300px; --grid-cols: auto 1fr; overflow: hidden;">
-  <bit-sidebar variant="inset" label="Inset sidebar" style="grid-area: sidebar;">
-    <bit-sidebar-group label="Navigation">
-      <bit-sidebar-item href="#" active>
-        <bit-icon slot="icon" name="home" size="18"></bit-icon>
+<sg-grid areas="'sidebar main'" fullwidth gap="none" style="height: 300px; --grid-cols: auto 1fr; overflow: hidden;">
+  <sg-sidebar variant="inset" label="Inset sidebar" style="grid-area: sidebar;">
+    <sg-sidebar-group label="Navigation">
+      <sg-sidebar-item href="#" active>
+        <sg-icon slot="icon" name="home" size="18"></sg-icon>
         Home
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="folder" size="18"></sg-icon>
         Files
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <div style="grid-area: main; padding: var(--size-4);">Content</div>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -336,37 +336,37 @@ Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or bran
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
-  <bit-sidebar label="App sidebar" style="grid-area: sidebar;">
-    <bit-icon slot="logo" name="rocket" size="24"></bit-icon>
+  <sg-sidebar label="App sidebar" style="grid-area: sidebar;">
+    <sg-icon slot="logo" name="rocket" size="24"></sg-icon>
     <span slot="header">MyApp</span>
 
-    <bit-sidebar-group label="Navigation">
-      <bit-sidebar-item href="#" active>
-        <bit-icon slot="icon" name="home" size="18"></bit-icon>
+    <sg-sidebar-group label="Navigation">
+      <sg-sidebar-item href="#" active>
+        <sg-icon slot="icon" name="home" size="18"></sg-icon>
         Dashboard
-      </bit-sidebar-item>
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="users" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="users" size="18"></sg-icon>
         Team
-      </bit-sidebar-item>
-    </bit-sidebar-group>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
 
     <div
       slot="footer"
       style="display: flex; align-items: center; gap: var(--size-2); font-size: var(--text-sm); color: var(--color-contrast-600);">
-      <bit-sidebar-item href="#">
-        <bit-icon slot="icon" name="settings" size="18"></bit-icon>
+      <sg-sidebar-item href="#">
+        <sg-icon slot="icon" name="settings" size="18"></sg-icon>
         Config
-      </bit-sidebar-item>
+      </sg-sidebar-item>
     </div>
-  </bit-sidebar>
+  </sg-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -375,43 +375,43 @@ Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or bran
 
 ## Disabled Items
 
-Set `disabled` on a `bit-sidebar-item` to prevent interaction.
+Set `disabled` on a `sg-sidebar-item` to prevent interaction.
 
 <ComponentPreview>
 
 ```html
-<bit-grid
+<sg-grid
   areas="'sidebar main'"
   fullwidth
   gap="none"
   style="--grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
-  <bit-sidebar label="App navigation" style="grid-area: sidebar;">
-    <bit-sidebar-group label="Options">
-      <bit-sidebar-item href="/available">
-        <bit-icon slot="icon" name="check-circle" size="18"></bit-icon>
+  <sg-sidebar label="App navigation" style="grid-area: sidebar;">
+    <sg-sidebar-group label="Options">
+      <sg-sidebar-item href="/available">
+        <sg-icon slot="icon" name="check-circle" size="18"></sg-icon>
         Available
-      </bit-sidebar-item>
-      <bit-sidebar-item href="/locked" disabled>
-        <bit-icon slot="icon" name="lock" size="18"></bit-icon>
+      </sg-sidebar-item>
+      <sg-sidebar-item href="/locked" disabled>
+        <sg-icon slot="icon" name="lock" size="18"></sg-icon>
         Locked (disabled)
-      </bit-sidebar-item>
-    </bit-sidebar-group>
-  </bit-sidebar>
+      </sg-sidebar-item>
+    </sg-sidebar-group>
+  </sg-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-</bit-grid>
+</sg-grid>
 ```
 
 </ComponentPreview>
 
 ## External Links
 
-When linking to external resources, use `target` and `rel` attributes on `bit-sidebar-item`.
+When linking to external resources, use `target` and `rel` attributes on `sg-sidebar-item`.
 
 ```html
-<bit-sidebar-item href="https://example.com" target="_blank" rel="noopener noreferrer">
-  <bit-icon slot="icon" name="globe" size="18"></bit-icon>
+<sg-sidebar-item href="https://example.com" target="_blank" rel="noopener noreferrer">
+  <sg-icon slot="icon" name="globe" size="18"></sg-icon>
   External Docs
-</bit-sidebar-item>
+</sg-sidebar-item>
 ```
 
 ## Imperative API
@@ -419,7 +419,7 @@ When linking to external resources, use `target` and `rel` attributes on `bit-si
 Collapse methods are exposed on the element instance.
 
 ```js
-const sidebar = document.querySelector('bit-sidebar');
+const sidebar = document.querySelector('sg-sidebar');
 
 sidebar.setCollapsed(true); // collapse to icon-only
 sidebar.setCollapsed(false); // expand to full width
@@ -434,7 +434,7 @@ sidebar.toggleMobile();
 ## Events
 
 ```js
-const sidebar = document.querySelector('bit-sidebar');
+const sidebar = document.querySelector('sg-sidebar');
 
 sidebar.addEventListener('collapsed-change', (e) => {
   console.log('Collapsed:', e.detail.collapsed, 'source:', e.detail.source);
@@ -444,7 +444,7 @@ sidebar.addEventListener('mobile-open-change', (e) => {
   console.log('Mobile drawer open:', e.detail.open, 'source:', e.detail.source);
 });
 
-const group = document.querySelector('bit-sidebar-group[collapsible]');
+const group = document.querySelector('sg-sidebar-group[collapsible]');
 
 group.addEventListener('toggle', (e) => {
   console.log('Group open:', e.detail.open);
@@ -462,14 +462,14 @@ group.addEventListener('toggle', (e) => {
 Override these CSS custom properties in your stylesheet to restyle the sidebar globally:
 
 ```css
-bit-sidebar {
+sg-sidebar {
   --sidebar-width: 18rem; /* expanded width */
   --sidebar-collapsed-width: 4rem; /* collapsed width */
   --sidebar-bg: var(--color-canvas); /* sidebar background */
   --sidebar-border-color: var(--color-contrast-300);
 }
 
-bit-sidebar-item {
+sg-sidebar-item {
   --sidebar-item-color: var(--color-contrast-700);
   --sidebar-item-hover-bg: var(--color-contrast-100);
   --sidebar-item-hover-color: var(--color-contrast-900);
@@ -481,7 +481,7 @@ bit-sidebar-item {
 
 ## API Reference
 
-### `bit-sidebar` Attributes
+### `sg-sidebar` Attributes
 
 | Attribute           | Type      | Default                | Description                                                  |
 | ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
@@ -493,23 +493,23 @@ bit-sidebar-item {
 | `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
-### `bit-sidebar` Slots
+### `sg-sidebar` Slots
 
 | Slot      | Description                                        |
 | --------- | -------------------------------------------------- |
 | `logo`    | Logo or icon, always visible at the top            |
 | `header`  | App name or branding text, hidden when collapsed   |
-| (default) | `bit-sidebar-group` or `bit-sidebar-item` elements |
+| (default) | `sg-sidebar-group` or `sg-sidebar-item` elements |
 | `footer`  | User info, theme toggles, or secondary actions     |
 
-### `bit-sidebar` Events
+### `sg-sidebar` Events
 
 | Event                | Detail                                                              | Description                                         |
 | -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
 | `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
 | `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the bottom-nav drawer open state changes |
 
-### `bit-sidebar` Methods
+### `sg-sidebar` Methods
 
 | Method               | Description                         |
 | -------------------- | ----------------------------------- |
@@ -519,7 +519,7 @@ bit-sidebar-item {
 | `closeMobile()`      | Close the bottom-nav drawer         |
 | `toggleMobile()`     | Toggle the bottom-nav drawer        |
 
-### `bit-sidebar` CSS Custom Properties
+### `sg-sidebar` CSS Custom Properties
 
 | Property                    | Description                 | Default  |
 | --------------------------- | --------------------------- | -------- |
@@ -530,7 +530,7 @@ bit-sidebar-item {
 
 ---
 
-### `bit-sidebar-group` Attributes
+### `sg-sidebar-group` Attributes
 
 | Attribute      | Type      | Default | Description                                               |
 | -------------- | --------- | ------- | --------------------------------------------------------- |
@@ -539,14 +539,14 @@ bit-sidebar-item {
 | `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
 | `open`         | `boolean` | —       | Controlled group open state                               |
 
-### `bit-sidebar-group` Slots
+### `sg-sidebar-group` Slots
 
 | Slot      | Description                                 |
 | --------- | ------------------------------------------- |
 | `icon`    | Optional icon displayed in the group header |
-| (default) | `bit-sidebar-item` elements                 |
+| (default) | `sg-sidebar-item` elements                 |
 
-### `bit-sidebar-group` Events
+### `sg-sidebar-group` Events
 
 | Event    | Detail              | Description                               |
 | -------- | ------------------- | ----------------------------------------- |
@@ -554,7 +554,7 @@ bit-sidebar-item {
 
 ---
 
-### `bit-sidebar-item` Attributes
+### `sg-sidebar-item` Attributes
 
 | Attribute  | Type      | Default | Description                                                |
 | ---------- | --------- | ------- | ---------------------------------------------------------- |
@@ -564,7 +564,7 @@ bit-sidebar-item {
 | `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
 | `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
 
-### `bit-sidebar-item` Slots
+### `sg-sidebar-item` Slots
 
 | Slot      | Description                                          |
 | --------- | ---------------------------------------------------- |
@@ -572,7 +572,7 @@ bit-sidebar-item {
 | (default) | Item label text                                      |
 | `end`     | Trailing content: badge, shortcut key, chevron, etc. |
 
-### `bit-sidebar-item` Parts
+### `sg-sidebar-item` Parts
 
 | Part         | Description                           |
 | ------------ | ------------------------------------- |
@@ -581,7 +581,7 @@ bit-sidebar-item {
 | `item-label` | The label text wrapper                |
 | `item-end`   | The trailing content wrapper          |
 
-### `bit-sidebar-item` CSS Custom Properties
+### `sg-sidebar-item` CSS Custom Properties
 
 | Property                      | Description                      |
 | ----------------------------- | -------------------------------- |
@@ -598,15 +598,15 @@ The sidebar follows WAI-ARIA navigation patterns and WCAG 2.2 guidelines.
 
 ### Navigation Landmark
 
-The `bit-sidebar` element renders a `<nav>` landmark with an `aria-label`. When a page has multiple navigation regions, ensure each has a unique descriptive label:
+The `sg-sidebar` element renders a `<nav>` landmark with an `aria-label`. When a page has multiple navigation regions, ensure each has a unique descriptive label:
 
 ```html
-<bit-sidebar label="Main navigation">…</bit-sidebar> <bit-sidebar label="Documentation sidebar">…</bit-sidebar>
+<sg-sidebar label="Main navigation">…</sg-sidebar> <sg-sidebar label="Documentation sidebar">…</sg-sidebar>
 ```
 
 ### Current Page
 
-`bit-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location.
+`sg-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location.
 
 ### Collapsed State
 
@@ -616,7 +616,7 @@ When the sidebar is collapsed to icon-only mode:
 - The toggle button updates `aria-label` and `aria-expanded` to reflect the current state.
 - Items remain keyboard reachable; only the visual label is hidden.
 
-**Best practice:** pair icon-only collapsed items with tooltips using `bit-tooltip` to surface the label for sighted keyboard and pointer users.
+**Best practice:** pair icon-only collapsed items with tooltips using `sg-tooltip` to surface the label for sighted keyboard and pointer users.
 
 ### Collapsible Groups
 
@@ -636,13 +636,13 @@ Navigation within the sidebar uses native DOM focus order — no roving tabindex
 
 **Do:**
 
-- Provide a descriptive `label` on `bit-sidebar` when the page has other `<nav>` elements.
+- Provide a descriptive `label` on `sg-sidebar` when the page has other `<nav>` elements.
 - Set `active` on the item matching the current URL on every page load.
-- Use `bit-sidebar-group` to group semantically related items — it adds a visible label and an implicit `role="list"` on the items container.
+- Use `sg-sidebar-group` to group semantically related items — it adds a visible label and an implicit `role="list"` on the items container.
 - Add tooltips to icon-only items when the sidebar can collapse.
 
 **Don't:**
 
-- Nest `bit-sidebar` inside another `bit-sidebar`.
+- Nest `sg-sidebar` inside another `sg-sidebar`.
 - Set `active` on more than one item simultaneously — it breaks `aria-current` semantics.
 - Use `disabled` as a teaching mechanism. If an item is permanently unavailable, remove it from the sidebar.

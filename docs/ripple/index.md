@@ -28,6 +28,7 @@ exports:
     installDevTools,
     getSignalName,
     getDevToolsHook,
+    StateError,
   ]
 ---
 

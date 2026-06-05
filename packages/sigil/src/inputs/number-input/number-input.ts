@@ -12,13 +12,13 @@ import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './number-input.css?inline';
 
-export type BitNumberInputEvents = {
+export type SgNumberInputEvents = {
   change: { originalEvent?: Event; value: number | null };
   input: { originalEvent?: Event; value: number | null };
 };
 
 /** Number Input props */
-export type BitNumberInputProps = {
+export type SgNumberInputProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -66,7 +66,7 @@ export type BitNumberInputProps = {
 /**
  * A numeric spin-button input with +/− controls, min/max clamping, and full keyboard support.
  *
- * @element bit-number-input
+ * @element sg-number-input
  *
  * @attr {number} value - Current value
  * @attr {number} min - Minimum value
@@ -77,12 +77,18 @@ export type BitNumberInputProps = {
  * @attr {boolean} readonly - Read-only mode
  * @attr {string} label - Visible label
  * @attr {string} name - Form field name
- * @attr {string} color - Theme color
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} placeholder - Input placeholder
  *
  * @fires change - On committed value change. detail: { value: number | null, originalEvent?: Event }
  * @fires input - On every keystroke. detail: { value: number | null, originalEvent?: Event }
+ *
+ * @slot prefix - Content before the input (e.g. icon)
+ * @slot suffix - Content after the input (e.g. unit label)
+ * @slot label - Custom label content
+ * @slot helper - Custom helper text content
+ * @slot error - Custom error content
  *
  * @cssprop --number-input-height - Control height
  * @cssprop --number-input-border-color - Border color
@@ -96,11 +102,11 @@ export type BitNumberInputProps = {
  * @part increment-btn - Increment stepper button.
  * @example
  * ```html
- * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>
+ * <sg-number-input label="Quantity" value="1" min="1" max="99" step="1"></sg-number-input>
  * ```
  */
-export const NUMBER_INPUT_TAG = 'bit-number-input' as const;
-define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
+export const NUMBER_INPUT_TAG = 'sg-number-input' as const;
+define<SgNumberInputProps, SgNumberInputEvents>(NUMBER_INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -171,9 +177,9 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
       step: props.step,
     });
 
-    // Ref to the bit-input host element
+    // Ref to the sg-input host element
     const bitInputRef = ref<HTMLElement>();
-    // Raw inner <input> extracted from bit-input's shadow root
+    // Raw inner <input> extracted from sg-input's shadow root
     let inputEl: HTMLInputElement | null = null;
 
     onElement(bitInputRef, (bitInputEl) => {
@@ -258,9 +264,9 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
           aria-label="Decrease"
           ?disabled="${() => isNonInteractive.value || spinner.atMin()}"
           @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
-          <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+          <sg-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></sg-icon>
         </button>
-        <bit-input
+        <sg-input
           class="field"
           part="field"
           ref="${bitInputRef}"
@@ -277,18 +283,18 @@ define<BitNumberInputProps, BitNumberInputEvents>(NUMBER_INPUT_TAG, {
           ?disabled="${isDisabled}"
           ?readonly="${isReadonly}"
           ?fullwidth="${() => false}">
-        </bit-input>
+        </sg-input>
         <button
           type="button"
           part="increment-btn"
           aria-label="Increase"
           ?disabled="${() => isNonInteractive.value || spinner.atMax()}"
           @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}">
-          <bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+          <sg-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></sg-icon>
         </button>
       </div>
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [disabledStateMixin(), styles],
+  styles: [disabledStateMixin, styles],
 });

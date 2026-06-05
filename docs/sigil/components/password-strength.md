@@ -23,7 +23,7 @@ For entropy-aware scoring with advanced dictionaries and pattern detection, comp
 ## Basic Usage
 
 ```html
-<bit-password-strength value="Tr0ub4dor&3"></bit-password-strength>
+<sg-password-strength value="Tr0ub4dor&3"></sg-password-strength>
 
 <script type="module">
   import '@vielzeug/sigil/password-strength';
@@ -37,8 +37,8 @@ Bind the password meter to your password input in `input` events.
 <ComponentPreview vertical>
 
 ```html
-<bit-input id="password" type="password" label="Password"></bit-input>
-<bit-password-strength id="meter-1"></bit-password-strength>
+<sg-input id="password" type="password" label="Password"></sg-input>
+<sg-password-strength id="meter-1"></sg-password-strength>
 
 <script type="module">
   import '@vielzeug/sigil/input';
@@ -66,7 +66,7 @@ If your backend or client uses a dedicated scoring engine, pass normalized score
 <ComponentPreview vertical>
 
 ```html
-<bit-password-strength score="3" label="Account password strength"></bit-password-strength>
+<sg-password-strength score="3" label="Account password strength"></sg-password-strength>
 ```
 
 </ComponentPreview>
@@ -78,7 +78,7 @@ Set the property `show-label` to `false` if you only want the visual bar while p
 <ComponentPreview vertical>
 
 ```html
-<bit-password-strength id="meter-2" value="Abcdef12!"></bit-password-strength>
+<sg-password-strength id="meter-2" value="Abcdef12!"></sg-password-strength>
 
 <script>
   document.getElementById('meter-2')['show-label'] = false;

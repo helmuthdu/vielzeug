@@ -1,5 +1,5 @@
-// ── Lifecycle bridge ────────────────────────────────────────────────────────────
-export { componentSignal } from './scope';
+// ── Craft adapter ─────────────────────────────────────────────────────────────
+export { lifecycleSignal } from './craft';
 
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
@@ -11,11 +11,9 @@ export {
   type CounterState,
   type ErrorHelperOptions,
   type ErrorHelperState,
-  type FieldAriaState,
   type FieldHandle,
   type FieldOptions,
   type LabelPlacement,
-  type LabelState,
   type ValidationTrigger,
 } from './field-base';
 
@@ -127,11 +125,7 @@ export {
 // ── Dialog focus ─────────────────────────────────────────────────────────────
 export { createDialogFocusControl, type DialogFocusControl, type DialogFocusControlOptions } from './dialog-focus';
 
-// ── ID generation ────────────────────────────────────────────────────────────
-export { createStableId } from '@vielzeug/craft';
-
 // ── DOM utilities ─────────────────────────────────────────────────────────────
-export { setBooleanAttribute, setMaybeAttribute } from './attrs';
 export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
 
 // ── Number utilities ──────────────────────────────────────────────────────────
@@ -145,6 +139,11 @@ export {
   type DataGridControlOptions,
   type SelectionMode,
   type SortDirection,
-  type SortMode,
   type SortState,
 } from './datagrid';
+
+// ── Typeahead ─────────────────────────────────────────────────────────────────
+export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+export { syncedSignal } from './utils';

@@ -13,10 +13,10 @@ import {
 } from '@vielzeug/craft';
 
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
-import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
+import type { SgComboboxEvents, SgComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
 import {
-  componentSignal,
+  lifecycleSignal,
   createChoiceField,
   createInteraction,
   createOptionList,
@@ -30,12 +30,12 @@ import '../../feedback/chip/chip';
 import '../input/input';
 import componentStyles from './combobox.css?inline';
 
-export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
+export type { SgComboboxEvents, SgComboboxProps } from './combobox.types';
 
 /**
  * A searchable select field with multiple selection, custom option creation, and large-list support.
  *
- * @element bit-combobox
+ * @element sg-combobox
  *
  * @attr {string} value - Selected value(s). Use comma-separated for multiple.
  * @attr {boolean} multiple - Enable multiple selection
@@ -69,15 +69,15 @@ export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
  * @part helper-text - Helper text displayed below the field
  * @example
  * ```html
- * <bit-combobox label="Country" name="country">
- *   <bit-combobox-option value="us">United States</bit-combobox-option>
- *   <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
- *   <bit-combobox-option value="de" disabled>Germany</bit-combobox-option>
- * </bit-combobox>
+ * <sg-combobox label="Country" name="country">
+ *   <sg-combobox-option value="us">United States</sg-combobox-option>
+ *   <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+ *   <sg-combobox-option value="de" disabled>Germany</sg-combobox-option>
+ * </sg-combobox>
  * ```
  */
-export const COMBOBOX_TAG = 'bit-combobox' as const;
-define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
+export const COMBOBOX_TAG = 'sg-combobox' as const;
+define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
     color: prop.string<ThemeColor>(),
@@ -106,14 +106,14 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
 
     // Element refs needed by the composite option-list factory.
     let inputEl: HTMLInputElement | null = null;
-    let fieldEl: HTMLElement | null = null; // set to the bit-input host once it mounts
+    let fieldEl: HTMLElement | null = null; // set to the sg-input host once it mounts
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
 
-    // Ref to the bit-input host; resolved when the template renders.
+    // Ref to the sg-input host; resolved when the template renders.
     const bitInputRef = ref<HTMLElement>();
 
-    const abortSignal = componentSignal(onCleanup);
+    const abortSignal = lifecycleSignal(onCleanup);
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
@@ -132,11 +132,6 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
     const filteredOptions = signal<ComboboxOptionItem[]>([]);
 
     const optionList = createOptionList<ComboboxOptionItem>({
-      behavior: {
-        isDisabled: () => choice.disabled.value,
-        manageAriaExpanded: false,
-        restoreFocus: false,
-      },
       dom: {
         getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
@@ -144,6 +139,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
         getReference: () => fieldEl,
         getTrigger: () => inputEl,
       },
+      isDisabled: () => choice.disabled.value,
       items: {
         getItems: () => filteredOptions.value,
         getOptionId: (index) => `${choice.fieldId}-opt-${index}`,
@@ -158,6 +154,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
         },
         onOpen: (reason) => emit('open', { reason }),
       },
+      restoreFocus: false,
       signal: abortSignal,
     });
 
@@ -675,7 +672,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       if (isOpen.value) positioner.update();
     });
 
-    // Once bit-input is in the DOM, grab its inner <input> from its shadow root
+    // Once sg-input is in the DOM, grab its inner <input> from its shadow root
     // and attach all combobox-specific ARIA + event handlers imperatively.
     // MUST be registered before the ARIA effects below so inputEl is set first
     // when bitInputRef fires (effects run in registration order).
@@ -716,7 +713,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
       };
     });
 
-    // Reactively sync combobox-specific ARIA attrs that bit-input doesn't manage.
+    // Reactively sync combobox-specific ARIA attrs that sg-input doesn't manage.
     // Uses bitInputRef (a signal) as the gate so the effect re-runs when the
     // inner input mounts — inputEl is a plain variable and would not trigger re-runs.
     effect(() => {
@@ -762,7 +759,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
 
     return html`
       <slot></slot>
-      <bit-input
+      <sg-input
         class="trigger"
         ref=${bitInputRef}
         :label="${() => props.label.value ?? ''}"
@@ -788,7 +785,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
             ${() =>
               (isMultiple() ? selectedValues.value : []).map(
                 (value) => html`
-                  <bit-chip
+                  <sg-chip
                     value=${value}
                     label=${allOptions.value.find((option) => option.value === value)?.label ?? value}
                     mode="removable"
@@ -797,7 +794,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
                     color="${props.color}"
                     @remove=${removeChip}>
                     ${allOptions.value.find((option) => option.value === value)?.label ?? value}
-                  </bit-chip>
+                  </sg-chip>
                 `,
               )}
           </span>
@@ -811,16 +808,16 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
             tabindex="-1"
             ?hidden=${() => !hasValue()}
             @click="${clearValue}">
-            <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+            <sg-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></sg-icon>
           </button>
           <span class="combobox-suffix-end">
             <span class="loader"></span>
             <span class="chevron">
-              <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+              <sg-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
             </span>
           </span>
         </span>
-      </bit-input>
+      </sg-input>
       <div
         class="dropdown"
         part="dropdown"
@@ -877,7 +874,7 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
                 ?data-disabled=${option.disabled}>
                 <span>${option.label}</span>
                 <span class="option-check" aria-hidden="true"
-                  ><bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
+                  ><sg-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></sg-icon
                 ></span>
               </div>`;
             });
@@ -888,4 +885,4 @@ define<BitComboboxProps, BitComboboxEvents>(COMBOBOX_TAG, {
   },
   shadow: { delegatesFocus: true },
   styles: [reducedMotionMixin, componentStyles],
-}) as unknown as AddEventListeners<BitComboboxEvents>;
+}) as unknown as AddEventListeners<SgComboboxEvents>;

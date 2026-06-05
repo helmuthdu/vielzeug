@@ -12,10 +12,10 @@ vi.mock('../../styles', async (importOriginal) => {
   };
 });
 
-describe('bit-checkbox-group', () => {
+describe('sg-checkbox-group', () => {
   let fixture: Fixture<HTMLElement>;
   const getCheckboxes = (): HTMLElement[] =>
-    Array.from(fixture.element.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+    Array.from(fixture.element.getElementsByTagName('sg-checkbox')) as HTMLElement[];
 
   beforeAll(async () => {
     await (() => import('../checkbox/checkbox'))();
@@ -27,14 +27,14 @@ describe('bit-checkbox-group', () => {
   });
 
   const checkboxHtml = `
-    <bit-checkbox value="a">A</bit-checkbox>
-    <bit-checkbox value="b">B</bit-checkbox>
-    <bit-checkbox value="c">C</bit-checkbox>
+    <sg-checkbox value="a">A</sg-checkbox>
+    <sg-checkbox value="b">B</sg-checkbox>
+    <sg-checkbox value="c">C</sg-checkbox>
   `;
 
   describe('Core Functionality', () => {
     it('renders semantic fieldset and grouped items', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { label: 'Choose options' },
         html: checkboxHtml,
       });
@@ -45,7 +45,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('syncs checked state to slotted checkboxes from values attribute', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { values: 'a,c' },
         html: checkboxHtml,
       });
@@ -60,7 +60,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('propagates color to slotted checkboxes', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { color: 'primary' },
         html: checkboxHtml,
       });
@@ -75,7 +75,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('propagates size to slotted checkboxes', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { size: 'lg' },
         html: checkboxHtml,
       });
@@ -90,7 +90,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('updates slotted checkbox size when group size changes', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { size: 'sm' },
         html: checkboxHtml,
       });
@@ -108,7 +108,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('propagates disabled to slotted checkboxes', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { disabled: '' },
         html: checkboxHtml,
       });
@@ -123,7 +123,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('emits change when slotted checkbox dispatches change', async () => {
-      fixture = await mount('bit-checkbox-group', { html: checkboxHtml });
+      fixture = await mount('sg-checkbox-group', { html: checkboxHtml });
       await fixture.flush();
       await fixture.flush();
 
@@ -152,7 +152,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('toggles value off if already checked', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { values: 'a,b' },
         html: checkboxHtml,
       });
@@ -182,7 +182,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('toggles value when clicking slotted checkbox', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { values: 'a' },
         html: checkboxHtml,
       });
@@ -200,7 +200,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('submits the current values as a form-associated field', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { name: 'choices', values: 'a,c' },
         html: checkboxHtml,
       });
@@ -219,7 +219,7 @@ describe('bit-checkbox-group', () => {
 
   describe('Accessibility', () => {
     it('uses group role with required semantics', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { label: 'Choose options', required: '' },
         html: checkboxHtml,
       });
@@ -233,7 +233,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('shows required asterisk when required is set', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { label: 'Options', required: '' },
         html: checkboxHtml,
       });
@@ -243,7 +243,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('associates error text through aria-errormessage', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { error: 'Please select at least one.', label: 'Pick one' },
         html: checkboxHtml,
       });
@@ -257,7 +257,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('associates helper text through aria-describedby', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { helper: 'You can choose multiple.', label: 'Pick one' },
         html: checkboxHtml,
       });
@@ -270,7 +270,7 @@ describe('bit-checkbox-group', () => {
     });
 
     it('hides legend when no label is set', async () => {
-      fixture = await mount('bit-checkbox-group', { html: checkboxHtml });
+      fixture = await mount('sg-checkbox-group', { html: checkboxHtml });
       await fixture.flush();
 
       expect(fixture.query('legend[hidden]')).toBeTruthy();
@@ -279,12 +279,12 @@ describe('bit-checkbox-group', () => {
 
   describe('Orientation', () => {
     it('defaults to vertical orientation', async () => {
-      fixture = await mount('bit-checkbox-group', { html: checkboxHtml });
+      fixture = await mount('sg-checkbox-group', { html: checkboxHtml });
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     });
 
     it('applies horizontal orientation', async () => {
-      fixture = await mount('bit-checkbox-group', {
+      fixture = await mount('sg-checkbox-group', {
         attrs: { orientation: 'horizontal' },
       });
       expect(fixture.element.getAttribute('orientation')).toBe('horizontal');

@@ -25,7 +25,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 <ComponentPreview vertical height="340px">
 
 ```html
-<bit-calendar></bit-calendar>
+<sg-calendar></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -35,7 +35,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 <ComponentPreview vertical height="340px">
 
 ```html
-<bit-calendar value="2025-06-15"></bit-calendar>
+<sg-calendar value="2025-06-15"></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -45,11 +45,11 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 <ComponentPreview vertical height="340px">
 
 ```html
-<bit-calendar
+<sg-calendar
   value="2025-06-15"
   min="2025-06-01"
   max="2025-06-30">
-</bit-calendar>
+</sg-calendar>
 ```
 
 </ComponentPreview>
@@ -59,7 +59,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 <ComponentPreview vertical height="340px">
 
 ```html
-<bit-calendar weekend-days="0,6"></bit-calendar>
+<sg-calendar weekend-days="0,6"></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -70,8 +70,8 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-  <bit-calendar value="2025-06-10" color="primary"></bit-calendar>
-  <bit-calendar value="2025-06-10" color="secondary"></bit-calendar>
+  <sg-calendar value="2025-06-10" color="primary"></sg-calendar>
+  <sg-calendar value="2025-06-10" color="secondary"></sg-calendar>
 </div>
 ```
 
@@ -81,9 +81,9 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-  <bit-calendar value="2025-06-10" color="success"></bit-calendar>
-  <bit-calendar value="2025-06-10" color="warning"></bit-calendar>
-  <bit-calendar value="2025-06-10" color="error"></bit-calendar>
+  <sg-calendar value="2025-06-10" color="success"></sg-calendar>
+  <sg-calendar value="2025-06-10" color="warning"></sg-calendar>
+  <sg-calendar value="2025-06-10" color="error"></sg-calendar>
 </div>
 ```
 
@@ -100,7 +100,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 <ComponentPreview vertical height="380px">
 
 ```html
-<bit-calendar id="cal-events" value="2025-06-15"></bit-calendar>
+<sg-calendar id="cal-events" value="2025-06-15"></sg-calendar>
 <script>
   document.getElementById('cal-events').events = [
     { id: '1', date: '2025-06-10', label: 'Team standup', color: 'var(--color-primary)' },
@@ -121,7 +121,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 <ComponentPreview vertical height="720px">
 
 ```html
-<bit-calendar id="cal-exp-events" expanded value="2025-06-15"></bit-calendar>
+<sg-calendar id="cal-exp-events" expanded value="2025-06-15"></sg-calendar>
 <script>
   document.getElementById('cal-exp-events').events = [
     { id: '1', date: '2025-06-10', label: 'Team standup', color: 'var(--color-primary)' },
@@ -142,7 +142,7 @@ When a day has more than 3 events, the first 3 are shown and the rest are summar
 <ComponentPreview vertical height="380px">
 
 ```html
-<bit-calendar id="cal-overflow" value="2025-06-15"></bit-calendar>
+<sg-calendar id="cal-overflow" value="2025-06-15"></sg-calendar>
 <script>
   document.getElementById('cal-overflow').events = [
     { id: '1', date: '2025-06-15', label: 'Standup', color: 'var(--color-primary)' },
@@ -159,7 +159,7 @@ When a day has more than 3 events, the first 3 are shown and the rest are summar
 <ComponentPreview vertical height="720px">
 
 ```html
-<bit-calendar id="cal-overflow-exp" expanded value="2025-06-15"></bit-calendar>
+<sg-calendar id="cal-overflow-exp" expanded value="2025-06-15"></sg-calendar>
 <script>
   document.getElementById('cal-overflow-exp').events = [
     { id: '1', date: '2025-06-15', label: 'Standup', color: 'var(--color-primary)' },
@@ -180,7 +180,7 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 <ComponentPreview vertical height="680px">
 
 ```html
-<bit-calendar expanded value="2025-06-15"></bit-calendar>
+<sg-calendar expanded value="2025-06-15"></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -188,7 +188,7 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 <ComponentPreview vertical height="680px">
 
 ```html
-<bit-calendar expanded value="2025-06-15" color="primary"></bit-calendar>
+<sg-calendar expanded value="2025-06-15" color="primary"></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -198,7 +198,7 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 <ComponentPreview vertical height="340px">
 
 ```html
-<bit-calendar value="2025-06-15" disabled></bit-calendar>
+<sg-calendar value="2025-06-15" disabled></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -209,8 +209,8 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-  <bit-calendar locale="fr-FR" value="2025-06-15"></bit-calendar>
-  <bit-calendar locale="ar-SA" value="2025-06-15"></bit-calendar>
+  <sg-calendar locale="fr-FR" value="2025-06-15"></sg-calendar>
+  <sg-calendar locale="ar-SA" value="2025-06-15"></sg-calendar>
 </div>
 ```
 
@@ -222,7 +222,7 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 ```html
 <form id="booking-form">
-  <bit-calendar name="appointment" value="2025-06-15" required></bit-calendar>
+  <sg-calendar name="appointment" value="2025-06-15" required></sg-calendar>
   <button type="submit" style="margin-top:1rem">Submit</button>
 </form>
 <script>
@@ -296,7 +296,7 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 ## Accessibility
 
-`bit-calendar` is built with first-class accessibility:
+`sg-calendar` is built with first-class accessibility:
 
 - **Roles**: the host element carries `role="group"` and `aria-label` (the currently visible month/year). The day grid uses `role="grid"` with `role="gridcell"` on each day cell.
 - **Selection state**: selected days have `aria-selected="true"`; unselected have `aria-selected="false"`.

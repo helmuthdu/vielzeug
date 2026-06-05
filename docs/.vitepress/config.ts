@@ -22,7 +22,7 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
         return [path, items];
       }
 
-      const normalizedItems = items.map((item) => {
+      const normalizedItems = (items as any).map((item: any) => {
         if (!('items' in item)) return item;
 
         return {
@@ -1702,7 +1702,7 @@ export default defineConfig({
   vue: {
     template: {
       compilerOptions: {
-        isCustomElement: (tag) => tag.startsWith('bit-'),
+        isCustomElement: (tag) => tag.startsWith('sg-'),
       },
     },
   },

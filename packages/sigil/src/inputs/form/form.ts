@@ -7,7 +7,7 @@ import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
 
 /** Form component properties */
-export type BitFormProps = {
+export type SgFormProps = {
   /** Disabled state */
   disabled?: boolean;
   /** No validate */
@@ -23,7 +23,7 @@ export type BitFormProps = {
 };
 
 /** Events emitted by the form component */
-export type BitFormEvents = {
+export type SgFormEvents = {
   /** Emitted when the form is reset */
   reset: { originalEvent: Event };
   /** Emitted when the form is submitted */
@@ -31,10 +31,10 @@ export type BitFormEvents = {
 };
 
 /**
- * A wrapper for standard HTML form that provides context to child bit-* form fields.
+ * A wrapper for standard HTML form that provides context to child sg-* form fields.
  * Manages shared state like size, variant, and validation timing.
  *
- * @element bit-form
+ * @element sg-form
  *
  * @attr {boolean} disabled - Disable all child fields
  * @attr {boolean} novalidate - Disable native browser validation
@@ -49,18 +49,18 @@ export type BitFormEvents = {
  * @part form - Form root element.
  * @example
  * ```html
- * <bit-form @submit=${(e) => console.log(e.detail.formData)}>
- *   <bit-input name="username" label="Username" required></bit-input>
- *   <bit-select name="role" label="Role">
+ * <sg-form @submit=${(e) => console.log(e.detail.formData)}>
+ *   <sg-input name="username" label="Username" required></sg-input>
+ *   <sg-select name="role" label="Role">
  *     <option value="user">User</option>
  *     <option value="admin">Admin</option>
- *   </bit-select>
- *   <bit-button type="submit">Submit</bit-button>
- * </bit-form>
+ *   </sg-select>
+ *   <sg-button type="submit">Submit</sg-button>
+ * </sg-form>
  * ```
  */
-export const FORM_TAG = 'bit-form' as const;
-define<BitFormProps, BitFormEvents>(FORM_TAG, {
+export const FORM_TAG = 'sg-form' as const;
+define<SgFormProps, SgFormEvents>(FORM_TAG, {
   props: {
     disabled: prop.bool(false),
     novalidate: prop.bool(false),
@@ -74,7 +74,7 @@ define<BitFormProps, BitFormEvents>(FORM_TAG, {
 
     // Reflect orientation to host so CSS and tests can read it
     bind({ attr: { orientation: props.orientation } });
-    // Provide context to all child bit-* form fields
+    // Provide context to all child sg-* form fields
     provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
       size: props.size,

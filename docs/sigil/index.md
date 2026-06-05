@@ -5,7 +5,7 @@ package: sigil
 category: ui-components
 keywords: [web-components, accessible, themeable, ui, components, design-system]
 related: [craft, orbit, forge]
-exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
+exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
 
 **Package:** `@vielzeug/sigil` &nbsp;·&nbsp; **Category:** Ui Components
 
-**Key exports:** `bit-button`, `bit-input`, `bit-dialog`, `bit-select`, `bit-form`
+**Key exports:** `sg-button`, `sg-input`, `sg-dialog`, `sg-select`, `sg-form`
 
 **When to use:** Production-ready accessible UI components without building from scratch. Drop-in web components that work in any framework.
 
@@ -62,12 +62,12 @@ import '@vielzeug/sigil/card';
 ```
 
 ```html
-<bit-button variant="solid" color="primary">Save</bit-button>
-<bit-input label="Email" type="email" required></bit-input>
-<bit-card padding="lg">
+<sg-button variant="solid" color="primary">Save</sg-button>
+<sg-input label="Email" type="email" required></sg-input>
+<sg-card padding="lg">
   <span slot="header">Account</span>
   <p>Card content goes here.</p>
-</bit-card>
+</sg-card>
 ```
 
 ```ts
@@ -90,17 +90,17 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 ### Components
 
-**Content:** `bit-avatar`, `bit-breadcrumb`, `bit-card`, `bit-pagination`, `bit-separator`, `bit-table`, `bit-text`
+**Content:** `sg-avatar`, `sg-breadcrumb`, `sg-card`, `sg-pagination`, `sg-separator`, `sg-table`, `sg-text`
 
-**Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
+**Disclosure:** `sg-accordion`, `sg-accordion-item`, `sg-tabs`, `sg-tab-item`, `sg-tab-panel`
 
-**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-password-strength`, `bit-progress`, `bit-skeleton`, `bit-toast`
+**Feedback:** `sg-alert`, `sg-async`, `sg-badge`, `sg-chip`, `sg-password-strength`, `sg-progress`, `sg-skeleton`, `sg-toast`
 
-**Inputs:** `bit-button`, `bit-button-group`, `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
+**Inputs:** `sg-button`, `sg-button-group`, `sg-checkbox`, `sg-checkbox-group`, `sg-combobox`, `sg-file-input`, `sg-form`, `sg-input`, `sg-number-input`, `sg-otp-input`, `sg-radio`, `sg-radio-group`, `sg-rating`, `sg-select`, `sg-slider`, `sg-switch`, `sg-textarea`
 
-**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-navbar`, `bit-sidebar`
+**Layout:** `sg-box`, `sg-grid`, `sg-grid-item`, `sg-navbar`, `sg-sidebar`
 
-**Overlay:** `bit-dialog`, `bit-drawer`, `bit-menu`, `bit-popover`, `bit-tooltip`
+**Overlay:** `sg-dialog`, `sg-drawer`, `sg-menu`, `sg-popover`, `sg-tooltip`
 
 ## Why Sigil?
 
@@ -114,7 +114,7 @@ Every project needs UI primitives. Sigil provides accessible web components that
 </button>
 
 <!-- After — Sigil -->
-<bit-button variant="primary" loading>Save</bit-button>
+<sg-button variant="primary" loading>Save</sg-button>
 ```
 
 | Feature            | Sigil                                       | Shoelace | Material Web |
@@ -152,13 +152,16 @@ Every project needs UI primitives. Sigil provides accessible web components that
 - Import `@vielzeug/sigil/styles` before rendering components.
 - For SSR, render placeholders server-side and hydrate components only on the client.
 
-## See Also
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [Craft](/craft/)
-- [Orbit](/orbit/)
-- [Forge](/forge/)
+
+## See Also
+
+- [Craft](/craft/) — Web component runtime that powers Sigil
+- [Orbit](/orbit/) — Floating UI positioning used in Sigil's overlays
+- [Forge](/forge/) — Form state management for use with Sigil inputs
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

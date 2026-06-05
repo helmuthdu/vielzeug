@@ -1,13 +1,24 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { computed, define, effect, html, onMounted, prop, syncAria, watch } from '@vielzeug/craft';
+import {
+  computed,
+  createStableId,
+  define,
+  effect,
+  html,
+  onCleanup,
+  onMounted,
+  prop,
+  syncAria,
+  watch,
+} from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
+  lifecycleSignal,
   createInteraction,
   createOptionList,
-  createStableId,
   type DropdownCloseReason,
   type OverlayOpenDetail,
 } from '../../headless';
@@ -24,22 +35,22 @@ export interface MenuSelectDetail {
   checked?: boolean;
 }
 
-export type BitMenuItemType = 'checkbox' | 'radio';
+export type SgMenuItemType = 'checkbox' | 'radio';
 
-export type BitMenuEvents = {
+export type SgMenuEvents = {
   close: { reason: DropdownCloseReason };
   open: OverlayOpenDetail;
   select: MenuSelectDetail;
 };
 
-export type BitMenuItemProps = {
+export type SgMenuItemProps = {
   checked?: boolean;
   disabled?: boolean;
-  type?: BitMenuItemType;
+  type?: SgMenuItemType;
   value?: string;
 };
 
-export type BitMenuProps = {
+export type SgMenuProps = {
   color?: ThemeColor;
   disabled?: boolean;
   placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
@@ -51,9 +62,9 @@ export type BitMenuProps = {
 // ── Menu Item Component ─────────────────────────────────────────────────────────────
 
 /**
- * A selectable action item used inside `<bit-menu>`.
+ * A selectable action item used inside `<sg-menu>`.
  *
- * @element bit-menu-item
+ * @element sg-menu-item
  *
  * @attr {boolean} checked - Checked state for `checkbox` and `radio` item types
  * @attr {boolean} disabled - Disables selection and pointer interaction
@@ -62,13 +73,21 @@ export type BitMenuProps = {
  *
  * @slot - Item label/content
  * @slot icon - Optional leading icon content
+ *
+ * @example
+ * ```html
+ * <sg-menu-item value="edit">Edit</sg-menu-item>
+ * <sg-menu-item value="delete" disabled>Delete</sg-menu-item>
+ * <sg-menu-item type="checkbox" value="wrap" checked>Word wrap</sg-menu-item>
+ * <sg-menu-item type="radio" value="left">Align left</sg-menu-item>
+ * ```
  */
-export const MENU_ITEM_TAG = 'bit-menu-item' as const;
-define<BitMenuItemProps>(MENU_ITEM_TAG, {
+export const MENU_ITEM_TAG = 'sg-menu-item' as const;
+define<SgMenuItemProps>(MENU_ITEM_TAG, {
   props: {
     checked: prop.bool(false),
     disabled: prop.bool(false),
-    type: prop.string<BitMenuItemType>(),
+    type: prop.string<SgMenuItemType>(),
     value: prop.string(),
   },
   setup(props) {
@@ -120,11 +139,18 @@ define<BitMenuItemProps>(MENU_ITEM_TAG, {
 // ── Menu Separator ─────────────────────────────────────────────────────────────
 
 /**
- * Visual separator used to group menu items.
+ * Visual separator used to group menu items inside `<sg-menu>`.
  *
- * @element bit-menu-separator
+ * @element sg-menu-separator
+ *
+ * @example
+ * ```html
+ * <sg-menu-item value="cut">Cut</sg-menu-item>
+ * <sg-menu-separator></sg-menu-separator>
+ * <sg-menu-item value="paste">Paste</sg-menu-item>
+ * ```
  */
-export const SEPARATOR_TAG = 'bit-menu-separator' as const;
+export const SEPARATOR_TAG = 'sg-menu-separator' as const;
 define(SEPARATOR_TAG, {
   setup() {
     return html``;
@@ -134,25 +160,27 @@ define(SEPARATOR_TAG, {
 
 // ── Menu Component ─────────────────────────────────────────────────────────────
 
-const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
+const isCheckableItemType = (value: string | null): value is SgMenuItemType =>
   value === 'checkbox' || value === 'radio';
 
 /**
  * Action dropdown menu triggered by a slotted trigger element.
  *
- * @element bit-menu
+ * @element sg-menu
+ * @element sg-menu-item - Clickable menu option (place in default slot)
+ * @element sg-menu-separator - Visual divider between menu groups
  *
- * @attr {string} color - Theme color variant for menu styling
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {boolean} disabled - Disables opening and keyboard interaction
- * @attr {string} placement - Floating panel placement around the trigger
- * @attr {string} size - Size variant propagated to menu styling tokens
+ * @attr {string} placement - Panel placement: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end' (default: 'bottom-start')
+ * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  *
- * @fires open - Fired when the menu opens (`detail.reason` explains source)
- * @fires close - Fired when the menu closes (`detail.reason` explains source)
- * @fires select - Fired when an item is selected (`detail.value`, optional `detail.checked`)
+ * @fires open - Fired when the menu opens. detail: { reason: 'trigger' | 'programmatic' }
+ * @fires close - Fired when the menu closes. detail: { reason: 'escape' | 'outsideClick' | 'programmatic' | 'trigger' }
+ * @fires select - Fired when an item is selected. detail: { value: string, checked?: boolean }
  *
  * @slot trigger - Trigger element that toggles menu visibility
- * @slot - Menu content (`<bit-menu-item>` and `<bit-menu-separator>`)
+ * @slot - Menu content (`<sg-menu-item>` and `<sg-menu-separator>`)
  *
  * @part panel - Floating menu panel container
  *
@@ -165,15 +193,15 @@ const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
  *
  * @example
  * ```html
- * <bit-menu>
+ * <sg-menu>
  *   <button slot="trigger">Actions</button>
- *   <bit-menu-item value="edit">Edit</bit-menu-item>
- *   <bit-menu-item value="delete">Delete</bit-menu-item>
- * </bit-menu>
+ *   <sg-menu-item value="edit">Edit</sg-menu-item>
+ *   <sg-menu-item value="delete">Delete</sg-menu-item>
+ * </sg-menu>
  * ```
  */
-export const MENU_TAG = 'bit-menu' as const;
-define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
+export const MENU_TAG = 'sg-menu' as const;
+define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -186,13 +214,14 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
   setup(props, { bind, el, emit, slots }) {
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
+    const abortSignal = lifecycleSignal(onCleanup);
     let triggerEl: HTMLElement | null = null;
     let panelEl: HTMLElement | null = null;
     let cleanupTrigger: (() => void) | null = null;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function getItems(): HTMLElement[] {
-      return Array.from(el.querySelectorAll<HTMLElement>('bit-menu-item:not([disabled])'));
+      return Array.from(el.querySelectorAll<HTMLElement>('sg-menu-item:not([disabled])'));
     }
 
     function getItemFocusable(item: HTMLElement | null | undefined): HTMLElement | null {
@@ -212,18 +241,13 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
     }
 
     const optionList = createOptionList<HTMLElement>({
-      behavior: {
-        isDisabled: () => isDisabled.value,
-        // syncAria on the slotted trigger element handles aria-expanded, aria-controls,
-        // aria-haspopup, and aria-disabled — opt out of duplicate management here.
-        manageAriaExpanded: false,
-      },
       dom: {
         getBoundary: () => el,
         getPanel: () => panelEl,
         getReference: () => triggerEl,
         getTrigger: () => triggerEl,
       },
+      isDisabled: () => isDisabled.value,
       items: {
         getItems: getItems,
         isItemDisabled: (item) => item.hasAttribute('disabled'),
@@ -243,6 +267,7 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
         offsetPx: 4,
         padding: 6,
       },
+      signal: abortSignal,
     });
     const { isOpen: isOpenSignal } = optionList;
 
@@ -253,7 +278,7 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
       if (type === 'checkbox') {
         item.toggleAttribute('checked', !item.hasAttribute('checked'));
       } else if (type === 'radio') {
-        for (const radio of el.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]')) {
+        for (const radio of el.querySelectorAll<HTMLElement>('sg-menu-item[type="radio"]')) {
           radio.toggleAttribute('checked', radio === item);
         }
       }
@@ -324,9 +349,9 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
           if (!isOpenSignal.value) return;
 
           const itemFromPath = path.find(
-            (node): node is HTMLElement => node instanceof HTMLElement && node.tagName === 'BIT-MENU-ITEM',
+            (node): node is HTMLElement => node instanceof HTMLElement && node.tagName === 'SG-MENU-ITEM',
           );
-          const item = itemFromPath ?? (e.target as HTMLElement | null)?.closest<HTMLElement>('bit-menu-item') ?? null;
+          const item = itemFromPath ?? (e.target as HTMLElement | null)?.closest<HTMLElement>('sg-menu-item') ?? null;
 
           if (!item || item.hasAttribute('disabled')) return;
 
@@ -394,7 +419,6 @@ define<BitMenuProps, BitMenuEvents>(MENU_TAG, {
       return () => {
         cleanupTrigger?.();
         cleanupTrigger = null;
-        optionList.cleanup();
       };
     });
 
