@@ -1,13 +1,8 @@
 ---
-title: isGreaterThan
+title: 'Arsenal — isGreaterThan (not exported)'
+description: 'isGreaterThan is not part of the Arsenal public API.'
 ---
 
-## isGreaterThan
+# isGreaterThan
 
-Checks whether the left value is greater than the right value.
-
-```ts
-import { isGreaterThan } from '@vielzeug/arsenal';
-
-isGreaterThan(5, 4); // true
-```
+`isGreaterThan` is not exported by `@vielzeug/arsenal`. Use native comparison operators or [`clamp`](../math/clamp.md) for bounds checks.

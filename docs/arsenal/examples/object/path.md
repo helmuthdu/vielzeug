@@ -1,100 +1,43 @@
-# get
+---
+title: 'Arsenal Examples — getPath'
+description: 'getPath example for @vielzeug/arsenal.'
+---
 
-The `get` utility safely retrieves a nested value from an object using a dot-notation path string. It prevents runtime errors when accessing properties of `undefined` or `null` intermediate objects and supports an optional default value.
+## getPath
 
-## Source Code
+### Problem
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/object/path.ts
-:::
+You need safe nested property access using a dot-notation string path, with a typed fallback for missing paths.
 
-## Features
+### Solution
 
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Safe Access**: Never throws if a parent is `null` or `undefined` (unless `throwOnMissing` is set).
-- **Dot & Bracket Notation**: Supports `'a.b.c'` and `'a[0].b'` path formats.
-- **Default Value**: Provide a fallback value for missing or `undefined` paths.
-- **Type-safe**: Generic return type with full TypeScript inference.
-
-## API
-
-::: details Type Definitions
-<<< @/../packages/arsenal/src/object/path.ts#PathOptions
-:::
+Use `getPath(item, path, defaultValue?, options?)` to traverse nested objects. Use dot notation only — `'a.b.c'` not `'a[0]'`.
 
 ```ts
-function get<T extends object, P extends string>(
-  item: T,
-  path: P,
-  defaultValue?: unknown,
-  options?: PathOptions,
-): unknown;
+import { getPath } from '@vielzeug/arsenal';
+
+const config = { api: { host: 'localhost', port: 3000 }, items: [10, 20] };
+
+getPath(config, 'api.port');         // 3000
+getPath(config, 'api.timeout', 5000); // 5000 — fallback for missing path
+getPath(config, 'items.1');          // 20 — array index access
 ```
 
-### Parameters
-
-- `item`: The object to query.
-- `path`: The path to the desired property as a dot-separated (or bracket-notation) string.
-- `defaultValue`: Optional. A value returned when the path is missing or resolves to `undefined`.
-- `options`: Optional configuration:
-  - `throwOnMissing`: If `true`, throws an `Error` instead of returning the default value.
-
-### Returns
-
-The value at the path, the `defaultValue`, or `undefined`.
-
-## Examples
-
-### Basic Nested Access
+#### Throw on missing path
 
 ```ts
-import { get } from '@vielzeug/arsenal';
+import { getPath } from '@vielzeug/arsenal';
 
-const config = {
-  api: {
-    endpoints: {
-      login: '/api/v1/login',
-    },
-  },
-};
-
-get(config, 'api.endpoints.login'); // '/api/v1/login'
-get(config, 'api.version'); // undefined
-get(config, 'api.version', 'v1'); // 'v1' (default value)
+getPath(config, 'api.missing', undefined, { throwOnMissing: true });
+// throws TypeError
 ```
 
-### Array Index Access
+### Pitfalls
 
-```ts
-import { get } from '@vielzeug/arsenal';
+- **Dot notation only.** Using `'a[0]'` instead of `'a.0'` throws a `TypeError` with a correction hint.
+- `isSafePath(key)` can pre-validate a path — it returns `false` for `__proto__`, `constructor`, or `prototype`.
 
-const data = {
-  users: [
-    { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' },
-  ],
-};
+### Related
 
-get(data, 'users[0].name'); // 'Alice'
-get(data, 'users[1].id'); // 2
-```
-
-### Throwing on Missing Paths
-
-```ts
-import { get } from '@vielzeug/arsenal';
-
-const obj = { a: { b: 1 } };
-
-// Throws an error instead of returning the default value
-get(obj, 'e.f.g', undefined, { throwOnMissing: true }); // throws Error
-```
-
-## Implementation Notes
-
-- Bracket notation (`[0]`) is parsed and treated as a key automatically.
-- Returns `defaultValue` only when the resolved value is `undefined`; `null` is returned as-is.
-
-## See Also
-
-- [defaults](./defaults.md): Apply fallback values before reading a nested path.
+- [flattenPaths](./flattenPaths.md)
+- [parseJSON](./parseJSON.md)

@@ -19,7 +19,6 @@ exports:
     createHonoGuard,
     WILDCARD,
     ANONYMOUS,
-    debugWard,
   ]
 ---
 

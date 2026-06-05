@@ -1,71 +1,32 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — compare'
+description: 'compare example for @vielzeug/arsenal.'
+---
 
-# compare
+## compare
 
-The `compare` utility is a generic comparator function that determines the relative order of two values. It returns `-1` if the first value is smaller, `1` if it is larger, and `0` if they are equal.
+### Problem
 
-## Source Code
+You need a general-purpose two-element comparator for `Array.prototype.sort` that handles numbers, strings, and dates uniformly.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/compare.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Versatile**: Handles numbers, strings, and dates.
-- **Standard Interface**: Compatible with native `Array.prototype.sort()`.
-- **Type-safe**: Properly typed for any comparable inputs.
-
-## API
-
-```ts
-function compare<T>(a: T, b: T): -1 | 0 | 1;
-```
-
-### Parameters
-
-- `a`: The first value to compare.
-- `b`: The second value to compare.
-
-### Returns
-
-- `-1`: `a` is less than `b`.
-- `0`: `a` is equal to `b`.
-- `1`: `a` is greater than `b`.
-
-## Examples
-
-### Basic Comparison
+Use `compare(a, b)` as a drop-in comparator. Returns negative, zero, or positive — same contract as `Array.prototype.sort`.
 
 ```ts
 import { compare } from '@vielzeug/arsenal';
 
-compare(10, 20); // -1
-compare('z', 'a'); // 1
-compare(5, 5); // 0
+[3, 1, 4, 1, 5].sort(compare);         // [1, 1, 3, 4, 5]
+['banana', 'apple'].sort(compare);      // ['apple', 'banana']
+[new Date('2024'), new Date('2020')].sort(compare); // [2020, 2024]
 ```
 
-### Using with Native Sort
+### Pitfalls
 
-```ts
-import { compare } from '@vielzeug/arsenal';
+- String comparison uses `localeCompare` — may return values other than `−1/0/1`, and sort order depends on the locale.
+- For multi-key sorting, use `compareBy`.
 
-const numbers = [10, 2, 33, 4, 1];
-numbers.sort(compare); // [1, 2, 4, 10, 33]
-```
+### Related
 
-## Implementation Notes
-
-- Performance-optimized for frequent use in sorting loops.
-- Correctly handles `null` and `undefined` by placing them at the end (or beginning depending on direction).
-- Throws nothing; safe for all basic primitive types.
-
-## See Also
-
-- [compareBy](./compareBy.md): Create a comparator for complex objects.
-- [sort](../array/sort.md): Functional sorting helper.
-- [isEqual](../typed/isEqual.md): Check for structural identity.
+- [compareBy](./compareBy.md)
+- [sort](../array/sort.md)

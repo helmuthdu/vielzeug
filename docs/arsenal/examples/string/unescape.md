@@ -1,13 +1,25 @@
 ---
-title: unescape
+title: 'Arsenal Examples — unescape'
+description: 'unescape example for @vielzeug/arsenal.'
 ---
 
 ## unescape
 
-Unescapes HTML entities.
+### Problem
+
+You need to decode HTML entities in a string — the inverse of `escape`.
+
+### Solution
+
+Use `unescape(value)` to convert HTML entities back to their original characters.
 
 ```ts
 import { unescape } from '@vielzeug/arsenal';
 
-unescape('&lt;h1&gt;Hi&lt;/h1&gt;'); // '<h1>Hi</h1>'
+unescape('&lt;b&gt;Hello&lt;/b&gt;'); // '<b>Hello</b>'
+unescape('Alice &amp; Bob');           // 'Alice & Bob'
 ```
+
+### Related
+
+- [escape](./escape.md)

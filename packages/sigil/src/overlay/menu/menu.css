@@ -58,14 +58,14 @@
   }
 
   /* ========================================
-       Menu Items (slotted bit-menu-item)
+       Menu Items (slotted sg-menu-item)
        ======================================== */
 
-  ::slotted(bit-menu-item) {
+  ::slotted(sg-menu-item) {
     display: block;
   }
 
-  ::slotted(bit-menu-separator) {
+  ::slotted(sg-menu-separator) {
     display: block;
   }
 }

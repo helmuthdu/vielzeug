@@ -1,67 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { setBooleanAttribute, setMaybeAttribute } from '../attrs';
 import { getChoiceLabel, getLightChildrenByTag } from '../light-dom';
 import { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from '../numbers';
 import { parseStringTriggers } from '../parse';
-
-// ── attrs ─────────────────────────────────────────────────────────────────────
-
-describe('setMaybeAttribute()', () => {
-  it('sets the attribute when value is truthy', () => {
-    const el = document.createElement('div');
-
-    setMaybeAttribute(el, 'data-color', 'primary');
-
-    expect(el.getAttribute('data-color')).toBe('primary');
-  });
-
-  it('removes the attribute when value is undefined', () => {
-    const el = document.createElement('div');
-
-    el.setAttribute('data-color', 'primary');
-    setMaybeAttribute(el, 'data-color', undefined);
-
-    expect(el.hasAttribute('data-color')).toBe(false);
-  });
-
-  it('removes the attribute when value is an empty string', () => {
-    const el = document.createElement('div');
-
-    el.setAttribute('data-color', 'primary');
-    setMaybeAttribute(el, 'data-color', '');
-
-    expect(el.hasAttribute('data-color')).toBe(false);
-  });
-});
-
-describe('setBooleanAttribute()', () => {
-  it('adds the attribute when active is true', () => {
-    const el = document.createElement('button');
-
-    setBooleanAttribute(el, 'disabled', true);
-
-    expect(el.hasAttribute('disabled')).toBe(true);
-  });
-
-  it('removes the attribute when active is false', () => {
-    const el = document.createElement('button');
-
-    el.setAttribute('disabled', '');
-    setBooleanAttribute(el, 'disabled', false);
-
-    expect(el.hasAttribute('disabled')).toBe(false);
-  });
-
-  it('is idempotent — calling with the same value multiple times does not throw', () => {
-    const el = document.createElement('div');
-
-    setBooleanAttribute(el, 'aria-hidden', true);
-    setBooleanAttribute(el, 'aria-hidden', true);
-
-    expect(el.getAttribute('aria-hidden')).toBe('');
-  });
-});
 
 // ── light-dom ─────────────────────────────────────────────────────────────────
 
@@ -70,11 +11,11 @@ describe('getLightChildrenByTag()', () => {
     const host = document.createElement('div');
 
     host.innerHTML = `
-      <bit-option value="a">Apple</bit-option>
-      <bit-option value="b">Banana</bit-option>
+      <sg-option value="a">Apple</sg-option>
+      <sg-option value="b">Banana</sg-option>
     `;
 
-    const options = getLightChildrenByTag(host, 'bit-option');
+    const options = getLightChildrenByTag(host, 'sg-option');
 
     expect(options).toHaveLength(2);
     expect(options[0].getAttribute('value')).toBe('a');
@@ -83,7 +24,7 @@ describe('getLightChildrenByTag()', () => {
   it('returns an empty array when no children match', () => {
     const host = document.createElement('div');
 
-    expect(getLightChildrenByTag(host, 'bit-option')).toEqual([]);
+    expect(getLightChildrenByTag(host, 'sg-option')).toEqual([]);
   });
 });
 
@@ -92,11 +33,11 @@ describe('getChoiceLabel()', () => {
     const host = document.createElement('div');
 
     host.innerHTML = `
-      <bit-option value="us">United States</bit-option>
-      <bit-option value="gb">United Kingdom</bit-option>
+      <sg-option value="us">United States</sg-option>
+      <sg-option value="gb">United Kingdom</sg-option>
     `;
 
-    const items = getLightChildrenByTag(host, 'bit-option');
+    const items = getLightChildrenByTag(host, 'sg-option');
 
     expect(getChoiceLabel(items, 'us')).toBe('United States');
     expect(getChoiceLabel(items, 'gb')).toBe('United Kingdom');
@@ -111,9 +52,9 @@ describe('getChoiceLabel()', () => {
   it('collapses whitespace in textContent', () => {
     const host = document.createElement('div');
 
-    host.innerHTML = `<bit-option value="x">  Multi   Space  </bit-option>`;
+    host.innerHTML = `<sg-option value="x">  Multi   Space  </sg-option>`;
 
-    const items = getLightChildrenByTag(host, 'bit-option');
+    const items = getLightChildrenByTag(host, 'sg-option');
 
     expect(getChoiceLabel(items, 'x')).toBe('Multi Space');
   });

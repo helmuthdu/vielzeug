@@ -1,39 +1,32 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1047_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — min'
+description: 'min example for @vielzeug/arsenal.'
+---
 
-# min
+## min
 
-Returns the smallest number in an array.
+### Problem
 
-## Source Code
+You need the minimum value in an array, optionally extracting a numeric field from objects.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/math/min.ts
-:::
+### Solution
 
-## API
-
-```ts
-function min(numbers: number[]): number | undefined;
-```
-
-## Example
+Use `min(array, callback?)` to return the smallest value.
 
 ```ts
 import { min } from '@vielzeug/arsenal';
 
-min([1, 5, 3, 9, 2]); // 1
-min([]); // undefined
+min([3, 1, 4, 1, 5]); // 1
+
+const prices = [{ price: 30 }, { price: 10 }, { price: 20 }];
+min(prices, (p) => p.price); // 10
 ```
 
-## Notes
+### Pitfalls
 
-- Returns `undefined` for an empty array.
-- Ignores non-numeric values (if any).
+- Returns `undefined` for empty arrays.
 
-## Related
+### Related
 
 - [max](./max.md)
 - [clamp](./clamp.md)

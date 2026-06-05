@@ -78,7 +78,7 @@ define('my-counter', () => {
 A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craft. Drop them straight into your project.
 
 ```html
-<bit-button variant="solid" color="primary">Save</bit-button> <bit-input label="Email"></bit-input>
+<sg-button variant="solid" color="primary">Save</sg-button> <sg-input label="Email"></sg-input>
 ```
 
 **Start here if** you want production-ready components without building from scratch.

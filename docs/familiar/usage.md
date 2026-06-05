@@ -9,7 +9,7 @@ description: How to use familiar for task functions, single workers, pools, stre
 New to Worker? Start with the [Overview](./index.md) for a quick introduction.
 :::
 
-## Task Functions
+## Basic Usage
 
 A task function receives a single typed input and returns a value (synchronously or as a Promise). Because the function is serialized via `.toString()` and executed in a separate global scope, it **must be entirely self-contained** — it cannot close over variables from the surrounding module.
 

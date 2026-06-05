@@ -3,7 +3,9 @@ title: Multi-Step Wizard with Routing
 description: Sync a multi-step wizard state machine with URL routing using Clockwork and Wayfinder.
 ---
 
-## Problem
+## Multi-Step Wizard with Routing
+
+### Problem
 
 Multi-step wizards need to maintain both internal state and URL state. Users expect:
 
@@ -14,7 +16,7 @@ Multi-step wizards need to maintain both internal state and URL state. Users exp
 
 Without coordination, the machine state and route can get out of sync, causing confusing UX.
 
-## Solution
+### Solution
 
 Use Machine to manage wizard steps with Wayfinder to sync the current step to the URL. The machine guards validate transitions and the router handles URL changes.
 
@@ -133,7 +135,7 @@ export function handleSubmit(formData: Record<string, unknown>) {
 }
 ```
 
-## Pitfalls
+### Pitfalls
 
 1. **Route changes don't update machine state** - Must dispatch ROUTE_CHANGE event when router navigation occurs, not assume they stay in sync automatically.
 
@@ -143,7 +145,7 @@ export function handleSubmit(formData: Record<string, unknown>) {
 
 4. **Duplicate events on startup** - Router listener and machine both may fire during initialization. Use a flag to prevent processing route change events until machine is fully initialized.
 
-## Related
+### Related
 
 - [Fetch with Retry](./fetch-retry.md) - Async patterns for step submission
 - [Wayfinder](../wayfinder/) - Client-side routing with middleware

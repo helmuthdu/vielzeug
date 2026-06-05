@@ -1,80 +1,42 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-312_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — assert'
+description: 'assert example for @vielzeug/arsenal.'
+---
 
-# assert
+## assert
 
-The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It supports advanced debugging options and custom error types.
+### Problem
 
-## Source Code
+You need to validate a runtime condition and have TypeScript narrow the type when it passes — for example asserting a parsed value matches an expected shape.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/assert.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Multiple Conditions**: Pass a single boolean or an array of conditions.
-- **Customizable Errors**: Specify the error message and the Error class to throw (e.g., `TypeError`).
-- **Debugging Info**: Attach metadata to errors for easier troubleshooting.
-
-## API
-
-```ts
-function assert(
-  condition: boolean | boolean[],
-  message?: string,
-  options?: {
-    type?: ErrorConstructor;
-    args?: Record<string, any>;
-  },
-): void;
-```
-
-### Parameters
-
-- `condition`: A boolean or an array of booleans to check.
-- `message`: Optional. The error message to display (defaults to `'Assertion failed'`).
-- `options`: Optional configuration:
-  - `type`: The constructor of the error to throw (defaults to `Error`).
-  - `args`: An object containing variables or state to include in the error details.
-
-### Returns
-
-- `void` (Nothing) if the assertion passes.
-
-## Examples
-
-### Basic Validation
+Use `assert(condition, message?, options?)` to throw if the condition is falsy. TypeScript narrows the type after the assertion via `asserts condition`.
 
 ```ts
 import { assert } from '@vielzeug/arsenal';
 
-assert(1 + 1 === 2); // OK
-assert(users.length > 0, 'Users list cannot be empty'); // Throws if empty
-```
-
-### Advanced Debugging
-
-```ts
-import { assert } from '@vielzeug/arsenal';
-
-function process(data: any) {
-  assert(data.id, 'Missing ID', {
-    type: TypeError,
-    args: { received: data },
-  });
+function process(id: string | undefined) {
+  assert(id !== undefined, 'id is required');
+  id; // string — undefined narrowed away
 }
 ```
 
-## Implementation Notes
+#### Custom error class
 
-- If an array of conditions is provided, it returns `true` only if **every** item is truthy.
-- Performance is optimized for minimal overhead when assertions pass.
+```ts
+import { assert } from '@vielzeug/arsenal';
 
-## See Also
+assert(value >= 0, 'value must be non-negative', { type: RangeError });
+// throws RangeError('value must be non-negative') when condition is false
+```
 
-- [attempt](../async/attempt.md): Execute async logic with retry + timeout semantics.
-- [isDefined](../typed/isDefined.md): Common check used within assertions.
+### Pitfalls
+
+- `assert` throws synchronously — it cannot be used inside async validators as a replacement for `await`.
+- The `type` option accepts any `ErrorConstructor`; it does not wrap the error.
+
+### Related
+
+- [attempt](../async/attempt.md)
+- [isMatch](../typed/isMatch.md)

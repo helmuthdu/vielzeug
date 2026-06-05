@@ -20,7 +20,7 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 ## Basic Usage
 
 ```html
-<bit-switch>Enable notifications</bit-switch>
+<sg-switch>Enable notifications</sg-switch>
 
 <script type="module">
   import '@vielzeug/sigil/switch';
@@ -36,13 +36,13 @@ Six semantic colors for different contexts. Defaults to neutral when no color is
 <ComponentPreview center>
 
 ```html
-<bit-switch checked>Default</bit-switch>
-<bit-switch checked color="primary">Primary</bit-switch>
-<bit-switch checked color="secondary">Secondary</bit-switch>
-<bit-switch checked color="info">Info</bit-switch>
-<bit-switch checked color="success">Success</bit-switch>
-<bit-switch checked color="warning">Warning</bit-switch>
-<bit-switch checked color="error">Error</bit-switch>
+<sg-switch checked>Default</sg-switch>
+<sg-switch checked color="primary">Primary</sg-switch>
+<sg-switch checked color="secondary">Secondary</sg-switch>
+<sg-switch checked color="info">Info</sg-switch>
+<sg-switch checked color="success">Success</sg-switch>
+<sg-switch checked color="warning">Warning</sg-switch>
+<sg-switch checked color="error">Error</sg-switch>
 ```
 
 </ComponentPreview>
@@ -54,9 +54,9 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-switch checked size="sm">Small</bit-switch>
-<bit-switch checked size="md">Medium</bit-switch>
-<bit-switch checked size="lg">Large</bit-switch>
+<sg-switch checked size="sm">Small</sg-switch>
+<sg-switch checked size="md">Medium</sg-switch>
+<sg-switch checked size="lg">Large</sg-switch>
 ```
 
 </ComponentPreview>
@@ -70,7 +70,7 @@ Toggle between on and off states.
 <ComponentPreview center>
 
 ```html
-<bit-switch>Unchecked</bit-switch> <bit-switch checked>Checked</bit-switch>
+<sg-switch>Unchecked</sg-switch> <sg-switch checked>Checked</sg-switch>
 ```
 
 </ComponentPreview>
@@ -82,7 +82,7 @@ Prevent interaction and reduce opacity for unavailable options.
 <ComponentPreview center>
 
 ```html
-<bit-switch disabled>Disabled off</bit-switch> <bit-switch checked disabled>Disabled on</bit-switch>
+<sg-switch disabled>Disabled off</sg-switch> <sg-switch checked disabled>Disabled on</sg-switch>
 ```
 
 </ComponentPreview>
@@ -97,9 +97,9 @@ Switches work seamlessly with forms using name and value attributes.
 
 ```html
 <form id="settings-form">
-  <bit-switch name="notifications" value="enabled" checked> Push notifications </bit-switch>
-  <bit-switch name="darkMode" value="on"> Dark mode </bit-switch>
-  <bit-switch name="analytics" value="track"> Analytics tracking </bit-switch>
+  <sg-switch name="notifications" value="enabled" checked> Push notifications </sg-switch>
+  <sg-switch name="darkMode" value="on"> Dark mode </sg-switch>
+  <sg-switch name="analytics" value="track"> Analytics tracking </sg-switch>
 </form>
 
 <script>
@@ -121,7 +121,7 @@ Listen to change events for custom logic.
 <ComponentPreview center>
 
 ```html
-<bit-switch id="feature-toggle">Enable feature</bit-switch>
+<sg-switch id="feature-toggle">Enable feature</sg-switch>
 <div id="status"></div>
 
 <script>
@@ -177,7 +177,7 @@ Listen to change events for custom logic.
 
 The switch component follows WCAG 2.1 Level AA standards.
 
-### `bit-switch`
+### `sg-switch`
 
 ✅ **Keyboard Navigation**
 
@@ -230,9 +230,9 @@ function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
 
   return (
-    <bit-switch checked={notifications} onChange={(e) => setNotifications(e.detail.checked)}>
+    <sg-switch checked={notifications} onChange={(e) => setNotifications(e.detail.checked)}>
       Enable notifications
-    </bit-switch>
+    </sg-switch>
   );
 }
 ```
@@ -241,9 +241,7 @@ function SettingsPanel() {
 
 ```vue
 <template>
-  <bit-switch :checked="notifications" @change="notifications = $event.detail.checked">
-    Enable notifications
-  </bit-switch>
+  <sg-switch :checked="notifications" @change="notifications = $event.detail.checked"> Enable notifications </sg-switch>
 </template>
 
 <script setup>
@@ -262,10 +260,10 @@ const notifications = ref(true);
   let notifications = true;
 </script>
 
-<bit-switch
+<sg-switch
   checked={notifications}
   on:change={(e) => notifications = e.detail.checked}
 >
   Enable notifications
-</bit-switch>
+</sg-switch>
 ```

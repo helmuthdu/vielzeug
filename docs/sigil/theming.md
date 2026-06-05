@@ -21,7 +21,7 @@ Sigil provides a comprehensive set of design tokens organized into the following
 | -------------------------- | -------------------------------------- | ------------------------------------------- |
 | **Spacing Scale**          | `--size-{n}`                           | 4px-increment spacing (0 → 96)              |
 | **Container Sizes**        | `--size-{2xs–7xl}`                     | Named width breakpoints (256px → 1280px)    |
-| **Special Sizes**          | `--size-{full,fit,min,max,auto,prose}` | Keyword size utilities                      |
+| **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}` | Keyword size utilities                   |
 | **Viewport & Breakpoints** | `--size-screen-*`                      | Viewport units + breakpoint values          |
 | **Aspect Ratios**          | `--aspect-*`                           | Common aspect ratios (square, video, wide…) |
 | **3D Perspective**         | `--perspective-*`                      | Transform perspective distances             |
@@ -37,15 +37,17 @@ Sigil provides a comprehensive set of design tokens organized into the following
 | **Font Families**          | `--font-{sans,serif,mono}`             | System font stacks                          |
 | **Font Weights**           | `--font-*`                             | Numeric weight scale (100–900)              |
 | **Letter Spacing**         | `--tracking-*`                         | Tracking utilities                          |
-| **Line Heights**           | `--leading-*`                          | Relative + absolute line height scale       |
+| **Line Heights**           | `--leading-*`                          | Relative (named) + absolute (numeric) line height scale |
 | **Body Text Scale**        | `--text-{xs–2xl}`                      | 6-step body font size scale                 |
 | **Heading Scale**          | `--heading-{xs–2xl}`                   | 6-step heading font size scale              |
 | **Semantic Text Colors**   | `--text-color-*`                       | Role-based text color tokens                |
 | **Transitions**            | `--transition-*`                       | Pre-built timing + easing combos            |
-| **Durations**              | `--duration-*`                         | Millisecond step scale                      |
+| **Durations**              | `--duration-{75,100,150,200,300,500,700,1000}` | Millisecond step scale (all zero under `prefers-reduced-motion`) |
 | **Easing Functions**       | `--ease-*`                             | Named cubic-bezier curves                   |
 | **Contrast Scale**         | `--color-contrast-{50–900}`            | 10-step light/dark adaptive palette         |
+| **Canvas / Contrast**      | `--color-canvas`, `--color-contrast`   | Aliases for `contrast-50` and `contrast-900` |
 | **Semantic Colors**        | `--color-{name}-*`                     | 7 sub-tokens per semantic color             |
+| **Section Spacing**        | `--section-spacing`                    | Default block section gap (`2rem`)          |
 
 ## Color Palette
 
@@ -79,8 +81,8 @@ Optimized for readability and WCAG compliance:
 
 | Token                  | Light           | Dark            | WCAG            | Usage                       |
 | ---------------------- | --------------- | --------------- | --------------- | --------------------------- |
-| `--color-contrast-500` | hsl(240 4% 60%) | hsl(210 4% 52%) | AA (large text) | Tertiary text, placeholders |
-| `--color-contrast-600` | hsl(240 4% 46%) | hsl(210 3% 64%) | AA              | Secondary / muted text      |
+| `--color-contrast-500` | hsl(240 4% 49%) | hsl(210 4% 52%) | AA (large text) | Tertiary text, placeholders |
+| `--color-contrast-600` | hsl(240 4% 40%) | hsl(210 3% 64%) | AA              | Secondary / muted text      |
 | `--color-contrast-700` | hsl(240 4% 32%) | hsl(210 3% 76%) | AAA             | Supplemental body text      |
 | `--color-contrast-800` | hsl(240 4% 22%) | hsl(210 4% 86%) | AAA             | Default body text           |
 | `--color-contrast-900` | hsl(240 4% 12%) | hsl(210 5% 94%) | AAA             | Headings, highest contrast  |
@@ -88,6 +90,15 @@ Optimized for readability and WCAG compliance:
 ::: tip Accessibility
 All text color values (500–900) meet or exceed WCAG AA standards. Values 700–900 achieve AAA compliance for body text and headings.
 :::
+
+### Canvas & Contrast Aliases
+
+Two convenience aliases are provided for the most common surface and text needs:
+
+| Token              | Resolves to              | Usage                               |
+| ------------------ | ------------------------ | ----------------------------------- |
+| `--color-canvas`   | `--color-contrast-50`    | Default page/component background   |
+| `--color-contrast` | `--color-contrast-900`   | Maximum-contrast text/icon color    |
 
 ## Semantic Text Colors
 
@@ -170,7 +181,7 @@ Used by default for all non-heading text:
 
 ### Heading Scale (`--heading-*`)
 
-Used exclusively by `variant="heading"` on `<bit-text>`:
+Used exclusively by `variant="heading"` on `<sg-text>`:
 
 | Token           | Value           | Usage                  |
 | --------------- | --------------- | ---------------------- |
@@ -199,17 +210,38 @@ Used exclusively by `variant="heading"` on `<bit-text>`:
 
 ```css
 --leading-none: 1;
---leading-tight: 1.15; /* headings */
+--leading-tight: 1.15;    /* headings */
 --leading-snug: 1.375;
---leading-normal: 1.5; /* body text — WCAG recommended */
+--leading-normal: 1.5;    /* body text — WCAG recommended */
 --leading-relaxed: 1.625;
 --leading-loose: 2;
+
+/* Absolute (pixel-aligned) */
+--leading-3: 0.75rem;  /* 12px */
+--leading-4: 1rem;     /* 16px */
+--leading-5: 1.25rem;  /* 20px */
+--leading-6: 1.5rem;   /* 24px */
+--leading-7: 1.75rem;  /* 28px */
+--leading-8: 2rem;     /* 32px */
+--leading-9: 2.25rem;  /* 36px */
+--leading-10: 2.5rem;  /* 40px */
 ```
 
 ### Letter Spacing
 
 ```css
 --tracking-header: -0.025em; /* tight tracking for headings */
+```
+
+## Cascade Layer
+
+All Sigil tokens are defined inside `@layer sigil.tokens { … }`. This means any unlayered `:root` rule in your own stylesheet wins automatically — no `!important` needed for overrides.
+
+```css
+/* ✅ This beats sigil.tokens without !important */
+:root {
+  --color-primary: hsl(200deg 100% 45%);
+}
 ```
 
 ## Dark Mode
@@ -257,7 +289,20 @@ document.documentElement.classList.toggle('dark');
 
 ## Transitions & Animations
 
-Sigil provides pre-built transition and animation tokens. All duration tokens resolve to `0ms` when `prefers-reduced-motion: reduce` is active.
+Sigil provides pre-built transition and animation tokens. Under `prefers-reduced-motion: reduce`, **all `--duration-*` tokens resolve to `0ms`** and all `--transition-*` tokens resolve to `none` — no extra configuration needed.
+
+### Duration Scale
+
+```css
+--duration-75: 75ms;
+--duration-100: 100ms;
+--duration-150: 150ms;
+--duration-200: 200ms;
+--duration-300: 300ms;
+--duration-500: 500ms;
+--duration-700: 700ms;
+--duration-1000: 1000ms;
+```
 
 ### Easing
 
@@ -301,14 +346,14 @@ Override the default theme by setting CSS variables in your root stylesheet. A p
 Each component exposes specific CSS custom properties for fine-tuned control. Set them inline or in a stylesheet scoped to your component.
 
 ```html
-<bit-button
+<sg-button
   style="
     --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --button-radius: 20px;
     --button-padding: 0.75rem 2rem;
   ">
   Gradient Button
-</bit-button>
+</sg-button>
 ```
 
 ### Component-Specific Variables
@@ -318,14 +363,14 @@ Refer to each component's documentation for the complete list of CSS custom prop
 :::
 
 ```css
-/* bit-text */
+/* sg-text */
 --text-size           /* font-size */
 --text-weight         /* font-weight */
 --text-color          /* color */
 --text-line-height    /* line-height */
 --text-letter-spacing /* letter-spacing */
 
-/* bit-button */
+/* sg-button */
 --button-bg
 --button-color
 --button-hover-bg
@@ -333,14 +378,14 @@ Refer to each component's documentation for the complete list of CSS custom prop
 --button-radius
 --button-padding
 
-/* bit-input */
+/* sg-input */
 --input-bg
 --input-color
 --input-border-color
 --input-placeholder-color
 --input-radius
 
-/* bit-checkbox */
+/* sg-checkbox */
 --checkbox-size
 --checkbox-bg
 --checkbox-checked-bg

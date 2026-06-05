@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-skeleton', () => {
+describe('sg-skeleton', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-skeleton', () => {
 
   describe('Core Functionality', () => {
     it('renders one skeleton bone by default', async () => {
-      fixture = await mount('bit-skeleton');
+      fixture = await mount('sg-skeleton');
 
       expect(fixture.element.shadowRoot?.querySelectorAll('.bone').length).toBe(1);
     });
 
     it('renders multiple lines for text variant', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { lines: '3', variant: 'text' } });
+      fixture = await mount('sg-skeleton', { attrs: { lines: '3', variant: 'text' } });
 
       const bones = fixture.element.shadowRoot?.querySelectorAll('.bone');
 
@@ -28,25 +28,25 @@ describe('bit-skeleton', () => {
     });
 
     it('keeps one line for non-text variants even when lines is provided', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { lines: '4', variant: 'rect' } });
+      fixture = await mount('sg-skeleton', { attrs: { lines: '4', variant: 'rect' } });
 
       expect(fixture.element.shadowRoot?.querySelectorAll('.bone').length).toBe(1);
     });
 
     it('applies circle variant', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { variant: 'circle' } });
+      fixture = await mount('sg-skeleton', { attrs: { variant: 'circle' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('circle');
     });
 
     it('applies size variant', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-skeleton', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('maps width/height/radius props to CSS variables', async () => {
-      fixture = await mount('bit-skeleton', {
+      fixture = await mount('sg-skeleton', {
         attrs: {
           height: '2rem',
           radius: '1rem',
@@ -60,7 +60,7 @@ describe('bit-skeleton', () => {
     });
 
     it('disables animation when animated is false', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { animated: 'false' } });
+      fixture = await mount('sg-skeleton', { attrs: { animated: 'false' } });
 
       expect(fixture.element.getAttribute('data-animated')).toBe('false');
     });
@@ -68,26 +68,26 @@ describe('bit-skeleton', () => {
 
   describe('Accessibility', () => {
     it('marks decorative bone as aria-hidden', async () => {
-      fixture = await mount('bit-skeleton');
+      fixture = await mount('sg-skeleton');
 
       expect(fixture.query('.bone')?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('does not expose interactive roles', async () => {
-      fixture = await mount('bit-skeleton');
+      fixture = await mount('sg-skeleton');
 
       expect(fixture.element.getAttribute('role')).toBeNull();
       expect(fixture.element.getAttribute('tabindex')).toBeNull();
     });
 
     it('defaults animation to enabled', async () => {
-      fixture = await mount('bit-skeleton');
+      fixture = await mount('sg-skeleton');
 
       expect(fixture.element.getAttribute('data-animated')).toBe('true');
     });
 
     it('supports text variant as a visual loading indicator', async () => {
-      fixture = await mount('bit-skeleton', { attrs: { lines: '2', variant: 'text' } });
+      fixture = await mount('sg-skeleton', { attrs: { lines: '2', variant: 'text' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('text');
       expect(fixture.element.shadowRoot?.querySelectorAll('.bone').length).toBe(2);
@@ -96,7 +96,7 @@ describe('bit-skeleton', () => {
 
   describe('Intersection-based animation pausing', () => {
     it('does not set data-paused when IntersectionObserver has not fired yet', async () => {
-      fixture = await mount('bit-skeleton');
+      fixture = await mount('sg-skeleton');
 
       // IntersectionObserver stub never fires — data-paused should be absent
       expect(fixture.element.hasAttribute('data-paused')).toBe(false);
@@ -115,7 +115,7 @@ describe('bit-skeleton', () => {
       };
 
       try {
-        fixture = await mount('bit-skeleton');
+        fixture = await mount('sg-skeleton');
 
         capturedCb([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
 
@@ -138,7 +138,7 @@ describe('bit-skeleton', () => {
       };
 
       try {
-        fixture = await mount('bit-skeleton');
+        fixture = await mount('sg-skeleton');
 
         capturedCb([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
         expect(fixture.element.hasAttribute('data-paused')).toBe(true);

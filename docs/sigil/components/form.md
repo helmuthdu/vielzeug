@@ -1,6 +1,6 @@
 # Form
 
-A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `validateOn` context to all child `bit-*` form fields. Intercepts native submit/reset events and assembles `FormData` so you never wire up individual field listeners.
+A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `validateOn` context to all child `sg-*` form fields. Intercepts native submit/reset events and assembles `FormData` so you never wire up individual field listeners.
 
 ## Features
 
@@ -21,17 +21,17 @@ A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `val
 
 ## Basic Usage
 
-Wrap your form fields in `bit-form`. A `bit-button type="submit"` triggers the form submit event.
+Wrap your form fields in `sg-form`. A `sg-button type="submit"` triggers the form submit event.
 
 ```html
-<bit-form id="my-form">
-  <bit-input name="email" label="Email" type="email" required></bit-input>
-  <bit-select name="role" label="Role">
+<sg-form id="my-form">
+  <sg-input name="email" label="Email" type="email" required></sg-input>
+  <sg-select name="role" label="Role">
     <option value="admin">Admin</option>
     <option value="editor">Editor</option>
-  </bit-select>
-  <bit-button type="submit">Submit</bit-button>
-</bit-form>
+  </sg-select>
+  <sg-button type="submit">Submit</sg-button>
+</sg-form>
 
 <script type="module">
   import '@vielzeug/sigil/form';
@@ -47,27 +47,27 @@ Wrap your form fields in `bit-form`. A `bit-button type="submit"` triggers the f
 
 ## Uniform Styling
 
-Set `size` and `variant` once on `bit-form` to propagate them to all child fields.
+Set `size` and `variant` once on `sg-form` to propagate them to all child fields.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-form size="sm" variant="flat">
-  <bit-input name="name" label="Full Name"></bit-input>
-  <bit-input name="email" label="Email" type="email"></bit-input>
-  <bit-combobox name="hobby" label="Hobby">
-    <bit-combobox-option value="boardgame">Board Game</bit-combobox-option>
-    <bit-combobox-option value="videogame">Video Game</bit-combobox-option>
-    <bit-combobox-option value="playmusic">Play Music</bit-combobox-option>
-    <bit-combobox-option value="gym">Gym</bit-combobox-option>
-  </bit-combobox>
-  <bit-select name="country" label="Country">
+<sg-form size="sm" variant="flat">
+  <sg-input name="name" label="Full Name"></sg-input>
+  <sg-input name="email" label="Email" type="email"></sg-input>
+  <sg-combobox name="hobby" label="Hobby">
+    <sg-combobox-option value="boardgame">Board Game</sg-combobox-option>
+    <sg-combobox-option value="videogame">Video Game</sg-combobox-option>
+    <sg-combobox-option value="playmusic">Play Music</sg-combobox-option>
+    <sg-combobox-option value="gym">Gym</sg-combobox-option>
+  </sg-combobox>
+  <sg-select name="country" label="Country">
     <option value="br">Brazil</option>
     <option value="de">Germany</option>
     <option value="us">United States</option>
-  </bit-select>
-  <bit-button type="submit" size="sm">Submit</bit-button>
-</bit-form>
+  </sg-select>
+  <sg-button type="submit" size="sm">Submit</sg-button>
+</sg-form>
 ```
 
 </ComponentPreview>
@@ -79,10 +79,10 @@ Set `disabled` to freeze all child fields and buttons — useful during an async
 <ComponentPreview vertical>
 
 ```html
-<bit-form id="async-form">
-  <bit-input name="email" label="Email" type="email"></bit-input>
-  <bit-button type="submit">Submit</bit-button>
-</bit-form>
+<sg-form id="async-form">
+  <sg-input name="email" label="Email" type="email"></sg-input>
+  <sg-button type="submit">Submit</sg-button>
+</sg-form>
 ```
 
 </ComponentPreview>
@@ -111,10 +111,10 @@ Use `validate-on` to control when field-level validation feedback appears.
 
 ```html
 <!-- immediate feedback as the user types -->
-<bit-form validate-on="change">
-  <bit-input name="email" type="email" label="Email" required></bit-input>
-  <bit-button type="submit">Continue</bit-button>
-</bit-form>
+<sg-form validate-on="change">
+  <sg-input name="email" type="email" label="Email" required></sg-input>
+  <sg-button type="submit">Continue</sg-button>
+</sg-form>
 ```
 
 ## Layout: Horizontal
@@ -124,15 +124,15 @@ Set `orientation="horizontal"` to arrange fields in a flex row with wrapping.
 <ComponentPreview vertical>
 
 ```html
-<bit-form orientation="horizontal" variant="flat">
-  <bit-input name="first" label="First Name"></bit-input>
-  <bit-input name="last" label="Last Name"></bit-input>
-  <bit-select name="role" label="Role">
+<sg-form orientation="horizontal" variant="flat">
+  <sg-input name="first" label="First Name"></sg-input>
+  <sg-input name="last" label="Last Name"></sg-input>
+  <sg-select name="role" label="Role">
     <option value="admin">Admin</option>
     <option value="editor">Editor</option>
-  </bit-select>
-  <bit-button type="submit">Save</bit-button>
-</bit-form>
+  </sg-select>
+  <sg-button type="submit">Save</sg-button>
+</sg-form>
 ```
 
 </ComponentPreview>
@@ -142,7 +142,7 @@ Set `orientation="horizontal"` to arrange fields in a flex row with wrapping.
 The `submit` event exposes `formData` and the original `SubmitEvent`.
 
 ```js
-document.querySelector('bit-form').addEventListener('submit', (e) => {
+document.querySelector('sg-form').addEventListener('submit', (e) => {
   const data = e.detail.formData;
   console.log('email:', data.get('email'));
   console.log('role:', data.get('role'));
@@ -153,7 +153,7 @@ document.querySelector('bit-form').addEventListener('submit', (e) => {
 ## Handling Reset
 
 ```js
-document.querySelector('bit-form').addEventListener('reset', (e) => {
+document.querySelector('sg-form').addEventListener('reset', (e) => {
   console.log('Form was reset', e.detail.originalEvent);
 });
 ```
@@ -163,10 +163,10 @@ document.querySelector('bit-form').addEventListener('reset', (e) => {
 Add `novalidate` to suppress native browser validation popups. Pair with `error` attributes on individual fields for custom validation UX.
 
 ```html
-<bit-form novalidate>
-  <bit-input name="email" label="Email" type="email" required error="Please enter a valid email address."> </bit-input>
-  <bit-button type="submit">Submit</bit-button>
-</bit-form>
+<sg-form novalidate>
+  <sg-input name="email" label="Email" type="email" required error="Please enter a valid email address."> </sg-input>
+  <sg-button type="submit">Submit</sg-button>
+</sg-form>
 ```
 
 ## API Reference
@@ -184,9 +184,9 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 ### Slots
 
-| Slot      | Description                                                              |
-| --------- | ------------------------------------------------------------------------ |
-| (default) | Form content — `bit-input`, `bit-select`, `bit-button`, and other fields |
+| Slot      | Description                                                           |
+| --------- | --------------------------------------------------------------------- |
+| (default) | Form content — `sg-input`, `sg-select`, `sg-button`, and other fields |
 
 ### Events
 
@@ -203,7 +203,7 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 ### Context Provided
 
-`bit-form` provides a `FORM_CTX` context object consumed by all descendant `bit-*` form fields:
+`sg-form` provides a `FORM_CTX` context object consumed by all descendant `sg-*` form fields:
 
 | Key          | Type                                                    | Description                           |
 | ------------ | ------------------------------------------------------- | ------------------------------------- |
@@ -216,7 +216,7 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 The form component follows WCAG 2.1 Level AA standards.
 
-### `bit-form`
+### `sg-form`
 
 ✅ **Keyboard Navigation**
 
@@ -233,13 +233,13 @@ The form component follows WCAG 2.1 Level AA standards.
 
 **Do:**
 
-- Use `bit-form` whenever multiple fields share the same `size` or `variant`.
+- Use `sg-form` whenever multiple fields share the same `size` or `variant`.
 - Toggle `disabled` during async operations to prevent double-submission.
-- Listen to the `submit` event on `bit-form` — `formData` is already assembled for you.
+- Listen to the `submit` event on `sg-form` — `formData` is already assembled for you.
 - Use `validate-on="blur"` for long forms to give users early feedback without interrupting them as they type.
 
 **Don't:**
 
-- Nest `bit-form` elements inside each other.
-- Rely on the native `submit` event directly — always use the custom `submit` event emitted by `bit-form`.
-- Use `bit-form` for single-field scenarios — a standalone field with its own listener is simpler.
+- Nest `sg-form` elements inside each other.
+- Rely on the native `submit` event directly — always use the custom `submit` event emitted by `sg-form`.
+- Use `sg-form` for single-field scenarios — a standalone field with its own listener is simpler.

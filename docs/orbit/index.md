@@ -6,7 +6,24 @@ category: ui
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
 related: [craft, sigil, grip]
 exports:
-  [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, hide, autoPlacement, compose, limitShift]
+  [
+    float,
+    computePosition,
+    computeOnce,
+    autoUpdate,
+    detectOverflow,
+    offset,
+    flip,
+    shift,
+    arrow,
+    size,
+    hide,
+    autoPlacement,
+    compose,
+    limitShift,
+    getAlignment,
+    getSide,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

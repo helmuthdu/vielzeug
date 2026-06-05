@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-file-input', () => {
+describe('sg-file-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-file-input', () => {
 
   describe('Rendering', () => {
     it('renders drop zone with correct role', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       expect(fixture.query('[role="button"]')).toBeTruthy();
     });
 
     it('renders label when provided', async () => {
-      fixture = await mount('bit-file-input', {
+      fixture = await mount('sg-file-input', {
         attrs: { label: 'Upload files' },
       });
 
@@ -27,13 +27,13 @@ describe('bit-file-input', () => {
     });
 
     it('renders helper text when provided', async () => {
-      fixture = await mount('bit-file-input', { attrs: { helper: 'Max 5MB' } });
+      fixture = await mount('sg-file-input', { attrs: { helper: 'Max 5MB' } });
 
       expect(fixture.query('[part="helper"]')?.textContent?.trim()).toBe('Max 5MB');
     });
 
     it('renders error text when provided', async () => {
-      fixture = await mount('bit-file-input', {
+      fixture = await mount('sg-file-input', {
         attrs: { error: 'File too large' },
       });
 
@@ -41,7 +41,7 @@ describe('bit-file-input', () => {
     });
 
     it('renders file list container', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       expect(fixture.query('[role="list"]')).toBeTruthy();
     });
@@ -49,7 +49,7 @@ describe('bit-file-input', () => {
 
   describe('Props', () => {
     it('applies disabled state', async () => {
-      fixture = await mount('bit-file-input', { attrs: { disabled: '' } });
+      fixture = await mount('sg-file-input', { attrs: { disabled: '' } });
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -57,7 +57,7 @@ describe('bit-file-input', () => {
     });
 
     it('applies accept attribute to hidden input', async () => {
-      fixture = await mount('bit-file-input', {
+      fixture = await mount('sg-file-input', {
         attrs: { accept: '.pdf,.docx' },
       });
 
@@ -65,31 +65,31 @@ describe('bit-file-input', () => {
     });
 
     it('applies multiple attribute', async () => {
-      fixture = await mount('bit-file-input', { attrs: { multiple: '' } });
+      fixture = await mount('sg-file-input', { attrs: { multiple: '' } });
 
       expect(fixture.query('input[type="file"]')?.hasAttribute('multiple')).toBe(true);
     });
 
     it('applies required attribute to input', async () => {
-      fixture = await mount('bit-file-input', { attrs: { required: '' } });
+      fixture = await mount('sg-file-input', { attrs: { required: '' } });
 
       expect(fixture.query('input[type="file"]')?.hasAttribute('required')).toBe(true);
     });
 
     it('applies color variant', async () => {
-      fixture = await mount('bit-file-input', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-file-input', { attrs: { color: 'primary' } });
 
       expect(fixture.element.getAttribute('color')).toBe('primary');
     });
 
     it('applies size variant', async () => {
-      fixture = await mount('bit-file-input', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-file-input', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('applies fullwidth', async () => {
-      fixture = await mount('bit-file-input', { attrs: { fullwidth: '' } });
+      fixture = await mount('sg-file-input', { attrs: { fullwidth: '' } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
@@ -97,13 +97,13 @@ describe('bit-file-input', () => {
 
   describe('File List', () => {
     it('shows no files initially', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       expect(fixture.query('[role="listitem"]')).toBeFalsy();
     });
 
     it('error message is hidden when no error', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const error = fixture.query('[part="error"]');
 
@@ -114,7 +114,7 @@ describe('bit-file-input', () => {
   describe('Colors', () => {
     for (const color of ['primary', 'secondary', 'success', 'warning', 'error']) {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-file-input', { attrs: { color } });
+        fixture = await mount('sg-file-input', { attrs: { color } });
 
         const el = fixture.element;
 
@@ -126,7 +126,7 @@ describe('bit-file-input', () => {
   describe('Sizes', () => {
     for (const size of ['sm', 'md', 'lg']) {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-file-input', { attrs: { size } });
+        fixture = await mount('sg-file-input', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
@@ -136,7 +136,7 @@ describe('bit-file-input', () => {
   describe('Variants', () => {
     for (const variant of ['solid', 'outline', 'ghost']) {
       it(`applies ${variant} variant`, async () => {
-        fixture = await mount('bit-file-input', { attrs: { variant } });
+        fixture = await mount('sg-file-input', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
       });
@@ -145,7 +145,7 @@ describe('bit-file-input', () => {
 
   describe('Events', () => {
     it('dispatches change event when file selected', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const handler = vi.fn();
 
@@ -171,7 +171,7 @@ describe('bit-file-input', () => {
     });
 
     it('opens the hidden input on Enter from the dropzone', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
       const dropzone = fixture.query<HTMLElement>('[role="button"]')!;
@@ -185,7 +185,7 @@ describe('bit-file-input', () => {
   });
 });
 
-describe('bit-file-input accessibility', () => {
+describe('sg-file-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -198,13 +198,13 @@ describe('bit-file-input accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('drop zone has role button', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       expect(fixture.query('[role="button"]')).toBeTruthy();
     });
 
     it('drop zone has aria-label', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -212,13 +212,13 @@ describe('bit-file-input accessibility', () => {
     });
 
     it('file list has role list', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       expect(fixture.query('[role="list"]')).toBeTruthy();
     });
 
     it('error region has role alert', async () => {
-      fixture = await mount('bit-file-input', {
+      fixture = await mount('sg-file-input', {
         attrs: { error: 'Invalid file' },
       });
 
@@ -228,7 +228,7 @@ describe('bit-file-input accessibility', () => {
 
   describe('Labeling', () => {
     it('drop zone references label via aria-labelledby', async () => {
-      fixture = await mount('bit-file-input', { attrs: { label: 'Upload' } });
+      fixture = await mount('sg-file-input', { attrs: { label: 'Upload' } });
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -236,7 +236,7 @@ describe('bit-file-input accessibility', () => {
     });
 
     it('drop zone references helper via aria-describedby', async () => {
-      fixture = await mount('bit-file-input', { attrs: { helper: 'Max 5MB' } });
+      fixture = await mount('sg-file-input', { attrs: { helper: 'Max 5MB' } });
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -246,7 +246,7 @@ describe('bit-file-input accessibility', () => {
 
   describe('Focus Management', () => {
     it('drop zone is focusable by default', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -254,7 +254,7 @@ describe('bit-file-input accessibility', () => {
     });
 
     it('drop zone is not focusable when disabled', async () => {
-      fixture = await mount('bit-file-input', { attrs: { disabled: '' } });
+      fixture = await mount('sg-file-input', { attrs: { disabled: '' } });
 
       const dropzone = fixture.query('[role="button"]');
 
@@ -262,7 +262,7 @@ describe('bit-file-input accessibility', () => {
     });
 
     it('native input is not focusable (hidden)', async () => {
-      fixture = await mount('bit-file-input');
+      fixture = await mount('sg-file-input');
 
       const input = fixture.query<HTMLInputElement>('input[type="file"]');
 

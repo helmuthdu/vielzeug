@@ -1,69 +1,27 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-368_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — kebabCase'
+description: 'kebabCase example for @vielzeug/arsenal.'
+---
 
-# kebabCase
+## kebabCase
 
-The `kebabCase` utility transforms a string into `kebab-case` format (all lower case with words separated by dashes). It is perfect for generating CSS class names, URL slugs, or CLI flags.
+### Problem
 
-## Source Code
+You need to convert a string to kebab-case — for example generating URL slugs or CSS class names from data.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/string/kebabCase.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Durable Parsing**: Handles spaces, underscores, and dots as separators.
-- **Case Boundary Detection**: Correctly splits strings based on transitions between lower and upper case (e.g., from `camelCase`).
-
-## API
-
-```ts
-function kebabCase(input: string): string;
-```
-
-### Parameters
-
-- `input`: The string to transform.
-
-### Returns
-
-- The transformed string in `kebab-case`.
-
-## Examples
-
-### Basic Conversion
+Use `kebabCase(str)` to convert any case to lowercase kebab-case.
 
 ```ts
 import { kebabCase } from '@vielzeug/arsenal';
 
-kebabCase('hello world'); // 'hello-world'
-kebabCase('fooBar'); // 'foo-bar'
-kebabCase('USER_PROFILE'); // 'user-profile'
-kebabCase('data.meta.id'); // 'data-meta-id'
+kebabCase('helloWorld');   // 'hello-world'
+kebabCase('hello_world');  // 'hello-world'
+kebabCase('Hello World');  // 'hello-world'
 ```
 
-### Advanced Scenarios
+### Related
 
-```ts
-import { kebabCase } from '@vielzeug/arsenal';
-
-kebabCase('  leading trailing  '); // 'leading-trailing'
-kebabCase('XMLHttpRequest'); // 'xml-http-request'
-kebabCase('multiple___underscores'); // 'multiple-underscores'
-```
-
-## Implementation Notes
-
-- Trims input and removes leading/trailing separators.
-- Collapses consecutive separators into a single dash.
-- Throws `TypeError` if the input is not a string.
-
-## See Also
-
-- [camelCase](./camelCase.md): Convert strings to `camelCase`.
-- [snakeCase](./snakeCase.md): Convert strings to `snake_case`.
-- [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
+- [camelCase](./camelCase.md)
+- [snakeCase](./snakeCase.md)

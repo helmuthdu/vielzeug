@@ -3,25 +3,23 @@ title: Arsenal — Function Examples
 description: Function utility examples for Arsenal.
 ---
 
-## Function Utilities
-
 ## Quick Reference
 
-- [allOf](./function/allOf.md)
-- [anyOf](./function/anyOf.md)
+- [allOf / anyOf / noneOf](./function/allOf.md)
 - [assert](./function/assert.md)
 - [compare](./function/compare.md)
 - [compareBy](./function/compareBy.md)
 - [compose](./function/compose.md)
-- [partial](./function/partial.md)
 - [constant](./function/constant.md)
 - [curry](./function/curry.md)
 - [debounce](./function/debounce.md)
 - [identity](./function/identity.md)
 - [memo](./function/memo.md)
-- [noneOf](./function/noneOf.md)
+- [not](./function/not.md)
 - [once](./function/once.md)
+- [partial](./function/partial.md)
 - [pipe](./function/pipe.md)
+- [runAll](./function/runAll.md)
 - [tap](./function/tap.md)
 - [throttle](./function/throttle.md)
 

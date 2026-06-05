@@ -3,7 +3,9 @@ title: Paginated Data Loading with Search
 description: Use Sourcerer with Clockwork to manage async data loading, pagination, and search state.
 ---
 
-## Problem
+## Paginated Data Loading with Search
+
+### Problem
 
 Paginated data interfaces need to coordinate:
 
@@ -15,7 +17,7 @@ Paginated data interfaces need to coordinate:
 
 Managing all these states together leads to spaghetti code with race conditions between pagination, filtering, and loading.
 
-## Solution
+### Solution
 
 Use Clockwork for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
 
@@ -209,7 +211,7 @@ export function retry() {
 }
 ```
 
-## Pitfalls
+### Pitfalls
 
 1. **Multiple fetches in flight** - If user changes page before previous fetch completes, both requests resolve and may update data out of order. Use AbortController to cancel pending requests on new fetch, or use invoke with cancellation.
 
@@ -221,7 +223,7 @@ export function retry() {
 
 5. **Total count doesn't update with search** - Machine records total items but doesn't recalculate pageCount after search narrows results. Ensure DONE event includes updated total from backend.
 
-## Related
+### Related
 
 - [Sourcerer](../sourcerer/) - Reactive data sources with pagination
 - [Courier](../courier/) - HTTP client with caching

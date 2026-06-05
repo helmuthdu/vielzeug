@@ -1,82 +1,34 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — compose'
+description: 'compose example for @vielzeug/arsenal.'
+---
 
-# compose
+## compose
 
-The `compose` utility performs functional composition from right to left. It takes multiple functions and returns a single function that passes its result from one call to the previous one, following standard mathematical notation $f(g(x))$.
+### Problem
 
-## Source Code
+You need to chain functions right-to-left — applying the last function first and passing the result to each preceding function.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/compose.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Async Support**: Automatically handles Promises. If any function in the chain returns a Promise, the final result will be a Promise.
-- **Type-safe**: Properly infers input and output types through the entire chain.
-- **Right-to-Left**: Executes functions in reverse order of provided arguments.
-
-## API
-
-```ts
-function compose<T extends any[], R>(
-  ...fns: [(arg: any) => R, ...Array<(arg: any) => any>, (...args: T) => any]
-): (...args: T) => R | Promise<R>;
-```
-
-### Parameters
-
-- `...fns`: A sequence of functions to be composed.
-
-### Returns
-
-- A new function that represents the composition.
-
-## Examples
-
-### Synchronous Composition
+Use `compose(...fns)` to create a pipeline that evaluates right-to-left.
 
 ```ts
 import { compose } from '@vielzeug/arsenal';
 
-const addTwo = (n: number) => n + 2;
-const double = (n: number) => n * 2;
+const process = compose(
+  (s: string) => s.toUpperCase(),
+  (s: string) => s.trim(),
+);
 
-// result = addTwo(double(x))
-const calculate = compose(addTwo, double);
-
-calculate(5); // (5 * 2) + 2 = 12
+process('  hello world  '); // 'HELLO WORLD'
 ```
 
-### Asynchronous Composition
+### Pitfalls
 
-```ts
-import { compose, sleep } from '@vielzeug/arsenal';
+- Execution is right-to-left: the last function runs first. Use `pipe` for left-to-right composition.
 
-const saveToDb = async (data: string) => {
-  await sleep(10);
-  return { success: true, data };
-};
+### Related
 
-const format = (s: string) => s.trim().toUpperCase();
-
-const processAndSave = compose(saveToDb, format);
-
-await processAndSave('  hello  '); // { success: true, data: 'HELLO' }
-```
-
-## Implementation Notes
-
-- If only one function is provided, it is returned as-is.
-- Uses `reduceRight` internally to chain function calls.
-- Throws `TypeError` if any provided argument is not a function.
-
-## See Also
-
-- [pipe](./pipe.md): Functional composition from left to right.
-- [curry](./curry.md): Transform a function into a sequence of unary functions.
-- [configure](./configure.md): Preconfigure trailing arguments for unary composition.
+- [pipe](./pipe.md)
+- [partial](./partial.md)

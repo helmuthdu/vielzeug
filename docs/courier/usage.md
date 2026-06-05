@@ -9,7 +9,7 @@ description: HTTP client, query cache, unified client, SSE, readable streams, an
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
-## Unified Client
+## Basic Usage
 
 `createCourier()` combines `api`, `stream`, `query`, and `mutation()` behind one shared transport.
 

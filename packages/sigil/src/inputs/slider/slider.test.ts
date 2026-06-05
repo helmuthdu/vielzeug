@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-slider', () => {
+describe('sg-slider', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -15,14 +15,14 @@ describe('bit-slider', () => {
 
   describe('Rendering', () => {
     it('renders the slider track and thumb', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.query('.slider-track')).toBeTruthy();
       expect(fixture.query('.slider-thumb')).toBeTruthy();
     });
 
     it('host has role="slider"', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
     });
@@ -32,20 +32,20 @@ describe('bit-slider', () => {
 
   describe('Value and Range', () => {
     it('has default min=0 and max=100', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('0');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('100');
     });
 
     it('reflects initial value via aria-valuenow', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '40' } });
+      fixture = await mount('sg-slider', { attrs: { value: '40' } });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('40');
     });
 
     it('updates aria-valuenow when value attribute changes', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '20' } });
+      fixture = await mount('sg-slider', { attrs: { value: '20' } });
 
       await fixture.attr('value', '75');
 
@@ -53,14 +53,14 @@ describe('bit-slider', () => {
     });
 
     it('applies custom min/max attributes', async () => {
-      fixture = await mount('bit-slider', { attrs: { max: '200', min: '50' } });
+      fixture = await mount('sg-slider', { attrs: { max: '200', min: '50' } });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('50');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('200');
     });
 
     it('applies step attribute on host', async () => {
-      fixture = await mount('bit-slider', { attrs: { step: '5' } });
+      fixture = await mount('sg-slider', { attrs: { step: '5' } });
 
       expect(fixture.element.getAttribute('step')).toBe('5');
     });
@@ -70,19 +70,19 @@ describe('bit-slider', () => {
 
   describe('Disabled State', () => {
     it('reflects disabled on host', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: true } });
+      fixture = await mount('sg-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
 
     it('host has no tabindex when disabled', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: true } });
+      fixture = await mount('sg-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.getAttribute('tabindex')).not.toBe('0');
     });
 
     it('does not emit change event when disabled', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: true, value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { disabled: true, value: '50' } });
 
       const changeHandler = vi.fn();
 
@@ -98,7 +98,7 @@ describe('bit-slider', () => {
 
   describe('Events', () => {
     it('emits change event with value and originalEvent on arrow key', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { value: '50' } });
 
       const changeHandler = vi.fn();
 
@@ -115,7 +115,7 @@ describe('bit-slider', () => {
     });
 
     it('increases value on ArrowRight', async () => {
-      fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { step: '10', value: '50' } });
 
       const changeHandler = vi.fn();
 
@@ -127,7 +127,7 @@ describe('bit-slider', () => {
     });
 
     it('decreases value on ArrowLeft', async () => {
-      fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { step: '10', value: '50' } });
 
       const changeHandler = vi.fn();
 
@@ -146,7 +146,7 @@ describe('bit-slider', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-slider', { attrs: { color } });
+        fixture = await mount('sg-slider', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
@@ -160,7 +160,7 @@ describe('bit-slider', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-slider', { attrs: { size } });
+        fixture = await mount('sg-slider', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
@@ -171,20 +171,20 @@ describe('bit-slider', () => {
 
   describe('Edge Cases', () => {
     it('clamps value at maximum boundary', async () => {
-      fixture = await mount('bit-slider', { attrs: { max: '100', value: '100' } });
+      fixture = await mount('sg-slider', { attrs: { max: '100', value: '100' } });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('100');
     });
 
     it('clamps value at minimum boundary', async () => {
-      fixture = await mount('bit-slider', { attrs: { min: '0', value: '0' } });
+      fixture = await mount('sg-slider', { attrs: { min: '0', value: '0' } });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('0');
     });
   });
 });
 
-describe('bit-slider accessibility', () => {
+describe('sg-slider accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -197,19 +197,19 @@ describe('bit-slider accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('host has role slider', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
     });
 
     it('host is focusable by default', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
     });
 
     it('host is not focusable when disabled', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: '' } });
+      fixture = await mount('sg-slider', { attrs: { disabled: '' } });
 
       expect(fixture.element.getAttribute('tabindex')).not.toBe('0');
     });
@@ -217,37 +217,37 @@ describe('bit-slider accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('exposes aria-valuemin', async () => {
-      fixture = await mount('bit-slider', { attrs: { min: '10' } });
+      fixture = await mount('sg-slider', { attrs: { min: '10' } });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('10');
     });
 
     it('exposes aria-valuemax', async () => {
-      fixture = await mount('bit-slider', { attrs: { max: '200' } });
+      fixture = await mount('sg-slider', { attrs: { max: '200' } });
 
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('200');
     });
 
     it('exposes aria-valuenow reflecting current value', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '42' } });
+      fixture = await mount('sg-slider', { attrs: { value: '42' } });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('42');
     });
 
     it('defaults aria-valuemin to 0', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('0');
     });
 
     it('defaults aria-valuemax to 100', async () => {
-      fixture = await mount('bit-slider');
+      fixture = await mount('sg-slider');
 
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('100');
     });
 
     it('updates aria-valuenow after keyboard increment', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { value: '50' } });
 
       await user.press(fixture.element, 'ArrowRight');
 
@@ -255,7 +255,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('updates aria-valuenow after keyboard decrement', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '50' } });
+      fixture = await mount('sg-slider', { attrs: { value: '50' } });
 
       await user.press(fixture.element, 'ArrowLeft');
 
@@ -265,7 +265,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('ArrowRight increments value', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '30' } });
+      fixture = await mount('sg-slider', { attrs: { value: '30' } });
 
       await user.press(fixture.element, 'ArrowRight');
 
@@ -273,7 +273,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('ArrowUp increments value', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '30' } });
+      fixture = await mount('sg-slider', { attrs: { value: '30' } });
 
       await user.press(fixture.element, 'ArrowUp');
 
@@ -281,7 +281,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('ArrowLeft decrements value', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '30' } });
+      fixture = await mount('sg-slider', { attrs: { value: '30' } });
 
       await user.press(fixture.element, 'ArrowLeft');
 
@@ -289,7 +289,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('ArrowDown decrements value', async () => {
-      fixture = await mount('bit-slider', { attrs: { value: '30' } });
+      fixture = await mount('sg-slider', { attrs: { value: '30' } });
 
       await user.press(fixture.element, 'ArrowDown');
 
@@ -297,7 +297,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('does not respond to keyboard when disabled', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: '', value: '30' } });
+      fixture = await mount('sg-slider', { attrs: { disabled: '', value: '30' } });
 
       await user.press(fixture.element, 'ArrowRight');
 
@@ -307,7 +307,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Disabled State', () => {
     it('aria-disabled is set when disabled', async () => {
-      fixture = await mount('bit-slider', { attrs: { disabled: '' } });
+      fixture = await mount('sg-slider', { attrs: { disabled: '' } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });

@@ -1,86 +1,43 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1237_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — diff'
+description: 'diff example for @vielzeug/arsenal.'
+---
 
-# diff
+## diff
 
-The `diff` utility compares two objects and returns an object containing only the properties that were changed or added in the second object. This is ideal for change tracking, auditing, and generating minimal data patches.
+### Problem
 
-## Source Code
+You need to compute what changed between two object snapshots — for example logging which form fields were modified or building a patch payload for an API.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/object/diff.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Minimal Output**: Only returns what has actually changed.
-- **Deep Comparison**: Correctly identifies differences even in nested objects.
-- **Type-safe**: Preserves typing for partially changed objects.
-
-## API
+Use `diff(before, after)` to get a partial object containing only the changed keys. Removed keys appear as the `DELETED` symbol.
 
 ```ts
-function diff<T extends object, U extends object>(a: T, b: U): Partial<T & U>;
+import { diff, DELETED } from '@vielzeug/arsenal';
+
+const before = { host: 'localhost', port: 3000, secure: false };
+const after  = { host: 'localhost', port: 4000 };
+
+diff(before, after);
+// { port: 4000, secure: DELETED }
 ```
 
-### Parameters
-
-- `a`: The base (original) object.
-- `b`: The target (updated) object to compare against the base.
-
-### Returns
-
-- A new object representing the delta between `a` and `b`.
-
-## Examples
-
-### Basic Diff
+#### Checking for deletions
 
 ```ts
-import { diff } from '@vielzeug/arsenal';
+import { diff, DELETED } from '@vielzeug/arsenal';
 
-const original = { id: 1, status: 'pending', tags: ['new'] };
-const updated = { id: 1, status: 'active', tags: ['new'], priority: 'high' };
-
-const result = diff(original, updated);
-// { status: 'active', priority: 'high' }
+const changes = diff({ a: 1, b: 2 }, { a: 1 });
+changes.b === DELETED; // true
 ```
 
-### Nested Object Diff
+### Pitfalls
 
-```ts
-import { diff } from '@vielzeug/arsenal';
+- `DELETED` is a unique symbol — compare with `=== DELETED`, not truthy/falsy checks.
+- Only performs a shallow diff. Nested object changes are represented as the whole nested value, not recursively diffed.
 
-const v1 = {
-  user: {
-    name: 'Alice',
-    settings: { theme: 'dark' },
-  },
-};
+### Related
 
-const v2 = {
-  user: {
-    name: 'Alice',
-    settings: { theme: 'light' },
-  },
-};
-
-diff(v1, v2);
-// { user: { settings: { theme: 'light' } } }
-```
-
-## Implementation Notes
-
-- Returns properties from `curr` that are new or different from `prev`.
-- Properties that existed in `prev` but not in `curr` are marked with `DELETED` sentinel.
-- Uses deep equality (`isEqual`) for comparisons.
-- Handles nested objects recursively.
-
-## See Also
-
-- [merge](./merge.md): Combine objects (often used with the result of `diff`).
-- [prune](./prune.md): Remove null/empty values from an object.
-- [isEqual](../typed/isEqual.md): The comparison engine used by `diff`.
+- [deepMerge](./merge.md)
+- [pick](./pick.md)

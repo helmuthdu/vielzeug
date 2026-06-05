@@ -27,7 +27,6 @@ exports:
     sortBy,
     encodeQuery,
     decodeQuery,
-    FetchMiddleware,
   ]
 ---
 
@@ -155,7 +154,7 @@ await source.searchNow(search);
 
 **Consider TanStack Query when** your data layer is already built around query keys, cache invalidation across many components, and React-first DevTools integration.
 
-## Sources at a Glance
+## Features
 
 | Factory                  | Data model      | Navigation          | Key extras                                                             |
 | ------------------------ | --------------- | ------------------- | ---------------------------------------------------------------------- |

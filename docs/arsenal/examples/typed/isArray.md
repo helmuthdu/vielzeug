@@ -1,65 +1,30 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-84_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isArray'
+description: 'isArray example for @vielzeug/arsenal.'
+---
 
-# isArray
+## isArray
 
-The `isArray` utility is a type guard that checks if a given value is an array. It provides reliable detection across different execution environments.
+### Problem
 
-## Features
+You need to check whether a value is an array, optionally narrowing the item type with a guard.
 
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Type Guard**: Automatically narrows the type of the checked value to `any[]` or `unknown[]` within conditional blocks.
-- **Reliable**: Correctly identifies arrays even when they originate from different iframes or windows.
+### Solution
 
-## API
+Use `isArray(value, itemGuard?)` to guard array type. Without `itemGuard` it checks `Array.isArray`; with one it also narrows the element type.
 
 ```ts
-function isArray(value: unknown): value is any[];
-```
+import { isArray, isString } from '@vielzeug/arsenal';
 
-### Parameters
+isArray([1, 2, 3]);         // true
+isArray('not an array');    // false
 
-- `value`: The value to check.
-
-### Returns
-
-- `true` if the value is an array; otherwise, `false`.
-
-## Examples
-
-### Basic Usage
-
-```ts
-import { isArray } from '@vielzeug/arsenal';
-
-isArray([1, 2, 3]); // true
-isArray('hello'); // false
-isArray({}); // false
-```
-
-### Type Narrowing
-
-```ts
-import { isArray } from '@vielzeug/arsenal';
-
-function process(data: unknown) {
-  if (isArray(data)) {
-    // data is now typed as any[]
-    return data.length;
-  }
-  return 0;
+if (isArray(value, isString)) {
+  value; // string[]
 }
 ```
 
-## Implementation Notes
+### Related
 
-- Internally uses the native `Array.isArray()` method.
-- Throws nothing; safely handles `null`, `undefined`, and all other primitive or object types.
-
-## See Also
-
-- [isObject](./isObject.md): Check if a value is a plain object.
-- [isEmpty](./isEmpty.md): Check if an array (or object/string) is empty.
-- [isDefined](./isDefined.md): Check if a value is not `null` or `undefined`.
+- [isPlainObject](./isPlainObject.md)
+- [isEmpty](./isEmpty.md)

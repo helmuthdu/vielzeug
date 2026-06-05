@@ -41,7 +41,7 @@
     width: 100%;
   }
 
-  :host([fullwidth]) ::slotted(bit-button) {
+  :host([fullwidth]) ::slotted(sg-button) {
     flex: 1;
   }
 
@@ -54,43 +54,43 @@
   }
 
   /* Ensure attached buttons have proper z-index on hover/focus */
-  :host([attached]) ::slotted(bit-button:hover),
-  :host([attached]) ::slotted(bit-button:focus-within) {
+  :host([attached]) ::slotted(sg-button:hover),
+  :host([attached]) ::slotted(sg-button:focus-within) {
     position: relative;
     z-index: 1;
   }
 
   /* Horizontal attached - remove inner borders and round corners */
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button) {
+  :host([attached]:not([orientation='vertical'])) ::slotted(sg-button) {
     --button-radius: 0;
   }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:not(:first-child)) {
+  :host([attached]:not([orientation='vertical'])) ::slotted(sg-button:not(:first-child)) {
     --button-border-start: 0;
   }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:first-child) {
+  :host([attached]:not([orientation='vertical'])) ::slotted(sg-button:first-child) {
     --button-radius: var(--group-radius) 0 0 var(--group-radius);
   }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:last-child) {
+  :host([attached]:not([orientation='vertical'])) ::slotted(sg-button:last-child) {
     --button-radius: 0 var(--group-radius) var(--group-radius) 0;
   }
 
   /* Vertical attached - remove inner borders and round corners */
-  :host([attached][orientation='vertical']) ::slotted(bit-button) {
+  :host([attached][orientation='vertical']) ::slotted(sg-button) {
     --button-radius: 0;
   }
 
-  :host([attached][orientation='vertical']) ::slotted(bit-button:not(:first-child)) {
+  :host([attached][orientation='vertical']) ::slotted(sg-button:not(:first-child)) {
     --button-border-top: 0;
   }
 
-  :host([attached][orientation='vertical']) ::slotted(bit-button:first-child) {
+  :host([attached][orientation='vertical']) ::slotted(sg-button:first-child) {
     --button-radius: var(--group-radius) var(--group-radius) 0 0;
   }
 
-  :host([attached][orientation='vertical']) ::slotted(bit-button:last-child) {
+  :host([attached][orientation='vertical']) ::slotted(sg-button:last-child) {
     --button-radius: 0 0 var(--group-radius) var(--group-radius);
   }
 }

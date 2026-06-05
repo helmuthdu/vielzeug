@@ -3,96 +3,46 @@ import { css } from '@vielzeug/craft';
 /**
  * Disabled State Mixin
  *
- * Provides consistent disabled styling across interactive components.
- * Reduces opacity, changes cursor, and prevents pointer events.
- *
- * @param selector - Optional CSS selector to apply styles to (default: component root)
- * @returns CSSResult with disabled state styles
- *
- * @example
- * ```ts
- * import { disabledStateMixin } from '../../styles';
- *
- * return {
- *   styles: [disabledStateMixin(), componentStyles],
- *   template: html`...`
- * };
- * ```
+ * Provides consistent disabled styling on the host element.
+ * Reduces opacity, changes cursor to `not-allowed`, and disables pointer events.
  */
-export const disabledStateMixin = (selector = '') => {
-  const sel = selector ? ` ${selector}` : '';
-
-  return css`
-    :host([disabled])${sel} {
-      opacity: 0.5;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-  `;
-};
+export const disabledStateMixin = css`
+  :host([disabled]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+`;
 
 /**
  * Loading State Mixin
  *
- * Provides consistent loading styling across interactive components.
- * Similar to disabled but for loading states.
- *
- * @param selector - Optional CSS selector to apply styles to (default: component root)
- * @returns CSSResult with loading state styles
- *
- * @example
- * ```ts
- * import { loadingStateMixin } from '../../styles';
- *
- * return {
- *   styles: [loadingStateMixin(), componentStyles],
- *   template: html`...`
- * };
- * ```
+ * Provides consistent loading styling on the host element.
+ * Similar to `disabledStateMixin` but uses `cursor: wait`.
  */
-export const loadingStateMixin = (selector = '') => {
-  const sel = selector ? ` ${selector}` : '';
-
-  return css`
-    :host([loading])${sel} {
-      opacity: 0.5;
-      cursor: wait;
-      pointer-events: none;
-    }
-  `;
-};
+export const loadingStateMixin = css`
+  :host([loading]) {
+    opacity: 0.5;
+    cursor: wait;
+    pointer-events: none;
+  }
+`;
 
 /**
  * Combined Disabled & Loading State Mixin
  *
- * Convenience mixin that combines both disabled and loading states.
- * Most interactive components need both.
- *
- * @param selector - Optional CSS selector to apply styles to
- * @returns CSSResult with both disabled and loading state styles
- *
- * @example
- * ```ts
- * import { disabledLoadingMixin } from '../../styles';
- *
- * return {
- *   styles: [disabledLoadingMixin('button'), componentStyles],
- *   template: html`...`
- * };
- * ```
+ * Convenience mixin combining both disabled and loading host states.
+ * Use for most interactive components that support both attributes.
  */
-export const disabledLoadingMixin = (selector = '') => {
-  const sel = selector ? ` ${selector}` : '';
+export const disabledLoadingMixin = css`
+  :host([disabled]),
+  :host([loading]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
-  return css`
-    :host([disabled])${sel}, :host([loading])${sel} {
-      opacity: 0.5;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-    :host([loading])${sel} {
-      cursor: wait;
-    }
-  `;
-};
+  :host([loading]) {
+    cursor: wait;
+  }
+`;

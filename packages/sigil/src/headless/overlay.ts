@@ -39,11 +39,8 @@ export type OverlayControlOptions = {
   positioner?: OverlayPositioner;
   restoreFocus?: boolean | (() => boolean);
   setOpen: (next: boolean, reason: OverlayOpenReason | DialogCloseReason) => void;
-  /**
-   * Optional `AbortSignal`. When provided, `cleanup()` is called automatically
-   * on abort (closes the overlay, removes all listeners).
-   */
-  signal?: AbortSignal;
+  /** `AbortSignal` from the component lifecycle. `cleanup()` is called automatically on abort. */
+  signal: AbortSignal;
 };
 
 export type OverlayControl = {
@@ -155,7 +152,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     }
   };
 
-  options.signal?.addEventListener('abort', cleanup, { once: true });
+  options.signal.addEventListener('abort', cleanup, { once: true });
 
   return { cleanup, close, open, toggle };
 };

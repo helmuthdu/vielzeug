@@ -5,28 +5,28 @@
   }
 
   /* Overlap avatars, latest first */
-  ::slotted(bit-avatar) {
+  ::slotted(sg-avatar) {
     --avatar-border: var(--border-2) solid var(--color-canvas);
 
     margin-left: calc(var(--avatar-group-overlap, -0.75rem));
   }
 
-  ::slotted(bit-avatar:first-child) {
+  ::slotted(sg-avatar:first-child) {
     margin-left: 0;
   }
 
-  :host([dir='rtl']) ::slotted(bit-avatar),
-  :host(:dir(rtl)) ::slotted(bit-avatar) {
+  :host([dir='rtl']) ::slotted(sg-avatar),
+  :host(:dir(rtl)) ::slotted(sg-avatar) {
     margin-right: calc(var(--avatar-group-overlap, -0.75rem));
     margin-left: 0;
   }
 
-  :host([dir='rtl']) ::slotted(bit-avatar:first-child),
-  :host(:dir(rtl)) ::slotted(bit-avatar:first-child) {
+  :host([dir='rtl']) ::slotted(sg-avatar:first-child),
+  :host(:dir(rtl)) ::slotted(sg-avatar:first-child) {
     margin-right: 0;
   }
 
-  ::slotted(bit-avatar[data-avatar-group-hidden]) {
+  ::slotted(sg-avatar[data-avatar-group-hidden]) {
     display: none;
   }
 

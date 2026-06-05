@@ -1,70 +1,26 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isDate'
+description: 'isDate example for @vielzeug/arsenal.'
+---
 
-# isDate
+## isDate
 
-The `isDate` utility is a type guard that checks if a given value is a valid JavaScript `Date` object.
+### Problem
 
-## Source Code
+You need to check whether a value is a `Date` instance — for example validating serialized form inputs before date math.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isDate.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Type Guard**: Automatically narrows types to `Date` within conditional blocks.
-- **Strict Check**: Only returns `true` for actual `Date` instances that are also valid (not "Invalid Date").
-
-## API
-
-```ts
-function isDate(value: unknown): value is Date;
-```
-
-### Parameters
-
-- `value`: The value to check.
-
-### Returns
-
-- `true` if the value is a valid `Date` object; otherwise, `false`.
-
-## Examples
-
-### Basic Usage
+Use `isDate(value)` to narrow the type to `Date`.
 
 ```ts
 import { isDate } from '@vielzeug/arsenal';
 
-isDate(new Date()); // true
-isDate(new Date('abc')); // false (Invalid Date)
-isDate('2024-01-01'); // false (String, not Date object)
-isDate(Date.now()); // false (Number, not Date object)
+isDate(new Date());       // true
+isDate('2024-01-01');     // false
+isDate(1704067200000);    // false
 ```
 
-### Type Guarding
+### Related
 
-```ts
-import { isDate } from '@vielzeug/arsenal';
-
-function format(val: unknown) {
-  if (isDate(val)) {
-    // val is narrowed to Date
-    return val.toISOString();
-  }
-}
-```
-
-## Implementation Notes
-
-- Returns `true` if `value instanceof Date` and `!isNaN(value.getTime())`.
-- Throws nothing; safe for any input type.
-
-## See Also
-
-- [isNumber](./isNumber.md): Check if a value is a number.
-- [isString](./isString.md): Check if a value is a string.
+- [isDefined](./isDefined.md)

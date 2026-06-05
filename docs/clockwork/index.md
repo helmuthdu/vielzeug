@@ -5,7 +5,7 @@ package: clockwork
 category: state
 keywords: [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, middleware]
 related: [ripple, herald, ward]
-exports: [defineMachine, interpret, resolveTransition, MachineError, debugInterpret]
+exports: [defineMachine, interpret, resolveTransition, MachineError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

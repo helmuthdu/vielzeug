@@ -6,7 +6,7 @@
     width: 100%;
   }
 
-  ::slotted(bit-accordion-item) {
+  ::slotted(sg-accordion-item) {
     width: 100%;
   }
 }
@@ -26,7 +26,7 @@
     gap: 0;
   }
 
-  :host([variant='text']) ::slotted(bit-accordion-item:not(:last-child)) {
+  :host([variant='text']) ::slotted(sg-accordion-item:not(:last-child)) {
     border-bottom: 1px solid var(--color-contrast-200);
   }
 
@@ -72,19 +72,19 @@
   }
 
   /* Nested item border radius for glass and frost variants */
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(sg-accordion-item) {
     border-radius: 0;
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:first-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(sg-accordion-item:first-child) {
     border-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:last-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(sg-accordion-item:last-child) {
     border-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:only-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(sg-accordion-item:only-child) {
     border-radius: var(--rounded-lg);
   }
 }

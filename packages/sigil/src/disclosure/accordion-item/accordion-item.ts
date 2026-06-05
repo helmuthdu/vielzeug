@@ -9,12 +9,12 @@ import styles from './accordion-item.css?inline';
 
 /** Accordion item component properties */
 
-export type BitAccordionItemEvents = {
+export type SgAccordionItemEvents = {
   collapse: { expanded: boolean; item: HTMLElement };
   expand: { expanded: boolean; item: HTMLElement };
 };
 
-export type BitAccordionItemProps = {
+export type SgAccordionItemProps = {
   /** Disable accordion item interaction */
   disabled?: boolean;
   /** Whether the item is expanded/open */
@@ -28,15 +28,15 @@ export type BitAccordionItemProps = {
 /**
  * An individual accordion item with expand/collapse functionality using native details/summary.
  *
- * @element bit-accordion-item
+ * @element sg-accordion-item
  *
  * @attr {boolean} expanded - Whether the item is expanded/open
  * @attr {boolean} disabled - Disable accordion item interaction
  * @attr {string} size - Item size: 'sm' | 'md' | 'lg'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
  *
- * @fires expand - Emitted when item expands
- * @fires collapse - Emitted when item collapses
+ * @fires expand - Emitted when item expands. detail: { expanded: boolean; item: HTMLElement }
+ * @fires collapse - Emitted when item collapses. detail: { expanded: boolean; item: HTMLElement }
  *
  * @slot prefix - Content before the title (e.g., icons)
  * @slot title - Main accordion item title
@@ -65,13 +65,13 @@ export type BitAccordionItemProps = {
  * @part content - Content container.
  * @example
  * ```html
- * <bit-accordion-item><span slot="title">Click to expand</span><p>Content</p></bit-accordion-item>
- * <bit-accordion-item expanded variant="bordered"><span slot="title">Title</span><p>Content</p></bit-accordion-item>
+ * <sg-accordion-item><span slot="title">Click to expand</span><p>Content</p></sg-accordion-item>
+ * <sg-accordion-item expanded variant="bordered"><span slot="title">Title</span><p>Content</p></sg-accordion-item>
  * ```
  */
 
-export const ACCORDION_ITEM_TAG = 'bit-accordion-item' as const;
-define<BitAccordionItemProps, BitAccordionItemEvents>(ACCORDION_ITEM_TAG, {
+export const ACCORDION_ITEM_TAG = 'sg-accordion-item' as const;
+define<SgAccordionItemProps, SgAccordionItemEvents>(ACCORDION_ITEM_TAG, {
   props: {
     disabled: prop.bool(false),
     expanded: prop.bool(false),
@@ -80,7 +80,7 @@ define<BitAccordionItemProps, BitAccordionItemEvents>(ACCORDION_ITEM_TAG, {
   },
 
   setup(props, { bind: _bind, el, emit }) {
-    // Inherit size/variant from a parent bit-accordion when present.
+    // Inherit size/variant from a parent sg-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 
     if (accordionCtx) {
@@ -191,7 +191,7 @@ define<BitAccordionItemProps, BitAccordionItemEvents>(ACCORDION_ITEM_TAG, {
           </span>
         </div>
         <slot name="suffix"></slot>
-        <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
+        <sg-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></sg-icon>
       </summary>
       <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
         <div class="content-inner">

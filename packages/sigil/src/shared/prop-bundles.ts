@@ -31,3 +31,23 @@ export const roundableBundle = {
 export const elevatableBundle = {
   elevation: prop.number<ElevationLevel>(),
 };
+
+/**
+ * Convenience bundle combining the five most common interactive-component props:
+ * `color`, `size`, `disabled`, `loading`, and `rounded`.
+ *
+ * Use this single spread instead of five separate bundle spreads when a
+ * component needs all of them.
+ *
+ * @example
+ * ```ts
+ * props: { ...commonProps, href: prop.string() }
+ * ```
+ */
+export const commonProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  ...loadableBundle,
+  ...roundableBundle,
+};

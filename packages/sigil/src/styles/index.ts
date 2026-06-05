@@ -4,7 +4,9 @@
  * Reusable CSS mixins for common component patterns.
  */
 
+import { coarsePointerMixin, reducedMotionMixin } from './mixins/accessibility.css';
 import { paddingMixin, roundedVariantMixin } from './mixins/shape.css';
+import { disabledLoadingMixin } from './mixins/states.css';
 import { colorThemeMixin, elevationMixin } from './mixins/theme.css';
 
 // Accessibility Mixins
@@ -40,3 +42,24 @@ export { tableBaseMixin } from './mixins/table-base.css';
  * ```
  */
 export const surfaceMixins = [colorThemeMixin, elevationMixin, paddingMixin, roundedVariantMixin] as const;
+
+/**
+ * Base mixins shared by every text input component (input, textarea, file-input).
+ * Covers theming, coarse-pointer targets, reduced-motion, border radius, and
+ * disabled/loading states.
+ *
+ * Pass `sizeVariantMixin(YOUR_PRESET)` and `forcedColorsFocusMixin(selector)`
+ * separately, as they accept component-specific arguments.
+ *
+ * @example
+ * ```ts
+ * styles: [...fieldMixins, sizeVariantMixin(FIELD_SIZE_PRESET), forcedColorsFocusMixin('input'), componentStyles]
+ * ```
+ */
+export const fieldMixins = [
+  colorThemeMixin,
+  coarsePointerMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  disabledLoadingMixin,
+] as const;

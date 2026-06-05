@@ -5,27 +5,18 @@ import { createCheckable } from '../checkable';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeHost(): HTMLElement {
-  return document.createElement('div');
-}
-
 let controller: AbortController;
 
 function makeOptions(overrides: Partial<Parameters<typeof createCheckable>[0]> = {}) {
   controller = new AbortController();
 
-  const host = makeHost();
-
   return {
-    host,
     options: {
       checked: signal(false),
       disabled: signal(false),
       error: signal(''),
       helper: signal(''),
-      host,
       prefix: 'check',
-      role: 'checkbox' as const,
       signal: controller.signal,
       value: signal('on'),
       ...overrides,
@@ -275,78 +266,74 @@ describe('createCheckable', () => {
     });
   });
 
-  describe('a11y integration', () => {
-    it('sets role on host via a11y handle', () => {
-      const { options } = makeOptions({ role: 'switch' });
-
-      createCheckable(options);
-
-      expect(options.host.getAttribute('role')).toBe('switch');
-    });
-
-    it('assistiveId is defined on the flat handle', () => {
+  describe('a11y ids and signals', () => {
+    it('exposes a stable assistiveId string', () => {
       const { options } = makeOptions();
       const ctrl = createCheckable(options);
 
-      expect(ctrl.assistiveId).toBeDefined();
+      expect(typeof ctrl.assistiveId).toBe('string');
+      expect(ctrl.assistiveId.length).toBeGreaterThan(0);
     });
 
-    it('sets aria-disabled="true" on host when disabled', () => {
+    it('exposes a stable labelId string', () => {
+      const { options } = makeOptions();
+      const ctrl = createCheckable(options);
+
+      expect(typeof ctrl.labelId).toBe('string');
+      expect(ctrl.labelId.length).toBeGreaterThan(0);
+    });
+
+    it('disabled signal reflects correctly when disabled', () => {
       const disabled = signal(true);
       const { options } = makeOptions({ disabled });
+      const ctrl = createCheckable(options);
 
-      createCheckable(options);
-
-      // The reactive effect from createA11yControl runs synchronously.
-      expect(options.host.getAttribute('aria-disabled')).toBe('true');
+      expect(ctrl.disabled.value).toBe(true);
     });
 
-    it('removes aria-disabled when not disabled', () => {
+    it('disabled signal reflects correctly when not disabled', () => {
       const disabled = signal(false);
       const { options } = makeOptions({ disabled });
+      const ctrl = createCheckable(options);
 
-      createCheckable(options);
-
-      expect(options.host.hasAttribute('aria-disabled')).toBe(false);
+      expect(ctrl.disabled.value).toBe(false);
     });
 
-    it('updates aria-disabled reactively when disabled signal changes', () => {
+    it('disabled signal updates reactively', () => {
       const disabled = signal(false);
       const { options } = makeOptions({ disabled });
+      const ctrl = createCheckable(options);
 
-      createCheckable(options);
-      expect(options.host.hasAttribute('aria-disabled')).toBe(false);
-
+      expect(ctrl.disabled.value).toBe(false);
       disabled.value = true;
-      expect(options.host.getAttribute('aria-disabled')).toBe('true');
-
+      expect(ctrl.disabled.value).toBe(true);
       disabled.value = false;
-      expect(options.host.hasAttribute('aria-disabled')).toBe(false);
+      expect(ctrl.disabled.value).toBe(false);
+    });
+
+    it('assistive signal reflects error text', () => {
+      const error = signal('Required');
+      const { options } = makeOptions({ error });
+      const ctrl = createCheckable(options);
+
+      expect(ctrl.assistive.value.errorText).toBe('Required');
     });
   });
 
-  describe('cleanup / signal teardown', () => {
-    it('cleanup() is idempotent — calling twice does not throw', () => {
-      const { options } = makeOptions();
+  describe('signal teardown', () => {
+    it('aborting the signal tears down prop-sync reactivity', () => {
+      const localController = new AbortController();
+      const srcChecked = signal(false);
+      const { options } = makeOptions({ checked: srcChecked, signal: localController.signal });
       const ctrl = createCheckable(options);
 
-      expect(() => {
-        ctrl.cleanup();
-        ctrl.cleanup();
-      }).not.toThrow();
-    });
-
-    it('aborting the signal tears down reactivity (same as cleanup())', () => {
-      const localController = new AbortController();
-      const checked = signal(false);
-      const { options } = makeOptions({ checked, signal: localController.signal });
-
-      createCheckable(options);
+      expect(ctrl.checked.value).toBe(false);
 
       localController.abort();
 
-      checked.value = true;
-      expect(options.host.getAttribute('aria-checked')).toBe('false');
+      // After teardown the internal synced signal no longer follows the source.
+      srcChecked.value = true;
+      expect(ctrl.checked.value).toBe(false);
     });
   });
 });

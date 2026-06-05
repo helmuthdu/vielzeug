@@ -5,7 +5,7 @@ import type { ComponentSize, VisualVariant } from '../../types';
 import { createListControl } from '../../headless';
 import styles from './accordion.css?inline';
 
-/** Context provided by bit-accordion to its bit-accordion-item children. */
+/** Context provided by sg-accordion to its sg-accordion-item children. */
 export type AccordionContext = {
   notifyExpand: (expandedItem: HTMLElement) => void;
   selectionMode: ReadonlySignal<'single' | 'multiple' | undefined>;
@@ -17,11 +17,11 @@ export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext')
 
 /** Accordion component properties */
 
-export type BitAccordionEvents = {
+export type SgAccordionEvents = {
   change: { expandedItem: HTMLElement };
 };
 
-export type BitAccordionProps = {
+export type SgAccordionProps = {
   /** Selection mode (single = only one opens, multiple = multiple can be open) */
   selectionMode?: 'single' | 'multiple';
   /** Size for all items (propagated via context) */
@@ -33,16 +33,17 @@ export type BitAccordionProps = {
 /**
  * A container for accordion items with single or multiple selection modes.
  *
- * @element bit-accordion
+ * @element sg-accordion
+ * @element sg-accordion-item - Child element for each collapsible panel
  *
  * @attr {string} selection-mode - Selection mode: 'single' | 'multiple'
  * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg' (propagated to children)
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'text' | 'glass' | 'frost' (propagated to children)
  *
- * @fires expand - Emitted when an item expands
- * @fires change - Emitted when selection changes (single mode)
+ * @fires expand - Emitted when an item expands. detail: { expanded: boolean; item: HTMLElement }
+ * @fires change - Emitted when selection changes (single mode). detail: { expandedItem: HTMLElement }
  *
- * @slot - Accordion item elements (bit-accordion-item)
+ * @slot - `sg-accordion-item` elements
  *
  * @cssprop --blur-lg - Backdrop blur for frosted accordion variants
  * @cssprop --border - Border token used for accordion item outlines
@@ -58,13 +59,24 @@ export type BitAccordionProps = {
  * @cssprop --shadow-xs - Subtle shadow for default accordion depth
  * @example
  * ```html
- * <bit-accordion selection-mode="single"><bit-accordion-item>...</bit-accordion-item></bit-accordion>
- * <bit-accordion variant="frost" size="lg"><bit-accordion-item>...</bit-accordion-item></bit-accordion>
+ * <sg-accordion selection-mode="single">
+ *   <sg-accordion-item>
+ *     <span slot="title">What is Sigil?</span>
+ *     <p>Sigil is a headless web component library.</p>
+ *   </sg-accordion-item>
+ *   <sg-accordion-item>
+ *     <span slot="title">How do I install it?</span>
+ *     <p>Run <code>npm install @vielzeug/sigil</code>.</p>
+ *   </sg-accordion-item>
+ * </sg-accordion>
+ * <sg-accordion variant="bordered" selection-mode="multiple">
+ *   <sg-accordion-item expanded><span slot="title">Open by default</span><p>Content</p></sg-accordion-item>
+ * </sg-accordion>
  * ```
  */
 
-export const ACCORDION_TAG = 'bit-accordion' as const;
-define<BitAccordionProps, BitAccordionEvents>(ACCORDION_TAG, {
+export const ACCORDION_TAG = 'sg-accordion' as const;
+define<SgAccordionProps, SgAccordionEvents>(ACCORDION_TAG, {
   props: {
     selectionMode: prop.string<'single' | 'multiple'>(),
     size: prop.string<ComponentSize>(),
@@ -77,7 +89,7 @@ define<BitAccordionProps, BitAccordionEvents>(ACCORDION_TAG, {
     const handleSelectionMode = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value !== 'single') return;
 
-      el.querySelectorAll('bit-accordion-item[expanded]').forEach((item) => {
+      el.querySelectorAll('sg-accordion-item[expanded]').forEach((item) => {
         if (item !== expandedItem && item.hasAttribute('expanded')) {
           item.removeAttribute('expanded');
         }
@@ -87,7 +99,7 @@ define<BitAccordionProps, BitAccordionEvents>(ACCORDION_TAG, {
     };
 
     const getAccordionItems = () => {
-      return [...el.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
+      return [...el.querySelectorAll<HTMLElement>('sg-accordion-item:not([disabled])')];
     };
 
     const getSummaryElements = () => {
@@ -125,7 +137,7 @@ define<BitAccordionProps, BitAccordionEvents>(ACCORDION_TAG, {
           const eventTarget = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement);
           const expandedItem = (event as CustomEvent<{ item?: HTMLElement }>).detail?.item ?? eventTarget;
 
-          if (!expandedItem || expandedItem.localName !== 'bit-accordion-item') return;
+          if (!expandedItem || expandedItem.localName !== 'sg-accordion-item') return;
 
           handleSelectionMode(expandedItem);
         },

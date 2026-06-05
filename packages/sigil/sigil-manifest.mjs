@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { sigilCemPlugin } from './cem-plugin-sigil.mjs';
+
 /**
  * Ordered inventory of published sigil component entry points.
  * Keep this list as the single internal source of truth for component subpaths.
@@ -11,6 +13,7 @@ export const componentManifest = [
   { name: 'alert', source: './src/feedback/alert/alert' },
   { name: 'async', source: './src/feedback/async/async' },
   { name: 'avatar', source: './src/content/avatar/avatar' },
+  { name: 'avatar-group', source: './src/content/avatar/avatar' },
   { name: 'badge', source: './src/feedback/badge/badge' },
   { name: 'password-strength', source: './src/feedback/password-strength/password-strength' },
   { name: 'box', source: './src/layout/box/box' },
@@ -19,10 +22,13 @@ export const componentManifest = [
   { name: 'button-group', source: './src/inputs/button-group/button-group' },
   { name: 'calendar', source: './src/inputs/calendar/calendar' },
   { name: 'card', source: './src/content/card/card' },
+  { name: 'carousel', source: './src/content/carousel/carousel' },
   { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
   { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
   { name: 'chip', source: './src/feedback/chip/chip' },
   { name: 'combobox', source: './src/inputs/combobox/combobox' },
+  { name: 'datagrid', source: './src/inputs/datagrid/datagrid' },
+  { name: 'date-picker', source: './src/inputs/date-picker/date-picker' },
   { name: 'dialog', source: './src/overlay/dialog/dialog' },
   { name: 'drawer', source: './src/overlay/drawer/drawer' },
   { name: 'file-input', source: './src/inputs/file-input/file-input' },
@@ -71,9 +77,37 @@ const staticExportKeys = new Set([
   './styles',
   './styles/animation.css',
   './styles/layers.css',
+  './styles/preflight.css',
   './styles/styles.css',
   './styles/theme.css',
 ]);
+
+const staticCssExports = {
+  './styles': {
+    import: './dist/styles/styles.css',
+    default: './dist/styles/styles.css',
+  },
+  './styles/animation.css': {
+    import: './dist/styles/animation.css',
+    default: './dist/styles/animation.css',
+  },
+  './styles/layers.css': {
+    import: './dist/styles/layer.css',
+    default: './dist/styles/layer.css',
+  },
+  './styles/preflight.css': {
+    import: './dist/styles/preflight.css',
+    default: './dist/styles/preflight.css',
+  },
+  './styles/styles.css': {
+    import: './dist/styles/styles.css',
+    default: './dist/styles/styles.css',
+  },
+  './styles/theme.css': {
+    import: './dist/styles/theme.css',
+    default: './dist/styles/theme.css',
+  },
+};
 
 export const customElementsManifestConfig = {
   dependencies: false,
@@ -91,7 +125,7 @@ export const customElementsManifestConfig = {
   litelement: false,
   outdir: 'dist',
   packagejson: true,
-  plugins: [],
+  plugins: [sigilCemPlugin()],
   stencil: false,
   watch: false,
   catalyst: false,
@@ -132,8 +166,15 @@ function getStaticExports(exportsField = {}) {
 }
 
 export function createSigilExports(exportsField = {}) {
+  const staticNonCss = Object.fromEntries(
+    Object.entries(getStaticExports(exportsField)).filter(
+      ([key]) => !Object.prototype.hasOwnProperty.call(staticCssExports, key),
+    ),
+  );
+
   return {
-    ...getStaticExports(exportsField),
+    ...staticNonCss,
+    ...staticCssExports,
     ...getComponentExports(),
   };
 }
@@ -143,6 +184,14 @@ export function syncComponentExports() {
   const previousContent = readFileSync(packageJsonUrl, 'utf8');
 
   packageJson.exports = createSigilExports(packageJson.exports ?? {});
+
+  // Ensure sideEffects lists all component dist bundles and styles so bundlers
+  // never eliminate side-effect-only imports (customElements.define calls, CSS).
+  packageJson.sideEffects = [
+    './dist/*.js',
+    './dist/*.cjs',
+    './dist/styles/**',
+  ];
 
   const nextContent = `${JSON.stringify(packageJson, null, 2)}\n`;
 

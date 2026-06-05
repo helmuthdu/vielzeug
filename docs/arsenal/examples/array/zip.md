@@ -1,29 +1,32 @@
 ---
-title: zip
+title: 'Arsenal Examples — zip'
+description: 'zip example for @vielzeug/arsenal.'
 ---
 
 ## zip
 
-Combines multiple arrays by index.
+### Problem
 
-## Example
+You have two or more parallel arrays and need to combine them element-by-element into tuples.
+
+### Solution
+
+Use `zip(...arrays)` to return an array of tuples, one per index position.
 
 ```ts
 import { zip } from '@vielzeug/arsenal';
 
-const pairs = zip(['a', 'b', 'c'], [1, 2], [true, false, true]);
+zip(['a', 'b', 'c'], [1, 2, 3]);
+// [['a', 1], ['b', 2], ['c', 3]]
 
-// [
-//   ['a', 1, true],
-//   ['b', 2, false],
-//   ['c', undefined, true],
-// ]
+zip([1, 2], ['x', 'y'], [true, false]);
+// [[1, 'x', true], [2, 'y', false]]
 ```
 
-## Signature
+### Pitfalls
 
-```ts
-function zip<T extends readonly unknown[][]>(
-  ...arrays: T
-): Array<{ [K in keyof T]: T[K] extends readonly (infer U)[] ? U | undefined : never }>;
-```
+- Output length is the length of the shortest input array — extra elements are dropped.
+
+### Related
+
+- [unzip](./unzip.md)

@@ -1,23 +1,32 @@
 ---
-title: normalize
+title: 'Arsenal Examples — normalize'
+description: 'normalize example for @vielzeug/arsenal.'
 ---
 
 ## normalize
 
-Maps a value from a range into a normalized 0..1 interval.
+### Problem
 
-## Example
+You need to map a value from an arbitrary range into 0–1 — for example computing progress percentages or scaling data for a chart.
+
+### Solution
+
+Use `normalize(value, min, max)` to return a `[0, 1]` proportion.
 
 ```ts
 import { normalize } from '@vielzeug/arsenal';
 
-normalize(75, 50, 100); // 0.5
-normalize(120, 0, 100); // 1 (clamped)
-normalize(-10, 0, 100); // 0 (clamped)
+normalize(75, 0, 100); // 0.75
+normalize(0,  0, 100); // 0
+normalize(50, 25, 75); // 0.5
 ```
 
-## Signature
+### Pitfalls
 
-```ts
-function normalize(value: number, min: number, max: number): number;
-```
+- When `min === max`, returns `NaN` (division by zero).
+- Does not clamp output — values outside `[min, max]` produce results outside `[0, 1]`.
+
+### Related
+
+- [lerp](./lerp.md)
+- [clamp](./clamp.md)

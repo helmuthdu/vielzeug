@@ -302,10 +302,10 @@
     --transition-all: all 150ms var(--ease-in-out);
 
     /* ========================================
-       Colors
-       light-dark() resolves based on color-scheme:
-       html.dark → dark, html:not(.dark) → light, default → OS preference
-       ======================================== */
+     Colors
+     light-dark() resolves based on color-scheme:
+     html.dark → dark, html:not(.dark) → light, default → OS preference
+     ======================================== */
     color-scheme: light dark;
 
     /* Contrast scale */
@@ -314,8 +314,8 @@
     --color-contrast-200: light-dark(hsl(240deg 5% 93%), hsl(210deg 5% 18%)); /* Nested cards, hover states */
     --color-contrast-300: light-dark(hsl(240deg 5% 88%), hsl(210deg 5% 24%)); /* Borders, dividers */
     --color-contrast-400: light-dark(hsl(240deg 4% 80%), hsl(210deg 4% 32%)); /* Disabled backgrounds, subtle UI */
-    --color-contrast-500: light-dark(hsl(240deg 4% 60%), hsl(210deg 4% 52%)); /* Tertiary text - AA for large text */
-    --color-contrast-600: light-dark(hsl(240deg 4% 46%), hsl(210deg 3% 64%)); /* Secondary text - AA compliant */
+    --color-contrast-500: light-dark(hsl(240deg 4% 49%), hsl(210deg 4% 52%)); /* Tertiary text - AA compliant */
+    --color-contrast-600: light-dark(hsl(240deg 4% 40%), hsl(210deg 3% 64%)); /* Secondary text - AA compliant */
     --color-contrast-700: light-dark(hsl(240deg 4% 32%), hsl(210deg 3% 76%)); /* Body text - AAA compliant */
     --color-contrast-800: light-dark(hsl(240deg 4% 22%), hsl(210deg 4% 86%)); /* Headings - AAA compliant */
     --color-contrast-900: light-dark(hsl(240deg 4% 12%), hsl(210deg 5% 94%)); /* High contrast text - AAA compliant */
@@ -366,7 +366,7 @@
     --color-neutral-contrast: light-dark(hsl(240deg 2% 98% / 91%), hsl(210deg 2% 10% / 91%));
     --color-neutral-focus: light-dark(hsl(240deg 2% 56% / 91%), hsl(210deg 2% 68% / 91%));
     --color-neutral-border: light-dark(hsl(240deg 2% 88% / 75%), hsl(210deg 2% 26% / 75%));
-    --color-neutral-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-neutral) 15%, transparent), var(--shadow-sm);
+    --color-neutral-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-neutral) 40%, transparent), var(--shadow-sm);
 
     /* Primary */
     --color-primary: light-dark(hsl(260deg 85% 65% / 100%), hsl(260deg 85% 70% / 100%));
@@ -375,7 +375,7 @@
     --color-primary-contrast: light-dark(hsl(260deg 85% 98% / 100%), hsl(260deg 85% 10% / 100%));
     --color-primary-focus: light-dark(hsl(260deg 85% 70% / 100%), hsl(260deg 85% 75% / 100%));
     --color-primary-border: light-dark(hsl(260deg 85% 70% / 60%), hsl(260deg 85% 75% / 60%));
-    --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
+    --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 40%, transparent), var(--shadow-sm);
 
     /* Secondary */
     --color-secondary: light-dark(hsl(240deg 6% 18% / 100%), hsl(210deg 5% 82% / 100%));
@@ -384,8 +384,7 @@
     --color-secondary-contrast: light-dark(hsl(240deg 5% 98% / 100%), hsl(210deg 4% 10% / 100%));
     --color-secondary-focus: light-dark(hsl(240deg 6% 26% / 100%), hsl(210deg 5% 88% / 100%));
     --color-secondary-border: light-dark(hsl(240deg 5% 26% / 60%), hsl(210deg 4% 80% / 60%));
-    --color-secondary-focus-shadow:
-      0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+    --color-secondary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 40%, transparent), var(--shadow-sm);
 
     /* Info */
     --color-info: light-dark(hsl(200deg 90% 50% / 91%), hsl(200deg 90% 60% / 91%));
@@ -394,7 +393,7 @@
     --color-info-contrast: light-dark(hsl(200deg 90% 96% / 91%), hsl(200deg 90% 15% / 91%));
     --color-info-focus: light-dark(hsl(200deg 90% 56% / 91%), hsl(200deg 90% 65% / 91%));
     --color-info-border: light-dark(hsl(200deg 90% 56% / 60%), hsl(200deg 90% 65% / 60%));
-    --color-info-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 15%, transparent), var(--shadow-sm);
+    --color-info-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 40%, transparent), var(--shadow-sm);
 
     /* Success */
     --color-success: light-dark(hsl(168deg 76% 42% / 91%), hsl(168deg 76% 50% / 91%));
@@ -403,7 +402,7 @@
     --color-success-contrast: light-dark(hsl(168deg 76% 97% / 91%), hsl(168deg 76% 15% / 91%));
     --color-success-focus: light-dark(hsl(168deg 76% 48% / 91%), hsl(168deg 76% 55% / 91%));
     --color-success-border: light-dark(hsl(168deg 76% 48% / 60%), hsl(168deg 76% 55% / 60%));
-    --color-success-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
+    --color-success-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 40%, transparent), var(--shadow-sm);
 
     /* Warning */
     --color-warning: light-dark(hsl(38deg 100% 52% / 91%), hsl(38deg 100% 60% / 91%));
@@ -412,7 +411,7 @@
     --color-warning-contrast: light-dark(hsl(38deg 100% 94% / 91%), hsl(38deg 100% 20% / 91%));
     --color-warning-focus: light-dark(hsl(38deg 100% 58% / 91%), hsl(38deg 100% 65% / 91%));
     --color-warning-border: light-dark(hsl(38deg 100% 58% / 60%), hsl(38deg 100% 65% / 60%));
-    --color-warning-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
+    --color-warning-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 40%, transparent), var(--shadow-sm);
 
     /* Error */
     --color-error: light-dark(hsl(8deg 90% 50% / 91%), hsl(8deg 90% 62% / 91%));
@@ -421,7 +420,7 @@
     --color-error-contrast: light-dark(hsl(8deg 90% 96% / 91%), hsl(8deg 90% 12% / 91%));
     --color-error-focus: light-dark(hsl(8deg 90% 56% / 91%), hsl(8deg 90% 67% / 91%));
     --color-error-border: light-dark(hsl(8deg 90% 56% / 60%), hsl(8deg 90% 67% / 60%));
-    --color-error-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
+    --color-error-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 40%, transparent), var(--shadow-sm);
   }
 
   /* ========================================

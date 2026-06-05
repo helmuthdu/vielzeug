@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-tabs', () => {
+describe('sg-tabs', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -14,28 +14,28 @@ describe('bit-tabs', () => {
   });
 
   const htmlTabs = `
-    <bit-tab-item slot="tabs" value="overview">Overview</bit-tab-item>
-    <bit-tab-item slot="tabs" value="settings">Settings</bit-tab-item>
-    <bit-tab-panel value="overview">Overview content</bit-tab-panel>
-    <bit-tab-panel value="settings">Settings content</bit-tab-panel>
+    <sg-tab-item slot="tabs" value="overview">Overview</sg-tab-item>
+    <sg-tab-item slot="tabs" value="settings">Settings</sg-tab-item>
+    <sg-tab-panel value="overview">Overview content</sg-tab-panel>
+    <sg-tab-panel value="settings">Settings content</sg-tab-panel>
   `;
 
   describe('Core Functionality', () => {
     it('renders tablist and panel container', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 
       expect(fixture.query('[role="tablist"]')).toBeTruthy();
       expect(fixture.query('.panels')).toBeTruthy();
     });
 
     it('emits change when a different tab is clicked', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
 
-      const tabs = fixture.element.querySelectorAll('bit-tab-item');
+      const tabs = fixture.element.querySelectorAll('sg-tab-item');
 
       tabs[1].dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
 
@@ -44,11 +44,11 @@ describe('bit-tabs', () => {
     });
 
     it('falls back to first enabled tab when value is missing', async () => {
-      fixture = await mount('bit-tabs', { html: htmlTabs });
+      fixture = await mount('sg-tabs', { html: htmlTabs });
 
       await fixture.flush();
 
-      const panels = fixture.element.querySelectorAll('bit-tab-panel');
+      const panels = fixture.element.querySelectorAll('sg-tab-panel');
       const firstPanel = panels[0].shadowRoot?.querySelector('[role="tabpanel"]');
 
       expect(fixture.element.getAttribute('value')).toBe('overview');
@@ -56,7 +56,7 @@ describe('bit-tabs', () => {
     });
 
     it('falls back to first enabled tab when value does not exist', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'missing' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'missing' }, html: htmlTabs });
 
       await fixture.flush();
 
@@ -64,12 +64,12 @@ describe('bit-tabs', () => {
     });
 
     it('keeps configured selection when tab items are assigned after connect', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'settings' } });
+      fixture = await mount('sg-tabs', { attrs: { value: 'settings' } });
 
       fixture.element.innerHTML = htmlTabs;
       await fixture.flush();
 
-      const panels = fixture.element.querySelectorAll('bit-tab-panel');
+      const panels = fixture.element.querySelectorAll('sg-tab-panel');
       const overviewPanel = panels[0].shadowRoot?.querySelector('[role="tabpanel"]');
       const settingsPanel = panels[1].shadowRoot?.querySelector('[role="tabpanel"]');
 
@@ -79,11 +79,11 @@ describe('bit-tabs', () => {
     });
 
     it('keeps initially selected panel visible across reconnect', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'settings' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'settings' }, html: htmlTabs });
 
       const getPanelHidden = (value: string) =>
         fixture.element
-          .querySelector<HTMLElement>(`bit-tab-panel[value="${value}"]`)
+          .querySelector<HTMLElement>(`sg-tab-panel[value="${value}"]`)
           ?.shadowRoot?.querySelector('[role="tabpanel"]')
           ?.getAttribute('aria-hidden');
 
@@ -106,14 +106,14 @@ describe('bit-tabs', () => {
 
   describe('Accessibility', () => {
     it('supports keyboard navigation on horizontal tabs', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 
       await user.press(fixture.element, 'ArrowRight');
       expect(fixture.element.getAttribute('value')).toBe('settings');
     });
 
     it('sets aria orientation on tablist', async () => {
-      fixture = await mount('bit-tabs', {
+      fixture = await mount('sg-tabs', {
         attrs: { orientation: 'vertical', value: 'overview' },
         html: htmlTabs,
       });
@@ -122,9 +122,9 @@ describe('bit-tabs', () => {
     });
 
     it('keeps only active panel visible to assistive tech', async () => {
-      fixture = await mount('bit-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      fixture = await mount('sg-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 
-      const panels = fixture.element.querySelectorAll('bit-tab-panel');
+      const panels = fixture.element.querySelectorAll('sg-tab-panel');
       const firstPanel = panels[0].shadowRoot?.querySelector('[role="tabpanel"]');
       const secondPanel = panels[1].shadowRoot?.querySelector('[role="tabpanel"]');
 
@@ -133,12 +133,12 @@ describe('bit-tabs', () => {
     });
 
     it('manual activation waits for Enter after arrow focus movement', async () => {
-      fixture = await mount('bit-tabs', {
+      fixture = await mount('sg-tabs', {
         attrs: { activation: 'manual', value: 'overview' },
         html: htmlTabs,
       });
 
-      const tabs = fixture.element.querySelectorAll<HTMLElement>('bit-tab-item');
+      const tabs = fixture.element.querySelectorAll<HTMLElement>('sg-tab-item');
 
       tabs[0]?.focus();
 
@@ -150,12 +150,12 @@ describe('bit-tabs', () => {
     });
 
     it('manual activation also supports Space after arrow focus movement', async () => {
-      fixture = await mount('bit-tabs', {
+      fixture = await mount('sg-tabs', {
         attrs: { activation: 'manual', value: 'overview' },
         html: htmlTabs,
       });
 
-      const tabs = fixture.element.querySelectorAll<HTMLElement>('bit-tab-item');
+      const tabs = fixture.element.querySelectorAll<HTMLElement>('sg-tab-item');
 
       tabs[0]?.focus();
 
@@ -169,17 +169,17 @@ describe('bit-tabs', () => {
 
   describe('Edge Cases', () => {
     it('renders lazy tab-panel content when the lazy panel is initially active', async () => {
-      fixture = await mount('bit-tabs', {
+      fixture = await mount('sg-tabs', {
         attrs: { value: 'details' },
         html: `
-          <bit-tab-item slot="tabs" value="overview">Overview</bit-tab-item>
-          <bit-tab-item slot="tabs" value="details">Details</bit-tab-item>
-          <bit-tab-panel value="overview">Overview content</bit-tab-panel>
-          <bit-tab-panel value="details" lazy>Details content</bit-tab-panel>
+          <sg-tab-item slot="tabs" value="overview">Overview</sg-tab-item>
+          <sg-tab-item slot="tabs" value="details">Details</sg-tab-item>
+          <sg-tab-panel value="overview">Overview content</sg-tab-panel>
+          <sg-tab-panel value="details" lazy>Details content</sg-tab-panel>
         `,
       });
 
-      const lazyPanel = fixture.element.querySelectorAll('bit-tab-panel')[1];
+      const lazyPanel = fixture.element.querySelectorAll('sg-tab-panel')[1];
 
       await fixture.flush();
       await new Promise((r) => setTimeout(r, 20));

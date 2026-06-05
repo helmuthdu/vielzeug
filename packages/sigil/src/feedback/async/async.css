@@ -9,8 +9,17 @@
 
   /* ── Status regions ─────────────────────────────────────────────── */
 
+  /* All regions always exist in the shadow DOM; only one is visible at a time. */
   .region {
-    /* `display: contents` can drop slotted/shadow content in some runtimes. */
+    display: none;
+  }
+
+  :host([status='idle']) .region-idle,
+  :host([status='loading']) .region-loading,
+  :host([status='empty']) .region-empty,
+  :host([status='error']) .region-error,
+  :host([status='success']) .region-success,
+  :host(:not([status])) .region-success {
     display: block;
   }
 
@@ -41,7 +50,7 @@
     height: 100%;
   }
 
-  .empty-state .icon bit-icon {
+  .empty-state .icon sg-icon {
     display: flex;
     width: 100%;
     height: 100%;
@@ -87,7 +96,7 @@
     height: 100%;
   }
 
-  .error-state .icon bit-icon {
+  .error-state .icon sg-icon {
     display: flex;
     width: 100%;
     height: 100%;
@@ -121,7 +130,7 @@
     transition: var(--_motion-transition, background var(--transition-fast), opacity var(--transition-fast));
   }
 
-  .error-state .retry-btn bit-icon {
+  .error-state .retry-btn sg-icon {
     flex: none;
   }
 

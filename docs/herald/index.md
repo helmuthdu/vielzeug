@@ -5,7 +5,7 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, createTestBus, debugBus]
+exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, createTestBu
 
 **Package:** `@vielzeug/herald` &nbsp;·&nbsp; **Category:** Events
 
-**Key exports:** `createBus`, `createBehaviorBus`, `pipeEvents`, `combineSignals`, `createTestBus`
+**Key exports:** `createBus`, `createBehaviorBus`, `pipeEvents`, `combineSignals`
 
 **When to use:** Decoupled inter-module communication via a typed event bus. Supports subscribe/emit, one-time await, async iteration, event piping, and AbortSignal lifecycle management.
 

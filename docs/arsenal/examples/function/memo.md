@@ -1,91 +1,53 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-512_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — memo'
+description: 'memo example for @vielzeug/arsenal.'
+---
 
-# memo
+## memo
 
-The `memo` utility creates a memoized version of a function that caches its results based on the provided arguments. It is highly configurable, featuring support for Time-To-Live (TTL) expiration and a maximum cache size with LRU (Least Recently Used) eviction.
+### Problem
 
-## Source Code
+A pure function is called repeatedly with the same arguments and the computation is expensive — you need to cache results and avoid redundant work.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/memo.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Smart Caching**: Efficiently stores and retrieves results for pure functions.
-- **Cache Management**: Prevent memory leaks with `maxSize` and `ttl` options.
-- **LRU Eviction**: Automatically removes the oldest entries when the cache limit is reached.
-- **Type-safe**: Properly preserves the original function's signature and return type.
-
-## API
-
-::: details Type Definitions
-<<< @/../packages/arsenal/src/function/memo.ts#MemoizeOptions
-:::
-
-```ts
-function memo<T extends (...args: any[]) => any>(fn: T, options?: MemoizeOptions<T>): T;
-```
-
-### Parameters
-
-- `fn`: The function to memoize.
-- `options`: Optional configuration:
-  - `ttl`: Time in milliseconds before a cached result expires.
-  - `maxSize`: Maximum number of entries to keep in the cache.
-
-### Returns
-
-- A new function that caches results.
-
-## Examples
-
-### Basic Memoization
+Use `memo(fn, options?)` to memoize with optional `ttl` (ms), `maxSize` (LRU cap), and a custom `key` function. Returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size`.
 
 ```ts
 import { memo } from '@vielzeug/arsenal';
 
-const heavyCalculation = (n: number) => {
-  console.log('Calculating...');
+const expensiveCalc = memo((n: number) => {
+  // simulate expensive work
   return n * n;
-};
+}, { maxSize: 100 });
 
-const cachedCalc = memo(heavyCalculation);
-
-cachedCalc(5); // Logs 'Calculating...', returns 25
-cachedCalc(5); // Returns 25 immediately (from cache)
+expensiveCalc(4); // computed: 16
+expensiveCalc(4); // cached: 16
+expensiveCalc.size; // 1
+expensiveCalc.invalidate(4); // removes entry for 4
+expensiveCalc.clear();       // clears all entries
 ```
 
-### With Expiration (TTL)
+#### Async memoization with in-flight deduplication
 
 ```ts
 import { memo } from '@vielzeug/arsenal';
 
-// Cache results for only 1 minute
-const getStats = memo(fetchStats, { ttl: 60000 });
+const fetchUser = memo(
+  (id: number) => fetch(`/api/users/${id}`).then((r) => r.json()),
+  { maxSize: 50, ttl: 60_000 },
+);
+
+// Concurrent calls with the same id share one in-flight Promise
+const [a, b] = await Promise.all([fetchUser(1), fetchUser(1)]);
 ```
 
-### Limiting Memory Usage
+### Pitfalls
 
-```ts
-import { memo } from '@vielzeug/arsenal';
+- Pass a `key` function when arguments are objects — by default arguments are stringified, which may not be stable.
+- `ttl` expiry is checked on access, not proactively — stale entries are not removed until the key is read.
 
-// Keep only the last 100 results
-const formatData = memo(formatter, { maxSize: 100 });
-```
+### Related
 
-## Implementation Notes
-
-- Performance-optimized using a standard `Map` for the cache.
-- The cache key is generated based on the string representation of all arguments.
-- Throws `TypeError` if `fn` is not a function.
-
-## See Also
-
-- [once](./once.md): Cache a result that never changes.
-- [retry](./retry.md): Automatically re-run failed operations.
-- [throttle](./throttle.md): Rate-limit execution based on time.
+- [stash](../object/stash.md)
+- [debounce](./debounce.md)

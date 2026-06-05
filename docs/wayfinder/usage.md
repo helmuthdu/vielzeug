@@ -9,7 +9,7 @@ description: Router setup, middleware, data loading, nested routes, and state pa
 Start with the [Overview](./index.md), then use this page for the day-to-day API.
 :::
 
-## Create a Router
+## Basic Usage
 
 ```ts
 import { createRouter, redirectTo } from '@vielzeug/wayfinder';

@@ -22,12 +22,12 @@ A floating interactive panel anchored to a trigger element. Unlike a tooltip, a 
 Wrap the trigger element in the default slot and place panel content in the `content` slot.
 
 ```html
-<bit-popover>
-  <bit-button>Open popover</bit-button>
+<sg-popover>
+  <sg-button>Open popover</sg-button>
   <div slot="content" style="padding: 1rem;">
     <p>This is the popover content.</p>
   </div>
-</bit-popover>
+</sg-popover>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -39,22 +39,22 @@ Wrap the trigger element in the default slot and place panel content in the `con
 <ComponentPreview center>
 
 ```html
-<bit-popover placement="top">
-  <bit-button size="sm">Top</bit-button>
+<sg-popover placement="top">
+  <sg-button size="sm">Top</sg-button>
   <div slot="content" style="padding:0.75rem;">Placed on top</div>
-</bit-popover>
-<bit-popover placement="right">
-  <bit-button size="sm">Right</bit-button>
+</sg-popover>
+<sg-popover placement="right">
+  <sg-button size="sm">Right</sg-button>
   <div slot="content" style="padding:0.75rem;">Placed on right</div>
-</bit-popover>
-<bit-popover placement="bottom">
-  <bit-button size="sm">Bottom</bit-button>
+</sg-popover>
+<sg-popover placement="bottom">
+  <sg-button size="sm">Bottom</sg-button>
   <div slot="content" style="padding:0.75rem;">Placed on bottom</div>
-</bit-popover>
-<bit-popover placement="left">
-  <bit-button size="sm">Left</bit-button>
+</sg-popover>
+<sg-popover placement="left">
+  <sg-button size="sm">Left</sg-button>
   <div slot="content" style="padding:0.75rem;">Placed on left</div>
-</bit-popover>
+</sg-popover>
 ```
 
 </ComponentPreview>
@@ -64,25 +64,25 @@ Wrap the trigger element in the default slot and place panel content in the `con
 <ComponentPreview center>
 
 ```html
-<bit-popover trigger="click">
-  <bit-button size="sm" variant="flat">Click</bit-button>
+<sg-popover trigger="click">
+  <sg-button size="sm" variant="flat">Click</sg-button>
   <div slot="content" style="padding:0.75rem;">Opens on click (default)</div>
-</bit-popover>
+</sg-popover>
 
-<bit-popover trigger="hover">
-  <bit-button size="sm" variant="flat">Hover</bit-button>
+<sg-popover trigger="hover">
+  <sg-button size="sm" variant="flat">Hover</sg-button>
   <div slot="content" style="padding:0.75rem;">Opens on hover</div>
-</bit-popover>
+</sg-popover>
 
-<bit-popover trigger="focus">
-  <bit-button size="sm" variant="flat">Focus</bit-button>
+<sg-popover trigger="focus">
+  <sg-button size="sm" variant="flat">Focus</sg-button>
   <div slot="content" style="padding:0.75rem;">Opens on focus</div>
-</bit-popover>
+</sg-popover>
 
-<bit-popover trigger="click,hover">
-  <bit-button size="sm" variant="flat">Click or hover</bit-button>
+<sg-popover trigger="click,hover">
+  <sg-button size="sm" variant="flat">Click or hover</sg-button>
   <div slot="content" style="padding:0.75rem;">Opens on click or hover</div>
-</bit-popover>
+</sg-popover>
 ```
 
 </ComponentPreview>
@@ -94,19 +94,19 @@ The `content` slot accepts any HTML — forms, cards, images, custom layouts.
 <ComponentPreview center>
 
 ```html
-<bit-popover placement="bottom-start">
-  <bit-button color="primary">What's new ✦</bit-button>
+<sg-popover placement="bottom-start">
+  <sg-button color="primary">What's new ✦</sg-button>
   <div slot="content" style="padding:1rem; display:flex; flex-direction:column; gap:0.5rem; max-width:18rem;">
     <p style="margin:0; font-weight:600; font-size:0.875rem;">Version 2.4 released</p>
     <p style="margin:0; font-size:0.8125rem; color:var(--color-contrast-600); line-height:1.5;">
       New toggle mode for button groups, popover improvements, and a fresh set of color tokens.
     </p>
     <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-      <bit-button size="sm" color="primary" variant="flat">Read changelog</bit-button>
-      <bit-button size="sm" variant="ghost">Dismiss</bit-button>
+      <sg-button size="sm" color="primary" variant="flat">Read changelog</sg-button>
+      <sg-button size="sm" variant="ghost">Dismiss</sg-button>
     </div>
   </div>
-</bit-popover>
+</sg-popover>
 ```
 
 </ComponentPreview>
@@ -116,13 +116,13 @@ The `content` slot accepts any HTML — forms, cards, images, custom layouts.
 Use the `open` attribute to programmatically show or hide the popover.
 
 ```html
-<bit-popover id="my-popover" placement="bottom">
-  <bit-button id="trigger-btn">Open</bit-button>
+<sg-popover id="my-popover" placement="bottom">
+  <sg-button id="trigger-btn">Open</sg-button>
   <div slot="content" style="padding:1rem;">
     <p>Controlled popover content.</p>
-    <bit-button id="close-btn" size="sm" variant="ghost">Close</bit-button>
+    <sg-button id="close-btn" size="sm" variant="ghost">Close</sg-button>
   </div>
-</bit-popover>
+</sg-popover>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -142,10 +142,10 @@ Use the `open` attribute to programmatically show or hide the popover.
 <ComponentPreview center>
 
 ```html
-<bit-popover disabled>
-  <bit-button size="sm" disabled>Disabled trigger</bit-button>
+<sg-popover disabled>
+  <sg-button size="sm" disabled>Disabled trigger</sg-button>
   <div slot="content" style="padding:0.75rem;">You won't see this.</div>
-</bit-popover>
+</sg-popover>
 ```
 
 </ComponentPreview>
@@ -153,10 +153,10 @@ Use the `open` attribute to programmatically show or hide the popover.
 ## Listening to Events
 
 ```html
-<bit-popover id="pop">
-  <bit-button>Toggle</bit-button>
+<sg-popover id="pop">
+  <sg-button>Toggle</sg-button>
   <div slot="content" style="padding:0.75rem;">Panel content</div>
-</bit-popover>
+</sg-popover>
 
 <script type="module">
   import '@vielzeug/sigil';
@@ -205,7 +205,7 @@ Use the `open` attribute to programmatically show or hide the popover.
 
 The popover component follows WAI-ARIA best practices.
 
-### `bit-popover`
+### `sg-popover`
 
 ✅ **Keyboard Navigation**
 

@@ -179,7 +179,41 @@ const payload = await fetchJSON('/api/profile');
 await Promise.all([a, b]);
 ```
 
-### Typed Predicates
+### Math
+
+```ts
+import { backoff, clamp, lerp, normalize, percent, range, round } from '@vielzeug/arsenal';
+
+// Clamp keeps a value within bounds
+clamp(150, 0, 100); // 100
+clamp(-10, 0, 100); // 0
+
+// Linear interpolation: t=0 → a, t=1 → b, t=0.5 → midpoint
+lerp(0, 100, 0.25); // 25
+
+// Normalize maps a value into 0–1 relative to a range
+normalize(75, 0, 100); // 0.75
+
+// range generates index arrays without mutation
+range(5);        // [0, 1, 2, 3, 4]
+range(1, 6);     // [1, 2, 3, 4, 5]
+range(0, 10, 2); // [0, 2, 4, 6, 8]
+
+// round to N decimal places
+round(3.14159, 2); // 3.14
+
+// percent: what % is value of total?
+percent(1, 4); // 25
+
+// backoff computes exponential delay for retry loops
+// min(1000 × 2ⁿ, maxMs) — multiply by Math.random() for full jitter
+backoff(0); // 1000
+backoff(1); // 2000
+backoff(2); // 4000
+backoff(3, 5_000); // 5000 (capped)
+```
+
+## Typed Predicates
 
 All typed predicates are standalone named exports — there is no `is` namespace.
 

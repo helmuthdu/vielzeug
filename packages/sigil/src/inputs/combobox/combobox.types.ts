@@ -2,7 +2,7 @@ import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail } from 
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-export type BitComboboxEvents = {
+export type SgComboboxEvents = {
   change: ChoiceChangeDetail;
   close: { reason: DropdownCloseReason };
   open: OverlayOpenDetail;
@@ -23,7 +23,7 @@ export type ComboboxOptionItem = {
   value: string;
 };
 
-export type BitComboboxProps = Omit<
+export type SgComboboxProps = Omit<
   SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>,
   'label-placement' | 'value'
 > & {
@@ -38,7 +38,7 @@ export type BitComboboxProps = Omit<
   value?: string | string[];
 };
 
-export type BitComboboxOptionProps = {
+export type SgComboboxOptionProps = {
   disabled?: boolean;
   /** Explicit label text; falls back to the element's text content. */
   label?: string;

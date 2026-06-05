@@ -6,8 +6,8 @@ import componentStyles from './password-strength.css?inline';
 /** Scoring levels for password strength. */
 export type PasswordStrengthLevel = 'empty' | 'weak' | 'fair' | 'good' | 'strong';
 
-/** Props accepted by <bit-password-strength>. */
-export type BitPasswordStrengthProps = {
+/** Props accepted by <sg-password-strength>. */
+export type SgPasswordStrengthProps = {
   /** Accessible name for assistive technology. Default: 'Password strength'. */
   label?: string;
   /**
@@ -36,12 +36,12 @@ export type BitPasswordStrengthProps = {
  * - + digit or symbol => good
  * - length >= 12 with mixed case, digit and symbol => strong
  *
- * @element bit-password-strength
+ * @element sg-password-strength
  *
- * @attr {string} value       Password to evaluate
- * @attr {number} score       Optional score override (0..4)
- * @attr {boolean} show-label Show visible feedback label (default: true)
- * @attr {string} label       Accessible name (default: Password strength)
+ * @attr {string} value - Password string to evaluate
+ * @attr {number} score - Optional score override (0..4). Use -1 for no override (default: -1)
+ * @attr {boolean} show-label - Show visible feedback label (default: true)
+ * @attr {string} label - Accessible name (default: 'Password strength')
  *
  * @cssprop --password-strength-height       Segment bar height
  * @cssprop --password-strength-gap          Gap between segments
@@ -56,11 +56,21 @@ export type BitPasswordStrengthProps = {
  *
  * @example
  * ```html
- * <bit-password-strength></bit-password-strength>
+ * <!-- Pair with an sg-input to evaluate in real time -->
+ * <sg-input type="password" label="Password" name="password" id="pwd"></sg-input>
+ * <sg-password-strength id="meter"></sg-password-strength>
+ * <script type="module">
+ *   document.getElementById('pwd').addEventListener('input', (e) => {
+ *     document.getElementById('meter').value = e.target.value;
+ *   });
+ * </script>
+ *
+ * <!-- Fixed score display (e.g. from a server-side score) -->
+ * <sg-password-strength score="3"></sg-password-strength>
  * ```
  */
-export const PASSWORD_STRENGTH_TAG = 'bit-password-strength' as const;
-define<BitPasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
+export const PASSWORD_STRENGTH_TAG = 'sg-password-strength' as const;
+define<SgPasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
   props: {
     label: prop.string('Password strength'),
     labels: prop.json(undefined as string[] | undefined),

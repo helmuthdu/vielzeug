@@ -1,78 +1,48 @@
-# allOf / anyOf / noneOf
+---
+title: 'Arsenal Examples — allOf / anyOf / noneOf'
+description: 'allOf, anyOf, noneOf example for @vielzeug/arsenal.'
+---
 
-Predicate combinators that compose multiple predicates into a single function using AND, OR, and NOR logic.
+## allOf / anyOf / noneOf
 
-## Signatures
+### Problem
+
+You need to combine multiple predicate functions with AND, OR, or NOR logic — for example building a compound filter without nested `&&` / `||` chains.
+
+### Solution
+
+Use `allOf`, `anyOf`, or `noneOf` to compose predicates into a single function.
 
 ```ts
-function allOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
-function anyOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
-function noneOf<T>(...predicates: Array<(value: T) => boolean>): (value: T) => boolean;
-```
+import { allOf, anyOf, noneOf } from '@vielzeug/arsenal';
 
-## Examples
-
-### allOf — all predicates must pass
-
-```ts
-import { allOf } from '@vielzeug/arsenal';
-
-const isAdultAdmin = allOf(
-  (u: { age: number; role: string }) => u.age >= 18,
-  (u) => u.role === 'admin',
+const isWorkingAge = allOf<number>(
+  (age) => age >= 18,
+  (age) => age < 65,
 );
 
-isAdultAdmin({ age: 25, role: 'admin' }); // true
-isAdultAdmin({ age: 25, role: 'user' }); // false
-isAdultAdmin({ age: 16, role: 'admin' }); // false
-```
+isWorkingAge(30); // true
+isWorkingAge(70); // false — fails second predicate
 
-### anyOf — at least one predicate must pass
-
-```ts
-import { anyOf } from '@vielzeug/arsenal';
-
-const isPrivileged = anyOf(
-  (u: { role: string }) => u.role === 'admin',
-  (u) => u.role === 'moderator',
+const isSpecialAge = anyOf<number>(
+  (age) => age === 0,
+  (age) => age === 100,
 );
 
-isPrivileged({ role: 'admin' }); // true
-isPrivileged({ role: 'moderator' }); // true
-isPrivileged({ role: 'user' }); // false
+isSpecialAge(0);  // true
+isSpecialAge(50); // false
+
+const noEvens = noneOf<number>((n) => n % 2 === 0);
+[1, 2, 3, 4].filter(noEvens); // [1, 3]
 ```
 
-### noneOf — no predicate may pass
+### Pitfalls
 
-```ts
-import { noneOf } from '@vielzeug/arsenal';
+- `allOf` with zero predicates returns `true` (vacuous truth).
+- `anyOf` with zero predicates returns `false` (vacuous falsity).
+- `noneOf` with a single predicate is equivalent to logical NOT — use `not` for that case to signal intent clearly.
 
-const isNotBanned = noneOf(
-  (u: { banned: boolean; suspended: boolean }) => u.banned,
-  (u) => u.suspended,
-);
+### Related
 
-isNotBanned({ banned: false, suspended: false }); // true
-isNotBanned({ banned: true, suspended: false }); // false
-```
-
-### Filter arrays
-
-```ts
-import { allOf, isString, isDefined } from '@vielzeug/arsenal';
-
-const values = ['hello', null, 'world', undefined, ''];
-const validStrings = values.filter(allOf(isDefined, isString));
-// ['hello', 'world', '']
-```
-
-## Edge cases
-
-- `allOf()` with zero predicates → always returns `true` (vacuous truth)
-- `anyOf()` with zero predicates → always returns `false` (vacuous falsity)
-- `noneOf()` with zero predicates → always returns `true`
-
-## Related
-
-- [assert](./assert.md) — Throw if a condition is falsy
-- [identity](./identity.md) — Returns its argument unchanged
+- [not](./not.md)
+- [filterMap](../array/select.md)

@@ -1,12 +1,12 @@
 import type { DataGridColumn } from '../../headless';
 
-// ── Declarative bit-column element ────────────────────────────────────────────
+// ── Declarative sg-column element ────────────────────────────────────────────
 
 /**
- * Declarative column definition for `<bit-datagrid>`.
+ * Declarative column definition for `<sg-datagrid>`.
  * Use as a child element instead of setting the `columns` prop imperatively.
  *
- * @element bit-column
+ * @element sg-column
  *
  * @attr {string} key - Row property key (required)
  * @attr {string} label - Header display label (required)
@@ -17,36 +17,36 @@ import type { DataGridColumn } from '../../headless';
  *
  * @example
  * ```html
- * <bit-datagrid>
- *   <bit-column key="name" label="Name" sortable></bit-column>
- *   <bit-column key="email" label="Email" width="20rem"></bit-column>
- * </bit-datagrid>
+ * <sg-datagrid>
+ *   <sg-column key="name" label="Name" sortable></sg-column>
+ *   <sg-column key="email" label="Email" width="20rem"></sg-column>
+ * </sg-datagrid>
  * ```
  */
-if (!customElements.get('bit-column'))
+if (!customElements.get('sg-column'))
   customElements.define(
-    'bit-column',
+    'sg-column',
     class extends HTMLElement {
       connectedCallback(): void {
         if (!this.getAttribute('key')) {
-          console.warn('[bit-column] Missing required `key` attribute.', this);
+          console.warn('[sg-column] Missing required `key` attribute.', this);
         }
 
         if (!this.getAttribute('label')) {
-          console.warn('[bit-column] Missing required `label` attribute.', this);
+          console.warn('[sg-column] Missing required `label` attribute.', this);
         }
       }
     },
   );
 
-export const COLUMN_TAG = 'bit-column' as const;
+export const COLUMN_TAG = 'sg-column' as const;
 
-/** Attributes observed by the column MutationObserver in bit-datagrid. */
+/** Attributes observed by the column MutationObserver in sg-datagrid. */
 export const COLUMN_OBSERVED_ATTRS = ['key', 'label', 'sortable', 'resizable', 'width', 'header-label'] as const;
 
-/** Parse all `<bit-column>` direct children of `host` into DataGridColumn descriptors. */
+/** Parse all `<sg-column>` direct children of `host` into DataGridColumn descriptors. */
 export function parseColumnChildren(host: HTMLElement): DataGridColumn[] {
-  return Array.from(host.querySelectorAll(':scope > bit-column')).map((el) => ({
+  return Array.from(host.querySelectorAll(':scope > sg-column')).map((el) => ({
     headerLabel: el.getAttribute('header-label') ?? undefined,
     key: el.getAttribute('key') ?? '',
     label: el.getAttribute('label') ?? '',

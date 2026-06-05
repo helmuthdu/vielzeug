@@ -1,107 +1,50 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~0.7KB-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — waitFor'
+description: 'waitFor example for @vielzeug/arsenal.'
+---
 
-# waitFor
+## waitFor
 
-Wait for a condition to become true by polling. Useful for waiting for DOM elements, API states, or other conditions.
+### Problem
 
-## Signature
+You need to poll until a condition becomes true — for example waiting for a DOM element to appear, a flag to be set, or a resource to become available.
 
-```typescript
-function waitFor(
-  condition: () => boolean | Promise<boolean>,
-  options?: {
-    timeout?: number;
-    interval?: number;
-    signal?: AbortSignal;
-  },
-): Promise<void>;
+### Solution
+
+Use `waitFor(condition, options?)` to poll `condition` until it returns `true` or the `timeout` fires.
+
+```ts
+import { waitFor } from '@vielzeug/arsenal';
+
+// Wait for a DOM element
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
+
+// Wait for a flag
+let ready = false;
+setTimeout(() => { ready = true; }, 500);
+await waitFor(() => ready);
 ```
 
-## Parameters
+#### With AbortSignal
 
-- `condition` – Function that returns true when condition is met
-- `options.timeout` – Maximum time to wait in ms (default: 5000)
-- `options.interval` – Polling interval in ms (default: 100)
-- `options.signal` – AbortSignal to cancel waiting
-
-## Returns
-
-Promise that resolves when condition becomes true.
-
-## Examples
-
-### Wait for DOM Element
-
-```typescript
+```ts
 import { waitFor } from '@vielzeug/arsenal';
-await waitFor(() => document.querySelector('#myElement') !== null, { timeout: 5000, interval: 100 });
-console.log('Element appeared!');
-```
 
-### Wait for API to be Ready
-
-```typescript
-import { waitFor } from '@vielzeug/arsenal';
-await waitFor(
-  async () => {
-    try {
-      const res = await fetch('/api/health');
-      return res.ok;
-    } catch {
-      return false;
-    }
-  },
-  { timeout: 30000, interval: 1000 },
-);
-console.log('API is ready!');
-```
-
-### Wait for State Change
-
-```typescript
-import { waitFor } from '@vielzeug/arsenal';
-await waitFor(() => window.myGlobal !== undefined, { timeout: 10000, interval: 200 });
-console.log('Global variable initialized!');
-```
-
-### With AbortSignal
-
-```typescript
-import { waitFor } from '@vielzeug/arsenal';
 const controller = new AbortController();
-// Abort after 10 seconds
-setTimeout(() => controller.abort(), 10000);
-try {
-  await waitFor(() => checkCondition(), {
-    timeout: 15000,
-    interval: 200,
-    signal: controller.signal,
-  });
-} catch (error) {
-  console.log('Waiting cancelled');
-}
+setTimeout(() => controller.abort(), 1_000);
+
+await waitFor(() => isServiceReady(), {
+  timeout: 5_000,
+  signal: controller.signal,
+});
 ```
 
-### Wait for Job Completion
+### Pitfalls
 
-```typescript
-import { waitFor } from '@vielzeug/arsenal';
-async function waitForJobCompletion(jobId: string) {
-  await waitFor(
-    async () => {
-      const status = await fetch(`/api/jobs/${jobId}`).then((r) => r.json());
-      return status.completed === true;
-    },
-    { timeout: 60000, interval: 2000 },
-  );
-  return fetch(`/api/jobs/${jobId}/result`).then((r) => r.json());
-}
-```
+- Throws a `TimeoutError` (or `AbortError`) when the condition never becomes true within the timeout or the signal fires.
+- The condition function is called on a polling interval — avoid expensive operations inside it.
 
-## Related
+### Related
 
-- [sleep](./sleep.md) – Simple async delay
-- [race](./race.md) – Race with minimum delay
+- [sleep](./sleep.md)
+- [abortable](./abortable.md)

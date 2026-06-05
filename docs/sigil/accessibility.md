@@ -46,7 +46,7 @@ The `axeCheck` helper is available globally in all Sigil tests:
 import { mount } from '@vielzeug/craft/testing';
 
 it('has no axe violations', async () => {
-  const fixture = await mount('bit-button', { attrs: { color: 'primary' } });
+  const fixture = await mount('sg-button', { attrs: { color: 'primary' } });
   const results = await axeCheck(fixture.element);
 
   expect(results.violations).toHaveLength(0);
@@ -71,76 +71,76 @@ Before each minor release, run the checklist below manually or with a screen rea
 
 ### Inputs
 
-| Component          | `role`                    | Keyboard              | ARIA attrs                                                          | axe | Notes                           |
-| ------------------ | ------------------------- | --------------------- | ------------------------------------------------------------------- | --- | ------------------------------- |
-| `bit-button`       | `button` (implicit)       | ✅ Enter/Space        | `aria-disabled`, `aria-busy`                                        | ✅  | Icon-only requires `aria-label` |
-| `bit-input`        | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
-| `bit-textarea`     | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
-| `bit-select`       | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
-| `bit-combobox`     | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
-| `bit-checkbox`     | `checkbox` (native)       | ✅ Space              | `aria-checked`, `aria-required`                                     | ✅  |                                 |
-| `bit-radio`        | `radio` (native)          | ✅ Arrow keys         | `aria-checked`                                                      | ✅  | Group nav                       |
-| `bit-switch`       | `switch`                  | ✅ Space              | `aria-checked`                                                      | ✅  |                                 |
-| `bit-slider`       | `slider`                  | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |                                 |
-| `bit-rating`       | `radiogroup` + `radio`    | ✅ Arrow keys         | `aria-label` per star                                               | ✅  |                                 |
-| `bit-number-input` | `spinbutton`              | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                   | ✅  |                                 |
-| `bit-otp-input`    | group of `spinbutton`     | ✅ Arrow/Tab          | `aria-label` per cell                                               | ✅  |                                 |
-| `bit-file-input`   | `button`-triggered native | ✅                    | `aria-label`                                                        | ✅  |                                 |
+| Component         | `role`                    | Keyboard              | ARIA attrs                                                          | axe | Notes                           |
+| ----------------- | ------------------------- | --------------------- | ------------------------------------------------------------------- | --- | ------------------------------- |
+| `sg-button`       | `button` (implicit)       | ✅ Enter/Space        | `aria-disabled`, `aria-busy`                                        | ✅  | Icon-only requires `aria-label` |
+| `sg-input`        | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
+| `sg-textarea`     | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
+| `sg-select`       | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
+| `sg-combobox`     | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
+| `sg-checkbox`     | `checkbox` (native)       | ✅ Space              | `aria-checked`, `aria-required`                                     | ✅  |                                 |
+| `sg-radio`        | `radio` (native)          | ✅ Arrow keys         | `aria-checked`                                                      | ✅  | Group nav                       |
+| `sg-switch`       | `switch`                  | ✅ Space              | `aria-checked`                                                      | ✅  |                                 |
+| `sg-slider`       | `slider`                  | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |                                 |
+| `sg-rating`       | `radiogroup` + `radio`    | ✅ Arrow keys         | `aria-label` per star                                               | ✅  |                                 |
+| `sg-number-input` | `spinbutton`              | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                   | ✅  |                                 |
+| `sg-otp-input`    | group of `spinbutton`     | ✅ Arrow/Tab          | `aria-label` per cell                                               | ✅  |                                 |
+| `sg-file-input`   | `button`-triggered native | ✅                    | `aria-label`                                                        | ✅  |                                 |
 
 ### Feedback
 
-| Component       | `role`                      | Keyboard     | ARIA attrs                                                          | axe | Notes      |
-| --------------- | --------------------------- | ------------ | ------------------------------------------------------------------- | --- | ---------- |
-| `bit-alert`     | `alert` / `status`          | ✅ (dismiss) | `aria-live` via region                                              | ✅  |            |
-| `bit-toast`     | `alert` / `status`          | ✅ (dismiss) | `aria-live="polite"` or `"assertive"`                               | ✅  |            |
-| `bit-progress`  | `progressbar`               | —            | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |            |
-| `bit-skeleton`  | none                        | —            | `aria-hidden="true"` on bones                                       | ✅  | Decorative |
-| `bit-badge`     | none                        | —            | `aria-label` if meaningful                                          | ✅  |            |
-| `bit-chip`      | `button` (when interactive) | ✅ Enter     | `aria-pressed`, `aria-label`                                        | ✅  |            |
-| **`bit-async`** | dynamic                     | —            | `aria-busy`, `aria-live`, `role="alert"` in error                   | ✅  | New        |
+| Component      | `role`                      | Keyboard     | ARIA attrs                                                          | axe | Notes      |
+| -------------- | --------------------------- | ------------ | ------------------------------------------------------------------- | --- | ---------- |
+| `sg-alert`     | `alert` / `status`          | ✅ (dismiss) | `aria-live` via region                                              | ✅  |            |
+| `sg-toast`     | `alert` / `status`          | ✅ (dismiss) | `aria-live="polite"` or `"assertive"`                               | ✅  |            |
+| `sg-progress`  | `progressbar`               | —            | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |            |
+| `sg-skeleton`  | none                        | —            | `aria-hidden="true"` on bones                                       | ✅  | Decorative |
+| `sg-badge`     | none                        | —            | `aria-label` if meaningful                                          | ✅  |            |
+| `sg-chip`      | `button` (when interactive) | ✅ Enter     | `aria-pressed`, `aria-label`                                        | ✅  |            |
+| **`sg-async`** | dynamic                     | —            | `aria-busy`, `aria-live`, `role="alert"` in error                   | ✅  | New        |
 
 ### Disclosure
 
-| Component       | `role`                         | Keyboard       | ARIA attrs                                          | axe | Notes |
-| --------------- | ------------------------------ | -------------- | --------------------------------------------------- | --- | ----- |
-| `bit-accordion` | `button` + region              | ✅ Enter/Space | `aria-expanded`, `aria-controls`                    | ✅  |       |
-| `bit-tabs`      | `tablist` + `tab` + `tabpanel` | ✅ Arrow keys  | `aria-selected`, `aria-controls`, `aria-labelledby` | ✅  |       |
+| Component      | `role`                         | Keyboard       | ARIA attrs                                          | axe | Notes |
+| -------------- | ------------------------------ | -------------- | --------------------------------------------------- | --- | ----- |
+| `sg-accordion` | `button` + region              | ✅ Enter/Space | `aria-expanded`, `aria-controls`                    | ✅  |       |
+| `sg-tabs`      | `tablist` + `tab` + `tabpanel` | ✅ Arrow keys  | `aria-selected`, `aria-controls`, `aria-labelledby` | ✅  |       |
 
 ### Overlay
 
-| Component     | `role`              | Keyboard              | ARIA attrs                       | axe | Notes                   |
-| ------------- | ------------------- | --------------------- | -------------------------------- | --- | ----------------------- |
-| `bit-dialog`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
-| `bit-drawer`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
-| `bit-popover` | `dialog` / `menu`   | ✅ Escape             | `aria-expanded`, `aria-haspopup` | ✅  |                         |
-| `bit-menu`    | `menu` + `menuitem` | ✅ Arrow/Enter/Escape | `aria-orientation`               | ✅  |                         |
-| `bit-tooltip` | `tooltip`           | ✅ Escape             | `aria-describedby` on trigger    | ✅  |                         |
+| Component    | `role`              | Keyboard              | ARIA attrs                       | axe | Notes                   |
+| ------------ | ------------------- | --------------------- | -------------------------------- | --- | ----------------------- |
+| `sg-dialog`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
+| `sg-drawer`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
+| `sg-popover` | `dialog` / `menu`   | ✅ Escape             | `aria-expanded`, `aria-haspopup` | ✅  |                         |
+| `sg-menu`    | `menu` + `menuitem` | ✅ Arrow/Enter/Escape | `aria-orientation`               | ✅  |                         |
+| `sg-tooltip` | `tooltip`           | ✅ Escape             | `aria-describedby` on trigger    | ✅  |                         |
 
 ### Content
 
-| Component        | `role`                      | Keyboard       | ARIA attrs                   | axe | Notes |
-| ---------------- | --------------------------- | -------------- | ---------------------------- | --- | ----- |
-| `bit-card`       | `button` (interactive mode) | ✅ Enter/Space | `aria-disabled`, `aria-busy` | ✅  |       |
-| `bit-table`      | `table` (native)            | ✅             | `aria-label`, `aria-busy`    | ✅  |       |
-| `bit-pagination` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
-| `bit-breadcrumb` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
-| `bit-avatar`     | none                        | —              | `alt` or `aria-label`        | ✅  |       |
+| Component       | `role`                      | Keyboard       | ARIA attrs                   | axe | Notes |
+| --------------- | --------------------------- | -------------- | ---------------------------- | --- | ----- |
+| `sg-card`       | `button` (interactive mode) | ✅ Enter/Space | `aria-disabled`, `aria-busy` | ✅  |       |
+| `sg-table`      | `table` (native)            | ✅             | `aria-label`, `aria-busy`    | ✅  |       |
+| `sg-pagination` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
+| `sg-breadcrumb` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
+| `sg-avatar`     | none                        | —              | `alt` or `aria-label`        | ✅  |       |
 
 ### Layout
 
-| Component     | Notes                                      |
-| ------------- | ------------------------------------------ |
-| `bit-sidebar` | Navigation landmark; `aria-label` required |
-| `bit-grid`    | Layout only; no interactive semantics      |
-| `bit-box`     | Layout only; no interactive semantics      |
+| Component    | Notes                                      |
+| ------------ | ------------------------------------------ |
+| `sg-sidebar` | Navigation landmark; `aria-label` required |
+| `sg-grid`    | Layout only; no interactive semantics      |
+| `sg-box`     | Layout only; no interactive semantics      |
 
 ## Known Gaps & Planned Work
 
-| Area                      | Gap                                                 | Planned                         |
-| ------------------------- | --------------------------------------------------- | ------------------------------- |
-| Visual regression         | No snapshot CI yet                                  | Playwright visual diff in vNext |
-| NVDA + JAWS parity        | Not systematically tested                           | Manual audit before 2.0 stable  |
-| `bit-select` virtual list | Virtual items need `aria-setsize` / `aria-posinset` | Tracked                         |
+| Area                     | Gap                                                 | Planned                         |
+| ------------------------ | --------------------------------------------------- | ------------------------------- |
+| Visual regression        | No snapshot CI yet                                  | Playwright visual diff in vNext |
+| NVDA + JAWS parity       | Not systematically tested                           | Manual audit before 2.0 stable  |
+| `sg-select` virtual list | Virtual items need `aria-setsize` / `aria-posinset` | Tracked                         |
 
 ## CI Badges
 

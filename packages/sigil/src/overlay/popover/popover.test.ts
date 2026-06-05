@@ -1,6 +1,6 @@
 import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-popover', () => {
+describe('sg-popover', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -27,7 +27,7 @@ describe('bit-popover', () => {
 
   describe('Rendering', () => {
     it('renders a trigger slot', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button><span slot="content">Content</span>',
       });
 
@@ -35,7 +35,7 @@ describe('bit-popover', () => {
     });
 
     it('renders a panel with role="dialog"', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -43,7 +43,7 @@ describe('bit-popover', () => {
     });
 
     it('renders a content slot inside the panel', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button><span slot="content">Panel content</span>',
       });
 
@@ -51,7 +51,7 @@ describe('bit-popover', () => {
     });
 
     it('panel has popover="manual" attribute', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -63,7 +63,7 @@ describe('bit-popover', () => {
 
   describe('Props', () => {
     it('reflects label prop as aria-label on panel', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         attrs: { label: 'User options' },
         html: '<button>Open</button>',
       });
@@ -74,7 +74,7 @@ describe('bit-popover', () => {
     });
 
     it('no aria-label on panel when label is absent', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -84,7 +84,7 @@ describe('bit-popover', () => {
     });
 
     it('falls back to click trigger for invalid trigger values', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         attrs: { trigger: 'unknown' },
         html: '<button>Open</button>',
       });
@@ -105,7 +105,7 @@ describe('bit-popover', () => {
 
   describe('Open / Close', () => {
     it('panel is initially hidden (aria-hidden="true")', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -115,7 +115,7 @@ describe('bit-popover', () => {
     });
 
     it('trigger slot has aria-expanded="false" by default', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
       await fixture.flush();
@@ -126,7 +126,7 @@ describe('bit-popover', () => {
     });
 
     it('clicking trigger opens the popover', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -142,7 +142,7 @@ describe('bit-popover', () => {
     });
 
     it('trigger slot has aria-expanded="true" when open', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -156,7 +156,7 @@ describe('bit-popover', () => {
     });
 
     it('clicking trigger again closes the popover', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -176,7 +176,7 @@ describe('bit-popover', () => {
     });
 
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         attrs: { disabled: '' },
         html: '<button>Open</button>',
       });
@@ -193,7 +193,7 @@ describe('bit-popover', () => {
     });
 
     it('keeps popover open when clicking inside panel content', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button><span slot="content">Panel content</span>',
       });
 
@@ -213,7 +213,7 @@ describe('bit-popover', () => {
     });
 
     it('closes an open popover when disabled at runtime', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -237,7 +237,7 @@ describe('bit-popover', () => {
 
   describe('Events', () => {
     it('fires open when the popover opens', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -256,7 +256,7 @@ describe('bit-popover', () => {
     });
 
     it('fires close when the popover closes', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -279,7 +279,7 @@ describe('bit-popover', () => {
     });
 
     it('fires outsideClick close reason when clicking outside', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -302,7 +302,7 @@ describe('bit-popover', () => {
     });
 
     it('fires escape close reason when dismissed via Escape key', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -325,7 +325,7 @@ describe('bit-popover', () => {
     });
 
     it('does not fire open when disabled', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         attrs: { disabled: '' },
         html: '<button>Open</button>',
       });
@@ -347,7 +347,7 @@ describe('bit-popover', () => {
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
-describe('bit-popover accessibility', () => {
+describe('sg-popover accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -360,7 +360,7 @@ describe('bit-popover accessibility', () => {
 
   describe('Dialog Role', () => {
     it('panel has role="dialog"', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -368,7 +368,7 @@ describe('bit-popover accessibility', () => {
     });
 
     it('panel aria-hidden is "true" when closed', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -376,7 +376,7 @@ describe('bit-popover accessibility', () => {
     });
 
     it('panel aria-hidden toggles to "false" when opened', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 
@@ -392,7 +392,7 @@ describe('bit-popover accessibility', () => {
 
   describe('Trigger Controls Association', () => {
     it('trigger element receives aria-controls pointing to panel id', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
       await fixture.flush();
@@ -404,7 +404,7 @@ describe('bit-popover accessibility', () => {
     });
 
     it('trigger element receives aria-haspopup="dialog"', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
       await fixture.flush();
@@ -417,7 +417,7 @@ describe('bit-popover accessibility', () => {
 
   describe('Expanded State Announcement', () => {
     it('trigger aria-expanded is "false" when closed', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
       await fixture.flush();
@@ -428,7 +428,7 @@ describe('bit-popover accessibility', () => {
     });
 
     it('trigger aria-expanded is "true" when panel is open', async () => {
-      fixture = await mount('bit-popover', {
+      fixture = await mount('sg-popover', {
         html: '<button>Open</button>',
       });
 

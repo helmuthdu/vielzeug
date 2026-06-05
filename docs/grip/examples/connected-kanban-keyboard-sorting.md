@@ -122,6 +122,12 @@ Keyboard behavior:
 - Use arrow keys to move it by one position within its current list.
 - Use `Home` and `End` to move to list boundaries.
 
+### Pitfalls
+
+- `scope` must be the same `SortableScope` instance across all connected lists — a new scope per list disables cross-list drag.
+- Keyboard reordering fires `onReorder` on each move, not on drop; debounce persistence calls if needed.
+- `using` declarations require a runtime that supports `Symbol.dispose` (or use explicit `dispose()` calls).
+
 ### Related
 
 - [Sortable List](./sortable-list.md)

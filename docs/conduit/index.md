@@ -5,7 +5,7 @@ package: conduit
 category: di
 keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
 related: [rune, herald, ward]
-exports: [createContainer, token, scope]
+exports: [createContainer, token, scope, CircularDependencyError, ProviderNotFoundError, ContainerDisposedError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

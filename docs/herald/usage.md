@@ -9,7 +9,7 @@ description: Event maps, subscriptions, wait(), async event streams, hooks, clea
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
-## Event Maps
+## Basic Usage
 
 An event map is a plain TypeScript type where each key is an event name and each value is the payload type. Use `void` for signal events that carry no data.
 

@@ -1,15 +1,9 @@
 ---
 title: Arsenal — API Reference
-description: Complete API reference for the current Arsenal surface.
+description: Complete API reference for Arsenal.
 ---
 
 [[toc]]
-
-## Package Entry Point
-
-| Import              | Purpose                    |
-| ------------------- | -------------------------- |
-| `@vielzeug/arsenal` | All public Arsenal exports |
 
 ## API At a Glance
 
@@ -45,6 +39,12 @@ description: Complete API reference for the current Arsenal surface.
 | `backoff(attempt, maxMs?)`                | Compute backoff delay for retry loops                             | Sync      | Returns `min(1000 × 2ⁿ, maxMs)` — multiply by `Math.random()` for full-jitter                            |
 
 <!-- markdownlint-enable MD060 -->
+
+## Package Entry Point
+
+| Import              | Purpose                    |
+| ------------------- | -------------------------- |
+| `@vielzeug/arsenal` | All public Arsenal exports |
 
 ## Array
 
@@ -137,6 +137,7 @@ retry(
 - `identity(value)` — returns its argument unchanged
 - `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function; returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size` (number of cached entries)
 - `noneOf(...predicates)` — NOR combinator
+- `not(predicate)` — negates a predicate; returns a new predicate with the boolean result inverted
 - `once(fn)` — run once; returns `.reset()` to allow re-invocation
 - `partial(fn, ...args)` — bind leading arguments
 - `pipe(...fns)` — left-to-right function composition
@@ -174,6 +175,7 @@ retry(
 - `diff(before?, after?, compareFn?)`
 - `deepMerge(...items)` — arrays replaced by default
 - `deepMergeWith(options)` — `{ arrayStrategy: 'concat' }` to concatenate
+- `shallowMerge(...items)` — `Object.assign`-style one-level merge
 - `entries(obj)`
 - `filterValues(obj, predicate)`
 - `flattenPaths(obj)` — flatten nested object to `{ 'a.b': value }` map; throws `RangeError` if nesting exceeds 10 levels
@@ -287,7 +289,6 @@ All predicates are standalone named exports. There is no `is` namespace.
 - `isPromise(value)`
 - `isRegex(value)`
 - `isString(value)`
-- `not(predicate)` — exported from the `function` domain; negates a predicate
 
 ## Types
 

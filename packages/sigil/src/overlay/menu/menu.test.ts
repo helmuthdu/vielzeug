@@ -1,10 +1,10 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-import type { BitMenuItemProps } from './menu';
+import type { SgMenuItemProps } from './menu';
 
-type MenuItemElement = HTMLElement & BitMenuItemProps;
+type MenuItemElement = HTMLElement & SgMenuItemProps;
 
-describe('bit-menu', () => {
+describe('sg-menu', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -17,10 +17,10 @@ describe('bit-menu', () => {
 
   describe('Core Functionality', () => {
     it('opens menu when trigger is clicked', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
         `,
       });
 
@@ -35,10 +35,10 @@ describe('bit-menu', () => {
     });
 
     it('emits select and closes for normal menu items', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
         `,
       });
 
@@ -58,10 +58,10 @@ describe('bit-menu', () => {
     });
 
     it('toggles checkbox menu item without closing menu', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="show-ids" type="checkbox">Show IDs</bit-menu-item>
+          <sg-menu-item value="show-ids" type="checkbox">Show IDs</sg-menu-item>
         `,
       });
 
@@ -76,10 +76,10 @@ describe('bit-menu', () => {
     });
 
     it('updates the internal checked UI for checkbox menu items', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="show-ids" type="checkbox">Show IDs</bit-menu-item>
+          <sg-menu-item value="show-ids" type="checkbox">Show IDs</sg-menu-item>
         `,
       });
 
@@ -109,10 +109,10 @@ describe('bit-menu', () => {
 
   describe('Accessibility', () => {
     it('sets trigger aria-haspopup and aria-expanded', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
         `,
       });
 
@@ -126,10 +126,10 @@ describe('bit-menu', () => {
     });
 
     it('uses semantic menu role on panel', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
         `,
       });
 
@@ -137,18 +137,18 @@ describe('bit-menu', () => {
     });
 
     it('uses checkable menuitemcheckbox role for checkbox items', async () => {
-      fixture = await mount('bit-menu-item', { attrs: { type: 'checkbox' }, html: 'Show IDs' });
+      fixture = await mount('sg-menu-item', { attrs: { type: 'checkbox' }, html: 'Show IDs' });
 
       expect(fixture.query('.item')?.getAttribute('role')).toBe('menuitemcheckbox');
       expect(fixture.query('.item')?.getAttribute('aria-checked')).toBe('false');
     });
 
     it('supports keyboard open using ArrowDown on trigger', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 
@@ -160,11 +160,11 @@ describe('bit-menu', () => {
     });
 
     it('supports keyboard open using Enter on trigger', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 
@@ -181,11 +181,11 @@ describe('bit-menu', () => {
     });
 
     it('supports keyboard open using Space on trigger', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 
@@ -197,10 +197,10 @@ describe('bit-menu', () => {
     });
 
     it('emits escape close reason when dismissed via Escape key', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
         `,
       });
 
@@ -215,11 +215,11 @@ describe('bit-menu', () => {
     });
 
     it('moves focus to the next menu item with ArrowDown', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 
@@ -230,18 +230,18 @@ describe('bit-menu', () => {
       await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
       await fixture.flush();
 
-      const items = fixture.element.querySelectorAll<MenuItemElement>('bit-menu-item');
+      const items = fixture.element.querySelectorAll<MenuItemElement>('sg-menu-item');
       const secondInternal = items[1]?.shadowRoot?.querySelector<HTMLElement>('[role="menuitem"]');
 
       expect(items[1]?.shadowRoot?.activeElement).toBe(secondInternal);
     });
 
     it('activates the focused menu item with Enter', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 
@@ -263,11 +263,11 @@ describe('bit-menu', () => {
     });
 
     it('activates the focused menu item with Space', async () => {
-      fixture = await mount('bit-menu', {
+      fixture = await mount('sg-menu', {
         html: `
           <button slot="trigger">Open</button>
-          <bit-menu-item value="edit">Edit</bit-menu-item>
-          <bit-menu-item value="delete">Delete</bit-menu-item>
+          <sg-menu-item value="edit">Edit</sg-menu-item>
+          <sg-menu-item value="delete">Delete</sg-menu-item>
         `,
       });
 

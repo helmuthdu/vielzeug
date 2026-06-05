@@ -1,75 +1,36 @@
-# getOrCreate
+---
+title: 'Arsenal Examples — getOrCreate'
+description: 'getOrCreate example for @vielzeug/arsenal.'
+---
 
-Lazily initialise a `Map` entry: returns the existing value if found, otherwise calls the factory, stores the result, and returns it.
+## getOrCreate
 
-## Signature
+### Problem
 
-```ts
-function getOrCreate<K, V>(map: Map<K, V>, key: K, build: () => V): V;
-```
+You need lazy initialisation of a `Map` entry — create the value only on first access, then cache it for subsequent reads.
 
-## Parameters
+### Solution
 
-- `map` — The `Map` to read from / write to.
-- `key` — The key to look up.
-- `build` — Factory called once when the key is absent.
-
-## Returns
-
-The existing or newly created value.
-
-## Examples
-
-### Cache expensive objects
+Use `getOrCreate(map, key, build)` to return the existing value or call `build()` and store the result.
 
 ```ts
 import { getOrCreate } from '@vielzeug/arsenal';
 
-const formatters = new Map<string, Intl.NumberFormat>();
+const registry = new Map<string, string[]>();
 
-function getFormatter(locale: string): Intl.NumberFormat {
-  return getOrCreate(formatters, locale, () => new Intl.NumberFormat(locale));
-}
+// First call: builds the array and stores it
+getOrCreate(registry, 'events', () => []).push('click');
+// Second call: returns the existing array
+getOrCreate(registry, 'events', () => []).push('keydown');
 
-getFormatter('en-US').format(1234.5); // '1,234.5'
-getFormatter('en-US'); // returns cached instance
+registry.get('events'); // ['click', 'keydown']
 ```
 
-### Group items lazily
+### Pitfalls
 
-```ts
-import { getOrCreate } from '@vielzeug/arsenal';
+- `build` is only called when the key is absent. If the stored value is `undefined`, `build` is not called again.
 
-const groups = new Map<string, number[]>();
+### Related
 
-for (const item of [
-  { tag: 'a', n: 1 },
-  { tag: 'b', n: 2 },
-  { tag: 'a', n: 3 },
-]) {
-  getOrCreate(groups, item.tag, () => []).push(item.n);
-}
-
-console.log(groups.get('a')); // [1, 3]
-console.log(groups.get('b')); // [2]
-```
-
-### Handles undefined values
-
-```ts
-import { getOrCreate } from '@vielzeug/arsenal';
-
-const map = new Map<string, undefined>();
-const build = vi.fn(() => undefined);
-
-getOrCreate(map, 'key', build);
-getOrCreate(map, 'key', build); // build not called again
-
-console.log(build.mock.calls.length); // 1
-```
-
-## Related
-
-- [cache](./cache.md) — Bounded FIFO cache
-- [stash](./stash.md) — TTL-aware cache with stampede prevention
-- [memo](../function/memo.md) — Memoize function results
+- [stash](./stash.md)
+- [cache](./cache.md)

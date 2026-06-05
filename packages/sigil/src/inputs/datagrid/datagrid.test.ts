@@ -69,7 +69,7 @@ type GridElement = HTMLElement & {
 };
 
 async function mountGrid(overrides: Record<string, unknown> = {}): Promise<Fixture<HTMLElement>> {
-  const fixture = await mount('bit-datagrid', { props: overrides });
+  const fixture = await mount('sg-datagrid', { props: overrides });
   const el = fixture.element as GridElement;
 
   el.columns = COLS;
@@ -114,7 +114,7 @@ function getSortableHeader(fixture: Fixture<HTMLElement>, label: string): Elemen
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
-describe('bit-datagrid', () => {
+describe('sg-datagrid', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -164,7 +164,7 @@ describe('bit-datagrid', () => {
     });
 
     it('renders empty-text when rows is empty', async () => {
-      fixture = await mount('bit-datagrid', { props: { 'empty-text': 'Nothing here' } });
+      fixture = await mount('sg-datagrid', { props: { 'empty-text': 'Nothing here' } });
 
       const el = fixture.element as GridElement;
 
@@ -482,11 +482,11 @@ describe('bit-datagrid', () => {
       expect(fixture.queryAll('.dg-td-check').length).toBe(ROWS.length);
     });
 
-    it('renders bit-checkbox in the header and each row', async () => {
+    it('renders sg-checkbox in the header and each row', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
-      expect(fixture.query('.dg-th-check bit-checkbox')).toBeTruthy();
-      expect(fixture.queryAll('.dg-td-check bit-checkbox').length).toBe(ROWS.length);
+      expect(fixture.query('.dg-th-check sg-checkbox')).toBeTruthy();
+      expect(fixture.queryAll('.dg-td-check sg-checkbox').length).toBe(ROWS.length);
     });
 
     it('allows selecting multiple rows independently', async () => {
@@ -503,10 +503,10 @@ describe('bit-datagrid', () => {
       expect(rows[1].getAttribute('aria-selected')).toBe('true');
     });
 
-    it('selects all visible rows via the select-all bit-checkbox', async () => {
+    it('selects all visible rows via the select-all sg-checkbox', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
-      const selectAll = fixture.query('.dg-th-check bit-checkbox') as HTMLElement | null;
+      const selectAll = fixture.query('.dg-th-check sg-checkbox') as HTMLElement | null;
 
       fire.change(selectAll!);
       await Promise.resolve();
@@ -519,7 +519,7 @@ describe('bit-datagrid', () => {
     it('deselects all rows when select-all is toggled again', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
-      const selectAll = fixture.query('.dg-th-check bit-checkbox') as HTMLElement | null;
+      const selectAll = fixture.query('.dg-th-check sg-checkbox') as HTMLElement | null;
 
       fire.change(selectAll!);
       await Promise.resolve();
@@ -531,7 +531,7 @@ describe('bit-datagrid', () => {
       }
     });
 
-    it('select-all bit-checkbox shows indeterminate when some rows are selected', async () => {
+    it('select-all sg-checkbox shows indeterminate when some rows are selected', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
       const rows = getBodyRows(fixture);
@@ -539,16 +539,16 @@ describe('bit-datagrid', () => {
       fire.click(rows[0]);
       await Promise.resolve();
 
-      const selectAll = fixture.query('.dg-th-check bit-checkbox') as HTMLElement | null;
+      const selectAll = fixture.query('.dg-th-check sg-checkbox') as HTMLElement | null;
 
       expect(selectAll?.hasAttribute('indeterminate')).toBe(true);
       expect(selectAll?.hasAttribute('checked')).toBe(false);
     });
 
-    it('select-all bit-checkbox shows checked when all rows are selected', async () => {
+    it('select-all sg-checkbox shows checked when all rows are selected', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
-      const selectAll = fixture.query('.dg-th-check bit-checkbox') as HTMLElement | null;
+      const selectAll = fixture.query('.dg-th-check sg-checkbox') as HTMLElement | null;
 
       fire.change(selectAll!);
       await Promise.resolve();
@@ -693,7 +693,7 @@ describe('bit-datagrid', () => {
 
   describe('Edge cases', () => {
     it('renders empty state when rows is empty', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -705,7 +705,7 @@ describe('bit-datagrid', () => {
     });
 
     it('empty state colspan spans all columns', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -717,7 +717,7 @@ describe('bit-datagrid', () => {
     });
 
     it('empty state colspan includes checkbox column in multi mode', async () => {
-      fixture = await mount('bit-datagrid', { props: { 'selection-mode': 'multi' } });
+      fixture = await mount('sg-datagrid', { props: { 'selection-mode': 'multi' } });
 
       const el = fixture.element as GridElement;
 
@@ -729,7 +729,7 @@ describe('bit-datagrid', () => {
     });
 
     it('renders correctly with a single column and single row', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & {
         columns: { key: string; label: string }[];
@@ -745,7 +745,7 @@ describe('bit-datagrid', () => {
     });
 
     it('uses custom getRowKey function', async () => {
-      fixture = await mount('bit-datagrid', { props: { 'selection-mode': 'single' } });
+      fixture = await mount('sg-datagrid', { props: { 'selection-mode': 'single' } });
 
       const el = fixture.element as GridElement;
 
@@ -784,7 +784,7 @@ describe('bit-datagrid', () => {
     });
 
     it('renders a toolbar with filters but no search input when only filters are set', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -857,7 +857,7 @@ describe('bit-datagrid', () => {
       expect(fixture.query('.dg-page-size-select')).toBeNull();
     });
 
-    it('renders a bit-select when page-size-options is set', async () => {
+    it('renders a sg-select when page-size-options is set', async () => {
       fixture = await mountGrid({ 'page-size': 2 });
 
       const el = fixture.element as GridElement;
@@ -924,7 +924,7 @@ describe('bit-datagrid', () => {
     });
 
     it('custom cell renderer formats the displayed value', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & {
         columns: { cell?: (r: User) => string; key: string; label: string }[];
@@ -967,17 +967,17 @@ describe('bit-datagrid', () => {
     });
   });
 
-  // ── Declarative bit-column ─────────────────────────────────────────────────────
+  // ── Declarative sg-column ─────────────────────────────────────────────────────
 
-  describe('Declarative bit-column children', () => {
-    it('renders columns from bit-column children when no columns prop is set', async () => {
-      fixture = await mount('bit-datagrid', {});
+  describe('Declarative sg-column children', () => {
+    it('renders columns from sg-column children when no columns prop is set', async () => {
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & { rows: User[] };
 
       el.innerHTML = `
-        <bit-column key="name" label="Name"></bit-column>
-        <bit-column key="role" label="Role"></bit-column>
+        <sg-column key="name" label="Name"></sg-column>
+        <sg-column key="role" label="Role"></sg-column>
       `;
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
@@ -989,11 +989,11 @@ describe('bit-datagrid', () => {
     });
 
     it('JS columns prop wins over declarative children when both are set', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
-      el.innerHTML = '<bit-column key="name" label="FromHTML"></bit-column>';
+      el.innerHTML = '<sg-column key="name" label="FromHTML"></sg-column>';
       el.columns = [{ key: 'name', label: 'FromJS' }];
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
@@ -1003,12 +1003,12 @@ describe('bit-datagrid', () => {
       expect(headers[0]?.textContent?.trim()).toBe('FromJS');
     });
 
-    it('marks sortable columns from bit-column[sortable]', async () => {
-      fixture = await mount('bit-datagrid', {});
+    it('marks sortable columns from sg-column[sortable]', async () => {
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & { rows: User[] };
 
-      el.innerHTML = '<bit-column key="name" label="Name" sortable></bit-column>';
+      el.innerHTML = '<sg-column key="name" label="Name" sortable></sg-column>';
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
 
@@ -1016,11 +1016,11 @@ describe('bit-datagrid', () => {
     });
 
     it('setting columns=[] explicitly clears declarative children', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
-      el.innerHTML = '<bit-column key="name" label="Name"></bit-column>';
+      el.innerHTML = '<sg-column key="name" label="Name"></sg-column>';
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
 
@@ -1032,8 +1032,8 @@ describe('bit-datagrid', () => {
       expect(fixture.queryAll('.dg-th').length).toBe(0);
     });
 
-    it('reacts to dynamically added bit-column children', async () => {
-      fixture = await mount('bit-datagrid', {});
+    it('reacts to dynamically added sg-column children', async () => {
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & { rows: User[] };
 
@@ -1042,7 +1042,7 @@ describe('bit-datagrid', () => {
 
       expect(fixture.queryAll('.dg-th').length).toBe(0);
 
-      const col = document.createElement('bit-column');
+      const col = document.createElement('sg-column');
 
       col.setAttribute('key', 'name');
       col.setAttribute('label', 'Name');
@@ -1122,7 +1122,7 @@ describe('bit-datagrid', () => {
     });
 
     it('calling focusCell before mount does not throw', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement & { focusCell?: (pos: { col: number; row: number }) => void };
 
@@ -1134,7 +1134,7 @@ describe('bit-datagrid', () => {
 
   describe('Column resizing (F4)', () => {
     it('adds dg-col-resize handle to resizable columns', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1155,7 +1155,7 @@ describe('bit-datagrid', () => {
     });
 
     it('only adds one resize handle per resizable column', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1181,7 +1181,7 @@ describe('bit-datagrid', () => {
     });
 
     it('falls back to 10 when page-size prop is not set', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1197,7 +1197,7 @@ describe('bit-datagrid', () => {
 
   describe('B2: searchedRows and filteredRows composition', () => {
     it('search and filter are composed — filter operates on searched result', async () => {
-      fixture = await mount('bit-datagrid', { props: { searchable: true } });
+      fixture = await mount('sg-datagrid', { props: { searchable: true } });
 
       const el = fixture.element as GridElement;
 
@@ -1221,7 +1221,7 @@ describe('bit-datagrid', () => {
 
   describe('B4: reactive page reset', () => {
     it('resets to page 0 when filter changes', async () => {
-      fixture = await mount('bit-datagrid', { props: { 'page-size': 2 } });
+      fixture = await mount('sg-datagrid', { props: { 'page-size': 2 } });
 
       const el = fixture.element as GridElement;
 
@@ -1249,7 +1249,7 @@ describe('bit-datagrid', () => {
 
   describe('B5: setFilter encapsulation', () => {
     it('filter selection updates visible rows', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1272,7 +1272,7 @@ describe('bit-datagrid', () => {
     });
 
     it('clearing filter selection restores all rows', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1295,19 +1295,19 @@ describe('bit-datagrid', () => {
     });
   });
 
-  // ── bit-column attribute reactivity ──────────────────────────────────────
+  // ── sg-column attribute reactivity ──────────────────────────────────────
 
-  describe('bit-column attribute reactivity', () => {
-    it('updating label attribute on bit-column updates the header cell', async () => {
-      fixture = await mount('bit-datagrid', {});
+  describe('sg-column attribute reactivity', () => {
+    it('updating label attribute on sg-column updates the header cell', async () => {
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & { rows: User[] };
 
-      el.innerHTML = '<bit-column key="name" label="Name"></bit-column>';
+      el.innerHTML = '<sg-column key="name" label="Name"></sg-column>';
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
 
-      const col = el.querySelector('bit-column')!;
+      const col = el.querySelector('sg-column')!;
 
       col.setAttribute('label', 'Full Name');
       await new Promise((r) => setTimeout(r, 0));
@@ -1317,18 +1317,18 @@ describe('bit-datagrid', () => {
       expect(headers.some((h) => h.textContent?.trim() === 'Full Name')).toBe(true);
     });
 
-    it('updating sortable attribute on bit-column adds sort button', async () => {
-      fixture = await mount('bit-datagrid', {});
+    it('updating sortable attribute on sg-column adds sort button', async () => {
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as HTMLElement & { rows: User[] };
 
-      el.innerHTML = '<bit-column key="name" label="Name"></bit-column>';
+      el.innerHTML = '<sg-column key="name" label="Name"></sg-column>';
       el.rows = ROWS;
       await new Promise((r) => setTimeout(r, 0));
 
       expect(fixture.query('.dg-sort-btn')).toBeNull();
 
-      el.querySelector('bit-column')!.setAttribute('sortable', '');
+      el.querySelector('sg-column')!.setAttribute('sortable', '');
       await new Promise((r) => setTimeout(r, 0));
 
       expect(fixture.query('.dg-sort-btn')).toBeTruthy();
@@ -1375,7 +1375,7 @@ describe('bit-datagrid', () => {
     ];
 
     async function mountExpandable(): Promise<Fixture<HTMLElement>> {
-      const f = await mount('bit-datagrid', { props: { expandable: true } });
+      const f = await mount('sg-datagrid', { props: { expandable: true } });
       const el = f.element as GridElement;
 
       (el as unknown as { columns: typeof EXPANDABLE_COLS }).columns = EXPANDABLE_COLS;
@@ -1512,7 +1512,7 @@ describe('bit-datagrid', () => {
 
   describe('filterValues pruning on column removal', () => {
     it('filteredRows computed ignores filter keys not present in current columns', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
@@ -1548,7 +1548,7 @@ describe('bit-datagrid', () => {
 
   describe('getRowKey missing id fallback', () => {
     it('rows without id and without getRowKey each get a unique key (no collapsed rows)', async () => {
-      fixture = await mount('bit-datagrid', { props: { 'selection-mode': 'single' } });
+      fixture = await mount('sg-datagrid', { props: { 'selection-mode': 'single' } });
 
       const el = fixture.element as HTMLElement & {
         columns: { key: string; label: string }[];
@@ -1573,7 +1573,7 @@ describe('bit-datagrid', () => {
     });
 
     it('warns when row is missing id', async () => {
-      fixture = await mount('bit-datagrid', {});
+      fixture = await mount('sg-datagrid', {});
 
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -1586,56 +1586,56 @@ describe('bit-datagrid', () => {
       el.rows = [{ name: 'Alice' }];
       await Promise.resolve();
 
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[bit-datagrid]'), expect.anything());
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[sg-datagrid]'), expect.anything());
 
       warnSpy.mockRestore();
     });
   });
 
-  // ── C3: bit-column validation warnings ───────────────────────────────────
+  // ── C3: sg-column validation warnings ───────────────────────────────────
 
-  describe('C3: bit-column connectedCallback validation', () => {
-    it('warns when bit-column is missing key attribute', async () => {
+  describe('C3: sg-column connectedCallback validation', () => {
+    it('warns when sg-column is missing key attribute', async () => {
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const col = document.createElement('bit-column');
+      const col = document.createElement('sg-column');
 
       col.setAttribute('label', 'Name');
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[bit-column]'), expect.anything());
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
 
       col.remove();
       spy.mockRestore();
     });
 
-    it('warns when bit-column is missing label attribute', async () => {
+    it('warns when sg-column is missing label attribute', async () => {
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const col = document.createElement('bit-column');
+      const col = document.createElement('sg-column');
 
       col.setAttribute('key', 'name');
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[bit-column]'), expect.anything());
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
 
       col.remove();
       spy.mockRestore();
     });
 
-    it('does not warn when bit-column has both key and label', async () => {
+    it('does not warn when sg-column has both key and label', async () => {
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const col = document.createElement('bit-column');
+      const col = document.createElement('sg-column');
 
       col.setAttribute('key', 'name');
       col.setAttribute('label', 'Name');
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('[bit-column]'), expect.anything());
+      expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
 
       col.remove();
       spy.mockRestore();

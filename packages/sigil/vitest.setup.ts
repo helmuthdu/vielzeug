@@ -125,10 +125,10 @@ const consoleWarn = globalThis.console.warn;
 const isKnownFormContextInjectWarning = (args: unknown[]) =>
   args.some((arg) => typeof arg === 'string' && arg.includes('[craft:E7] inject key missing: Symbol(FormContext)'));
 
-// bit-async intentionally renders no named slots when status="idle" — the E10
+// sg-async intentionally renders no named slots when status="idle" — the E10
 // warning is expected and harmless in that state.
 const isKnownAsyncSlotWarning = (args: unknown[]) =>
-  args.some((arg) => typeof arg === 'string' && arg.includes('[craft:E10]') && arg.includes('<bit-async>'));
+  args.some((arg) => typeof arg === 'string' && arg.includes('[craft:E10]') && arg.includes('<sg-async>'));
 
 globalThis.console.error = (...args: unknown[]) => {
   if (isKnownFormContextInjectWarning(args)) return;

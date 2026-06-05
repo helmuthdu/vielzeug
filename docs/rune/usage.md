@@ -9,7 +9,7 @@ description: Configuration, transports, scoped loggers, lazy bindings, timers, g
 Start with the [Overview](./index.md), then use this page for detailed usage patterns.
 :::
 
-## Logger Instances
+## Basic Usage
 
 `Rune` is the default singleton logger instance. Use `createLogger()` for isolated config.
 

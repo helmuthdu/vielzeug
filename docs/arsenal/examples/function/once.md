@@ -1,79 +1,39 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-184_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — once'
+description: 'once example for @vielzeug/arsenal.'
+---
 
-# once
+## once
 
-The `once` utility restricts a function so that it can only be executed a single time. Subsequent calls to the restricted function will return the result of the first invocation. It also includes a `reset` method to allow the function to be run again if needed.
+### Problem
 
-## Source Code
+You need a function to execute at most once — for example initializing a singleton, registering a global listener, or running a migration.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/once.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Stateful**: Remembers the result of the first call.
-- **Resettable**: Manual control to clear the cached result and allow a new execution.
-- **Type-safe**: Preserves the argument and return types of the original function.
-
-## API
-
-```ts
-function once<T extends (...args: any[]) => any>(fn: T): T;
-```
-
-### Parameters
-
-- `fn`: The function to restrict.
-
-### Returns
-
-- A new function that only executes `fn` once.
-- The returned function has a `.reset()` property to clear its state.
-
-## Examples
-
-### One-time Initialization
+Use `once(fn)` to wrap a function so it runs only on the first call. Subsequent calls return the same result. The returned function exposes `.reset()` to allow re-invocation.
 
 ```ts
 import { once } from '@vielzeug/arsenal';
 
-const initializeApp = once(() => {
-  console.log('Connecting to database...');
-  return { status: 'ready' };
+const init = once(() => {
+  console.log('initialized');
+  return 42;
 });
 
-initializeApp(); // Logs message, returns { status: 'ready' }
-initializeApp(); // Returns same object, no log
+init(); // 'initialized' logged, returns 42
+init(); // returns 42, no log
+init(); // returns 42, no log
+
+init.reset(); // allow re-invocation
+init();       // 'initialized' logged again, returns 42
 ```
 
-### Resettable Logic
+### Pitfalls
 
-```ts
-import { once } from '@vielzeug/arsenal';
+- The result is memoized after the first call — if `fn` throws, the error is not cached and subsequent calls re-throw.
 
-const getData = once(() => fetch('/api/data'));
+### Related
 
-await getData(); // Performs fetch
-await getData(); // Returns cached promise
-
-// Force a new fetch later
-getData.reset();
-await getData(); // Performs new fetch
-```
-
-## Implementation Notes
-
-- Performance-optimized using a simple closure.
-- The `.reset()` method is ideal for handling logout/re-login scenarios or refreshing stale caches.
-- Throws `TypeError` if `fn` is not a function.
-
-## See Also
-
-- [memo](./memo.md): Cache results based on multiple different arguments.
-- [throttle](./throttle.md): Rate-limit execution based on time.
-- [debounce](./debounce.md): Delay execution until a quiet period.
+- [memo](./memo.md)
+- [constant](./constant.md)

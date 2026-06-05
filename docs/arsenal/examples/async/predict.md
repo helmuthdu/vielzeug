@@ -1,44 +1,13 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~0.5KB-success" alt="Size">
-</div>
+---
+title: 'Arsenal — predict (not exported)'
+description: 'predict is not part of the Arsenal public API.'
+---
 
 # predict
 
-Execute async logic with timeout and optional cancellation via AbortSignal.
+`predict` is not exported by `@vielzeug/arsenal`.
 
-## Signature
+Use `retry` with a `timeout` option and an `AbortSignal` to achieve per-attempt time limits with cancellation support.
 
-```typescript
-function predict<T>(
-  fn: (signal: AbortSignal) => Promise<T>,
-  options?: { signal?: AbortSignal; timeout?: number },
-): Promise<T>;
-```
-
-## Parameters
-
-- `fn` - Async function that receives a merged `AbortSignal`.
-- `options.timeout` - Timeout in milliseconds (default `7000`).
-- `options.signal` - Optional external signal to cancel early.
-
-## Example
-
-```typescript
-import { predict } from '@vielzeug/arsenal';
-
-const result = await predict(
-  async (signal) => {
-    const response = await fetch('/api/user', { signal });
-    return response.json();
-  },
-  { timeout: 2_000 },
-);
-
-console.log(result);
-```
-
-## Related
-
-- [attempt](./attempt.md) - Wraps `retry` + `predict` into `{ ok, value | error }`.
-- [retry](./retry.md) - Retry strategy with delay and predicates.
+- [retry](./retry.md)
+- [attempt](./attempt.md)

@@ -352,7 +352,7 @@ Craft re-exports these from `@vielzeug/ripple`:
 | `craft:disconnect` | After `disconnectedCallback`, before component state is reset   |
 | `craft:error`      | When setup throws — bubbles, composed; detail is `CraftitError` |
 
-## Key Types
+## Types
 
 ```ts
 type PropDef<T> = {

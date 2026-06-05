@@ -4,7 +4,7 @@ import { sizableBundle, themableBundle } from '../../shared';
 import styles from './button-group.css?inline';
 
 /** Button group properties */
-export type BitButtonGroupProps = {
+export type SgButtonGroupProps = {
   /** Join buttons together into a single unit */
   attached?: boolean;
   /** Theme color tint for all child buttons */
@@ -28,23 +28,23 @@ export type ButtonGroupContext = {
   variant: ReadonlySignal<string | undefined>;
 };
 
-export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('BitButtonGroup');
+export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('SgButtonGroup');
 
 /**
  * A container for grouping related buttons.
- * Child `bit-button` components automatically inherit the group's color, size, and variant.
+ * Child `sg-button` components automatically inherit the group's color, size, and variant.
  *
- * @element bit-button-group
+ * @element sg-button-group
  *
  * @attr {boolean} attached - Join buttons together into a unit
- * @attr {string} color - Shared color tint
+ * @attr {string} color - Shared color tint: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {boolean} fullwidth - Group spans full width
  * @attr {string} label - Accessible label
  * @attr {string} orientation - 'horizontal' | 'vertical'
- * @attr {string} size - Shared size
- * @attr {string} variant - Shared visual variant
+ * @attr {string} size - Shared size: 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Shared visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost' | 'glass'
  *
- * @slot - Place bit-button elements here
+ * @slot - Place sg-button elements here
  *
  * @cssprop --button-border-start - Button styling token.
  * @cssprop --button-border-top - Button styling token.
@@ -56,11 +56,19 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('B
  * @part group - Group container.
  * @example
  * ```html
- * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
+ * <sg-button-group attached>
+ *   <sg-button variant="solid" color="primary">Save</sg-button>
+ *   <sg-button variant="solid" color="primary">Save &amp; Continue</sg-button>
+ * </sg-button-group>
+ * <sg-button-group orientation="vertical" size="sm">
+ *   <sg-button>Top</sg-button>
+ *   <sg-button>Middle</sg-button>
+ *   <sg-button>Bottom</sg-button>
+ * </sg-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = 'bit-button-group' as const;
-define<BitButtonGroupProps>(BUTTON_GROUP_TAG, {
+export const BUTTON_GROUP_TAG = 'sg-button-group' as const;
+define<SgButtonGroupProps>(BUTTON_GROUP_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

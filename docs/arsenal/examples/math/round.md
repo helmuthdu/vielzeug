@@ -1,40 +1,32 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-820_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — round'
+description: 'round example for @vielzeug/arsenal.'
+---
 
-# round
+## round
 
-Rounds a number to a specified precision.
+### Problem
 
-## Source Code
+You need to round a number to a specific decimal precision — avoiding the floating-point inaccuracies of naive `Math.round`.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/math/round.ts
-:::
+### Solution
 
-## API
-
-```ts
-function round(value: number, decimals?: number): number;
-```
-
-## Example
+Use `round(value, precision?, parser?)` to round to `precision` decimal places.
 
 ```ts
 import { round } from '@vielzeug/arsenal';
 
-round(3.14159); // 3
 round(3.14159, 2); // 3.14
-round(3.14159, 4); // 3.1416
+round(3.14159, 0); // 3
+round(1.005, 2);   // 1.01
 ```
 
-## Notes
+### Pitfalls
 
-- Handles negative and large numbers.
-- Defaults to rounding to the nearest integer.
+- Default precision is `0` (rounds to nearest integer).
+- Floating-point representation means some values behave unexpectedly — `round` uses the standard multiply-round-divide approach which handles most common cases correctly.
 
-## Related
+### Related
 
 - [clamp](./clamp.md)
-- [sum](./sum.md)
+- [percent](./percent.md)

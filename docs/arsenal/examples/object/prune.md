@@ -1,104 +1,34 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-</div>
+---
+title: 'Arsenal Examples — prune'
+description: 'prune example for @vielzeug/arsenal.'
+---
 
-# prune
+## prune
 
-The `prune` utility recursively removes null, undefined, empty strings, and empty objects/arrays from a value. It works on strings, arrays, and objects, returning `undefined` when the entire value would be empty after pruning.
+### Problem
 
-## Source Code
+You need to strip `null`, `undefined`, empty strings, and empty arrays/objects from a value before serializing or sending it to an API.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/object/prune.ts
-:::
+### Solution
 
-## Features
-
-- **Recursive**: Deeply cleans nested structures.
-- **Multi-type**: Works on strings, arrays, and objects with the same API.
-- **Edge-safe**: Returns `undefined` rather than empty containers.
-
-## API
-
-```ts
-function prune<T>(value: T): T | undefined;
-```
-
-### Parameters
-
-- `value`: The value to prune. Can be a string, array, object, or any other type (passthrough).
-
-### Returns
-
-- The pruned value, or `undefined` if the result would be entirely empty.
-
-## Examples
-
-### Strings
+Use `prune(value)` to recursively remove all falsy-null values, returning a clean copy.
 
 ```ts
 import { prune } from '@vielzeug/arsenal';
 
-prune('  hello  '); // 'hello'
-prune('   '); // undefined
-prune(''); // undefined
+prune({ a: 1, b: null, c: '', d: { e: undefined, f: 2 } });
+// { a: 1, d: { f: 2 } }
+
+prune([1, null, 2, undefined, 3]);
+// [1, 2, 3]
 ```
 
-### Arrays
+### Pitfalls
 
-```ts
-import { prune } from '@vielzeug/arsenal';
+- `false` and `0` are **kept** — `prune` only removes `null`, `undefined`, and empty strings/collections.
+- Returns a deep copy — the original is not mutated.
 
-prune([1, null, '', 2, undefined, 3]); // [1, 2, 3]
-prune([null, undefined, '']); // undefined
-```
+### Related
 
-### Objects
-
-```ts
-import { prune } from '@vielzeug/arsenal';
-
-prune({ a: 1, b: null, c: '', d: 2 });
-// { a: 1, d: 2 }
-
-prune({ a: { b: null, c: '' }, d: 1 });
-// { d: 1 }
-
-prune({ a: null, b: undefined });
-// undefined
-```
-
-### Sanitising API Payloads
-
-```ts
-import { prune } from '@vielzeug/arsenal';
-
-const formData = {
-  name: '  Alice  ',
-  email: '',
-  address: {
-    street: '123 Main St',
-    apartment: '',
-    city: 'Wonderland',
-  },
-  tags: ['typescript', null, '', 'arsenal'],
-};
-
-prune(formData);
-/*
-{
-  name: 'Alice',
-  address: { street: '123 Main St', city: 'Wonderland' },
-  tags: ['typescript', 'arsenal'],
-}
-*/
-```
-
-## See Also
-
-- [diff](./diff.md): Find differences between two objects.
-- [merge](./merge.md): Deep-merge cleaned objects.
-
-<style>
-.badges { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-</style>
+- [filterValues](./filterValues.md)
+- [compact](../array/compact.md)

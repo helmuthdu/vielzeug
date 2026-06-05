@@ -1,43 +1,17 @@
-# indexBy
+---
+title: 'Arsenal Examples — indexBy'
+description: 'indexBy example for @vielzeug/arsenal.'
+---
 
-The `indexBy` utility indexes an array into an object keyed by a selector function. When multiple items share the same key, the last one wins.
+## indexBy
 
-## Source Code
+### Problem
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/indexBy.ts
-:::
+You have an array and need O(1) lookup by a unique key — for example building an id-to-object map from an API response.
 
-## Features
+### Solution
 
-- **Custom selector**: Pass a function for computed keys.
-- **Last-wins deduplication**: Duplicate keys overwrite earlier entries.
-
-## API
-
-```ts
-function indexBy<T>(
-  array: T[],
-  selector: (item: T, index: number, array: T[]) => string | number | boolean,
-): Record<string, T>;
-```
-
-### Parameters
-
-- `array`: The array to index.
-- `selector`: A function `(item: T, index: number, array: T[]) => string | number | boolean` that returns the key for each element.
-
-### Returns
-
-- A `Record<string, T>` mapping each key to its corresponding element.
-
-### Throws
-
-- `TypeError`: If the first argument is not an array.
-
-## Examples
-
-### Index by Selector Function
+Use `indexBy(array, selector)` to produce a `Record<string, T>` keyed by the selector result.
 
 ```ts
 import { indexBy } from '@vielzeug/arsenal';
@@ -45,46 +19,19 @@ import { indexBy } from '@vielzeug/arsenal';
 const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
-  { id: 3, name: 'Charlie' },
 ];
 
-indexBy(users, (user) => user.id);
-// { '1': { id: 1, name: 'Alice' }, '2': { id: 2, name: 'Bob' }, '3': { id: 3, name: 'Charlie' } }
+const byId = indexBy(users, (u) => u.id);
+byId[1]; // { id: 1, name: 'Alice' }
+byId[2]; // { id: 2, name: 'Bob' }
 ```
 
-### Index with Selector Function
+### Pitfalls
 
-```ts
-import { indexBy } from '@vielzeug/arsenal';
+- If multiple items share the same key, the last one wins.
+- Keys are always coerced to strings — numeric ids become string keys in the record.
 
-const products = [
-  { sku: 'A-1', name: 'Widget', price: 9.99 },
-  { sku: 'B-2', name: 'Gadget', price: 19.99 },
-];
+### Related
 
-const bySku = indexBy(products, (p) => p.sku);
-// { 'A-1': { sku: 'A-1', ... }, 'B-2': { sku: 'B-2', ... } }
-
-// Fast O(1) lookup
-bySku['A-1'].name; // 'Widget'
-```
-
-### Duplicate Keys (Last Wins)
-
-```ts
-import { indexBy } from '@vielzeug/arsenal';
-
-const data = [
-  { a: 'x', v: 1 },
-  { a: 'y', v: 2 },
-  { a: 'x', v: 3 }, // overwrites first
-];
-
-indexBy(data, (item) => item.a);
-// { x: { a: 'x', v: 3 }, y: { a: 'y', v: 2 } }
-```
-
-## See Also
-
-- [groupBy](./group.md): Group items into arrays by key.
-- [filterMap](./select.md): Map and filter in one pass.
+- [groupBy](./group.md)
+- [countBy](./countBy.md)

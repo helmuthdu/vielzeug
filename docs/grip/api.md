@@ -367,7 +367,7 @@ Applies a DOM reorder result (`orderedIds`) to your backing array.
 
 - IDs missing from `items` are ignored.
 - Items not listed in `ids` are appended in original order.
-- Duplicate IDs in `ids` — first occurrence wins, subsequent occurrences are ignored.
+- Duplicate IDs in `ids` — first occurrence wins, later occurrences are ignored.
 
 ```ts
 const next = applyReorder(items, orderedIds, (item) => item.id);

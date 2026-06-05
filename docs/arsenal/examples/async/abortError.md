@@ -1,60 +1,36 @@
-# abortError
+---
+title: 'Arsenal Examples — abortError'
+description: 'abortError example for @vielzeug/arsenal.'
+---
 
-Extracts the abort reason from an `AbortSignal`, or constructs a `DOMException('Aborted', 'AbortError')` when no reason is set.
+## abortError
 
-## Signature
+### Problem
 
-```ts
-function abortError(signal?: AbortSignal): unknown;
-```
+You need to extract an abort reason from a signal or construct a standard `AbortError` `DOMException` — for example propagating cancellation in a custom async helper.
 
-## Parameters
+### Solution
 
-- `signal` — (optional) An aborted `AbortSignal` to extract the reason from.
-
-## Returns
-
-- The signal's `reason` if present, otherwise `new DOMException('Aborted', 'AbortError')`.
-
-## Examples
-
-### Default DOMException
+Use `abortError(signal?)` to get the signal's `reason` if set, or create a new `DOMException('AbortError')`.
 
 ```ts
 import { abortError } from '@vielzeug/arsenal';
 
-throw abortError(); // DOMException { name: 'AbortError' }
-```
+// Construct a standard AbortError
+throw abortError();
 
-### Extract signal reason
-
-```ts
-import { abortError } from '@vielzeug/arsenal';
-
-const ac = new AbortController();
-ac.abort(new TypeError('Request cancelled'));
-
-throw abortError(ac.signal); // TypeError: Request cancelled
-```
-
-### Use with isAbortError
-
-```ts
-import { abortError, isAbortError } from '@vielzeug/arsenal';
-
-try {
-  const ac = new AbortController();
-  ac.abort();
-  throw abortError(ac.signal);
-} catch (err) {
-  if (isAbortError(err)) {
-    console.log('Aborted');
-  }
+// Propagate the signal's own reason
+async function runWithSignal(signal: AbortSignal) {
+  if (signal.aborted) throw abortError(signal);
+  // ... do work
 }
 ```
 
-## Related
+### Pitfalls
 
-- [abortable](./abortable.md) — Wrap a promise to reject on signal fire
-- [waitFor](./waitFor.md) — Poll until a condition is met
-- [retry](./retry.md) — Retry async operations with backoff
+- When a signal has no explicit `reason`, the returned error is a plain `DOMException` with name `'AbortError'`. Check with `isAbortError` rather than `instanceof DOMException`.
+
+### Related
+
+- [abortable](./abortable.md)
+- [isAbortError](../typed/isAbortError.md)

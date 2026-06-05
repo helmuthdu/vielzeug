@@ -1,90 +1,33 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isMatch'
+description: 'isMatch example for @vielzeug/arsenal.'
+---
 
-# isMatch
+## isMatch
 
-The `isMatch` utility checks if an object contains a specific pattern of properties and values. It performs a partial comparison, meaning the checked object can have additional properties not present in the pattern.
+### Problem
 
-## Source Code
+You need partial structural matching — checking that an object contains at least the keys and values of a source, without requiring exact equality.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isMatch.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Partial Matching**: Only verifies the keys specified in the pattern.
-- **Regex Support**: Allows matching string values against Regular Expressions.
-- **Deep Matching**: Recursively checks nested objects within the pattern.
-
-## API
-
-```ts
-function isMatch(target: any, pattern: any): boolean;
-```
-
-### Parameters
-
-- `obj`: The object to validate.
-- `pattern`: The shape or values to match against.
-
-### Returns
-
-- `true` if the object matches the pattern; otherwise, `false`.
-
-## Examples
-
-### Partial Object Match
+Use `isMatch(object, source)` to confirm that `object` has every key-value from `source` (recursively).
 
 ```ts
 import { isMatch } from '@vielzeug/arsenal';
 
 const user = { id: 1, name: 'Alice', role: 'admin', active: true };
 
-// Only check name and role
-isMatch(user, { name: 'Alice', role: 'admin' }); // true
-
-// Missing property in pattern is fine
-isMatch(user, { id: 1 }); // true
+isMatch(user, { role: 'admin' });          // true
+isMatch(user, { role: 'admin', active: true }); // true
+isMatch(user, { role: 'user' });           // false
 ```
 
-### Regular Expression Matching
+### Pitfalls
 
-```ts
-import { isMatch } from '@vielzeug/arsenal';
+- `Map` and `Set` sources always return `false` — use `isEqual` for those types.
+- Only checks keys present in `source` — extra keys in `object` are ignored.
 
-const product = { sku: 'PROD-123', category: 'electronics' };
+### Related
 
-// Match SKU using a regex
-isMatch(product, { sku: /^PROD-/ }); // true
-```
-
-### Nested Pattern Matching
-
-```ts
-import { isMatch } from '@vielzeug/arsenal';
-
-const data = {
-  meta: {
-    status: 200,
-    tags: ['new'],
-  },
-};
-
-isMatch(data, { meta: { status: 200 } }); // true
-```
-
-## Implementation Notes
-
-- Uses deep equality (`isEqual`) for non-primitive values in the pattern.
-- If a value in the pattern is a `RegExp`, it tests the corresponding value in the object using `.test()`.
-- Throws nothing; safely handles `null`, `undefined`, and non-object inputs by returning `false`.
-
-## See Also
-
-- [isEqual](./isEqual.md): Check for total structural identity.
-- [search](../array/search.md): Fuzzy search across objects in an array.
-- [path](../object/path.md): Retrieve a specific nested value.
+- [isEqual](./isEqual.md)

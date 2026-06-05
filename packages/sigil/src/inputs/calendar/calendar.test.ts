@@ -33,7 +33,7 @@ function getHeaderLabel(fixture: Fixture<HTMLElement>): string {
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
-describe('bit-calendar', () => {
+describe('sg-calendar', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -49,19 +49,19 @@ describe('bit-calendar', () => {
 
   describe('Rendering', () => {
     it('renders the calendar panel', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(fixture.query('.calendar')).toBeTruthy();
     });
 
     it('renders the day grid by default', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(getGrid(fixture)).toBeTruthy();
     });
 
     it('renders 7 weekday header cells', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       const headers = fixture.queryAll('.cal-cell-head');
 
@@ -69,7 +69,7 @@ describe('bit-calendar', () => {
     });
 
     it('renders between 28 and 42 day cells', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       const cells = getDayCells(fixture);
 
@@ -78,20 +78,20 @@ describe('bit-calendar', () => {
     });
 
     it('renders prev/next nav buttons', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(fixture.query('.nav-btn[aria-label="Previous"]')).toBeTruthy();
       expect(fixture.query('.nav-btn[aria-label="Next"]')).toBeTruthy();
     });
 
     it('renders header label button', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(fixture.query('.cal-label-btn')).toBeTruthy();
     });
 
     it('marks today with data-today and aria-current="date"', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       const today = getToday(fixture);
 
@@ -107,7 +107,7 @@ describe('bit-calendar', () => {
       const year = new Date().getFullYear();
       const iso = `${year}-01-15`;
 
-      fixture = await mount('bit-calendar', { props: { value: iso } });
+      fixture = await mount('sg-calendar', { props: { value: iso } });
 
       const selected = getSelectedDay(fixture);
 
@@ -116,7 +116,7 @@ describe('bit-calendar', () => {
     });
 
     it('navigates to value prop month on mount', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-03-10' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-03-10' } });
 
       const label = getHeaderLabel(fixture);
 
@@ -127,7 +127,7 @@ describe('bit-calendar', () => {
     it('emits change event when a day is clicked', async () => {
       const year = new Date().getFullYear();
 
-      fixture = await mount('bit-calendar', { props: { value: `${year}-01-01` } });
+      fixture = await mount('sg-calendar', { props: { value: `${year}-01-01` } });
 
       const events: CustomEvent[] = [];
       const iso = `${year}-01-10`;
@@ -143,7 +143,7 @@ describe('bit-calendar', () => {
     it('updates selected cell after clicking a day', async () => {
       const year = new Date().getFullYear();
 
-      fixture = await mount('bit-calendar', { props: { value: `${year}-01-01` } });
+      fixture = await mount('sg-calendar', { props: { value: `${year}-01-01` } });
 
       const iso = `${year}-01-15`;
 
@@ -156,7 +156,7 @@ describe('bit-calendar', () => {
     });
 
     it('re-clicking a different day updates the selection', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-01-10' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-01-10' } });
 
       clickDay(fixture, '2023-01-20');
       await fixture.flush();
@@ -171,7 +171,7 @@ describe('bit-calendar', () => {
 
   describe('Navigation', () => {
     it('previous button moves to prior month', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       const labelBefore = getHeaderLabel(fixture);
 
@@ -185,7 +185,7 @@ describe('bit-calendar', () => {
     });
 
     it('next button moves to next month', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       fire.click(fixture.query('.nav-btn[aria-label="Next"]')!);
       await fixture.flush();
@@ -194,7 +194,7 @@ describe('bit-calendar', () => {
     });
 
     it('previous wraps from January to December of prior year', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-01-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-01-01' } });
 
       fire.click(fixture.query('.nav-btn[aria-label="Previous"]')!);
       await fixture.flush();
@@ -206,7 +206,7 @@ describe('bit-calendar', () => {
     });
 
     it('header click switches to month view', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -215,7 +215,7 @@ describe('bit-calendar', () => {
     });
 
     it('clicking a month in month view switches to day view', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -232,7 +232,7 @@ describe('bit-calendar', () => {
     });
 
     it('second header click switches to year view', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -243,7 +243,7 @@ describe('bit-calendar', () => {
     });
 
     it('clicking a year in year view switches to month view', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-01-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-01-01' } });
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -263,7 +263,7 @@ describe('bit-calendar', () => {
 
   describe('Min / Max bounds', () => {
     it('disables days before min', async () => {
-      fixture = await mount('bit-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
+      fixture = await mount('sg-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
 
       const cell = fixture.query('[data-iso="2023-06-05"]');
 
@@ -272,7 +272,7 @@ describe('bit-calendar', () => {
     });
 
     it('disables days after max', async () => {
-      fixture = await mount('bit-calendar', { props: { max: '2023-06-20', value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { max: '2023-06-20', value: '2023-06-01' } });
 
       const cell = fixture.query('[data-iso="2023-06-25"]');
 
@@ -280,7 +280,7 @@ describe('bit-calendar', () => {
     });
 
     it('does not emit change when a disabled day is clicked', async () => {
-      fixture = await mount('bit-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
+      fixture = await mount('sg-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
 
       const events: CustomEvent[] = [];
 
@@ -297,7 +297,7 @@ describe('bit-calendar', () => {
 
   describe('weekend-days', () => {
     it('disables days matching weekend-days (array prop)', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: { value: '2023-06-02', 'weekend-days': [0, 6] },
       });
 
@@ -308,7 +308,7 @@ describe('bit-calendar', () => {
     });
 
     it('disables days matching weekend-days (JSON attribute)', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
       fixture.element.setAttribute('weekend-days', '[0,6]');
       fixture.element.setAttribute('value', '2023-06-02');
       await fixture.flush();
@@ -323,7 +323,7 @@ describe('bit-calendar', () => {
 
   describe('Keyboard navigation', () => {
     it('Enter on a day cell selects the date', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       const events: CustomEvent[] = [];
 
@@ -339,7 +339,7 @@ describe('bit-calendar', () => {
     });
 
     it('Space on a day cell selects the date', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       const events: CustomEvent[] = [];
 
@@ -354,7 +354,7 @@ describe('bit-calendar', () => {
     });
 
     it('ArrowRight fires on a day cell without error', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       const cell = fixture.query('[data-iso="2023-06-10"]') as HTMLElement;
 
@@ -362,7 +362,7 @@ describe('bit-calendar', () => {
     });
 
     it('ArrowLeft fires on a day cell without error', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       const cell = fixture.query('[data-iso="2023-06-10"]') as HTMLElement;
 
@@ -370,7 +370,7 @@ describe('bit-calendar', () => {
     });
 
     it('Enter on a month cell navigates to day view', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -387,7 +387,7 @@ describe('bit-calendar', () => {
     });
 
     it('Enter on a year cell navigates to month view', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-01-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-01-01' } });
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -407,25 +407,25 @@ describe('bit-calendar', () => {
 
   describe('Accessibility', () => {
     it('host has role="group"', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(fixture.element.getAttribute('role')).toBe('group');
     });
 
     it('host has aria-label from display label', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-01' } });
 
       expect(fixture.element.getAttribute('aria-label')).toMatch(/June 2023/i);
     });
 
     it('day grid has role="grid"', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(getGrid(fixture)?.getAttribute('role')).toBe('grid');
     });
 
     it('day cells have role="gridcell"', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       const cells = getDayCells(fixture);
 
@@ -433,7 +433,7 @@ describe('bit-calendar', () => {
     });
 
     it('selected day has aria-selected="true"', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-06-15' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-06-15' } });
 
       const selected = getSelectedDay(fixture);
 
@@ -441,7 +441,7 @@ describe('bit-calendar', () => {
     });
 
     it('disabled days have tabindex="-1"', async () => {
-      fixture = await mount('bit-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
+      fixture = await mount('sg-calendar', { props: { min: '2023-06-10', value: '2023-06-15' } });
 
       const disabled = fixture.query('[data-iso="2023-06-05"]');
 
@@ -449,20 +449,20 @@ describe('bit-calendar', () => {
     });
 
     it('host sets aria-disabled="true" when disabled', async () => {
-      fixture = await mount('bit-calendar', { props: { disabled: true } });
+      fixture = await mount('sg-calendar', { props: { disabled: true } });
 
       expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('nav buttons have descriptive aria-label', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(fixture.query('[aria-label="Previous"]')).toBeTruthy();
       expect(fixture.query('[aria-label="Next"]')).toBeTruthy();
     });
 
     it('header label button aria-label reflects next view', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       const btn = fixture.query('.cal-label-btn');
 
@@ -474,7 +474,7 @@ describe('bit-calendar', () => {
 
   describe('Disabled state', () => {
     it('does not emit change when disabled and day is clicked', async () => {
-      fixture = await mount('bit-calendar', { props: { disabled: true, value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { disabled: true, value: '2023-06-01' } });
 
       const events: CustomEvent[] = [];
 
@@ -486,7 +486,7 @@ describe('bit-calendar', () => {
     });
 
     it('all day cells have tabindex="-1" when disabled', async () => {
-      fixture = await mount('bit-calendar', { props: { disabled: true } });
+      fixture = await mount('sg-calendar', { props: { disabled: true } });
 
       const cells = getDayCells(fixture);
 
@@ -498,7 +498,7 @@ describe('bit-calendar', () => {
 
   describe('Events', () => {
     it('renders a dot for a date with 1 event in normal mode', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [{ date: '2023-06-15', id: '1', label: 'Meeting' }],
           value: '2023-06-15',
@@ -511,7 +511,7 @@ describe('bit-calendar', () => {
     });
 
     it('caps visible dots at 3 and shows overflow badge', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [
             { date: '2023-06-15', id: '1', label: 'A' },
@@ -530,7 +530,7 @@ describe('bit-calendar', () => {
     });
 
     it('renders pills instead of dots in expanded mode', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [{ date: '2023-06-15', id: '1', label: 'Release' }],
           expanded: true,
@@ -545,7 +545,7 @@ describe('bit-calendar', () => {
     });
 
     it('caps visible pills at 3 and shows "+N more" in expanded mode', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [
             { date: '2023-06-15', id: '1', label: 'A' },
@@ -568,7 +568,7 @@ describe('bit-calendar', () => {
     });
 
     it('shows no overflow pill when events fit within cap in expanded mode', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [
             { date: '2023-06-15', id: '1', label: 'A' },
@@ -587,7 +587,7 @@ describe('bit-calendar', () => {
     });
 
     it('applies event color as CSS custom property on dot', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [{ color: '#e11d48', date: '2023-06-15', id: '1', label: 'Alert' }],
           value: '2023-06-15',
@@ -600,7 +600,7 @@ describe('bit-calendar', () => {
     });
 
     it('renders no dot container for a date with 0 events', async () => {
-      fixture = await mount('bit-calendar', {
+      fixture = await mount('sg-calendar', {
         props: {
           events: [{ date: '2023-06-20', id: '1', label: 'Other day' }],
           value: '2023-06-15',
@@ -617,13 +617,13 @@ describe('bit-calendar', () => {
 
   describe('Edge cases', () => {
     it('ignores invalid value prop gracefully', async () => {
-      fixture = await mount('bit-calendar', { props: { value: 'not-a-date' } });
+      fixture = await mount('sg-calendar', { props: { value: 'not-a-date' } });
 
       expect(getSelectedDay(fixture)).toBeNull();
     });
 
     it('navigates month grids across year boundaries correctly', async () => {
-      fixture = await mount('bit-calendar', { props: { value: '2023-12-01' } });
+      fixture = await mount('sg-calendar', { props: { value: '2023-12-01' } });
 
       fire.click(fixture.query('.nav-btn[aria-label="Next"]')!);
       await fixture.flush();
@@ -632,13 +632,13 @@ describe('bit-calendar', () => {
     });
 
     it('renders without value prop (no selected cell)', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       expect(getSelectedDay(fixture)).toBeNull();
     });
 
     it('month view shows 12 month cells', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -647,7 +647,7 @@ describe('bit-calendar', () => {
     });
 
     it('year view shows 12 year cells', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -658,7 +658,7 @@ describe('bit-calendar', () => {
     });
 
     it('third header click cycles back to day view', async () => {
-      fixture = await mount('bit-calendar');
+      fixture = await mount('sg-calendar');
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();
@@ -671,7 +671,7 @@ describe('bit-calendar', () => {
     });
 
     it('space in month view does not select when disabled', async () => {
-      fixture = await mount('bit-calendar', { props: { disabled: true, value: '2023-06-01' } });
+      fixture = await mount('sg-calendar', { props: { disabled: true, value: '2023-06-01' } });
 
       fire.click(fixture.query('.cal-label-btn')!);
       await fixture.flush();

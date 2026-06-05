@@ -1,76 +1,37 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1004_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — truncate'
+description: 'truncate example for @vielzeug/arsenal.'
+---
 
-# truncate
+## truncate
 
-The `truncate` utility shortens a string to a specified length and appends a customizable suffix (like an ellipsis) if the string exceeds that length.
+### Problem
 
-## Source Code
+You need to shorten a string to fit a display limit, appending an ellipsis without cutting a word mid-way.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/string/truncate.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Configurable**: Choose the maximum length and the suffix to append.
-- **Smart Truncation**: Only applies if the string is actually longer than the target length.
-
-## API
-
-```ts
-function truncate(input: string, length: number, suffix?: string): string;
-```
-
-### Parameters
-
-- `input`: The string to be truncated.
-- `length`: The maximum allowed length of the resulting string, _including_ the suffix.
-- `suffix`: The string to append to the end of the truncated result (default: `'...'`).
-
-### Returns
-
-- The truncated string if it was longer than `length`, otherwise the original string.
-
-## Examples
-
-### Basic Truncation
+Use `truncate(str, limit?, options?)` to trim and optionally respect word boundaries.
 
 ```ts
 import { truncate } from '@vielzeug/arsenal';
 
-const text = 'Vielzeug is a Swiss-army knife for TypeScript developers.';
+truncate('The quick brown fox', 15);
+// 'The quick brow…'
 
-truncate(text, 20); // 'Vielzeug is a Swi...'
+truncate('The quick brown fox', 15, { completeWords: true });
+// 'The quick…'
+
+truncate('The quick brown fox', 15, { ellipsis: '...' });
+// 'The quick bro...'
 ```
 
-### Custom Suffix
+### Pitfalls
 
-```ts
-import { truncate } from '@vielzeug/arsenal';
+- Default `limit` is 100 characters.
+- With `completeWords: true`, the string may be shorter than `limit` since the last partial word is dropped.
 
-truncate('Read more about this topic', 15, ' [...]');
-// 'Read more [...]'
-```
+### Related
 
-### Short Strings
-
-```ts
-import { truncate } from '@vielzeug/arsenal';
-
-// String is shorter than length, returned as-is
-truncate('Hello', 10); // 'Hello'
-```
-
-## Implementation Notes
-
-- If the `length` provided is less than or equal to the length of the `suffix`, the behavior may vary depending on the implementation (usually returns just the suffix or a portion of it).
-- Does not attempt to truncate at word boundaries; it cuts exactly at the specified character count.
-
-## See Also
-
-- [similarity](./similarity.md): Compare two strings for similarity.
-- [camelCase](./camelCase.md): Convert strings to camelCase.
+- [pad](./pad.md)
+- [words](./words.md)

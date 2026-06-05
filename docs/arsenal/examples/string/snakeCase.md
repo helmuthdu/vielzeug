@@ -1,69 +1,27 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — snakeCase'
+description: 'snakeCase example for @vielzeug/arsenal.'
+---
 
-# snakeCase
+## snakeCase
 
-The `snake_case` utility transforms a string into `snake_case` format (all lower case with words separated by underscores). It is commonly used for database column names, file naming conventions, or environment variables.
+### Problem
 
-## Source Code
+You need to convert a string to snake_case — for example transforming display names to database column names.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/string/snakeCase.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Durable Parsing**: Handles spaces, dashes, and dots as separators.
-- **Case Boundary Detection**: Correctly splits strings based on transitions between lower and upper case (e.g., from `camelCase`).
-
-## API
-
-```ts
-function snakeCase(input: string): string;
-```
-
-### Parameters
-
-- `input`: The string to transform.
-
-### Returns
-
-- The transformed string in `snake_case`.
-
-## Examples
-
-### Basic Conversion
+Use `snakeCase(str)` to convert any case to lowercase underscore-separated form.
 
 ```ts
 import { snakeCase } from '@vielzeug/arsenal';
 
-snakeCase('hello world'); // 'hello_world'
-snakeCase('fooBar'); // 'foo_bar'
-snakeCase('Kebab-Case'); // 'kebab_case'
-snakeCase('data.meta.id'); // 'data_meta_id'
+snakeCase('helloWorld');   // 'hello_world'
+snakeCase('hello-world');  // 'hello_world'
+snakeCase('Hello World');  // 'hello_world'
 ```
 
-### Advanced Scenarios
+### Related
 
-```ts
-import { snakeCase } from '@vielzeug/arsenal';
-
-snakeCase('  leading trailing  '); // 'leading_trailing'
-snakeCase('XMLHttpRequest'); // 'xml_http_request'
-snakeCase('multiple---dashes'); // 'multiple_dashes'
-```
-
-## Implementation Notes
-
-- Trims input and removes leading/trailing separators.
-- Collapses consecutive separators into a single underscore.
-- Throws `TypeError` if the input is not a string.
-
-## See Also
-
-- [camelCase](./camelCase.md): Convert strings to `camelCase`.
-- [kebabCase](./kebabCase.md): Convert strings to `kebab-case`.
-- [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
+- [camelCase](./camelCase.md)
+- [kebabCase](./kebabCase.md)

@@ -5,7 +5,7 @@ description: Practical patterns for using Vault with LocalStorage, SessionStorag
 
 [[toc]]
 
-## Define a Schema
+## Basic Usage
 
 ```ts
 import { table } from '@vielzeug/vault';

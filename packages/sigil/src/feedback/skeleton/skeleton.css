@@ -38,7 +38,7 @@
     content: '';
     background: linear-gradient(90deg, var(--_bg) 0%, var(--_highlight) 50%, var(--_bg) 100%);
     transform: translateX(-100%);
-    animation: var(--_motion-animation, bit-skeleton-shimmer var(--_duration) linear infinite);
+    animation: var(--_motion-animation, sg-skeleton-shimmer var(--_duration) linear infinite);
   }
 
   :host([data-animated='false']) .bone::after {
@@ -50,7 +50,7 @@
     animation-play-state: paused;
   }
 
-  @keyframes bit-skeleton-shimmer {
+  @keyframes sg-skeleton-shimmer {
     to {
       transform: translateX(100%);
     }

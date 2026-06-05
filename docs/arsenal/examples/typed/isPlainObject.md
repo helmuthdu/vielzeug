@@ -1,57 +1,31 @@
-# isPlainObject
+---
+title: 'Arsenal Examples — isPlainObject'
+description: 'isPlainObject example for @vielzeug/arsenal.'
+---
 
-Returns `true` if the value is a plain object — one with `Object.prototype` or a `null` prototype. Excludes class instances, arrays, `Date`, `Map`, `Set`, and other built-ins.
+## isPlainObject
 
-## Signature
+### Problem
 
-```ts
-function isPlainObject(value: unknown): value is Record<string, unknown>;
-```
+You need to distinguish plain data objects from class instances, arrays, and built-ins — for example deciding whether to deep-merge or use as-is.
 
-## Examples
+### Solution
 
-### Basic usage
+Use `isPlainObject(value)` to narrow to `Record<string, unknown>`. Returns `true` only for objects with `Object.prototype` or `null` prototype.
 
 ```ts
 import { isPlainObject } from '@vielzeug/arsenal';
 
-isPlainObject({}); // true
-isPlainObject({ a: 1 }); // true
+isPlainObject({});              // true
+isPlainObject({ a: 1 });        // true
 isPlainObject(Object.create(null)); // true
 
-isPlainObject([]); // false
-isPlainObject(new Date()); // false
-isPlainObject(new Map()); // false
-isPlainObject(null); // false
-isPlainObject('string'); // false
+isPlainObject([]);              // false — array
+isPlainObject(new Date());      // false — class instance
+isPlainObject(null);            // false
 ```
 
-### Distinguish from class instances
+### Related
 
-```ts
-import { isPlainObject } from '@vielzeug/arsenal';
-
-class Foo {}
-isPlainObject(new Foo()); // false — has Foo.prototype
-isPlainObject({}); // true — has Object.prototype
-```
-
-### Runtime data validation
-
-```ts
-import { isPlainObject } from '@vielzeug/arsenal';
-
-function processConfig(config: unknown) {
-  if (!isPlainObject(config)) {
-    throw new TypeError('config must be a plain object');
-  }
-  // config is Record<string, unknown> here
-  return config;
-}
-```
-
-## Related
-
-- [isMatch](./isMatch.md) — Partial deep structural comparison
-- [isEqual](./isEqual.md) — Deep or shallow equality
-- [isEmpty](./isEmpty.md) — Check if a value is empty
+- [isArray](./isArray.md)
+- [isNil](./isNil.md)

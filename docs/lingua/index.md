@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter, validateCatalog]
+exports: [createI18n, createFormatter]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

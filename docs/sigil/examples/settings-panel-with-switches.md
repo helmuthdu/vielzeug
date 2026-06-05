@@ -36,27 +36,27 @@ function SettingsPanel() {
       <h3>Application Settings</h3>
 
       <div className="setting-item">
-        <bit-switch checked={settings.notifications} onChange={() => handleToggle('notifications')} color="primary">
+        <sg-switch checked={settings.notifications} onChange={() => handleToggle('notifications')} color="primary">
           Enable notifications
-        </bit-switch>
+        </sg-switch>
       </div>
 
       <div className="setting-item">
-        <bit-switch checked={settings.darkMode} onChange={() => handleToggle('darkMode')} color="secondary">
+        <sg-switch checked={settings.darkMode} onChange={() => handleToggle('darkMode')} color="secondary">
           Dark mode
-        </bit-switch>
+        </sg-switch>
       </div>
 
       <div className="setting-item">
-        <bit-switch checked={settings.autoSave} onChange={() => handleToggle('autoSave')} color="success">
+        <sg-switch checked={settings.autoSave} onChange={() => handleToggle('autoSave')} color="success">
           Auto-save documents
-        </bit-switch>
+        </sg-switch>
       </div>
 
       <div className="setting-item">
-        <bit-switch checked={settings.analytics} onChange={() => handleToggle('analytics')} color="warning">
+        <sg-switch checked={settings.analytics} onChange={() => handleToggle('analytics')} color="warning">
           Share analytics data
-        </bit-switch>
+        </sg-switch>
       </div>
     </div>
   );
@@ -69,27 +69,27 @@ function SettingsPanel() {
     <h3>Application Settings</h3>
 
     <div class="setting-item">
-      <bit-switch :checked="settings.notifications" @change="handleToggle('notifications')" color="primary">
+      <sg-switch :checked="settings.notifications" @change="handleToggle('notifications')" color="primary">
         Enable notifications
-      </bit-switch>
+      </sg-switch>
     </div>
 
     <div class="setting-item">
-      <bit-switch :checked="settings.darkMode" @change="handleToggle('darkMode')" color="secondary">
+      <sg-switch :checked="settings.darkMode" @change="handleToggle('darkMode')" color="secondary">
         Dark mode
-      </bit-switch>
+      </sg-switch>
     </div>
 
     <div class="setting-item">
-      <bit-switch :checked="settings.autoSave" @change="handleToggle('autoSave')" color="success">
+      <sg-switch :checked="settings.autoSave" @change="handleToggle('autoSave')" color="success">
         Auto-save documents
-      </bit-switch>
+      </sg-switch>
     </div>
 
     <div class="setting-item">
-      <bit-switch :checked="settings.analytics" @change="handleToggle('analytics')" color="warning">
+      <sg-switch :checked="settings.analytics" @change="handleToggle('analytics')" color="warning">
         Share analytics data
-      </bit-switch>
+      </sg-switch>
     </div>
   </div>
 </template>
@@ -134,39 +134,39 @@ const handleToggle = (key: keyof typeof settings) => {
   <h3>Application Settings</h3>
 
   <div class="setting-item">
-    <bit-switch
+    <sg-switch
       checked={settings.notifications}
       on:change={() => handleToggle('notifications')}
       color="primary">
       Enable notifications
-    </bit-switch>
+    </sg-switch>
   </div>
 
   <div class="setting-item">
-    <bit-switch
+    <sg-switch
       checked={settings.darkMode}
       on:change={() => handleToggle('darkMode')}
       color="secondary">
       Dark mode
-    </bit-switch>
+    </sg-switch>
   </div>
 
   <div class="setting-item">
-    <bit-switch
+    <sg-switch
       checked={settings.autoSave}
       on:change={() => handleToggle('autoSave')}
       color="success">
       Auto-save documents
-    </bit-switch>
+    </sg-switch>
   </div>
 
   <div class="setting-item">
-    <bit-switch
+    <sg-switch
       checked={settings.analytics}
       on:change={() => handleToggle('analytics')}
       color="warning">
       Share analytics data
-    </bit-switch>
+    </sg-switch>
   </div>
 </div>
 

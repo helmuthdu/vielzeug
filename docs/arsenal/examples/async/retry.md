@@ -1,141 +1,68 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~0.6KB-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — retry'
+description: 'retry example for @vielzeug/arsenal.'
+---
 
-# retry
+## retry
 
-Retry an asynchronous function with exponential backoff on failure.
+### Problem
 
-## Signature
+A network call or external API is flaky and fails occasionally. You need automatic retries with configurable delay and the ability to cancel early or skip certain error types.
 
-```typescript
-function retry<T>(
-  fn: () => Promise<T>,
-  options?: {
-    times?: number;
-    delay?: number;
-    backoff?: number | ((attempt: number, delay: number) => number);
-    retryDelay?: (attempt: number) => number;
-    shouldRetry?: (error: unknown, attempt: number) => boolean;
-    signal?: AbortSignal;
+### Solution
+
+Use `retry(fn, options)` to re-run an async function up to `times` attempts. The callback receives an `AbortSignal` that fires when a per-attempt `timeout` expires or the external `signal` is aborted.
+
+```ts
+import { retry, backoff } from '@vielzeug/arsenal';
+
+const data = await retry(
+  (signal) => fetch('/api/health', { signal }).then((r) => r.json()),
+  {
+    times: 4,
+    timeout: 5_000,
+    delay: (failureIndex) => backoff(failureIndex), // 1s, 2s, 4s, 8s
+    shouldRetry: (err, failureIndex) => {
+      // failureIndex is 0-based: 0 = first failure
+      // NOT called on the final exhausting attempt
+      return failureIndex < 3 && !(err instanceof TypeError);
+    },
   },
-): Promise<T>;
+);
 ```
 
-## Parameters
+#### Basic usage
 
-- `fn` – The asynchronous function to retry
-- `options.times` – Total number of attempts including the first (default: `3`)
-- `options.delay` – Delay in milliseconds between retries (default: `250`). Ignored when `retryDelay` is provided
-- `options.backoff` – Exponential backoff factor or custom function (default: `1`, no backoff). Ignored when `retryDelay` is provided
-- `options.retryDelay` – Per-attempt delay function. `attempt` is 0-based (0 = before the 2nd try). Supersedes `delay` and `backoff`
-- `options.shouldRetry` – Return `false` to stop retrying for a specific error. `attempt` is the 0-based failure count
-- `options.signal` – `AbortSignal` to cancel retries; throws the signal's `reason` on abort
-
-## Returns
-
-The result of the asynchronous function.
-
-## Examples
-
-### Basic Usage
-
-```typescript
+```ts
 import { retry } from '@vielzeug/arsenal';
-const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
+
+const result = await retry(() => fetch('/api').then((r) => r.json()), { times: 3, delay: 250 });
 ```
 
-### Exponential Backoff
+#### With external cancellation
 
-```typescript
-import { retry } from '@vielzeug/arsenal';
-const result = await retry(() => unreliableAPICall(), {
-  times: 5,
-  delay: 500,
-  backoff: 2, // Delays: 500ms, 1000ms, 2000ms, 4000ms
-});
-```
-
-### Per-Attempt Delay Override (`retryDelay`)
-
-Use `retryDelay` for full control over each inter-attempt delay. It supersedes `delay` and `backoff`.
-
-```typescript
+```ts
 import { retry } from '@vielzeug/arsenal';
 
-// Capped exponential backoff: 1s, 2s, 4s, 8s (max 30s)
-const result = await retry(() => fetchData(), {
-  times: 5,
-  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
-});
-```
-
-### Selective Retry with `shouldRetry`
-
-Return `false` to abort retries for a specific error type.
-
-```typescript
-import { retry } from '@vielzeug/arsenal';
-
-const result = await retry(() => fetchUser(id), {
-  times: 3,
-  delay: 500,
-  // Never retry 4xx client errors — only retry 5xx / network failures
-  shouldRetry: (err, attempt) => {
-    if (err instanceof Response && err.status >= 400 && err.status < 500) return false;
-    return true;
-  },
-});
-```
-
-### With AbortSignal
-
-```typescript
-import { retry } from '@vielzeug/arsenal';
 const controller = new AbortController();
-const result = await retry(() => fetchData(), {
-  times: 3,
-  delay: 1000,
-  signal: controller.signal,
-});
-// Can abort from outside
-controller.abort();
+
+const result = await retry(
+  (signal) => fetch('/api/data', { signal }).then((r) => r.json()),
+  { times: 3, signal: controller.signal },
+);
+
+controller.abort(); // cancels retries mid-flight
 ```
 
-### Custom Backoff Function
+### Pitfalls
 
-```typescript
-import { retry } from '@vielzeug/arsenal';
-const result = await retry(() => fetchData(), {
-  times: 4,
-  delay: 1000,
-  backoff: (attempt, delay) => delay * attempt, // Linear backoff
-});
-```
+- `shouldRetry` is **not** called on the final (exhausting) attempt — it only guards intermediate retries.
+- `failureIndex` is 0-based: index `0` is the first failure, index `1` is the second, and so on.
+- When a `timeout` is set, the `signal` passed to `fn` fires after `timeout` ms — pass it to `fetch` or other cancellable APIs.
+- On exhaustion, the last error is re-thrown unchanged.
 
-### Robust API Call
+### Related
 
-```typescript
-import { retry } from '@vielzeug/arsenal';
-async function fetchWithRetry(url: string) {
-  return retry(
-    async () => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return response.json();
-    },
-    {
-      times: 3,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
-      shouldRetry: (err) => !(err instanceof Error && err.message.startsWith('HTTP 4')),
-    },
-  );
-}
-```
-
-## Related
-
-- [attempt](./attempt.md) – Execute with error handling and retry
+- [attempt](./attempt.md)
+- [backoff](../math/backoff.md)
+- [abortable](./abortable.md)

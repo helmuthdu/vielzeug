@@ -1,6 +1,6 @@
 import { fire, type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-chip', () => {
+describe('sg-chip', () => {
   let fixture: Fixture<HTMLElement> | undefined;
 
   beforeAll(async () => {
@@ -13,25 +13,25 @@ describe('bit-chip', () => {
 
   describe('Rendering', () => {
     it('renders chip content via slot', async () => {
-      fixture = await mount('bit-chip', { html: 'Label' });
+      fixture = await mount('sg-chip', { html: 'Label' });
 
       expect(fixture.element.textContent?.trim()).toBe('Label');
     });
 
     it('does not render remove button in static mode', async () => {
-      fixture = await mount('bit-chip');
+      fixture = await mount('sg-chip');
 
       expect(fixture.query('.remove-btn')).toBeNull();
     });
 
     it('renders remove button in removable mode', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable' } });
 
       expect(fixture.query('.remove-btn')?.hasAttribute('hidden')).toBe(false);
     });
 
     it('renders selectable mode as button with checkbox semantics', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'selectable' } });
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn');
 
@@ -42,13 +42,13 @@ describe('bit-chip', () => {
     });
 
     it('remove button has accessible label', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable' } });
 
       expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove');
     });
 
     it('remove button uses the explicit label when provided', async () => {
-      fixture = await mount('bit-chip', {
+      fixture = await mount('sg-chip', {
         attrs: { label: 'Saved filter', mode: 'removable', value: 'filter-1' },
       });
 
@@ -58,26 +58,26 @@ describe('bit-chip', () => {
 
   describe('Props', () => {
     it('applies color', async () => {
-      fixture = await mount('bit-chip', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-chip', { attrs: { color: 'primary' } });
 
       expect(fixture.element.getAttribute('color')).toBe('primary');
     });
 
     it('applies size', async () => {
-      fixture = await mount('bit-chip', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-chip', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('applies disabled', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '' } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
       await fixture.attr('disabled', false);
     });
 
     it('applies value', async () => {
-      fixture = await mount('bit-chip', { attrs: { value: 'tag-1' } });
+      fixture = await mount('sg-chip', { attrs: { value: 'tag-1' } });
 
       expect(fixture.element.getAttribute('value')).toBe('tag-1');
     });
@@ -85,7 +85,7 @@ describe('bit-chip', () => {
 
   describe('Removable Mode', () => {
     it('fires remove event when remove button clicked', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable', value: 'chip-1' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable', value: 'chip-1' } });
 
       const handler = vi.fn();
 
@@ -97,7 +97,7 @@ describe('bit-chip', () => {
     });
 
     it('remove event carries value', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable', value: 'chip-x' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable', value: 'chip-x' } });
 
       let detail: { originalEvent?: Event; value?: string } | undefined;
 
@@ -112,7 +112,7 @@ describe('bit-chip', () => {
     });
 
     it('does not emit remove when disabled', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'removable', value: 'chip-x' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '', mode: 'removable', value: 'chip-x' } });
 
       const handler = vi.fn();
 
@@ -127,7 +127,7 @@ describe('bit-chip', () => {
 
   describe('Selectable Mode', () => {
     it('toggles unchecked to checked in uncontrolled mode', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'selectable', value: 'chip-a' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'selectable', value: 'chip-a' } });
 
       const handler = vi.fn();
 
@@ -153,7 +153,7 @@ describe('bit-chip', () => {
     });
 
     it('uses default-checked for initial uncontrolled state', async () => {
-      fixture = await mount('bit-chip', { attrs: { 'default-checked': '', mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { 'default-checked': '', mode: 'selectable' } });
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
 
@@ -161,7 +161,7 @@ describe('bit-chip', () => {
     });
 
     it('emits change in controlled mode without mutating aria-checked', async () => {
-      fixture = await mount('bit-chip', { attrs: { checked: '', mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { checked: '', mode: 'selectable' } });
 
       const handler = vi.fn();
 
@@ -182,7 +182,7 @@ describe('bit-chip', () => {
     });
 
     it('treats a defined checked property as controlled and reflects host state', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'selectable' } });
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
 
@@ -200,7 +200,7 @@ describe('bit-chip', () => {
     });
 
     it('does not emit change when disabled', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '', mode: 'selectable' } });
 
       const handler = vi.fn();
 
@@ -213,7 +213,7 @@ describe('bit-chip', () => {
     });
 
     it('switching mode from selectable clears host checked attribute', async () => {
-      fixture = await mount('bit-chip', { attrs: { 'default-checked': '', mode: 'selectable' } });
+      fixture = await mount('sg-chip', { attrs: { 'default-checked': '', mode: 'selectable' } });
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
       await fixture.attr('mode', 'static');
@@ -223,7 +223,7 @@ describe('bit-chip', () => {
 
   describe('Action Mode', () => {
     it('fires click event with detail when action chip clicked', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'action', value: 'add' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'action', value: 'add' } });
 
       const handler = vi.fn();
 
@@ -243,7 +243,7 @@ describe('bit-chip', () => {
     });
 
     it('does not emit click when disabled', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'action', value: 'add' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '', mode: 'action', value: 'add' } });
 
       const handler = vi.fn();
 
@@ -258,7 +258,7 @@ describe('bit-chip', () => {
 
   describe('Disabled State', () => {
     it('remove button is disabled when chip is disabled in removable mode', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'removable' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '', mode: 'removable' } });
 
       const btn = fixture.query<HTMLButtonElement>('.remove-btn');
 
@@ -273,7 +273,7 @@ describe('bit-chip', () => {
   describe('Colors', () => {
     for (const color of ['primary', 'success', 'warning', 'error', 'info']) {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-chip', { attrs: { color } });
+        fixture = await mount('sg-chip', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
@@ -281,7 +281,7 @@ describe('bit-chip', () => {
   });
 });
 
-describe('bit-chip accessibility', () => {
+describe('sg-chip accessibility', () => {
   let fixture: Awaited<ReturnType<typeof mount>> | undefined;
 
   beforeAll(async () => {
@@ -294,13 +294,13 @@ describe('bit-chip accessibility', () => {
 
   describe('Remove Button', () => {
     it('remove button has aria-label Remove', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable' } });
 
       expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove');
     });
 
     it('remove button is keyboard accessible', async () => {
-      fixture = await mount('bit-chip', { attrs: { mode: 'removable' } });
+      fixture = await mount('sg-chip', { attrs: { mode: 'removable' } });
 
       const btn = fixture.query<HTMLButtonElement>('.remove-btn');
 
@@ -310,7 +310,7 @@ describe('bit-chip accessibility', () => {
 
   describe('Disabled State', () => {
     it('chip with disabled has aria-disabled or disabled attribute', async () => {
-      fixture = await mount('bit-chip', { attrs: { disabled: '' } });
+      fixture = await mount('sg-chip', { attrs: { disabled: '' } });
 
       expect(fixture.element.hasAttribute('disabled') || fixture.element.getAttribute('aria-disabled') === 'true').toBe(
         true,

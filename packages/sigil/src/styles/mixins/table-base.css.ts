@@ -3,7 +3,7 @@ import { css } from '@vielzeug/craft';
 /**
  * Table Base Mixin
  *
- * Shared structural foundation for table-like components (`bit-table`, `bit-datagrid`).
+ * Shared structural foundation for table-like components (`sg-table`, `sg-datagrid`).
  * Covers only the `:host` shell, `.scroll-container`, and the bare `table` element.
  * Each consumer component owns all cell, row, head, and footer styles itself.
  *
@@ -15,10 +15,10 @@ import { css } from '@vielzeug/craft';
  *
  * @example
  * ```ts
- * // bit-table
+ * // sg-table
  * styles: [tableBaseMixin('table'), componentStyles]
  *
- * // bit-datagrid
+ * // sg-datagrid
  * styles: [tableBaseMixin('datagrid'), componentStyles]
  * ```
  */
@@ -92,17 +92,20 @@ export const tableBaseMixin = (prefix: string) => css`
     }
   }
 
-  @layer sigil.sizes {
-    :host([size='sm']) {
+  @layer sigil.density {
+    :host([density='compact']) {
       --_cell-padding-x: var(--size-2);
       --_cell-padding-y: var(--size-1-5);
-      --_font-size: var(--text-xs);
     }
 
-    :host([size='lg']) {
+    :host([density='cozy']) {
+      --_cell-padding-x: var(--size-3);
+      --_cell-padding-y: var(--size-2-5);
+    }
+
+    :host([density='comfortable']) {
       --_cell-padding-x: var(--size-4);
       --_cell-padding-y: var(--size-3-5);
-      --_font-size: var(--text-base);
     }
   }
 

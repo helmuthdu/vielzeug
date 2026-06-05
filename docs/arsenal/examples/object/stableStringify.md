@@ -1,72 +1,45 @@
-# stableStringify
+---
+title: 'Arsenal Examples — stableStringify'
+description: 'stableStringify example for @vielzeug/arsenal.'
+---
 
-Produces a deterministic, stable JSON-like string for any value. Object keys are sorted alphabetically; `Date`, `Set`, `Map`, `bigint`, `RegExp`, and circular references all have deterministic representations.
+## stableStringify
 
-## Signature
+### Problem
 
-```ts
-function stableStringify(value: unknown, options?: { strict?: boolean }): string;
-```
+You need a deterministic string from an object to use as a cache key, but `JSON.stringify` produces different output depending on key insertion order.
 
-## Parameters
+### Solution
 
-- `value` — Any value to serialise.
-- `options.strict` — When `true`, throws a `TypeError` for class instances instead of falling back to `String(instance)`.
-
-## Returns
-
-A deterministic string representation.
-
-## Examples
-
-### Deterministic object keys
+Use `stableStringify(value, options?)` to always produce the same string regardless of key order. Object keys are sorted; `Date`, `Set`, `Map`, and `bigint` all have deterministic representations.
 
 ```ts
 import { stableStringify } from '@vielzeug/arsenal';
 
-stableStringify({ b: 2, a: 1 }); // '{"a":1,"b":2}'
-stableStringify({ z: 'last', a: 'first' }); // '{"a":"first","z":"last"}'
+const key1 = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
+const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
+key1 === key2; // true
+
+stableStringify(new Set([3, 1, 2]));           // '[Set:1,2,3]'
+stableStringify(new Date('2024-01-01T00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
+stableStringify(42n);                           // '[BigInt:42]'
 ```
 
-### Built-in types
+#### Strict mode — throw on class instances
 
 ```ts
 import { stableStringify } from '@vielzeug/arsenal';
 
-stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
-stableStringify(
-  new Map([
-    ['b', 2],
-    ['a', 1],
-  ]),
-); // '[Map:{"a":1,"b":2}]'
-stableStringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
-stableStringify(42n); // '[BigInt:42]'
-stableStringify(/foo/gi); // '[RegExp:/foo/gi]'
+stableStringify(new MyClass());                   // falls back to String(instance)
+stableStringify(new MyClass(), { strict: true }); // throws TypeError
 ```
 
-### Cache keys
+### Pitfalls
 
-```ts
-import { stableStringify } from '@vielzeug/arsenal';
+- Class instances fall back to `String(instance)` by default — use `{ strict: true }` to detect them instead.
+- Map keys are sorted; the output is deterministic regardless of insertion order.
 
-const key = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
-// '{"filter":{"role":"admin"},"sort":"asc"}'
-// Same result regardless of property insertion order
-```
+### Related
 
-### Strict mode
-
-```ts
-import { stableStringify } from '@vielzeug/arsenal';
-
-class Foo {}
-
-stableStringify(new Foo()); // '[object Object]' (default)
-stableStringify(new Foo(), { strict: true }); // throws TypeError
-```
-
-## Related
-
-- [parseJSON](./parseJSON.md) — Safe JSON parse with fallback
-- [memo](../function/memo.md) — Use stableStringify as a cache key function
+- [parseJSON](./parseJSON.md)
+- [stash](./stash.md)

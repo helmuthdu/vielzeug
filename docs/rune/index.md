@@ -8,6 +8,7 @@ related: [courier, herald, familiar]
 exports:
   [
     createLogger,
+    Rune,
     consoleTransport,
     remoteTransport,
     jsonTransport,
@@ -16,7 +17,12 @@ exports:
     redactTransport,
     pipe,
     lazy,
+    isLazyBinding,
     isLevelEnabled,
+    PRIORITY,
+    resolveTheme,
+    DEFAULT_THEME,
+    DEFAULT_TRANSPORT,
   ]
 ---
 
@@ -33,7 +39,7 @@ exports:
 
 **Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
 
-**Key exports:** `createLogger`
+**Key exports:** `createLogger` · `Rune` · `consoleTransport` · `remoteTransport` · `jsonTransport` · `batchTransport` · `sampleTransport` · `redactTransport` · `pipe` · `lazy` · `isLazyBinding` · `isLevelEnabled` · `PRIORITY`
 
 **When to use:** Structured browser/Node logging with log levels, namespaced scopes, timing helpers, and optional remote transport.
 

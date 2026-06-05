@@ -1,75 +1,31 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-429_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isNumber'
+description: 'isNumber example for @vielzeug/arsenal.'
+---
 
-# isNumber
+## isNumber
 
-Checks if a value is a number (excluding NaN).
+### Problem
 
-## Source Code
+You need to guard numeric values from generic inputs — for example validating config values or discriminating a union type.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isNumber.ts
-:::
+### Solution
 
-## Features
-
-- **Type Guard**: Narrows `unknown` to `number`
-- **NaN Exclusion**: Returns `false` for NaN values
-- **Isomorphic**: Works in both Browser and Node.js
-
-## API
-
-```ts
-function isNumber(value: unknown): value is number;
-```
-
-### Parameters
-
-- `value`: The value to check
-
-### Returns
-
-- `true` if the value is a number (and not NaN), `false` otherwise
-
-## Examples
-
-### Basic Usage
+Use `isNumber(value)` to narrow to `number`.
 
 ```ts
 import { isNumber } from '@vielzeug/arsenal';
 
-isNumber(42); // true
-isNumber(3.14); // true
-isNumber(NaN); // false
-isNumber('42'); // false
-isNumber(Infinity); // true
+isNumber(42);      // true
+isNumber(NaN);     // true — NaN is typeof 'number'
+isNumber('42');    // false
 ```
 
-### Type Guard Usage
+### Pitfalls
 
-```ts
-import { isNumber } from '@vielzeug/arsenal';
+- `NaN` passes `isNumber` — add `&& !isNaN(value)` if you need to exclude it.
 
-function calculate(value: unknown) {
-  if (isNumber(value)) {
-    // TypeScript knows value is number here
-    return value * 2;
-  }
-  return 0;
-}
-```
+### Related
 
-## Implementation Notes
-
-- Explicitly excludes `NaN` (since `typeof NaN === 'number'` in JavaScript)
-- Returns `true` for `Infinity` and `-Infinity`
-- Use for validation and type narrowing in TypeScript
-
-## See Also
-
-- [isString](./isString.md): Check if value is a string
-- [isPrimitive](./isPrimitive.md): Check if value is a primitive type
-- [is](./is.md): Access grouped checks through `is.number` and related helpers
-- [typeOf](./typeOf.md): Get the type of any value
+- [isString](./isString.md)
+- [isPrimitive](./isPrimitive.md)

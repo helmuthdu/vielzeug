@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-text', () => {
+describe('sg-text', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,13 +13,13 @@ describe('bit-text', () => {
 
   describe('Rendering', () => {
     it('renders text content', async () => {
-      fixture = await mount('bit-text', { html: 'Hello world' });
+      fixture = await mount('sg-text', { html: 'Hello world' });
 
       expect(fixture.element.textContent?.trim()).toBe('Hello world');
     });
 
     it('renders slot for content', async () => {
-      fixture = await mount('bit-text', { html: '<span>Text</span>' });
+      fixture = await mount('sg-text', { html: '<span>Text</span>' });
 
       expect(fixture.element.querySelector('span')).toBeTruthy();
     });
@@ -29,7 +29,7 @@ describe('bit-text', () => {
     it.each(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const)(
       'as="%s" sets role="heading" and aria-level on the host',
       async (tag) => {
-        fixture = await mount('bit-text', { attrs: { as: tag } });
+        fixture = await mount('sg-text', { attrs: { as: tag } });
 
         const level = Number(tag[1]);
 
@@ -40,26 +40,26 @@ describe('bit-text', () => {
     );
 
     it('as="p" does not set role="heading"', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'p' } });
+      fixture = await mount('sg-text', { attrs: { as: 'p' } });
 
       expect(fixture.element.getAttribute('role')).toBeNull();
       expect(fixture.element.getAttribute('aria-level')).toBeNull();
     });
 
     it('as="span" does not set role="heading"', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'span' } });
+      fixture = await mount('sg-text', { attrs: { as: 'span' } });
 
       expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
     it('without as, no role is set', async () => {
-      fixture = await mount('bit-text', {});
+      fixture = await mount('sg-text', {});
 
       expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
     it('switching from h2 to p removes role and aria-level', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'h2' } });
+      fixture = await mount('sg-text', { attrs: { as: 'h2' } });
       expect(fixture.element.getAttribute('role')).toBe('heading');
 
       await fixture.attr('as', 'p');
@@ -70,13 +70,13 @@ describe('bit-text', () => {
 
   describe('lines — multi-line clamp', () => {
     it('sets --_lines CSS variable on the host when lines is provided', async () => {
-      fixture = await mount('bit-text', { attrs: { lines: '3' } });
+      fixture = await mount('sg-text', { attrs: { lines: '3' } });
 
       expect(fixture.element.style.getPropertyValue('--_lines')).toBe('3');
     });
 
     it('does not set --_lines when lines is absent', async () => {
-      fixture = await mount('bit-text', {});
+      fixture = await mount('sg-text', {});
 
       expect(fixture.element.style.getPropertyValue('--_lines')).toBe('');
     });
@@ -84,13 +84,13 @@ describe('bit-text', () => {
 
   describe('truncate', () => {
     it('applies the truncate attribute to the host', async () => {
-      fixture = await mount('bit-text', { attrs: { truncate: '' } });
+      fixture = await mount('sg-text', { attrs: { truncate: '' } });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
     });
 
     it('truncate does not remove content', async () => {
-      fixture = await mount('bit-text', { attrs: { truncate: '' }, html: 'Long text' });
+      fixture = await mount('sg-text', { attrs: { truncate: '' }, html: 'Long text' });
 
       expect(fixture.element.textContent?.trim()).toBe('Long text');
     });
@@ -99,7 +99,7 @@ describe('bit-text', () => {
   describe('Variants', () => {
     for (const variant of ['body', 'heading', 'label', 'caption', 'overline', 'code'] as const) {
       it(`reflects ${variant} variant as host attribute`, async () => {
-        fixture = await mount('bit-text', { attrs: { variant } });
+        fixture = await mount('sg-text', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
         fixture.destroy();
@@ -110,7 +110,7 @@ describe('bit-text', () => {
   describe('Weights', () => {
     for (const weight of ['normal', 'medium', 'semibold', 'bold'] as const) {
       it(`reflects ${weight} weight as host attribute`, async () => {
-        fixture = await mount('bit-text', { attrs: { weight } });
+        fixture = await mount('sg-text', { attrs: { weight } });
 
         expect(fixture.element.getAttribute('weight')).toBe(weight);
         fixture.destroy();
@@ -121,7 +121,7 @@ describe('bit-text', () => {
   describe('Sizes', () => {
     for (const size of ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const) {
       it(`reflects ${size} size as host attribute`, async () => {
-        fixture = await mount('bit-text', { attrs: { size } });
+        fixture = await mount('sg-text', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
         fixture.destroy();
@@ -145,7 +145,7 @@ describe('bit-text', () => {
       'contrast',
     ] as const) {
       it(`reflects ${color} color as host attribute`, async () => {
-        fixture = await mount('bit-text', { attrs: { color } });
+        fixture = await mount('sg-text', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
         fixture.destroy();
@@ -154,7 +154,7 @@ describe('bit-text', () => {
   });
 });
 
-describe('bit-text accessibility', () => {
+describe('sg-text accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -167,25 +167,25 @@ describe('bit-text accessibility', () => {
 
   describe('Content Accessibility', () => {
     it('exposes text content to accessibility tree', async () => {
-      fixture = await mount('bit-text', { html: 'Screen reader text' });
+      fixture = await mount('sg-text', { html: 'Screen reader text' });
 
       expect(fixture.element.textContent?.trim()).toBe('Screen reader text');
     });
 
     it('color attribute does not hide content', async () => {
-      fixture = await mount('bit-text', { attrs: { color: 'muted' }, html: 'Visible' });
+      fixture = await mount('sg-text', { attrs: { color: 'muted' }, html: 'Visible' });
 
       expect(fixture.element.textContent?.trim()).toBe('Visible');
     });
 
     it('color="tertiary" does not hide content', async () => {
-      fixture = await mount('bit-text', { attrs: { color: 'tertiary' }, html: 'Tertiary text' });
+      fixture = await mount('sg-text', { attrs: { color: 'tertiary' }, html: 'Tertiary text' });
 
       expect(fixture.element.textContent?.trim()).toBe('Tertiary text');
     });
 
     it('italic does not hide content', async () => {
-      fixture = await mount('bit-text', { attrs: { italic: '' }, html: 'Slanted' });
+      fixture = await mount('sg-text', { attrs: { italic: '' }, html: 'Slanted' });
 
       expect(fixture.element.textContent?.trim()).toBe('Slanted');
     });
@@ -193,14 +193,14 @@ describe('bit-text accessibility', () => {
 
   describe('Heading + size compound', () => {
     it('heading variant with size lg carries both attributes', async () => {
-      fixture = await mount('bit-text', { attrs: { size: 'lg', variant: 'heading' } });
+      fixture = await mount('sg-text', { attrs: { size: 'lg', variant: 'heading' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('heading');
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('heading variant with size 2xl carries both attributes', async () => {
-      fixture = await mount('bit-text', { attrs: { size: '2xl', variant: 'heading' } });
+      fixture = await mount('sg-text', { attrs: { size: '2xl', variant: 'heading' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('heading');
       expect(fixture.element.getAttribute('size')).toBe('2xl');

@@ -1,4 +1,4 @@
-import { computed, define, effect, html, prop, styleMap, when } from '@vielzeug/craft';
+import { computed, define, effect, html, prop, styleMap } from '@vielzeug/craft';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -7,7 +7,7 @@ import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../st
 import componentStyles from './progress.css?inline';
 
 /** Progress bar component properties */
-export type BitProgressProps = {
+export type SgProgressProps = {
   /** Theme color for the fill bar */
   color?: ThemeColor;
   /** Floating chip centered above the fill endpoint (linear only). Hidden in indeterminate mode. Position formula: left = fill% − half chip width (CSS: left:X%; transform:translateX(−50%)). */
@@ -27,8 +27,8 @@ export type BitProgressProps = {
    * - Linear: displayed as a header above the bar; moves `label` into the header row.
    * - Circular: smaller text displayed below the `label` inside the ring. */
   title?: string;
-  /** 'linear' (default) or 'circular' */
-  type?: 'linear' | 'circular';
+  /** 'linear' (default), 'circular', or 'vertical' */
+  type?: 'linear' | 'circular' | 'vertical';
   /** Current progress value (0 to `max`). Ignored when `indeterminate`. */
   value?: number;
   /** Human-readable value text for screen readers (e.g. "Step 2 of 5", "75%"). Overrides the raw aria-valuenow when set. */
@@ -39,13 +39,16 @@ export type BitProgressProps = {
  * A linear progress bar for conveying operation progress.
  * Supports determinate (known value) and indeterminate (unknown duration) modes.
  *
- * @element bit-progress
+ * @element sg-progress
  *
  * @attr {number} value   - Current value (0–max). Defaults to 0.
  * @attr {number} max     - Maximum value. Defaults to 100.
  * @attr {boolean} indeterminate - Show infinite animation (ignores value/max).
  * @attr {string} color   - Theme color: 'primary' | 'success' | 'warning' | 'error' | …
- * @attr {string} size    - Bar height: 'sm' | 'md' | 'lg'
+ * @attr {string} size    - Bar height/width: 'sm' | 'md' | 'lg'
+ * @attr {string} type   - 'linear' (default) | 'circular' | 'vertical'
+ *
+ * @cssprop --progress-width  - Bar width override (vertical only)
  * @attr {string} label          - Visible text label + accessible name. Linear: at bar end (or header row with title). Circular: large text centered inside the ring.
  * @attr {string} title          - Title text. Linear: header above the bar (moves label to header row). Circular: smaller text below the label inside the ring.
  * @attr {string} floating-label - Floating chip centered above the fill endpoint (linear only); hidden when indeterminate.
@@ -64,13 +67,13 @@ export type BitProgressProps = {
  * @part fill - Progress fill element.
  * @example
  * ```html
- * <bit-progress value="45"></bit-progress>
- * <bit-progress value="75" max="100" color="success" size="lg"></bit-progress>
- * <bit-progress indeterminate color="primary" label="Loading…"></bit-progress>
+ * <sg-progress value="45"></sg-progress>
+ * <sg-progress value="75" max="100" color="success" size="lg"></sg-progress>
+ * <sg-progress indeterminate color="primary" label="Loading…"></sg-progress>
  * ```
  */
-export const PROGRESS_TAG = 'bit-progress' as const;
-define<BitProgressProps>(PROGRESS_TAG, {
+export const PROGRESS_TAG = 'sg-progress' as const;
+define<SgProgressProps>(PROGRESS_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -79,7 +82,7 @@ define<BitProgressProps>(PROGRESS_TAG, {
     label: prop.string(),
     max: prop.number(100),
     title: prop.string(),
-    type: prop.oneOf(['linear', 'circular'] as const, 'linear'),
+    type: prop.oneOf(['linear', 'circular', 'vertical'] as const, 'linear'),
     value: prop.number(0),
     'value-text': prop.string(),
   },
@@ -108,65 +111,67 @@ define<BitProgressProps>(PROGRESS_TAG, {
     const circularStyle = styleMap({ '--_circ': `${CIRC}px` });
     const strokeDasharray = () => (props.indeterminate.value ? undefined : `${CIRC}px`);
     const strokeDashoffset = () => (props.indeterminate.value ? undefined : `${dashoffset.value}px`);
-    const linearFillStyle = styleMap({ width: () => (!props.indeterminate.value ? percent.value : null) });
+    const isVertical = computed(() => props.type.value === 'vertical');
+    const linearFillStyle = styleMap({
+      height: () => (!props.indeterminate.value && isVertical.value ? percent.value : null),
+      width: () => (!props.indeterminate.value && !isVertical.value ? percent.value : null),
+    });
 
     effect(() => {
       el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
-    return html`
-      ${when(
-        () => props.type.value === 'circular',
-        () =>
-          html` <div
-            class="circular-track"
-            role="progressbar"
-            :aria-valuenow="${ariaValueNow}"
-            aria-valuemin="0"
-            :aria-valuemax="${props.max}"
-            :aria-label="${ariaLabel}"
-            :aria-valuetext="${props['value-text']}"
-            :style="${circularStyle}">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
-              <circle
-                class="circle-fill"
-                cx="50"
-                cy="50"
-                r="${RADIUS}"
-                :stroke-dasharray="${strokeDasharray}"
-                :stroke-dashoffset="${strokeDashoffset}"></circle>
-            </svg>
-            <div class="circular-inner">
-              <span class="circular-label">${() => props.label.value ?? ''}</span>
-              <span class="circular-title">${() => props.title.value ?? ''}</span>
+    const circularTemplate = () =>
+      html` <div
+        class="circular-track"
+        role="progressbar"
+        :aria-valuenow="${ariaValueNow}"
+        aria-valuemin="0"
+        :aria-valuemax="${props.max}"
+        :aria-label="${ariaLabel}"
+        :aria-valuetext="${props['value-text']}"
+        :style="${circularStyle}">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
+          <circle
+            class="circle-fill"
+            cx="50"
+            cy="50"
+            r="${RADIUS}"
+            :stroke-dasharray="${strokeDasharray}"
+            :stroke-dashoffset="${strokeDashoffset}"></circle>
+        </svg>
+        <div class="circular-inner">
+          <span class="circular-label">${() => props.label.value ?? ''}</span>
+          <span class="circular-title">${() => props.title.value ?? ''}</span>
+        </div>
+      </div>`;
+
+    const barTemplate = () =>
+      html` <div class="wrapper">
+        <div class="header">
+          <span class="progress-title">${() => props.title.value ?? ''}</span>
+          <span class="end-label header-label">${() => props.label.value ?? ''}</span>
+        </div>
+        <div :class=${() => `bar-row${isVertical.value ? ' bar-row-vertical' : ''}`}>
+          <div class="track-outer">
+            <div
+              class="track"
+              role="progressbar"
+              :aria-valuenow="${ariaValueNow}"
+              aria-valuemin="0"
+              :aria-valuemax="${props.max}"
+              :aria-label="${ariaLabel}"
+              :aria-valuetext="${props['value-text']}">
+              <div class="fill" part="fill" :style="${linearFillStyle}"></div>
             </div>
-          </div>`,
-        () =>
-          html` <div class="wrapper">
-            <div class="header">
-              <span class="progress-title">${() => props.title.value ?? ''}</span>
-              <span class="end-label header-label">${() => props.label.value ?? ''}</span>
-            </div>
-            <div class="bar-row">
-              <div class="track-outer">
-                <div
-                  class="track"
-                  role="progressbar"
-                  :aria-valuenow="${ariaValueNow}"
-                  aria-valuemin="0"
-                  :aria-valuemax="${props.max}"
-                  :aria-label="${ariaLabel}"
-                  :aria-valuetext="${props['value-text']}">
-                  <div class="fill" part="fill" :style="${linearFillStyle}"></div>
-                </div>
-                <span class="floating-label">${props['floating-label']}</span>
-              </div>
-              <span class="end-label row-label">${() => props.label.value ?? ''}</span>
-            </div>
-          </div>`,
-      )}
-    `;
+            ${() => (!isVertical.value ? html`<span class="floating-label">${props['floating-label']}</span>` : null)}
+          </div>
+          <span class="end-label row-label">${() => props.label.value ?? ''}</span>
+        </div>
+      </div>`;
+
+    return html` ${() => (props.type.value === 'circular' ? circularTemplate() : barTemplate())} `;
   },
 
   styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],

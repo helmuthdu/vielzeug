@@ -1,6 +1,6 @@
 # File Input
 
-A modern file upload component with drag-and-drop support, file list management, constraint filtering, and full form integration. Shares the same visual theme system as `bit-input`.
+A modern file upload component with drag-and-drop support, file list management, constraint filtering, and full form integration. Shares the same visual theme system as `sg-input`.
 
 ## Features
 
@@ -23,7 +23,7 @@ A modern file upload component with drag-and-drop support, file list management,
 ## Basic Usage
 
 ```html
-<bit-file-input label="Upload files"></bit-file-input>
+<sg-file-input label="Upload files"></sg-file-input>
 
 <script type="module">
   import '@vielzeug/sigil/file-input';
@@ -39,11 +39,11 @@ Six visual variants for different UI contexts and levels of emphasis.
 <ComponentPreview>
 
 ```html
-<bit-file-input variant="solid" label="Solid"></bit-file-input>
-<bit-file-input variant="flat" label="Flat"></bit-file-input>
-<bit-file-input variant="bordered" label="Bordered"></bit-file-input>
-<bit-file-input variant="outline" label="Outline"></bit-file-input>
-<bit-file-input variant="ghost" label="Ghost"></bit-file-input>
+<sg-file-input variant="solid" label="Solid"></sg-file-input>
+<sg-file-input variant="flat" label="Flat"></sg-file-input>
+<sg-file-input variant="bordered" label="Bordered"></sg-file-input>
+<sg-file-input variant="outline" label="Outline"></sg-file-input>
+<sg-file-input variant="ghost" label="Ghost"></sg-file-input>
 ```
 
 </ComponentPreview>
@@ -55,15 +55,15 @@ Six semantic colors for different contexts and validation states.
 <ComponentPreview center>
 
 ```html
-<bit-grid cols="1" cols-sm="2" cols-md="3" gap="md" style="width: 100%;">
-  <bit-file-input variant="flat" label="Default"></bit-file-input>
-  <bit-file-input variant="flat" color="primary" label="Primary"></bit-file-input>
-  <bit-file-input variant="flat" color="secondary" label="Secondary"></bit-file-input>
-  <bit-file-input variant="flat" color="info" label="Info"></bit-file-input>
-  <bit-file-input variant="flat" color="success" label="Success"></bit-file-input>
-  <bit-file-input variant="flat" color="warning" label="Warning"></bit-file-input>
-  <bit-file-input variant="flat" color="error" label="Error"></bit-file-input>
-</bit-grid>
+<sg-grid cols="1" cols-sm="2" cols-md="3" gap="md" style="width: 100%;">
+  <sg-file-input variant="flat" label="Default"></sg-file-input>
+  <sg-file-input variant="flat" color="primary" label="Primary"></sg-file-input>
+  <sg-file-input variant="flat" color="secondary" label="Secondary"></sg-file-input>
+  <sg-file-input variant="flat" color="info" label="Info"></sg-file-input>
+  <sg-file-input variant="flat" color="success" label="Success"></sg-file-input>
+  <sg-file-input variant="flat" color="warning" label="Warning"></sg-file-input>
+  <sg-file-input variant="flat" color="error" label="Error"></sg-file-input>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -75,9 +75,9 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-file-input variant="flat" size="sm" label="Small"></bit-file-input>
-<bit-file-input variant="flat" size="md" label="Medium"></bit-file-input>
-<bit-file-input variant="flat" size="lg" label="Large"></bit-file-input>
+<sg-file-input variant="flat" size="sm" label="Small"></sg-file-input>
+<sg-file-input variant="flat" size="md" label="Medium"></sg-file-input>
+<sg-file-input variant="flat" size="lg" label="Large"></sg-file-input>
 ```
 
 </ComponentPreview>
@@ -89,10 +89,10 @@ Use the `rounded` attribute to apply a border radius from the theme.
 <ComponentPreview center>
 
 ```html
-<bit-file-input rounded="none" variant="flat" label="None"></bit-file-input>
-<bit-file-input rounded="xl" variant="bordered" label="Extra large"></bit-file-input>
-<bit-file-input rounded="2xl" variant="outline" label="2XL"></bit-file-input>
-<bit-file-input rounded="3xl" variant="flat" color="primary" label="3XL"></bit-file-input>
+<sg-file-input rounded="none" variant="flat" label="None"></sg-file-input>
+<sg-file-input rounded="xl" variant="bordered" label="Extra large"></sg-file-input>
+<sg-file-input rounded="2xl" variant="outline" label="2XL"></sg-file-input>
+<sg-file-input rounded="3xl" variant="flat" color="primary" label="3XL"></sg-file-input>
 ```
 
 </ComponentPreview>
@@ -106,14 +106,14 @@ Enable multi-file selection with the `multiple` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-file-input
+<sg-file-input
   multiple
   label="Upload photos"
   helper="Select one or more images"
   accept="image/*"
   variant="bordered"
   color="primary">
-</bit-file-input>
+</sg-file-input>
 ```
 
 </ComponentPreview>
@@ -126,18 +126,18 @@ Restrict accepted file types using MIME types or file extensions. The accepted t
 
 ```html
 <!-- Only images -->
-<bit-file-input accept="image/*" label="Profile Photo" variant="flat" color="primary"></bit-file-input>
+<sg-file-input accept="image/*" label="Profile Photo" variant="flat" color="primary"></sg-file-input>
 
 <!-- PDF, Word documents -->
-<bit-file-input accept=".pdf,.doc,.docx" label="Resume" variant="bordered"></bit-file-input>
+<sg-file-input accept=".pdf,.doc,.docx" label="Resume" variant="bordered"></sg-file-input>
 
 <!-- Multiple types -->
-<bit-file-input
+<sg-file-input
   accept="image/*,application/pdf,.docx"
   label="Attachments"
   multiple
   variant="flat"
-  color="secondary"></bit-file-input>
+  color="secondary"></sg-file-input>
 ```
 
 </ComponentPreview>
@@ -150,17 +150,17 @@ Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't 
 
 ```html
 <!-- Max 5 MB per file -->
-<bit-file-input
+<sg-file-input
   accept="image/*"
   max-size="5242880"
   label="Upload image"
   helper="Images only, max 5 MB"
   variant="bordered"
   color="success">
-</bit-file-input>
+</sg-file-input>
 
 <!-- Multiple files with count cap -->
-<bit-file-input
+<sg-file-input
   multiple
   max-files="3"
   max-size="2097152"
@@ -168,7 +168,7 @@ Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't 
   helper="Up to 3 files, 2 MB each"
   variant="flat"
   color="primary">
-</bit-file-input>
+</sg-file-input>
 ```
 
 </ComponentPreview>
@@ -180,14 +180,14 @@ Provide context below the dropzone using the `helper` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-file-input
+<sg-file-input
   label="Portfolio"
   multiple
   accept="image/*,.pdf"
   helper="Upload images or PDFs showcasing your work"
   variant="bordered"
   color="primary">
-</bit-file-input>
+</sg-file-input>
 ```
 
 </ComponentPreview>
@@ -199,8 +199,8 @@ Expand the component to fill its container with `fullwidth`.
 <ComponentPreview>
 
 ```html
-<bit-file-input fullwidth multiple label="Attachments" helper="Drop any files here" variant="bordered" color="primary">
-</bit-file-input>
+<sg-file-input fullwidth multiple label="Attachments" helper="Drop any files here" variant="bordered" color="primary">
+</sg-file-input>
 ```
 
 </ComponentPreview>
@@ -214,7 +214,7 @@ Prevents all interaction — click, drag-and-drop, and keyboard activation are a
 <ComponentPreview center>
 
 ```html
-<bit-file-input disabled label="Upload disabled" variant="bordered"></bit-file-input>
+<sg-file-input disabled label="Upload disabled" variant="bordered"></sg-file-input>
 ```
 
 </ComponentPreview>
@@ -226,24 +226,24 @@ Display a validation error with the `error` attribute. The error message replace
 <ComponentPreview center>
 
 ```html
-<bit-file-input
+<sg-file-input
   error="File type not supported. Please upload a PDF or image."
   label="Contract"
   accept=".pdf"
   variant="bordered"
   color="error">
-</bit-file-input>
+</sg-file-input>
 ```
 
 </ComponentPreview>
 
 ## Form Integration
 
-`bit-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key — identical to how a native `<input type="file">` behaves.
+`sg-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key — identical to how a native `<input type="file">` behaves.
 
 ```html
 <form id="upload-form" method="post" enctype="multipart/form-data">
-  <bit-file-input name="documents" multiple accept=".pdf,.docx" label="Upload documents" required> </bit-file-input>
+  <sg-file-input name="documents" multiple accept=".pdf,.docx" label="Upload documents" required> </sg-file-input>
   <button type="submit">Submit</button>
 </form>
 ```
@@ -251,7 +251,7 @@ Display a validation error with the `error` attribute. The error message replace
 Listening to the `change` event for reactive scenarios:
 
 ```js
-const fileInput = document.querySelector('bit-file-input');
+const fileInput = document.querySelector('sg-file-input');
 
 fileInput.addEventListener('change', ({ detail }) => {
   console.log('Selected files:', detail.files);
@@ -317,7 +317,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 The file input component follows WCAG 2.1 Level AA standards.
 
-### `bit-file-input`
+### `sg-file-input`
 
 ✅ **Keyboard Navigation**
 

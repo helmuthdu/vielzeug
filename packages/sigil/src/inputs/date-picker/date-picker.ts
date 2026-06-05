@@ -13,11 +13,11 @@ import componentStyles from './date-picker.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type BitDatePickerEvents = {
+export type SgDatePickerEvents = {
   change: { isoValue: string | null };
 };
 
-export type BitDatePickerProps = {
+export type SgDatePickerProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable the picker */
@@ -60,7 +60,7 @@ export type BitDatePickerProps = {
    * Pass as a JSON array attribute or a JS property.
    * @example
    * ```html
-   * <bit-date-picker weekend-days="[0,6]"></bit-date-picker>
+   * <sg-date-picker weekend-days="[0,6]"></sg-date-picker>
    * ```
    */
   'weekend-days'?: number[];
@@ -70,7 +70,7 @@ export type BitDatePickerProps = {
  * An accessible, keyboard-navigable date picker with an inline calendar popup.
  * Supports min/max bounds, disabled weekend days, and form association.
  *
- * @element bit-date-picker
+ * @element sg-date-picker
  *
  * @attr {string} value - Selected date in ISO 8601 format (yyyy-MM-dd)
  * @attr {string} min - Minimum selectable date (yyyy-MM-dd)
@@ -83,14 +83,19 @@ export type BitDatePickerProps = {
  * @attr {string} name - Form field name
  * @attr {string} error - Error message
  * @attr {string} helper - Helper text
- * @attr {string} color - Theme color
- * @attr {string} size - Component size
- * @attr {string} variant - Visual variant
- * @attr {string} rounded - Border radius
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} locale - BCP 47 locale string
  * @attr {string} weekend-days - Comma-separated day indices to disable
  *
  * @fires change - Fired when a date is selected. detail: { value: Date | null, isoValue: string | null }
+ *
+ * @slot label - Custom label for the trigger field
+ * @slot prefix - Content before the trigger text (e.g. icon)
+ * @slot helper - Custom helper text
+ * @slot error - Custom error content
  *
  * @cssprop --date-picker-bg - Calendar background
  * @cssprop --date-picker-border-color - Calendar border color
@@ -107,13 +112,19 @@ export type BitDatePickerProps = {
  *
  * @example
  * ```html
- * <bit-date-picker label="Appointment date" min="2025-01-01" max="2025-12-31">
- * </bit-date-picker>
+ * <!-- Single date with constraints -->
+ * <sg-date-picker label="Appointment date" name="date" min="2025-01-01" max="2025-12-31" color="primary"></sg-date-picker>
+ *
+ * <!-- Range selection -->
+ * <sg-date-picker label="Date range" selection-mode="range" color="primary"></sg-date-picker>
+ *
+ * <!-- Outside label, bordered variant -->
+ * <sg-date-picker label="Start date" label-placement="outside" variant="bordered"></sg-date-picker>
  * ```
  */
-export const DATE_PICKER_TAG = 'bit-date-picker' as const;
+export const DATE_PICKER_TAG = 'sg-date-picker' as const;
 
-define<BitDatePickerProps, BitDatePickerEvents>(DATE_PICKER_TAG, {
+define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -397,8 +408,8 @@ define<BitDatePickerProps, BitDatePickerEvents>(DATE_PICKER_TAG, {
     const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
 
     return html`
-      <!-- Trigger: bit-input in readonly display mode -->
-      <bit-input
+      <!-- Trigger: sg-input in readonly display mode -->
+      <sg-input
         class="trigger"
         readonly
         tabindex="${tabIndex}"
@@ -422,8 +433,8 @@ define<BitDatePickerProps, BitDatePickerEvents>(DATE_PICKER_TAG, {
         ?fullwidth="${inputFullwidth}"
         @click="${handleTriggerClick}"
         @keydown="${handleTriggerKeydown}">
-        <bit-icon slot="suffix" name="calendar" size="16" stroke-width="1.75" aria-hidden="true"></bit-icon>
-      </bit-input>
+        <sg-icon slot="suffix" name="calendar" size="16" stroke-width="1.75" aria-hidden="true"></sg-icon>
+      </sg-input>
 
       <!-- Calendar popup -->
       <div
@@ -437,7 +448,7 @@ define<BitDatePickerProps, BitDatePickerEvents>(DATE_PICKER_TAG, {
         <!-- Calendar header -->
         <div class="cal-header" part="header">
           <button class="nav-btn" type="button" aria-label="Previous" @click="${handlePrev}">
-            <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></sg-icon>
           </button>
           <button
             class="cal-label-btn"
@@ -448,7 +459,7 @@ define<BitDatePickerProps, BitDatePickerEvents>(DATE_PICKER_TAG, {
             ><span class="cal-label-year">${displayYear_}</span>
           </button>
           <button class="nav-btn" type="button" aria-label="Next" @click="${handleNext}">
-            <bit-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></sg-icon>
           </button>
         </div>
 

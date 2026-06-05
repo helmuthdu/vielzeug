@@ -1,51 +1,31 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-528_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isPromise'
+description: 'isPromise example for @vielzeug/arsenal.'
+---
 
-# isPromise
+## isPromise
 
-Checks if a value is a Promise.
+### Problem
 
-## Source Code
+You need to check whether a value is a thenable (Promise-like) — for example handling functions that may return either a value or a Promise.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isPromise.ts
-:::
+### Solution
 
-## API
-
-```ts
-function isPromise(value: unknown): value is Promise<unknown>;
-```
-
-### Parameters
-
-- `value`: The value to check
-
-### Returns
-
-- `true` if the value is a Promise, `false` otherwise
-
-## Examples
-
-### Basic Usage
+Use `isPromise(value)` to narrow to `Promise<unknown>`.
 
 ```ts
 import { isPromise } from '@vielzeug/arsenal';
 
-isPromise(Promise.resolve(42)); // true
-isPromise(42); // false
-isPromise((async () => {})()); // true
+function normalize<T>(valueOrPromise: T | Promise<T>): Promise<T> {
+  return isPromise(valueOrPromise) ? valueOrPromise : Promise.resolve(valueOrPromise);
+}
 ```
 
-## Implementation Notes
+### Pitfalls
 
-- Checks for the presence of a `.then` method
-- Useful for type guards and async code
+- Checks for a `.then` method — matches any thenable, not just native `Promise` instances.
 
-## See Also
+### Related
 
-- [isFunction](./isFunction.md): Check if value is a function
-- [isObject](./isObject.md): Check if value is an object
-- [typeOf](./typeOf.md): Get the type of any value
+- [isFunction](./isFunction.md)
+- [attempt](../async/attempt.md)

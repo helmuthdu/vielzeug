@@ -2,8 +2,8 @@
 
 A radio button and a group wrapper for mutually exclusive selections.
 
-- **`bit-radio`** — standalone radio button for a single boolean choice within a named group.
-- **`bit-radio-group`** — `<fieldset>` wrapper that manages a set of radios, propagates `color`, `size`, `name`, and `disabled` to all children, and handles roving keyboard navigation.
+- **`sg-radio`** — standalone radio button for a single boolean choice within a named group.
+- **`sg-radio-group`** — `<fieldset>` wrapper that manages a set of radios, propagates `color`, `size`, `name`, and `disabled` to all children, and handles roving keyboard navigation.
 
 ## Features
 
@@ -29,8 +29,8 @@ A radio button and a group wrapper for mutually exclusive selections.
 ### Basic Usage
 
 ```html
-<bit-radio name="choice" value="option1" checked>Option 1</bit-radio>
-<bit-radio name="choice" value="option2">Option 2</bit-radio>
+<sg-radio name="choice" value="option1" checked>Option 1</sg-radio>
+<sg-radio name="choice" value="option2">Option 2</sg-radio>
 
 <script type="module">
   import '@vielzeug/sigil/radio';
@@ -48,13 +48,13 @@ Six semantic colors for different contexts. Defaults to neutral when no color is
 <ComponentPreview center>
 
 ```html
-<bit-radio checked name="color">Default</bit-radio>
-<bit-radio name="color" color="primary">Primary</bit-radio>
-<bit-radio name="color" color="secondary">Secondary</bit-radio>
-<bit-radio name="color" color="info">Info</bit-radio>
-<bit-radio name="color" color="success">Success</bit-radio>
-<bit-radio name="color" color="warning">Warning</bit-radio>
-<bit-radio name="color" color="error">Error</bit-radio>
+<sg-radio checked name="color">Default</sg-radio>
+<sg-radio name="color" color="primary">Primary</sg-radio>
+<sg-radio name="color" color="secondary">Secondary</sg-radio>
+<sg-radio name="color" color="info">Info</sg-radio>
+<sg-radio name="color" color="success">Success</sg-radio>
+<sg-radio name="color" color="warning">Warning</sg-radio>
+<sg-radio name="color" color="error">Error</sg-radio>
 ```
 
 </ComponentPreview>
@@ -66,9 +66,9 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-radio checked name="size" size="sm">Small</bit-radio>
-<bit-radio name="size" size="md">Medium</bit-radio>
-<bit-radio name="size" size="lg">Large</bit-radio>
+<sg-radio checked name="size" size="sm">Small</sg-radio>
+<sg-radio name="size" size="md">Medium</sg-radio>
+<sg-radio name="size" size="lg">Large</sg-radio>
 ```
 
 </ComponentPreview>
@@ -80,24 +80,24 @@ Prevent interaction and reduce opacity for unavailable options.
 <ComponentPreview center>
 
 ```html
-<bit-radio name="disabled" disabled>Disabled unchecked</bit-radio>
-<bit-radio name="disabled" checked disabled>Disabled checked</bit-radio>
+<sg-radio name="disabled" disabled>Disabled unchecked</sg-radio>
+<sg-radio name="disabled" checked disabled>Disabled checked</sg-radio>
 ```
 
 </ComponentPreview>
 
 ## Radio Group
 
-`bit-radio-group` wraps `bit-radio` elements in a semantic `<fieldset>`. Set `value` to the default selected option and `name` to share the field name across all children.
+`sg-radio-group` wraps `sg-radio` elements in a semantic `<fieldset>`. Set `value` to the default selected option and `name` to share the field name across all children.
 
 ### Basic Usage
 
 ```html
-<bit-radio-group name="size" label="T-shirt size" value="medium">
-  <bit-radio value="small">Small</bit-radio>
-  <bit-radio value="medium">Medium</bit-radio>
-  <bit-radio value="large">Large</bit-radio>
-</bit-radio-group>
+<sg-radio-group name="size" label="T-shirt size" value="medium">
+  <sg-radio value="small">Small</sg-radio>
+  <sg-radio value="medium">Medium</sg-radio>
+  <sg-radio value="large">Large</sg-radio>
+</sg-radio-group>
 
 <script type="module">
   import '@vielzeug/sigil/radio-group';
@@ -110,17 +110,17 @@ Prevent interaction and reduce opacity for unavailable options.
 <ComponentPreview vertical>
 
 ```html
-<bit-radio-group label="Notifications" name="notif">
-  <bit-radio value="email">Email</bit-radio>
-  <bit-radio value="push">Push</bit-radio>
-  <bit-radio value="sms">SMS</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Notifications" name="notif">
+  <sg-radio value="email">Email</sg-radio>
+  <sg-radio value="push">Push</sg-radio>
+  <sg-radio value="sms">SMS</sg-radio>
+</sg-radio-group>
 
-<bit-radio-group label="Priority" name="priority" orientation="horizontal">
-  <bit-radio value="low">Low</bit-radio>
-  <bit-radio value="medium">Medium</bit-radio>
-  <bit-radio value="high">High</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Priority" name="priority" orientation="horizontal">
+  <sg-radio value="low">Low</sg-radio>
+  <sg-radio value="medium">Medium</sg-radio>
+  <sg-radio value="high">High</sg-radio>
+</sg-radio-group>
 ```
 
 </ComponentPreview>
@@ -132,18 +132,18 @@ Color and size set on the group are automatically propagated to all child radios
 <ComponentPreview vertical>
 
 ```html
-<bit-radio-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" name="c1" value="a">
-  <bit-radio value="a">Option A</bit-radio>
-  <bit-radio value="b">Option B</bit-radio>
-</bit-radio-group>
-<bit-radio-group label="Medium · Success" size="md" color="success" orientation="horizontal" name="c2" value="a">
-  <bit-radio value="a">Option A</bit-radio>
-  <bit-radio value="b">Option B</bit-radio>
-</bit-radio-group>
-<bit-radio-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" name="c3" value="a">
-  <bit-radio value="a">Option A</bit-radio>
-  <bit-radio value="b">Option B</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" name="c1" value="a">
+  <sg-radio value="a">Option A</sg-radio>
+  <sg-radio value="b">Option B</sg-radio>
+</sg-radio-group>
+<sg-radio-group label="Medium · Success" size="md" color="success" orientation="horizontal" name="c2" value="a">
+  <sg-radio value="a">Option A</sg-radio>
+  <sg-radio value="b">Option B</sg-radio>
+</sg-radio-group>
+<sg-radio-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" name="c3" value="a">
+  <sg-radio value="a">Option A</sg-radio>
+  <sg-radio value="b">Option B</sg-radio>
+</sg-radio-group>
 ```
 
 </ComponentPreview>
@@ -153,15 +153,15 @@ Color and size set on the group are automatically propagated to all child radios
 <ComponentPreview vertical>
 
 ```html
-<bit-radio-group label="Preferred contact" name="contact" helper="We'll only contact you for important updates.">
-  <bit-radio value="email">Email</bit-radio>
-  <bit-radio value="phone">Phone</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Preferred contact" name="contact" helper="We'll only contact you for important updates.">
+  <sg-radio value="email">Email</sg-radio>
+  <sg-radio value="phone">Phone</sg-radio>
+</sg-radio-group>
 
-<bit-radio-group label="Agreement" name="agree" error="You must select an option." color="error">
-  <bit-radio value="yes">Yes, I agree</bit-radio>
-  <bit-radio value="no">No</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Agreement" name="agree" error="You must select an option." color="error">
+  <sg-radio value="yes">Yes, I agree</sg-radio>
+  <sg-radio value="no">No</sg-radio>
+</sg-radio-group>
 ```
 
 </ComponentPreview>
@@ -171,11 +171,11 @@ Color and size set on the group are automatically propagated to all child radios
 <ComponentPreview>
 
 ```html
-<bit-radio-group label="Disabled group" name="disabled" disabled value="b">
-  <bit-radio value="a">Option A</bit-radio>
-  <bit-radio value="b">Option B</bit-radio>
-  <bit-radio value="c">Option C</bit-radio>
-</bit-radio-group>
+<sg-radio-group label="Disabled group" name="disabled" disabled value="b">
+  <sg-radio value="a">Option A</sg-radio>
+  <sg-radio value="b">Option B</sg-radio>
+  <sg-radio value="c">Option C</sg-radio>
+</sg-radio-group>
 ```
 
 </ComponentPreview>
@@ -186,13 +186,13 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ```html
 <form id="survey">
-  <bit-radio-group name="experience" label="How would you rate your experience?" required>
-    <bit-radio value="1">Poor</bit-radio>
-    <bit-radio value="2">Fair</bit-radio>
-    <bit-radio value="3">Good</bit-radio>
-    <bit-radio value="4">Excellent</bit-radio>
-  </bit-radio-group>
-  <bit-button type="submit">Submit</bit-button>
+  <sg-radio-group name="experience" label="How would you rate your experience?" required>
+    <sg-radio value="1">Poor</sg-radio>
+    <sg-radio value="2">Fair</sg-radio>
+    <sg-radio value="3">Good</sg-radio>
+    <sg-radio value="4">Excellent</sg-radio>
+  </sg-radio-group>
+  <sg-button type="submit">Submit</sg-button>
 </form>
 
 <script type="module">
@@ -210,7 +210,7 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ## API Reference
 
-### `bit-radio` Attributes
+### `sg-radio` Attributes
 
 | Attribute  | Type                                                                      | Default     | Description                             |
 | ---------- | ------------------------------------------------------------------------- | ----------- | --------------------------------------- |
@@ -221,19 +221,19 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `name`     | `string`                                                                  | —           | Form field name (required for grouping) |
 | `value`    | `string`                                                                  | —           | Form field value when checked           |
 
-### `bit-radio` Slots
+### `sg-radio` Slots
 
 | Slot      | Description                |
 | --------- | -------------------------- |
 | (default) | Radio button label content |
 
-### `bit-radio` Events
+### `sg-radio` Events
 
 | Event    | Detail                                                      | Description                                                     |
 | -------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
 | `change` | `{ checked: boolean, value: string, originalEvent: Event }` | Emitted when checked state changes (only when becoming checked) |
 
-### `bit-radio` CSS Custom Properties
+### `sg-radio` CSS Custom Properties
 
 | Property             | Description             | Default         |
 | -------------------- | ----------------------- | --------------- |
@@ -241,7 +241,7 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `--radio-checked-bg` | Background when checked | Color-dependent |
 | `--radio-color`      | Inner dot color         | `white`         |
 
-### `bit-radio-group` Attributes
+### `sg-radio-group` Attributes
 
 | Attribute     | Type                                                                      | Default      | Description                                      |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
@@ -256,19 +256,19 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)         |
 | `required`    | `boolean`                                                                 | `false`      | Mark the group as required                       |
 
-### `bit-radio-group` Slots
+### `sg-radio-group` Slots
 
-| Slot      | Description                     |
-| --------- | ------------------------------- |
-| (default) | Place `bit-radio` elements here |
+| Slot      | Description                    |
+| --------- | ------------------------------ |
+| (default) | Place `sg-radio` elements here |
 
-### `bit-radio-group` Events
+### `sg-radio-group` Events
 
 | Event    | Detail              | Description                      |
 | -------- | ------------------- | -------------------------------- |
 | `change` | `{ value: string }` | Emitted when a radio is selected |
 
-### `bit-radio-group` CSS Custom Properties
+### `sg-radio-group` CSS Custom Properties
 
 | Property                  | Description                     | Default         |
 | ------------------------- | ------------------------------- | --------------- |
@@ -279,7 +279,7 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 The radio components follow WCAG 2.1 Level AA standards.
 
-### `bit-radio`
+### `sg-radio`
 
 ✅ **Keyboard Navigation**
 
@@ -291,7 +291,7 @@ The radio components follow WCAG 2.1 Level AA standards.
 - Uses `role="radio"` with `aria-checked` reflecting the current state.
 - `aria-disabled` reflects the disabled state.
 
-### `bit-radio-group`
+### `sg-radio-group`
 
 ✅ **Semantic Structure**
 
@@ -306,4 +306,4 @@ The radio components follow WCAG 2.1 Level AA standards.
 - Always provide a meaningful `label` on the group — it is read before each option by screen readers.
 - Always use the `name` attribute (or set it once on the group) so radios are mutually exclusive.
 - Provide a default `value` when a sensible default exists.
-- For non-mutually exclusive choices, use [`bit-checkbox-group`](./checkbox) instead.
+- For non-mutually exclusive choices, use [`sg-checkbox-group`](./checkbox) instead.

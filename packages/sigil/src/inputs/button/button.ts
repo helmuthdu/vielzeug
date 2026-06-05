@@ -2,7 +2,7 @@ import { computed, define, defineField, html, inject, prop } from '@vielzeug/cra
 
 import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import { commonProps } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -21,7 +21,7 @@ import componentStyles from './button.css?inline';
 const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
 /** Button component properties */
-export type BitButtonProps = {
+export type SgButtonProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -56,7 +56,7 @@ export type BitButtonProps = {
  * A customizable button component with multiple variants, sizes, and states.
  * Supports icons, loading states, and special effects like frost and rainbow.
  *
- * @element bit-button
+ * @element sg-button
  *
  * @attr {string} type - HTML button type: 'button' | 'submit' | 'reset'
  * @attr {boolean} disabled - Disable button interaction
@@ -69,7 +69,7 @@ export type BitButtonProps = {
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
  *
- * @fires click - Emitted when button is clicked (unless disabled/loading)
+ * @fires click - Emitted when button is clicked (unless disabled/loading). detail: { originalEvent: MouseEvent }
  *
  * @slot - Button content (text, icons, etc.)
  * @slot prefix - Content before the button text (e.g., icons)
@@ -92,20 +92,16 @@ export type BitButtonProps = {
  *
  * @example
  * ```html
- * <bit-button variant="solid" color="primary">Click me</bit-button>
- * <bit-button loading color="success">Processing...</bit-button>
- * <bit-button variant="frost" rainbow>Special Button</bit-button>
+ * <sg-button variant="solid" color="primary">Click me</sg-button>
+ * <sg-button loading color="success">Processing...</sg-button>
+ * <sg-button variant="frost" rainbow>Special Button</sg-button>
  * ```
  */
-export const BUTTON_TAG = 'bit-button' as const;
-define<BitButtonProps, { click: MouseEvent }>(BUTTON_TAG, {
+export const BUTTON_TAG = 'sg-button' as const;
+define<SgButtonProps>(BUTTON_TAG, {
   formAssociated: true,
   props: {
-    ...themableBundle,
-    ...sizableBundle,
-    ...disablableBundle,
-    ...loadableBundle,
-    ...roundableBundle,
+    ...commonProps,
     fullwidth: prop.bool(false),
     href: prop.string(),
     iconOnly: prop.bool(false),
@@ -116,7 +112,7 @@ define<BitButtonProps, { click: MouseEvent }>(BUTTON_TAG, {
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el }) {
     // Derive effective color/size/variant — prefer group context, fall back to own prop.
     const groupCtx = inject(BUTTON_GROUP_CTX);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
@@ -167,7 +163,7 @@ define<BitButtonProps, { click: MouseEvent }>(BUTTON_TAG, {
       const reachedHost = path.includes(el);
 
       if (!reachedHost) {
-        emit('click', e);
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
       }
     };
 
@@ -240,7 +236,7 @@ define<BitButtonProps, { click: MouseEvent }>(BUTTON_TAG, {
     }),
     frostVariantMixin('button'),
     rainbowEffectMixin('button'),
-    disabledLoadingMixin('button'),
+    disabledLoadingMixin,
     componentStyles,
   ],
 });

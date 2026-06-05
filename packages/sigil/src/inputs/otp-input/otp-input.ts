@@ -8,13 +8,13 @@ import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../..
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import styles from './otp-input.css?inline';
 
-export type BitOtpInputEvents = {
+export type SgOtpInputEvents = {
   change: { complete: boolean; originalEvent?: Event; value: string };
   complete: { originalEvent?: Event; value: string };
 };
 
 /** OTP Input props */
-export type BitOtpInputProps = {
+export type SgOtpInputProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Make inputs disabled */
@@ -43,7 +43,7 @@ export type BitOtpInputProps = {
  * A segmented OTP (One-Time Password) input with N individual cells.
  * Auto-advances focus on input, auto-backs on Backspace, handles paste.
  *
- * @element bit-otp-input
+ * @element sg-otp-input
  *
  * @attr {number} length - Number of cells (default: 6)
  * @attr {string} type - 'numeric' (default) | 'alphanumeric'
@@ -51,13 +51,17 @@ export type BitOtpInputProps = {
  * @attr {boolean} disabled - Disable all cells
  * @attr {boolean} masked - Show as password
  * @attr {string} size - 'sm' | 'md' | 'lg'
- * @attr {string} color - Theme color
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} name - Form field name
  * @attr {string} label - Group aria-label
  * @attr {string} separator - Optional separator character shown in the middle
  *
  * @fires change - Emitted whenever a cell changes. detail: { value: string, complete: boolean, originalEvent?: Event }
  * @fires complete - Emitted when all cells are filled. detail: { value: string, originalEvent?: Event }
+ *
+ * @slot label - Custom label above the OTP input
+ * @slot helper - Custom helper text below the OTP input
+ * @slot error - Custom error content below the OTP input
  *
  * @cssprop --otp-cell-size - Width and height of each cell
  * @cssprop --otp-cell-gap - Gap between cells
@@ -70,11 +74,11 @@ export type BitOtpInputProps = {
  * @part cell - Shadow part for the `cell` element.
  * @example
  * ```html
- * <bit-otp-input length="6" color="primary"></bit-otp-input>
+ * <sg-otp-input length="6" color="primary"></sg-otp-input>
  * ```
  */
-export const OTP_INPUT_TAG = 'bit-otp-input' as const;
-define<BitOtpInputProps, BitOtpInputEvents>(OTP_INPUT_TAG, {
+export const OTP_INPUT_TAG = 'sg-otp-input' as const;
+define<SgOtpInputProps, SgOtpInputEvents>(OTP_INPUT_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,

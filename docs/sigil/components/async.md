@@ -27,7 +27,7 @@ A zero-boilerplate wrapper that drives the right UI for every stage of an async 
 ## Basic Usage
 
 ```html
-<bit-async status="loading"></bit-async>
+<sg-async status="loading"></sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -38,7 +38,7 @@ A zero-boilerplate wrapper that drives the right UI for every stage of an async 
 Switch `status` from your data layer:
 
 ```js
-const el = document.querySelector('bit-async');
+const el = document.querySelector('sg-async');
 
 async function loadData() {
   el.status = 'loading';
@@ -58,7 +58,7 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async status="loading" style="width: 100%; max-width: 24rem;"></bit-async>
+<sg-async status="loading" style="width: 100%; max-width: 24rem;"></sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -73,15 +73,15 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async status="loading" style="width: 100%; max-width: 24rem;">
+<sg-async status="loading" style="width: 100%; max-width: 24rem;">
   <div slot="loading" style="display: flex; gap: var(--size-3); align-items: center; padding: var(--size-4);">
-    <bit-skeleton variant="circle" size="md"></bit-skeleton>
+    <sg-skeleton variant="circle" size="md"></sg-skeleton>
     <div style="flex: 1; display: flex; flex-direction: column; gap: var(--size-2);">
-      <bit-skeleton variant="text" lines="1" width="60%"></bit-skeleton>
-      <bit-skeleton variant="text" lines="1" width="40%"></bit-skeleton>
+      <sg-skeleton variant="text" lines="1" width="60%"></sg-skeleton>
+      <sg-skeleton variant="text" lines="1" width="40%"></sg-skeleton>
     </div>
   </div>
-</bit-async>
+</sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -96,11 +96,11 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async
+<sg-async
   status="empty"
   empty-label="No results found"
   empty-description="Try adjusting your search or filters."
-  style="width: 100%; max-width: 24rem;"></bit-async>
+  style="width: 100%; max-width: 24rem;"></sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -114,15 +114,15 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async status="empty" style="width: 100%; max-width: 24rem;">
+<sg-async status="empty" style="width: 100%; max-width: 24rem;">
   <div
     slot="empty"
     style="display: flex; flex-direction: column; align-items: center; gap: var(--size-3); padding: var(--size-10) var(--size-6); text-align: center;">
-    <bit-avatar size="xl" label="📭"></bit-avatar>
+    <sg-avatar size="xl" label="📭"></sg-avatar>
     <p style="font-size: var(--text-sm); color: var(--color-contrast-500);">Your inbox is empty</p>
-    <bit-button variant="outline" size="sm">Compose message</bit-button>
+    <sg-button variant="outline" size="sm">Compose message</sg-button>
   </div>
-</bit-async>
+</sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -138,12 +138,12 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async
+<sg-async
   status="error"
   error-label="Failed to load data"
   error-description="Check your connection and try again."
   retryable
-  style="width: 100%; max-width: 24rem;"></bit-async>
+  style="width: 100%; max-width: 24rem;"></sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -157,16 +157,16 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async status="error" style="width: 100%; max-width: 24rem;">
+<sg-async status="error" style="width: 100%; max-width: 24rem;">
   <div slot="error">
-    <bit-alert color="error" variant="bordered" heading="Request failed">
+    <sg-alert color="error" variant="bordered" heading="Request failed">
       The server returned an error. Please try again later.
       <div slot="actions">
-        <bit-button color="error" variant="outline" size="sm">Retry</bit-button>
+        <sg-button color="error" variant="outline" size="sm">Retry</sg-button>
       </div>
-    </bit-alert>
+    </sg-alert>
   </div>
-</bit-async>
+</sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -182,12 +182,12 @@ The default loading view renders a skeleton stack automatically. No slot require
 <ComponentPreview center>
 
 ```html
-<bit-async status="success" style="width: 100%; max-width: 24rem;">
-  <bit-card elevation="1" padding="md">
+<sg-async status="success" style="width: 100%; max-width: 24rem;">
+  <sg-card elevation="1" padding="md">
     <span slot="header">Latest activity</span>
     <p>Everything loaded successfully.</p>
-  </bit-card>
-</bit-async>
+  </sg-card>
+</sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -204,12 +204,12 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 <ComponentPreview center>
 
 ```html
-<bit-async
+<sg-async
   id="data-region"
   status="error"
   error-label="Could not load items"
   retryable
-  style="width: 100%; max-width: 24rem;"></bit-async>
+  style="width: 100%; max-width: 24rem;"></sg-async>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -222,18 +222,18 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 
 </ComponentPreview>
 
-## Composing with bit-card
+## Composing with sg-card
 
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="1" style="width: 100%; max-width: 24rem;">
+<sg-card elevation="1" style="width: 100%; max-width: 24rem;">
   <span slot="header">Latest orders</span>
-  <bit-async
+  <sg-async
     status="empty"
     empty-label="No orders yet"
-    empty-description="Orders will appear here once placed."></bit-async>
-</bit-card>
+    empty-description="Orders will appear here once placed."></sg-async>
+</sg-card>
 
 <script type="module">
   import '@vielzeug/sigil/async';
@@ -243,25 +243,73 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 
 </ComponentPreview>
 
-## Composing with bit-table
+## Composing with sg-table
+
+Use the `loading` slot to render a table-shaped skeleton that matches the real table layout. When data arrives, switch `status` to `success` and the real table appears.
 
 <ComponentPreview center>
 
 ```html
-<bit-async status="loading" style="width: 100%;">
-  <bit-table striped bordered caption="Members">
-    <bit-tr head>
-      <bit-th>Name</bit-th>
-      <bit-th>Role</bit-th>
-    </bit-tr>
-    <bit-tr><bit-td>Alice</bit-td><bit-td>Admin</bit-td></bit-tr>
-    <bit-tr><bit-td>Bob</bit-td><bit-td>Editor</bit-td></bit-tr>
-  </bit-table>
-</bit-async>
+<div style="display: flex; flex-direction: column; gap: var(--size-3); width: 100%;">
+  <div style="display: flex; gap: var(--size-2);">
+    <sg-button id="btn-load" size="sm" variant="outline">Simulate loading</sg-button>
+    <sg-button id="btn-done" size="sm" variant="outline">Simulate success</sg-button>
+  </div>
+
+  <sg-async id="members-async" status="loading" style="width: 100%;">
+    <!-- Loading slot: sg-table in loading state with sg-skeleton cells.
+         sg-td element children are deep-cloned into the native shadow <td>,
+         so sg-skeleton renders correctly inside the table structure. -->
+    <sg-table slot="loading" striped bordered caption="Members" loading>
+      <sg-tr head>
+        <sg-th>Name</sg-th>
+        <sg-th>Role</sg-th>
+        <sg-th>Status</sg-th>
+      </sg-tr>
+      <sg-tr>
+        <sg-td><sg-skeleton variant="text" lines="1" width="70%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="50%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="60%"></sg-skeleton></sg-td>
+      </sg-tr>
+      <sg-tr>
+        <sg-td><sg-skeleton variant="text" lines="1" width="80%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="60%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="45%"></sg-skeleton></sg-td>
+      </sg-tr>
+      <sg-tr>
+        <sg-td><sg-skeleton variant="text" lines="1" width="90%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="55%"></sg-skeleton></sg-td>
+        <sg-td><sg-skeleton variant="text" lines="1" width="65%"></sg-skeleton></sg-td>
+      </sg-tr>
+    </sg-table>
+
+    <!-- Default slot: real table shown on success -->
+    <sg-table striped bordered caption="Members">
+      <sg-tr head>
+        <sg-th>Name</sg-th>
+        <sg-th>Role</sg-th>
+        <sg-th>Status</sg-th>
+      </sg-tr>
+      <sg-tr><sg-td>Alice</sg-td><sg-td>Admin</sg-td><sg-td>Active</sg-td></sg-tr>
+      <sg-tr><sg-td>Bob</sg-td><sg-td>Editor</sg-td><sg-td>Active</sg-td></sg-tr>
+      <sg-tr><sg-td>Carol</sg-td><sg-td>Viewer</sg-td><sg-td>Inactive</sg-td></sg-tr>
+    </sg-table>
+  </sg-async>
+</div>
 
 <script type="module">
   import '@vielzeug/sigil/async';
+  import '@vielzeug/sigil/skeleton';
   import '@vielzeug/sigil/table';
+  import '@vielzeug/sigil/button';
+
+  const el = document.getElementById('members-async');
+  document.getElementById('btn-load').addEventListener('click', () => {
+    el.status = 'loading';
+  });
+  document.getElementById('btn-done').addEventListener('click', () => {
+    el.status = 'success';
+  });
 </script>
 ```
 
@@ -313,7 +361,7 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 
 ## Accessibility
 
-`bit-async` manages ARIA on the host element automatically:
+`sg-async` manages ARIA on the host element automatically:
 
 - **`aria-busy="true"`** while status is `loading` — screen readers announce the busy region.
 - **`aria-live="assertive"`** in the `error` state — error messages interrupt immediately.

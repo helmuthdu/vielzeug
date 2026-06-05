@@ -1,14 +1,14 @@
 ---
-title: negate
+title: 'Arsenal — negate (not exported, use not)'
+description: 'negate is not exported. The correct export is not().'
 ---
 
-## negate
+# negate
 
-Inverts predicate result.
+`negate` is not exported by `@vielzeug/arsenal`. Use [`not`](./not.md) instead.
 
 ```ts
-import { negate } from '@vielzeug/arsenal';
+import { not } from '@vielzeug/arsenal';
 
-const isEven = (n: number) => n % 2 === 0;
-[1, 2, 3, 4].filter(negate(isEven)); // [1, 3]
+const isInactive = not((user: User) => user.active);
 ```

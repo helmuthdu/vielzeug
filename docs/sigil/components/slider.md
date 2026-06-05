@@ -25,7 +25,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 ## Basic Usage
 
 ```html
-<bit-slider value="50">Volume</bit-slider>
+<sg-slider value="50">Volume</sg-slider>
 
 <script type="module">
   import '@vielzeug/sigil/slider';
@@ -39,13 +39,13 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="35">Default</bit-slider>
-<bit-slider value="40" color="primary">Primary</bit-slider>
-<bit-slider value="50" color="secondary">Secondary</bit-slider>
-<bit-slider value="60" color="info">Info</bit-slider>
-<bit-slider value="70" color="success">Success</bit-slider>
-<bit-slider value="80" color="warning">Warning</bit-slider>
-<bit-slider value="90" color="error">Error</bit-slider>
+<sg-slider value="35">Default</sg-slider>
+<sg-slider value="40" color="primary">Primary</sg-slider>
+<sg-slider value="50" color="secondary">Secondary</sg-slider>
+<sg-slider value="60" color="info">Info</sg-slider>
+<sg-slider value="70" color="success">Success</sg-slider>
+<sg-slider value="80" color="warning">Warning</sg-slider>
+<sg-slider value="90" color="error">Error</sg-slider>
 ```
 
 </ComponentPreview>
@@ -55,9 +55,9 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="30" size="sm">Small</bit-slider>
-<bit-slider value="50" size="md">Medium (default)</bit-slider>
-<bit-slider value="70" size="lg">Large</bit-slider>
+<sg-slider value="30" size="sm">Small</sg-slider>
+<sg-slider value="50" size="md">Medium (default)</sg-slider>
+<sg-slider value="70" size="lg">Large</sg-slider>
 ```
 
 </ComponentPreview>
@@ -67,10 +67,10 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider min="0" max="100" value="50" color="primary">Percentage (0–100)</bit-slider>
-<bit-slider min="0" max="200" value="100" color="secondary">Temperature (0–200 °C)</bit-slider>
-<bit-slider min="0" max="100" step="5" value="50" color="success">Coarse steps (step 5)</bit-slider>
-<bit-slider min="0" max="1" step="0.1" value="0.5" color="info">Decimal (step 0.1)</bit-slider>
+<sg-slider min="0" max="100" value="50" color="primary">Percentage (0–100)</sg-slider>
+<sg-slider min="0" max="200" value="100" color="secondary">Temperature (0–200 °C)</sg-slider>
+<sg-slider min="0" max="100" step="5" value="50" color="success">Coarse steps (step 5)</sg-slider>
+<sg-slider min="0" max="1" step="0.1" value="0.5" color="info">Decimal (step 0.1)</sg-slider>
 ```
 
 </ComponentPreview>
@@ -82,8 +82,8 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="50" disabled>Disabled</bit-slider>
-<bit-slider value="75" color="success" disabled>Disabled with color</bit-slider>
+<sg-slider value="50" disabled>Disabled</sg-slider>
+<sg-slider value="75" color="success" disabled>Disabled with color</sg-slider>
 ```
 
 </ComponentPreview>
@@ -93,7 +93,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` to set the initial lower and upper bounds.
 
 ```html
-<bit-slider range from="20" to="80">Price range</bit-slider>
+<sg-slider range from="20" to="80">Price range</sg-slider>
 
 <script type="module">
   import '@vielzeug/sigil/slider';
@@ -103,10 +103,10 @@ Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` 
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider range from="20" to="80">Default</bit-slider>
-<bit-slider range from="20" to="80" color="primary">Primary</bit-slider>
-<bit-slider range from="30" to="70" color="success" size="sm">Small · Success</bit-slider>
-<bit-slider range from="10" to="90" color="warning" size="lg">Large · Warning</bit-slider>
+<sg-slider range from="20" to="80">Default</sg-slider>
+<sg-slider range from="20" to="80" color="primary">Primary</sg-slider>
+<sg-slider range from="30" to="70" color="success" size="sm">Small · Success</sg-slider>
+<sg-slider range from="10" to="90" color="warning" size="lg">Large · Warning</sg-slider>
 ```
 
 </ComponentPreview>
@@ -131,23 +131,23 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ```html
 <!-- Single mode: announce "75%" instead of "75" -->
-<bit-slider value="75" value-text="75%" color="primary">Volume</bit-slider>
+<sg-slider value="75" value-text="75%" color="primary">Volume</sg-slider>
 
 <!-- Range mode: announce "$20 – $80" -->
-<bit-slider range from="20" to="80" min="0" max="100" from-value-text="$20" to-value-text="$80" color="primary">
+<sg-slider range from="20" to="80" min="0" max="100" from-value-text="$20" to-value-text="$80" color="primary">
   Price range
-</bit-slider>
+</sg-slider>
 ```
 
 ## Form Integration
 
-`bit-slider` is form-associated in single mode. The `name` attribute is submitted as part of `FormData`.
+`sg-slider` is form-associated in single mode. The `name` attribute is submitted as part of `FormData`.
 
 ```html
 <form id="settings-form">
-  <bit-slider name="volume" min="0" max="100" value="70">Volume</bit-slider>
-  <bit-slider name="bass" min="-10" max="10" value="0">Bass</bit-slider>
-  <bit-button type="submit">Save</bit-button>
+  <sg-slider name="volume" min="0" max="100" value="70">Volume</sg-slider>
+  <sg-slider name="bass" min="-10" max="10" value="0">Bass</sg-slider>
+  <sg-button type="submit">Save</sg-button>
 </form>
 
 <script type="module">
@@ -222,7 +222,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 The slider component follows WAI-ARIA best practices.
 
-### `bit-slider`
+### `sg-slider`
 
 ✅ **Keyboard Navigation**
 
@@ -254,5 +254,5 @@ The slider component follows WAI-ARIA best practices.
 
 **Don't:**
 
-- Use a slider for a small, discrete set of options — a `bit-select` or `bit-radio-group` is clearer.
+- Use a slider for a small, discrete set of options — a `sg-select` or `sg-radio-group` is clearer.
 - Omit `value-text` when using fractional step values — screen readers announce the raw float verbatim.

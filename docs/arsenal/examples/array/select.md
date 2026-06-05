@@ -1,86 +1,46 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1420_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — filterMap'
+description: 'filterMap example for @vielzeug/arsenal.'
+---
 
-# filterMap
+## filterMap
 
-The `filterMap` utility maps and filters an array in a single pass. Return `undefined` from the callback to skip an item.
+### Problem
 
-## Source Code
+You need to transform an array and drop some items in a single pass — without a separate `filter` then `map` chain.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/filterMap.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Single Pass**: Map and filter in one iteration for readability and performance.
-- **Explicit Filtering**: Return `undefined` to drop an item.
-
-## API
-
-```ts
-function filterMap<T, R>(array: T[], callback: (item: T, index: number, array: T[]) => R | undefined): R[];
-```
-
-### Parameters
-
-- `array`: The input array.
-- `callback`: Transformation applied to each element. Return `undefined` to drop an item.
-
-### Returns
-
-A new array containing the mapped values of elements where the callback returned a value.
-
-## Examples
-
-### Synchronous Selection
+Use `filterMap(array, fn)` to map items and skip any where the callback returns `undefined`.
 
 ```ts
 import { filterMap } from '@vielzeug/arsenal';
 
-const numbers = [10, 20, 30, 40];
+const values = [1, null, 2, null, 3];
 
-// Double only the numbers greater than 20
-const result = filterMap(numbers, (x) => (x > 20 ? x * 2 : undefined));
-// [60, 80]
-```
-
-### Asynchronous Selection
-
-::: warning
-`filterMap` does not support async callbacks. Use `parallel` or `Promise.all` for async mapping:
-
-```ts
-import { parallel } from '@vielzeug/arsenal';
-
-const ids = [1, 2, 3];
-const details = await parallel(ids, async (id) => fetchUser(id), { limit: 3 });
-```
-
-:::
-
-### Default Filtering
-
-```ts
-import { filterMap } from '@vielzeug/arsenal';
-
-const data = [1, null, 2, undefined, 3];
-
-// Return undefined to skip nullish values
-const doubled = filterMap(data, (x) => (x == null ? undefined : x * 2));
+// Return undefined to drop; return a value to keep
+filterMap(values, (n) => (n == null ? undefined : n * 2));
 // [2, 4, 6]
 ```
 
-## Implementation Notes
+#### Transform and narrow type
 
-- Throws `TypeError` if the first argument is not an array.
-- The callback controls both mapping and filtering.
-- `undefined` callback results are omitted from the output.
+```ts
+import { filterMap } from '@vielzeug/arsenal';
 
-## See Also
+type Raw = { value: string | null };
+const rows: Raw[] = [{ value: 'a' }, { value: null }, { value: 'b' }];
 
-- [toggle](./toggle.md): Add or remove an item from an array.
-- [groupBy](./group.md): Collect related values into keyed groups.
+const strings: string[] = filterMap(rows, (r) => r.value ?? undefined);
+// ['a', 'b']
+```
+
+### Pitfalls
+
+- Return `undefined` to drop an item. Returning `null` keeps it.
+- Not lazy — processes the whole array in one pass.
+
+### Related
+
+- [compact](./compact.md)
+- [partition](./partition.md)

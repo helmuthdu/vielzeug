@@ -1,110 +1,50 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1066_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — sort'
+description: 'sort example for @vielzeug/arsenal.'
+---
 
-# sort
+## sort
 
-The `sort` utility returns a new sorted array and supports two modes:
+### Problem
 
-- single-field sorting via selector function
-- multi-field sorting via object selector (`{ key: 'asc' | 'desc' }`)
+You need to sort an array by one or multiple fields without mutating the original, and with clear asc/desc control per field.
 
-## Source Code
+### Solution
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/sort.ts
-:::
-
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Immutable**: Returns a new sorted array, leaving the original untouched.
-- **Selector Support**: Sort by any property or computed value.
-- **Multi-Field Support**: Sort by multiple keys with independent directions.
-- **Custom Order**: Supports `'asc'` and `'desc'`.
-
-## API
-
-```ts
-type SortDirection = 'asc' | 'desc';
-type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
-
-function sort<T>(array: T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
-function sort<T>(array: T[], selectors: SortSelectors<T>): T[];
-```
-
-### Parameters
-
-- `array`: The array to sort.
-- `selector`: A function that extracts the value to compare from each element.
-- `direction`: Optional. `'asc'` by default, `'desc'` for descending order.
-- `selectors`: Object-based multi-field selector. Each key maps to `'asc'` or `'desc'`.
-
-### Returns
-
-- A new sorted array.
-
-## Examples
-
-### Sorting Numbers
-
-```ts
-import { sort } from '@vielzeug/arsenal';
-
-const numbers = [10, 2, 33, 4, 1];
-
-// Ascending (default)
-sort(numbers, (n) => n); // [1, 2, 4, 10, 33]
-
-// Descending
-sort(numbers, (n) => n, 'desc'); // [33, 10, 4, 2, 1]
-```
-
-### Sorting Objects
+Use `sort(array, selectors)` with an object of `{ field: 'asc' | 'desc' }` pairs. Earlier keys take priority; ties fall through to the next.
 
 ```ts
 import { sort } from '@vielzeug/arsenal';
 
 const users = [
-  { name: 'Alice', age: 25 },
-  { name: 'Bob', age: 20 },
-  { name: 'Charlie', age: 30 },
+  { name: 'Bob',   age: 30 },
+  { name: 'Alice', age: 30 },
+  { name: 'Carol', age: 25 },
 ];
 
-// Sort by age
-const byAge = sort(users, (u) => u.age);
-// [{ name: 'Bob', ... }, { name: 'Alice', ... }, { name: 'Charlie', ... }]
+sort(users, { age: 'desc', name: 'asc' });
+// [
+//   { name: 'Alice', age: 30 },
+//   { name: 'Bob',   age: 30 },
+//   { name: 'Carol', age: 25 },
+// ]
 ```
 
-### Sorting by Multiple Fields
+#### Single-key sort
 
 ```ts
 import { sort } from '@vielzeug/arsenal';
 
-const employees = [
-  { team: 'A', score: 10, name: 'Chris' },
-  { team: 'B', score: 12, name: 'Alex' },
-  { team: 'A', score: 12, name: 'Bea' },
-  { team: 'A', score: 12, name: 'Anna' },
-];
-
-const ordered = sort(employees, { score: 'desc', name: 'asc' });
-// [
-//   { team: 'B', score: 12, name: 'Alex' },
-//   { team: 'A', score: 12, name: 'Anna' },
-//   { team: 'A', score: 12, name: 'Bea' },
-//   { team: 'A', score: 10, name: 'Chris' },
-// ]
+sort([3, 1, 4, 1, 5], { '': 'asc' }); // won't work for primitives — use native .sort()
+sort([{ n: 3 }, { n: 1 }], { n: 'asc' }); // [{ n: 1 }, { n: 3 }]
 ```
 
-## Implementation Notes
+### Pitfalls
 
-- Throws `TypeError` if the first argument is not an array.
-- Uses native array sorting and returns a cloned array (`[...array]`) to keep input immutable.
-- Uses `compare()` in selector mode and `compareBy()` in object-selector mode.
+- Returns a new array; the original is never mutated.
+- String comparison uses `localeCompare` — results may differ from `<`/`>` comparisons.
 
-## See Also
+### Related
 
-- [compareBy](../function/compareBy.md): Build comparator functions for object sorting.
-- [group](./group.md): Organize elements into collections.
+- [search](./search.md)
+- [groupBy](./group.md)

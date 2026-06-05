@@ -22,12 +22,12 @@ A flexible accordion component for organizing collapsible content sections. Buil
 ## Basic Usage
 
 ```html
-<bit-accordion>
-  <bit-accordion-item>
+<sg-accordion>
+  <sg-accordion-item>
     <span slot="title">First Section</span>
     Content for the first section goes here.
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 
 <script type="module">
   import '@vielzeug/sigil/accordion';
@@ -46,16 +46,16 @@ Allow multiple items to be expanded simultaneously.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion variant="solid" selection-mode="multiple">
-  <bit-accordion-item>
+<sg-accordion variant="solid" selection-mode="multiple">
+  <sg-accordion-item>
     <span slot="title">Section 1</span>
     Content 1
-  </bit-accordion-item>
-  <bit-accordion-item>
+  </sg-accordion-item>
+  <sg-accordion-item>
     <span slot="title">Section 2</span>
     Content 2
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 ```
 
 </ComponentPreview>
@@ -67,16 +67,16 @@ Only one item can be expanded at a time.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion variant="outline" selection-mode="single">
-  <bit-accordion-item>
+<sg-accordion variant="outline" selection-mode="single">
+  <sg-accordion-item>
     <span slot="title">Section 1</span>
     Content 1
-  </bit-accordion-item>
-  <bit-accordion-item>
+  </sg-accordion-item>
+  <sg-accordion-item>
     <span slot="title">Section 2</span>
     Content 2
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 ```
 
 </ComponentPreview>
@@ -88,42 +88,42 @@ Eight visual variants applied to all items via the parent accordion.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion variant="solid">
-  <bit-accordion-item>
+<sg-accordion variant="solid">
+  <sg-accordion-item>
     <span slot="title">Solid Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="flat">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="flat">
+  <sg-accordion-item>
     <span slot="title">Flat Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="bordered">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="bordered">
+  <sg-accordion-item>
     <span slot="title">Bordered Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="outline">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="outline">
+  <sg-accordion-item>
     <span slot="title">Outline Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="ghost">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="ghost">
+  <sg-accordion-item>
     <span slot="title">Ghost Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="text">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="text">
+  <sg-accordion-item>
     <span slot="title">Text Variant</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 ```
 
 </ComponentPreview>
@@ -139,46 +139,46 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 <ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
-<bit-accordion variant="glass">
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="heart" size="18"></bit-icon>
+<sg-accordion variant="glass">
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="heart" size="18"></sg-icon>
     <span slot="title">Item 1</span>
     <span slot="subtitle">Subitem 1</span>
     Content
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="help-circle" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="help-circle" size="18"></sg-icon>
     <span slot="title">Item 2</span>
     <span slot="subtitle">Subitem 2</span>
     Content
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="bookmark" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="bookmark" size="18"></sg-icon>
     <span slot="title">Item 3</span>
     <span slot="subtitle">Subitem 3</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion variant="frost">
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="heart" size="18"></bit-icon>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion variant="frost">
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="heart" size="18"></sg-icon>
     <span slot="title">Item 1</span>
     <span slot="subtitle">Subitem 1</span>
     Content
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="help-circle" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="help-circle" size="18"></sg-icon>
     <span slot="title">Item 2</span>
     <span slot="subtitle">Subitem 2</span>
     Content
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="bookmark" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="bookmark" size="18"></sg-icon>
     <span slot="title">Item 3</span>
     <span slot="subtitle">Subitem 3</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 
 <script type="module">
   import '@vielzeug/sigil/accordion';
@@ -196,24 +196,24 @@ Three sizes for different contexts.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion size="sm">
-  <bit-accordion-item>
+<sg-accordion size="sm">
+  <sg-accordion-item>
     <span slot="title">Small size</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion size="md">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion size="md">
+  <sg-accordion-item>
     <span slot="title">Medium Size</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
-<bit-accordion size="lg">
-  <bit-accordion-item>
+  </sg-accordion-item>
+</sg-accordion>
+<sg-accordion size="lg">
+  <sg-accordion-item>
     <span slot="title">Large size</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 ```
 
 </ComponentPreview>
@@ -227,26 +227,26 @@ Add icons or descriptive subtitles using slots.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion variant="bordered">
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="wind" size="18"></bit-icon>
+<sg-accordion variant="bordered">
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="wind" size="18"></sg-icon>
     <span slot="title">Cloud Storage</span>
     <span slot="subtitle">Manage your files and backups</span>
     <p>Access and manage all your cloud storage files, folders, and backups from this central location.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="shield" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="shield" size="18"></sg-icon>
     <span slot="title">Security Settings</span>
     <span slot="subtitle">Two-factor authentication and password management</span>
     <p>Configure security options including 2FA, password policies, and login alerts.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <bit-icon slot="prefix" name="smile-plus" size="18"></bit-icon>
+  </sg-accordion-item>
+  <sg-accordion-item>
+    <sg-icon slot="prefix" name="smile-plus" size="18"></sg-icon>
     <span slot="title">Appearance</span>
     <span slot="subtitle">Theme, colors, and layout preferences</span>
     <p>Customize the look and feel of your application with theme and color options.</p>
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 
 <script type="module">
   import '@vielzeug/sigil/accordion';
@@ -266,23 +266,23 @@ Prevent interaction with specific items.
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion variant="text">
-  <bit-accordion-item>
+<sg-accordion variant="text">
+  <sg-accordion-item>
     <span slot="title">Normal Section</span>
     Content
-  </bit-accordion-item>
-  <bit-accordion-item disabled>
+  </sg-accordion-item>
+  <sg-accordion-item disabled>
     <span slot="title">Disabled Section</span>
     Content
-  </bit-accordion-item>
-</bit-accordion>
+  </sg-accordion-item>
+</sg-accordion>
 ```
 
 </ComponentPreview>
 
 ## API Reference
 
-### `bit-accordion` Attributes
+### `sg-accordion` Attributes
 
 | Attribute        | Type                                                                | Default      | Description                                           |
 | ---------------- | ------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
@@ -290,7 +290,7 @@ Prevent interaction with specific items.
 | `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'`    | Visual variant applied to all items                   |
 | `size`           | `'sm' \| 'md' \| 'lg'`                                              | `'md'`       | Size applied to all items                             |
 
-### `bit-accordion-item` Attributes
+### `sg-accordion-item` Attributes
 
 | Attribute  | Type                                                                | Default   | Description                             |
 | ---------- | ------------------------------------------------------------------- | --------- | --------------------------------------- |
@@ -301,7 +301,7 @@ Prevent interaction with specific items.
 
 ### Slots
 
-#### `bit-accordion-item`
+#### `sg-accordion-item`
 
 | Slot       | Description                                            |
 | ---------- | ------------------------------------------------------ |
@@ -313,13 +313,13 @@ Prevent interaction with specific items.
 
 ### Events
 
-#### `bit-accordion`
+#### `sg-accordion`
 
 | Event    | Detail                                  | Description                                       |
 | -------- | --------------------------------------- | ------------------------------------------------- |
 | `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
-#### `bit-accordion-item`
+#### `sg-accordion-item`
 
 | Event      | Detail                                   | Description                        |
 | ---------- | ---------------------------------------- | ---------------------------------- |
@@ -339,7 +339,7 @@ Prevent interaction with specific items.
 
 The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
-### `bit-accordion`
+### `sg-accordion`
 
 ✅ **Native Semantics**
 

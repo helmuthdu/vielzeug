@@ -1,73 +1,36 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — curry'
+description: 'curry example for @vielzeug/arsenal.'
+---
 
-# curry
+## curry
 
-The `curry` utility transforms a function that takes multiple arguments into a sequence of functions, each taking a single argument. It is a fundamental tool for functional programming, enabling easy partial application and better logic reuse.
+### Problem
 
-## Source Code
+You need auto-curried functions — calling with fewer arguments than the arity returns a new function waiting for the rest.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/curry.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Dynamic Arity**: Automatically determines how many arguments to wait for based on the original function's length.
-- **Type-safe**: Properly infers the return types and argument types through the currying chain.
-
-## API
-
-```ts
-function curry<T extends (...args: any[]) => any>(fn: T): (...args: any[]) => any;
-```
-
-### Parameters
-
-- `fn`: The function to curry.
-
-### Returns
-
-- A curried version of the input function.
-
-## Examples
-
-### Basic Currying
+Use `curry(fn, arity?)` to wrap a function so it auto-curries. Call it one argument at a time or all at once.
 
 ```ts
 import { curry } from '@vielzeug/arsenal';
 
-const add = (a: number, b: number, c: number) => a + b + c;
-const curriedAdd = curry(add);
+const add = curry((a: number, b: number) => a + b);
 
-curriedAdd(1)(2)(3); // 6
+add(2)(3); // 5
+add(2, 3); // 5
+
+const addTwo = add(2);
+addTwo(10); // 12
 ```
 
-### Partial Application
+### Pitfalls
 
-```ts
-import { curry } from '@vielzeug/arsenal';
+- Provide `arity` explicitly when the function uses rest parameters, since `fn.length` would return 0.
+- Curried functions are not variadic — each call collects exactly the arguments up to `arity`.
 
-const multiply = curry((a: number, b: number) => a * b);
+### Related
 
-// Create a reusable 'double' function
-const double = multiply(2);
-
-double(10); // 20
-[1, 2, 3].map(double); // [2, 4, 6]
-```
-
-## Implementation Notes
-
-- Performance-optimized using a recursive wrapper.
-- Does not support functions with variadic arguments (`...args`) effectively, as it relies on `fn.length`.
-- Throws `TypeError` if the argument is not a function.
-
-## See Also
-
-- [compose](./compose.md): Functional composition from right to left.
-- [pipe](./pipe.md): Functional composition from left to right.
-- [configure](./configure.md): Preconfigure trailing arguments for unary composition.
+- [partial](./partial.md)
+- [compose](./compose.md)

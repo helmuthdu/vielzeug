@@ -1,113 +1,56 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~0.9KB-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — queue'
+description: 'queue example for @vielzeug/arsenal.'
+---
 
-# queue
+## queue
 
-Create a task queue that processes promises sequentially with optional concurrency limit.
+### Problem
 
-## Signature
+You have multiple async jobs that must not all run at once — for example uploads or API calls that must be serialized or bounded to avoid overload.
 
-```typescript
-function queue(options?: { concurrency?: number }): {
-  add: <T>(fn: () => Promise<T>) => Promise<T>;
-  onIdle: () => Promise<void>;
-  clear: () => void;
-  size: number;
-  pending: number;
-};
-```
+### Solution
 
-## Parameters
+Use `queue({ concurrency })` to create a shared job queue. `.add(fn)` enqueues a task and returns its promise. `.onIdle()` resolves when all enqueued tasks complete.
 
-- `options.concurrency` – Maximum number of concurrent promises (default: 1)
-
-## Returns
-
-Queue instance with:
-
-- `add` – Add a task to the queue
-- `onIdle` – Returns a promise that resolves when queue becomes idle
-- `clear` – Clear all pending tasks
-- `size` – Number of pending tasks
-- `pending` – Number of currently running tasks
-
-## Examples
-
-### Basic Usage
-
-```typescript
+```ts
 import { queue } from '@vielzeug/arsenal';
-const taskQueue = queue({ concurrency: 2 });
-taskQueue.add(() => fetch('/api/1'));
-taskQueue.add(() => fetch('/api/2'));
-taskQueue.add(() => fetch('/api/3'));
-await taskQueue.onIdle(); // Wait for all tasks to complete
-console.log('All tasks done!');
+
+const q = queue({ concurrency: 2 });
+
+const a = q.add(() => fetch('/api/a').then((r) => r.json()));
+const b = q.add(() => fetch('/api/b').then((r) => r.json()));
+const c = q.add(() => fetch('/api/c').then((r) => r.json()));
+
+await q.onIdle(); // wait for all three to finish
+
+const [dataA, dataB, dataC] = await Promise.all([a, b, c]);
 ```
 
-### With Results
+#### Inspecting queue state
 
-```typescript
+```ts
 import { queue } from '@vielzeug/arsenal';
-const taskQueue = queue({ concurrency: 3 });
-const results: string[] = [];
-for (const url of urls) {
-  const result = await taskQueue.add(() => fetch(url).then((r) => r.text()));
-  results.push(result);
-}
-console.log('All results:', results);
+
+const q = queue({ concurrency: 1 });
+
+q.add(() => sleep(100));
+q.add(() => sleep(100));
+
+q.active;  // tasks currently running
+q.pending; // tasks waiting to start
+q.size;    // active + pending
+
+q.clear(); // discard pending tasks (running tasks continue)
 ```
 
-### Monitoring Queue
+### Pitfalls
 
-```typescript
-import { queue } from '@vielzeug/arsenal';
-const taskQueue = queue({ concurrency: 5 });
-// Add tasks
-urls.forEach((url) => {
-  taskQueue.add(() => fetch(url));
-});
-// Monitor progress
-const interval = setInterval(() => {
-  console.log(`Pending: ${taskQueue.size}, Running: ${taskQueue.pending}`);
-  if (taskQueue.size === 0 && taskQueue.pending === 0) {
-    clearInterval(interval);
-  }
-}, 1000);
-await taskQueue.onIdle();
-```
+- `concurrency` defaults to `1` (serial). Pass a value greater than `1` for bounded parallelism.
+- `.clear()` discards pending tasks but does not cancel already-running ones.
+- `.onIdle()` only resolves once — it does not re-arm if new tasks are added after the queue drains.
 
-### Clearing Queue
+### Related
 
-```typescript
-import { queue } from '@vielzeug/arsenal';
-const taskQueue = queue({ concurrency: 2 });
-// Add many tasks
-for (let i = 0; i < 100; i++) {
-  taskQueue.add(() => processItem(i));
-}
-// User cancels
-if (userCancelled) {
-  taskQueue.clear(); // Clear remaining pending tasks
-  console.log('Queue cleared');
-}
-```
-
-### Sequential Processing
-
-```typescript
-import { queue } from '@vielzeug/arsenal';
-// Concurrency of 1 = sequential processing
-const sequentialQueue = queue({ concurrency: 1 });
-const operations = [() => updateDatabase(), () => sendNotification(), () => logActivity()];
-for (const operation of operations) {
-  await sequentialQueue.add(operation);
-  console.log('Operation completed');
-}
-```
-
-## Related
-
-- [parallel](./parallel.md) – Array processing with concurrency
+- [parallel](./parallel.md)
+- [retry](./retry.md)

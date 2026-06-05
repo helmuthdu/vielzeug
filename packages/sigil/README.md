@@ -4,7 +4,7 @@ package: sigil
 category: ui-components
 keywords: [web-components, accessible, themeable, ui, components, design-system]
 related: [craft, orbit, forge]
-exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
+exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form]
 ---
 
 # @vielzeug/sigil
@@ -18,7 +18,7 @@ exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
 
 **Package:** `@vielzeug/sigil` &nbsp;·&nbsp; **Category:** Ui-components
 
-**Key exports:** `bit-button`, `bit-input`, `bit-dialog`, `bit-select`, `bit-form`
+**Key exports:** `sg-button`, `sg-input`, `sg-dialog`, `sg-select`, `sg-form`
 
 **When to use:** Accessible, themeable web components built with Craft for framework and vanilla DOM apps.
 
@@ -49,14 +49,14 @@ import '@vielzeug/sigil/input';
 ```
 
 ```html
-<bit-button variant="solid" color="primary">Save</bit-button>
+<sg-button variant="solid" color="primary">Save</sg-button>
 
-<bit-input label="Email" type="email" required></bit-input>
+<sg-input label="Email" type="email" required></sg-input>
 
-<bit-card padding="lg">
+<sg-card padding="lg">
   <span slot="header">Account</span>
   <p>Build forms, layouts, overlays, and feedback UI with native custom elements.</p>
-</bit-card>
+</sg-card>
 ```
 
 To register everything at once:

@@ -16,7 +16,7 @@ import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, Overla
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { componentSignal, createChoiceField, createOptionList } from '../../headless';
+import { lifecycleSignal, createChoiceField, createOptionList } from '../../headless';
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import '../input/input';
@@ -34,7 +34,7 @@ type OptionItem = {
   value: string;
 };
 
-export type BitSelectOptionInput = {
+export type SgSelectOptionInput = {
   disabled?: boolean;
   group?: string;
   label?: string;
@@ -58,19 +58,19 @@ type FlatRow =
 
 /** Select component properties */
 
-export type BitSelectEvents = {
+export type SgSelectEvents = {
   change: ChoiceChangeDetail;
   close: { reason: DropdownCloseReason };
   open: OverlayOpenDetail;
 };
 
-export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>> & {
+export type SgSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>> & {
   /** Show loading state in dropdown */
   loading?: boolean;
   /** Allow selecting multiple options */
   multiple?: boolean;
   /** JS options array (alternative to slotted <option> elements) */
-  options?: BitSelectOptionInput[];
+  options?: SgSelectOptionInput[];
   /** Mark the field as required */
   required?: boolean;
 };
@@ -79,7 +79,7 @@ export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass'
  * A fully custom form-associated select dropdown with keyboard navigation and ARIA support.
  * Reads `<option>` and `<optgroup>` children from the default slot.
  *
- * @element bit-select
+ * @element sg-select
  *
  * @attr {string} label - Label text
  * @attr {string} label-placement - 'inset' | 'outside'
@@ -91,10 +91,10 @@ export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass'
  * @attr {boolean} required - Required field
  * @attr {string} helper - Helper text below the select
  * @attr {string} error - Error message
- * @attr {string} color - Theme color
- * @attr {string} variant - Visual variant
- * @attr {string} size - Component size
- * @attr {string} rounded - Border radius
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {boolean} fullwidth - Expand to full width
  *
  * @fires change - Fired when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
@@ -112,13 +112,13 @@ export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass'
  *
  * @example
  * ```html
- * <bit-select label="Role" value="admin">
+ * <sg-select label="Role" value="admin">
  *   <option value="admin">Administrator</option>
  *   <option value="editor">Editor</option>
  *   <option value="viewer">Viewer</option>
- * </bit-select>
+ * </sg-select>
  *
- * <bit-select label="Tags" multiple color="primary">
+ * <sg-select label="Tags" multiple color="primary">
  *   <optgroup label="Frontend">
  *     <option value="react">React</option>
  *     <option value="vue">Vue</option>
@@ -126,11 +126,11 @@ export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass'
  *   <optgroup label="Backend">
  *     <option value="node">Node.js</option>
  *   </optgroup>
- * </bit-select>
+ * </sg-select>
  * ```
  */
-export const SELECT_TAG = 'bit-select' as const;
-define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
+export const SELECT_TAG = 'sg-select' as const;
+define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -145,7 +145,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     multiple: prop.bool(false),
     name: prop.string(),
-    options: prop.json(undefined as BitSelectOptionInput[] | undefined),
+    options: prop.json(undefined as SgSelectOptionInput[] | undefined),
     placeholder: prop.string(),
     required: prop.bool(false),
     value: prop.string(),
@@ -161,7 +161,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     const isLoading = computed(() => Boolean(props.loading.value));
 
     // Merged options: explicit prop value overrides slotted options
-    function normalizeOption(option: BitSelectOptionInput): OptionItem {
+    function normalizeOption(option: SgSelectOptionInput): OptionItem {
       return {
         disabled: Boolean(option.disabled),
         group: option.group,
@@ -181,7 +181,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
 
-    const abortSignal = componentSignal(onCleanup);
+    const abortSignal = lifecycleSignal(onCleanup);
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
@@ -195,10 +195,6 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       value: props.value,
     });
     const optionList = createOptionList<OptionItem>({
-      behavior: {
-        isDisabled: () => choice.disabled.value,
-        manageAriaExpanded: false,
-      },
       dom: {
         getBoundary: () => el,
         getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
@@ -206,6 +202,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
         getReference: () => triggerEl,
         getTrigger: () => triggerEl,
       },
+      isDisabled: () => choice.disabled.value,
       items: {
         getItems: () => options.value,
       },
@@ -405,7 +402,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
       }
     }
 
-    // bit-input prop helpers
+    // sg-input prop helpers
     const inputValue = () => triggerText.value;
     const inputLabel = () => props.label.value ?? '';
     const inputPlaceholder = () => props.placeholder.value ?? '';
@@ -453,7 +450,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
     });
 
     return html`<slot style="display:none"></slot>
-      <bit-input
+      <sg-input
         class="trigger"
         readonly
         tabindex="${tabIndexAttr}"
@@ -484,7 +481,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
           ${() =>
             selectedChipItems.value.map(
               (item) =>
-                html`<bit-chip
+                html`<sg-chip
                   value="${item.value}"
                   label="${item.label}"
                   mode="removable"
@@ -493,16 +490,16 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
                   color="${props.color}"
                   @remove="${removeChip}">
                   ${item.label}
-                </bit-chip>`,
+                </sg-chip>`,
             )}
         </div>
         <span slot="suffix" class="trigger-suffix" aria-hidden="true">
           <span class="loader"></span>
           <span class="trigger-icon">
-            <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
           </span>
         </span>
-      </bit-input>
+      </sg-input>
       <div
         class="dropdown"
         ?data-open="${isOpen}"
@@ -539,7 +536,7 @@ define<BitSelectProps, BitSelectEvents>(SELECT_TAG, {
                     }}">
                     <span>${row.opt.label}</span>
                     <span class="option-check" aria-hidden="true">
-                      <bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+                      <sg-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></sg-icon>
                     </span>
                   </div>`,
             )}

@@ -9,7 +9,7 @@
  * import { getAriaLabel, getAriaDescribedBy, isAriaInvalid } from '@vielzeug/sigil/testing';
  * import { mount } from '@vielzeug/craft/testing';
  *
- * const fixture = mount('<bit-input label="Name"></bit-input>');
+ * const fixture = mount('<sg-input label="Name"></sg-input>');
  * const input = fixture.query('input')!;
  * expect(isAriaInvalid(input)).toBe(false);
  * ```
@@ -72,6 +72,54 @@ export const queryInShadow = <T extends Element = Element>(host: Element, select
  */
 export const queryAllInShadow = <T extends Element = Element>(host: Element, selector: string): T[] => {
   return Array.from(host.shadowRoot?.querySelectorAll<T>(selector) ?? []);
+};
+
+/**
+ * Queries a shadow DOM element by its CSS `part` attribute.
+ * Shorthand for `queryInShadow(host, '[part="name"]')`.
+ *
+ * @example
+ * ```ts
+ * const btn = queryPart(carousel, 'prev-btn');
+ * expect(btn).not.toBeNull();
+ * ```
+ */
+export const queryPart = <T extends Element = Element>(host: Element, part: string): null | T =>
+  queryInShadow<T>(host, `[part="${part}"]`);
+
+/**
+ * Returns an array of light-DOM children assigned to a named slot,
+ * or all slotted children if no name is given.
+ *
+ * @example
+ * ```ts
+ * const slides = getSlotted(carousel);
+ * expect(slides).toHaveLength(3);
+ * ```
+ */
+export const getSlotted = (host: Element, slotName?: string): Element[] => {
+  const selector = slotName ? `[slot="${slotName}"]` : ':not([slot])';
+
+  return Array.from(host.querySelectorAll(`:scope > ${selector}`));
+};
+
+/**
+ * Dispatches a `PointerEvent` on the given element.
+ * Useful for testing hover, drag, and pointer interactions without
+ * relying on the fire helper from @vielzeug/craft/testing.
+ *
+ * @example
+ * ```ts
+ * dispatchPointer(el, 'enter');
+ * dispatchPointer(el, 'leave');
+ * ```
+ */
+export const dispatchPointer = (
+  el: Element,
+  type: 'cancel' | 'down' | 'enter' | 'leave' | 'move' | 'up',
+  init?: PointerEventInit,
+): void => {
+  el.dispatchEvent(new PointerEvent(`pointer${type}`, { bubbles: true, composed: true, ...init }));
 };
 
 // ── Form-associated component helpers ─────────────────────────────────────────
@@ -179,23 +227,23 @@ import type { Fixture } from '@vielzeug/craft/testing';
 
 import { mount } from '@vielzeug/craft/testing';
 
-import type { BitButtonGroupProps } from '../inputs/button-group/button-group';
-import type { BitButtonProps } from '../inputs/button/button';
-import type { BitCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
-import type { BitCheckboxProps } from '../inputs/checkbox/checkbox';
-import type { BitComboboxProps } from '../inputs/combobox/combobox.types';
-import type { BitFileInputProps } from '../inputs/file-input/file-input';
-import type { BitFormProps } from '../inputs/form/form';
-import type { BitInputProps } from '../inputs/input/input';
-import type { BitNumberInputProps } from '../inputs/number-input/number-input';
-import type { BitOtpInputProps } from '../inputs/otp-input/otp-input';
-import type { BitRadioGroupProps } from '../inputs/radio-group/radio-group';
-import type { BitRadioProps } from '../inputs/radio/radio';
-import type { BitRatingProps } from '../inputs/rating/rating';
-import type { BitSelectProps } from '../inputs/select/select';
-import type { BitSliderProps } from '../inputs/slider/slider';
-import type { BitSwitchProps } from '../inputs/switch/switch';
-import type { BitTextareaProps } from '../inputs/textarea/textarea';
+import type { SgButtonGroupProps } from '../inputs/button-group/button-group';
+import type { SgButtonProps } from '../inputs/button/button';
+import type { SgCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
+import type { SgCheckboxProps } from '../inputs/checkbox/checkbox';
+import type { SgComboboxProps } from '../inputs/combobox/combobox.types';
+import type { SgFileInputProps } from '../inputs/file-input/file-input';
+import type { SgFormProps } from '../inputs/form/form';
+import type { SgInputProps } from '../inputs/input/input';
+import type { SgNumberInputProps } from '../inputs/number-input/number-input';
+import type { SgOtpInputProps } from '../inputs/otp-input/otp-input';
+import type { SgRadioGroupProps } from '../inputs/radio-group/radio-group';
+import type { SgRadioProps } from '../inputs/radio/radio';
+import type { SgRatingProps } from '../inputs/rating/rating';
+import type { SgSelectProps } from '../inputs/select/select';
+import type { SgSliderProps } from '../inputs/slider/slider';
+import type { SgSwitchProps } from '../inputs/switch/switch';
+import type { SgTextareaProps } from '../inputs/textarea/textarea';
 
 /**
  * Serializes an attribute map to an HTML attribute string fragment.
@@ -249,70 +297,70 @@ export const propsToAttrs = (props: Record<string, unknown> = {}): Record<string
 
 type MountOptions = { innerHTML?: string };
 
-/** Typed mount wrapper for `<bit-input>`. Catch prop name typos at compile time. */
-export const mountBitInput = (props?: Partial<BitInputProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-input>`);
+/** Typed mount wrapper for `<sg-input>`. Catch prop name typos at compile time. */
+export const mountSgInput = (props?: Partial<SgInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-input>`);
 
-/** Typed mount wrapper for `<bit-textarea>`. */
-export const mountBitTextarea = (props?: Partial<BitTextareaProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-textarea ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-textarea>`);
+/** Typed mount wrapper for `<sg-textarea>`. */
+export const mountSgTextarea = (props?: Partial<SgTextareaProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-textarea ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-textarea>`);
 
-/** Typed mount wrapper for `<bit-select>`. */
-export const mountBitSelect = (props?: Partial<BitSelectProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-select ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-select>`);
+/** Typed mount wrapper for `<sg-select>`. */
+export const mountSgSelect = (props?: Partial<SgSelectProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-select ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-select>`);
 
-/** Typed mount wrapper for `<bit-combobox>`. */
-export const mountBitCombobox = (props?: Partial<BitComboboxProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-combobox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-combobox>`);
+/** Typed mount wrapper for `<sg-combobox>`. */
+export const mountSgCombobox = (props?: Partial<SgComboboxProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-combobox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-combobox>`);
 
-/** Typed mount wrapper for `<bit-checkbox>`. */
-export const mountBitCheckbox = (props?: Partial<BitCheckboxProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-checkbox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-checkbox>`);
+/** Typed mount wrapper for `<sg-checkbox>`. */
+export const mountSgCheckbox = (props?: Partial<SgCheckboxProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-checkbox ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-checkbox>`);
 
-/** Typed mount wrapper for `<bit-checkbox-group>`. */
-export const mountBitCheckboxGroup = (props?: Partial<BitCheckboxGroupProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-checkbox-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-checkbox-group>`);
+/** Typed mount wrapper for `<sg-checkbox-group>`. */
+export const mountSgCheckboxGroup = (props?: Partial<SgCheckboxGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-checkbox-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-checkbox-group>`);
 
-/** Typed mount wrapper for `<bit-radio>`. */
-export const mountBitRadio = (props?: Partial<BitRadioProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-radio ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-radio>`);
+/** Typed mount wrapper for `<sg-radio>`. */
+export const mountSgRadio = (props?: Partial<SgRadioProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-radio ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-radio>`);
 
-/** Typed mount wrapper for `<bit-radio-group>`. */
-export const mountBitRadioGroup = (props?: Partial<BitRadioGroupProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-radio-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-radio-group>`);
+/** Typed mount wrapper for `<sg-radio-group>`. */
+export const mountSgRadioGroup = (props?: Partial<SgRadioGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-radio-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-radio-group>`);
 
-/** Typed mount wrapper for `<bit-switch>`. */
-export const mountBitSwitch = (props?: Partial<BitSwitchProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-switch ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-switch>`);
+/** Typed mount wrapper for `<sg-switch>`. */
+export const mountSgSwitch = (props?: Partial<SgSwitchProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-switch ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-switch>`);
 
-/** Typed mount wrapper for `<bit-button>`. */
-export const mountBitButton = (props?: Partial<BitButtonProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-button ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-button>`);
+/** Typed mount wrapper for `<sg-button>`. */
+export const mountSgButton = (props?: Partial<SgButtonProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-button ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-button>`);
 
-/** Typed mount wrapper for `<bit-button-group>`. */
-export const mountBitButtonGroup = (props?: Partial<BitButtonGroupProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-button-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-button-group>`);
+/** Typed mount wrapper for `<sg-button-group>`. */
+export const mountSgButtonGroup = (props?: Partial<SgButtonGroupProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-button-group ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-button-group>`);
 
-/** Typed mount wrapper for `<bit-file-input>`. */
-export const mountBitFileInput = (props?: Partial<BitFileInputProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-file-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-file-input>`);
+/** Typed mount wrapper for `<sg-file-input>`. */
+export const mountSgFileInput = (props?: Partial<SgFileInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-file-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-file-input>`);
 
-/** Typed mount wrapper for `<bit-form>`. */
-export const mountBitForm = (props?: Partial<BitFormProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-form ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-form>`);
+/** Typed mount wrapper for `<sg-form>`. */
+export const mountSgForm = (props?: Partial<SgFormProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-form ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-form>`);
 
-/** Typed mount wrapper for `<bit-number-input>`. */
-export const mountBitNumberInput = (props?: Partial<BitNumberInputProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-number-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-number-input>`);
+/** Typed mount wrapper for `<sg-number-input>`. */
+export const mountSgNumberInput = (props?: Partial<SgNumberInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-number-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-number-input>`);
 
-/** Typed mount wrapper for `<bit-otp-input>`. */
-export const mountBitOtpInput = (props?: Partial<BitOtpInputProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-otp-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-otp-input>`);
+/** Typed mount wrapper for `<sg-otp-input>`. */
+export const mountSgOtpInput = (props?: Partial<SgOtpInputProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-otp-input ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-otp-input>`);
 
-/** Typed mount wrapper for `<bit-rating>`. */
-export const mountBitRating = (props?: Partial<BitRatingProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-rating ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-rating>`);
+/** Typed mount wrapper for `<sg-rating>`. */
+export const mountSgRating = (props?: Partial<SgRatingProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-rating ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-rating>`);
 
-/** Typed mount wrapper for `<bit-slider>`. */
-export const mountBitSlider = (props?: Partial<BitSliderProps>, opts?: MountOptions): Promise<Fixture> =>
-  mount(`<bit-slider ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</bit-slider>`);
+/** Typed mount wrapper for `<sg-slider>`. */
+export const mountSgSlider = (props?: Partial<SgSliderProps>, opts?: MountOptions): Promise<Fixture> =>
+  mount(`<sg-slider ${attrsToHtml(propsToAttrs(props))}>${opts?.innerHTML ?? ''}</sg-slider>`);

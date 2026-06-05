@@ -5,7 +5,7 @@ description: Practical Craft usage patterns for components, props, templates, sl
 
 [[toc]]
 
-## define and component structure
+## Basic Usage
 
 `define(tag, definition)` registers a custom element and returns the tag name.
 

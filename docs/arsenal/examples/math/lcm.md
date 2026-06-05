@@ -1,13 +1,26 @@
 ---
-title: lcm
+title: 'Arsenal Examples — lcm'
+description: 'lcm example for @vielzeug/arsenal.'
 ---
 
 ## lcm
 
-Computes the least common multiple.
+### Problem
+
+You need the least common multiple of two integers — for example synchronizing repeating intervals.
+
+### Solution
+
+Use `lcm(a, b)` to return the smallest positive integer divisible by both `a` and `b`.
 
 ```ts
 import { lcm } from '@vielzeug/arsenal';
 
-lcm(6, 8); // 24
+lcm(4, 6);  // 12
+lcm(3, 5);  // 15
+lcm(7, 7);  // 7
 ```
+
+### Related
+
+- [gcd](./gcd.md)

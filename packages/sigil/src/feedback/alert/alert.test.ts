@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-alert', () => {
+describe('sg-alert', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,25 +13,25 @@ describe('bit-alert', () => {
 
   describe('Rendering', () => {
     it('renders alert container', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       expect(fixture.query('[role="status"], [role="alert"]')).toBeTruthy();
     });
 
     it('renders default slot content', async () => {
-      fixture = await mount('bit-alert', { html: '<p>Alert message</p>' });
+      fixture = await mount('sg-alert', { html: '<p>Alert message</p>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Alert message');
     });
 
     it('renders heading when provided', async () => {
-      fixture = await mount('bit-alert', { attrs: { heading: 'Warning!' } });
+      fixture = await mount('sg-alert', { attrs: { heading: 'Warning!' } });
 
       expect(fixture.element.getAttribute('heading')).toBe('Warning!');
     });
 
     it('dismiss button is hidden when not dismissible', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       // The close button is CSS-hidden when not dismissible (jsdom can't test CSS)
       // Verify functionally: clicking the button does not emit dismiss
@@ -43,13 +43,13 @@ describe('bit-alert', () => {
     });
 
     it('dismiss button renders when dismissible', async () => {
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
 
       expect(fixture.query('.close')).toBeTruthy();
     });
 
     it('dismiss button has accessible label', async () => {
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
 
       expect(fixture.query('.close')?.getAttribute('aria-label')).toBe('Dismiss alert');
     });
@@ -57,14 +57,14 @@ describe('bit-alert', () => {
 
   describe('ARIA Live Region', () => {
     it('has aria-live polite by default', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       // role="status" carries implicit aria-live="polite" — no explicit attribute needed
       expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('has aria-live assertive for error color', async () => {
-      fixture = await mount('bit-alert', { attrs: { color: 'error' } });
+      fixture = await mount('sg-alert', { attrs: { color: 'error' } });
 
       // role="alert" carries implicit aria-live="assertive"
       expect(fixture.query('[role="alert"]')).toBeTruthy();
@@ -73,31 +73,31 @@ describe('bit-alert', () => {
 
   describe('Props', () => {
     it('applies color', async () => {
-      fixture = await mount('bit-alert', { attrs: { color: 'success' } });
+      fixture = await mount('sg-alert', { attrs: { color: 'success' } });
 
       expect(fixture.element.getAttribute('color')).toBe('success');
     });
 
     it('applies variant', async () => {
-      fixture = await mount('bit-alert', { attrs: { variant: 'outlined' } });
+      fixture = await mount('sg-alert', { attrs: { variant: 'outlined' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('outlined');
     });
 
     it('applies size', async () => {
-      fixture = await mount('bit-alert', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-alert', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('applies horizontal', async () => {
-      fixture = await mount('bit-alert', { attrs: { horizontal: '' } });
+      fixture = await mount('sg-alert', { attrs: { horizontal: '' } });
 
       expect(fixture.element.hasAttribute('horizontal')).toBe(true);
     });
 
     it('applies accented', async () => {
-      fixture = await mount('bit-alert', { attrs: { accented: '' } });
+      fixture = await mount('sg-alert', { attrs: { accented: '' } });
 
       expect(fixture.element.hasAttribute('accented')).toBe(true);
     });
@@ -105,7 +105,7 @@ describe('bit-alert', () => {
 
   describe('Dismiss', () => {
     it('fires dismiss event when close button clicked', async () => {
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
 
       const handler = vi.fn();
 
@@ -120,7 +120,7 @@ describe('bit-alert', () => {
     });
 
     it('dismisses even when animationend is not fired', async () => {
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
 
       const handler = vi.fn();
 
@@ -137,7 +137,7 @@ describe('bit-alert', () => {
   describe('Colors', () => {
     for (const color of ['primary', 'success', 'warning', 'error', 'info']) {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-alert', { attrs: { color } });
+        fixture = await mount('sg-alert', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
         fixture.destroy();
@@ -146,7 +146,7 @@ describe('bit-alert', () => {
   });
 });
 
-describe('bit-alert accessibility', () => {
+describe('sg-alert accessibility', () => {
   let fixture: Awaited<ReturnType<typeof mount>>;
 
   beforeAll(async () => {
@@ -159,19 +159,19 @@ describe('bit-alert accessibility', () => {
 
   describe('WAI-ARIA Role', () => {
     it('has role alert on container for error color', async () => {
-      fixture = await mount('bit-alert', { attrs: { color: 'error' } });
+      fixture = await mount('sg-alert', { attrs: { color: 'error' } });
 
       expect(fixture.query('[role="alert"]')).toBeTruthy();
     });
 
     it('has role status on container by default', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('icon has aria-hidden', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       const icon = fixture.query('.icon');
 
@@ -183,14 +183,14 @@ describe('bit-alert accessibility', () => {
 
   describe('Live Region', () => {
     it('uses aria-live polite by default', async () => {
-      fixture = await mount('bit-alert');
+      fixture = await mount('sg-alert');
 
       // role="status" carries implicit aria-live="polite" — no explicit attribute needed
       expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('uses aria-live assertive for error color', async () => {
-      fixture = await mount('bit-alert', { attrs: { color: 'error' } });
+      fixture = await mount('sg-alert', { attrs: { color: 'error' } });
 
       // role="alert" carries implicit aria-live="assertive"
       expect(fixture.query('[role="alert"]')).toBeTruthy();
@@ -198,7 +198,7 @@ describe('bit-alert accessibility', () => {
 
     it('uses aria-live polite for non-error colors', async () => {
       for (const color of ['primary', 'success', 'warning', 'info']) {
-        fixture = await mount('bit-alert', { attrs: { color } });
+        fixture = await mount('sg-alert', { attrs: { color } });
         expect(fixture.query('[role="status"]')).toBeTruthy();
         fixture.destroy();
       }
@@ -207,7 +207,7 @@ describe('bit-alert accessibility', () => {
 
   describe('Dismissible Accessibility', () => {
     it('close button has aria-label', async () => {
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
 
       expect(fixture.query('.close')?.getAttribute('aria-label')).toBe('Dismiss alert');
     });
@@ -215,7 +215,7 @@ describe('bit-alert accessibility', () => {
     it('close button is keyboard accessible via Enter', async () => {
       const handler = { called: false };
 
-      fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+      fixture = await mount('sg-alert', { attrs: { dismissible: '' } });
       fixture.element.addEventListener('dismiss', () => {
         handler.called = true;
       });

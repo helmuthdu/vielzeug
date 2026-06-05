@@ -12,7 +12,7 @@ import componentStyles from './calendar.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type BitCalendarEvents = {
+export type SgCalendarEvents = {
   change: { isoValue: string | null };
 };
 
@@ -34,7 +34,7 @@ export type CalendarEvent = {
   label: string;
 };
 
-export type BitCalendarProps = {
+export type SgCalendarProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Disable all date selection */
@@ -84,7 +84,7 @@ export type BitCalendarProps = {
    * Pass as a JSON array attribute or a JS property.
    * @example
    * ```html
-   * <bit-calendar weekend-days="[0,6]"></bit-calendar>
+   * <sg-calendar weekend-days="[0,6]"></sg-calendar>
    * ```
    */
   'weekend-days'?: number[];
@@ -95,7 +95,7 @@ export type BitCalendarProps = {
  * Supports day/month/year drill-down views, min/max bounds, disabled weekend
  * days, and optional form association.
  *
- * @element bit-calendar
+ * @element sg-calendar
  *
  * @attr {string} value - Selected date in ISO 8601 format (yyyy-MM-dd)
  * @attr {string} min - Minimum selectable date (yyyy-MM-dd)
@@ -103,9 +103,9 @@ export type BitCalendarProps = {
  * @attr {boolean} disabled - Disable all interaction
  * @attr {boolean} required - Required field (form association)
  * @attr {string} name - Form field name
- * @attr {string} color - Theme color
- * @attr {string} size - Component size: sm | md | lg
- * @attr {string} rounded - Border radius override
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} locale - BCP 47 locale string
  * @attr {string} weekend-days - Comma-separated day indices to disable (0=Sun…6=Sat)
  * @attr {boolean} fullwidth - Expand to full container width
@@ -128,12 +128,19 @@ export type BitCalendarProps = {
  *
  * @example
  * ```html
- * <bit-calendar value="2025-06-15" min="2025-01-01" max="2025-12-31"></bit-calendar>
+ * <!-- Single date -->
+ * <sg-calendar value="2025-06-15" min="2025-01-01" max="2025-12-31" color="primary"></sg-calendar>
+ *
+ * <!-- Range selection -->
+ * <sg-calendar selection-mode="range" color="primary"></sg-calendar>
+ *
+ * <!-- Expanded calendar-app layout -->
+ * <sg-calendar expanded fullwidth color="primary"></sg-calendar>
  * ```
  */
-export const CALENDAR_TAG = 'bit-calendar' as const;
+export const CALENDAR_TAG = 'sg-calendar' as const;
 
-define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
+define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -350,7 +357,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
         <!-- Header -->
         <div class="cal-header" part="header">
           <button class="nav-btn" type="button" aria-label="Previous" ?disabled="${isDisabled}" @click="${handlePrev}">
-            <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></sg-icon>
           </button>
 
           <button
@@ -364,7 +371,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
           </button>
 
           <button class="nav-btn" type="button" aria-label="Next" ?disabled="${isDisabled}" @click="${handleNext}">
-            <bit-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+            <sg-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></sg-icon>
           </button>
         </div>
 
@@ -439,7 +446,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
                         aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
                         ${shownPills.map(
                           (evt) =>
-                            html`<bit-badge
+                            html`<sg-badge
                               class="cal-event-pill"
                               size="xs"
                               rounded="sm"
@@ -447,7 +454,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
                               style="${() =>
                                 evt.color ? `--badge-bg:${evt.color};--badge-border-color:${evt.color}` : ''}">
                               ${evt.label}
-                            </bit-badge>`,
+                            </sg-badge>`,
                         )}
                         ${pillOverflow > 0
                           ? html`<span class="cal-event-pill-overflow" aria-hidden="true">+${pillOverflow} more</span>`
@@ -464,7 +471,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
                       aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
                       ${shown.map(
                         (evt) =>
-                          html`<bit-badge
+                          html`<sg-badge
                             class="cal-dot"
                             dot
                             size="xs"
@@ -472,7 +479,7 @@ define<BitCalendarProps, BitCalendarEvents>(CALENDAR_TAG, {
                             style="${() =>
                               evt.color
                                 ? `--badge-bg:${evt.color};--badge-border-color:${evt.color}`
-                                : ''}"></bit-badge>`,
+                                : ''}"></sg-badge>`,
                       )}
                       ${overflow > 0
                         ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`

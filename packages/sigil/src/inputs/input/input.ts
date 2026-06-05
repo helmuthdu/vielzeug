@@ -4,29 +4,21 @@ import { computed, watch } from '@vielzeug/ripple';
 import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
 
+import { lifecycleSignal, createTextField } from '../../headless';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import '../../content/icon/icon';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledLoadingMixin,
-  forcedColorsFocusMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import { useTextField } from '../shared/use-field';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
 
-export type BitInputEvents = {
+export type SgInputEvents = {
   change: { originalEvent: Event; value: string };
   input: { originalEvent: Event; value: string };
 };
 
-export type BitInputProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost'>> & {
+export type SgInputProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost'>> & {
   /** Autocomplete hint */
   autocomplete?: string;
   /** Show a clear (×) button when the field has a value */
@@ -68,7 +60,7 @@ const VALID_INPUT_TYPES = [
 /**
  * A customizable text input component with multiple variants, label placements, and form features.
  *
- * @element bit-input
+ * @element sg-input
  *
  * @attr {string} label - Label text
  * @attr {string} label-placement - Label placement: 'inset' | 'outside'
@@ -86,8 +78,8 @@ const VALID_INPUT_TYPES = [
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *
- * @fires input - Emitted when input value changes (on every keystroke)
- * @fires change - Emitted when input loses focus with changed value
+ * @fires input - Emitted when input value changes (on every keystroke). detail: { value: string; originalEvent: Event }
+ * @fires change - Emitted when input loses focus with changed value. detail: { value: string; originalEvent: Event }
  *
  * @slot prefix - Content before the input (e.g., icons)
  * @slot suffix - Content after the input (e.g., clear button, validation icon)
@@ -102,24 +94,24 @@ const VALID_INPUT_TYPES = [
  * @part input - The input element
  * @part helper - The helper text element
  *
- * @cssprop --bit-input-bg - Background color (maps to internal --_bg)
- * @cssprop --bit-input-color - Text color (maps to internal --_color)
- * @cssprop --bit-input-border-color - Border color
- * @cssprop --bit-input-focus-color - Focus ring / border color
- * @cssprop --bit-input-placeholder-color - Placeholder text color
- * @cssprop --bit-input-radius - Border radius override
- * @cssprop --bit-input-padding - Inner padding (vertical horizontal)
- * @cssprop --bit-input-gap - Gap between prefix/suffix and input
- * @cssprop --bit-input-font-size - Font size override
+ * @cssprop --sg-input-bg - Background color (maps to internal --_bg)
+ * @cssprop --sg-input-color - Text color (maps to internal --_color)
+ * @cssprop --sg-input-border-color - Border color
+ * @cssprop --sg-input-focus-color - Focus ring / border color
+ * @cssprop --sg-input-placeholder-color - Placeholder text color
+ * @cssprop --sg-input-radius - Border radius override
+ * @cssprop --sg-input-padding - Inner padding (vertical horizontal)
+ * @cssprop --sg-input-gap - Gap between prefix/suffix and input
+ * @cssprop --sg-input-font-size - Font size override
  *
  * @example
  * ```html
- * <bit-input type="email" label="Email" placeholder="you@example.com" />
- * <bit-input label="Name" variant="bordered" color="primary" />
+ * <sg-input type="email" label="Email" placeholder="you@example.com" />
+ * <sg-input label="Name" variant="bordered" color="primary" />
  * ```
  */
-export const INPUT_TAG = 'bit-input' as const;
-define<BitInputProps, BitInputEvents>(INPUT_TAG, {
+export const INPUT_TAG = 'sg-input' as const;
+define<SgInputProps, SgInputEvents>(INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -154,36 +146,42 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
 
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
 
-    const tf = useTextField(
-      {
-        disabled: fCtxProps.disabled,
-        error: props.error,
-        hasLabel,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        maxLength: props.maxlength,
-        onChange: (event: Event, value: string) => {
-          emit('change', { originalEvent: event, value });
-        },
-        onInput: (event: Event, value: string) => {
-          emit('input', { originalEvent: event, value });
-        },
-        prefix: 'input',
-        validateOn: formCtx?.validateOn,
-        value: props.value,
+    const abortSignal = lifecycleSignal(onCleanup);
+    const tf = createTextField({
+      disabled: fCtxProps.disabled,
+      error: props.error,
+      hasLabel,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      maxLength: props.maxlength,
+      onChange: (event: Event, value: string) => {
+        emit('change', { originalEvent: event, value });
       },
-      defineField,
-      onCleanup,
-    );
+      onInput: (event: Event, value: string) => {
+        emit('input', { originalEvent: event, value });
+      },
+      prefix: 'input',
+      signal: abortSignal,
+      validateOn: formCtx?.validateOn,
+      value: props.value,
+    });
+
+    tf.bindFormField(defineField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value }));
+
     const {
-      abortSignal,
+      ariaDescribedBy,
+      ariaErrorMessage,
+      ariaInvalid,
+      ariaLabelledBy,
       assistive,
       assistiveId,
       clear: clearValue,
       counter,
       errorId,
       fieldId: inputId,
+      labelId,
+      labelVisible,
       value: fieldValue,
       wire,
     } = tf;
@@ -224,14 +222,13 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
       },
     });
 
-    const { aria, label } = tf;
-    const labelHidden = () => !label.show.value;
+    const labelHidden = () => !labelVisible.value;
     const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
     const passwordTogglePressed = () => String(showPassword.value);
     const passwordToggleIcon = () =>
       showPassword.value
-        ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
-        : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`;
+        ? html`<sg-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></sg-icon>`
+        : html`<sg-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></sg-icon>`;
     const helperHidden = () => !!assistive.value.errorText || !assistive.value.helperText;
     const helperText = () => assistive.value.helperText;
     const errorHidden = () => !assistive.value.errorText;
@@ -248,7 +245,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
 
     return html`
       <div class="input-wrapper" part="wrapper">
-        <label class="label" for="${inputId}" id="${label.id}" part="label" ?hidden="${labelHidden}"
+        <label class="label" for="${inputId}" id="${labelId}" part="label" ?hidden="${labelHidden}"
           ><slot name="label">${props.label}</slot></label
         >
         <div class="field" part="field">
@@ -269,10 +266,10 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
               ?readonly="${props.readonly}"
               ?required="${props.required}"
               :value="${live(fieldValue)}"
-              :aria-labelledby="${aria.labelledBy}"
-              :aria-describedby="${aria.describedBy}"
-              :aria-errormessage="${aria.errorMessage}"
-              :aria-invalid="${aria.invalid}"
+              :aria-labelledby="${ariaLabelledBy}"
+              :aria-describedby="${ariaDescribedBy}"
+              :aria-errormessage="${ariaErrorMessage}"
+              :aria-invalid="${ariaInvalid}"
               ref="${inputRef}" />
             <slot name="suffix"></slot>
             <button
@@ -286,7 +283,7 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
               ${passwordToggleIcon}
             </button>
             <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
-              <bit-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></bit-icon>
+              <sg-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></sg-icon>
             </button>
           </div>
         </div>
@@ -308,14 +305,5 @@ define<BitInputProps, BitInputEvents>(INPUT_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [
-    sizeVariantMixin(FIELD_SIZE_PRESET),
-    colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    roundedVariantMixin,
-    disabledLoadingMixin(),
-    forcedColorsFocusMixin('input'),
-    componentStyles,
-  ],
+  styles: [...fieldMixins, sizeVariantMixin(FIELD_SIZE_PRESET), forcedColorsFocusMixin('input'), componentStyles],
 });

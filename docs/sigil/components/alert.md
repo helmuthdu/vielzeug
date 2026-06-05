@@ -24,7 +24,7 @@ A feedback banner for surface-level status messages — errors, warnings, succes
 ## Basic Usage
 
 ```html
-<bit-alert color="success">Your changes have been saved.</bit-alert>
+<sg-alert color="success">Your changes have been saved.</sg-alert>
 
 <script type="module">
   import '@vielzeug/sigil/alert';
@@ -38,9 +38,9 @@ Three visual styles are available via the `variant` attribute. `flat` is the def
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="primary">Flat (default)</bit-alert>
-<bit-alert color="primary" variant="solid">Solid</bit-alert>
-<bit-alert color="primary" variant="bordered">Bordered</bit-alert>
+<sg-alert color="primary">Flat (default)</sg-alert>
+<sg-alert color="primary" variant="solid">Solid</sg-alert>
+<sg-alert color="primary" variant="bordered">Bordered</sg-alert>
 ```
 
 </ComponentPreview>
@@ -50,14 +50,14 @@ Three visual styles are available via the `variant` attribute. `flat` is the def
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid gap="sm" cols="1" style="width: 100%;">
-  <bit-alert variant="bordered" color="primary">Primary</bit-alert>
-  <bit-alert variant="bordered" color="secondary">Secondary</bit-alert>
-  <bit-alert variant="bordered" color="info">Info</bit-alert>
-  <bit-alert variant="bordered" color="success">Success</bit-alert>
-  <bit-alert variant="bordered" color="warning">Warning</bit-alert>
-  <bit-alert variant="bordered" color="error">Error</bit-alert>
-</bit-grid>
+<sg-grid gap="sm" cols="1" style="width: 100%;">
+  <sg-alert variant="bordered" color="primary">Primary</sg-alert>
+  <sg-alert variant="bordered" color="secondary">Secondary</sg-alert>
+  <sg-alert variant="bordered" color="info">Info</sg-alert>
+  <sg-alert variant="bordered" color="success">Success</sg-alert>
+  <sg-alert variant="bordered" color="warning">Warning</sg-alert>
+  <sg-alert variant="bordered" color="error">Error</sg-alert>
+</sg-grid>
 ```
 
 </ComponentPreview>
@@ -67,9 +67,9 @@ Three visual styles are available via the `variant` attribute. `flat` is the def
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="info" size="sm">Small alert</bit-alert>
-<bit-alert color="info" size="md">Medium alert (default)</bit-alert>
-<bit-alert color="info" size="lg">Large alert</bit-alert>
+<sg-alert color="info" size="sm">Small alert</sg-alert>
+<sg-alert color="info" size="md">Medium alert (default)</sg-alert>
+<sg-alert color="info" size="lg">Large alert</sg-alert>
 ```
 
 </ComponentPreview>
@@ -81,33 +81,33 @@ Use `heading` to add a bold heading above the message body.
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="error" heading="Something went wrong">
+<sg-alert color="error" heading="Something went wrong">
   The server returned a 500 error. Please try again later.
-</bit-alert>
-<bit-alert color="success" heading="Payment confirmed">
+</sg-alert>
+<sg-alert color="success" heading="Payment confirmed">
   Your subscription has been updated. Changes take effect immediately.
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
 
 ## Dismissible
 
-Add `dismissible` to show a close (×) button. When clicked, the component plays a `bit-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. Listen to the `dismiss` event to remove it from the DOM or restore it later.
+Add `dismissible` to show a close (×) button. When clicked, the component plays a `sg-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. Listen to the `dismiss` event to remove it from the DOM or restore it later.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="warning" dismissible>Your session expires in 5 minutes.</bit-alert>
-<bit-alert color="error" heading="Validation failed" dismissible variant="solid">
+<sg-alert color="warning" dismissible>Your session expires in 5 minutes.</sg-alert>
+<sg-alert color="error" heading="Validation failed" dismissible variant="solid">
   Please fix the highlighted fields before continuing.
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
 
 ```javascript
-document.querySelector('bit-alert').addEventListener('dismiss', (e) => {
+document.querySelector('sg-alert').addEventListener('dismiss', (e) => {
   e.target.remove(); // optionally remove from DOM entirely
 });
 ```
@@ -119,18 +119,18 @@ Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely w
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="success">
-  <bit-icon slot="icon" name="check-circle" size="18"></bit-icon>
+<sg-alert color="success">
+  <sg-icon slot="icon" name="check-circle" size="18"></sg-icon>
   Changes saved successfully.
-</bit-alert>
-<bit-alert color="warning" heading="Heads up">
-  <bit-icon slot="icon" name="triangle-alert" size="18"></bit-icon>
+</sg-alert>
+<sg-alert color="warning" heading="Heads up">
+  <sg-icon slot="icon" name="triangle-alert" size="18"></sg-icon>
   Some features are currently in maintenance mode.
-</bit-alert>
-<bit-alert color="error" heading="Access denied" variant="solid" dismissible>
-  <bit-icon slot="icon" name="x-circle" size="18"></bit-icon>
+</sg-alert>
+<sg-alert color="error" heading="Access denied" variant="solid" dismissible>
+  <sg-icon slot="icon" name="x-circle" size="18"></sg-icon>
   You do not have permission to perform this action.
-</bit-alert>
+</sg-alert>
 
 <script type="module">
   import '@vielzeug/sigil/alert';
@@ -147,15 +147,15 @@ Use the `meta` slot to add secondary information (e.g. a timestamp) displayed al
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="info" heading="New message" dismissible>
+<sg-alert color="info" heading="New message" dismissible>
   <span slot="meta">2 mins ago</span>
   You have a new message from the support team.
-</bit-alert>
+</sg-alert>
 
-<bit-alert color="warning" variant="bordered" heading="Scheduled maintenance">
+<sg-alert color="warning" variant="bordered" heading="Scheduled maintenance">
   <span slot="meta">Tomorrow at 3:00 AM</span>
   The system will be unavailable for approximately 30 minutes.
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
@@ -167,20 +167,20 @@ Use the `actions` slot to add call-to-action buttons below the message.
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="warning" heading="Session expiring">
+<sg-alert color="warning" heading="Session expiring">
   Your session will expire in 5 minutes.
   <div slot="actions" style="display: flex; gap: var(--size-2);">
-    <bit-button size="sm" variant="ghost">Dismiss</bit-button>
-    <bit-button size="sm" color="warning">Stay signed in</bit-button>
+    <sg-button size="sm" variant="ghost">Dismiss</sg-button>
+    <sg-button size="sm" color="warning">Stay signed in</sg-button>
   </div>
-</bit-alert>
+</sg-alert>
 
-<bit-alert color="primary" variant="bordered" heading="Update available">
+<sg-alert color="primary" variant="bordered" heading="Update available">
   A new version is ready to install.
   <div slot="actions">
-    <bit-button size="sm" color="primary">Update now</bit-button>
+    <sg-button size="sm" color="primary">Update now</sg-button>
   </div>
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
@@ -192,20 +192,20 @@ Add `horizontal` to move the actions to the right side of the content instead of
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="info" horizontal>
+<sg-alert color="info" horizontal>
   You have 3 unread notifications.
   <div slot="actions">
-    <bit-button size="sm" color="info">View all</bit-button>
+    <sg-button size="sm" color="info">View all</sg-button>
   </div>
-</bit-alert>
+</sg-alert>
 
-<bit-alert color="success" variant="bordered" horizontal>
+<sg-alert color="success" variant="bordered" horizontal>
   Your backup completed successfully.
   <div slot="actions" style="display: flex; gap: var(--size-2);">
-    <bit-button size="sm" color="success" variant="ghost">Details</bit-button>
-    <bit-button size="sm" color="success">Download</bit-button>
+    <sg-button size="sm" color="success" variant="ghost">Details</sg-button>
+    <sg-button size="sm" color="success">Download</sg-button>
   </div>
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
@@ -221,12 +221,12 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="error" variant="flat" accented>
+<sg-alert color="error" variant="flat" accented>
   Your account has been locked due to too many failed sign-in attempts.
-</bit-alert>
-<bit-alert color="info" variant="bordered" accented heading="Did you know?">
+</sg-alert>
+<sg-alert color="info" variant="bordered" accented heading="Did you know?">
   You can export your data at any time from the settings page.
-</bit-alert>
+</sg-alert>
 ```
 
 </ComponentPreview>
@@ -291,7 +291,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 The alert component follows WAI-ARIA best practices.
 
-### `bit-alert`
+### `sg-alert`
 
 ✅ **Screen Readers**
 
@@ -319,6 +319,6 @@ Alerts injected into the DOM are announced automatically via `role="alert"`. Avo
 
 **Don't:**
 
-- Use `bit-alert` for short, transient notifications — use a toast/notification system instead.
+- Use `sg-alert` for short, transient notifications — use a toast/notification system instead.
 - Combine `horizontal` with `heading` — the layout becomes cramped.
 - Nest complex interactive controls in the default slot; keep alerts primarily informational.

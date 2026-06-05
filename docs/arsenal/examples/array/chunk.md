@@ -1,81 +1,43 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1533_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — chunk'
+description: 'chunk example for @vielzeug/arsenal.'
+---
 
-# chunk
+## chunk
 
-The `chunk` utility splits an array or string into smaller pieces (chunks) of a specified size.
+### Problem
 
-## Source Code
+You have a flat array (or string) and need to split it into fixed-size pages or sliding windows — for example paginating a list or building bigram tokens.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/chunk.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Versatile**: Supports both arrays and strings.
-- **Overlapping**: Optional support for overlapping chunks in strings.
-- **Padding**: Optional padding for string chunks that don't meet the chunk size.
-
-## API
-
-::: details Type Definitions
-<<< @/../packages/arsenal/src/array/chunk.ts#ChunkTypes
-:::
-
-```ts
-function chunk<T>(input: T[] | string, size?: number, options?: ChunkOptions): ChunkResult<T>;
-```
-
-### Parameters
-
-- `input`: The array or string to be chunked.
-- `size`: The size of each chunk (default: 2).
-- `options`: Optional configuration (for strings):
-  - `overlap`: If `true`, chunks will overlap by one character.
-  - `pad`: Character used to pad the last chunk if it's shorter than `size`.
-
-### Returns
-
-- An array containing the chunks.
-
-## Examples
-
-### Array Chunking
+Use `chunk(input, size)` to split an array or string into sub-arrays of at most `size` items. The last chunk contains the remainder.
 
 ```ts
 import { chunk } from '@vielzeug/arsenal';
 
-const data = [1, 2, 3, 4, 5, 6, 7];
-
-chunk(data, 2); // [[1, 2], [3, 4], [5, 6], [7]]
-chunk(data, 3); // [[1, 2, 3], [4, 5, 6], [7]]
+const pages = chunk([1, 2, 3, 4, 5, 6, 7], 3);
+// [[1, 2, 3], [4, 5, 6], [7]]
 ```
 
-### String Chunking
+#### String input
 
 ```ts
 import { chunk } from '@vielzeug/arsenal';
 
-chunk('vielzeug', 3); // ['vie', 'lze', 'ug '] (padded with space by default)
-
-// Custom padding
+chunk('hello', 2);               // ['he', 'll', 'o']
 chunk('hello', 2, { pad: '_' }); // ['he', 'll', 'o_']
-
-// Overlapping chunks
-chunk('abc', 2, { overlap: true }); // ['ab', 'bc']
+chunk('abcd', 2, { overlap: true }); // ['ab', 'bc', 'cd']
 ```
 
-## Implementation Notes
+### Pitfalls
 
-- Throws `TypeError` if input is neither an array nor a string.
 - Throws `RangeError` if `size` is less than 1.
-- For arrays, the last chunk may be smaller than `size` if the total length is not perfectly divisible.
+- The last chunk may be shorter than `size` when the input length is not evenly divisible.
+- String mode and array mode return different types: `string[]` vs `T[][]`.
 
-## See Also
+### Related
 
-- [group](./group.md): Partition array elements by a criterion.
-- [group](./group.md): Group array elements by a criterion.
+- [flatten](./flatten.md)
+- [take](./take.md)
+- [partition](./partition.md)

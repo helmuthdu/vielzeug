@@ -119,7 +119,7 @@ describe('packageMeta', () => {
   it('strips docs, apiSource, and components from the output', () => {
     const pkg = makePkg({
       apiSource: 'export function foo() {}',
-      components: [{ name: 'bit-button', tagName: 'bit-button' }],
+      components: [{ name: 'sg-button', tagName: 'sg-button' }],
       docs: { api: '# API', index: '# Index' },
     });
 

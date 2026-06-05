@@ -25,10 +25,11 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 | `@vielzeug/sigil/styles/theme.css`     | Theme token stylesheet                                                 |
 | `@vielzeug/sigil/styles/animation.css` | Animation helpers                                                      |
 | `@vielzeug/sigil/styles/layers.css`    | Cascade layer definitions                                              |
+| `@vielzeug/sigil/styles/preflight.css` | CSS reset / preflight (importable separately to opt out)               |
 
 Headless controller primitives (`createTextField`, `createChoiceField`, `createCheckable`, `createListControl`, `createOverlayControl`, and others) are exported from `@vielzeug/sigil` alongside the component types — no separate subpath is needed. Use `componentSignal(onCleanup)` to wire an `AbortSignal` from a craft component's `onCleanup` callback into any headless primitive that accepts a `signal` option.
 
-The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountBitInput`, `mountBitSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
+The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountSgInput`, `mountSgSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
 
 ## Runtime Registration Imports
 
@@ -56,16 +57,19 @@ import '@vielzeug/sigil/accordion-item';
 import '@vielzeug/sigil/alert';
 import '@vielzeug/sigil/async';
 import '@vielzeug/sigil/avatar';
+import '@vielzeug/sigil/avatar-group';
 import '@vielzeug/sigil/badge';
 import '@vielzeug/sigil/box';
 import '@vielzeug/sigil/breadcrumb';
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/button-group';
 import '@vielzeug/sigil/card';
+import '@vielzeug/sigil/carousel';
 import '@vielzeug/sigil/checkbox';
 import '@vielzeug/sigil/checkbox-group';
 import '@vielzeug/sigil/chip';
 import '@vielzeug/sigil/combobox';
+import '@vielzeug/sigil/datagrid';
 import '@vielzeug/sigil/date-picker';
 import '@vielzeug/sigil/dialog';
 import '@vielzeug/sigil/drawer';
@@ -98,6 +102,7 @@ import '@vielzeug/sigil/table';
 import '@vielzeug/sigil/tabs';
 import '@vielzeug/sigil/text';
 import '@vielzeug/sigil/textarea';
+import '@vielzeug/sigil/time-picker';
 import '@vielzeug/sigil/toast';
 import '@vielzeug/sigil/tooltip';
 ```
@@ -110,7 +115,7 @@ Notable root exports include:
 
 - tag constants like `BUTTON_TAG`, `INPUT_TAG`, `DIALOG_TAG`
 - context constants like `FORM_CTX`, `TABS_CTX`, `CHECKBOX_GROUP_CTX`
-- component prop/event types like `BitButtonProps`, `BitInputEvents`
+- component prop/event types like `SgButtonProps`, `SgInputEvents`
 - toast runtime API: `toast`
 
 ## Component Documentation Index
@@ -125,7 +130,7 @@ Use the following pages as the canonical per-component API source.
 ### Feedback
 
 - [Alert](./components/alert.md)
-- [Async (bit-async)](./components/async.md)
+- [Async (sg-async)](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
 - [Password Strength](./components/password-strength.md)
@@ -135,9 +140,10 @@ Use the following pages as the canonical per-component API source.
 
 ### Content
 
-- [Avatar](./components/avatar.md)
+- [Avatar (+ Avatar Group)](./components/avatar.md)
 - [Breadcrumb](./components/breadcrumb.md)
 - [Card](./components/card.md)
+- [Carousel](./components/carousel.md)
 - [Icon](./components/icon.md)
 - [Pagination](./components/pagination.md)
 - [Separator](./components/separator.md)
@@ -155,21 +161,23 @@ Use the following pages as the canonical per-component API source.
 ### Inputs
 
 - [Button (+ Button Group)](./components/button.md)
+- [Calendar](./components/calendar.md)
 - [Checkbox (+ Checkbox Group)](./components/checkbox.md)
-- [Checkbox Group](./components/checkbox-group.md)
 - [Combobox](./components/combobox.md)
+- [Data Grid](./components/datagrid.md)
+- [Date Picker](./components/date-picker.md)
 - [File Input](./components/file-input.md)
 - [Form](./components/form.md)
 - [Input](./components/input.md)
 - [Number Input](./components/number-input.md)
 - [OTP Input](./components/otp-input.md)
 - [Radio (+ Radio Group)](./components/radio.md)
-- [Radio Group](./components/radio-group.md)
 - [Rating](./components/rating.md)
 - [Select](./components/select.md)
 - [Slider](./components/slider.md)
 - [Switch](./components/switch.md)
 - [Textarea](./components/textarea.md)
+- [Time Picker](./components/time-picker.md)
 
 ### Layout
 
@@ -177,6 +185,25 @@ Use the following pages as the canonical per-component API source.
 - [Grid (+ Grid Item)](./components/grid.md)
 - [Navbar](./components/navbar.md)
 - [Sidebar](./components/sidebar.md)
+
+## Types
+
+Every component exports TypeScript types named after the component. Import them from the component's subpath:
+
+```ts
+import type { SgButtonProps, SgButtonEvents } from '@vielzeug/sigil/button';
+import type { SgInputProps, SgInputEvents } from '@vielzeug/sigil/input';
+import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
+```
+
+Shared types used across multiple components:
+
+| Type              | Package path              | Description                              |
+| ----------------- | ------------------------- | ---------------------------------------- |
+| `ColorVariant`    | `@vielzeug/sigil`         | `'primary' \| 'secondary' \| 'error' \| 'warning' \| 'success' \| 'info'` |
+| `SizeVariant`     | `@vielzeug/sigil`         | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'` |
+| `IconNode`        | `@vielzeug/sigil/icon`    | Lucide-compatible `[string, object, ...children]` tuple |
+| `componentSignal` | `@vielzeug/sigil`         | Returns an `AbortSignal` tied to a component's cleanup lifecycle |
 
 ## Notes
 
@@ -210,7 +237,7 @@ Previously, calling `cleanup()` on an open overlay would invoke the `onClose` ca
 
 ### `createChoiceField` — `signal` and `cleanup()` added
 
-`ChoiceFieldOptions` now accepts an optional `signal?: AbortSignal` to auto-dispose internal `watch()` subscriptions on component unmount. A `cleanup()` method is also exposed on `ChoiceFieldHandle` for manual teardown. All component consumers (`bit-select`, `bit-combobox`, `bit-checkbox-group`, `bit-radio-group`) now pass their `componentSignal` automatically.
+`ChoiceFieldOptions` now accepts an optional `signal?: AbortSignal` to auto-dispose internal `watch()` subscriptions on component unmount. A `cleanup()` method is also exposed on `ChoiceFieldHandle` for manual teardown. All component consumers (`sg-select`, `sg-combobox`, `sg-checkbox-group`, `sg-radio-group`) now pass their `componentSignal` automatically.
 
 ```ts
 // Before — subscriptions leaked on unmount

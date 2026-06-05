@@ -1,13 +1,8 @@
 ---
-title: isWithin
+title: 'Arsenal — isWithin (not exported)'
+description: 'isWithin is not part of the Arsenal public API.'
 ---
 
-## isWithin
+# isWithin
 
-Checks if a value is within an inclusive range.
-
-```ts
-import { isWithin } from '@vielzeug/arsenal';
-
-isWithin(5, 1, 10); // true
-```
+`isWithin` is not exported by `@vielzeug/arsenal`. Use [`clamp`](../math/clamp.md) to bound a value, or compare directly.

@@ -2,7 +2,7 @@ import { computed, define, defineField, html, inject, onCleanup, prop } from '@v
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, componentSignal, createCheckable } from '../../headless';
+import { type CheckableChangePayload, lifecycleSignal, createCheckable } from '../../headless';
 import '../../content/icon/icon';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
@@ -18,11 +18,11 @@ import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './checkbox.css?inline';
 
-export type BitCheckboxEvents = {
+export type SgCheckboxEvents = {
   change: CheckableChangePayload;
 };
 
-export type BitCheckboxProps = CheckableProps & {
+export type SgCheckboxProps = CheckableProps & {
   /** Theme color */
   color?: ThemeColor;
   /** Disable interaction */
@@ -40,7 +40,7 @@ export type BitCheckboxProps = CheckableProps & {
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
  *
- * @element bit-checkbox
+ * @element sg-checkbox
  *
  * @attr {boolean} checked - Checked state
  * @attr {boolean} disabled - Disable checkbox interaction
@@ -75,11 +75,13 @@ export type BitCheckboxProps = CheckableProps & {
  *
  * @example
  * ```html
- * <bit-checkbox></bit-checkbox>
+ * <sg-checkbox name="agree" required>I agree to the terms</sg-checkbox>
+ * <sg-checkbox checked color="primary" size="lg">Enabled by default</sg-checkbox>
+ * <sg-checkbox error="This field is required" helper="Check to continue">Accept</sg-checkbox>
  * ```
  */
-export const CHECKBOX_TAG = 'bit-checkbox' as const;
-define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
+export const CHECKBOX_TAG = 'sg-checkbox' as const;
+define<SgCheckboxProps, SgCheckboxEvents>(CHECKBOX_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -92,7 +94,7 @@ define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, emit }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
@@ -104,7 +106,6 @@ define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
       error: props.error,
       group: groupCtx,
       helper: props.helper,
-      host: el,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -116,12 +117,11 @@ define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
         emit('change', payload);
       },
       prefix: 'checkbox',
-      role: 'checkbox',
-      signal: componentSignal(onCleanup),
+      signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = checkable;
+    const { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = checkable;
 
     checkable.bindFormField(
       defineField<string | null>({
@@ -131,25 +131,28 @@ define<BitCheckboxProps, BitCheckboxEvents>(CHECKBOX_TAG, {
       }),
     );
 
-    applyCheckableBinding(bind, fCtxProps.size, { checked, disabled, handleClick, handleKeydown, indeterminate });
+    applyCheckableBinding(
+      bind,
+      fCtxProps.size,
+      { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId },
+      'checkbox',
+    );
 
     return html`
       <div class="checkbox-wrapper" part="checkbox">
         <div class="box" part="box">
-          <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-          <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+          <sg-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
+          <sg-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></sg-icon>
         </div>
       </div>
-      <span class="label" part="label" ref=${(el: HTMLElement | null) => checkable.setLabelEl(el)} id="${labelId}"
-        ><slot></slot
-      ></span>
-      ${renderHelperRegion(assistiveId, checkable.assistive, checkable.setHelperEl)}
+      <span class="label" part="label" id="${labelId}"><slot></slot></span>
+      ${renderHelperRegion(assistiveId, assistive)}
     `;
   },
   styles: [
     colorThemeMixin,
     forcedColorsFormControlMixin,
-    disabledStateMixin(),
+    disabledStateMixin,
     coarsePointerMixin,
     sizeVariantMixin(CONTROL_SIZE_PRESET),
     componentStyles,

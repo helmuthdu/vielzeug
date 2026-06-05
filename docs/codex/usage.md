@@ -105,7 +105,7 @@ For Sigil component queries:
 
 ```
 list-components                              → enumerate available tag names
-get-component { tagName: "bit-input" }       → full CEM declaration
+get-component { tagName: "sg-input" }       → full CEM declaration
 ```
 
 ## Programmatic Usage
@@ -151,6 +151,34 @@ pnpm run prepare:data
 ```
 
 If `list-components` returns an error about missing Sigil metadata, build `@vielzeug/sigil` first so `packages/sigil/dist/custom-elements.json` is available during bundling.
+
+## Working with Other Vielzeug Libraries
+
+**With Sigil** — the codex MCP server exposes Sigil component metadata via `list-components` and `get-component`. After building `@vielzeug/sigil`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
+
+```bash
+# Ensure Sigil CEM is available before bundling codex
+pnpm --filter @vielzeug/sigil build
+pnpm --filter @vielzeug/codex run prepare:data
+```
+
+An AI agent can then call:
+
+```jsonc
+// list all sg- components
+{ "tool": "list-components" }
+
+// get full declaration for sg-button
+{ "tool": "get-component", "arguments": { "tagName": "sg-button" } }
+```
+
+**With Spell** — codex exposes `spell` documentation so AI agents can discover the schema validation API without leaving the MCP session:
+
+```jsonc
+{ "tool": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
+```
+
+This returns the complete `spell` API reference, letting an agent write correct validation schemas without browsing external docs.
 
 ## Best Practices
 

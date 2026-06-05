@@ -11,11 +11,11 @@ import componentStyles from './time-picker.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type BitTimePickerEvents = {
+export type SgTimePickerEvents = {
   change: { value: string | null };
 };
 
-export type BitTimePickerProps = {
+export type SgTimePickerProps = {
   /** Theme color */
   color?: string;
   /** Disable the picker */
@@ -110,7 +110,7 @@ function clampTime(
  * An accessible time picker with a scrollable clock dropdown.
  * Supports 12/24-hour display formats, min/max bounds, minute steps, and form association.
  *
- * @element bit-time-picker
+ * @element sg-time-picker
  *
  * @attr {string} value - Selected time in HH:MM (24-hour) format
  * @attr {string} min - Minimum selectable time (HH:MM)
@@ -123,14 +123,19 @@ function clampTime(
  * @attr {string} name - Form field name
  * @attr {string} error - Error message
  * @attr {string} helper - Helper text
- * @attr {string} color - Theme color
- * @attr {string} size - Component size
- * @attr {string} variant - Visual variant
- * @attr {string} rounded - Border radius
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} time-format - '12' or '24' (default: '24')
  * @attr {number} minute-step - Minute increment (default: 5)
  *
  * @fires change - Fired when a time is selected. detail: { value: string | null }
+ *
+ * @slot label - Custom label for the trigger field
+ * @slot prefix - Content before the trigger text (e.g. icon)
+ * @slot helper - Custom helper text
+ * @slot error - Custom error content
  *
  * @cssprop --time-picker-bg - Dropdown background
  * @cssprop --time-picker-border-color - Dropdown border color
@@ -146,12 +151,19 @@ function clampTime(
  *
  * @example
  * ```html
- * <bit-time-picker label="Meeting time" value="09:30"></bit-time-picker>
+ * <!-- 24-hour clock, 15-minute steps -->
+ * <sg-time-picker label="Meeting time" value="09:30" minute-step="15" color="primary"></sg-time-picker>
+ *
+ * <!-- 12-hour AM/PM format -->
+ * <sg-time-picker label="Appointment" time-format="12" minute-step="30"></sg-time-picker>
+ *
+ * <!-- Outside label, bordered variant -->
+ * <sg-time-picker label="Start time" label-placement="outside" variant="bordered"></sg-time-picker>
  * ```
  */
-export const TIME_PICKER_TAG = 'bit-time-picker' as const;
+export const TIME_PICKER_TAG = 'sg-time-picker' as const;
 
-define<BitTimePickerProps, BitTimePickerEvents>(TIME_PICKER_TAG, {
+define<SgTimePickerProps, SgTimePickerEvents>(TIME_PICKER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -423,7 +435,7 @@ define<BitTimePickerProps, BitTimePickerEvents>(TIME_PICKER_TAG, {
       },
     });
 
-    // ── bit-input prop helpers ────────────────────────────────────────────────
+    // ── sg-input prop helpers ────────────────────────────────────────────────
 
     const inputValue = () => triggerText.value;
     const inputLabel = () => props.label.value ?? '';
@@ -441,7 +453,7 @@ define<BitTimePickerProps, BitTimePickerEvents>(TIME_PICKER_TAG, {
 
     return html`
       <!-- Trigger -->
-      <bit-input
+      <sg-input
         class="trigger"
         readonly
         tabindex="0"
@@ -465,8 +477,8 @@ define<BitTimePickerProps, BitTimePickerEvents>(TIME_PICKER_TAG, {
         ?fullwidth="${inputFullwidth}"
         @click="${handleTriggerClick}"
         @keydown="${handleTriggerKeydown}">
-        <bit-icon slot="suffix" name="clock" size="16" stroke-width="1.75" aria-hidden="true"></bit-icon>
-      </bit-input>
+        <sg-icon slot="suffix" name="clock" size="16" stroke-width="1.75" aria-hidden="true"></sg-icon>
+      </sg-input>
 
       <!-- Dropdown -->
       <div

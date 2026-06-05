@@ -12,7 +12,7 @@ vi.mock('../../styles', async (importOriginal) => {
   };
 });
 
-describe('bit-radio-group', () => {
+describe('sg-radio-group', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -25,14 +25,14 @@ describe('bit-radio-group', () => {
   });
 
   const radioHtml = `
-    <bit-radio value="a">A</bit-radio>
-    <bit-radio value="b">B</bit-radio>
-    <bit-radio value="c">C</bit-radio>
+    <sg-radio value="a">A</sg-radio>
+    <sg-radio value="b">B</sg-radio>
+    <sg-radio value="c">C</sg-radio>
   `;
 
   describe('Core Functionality', () => {
     it('renders semantic fieldset and grouped items', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { label: 'Choose one' },
         html: radioHtml,
       });
@@ -43,28 +43,28 @@ describe('bit-radio-group', () => {
     });
 
     it('syncs name and selected state to slotted radios', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { name: 'letters', value: 'b' },
         html: radioHtml,
       });
       await fixture.flush();
       await fixture.flush();
 
-      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+      const radios = fixture.element.querySelectorAll<HTMLElement>('sg-radio');
 
       expect(radios[1].hasAttribute('checked')).toBe(true);
       expect(radios[1].getAttribute('name')).toBe('letters');
     });
 
     it('applies size to slotted radios before interaction', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { size: 'lg' },
         html: radioHtml,
       });
       await fixture.flush();
       await fixture.flush();
 
-      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+      const radios = fixture.element.querySelectorAll<HTMLElement>('sg-radio');
 
       expect(radios[0].getAttribute('size')).toBe('lg');
       expect(radios[1].getAttribute('size')).toBe('lg');
@@ -72,7 +72,7 @@ describe('bit-radio-group', () => {
     });
 
     it('updates slotted radio size when group size changes', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { size: 'sm' },
         html: radioHtml,
       });
@@ -82,7 +82,7 @@ describe('bit-radio-group', () => {
       await fixture.attr('size', 'lg');
       await fixture.flush();
 
-      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+      const radios = fixture.element.querySelectorAll<HTMLElement>('sg-radio');
 
       expect(radios[0].getAttribute('size')).toBe('lg');
       expect(radios[1].getAttribute('size')).toBe('lg');
@@ -90,7 +90,7 @@ describe('bit-radio-group', () => {
     });
 
     it('emits change when slotted radio dispatches change', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { name: 'letters' },
         html: radioHtml,
       });
@@ -100,7 +100,7 @@ describe('bit-radio-group', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const second = fixture.element.querySelectorAll<HTMLElement>('bit-radio')[1];
+      const second = fixture.element.querySelectorAll<HTMLElement>('sg-radio')[1];
 
       second.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
@@ -119,7 +119,7 @@ describe('bit-radio-group', () => {
 
   describe('Accessibility', () => {
     it('uses radiogroup role with required semantics', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { label: 'Choose one', required: '' },
         html: radioHtml,
       });
@@ -133,7 +133,7 @@ describe('bit-radio-group', () => {
     });
 
     it('associates helper text through aria-describedby', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { helper: 'Use arrows to navigate', label: 'Choose one' },
         html: radioHtml,
       });
@@ -150,7 +150,7 @@ describe('bit-radio-group', () => {
     });
 
     it('announces errors with alert role and invalid state', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { error: 'Selection required', label: 'Choose one' },
         html: radioHtml,
       });
@@ -161,14 +161,14 @@ describe('bit-radio-group', () => {
     });
 
     it('supports roving tabindex and arrow-key navigation', async () => {
-      fixture = await mount('bit-radio-group', {
+      fixture = await mount('sg-radio-group', {
         attrs: { name: 'letters', value: 'a' },
         html: radioHtml,
       });
       await fixture.flush();
       await fixture.flush();
 
-      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+      const radios = fixture.element.querySelectorAll<HTMLElement>('sg-radio');
 
       radios[0].focus();
       await user.press(fixture.element, 'ArrowRight');

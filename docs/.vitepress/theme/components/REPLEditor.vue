@@ -1,5 +1,5 @@
 <template>
-  <bit-grid
+  <sg-grid
     cols-md="2"
     cols="1"
     areas-md="'editor output'"
@@ -10,7 +10,7 @@
     style="margin: 0.5rem 0; min-height: 500px">
     <!-- Code Editor -->
     <div class="editor-section" style="grid-area: editor">
-      <bit-grid
+      <sg-grid
         areas="'title selector actions'"
         style="grid-template-columns: auto 1fr"
         align="center"
@@ -18,16 +18,16 @@
         class="section-header">
         <h3 class="section-label" style="grid-area: title">Editor</h3>
         <div class="header-actions" style="grid-area: selector">
-          <bit-select fullwidth placeholder="Examples..." :value="localSelectedExample" @change="handleExampleSelect">
+          <sg-select fullwidth placeholder="Examples..." :value="localSelectedExample" @change="handleExampleSelect">
             <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
               <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
             </optgroup>
-          </bit-select>
+          </sg-select>
         </div>
         <div class="header-actions" style="grid-area: actions">
-          <bit-grid cols="1" justify="end" gap="md" flow="column">
-            <bit-grid-item>
-              <bit-button
+          <sg-grid cols="1" justify="end" gap="md" flow="column">
+            <sg-grid-item>
+              <sg-button
                 color="primary"
                 variant="solid"
                 v-bind="isExecuting ? { loading: true } : {}"
@@ -47,11 +47,11 @@
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
                 Run
-              </bit-button>
-            </bit-grid-item>
-            <bit-grid-item>
-              <bit-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
-                <bit-button icon-only variant="ghost" @click="emit('toggle-expand')" size="md">
+              </sg-button>
+            </sg-grid-item>
+            <sg-grid-item>
+              <sg-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
+                <sg-button icon-only variant="ghost" @click="emit('toggle-expand')" size="md">
                   <svg
                     v-if="!isExpanded"
                     xmlns="http://www.w3.org/2000/svg"
@@ -84,17 +84,17 @@
                     <line x1="14" y1="10" x2="21" y2="3" />
                     <line x1="10" y1="14" x2="3" y2="21" />
                   </svg>
-                </bit-button>
-              </bit-tooltip>
-            </bit-grid-item>
-          </bit-grid>
+                </sg-button>
+              </sg-tooltip>
+            </sg-grid-item>
+          </sg-grid>
         </div>
-      </bit-grid>
+      </sg-grid>
       <div class="editor-content-wrapper">
         <div ref="editorContainer" class="code-editor"></div>
         <div class="editor-floating-toolbar">
-          <bit-tooltip content="Format Code" placement="top">
-            <bit-button icon-only variant="ghost" size="sm" @click="formatCode">
+          <sg-tooltip content="Format Code" placement="top">
+            <sg-button icon-only variant="ghost" size="sm" @click="formatCode">
               <svg
                 width="14"
                 height="14"
@@ -115,10 +115,10 @@
                   style="stroke-width: 2.00057; stroke-dasharray: none" />
                 <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
               </svg>
-            </bit-button>
-          </bit-tooltip>
-          <bit-tooltip content="Copy to Clipboard" placement="top">
-            <bit-button icon-only variant="ghost" size="sm" @click="copyCode">
+            </sg-button>
+          </sg-tooltip>
+          <sg-tooltip content="Copy to Clipboard" placement="top">
+            <sg-button icon-only variant="ghost" size="sm" @click="copyCode">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -132,11 +132,11 @@
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
-            </bit-button>
-          </bit-tooltip>
-          <bit-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></bit-separator>
-          <bit-tooltip content="Reset to Default" placement="top">
-            <bit-button icon-only variant="ghost" size="sm" @click="resetEditor">
+            </sg-button>
+          </sg-tooltip>
+          <sg-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></sg-separator>
+          <sg-tooltip content="Reset to Default" placement="top">
+            <sg-button icon-only variant="ghost" size="sm" @click="resetEditor">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -150,10 +150,10 @@
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-            </bit-button>
-          </bit-tooltip>
-          <bit-tooltip content="Clear Editor" placement="top">
-            <bit-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
+            </sg-button>
+          </sg-tooltip>
+          <sg-tooltip content="Clear Editor" placement="top">
+            <sg-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -170,15 +170,15 @@
                 <line x1="10" x2="10" y1="11" y2="17" />
                 <line x1="14" x2="14" y1="11" y2="17" />
               </svg>
-            </bit-button>
-          </bit-tooltip>
+            </sg-button>
+          </sg-tooltip>
         </div>
       </div>
     </div>
 
     <!-- Output -->
     <div class="output-section" style="grid-area: output">
-      <bit-grid
+      <sg-grid
         areas="'title actions'"
         style="grid-template-columns: auto 1fr"
         align="center"
@@ -186,8 +186,8 @@
         class="section-header">
         <h3 class="section-label" style="grid-area: title">Output</h3>
         <div style="grid-area: actions; display: flex; justify-content: flex-end">
-          <bit-tooltip content="Clear Output" placement="bottom">
-            <bit-button icon-only variant="ghost" @click="handleClearOutput">
+          <sg-tooltip content="Clear Output" placement="bottom">
+            <sg-button icon-only variant="ghost" @click="handleClearOutput">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -204,10 +204,10 @@
                 <line x1="10" x2="10" y1="11" y2="17" />
                 <line x1="14" x2="14" y1="11" y2="17" />
               </svg>
-            </bit-button>
-          </bit-tooltip>
+            </sg-button>
+          </sg-tooltip>
         </div>
-      </bit-grid>
+      </sg-grid>
       <div ref="outputContainer" class="output-area">
         <div class="output-placeholder">
           <svg
@@ -228,7 +228,7 @@
         </div>
       </div>
     </div>
-  </bit-grid>
+  </sg-grid>
 </template>
 
 <script setup lang="ts">
@@ -464,7 +464,10 @@ const handleRunCode = async () => {
     code = code.replace(/^type\s+\w[^\n]*(?:\n[ \t]+[|&][^\n]*)*/gm, '');
     // 2. Remove 'as TYPE' casts — 'as' is not a valid JS operator, always safe to drop.
     //    Handles: 'as any', 'as Foo', 'as Foo[]', 'as A | B', 'as { ... }', 'as { ... }[]'
-    code = code.replace(/\bas\s+(?:\{[^}]*\}(?:\[\])*|[\w$][\w$.<>\[\]]*(?:\s*\|\s*(?:null|undefined|[\w$][\w$.<>\[\]]*))*)/g, '');
+    code = code.replace(
+      /\bas\s+(?:\{[^}]*\}(?:\[\])*|[\w$][\w$.<>\[\]]*(?:\s*\|\s*(?:null|undefined|[\w$][\w$.<>\[\]]*))*)/g,
+      '',
+    );
     // 3. Remove ': any' parameter/variable type annotations.
     code = code.replace(/:\s*any\b/g, '');
 

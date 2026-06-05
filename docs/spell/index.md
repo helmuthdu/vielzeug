@@ -6,7 +6,23 @@ category: validation
 keywords: [schema, validation, parsing, json-schema, locale, typescript, descriptors]
 related: [forge, courier, vault]
 exports:
-  [s, sString, sNumber, sObject, sUnion, sVariant, sCoerce, fromDescriptor, configure, ValidationError, refine, keyof]
+  [
+    s,
+    Schema,
+    WrapperSchema,
+    PipeSchema,
+    ValidationError,
+    ErrorCode,
+    errorsAt,
+    fail,
+    fromDescriptor,
+    descriptorToJsonSchema,
+    configure,
+    currentLocale,
+    registerLocale,
+    useLocale,
+    reset,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -22,7 +38,7 @@ exports:
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `sString`, `sNumber`, `sObject`, `sUnion`, `sVariant`, `sCoerce`, `fromDescriptor`, `configure`, `ValidationError`
+**Key exports:** `s`, `Schema`, `ValidationError`, `ErrorCode`, `errorsAt`, `fail`, `fromDescriptor`, `descriptorToJsonSchema`, `configure`, `currentLocale`, `registerLocale`
 
 **When to use:** Validate unknown input, infer types from schemas, customize messages, and round-trip schema descriptors across tools.
 

@@ -1,6 +1,6 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-button', () => {
+describe('sg-button', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,31 +13,31 @@ describe('bit-button', () => {
 
   describe('Rendering', () => {
     it('renders inner button element', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.query('[part="button"]')).toBeTruthy();
     });
 
     it('renders default slot content', async () => {
-      fixture = await mount('bit-button', { html: '<span>Click me</span>' });
+      fixture = await mount('sg-button', { html: '<span>Click me</span>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Click me');
     });
 
     it('renders loader element', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.query('.loader')).toBeTruthy();
     });
 
     it('loader is hidden when not loading', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.query('.loader')?.hasAttribute('hidden')).toBe(true);
     });
 
     it('loader is visible when loading', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       expect(fixture.query('.loader')?.hasAttribute('hidden')).toBe(false);
     });
@@ -45,55 +45,55 @@ describe('bit-button', () => {
 
   describe('Props', () => {
     it('applies solid variant by default', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.element.getAttribute('variant') ?? 'solid').toBe('solid');
     });
 
     it('applies outline variant', async () => {
-      fixture = await mount('bit-button', { attrs: { variant: 'outline' } });
+      fixture = await mount('sg-button', { attrs: { variant: 'outline' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
     });
 
     it('applies ghost variant', async () => {
-      fixture = await mount('bit-button', { attrs: { variant: 'ghost' } });
+      fixture = await mount('sg-button', { attrs: { variant: 'ghost' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('ghost');
     });
 
     it('applies color', async () => {
-      fixture = await mount('bit-button', { attrs: { color: 'primary' } });
+      fixture = await mount('sg-button', { attrs: { color: 'primary' } });
 
       expect(fixture.element.getAttribute('color')).toBe('primary');
     });
 
     it('applies sm size', async () => {
-      fixture = await mount('bit-button', { attrs: { size: 'sm' } });
+      fixture = await mount('sg-button', { attrs: { size: 'sm' } });
 
       expect(fixture.element.getAttribute('size')).toBe('sm');
     });
 
     it('applies lg size', async () => {
-      fixture = await mount('bit-button', { attrs: { size: 'lg' } });
+      fixture = await mount('sg-button', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('applies fullwidth', async () => {
-      fixture = await mount('bit-button', { attrs: { fullwidth: '' } });
+      fixture = await mount('sg-button', { attrs: { fullwidth: '' } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('applies rounded', async () => {
-      fixture = await mount('bit-button', { attrs: { rounded: '' } });
+      fixture = await mount('sg-button', { attrs: { rounded: '' } });
 
       expect(fixture.element.hasAttribute('rounded')).toBe(true);
     });
 
     it('reflects type attribute on host; inner button always type="button"', async () => {
-      fixture = await mount('bit-button', { attrs: { type: 'submit' } });
+      fixture = await mount('sg-button', { attrs: { type: 'submit' } });
 
       expect(fixture.element.getAttribute('type')).toBe('submit');
 
@@ -105,7 +105,7 @@ describe('bit-button', () => {
 
   describe('Disabled State', () => {
     it('sets aria-disabled when disabled', async () => {
-      fixture = await mount('bit-button', { attrs: { disabled: '' } });
+      fixture = await mount('sg-button', { attrs: { disabled: '' } });
 
       const btn = fixture.query('[part="button"]');
 
@@ -113,7 +113,7 @@ describe('bit-button', () => {
     });
 
     it('does not fire click event when disabled', async () => {
-      fixture = await mount('bit-button', { attrs: { disabled: '' } });
+      fixture = await mount('sg-button', { attrs: { disabled: '' } });
 
       const handler = vi.fn();
 
@@ -127,7 +127,7 @@ describe('bit-button', () => {
 
   describe('Loading State', () => {
     it('sets aria-busy when loading', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       const btn = fixture.query('[part="button"]');
 
@@ -135,7 +135,7 @@ describe('bit-button', () => {
     });
 
     it('does not fire click event when loading', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       const handler = vi.fn();
 
@@ -147,7 +147,7 @@ describe('bit-button', () => {
     });
 
     it('loader has accessible label', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       expect(fixture.query('.loader')?.getAttribute('aria-label')).toBe('Loading');
     });
@@ -155,7 +155,7 @@ describe('bit-button', () => {
 
   describe('Events', () => {
     it('fires click event on click', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const handler = vi.fn();
 
@@ -170,7 +170,7 @@ describe('bit-button', () => {
   describe('Colors', () => {
     for (const color of ['primary', 'secondary', 'success', 'warning', 'error']) {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-button', { attrs: { color } });
+        fixture = await mount('sg-button', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
         fixture.destroy();
@@ -180,20 +180,20 @@ describe('bit-button', () => {
 
   describe('Link Mode', () => {
     it('renders as anchor when href is provided', async () => {
-      fixture = await mount('bit-button', { attrs: { href: '/home' } });
+      fixture = await mount('sg-button', { attrs: { href: '/home' } });
 
       expect(fixture.query('a[part="button"]')).toBeTruthy();
     });
 
     it('anchor has correct href', async () => {
-      fixture = await mount('bit-button', { attrs: { href: '/about' } });
+      fixture = await mount('sg-button', { attrs: { href: '/about' } });
 
       expect(fixture.query('a[part="button"]')?.getAttribute('href')).toBe('/about');
     });
   });
 });
 
-describe('bit-button accessibility', () => {
+describe('sg-button accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -206,13 +206,13 @@ describe('bit-button accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('inner element has role button', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.query('button[part="button"], [role="button"]')).toBeTruthy();
     });
 
     it('renders as native button element by default', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const btn = fixture.query('[part="button"]');
 
@@ -220,7 +220,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('renders as anchor when href provided', async () => {
-      fixture = await mount('bit-button', { attrs: { href: '/page' } });
+      fixture = await mount('sg-button', { attrs: { href: '/page' } });
 
       expect(fixture.query('a[part="button"]')).toBeTruthy();
     });
@@ -228,7 +228,7 @@ describe('bit-button accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('inner button default type is button', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const btn = fixture.query<HTMLButtonElement>('[part="button"]');
 
@@ -236,13 +236,13 @@ describe('bit-button accessibility', () => {
     });
 
     it('aria-disabled is true when disabled', async () => {
-      fixture = await mount('bit-button', { attrs: { disabled: '' } });
+      fixture = await mount('sg-button', { attrs: { disabled: '' } });
 
       expect(fixture.query('[part="button"]')?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('aria-disabled is false/absent when enabled', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const val = fixture.query('[part="button"]')?.getAttribute('aria-disabled');
 
@@ -250,19 +250,19 @@ describe('bit-button accessibility', () => {
     });
 
     it('aria-busy is true when loading', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       expect(fixture.query('[part="button"]')?.getAttribute('aria-busy')).toBe('true');
     });
 
     it('aria-busy is absent when not loading', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       expect(fixture.query('[part="button"]')?.getAttribute('aria-busy')).toBeNull();
     });
 
     it('loader has aria-label Loading', async () => {
-      fixture = await mount('bit-button', { attrs: { loading: '' } });
+      fixture = await mount('sg-button', { attrs: { loading: '' } });
 
       expect(fixture.query('.loader')?.getAttribute('aria-label')).toBe('Loading');
     });
@@ -270,7 +270,7 @@ describe('bit-button accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('fires click when Enter pressed on inner button', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const handler = vi.fn();
 
@@ -285,7 +285,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('fires click when Space pressed on inner button', async () => {
-      fixture = await mount('bit-button');
+      fixture = await mount('sg-button');
 
       const handler = vi.fn();
 
@@ -300,7 +300,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('does not fire click when disabled and Enter pressed', async () => {
-      fixture = await mount('bit-button', { attrs: { disabled: '' } });
+      fixture = await mount('sg-button', { attrs: { disabled: '' } });
 
       const handler = vi.fn();
 

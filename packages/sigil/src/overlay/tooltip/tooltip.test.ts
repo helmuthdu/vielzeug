@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/craft/testing';
 
-describe('bit-tooltip', () => {
+describe('sg-tooltip', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -13,19 +13,19 @@ describe('bit-tooltip', () => {
 
   describe('Rendering', () => {
     it('renders slot for trigger', async () => {
-      fixture = await mount('bit-tooltip', { html: '<button>Hover me</button>' });
+      fixture = await mount('sg-tooltip', { html: '<button>Hover me</button>' });
 
       expect(fixture.element.textContent?.trim()).toBe('Hover me');
     });
 
     it('renders tooltip element in shadow DOM', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'Tooltip text' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'Tooltip text' } });
 
       expect(fixture.query('.tooltip')).toBeTruthy();
     });
 
     it('renders prop content inside fallback text wrapper', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'Line 1\nLine 2' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'Line 1\nLine 2' } });
 
       const text = fixture.query('.tooltip-text');
 
@@ -34,7 +34,7 @@ describe('bit-tooltip', () => {
     });
 
     it('prefers named slot content over fallback text wrapper', async () => {
-      fixture = await mount('bit-tooltip', {
+      fixture = await mount('sg-tooltip', {
         attrs: { content: 'Fallback text' },
         html: '<button>Trigger</button><span slot="content">Slotted text</span>',
       });
@@ -49,19 +49,19 @@ describe('bit-tooltip', () => {
 
   describe('Props', () => {
     it('applies content prop', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'Help text' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'Help text' } });
 
       expect(fixture.element.getAttribute('content')).toBe('Help text');
     });
 
     it('applies placement prop', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'tip', placement: 'bottom' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'tip', placement: 'bottom' } });
 
       expect(fixture.element.getAttribute('placement')).toBe('bottom');
     });
 
     it('applies variant prop', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'tip', variant: 'light' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'tip', variant: 'light' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('light');
     });
@@ -69,7 +69,7 @@ describe('bit-tooltip', () => {
 
   describe('ARIA', () => {
     it('tooltip element has role tooltip', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'tip' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'tip' } });
 
       expect(fixture.query('[role="tooltip"]')).toBeTruthy();
     });
@@ -78,7 +78,7 @@ describe('bit-tooltip', () => {
   describe('Placements', () => {
     for (const placement of ['top', 'bottom', 'left', 'right']) {
       it(`accepts ${placement} placement`, async () => {
-        fixture = await mount('bit-tooltip', { attrs: { content: 'tip', placement } });
+        fixture = await mount('sg-tooltip', { attrs: { content: 'tip', placement } });
 
         expect(fixture.element.getAttribute('placement')).toBe(placement);
         fixture.destroy();
@@ -87,7 +87,7 @@ describe('bit-tooltip', () => {
   });
 });
 
-describe('bit-tooltip accessibility', () => {
+describe('sg-tooltip accessibility', () => {
   let fixture: Awaited<ReturnType<typeof mount>>;
 
   beforeAll(async () => {
@@ -112,7 +112,7 @@ describe('bit-tooltip accessibility', () => {
 
   describe('Trigger Relationship', () => {
     it('trigger receives aria-describedby pointing to tooltip', async () => {
-      fixture = await mount('bit-tooltip', {
+      fixture = await mount('sg-tooltip', {
         attrs: { content: 'Description', trigger: 'focus' },
         html: '<button>Trigger</button>',
       });
@@ -129,7 +129,7 @@ describe('bit-tooltip accessibility', () => {
 
   describe('Tooltip Hidden State', () => {
     it('tooltip is aria-hidden when not visible', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'tip' } });
+      fixture = await mount('sg-tooltip', { attrs: { content: 'tip' } });
 
       const tooltip = fixture.query('.tooltip');
 

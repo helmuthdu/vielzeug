@@ -14,12 +14,12 @@ Form submissions often arrive as strings, optional fields, and checkboxes. You n
 Use coercion, wrappers, and formatted errors to normalize the form payload in one step.
 
 ```ts
-import { ValidationError, s, sCoerce } from '@vielzeug/spell';
+import { ValidationError, s } from '@vielzeug/spell';
 
 const SignupForm = s.object({
-  age: sCoerce.number().int().min(18),
+  age: s.coerce.number().int().min(18),
   email: s.string().email(),
-  marketing: sCoerce.boolean().default(false),
+  marketing: s.coerce.boolean().default(false),
   referralCode: s.string().trim().optional().nullable().required(),
 });
 
@@ -40,7 +40,7 @@ if (result.success) {
 ### Pitfalls
 
 - `.required()` removes `undefined` but keeps `null`. That matters after `.optional().nullable()` chains.
-- `sCoerce.boolean()` is for loosely typed input at the boundary. Keep your app state typed after parsing.
+- `s.coerce.boolean()` is for loosely typed input at the boundary. Keep your app state typed after parsing.
 - Call `safeParseAsync()` if any nested field uses `checkAsync()`.
 
 ### Related

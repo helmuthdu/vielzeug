@@ -22,7 +22,7 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
         return [path, items];
       }
 
-      const normalizedItems = items.map((item) => {
+      const normalizedItems = (items as any).map((item: any) => {
         if (!('items' in item)) return item;
 
         return {
@@ -285,13 +285,12 @@ export default defineConfig({
           items: [
             { link: '/arsenal/api#array', text: 'Array' },
             { link: '/arsenal/api#async', text: 'Async' },
-            { link: '/arsenal/api#date', text: 'Date' },
             { link: '/arsenal/api#function', text: 'Function' },
             { link: '/arsenal/api#math', text: 'Math' },
             { link: '/arsenal/api#object', text: 'Object' },
             { link: '/arsenal/api#random', text: 'Random' },
             { link: '/arsenal/api#string', text: 'String' },
-            { link: '/arsenal/api#typed', text: 'Typed' },
+            { link: '/arsenal/api#typed-predicates', text: 'Typed Predicates' },
           ],
           link: '/arsenal/api',
           text: 'API Reference',
@@ -384,10 +383,10 @@ export default defineConfig({
                 { link: '/arsenal/examples/object/keys', text: 'keys' },
                 { link: '/arsenal/examples/object/mapKeys', text: 'mapKeys' },
                 { link: '/arsenal/examples/object/mapValues', text: 'mapValues' },
-                { link: '/arsenal/examples/object/merge', text: 'merge' },
+                { link: '/arsenal/examples/object/merge', text: 'deepMerge / shallowMerge' },
                 { link: '/arsenal/examples/object/omit', text: 'omit' },
                 { link: '/arsenal/examples/object/parseJSON', text: 'parseJSON' },
-                { link: '/arsenal/examples/object/path', text: 'path' },
+                { link: '/arsenal/examples/object/path', text: 'getPath' },
                 { link: '/arsenal/examples/object/pick', text: 'pick' },
                 { link: '/arsenal/examples/object/prune', text: 'prune' },
                 { link: '/arsenal/examples/object/stableStringify', text: 'stableStringify' },
@@ -411,6 +410,7 @@ export default defineConfig({
                 { link: '/arsenal/examples/function/debounce', text: 'debounce' },
                 { link: '/arsenal/examples/function/identity', text: 'identity' },
                 { link: '/arsenal/examples/function/memo', text: 'memo' },
+                { link: '/arsenal/examples/function/not', text: 'not' },
                 { link: '/arsenal/examples/function/once', text: 'once' },
                 { link: '/arsenal/examples/function/partial', text: 'partial' },
                 { link: '/arsenal/examples/function/pipe', text: 'pipe' },
@@ -427,6 +427,7 @@ export default defineConfig({
                 { link: '/arsenal/examples/math/abs', text: 'abs' },
                 { link: '/arsenal/examples/math/allocate', text: 'allocate' },
                 { link: '/arsenal/examples/math/average', text: 'average' },
+                { link: '/arsenal/examples/math/backoff', text: 'backoff' },
                 { link: '/arsenal/examples/math/clamp', text: 'clamp' },
                 { link: '/arsenal/examples/math/gcd', text: 'gcd' },
                 { link: '/arsenal/examples/math/lcm', text: 'lcm' },
@@ -554,15 +555,13 @@ export default defineConfig({
             { link: '/codex/api#tools', text: 'Tools' },
             { link: '/codex/api#list-packages', text: 'list-packages' },
             { link: '/codex/api#search-packages', text: 'search-packages' },
-            { link: '/codex/api#get-ai-context', text: 'get-ai-context' },
-            { link: '/codex/api#list-docs-pages', text: 'list-docs-pages' },
             { link: '/codex/api#get-docs', text: 'get-docs' },
-            { link: '/codex/api#get-package-api', text: 'get-package-api' },
+            { link: '/codex/api#get-source', text: 'get-source' },
             { link: '/codex/api#list-components', text: 'list-components' },
             { link: '/codex/api#get-component', text: 'get-component' },
             { link: '/codex/api#resources', text: 'Resources' },
-            { link: '/codex/api#input-validation', text: 'Input Validation' },
-            { link: '/codex/api#error-handling', text: 'Error Handling' },
+            { link: '/codex/api#programmatic-api', text: 'Programmatic API' },
+            { link: '/codex/api#errors', text: 'Errors' },
           ],
           link: '/codex/api',
           text: 'API Reference',
@@ -571,7 +570,7 @@ export default defineConfig({
           items: [
             { link: '/codex/examples/listing-packages', text: 'Listing Packages' },
             { link: '/codex/examples/searching-packages', text: 'Searching Packages' },
-            { link: '/codex/examples/ai-context', text: 'AI Context' },
+            { link: '/codex/examples/package-metadata', text: 'Package Metadata' },
             { link: '/codex/examples/looking-up-components', text: 'Looking Up Components' },
             { link: '/codex/examples/reading-docs', text: 'Reading Docs' },
             { link: '/codex/examples/inspector', text: 'Inspector' },
@@ -1702,7 +1701,7 @@ export default defineConfig({
   vue: {
     template: {
       compilerOptions: {
-        isCustomElement: (tag) => tag.startsWith('bit-'),
+        isCustomElement: (tag) => tag.startsWith('sg-'),
       },
     },
   },

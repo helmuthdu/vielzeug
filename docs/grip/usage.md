@@ -5,11 +5,9 @@ description: Drop zones, sortable lists, explicit connected scopes, keyboard sor
 
 [[toc]]
 
-## Drop Zone
+## Basic Usage
 
 `createDropZone` attaches drag-and-drop behavior to any DOM element and keeps hover state stable with a counter.
-
-### Basic usage
 
 ```ts
 import { createDropZone } from '@vielzeug/grip';

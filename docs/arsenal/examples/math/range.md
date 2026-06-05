@@ -1,80 +1,32 @@
-# range
+---
+title: 'Arsenal Examples — range'
+description: 'range example for @vielzeug/arsenal.'
+---
 
-The `range` utility generates an array of numbers starting from a base value up to (but not including) an end value, using a specified step increment. It is highly versatile for creating numeric sequences, loops, or lookup tables.
+## range
 
-## Source Code
+### Problem
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/math/range.ts
-:::
+You need to generate a sequence of integers without mutation — for example creating index arrays, building pagination controls, or driving `Array.from`.
 
-## Features
+### Solution
 
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Bi-directional**: Easily generate both ascending and descending sequences.
-- **Customizable Step**: Control the gap between numbers in the sequence.
-- **Type-safe**: Properly typed for numeric inputs and array results.
-
-## API
-
-```ts
-function range(start: number, end?: number, step?: number): number[];
-```
-
-### Parameters
-
-- `start`: The inclusive beginning of the sequence.
-- `end`: The exclusive end of the sequence.
-- `step`: Optional. The amount to increment/decrement by (defaults to `1` or `-1` based on the range direction).
-
-### Returns
-
-- An array of numbers containing the generated sequence.
-
-## Examples
-
-### Basic Ascending Ranges
+Use `range(stop)`, `range(start, stop)`, or `range(start, stop, step)` to produce an integer array.
 
 ```ts
 import { range } from '@vielzeug/arsenal';
 
-range(0, 5); // [0, 1, 2, 3, 4]
-range(1, 10, 2); // [1, 3, 5, 7, 9]
+range(5);        // [0, 1, 2, 3, 4]
+range(1, 6);     // [1, 2, 3, 4, 5]
+range(0, 10, 2); // [0, 2, 4, 6, 8]
+range(5, 0, -1); // [5, 4, 3, 2, 1]
 ```
 
-### Descending Ranges
+### Pitfalls
 
-```ts
-import { range } from '@vielzeug/arsenal';
+- `stop` is exclusive. `range(1, 5)` returns `[1, 2, 3, 4]`, not `[1, 2, 3, 4, 5]`.
 
-// Automatic step detection
-range(5, 0); // [5, 4, 3, 2, 1]
+### Related
 
-// Explicit negative step
-range(10, 0, -2); // [10, 8, 6, 4, 2]
-```
-
-### Advanced Usage (Loops)
-
-```ts
-import { range } from '@vielzeug/arsenal';
-
-// Create 5 localized dates
-const dates = range(0, 5).map((day) => {
-  const d = new Date();
-  d.setDate(d.getDate() + day);
-  return d;
-});
-```
-
-## Implementation Notes
-
-- Returns an empty array if `step` is `0` or if the range is logically impossible (e.g., `start < end` with a negative step).
-- Performance-optimized for large sequences.
-- Throws `TypeError` if non-numeric arguments are provided.
-
-## See Also
-
-- [Sourcerer Overview](/sourcerer/): Build reactive paginated data sources.
-- [clamp](./clamp.md): Restrict a number to a specific range.
-- [sum](./sum.md): Calculate the total of a generated range.
+- [linspace](./linspace.md)
+- [chunk](../array/chunk.md)

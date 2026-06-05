@@ -30,7 +30,7 @@ export type PaddingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 /** Button form-submission types */
 export type ButtonType = 'button' | 'submit' | 'reset';
 
-/** Allowed HTML5 input type values for `<bit-input>` */
+/** Allowed HTML5 input type values for `<sg-input>` */
 export type InputType =
   | 'text'
   | 'email'
@@ -62,10 +62,10 @@ export type CheckableProps = FormElementProps & {
  * Adds type-safe `addEventListener` / `removeEventListener` overloads to a custom element type.
  *
  * ```ts
- * export interface BitInputEvents {
+ * export interface SgInputEvents {
  *   change: { value: string; originalEvent: Event };
  * }
- * type BitInputElement = HTMLElement & BitInputProps & AddEventListeners<BitInputEvents>;
+ * type SgInputElement = HTMLElement & SgInputProps & AddEventListeners<SgInputEvents>;
  * ```
  */
 export type AddEventListeners<T> = {

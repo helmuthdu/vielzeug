@@ -15,11 +15,11 @@ import {
 } from '../../styles';
 import componentStyles from './alert.css?inline';
 
-export type BitAlertEvents = {
+export type SgAlertEvents = {
   dismiss: { originalEvent: MouseEvent };
 };
 
-export type BitAlertProps = {
+export type SgAlertProps = {
   /** Show a left accent border (for flat/bordered variants) */
   accented?: boolean;
   /** Theme color */
@@ -41,18 +41,18 @@ export type BitAlertProps = {
 /**
  * A status/feedback banner with optional heading, icon slot, and dismiss button.
  *
- * @element bit-alert
+ * @element sg-alert
  *
- * @attr {string} color - Theme color (primary/success/warning/error…)
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual style: 'flat' | 'solid' | 'bordered'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
- * @attr {string} rounded - Border radius size
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} heading - Bold heading text above the content
  * @attr {boolean} dismissible - Show a close (×) button
  * @attr {boolean} accented - Add a left accent border (flat/bordered only)
  * @attr {boolean} horizontal - Position action buttons to the right instead of below
  *
- * @fires dismiss - Fired when the alert is dismissed
+ * @fires dismiss - Fired when the alert is dismissed. detail: { originalEvent: MouseEvent }
  *
  * @slot - Default slot for the alert message content
  * @slot icon - Icon on the left side
@@ -78,14 +78,14 @@ export type BitAlertProps = {
  * @part close - Close action control.
  * @example
  * ```html
- * <bit-alert color="success">Your changes have been saved.</bit-alert>
- * <bit-alert color="error" variant="solid" dismissible heading="Something went wrong">
+ * <sg-alert color="success">Your changes have been saved.</sg-alert>
+ * <sg-alert color="error" variant="solid" dismissible heading="Something went wrong">
  *   Please try again later.
- * </bit-alert>
+ * </sg-alert>
  * ```
  */
-export const ALERT_TAG = 'bit-alert' as const;
-define<BitAlertProps, BitAlertEvents>(ALERT_TAG, {
+export const ALERT_TAG = 'sg-alert' as const;
+define<SgAlertProps, SgAlertEvents>(ALERT_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -136,7 +136,7 @@ define<BitAlertProps, BitAlertEvents>(ALERT_TAG, {
           aria-label="Dismiss alert"
           ?hidden="${() => !props.dismissible.value}"
           @click="${handleDismiss}">
-          <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+          <sg-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></sg-icon>
         </button>
       </div>
     `;

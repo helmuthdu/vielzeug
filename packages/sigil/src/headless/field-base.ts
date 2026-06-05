@@ -26,8 +26,13 @@ export type FieldOptions = {
   hasLabel?: ReadonlySignal<boolean>;
   helper?: ReadonlySignal<string | undefined>;
   /**
-   * Label text signal. When provided, `label.inset.show`/`label.outside.show` and
-   * `aria.labelledBy` are computed reactively from this value and `labelPlacement`.
+   * When provided, used directly as `fieldId` instead of generating one via
+   * `createStableId`. Useful in tests for deterministic ID assertions.
+   */
+  id?: string;
+  /**
+   * Label text signal. When provided, `labelVisible` and `ariaLabelledBy` are
+   * computed reactively from this value and `labelPlacement`.
    */
   label?: ReadonlySignal<string | undefined>;
   /** Label placement signal. Defaults to `'inset'`. */
@@ -94,59 +99,37 @@ export const createCounterState = (options: CounterOptions): ReadonlySignal<Coun
     };
   });
 
-// ── Label state ───────────────────────────────────────────────────────────────
+// ── Label placement ───────────────────────────────────────────────────────────
 
 export type LabelPlacement = 'inset' | 'outside' | undefined;
-
-/**
- * Label state returned on every field handle as `field.label`.
- * A single label element is used for both inset and outside placements.
- * CSS on `:host([label-placement="outside"])` controls the visual positioning.
- *
- * @example
- * ```html
- * <label id="${label.id}" ?hidden="${() => !label.show.value}">...</label>
- * ```
- */
-export type LabelState = {
-  id: string;
-  show: ReadonlySignal<boolean>;
-};
-
-// ── Field ARIA state ──────────────────────────────────────────────────────────
-
-/**
- * Reactive ARIA state returned on every field handle as `field.aria`.
- * Each property is a `ReadonlySignal<T>` — use `.value` directly, or pass the
- * signal to craft's `:attr` directive for automatic reactive binding.
- *
- * @example
- * ```html
- * :aria-labelledby="${field.aria.labelledBy}"
- * :aria-describedby="${field.aria.describedBy}"
- * :aria-invalid="${field.aria.invalid}"
- * ```
- */
-export type FieldAriaState = {
-  /** `aria-describedby` value. Non-null when helper or error text is present. */
-  describedBy: ReadonlySignal<string | null>;
-  /** `aria-errormessage` value. Non-null when error text is present. */
-  errorMessage: ReadonlySignal<string | null>;
-  /** `aria-invalid` value. `'true'` when error text is present, otherwise `null`. */
-  invalid: ReadonlySignal<'true' | null>;
-  /** `aria-labelledby` value. Non-null when a label text signal is provided. */
-  labelledBy: ReadonlySignal<string | null>;
-};
 
 // ── Field handle ──────────────────────────────────────────────────────────────
 
 /**
  * Common handle returned by `createField` — the base for both `TextFieldHandle`
  * and `ChoiceFieldHandle`.
+ *
+ * ARIA signals and label state are flat on the handle — no nested `aria` or
+ * `label` sub-objects.
+ *
+ * @example
+ * ```html
+ * <label id="${labelId}" ?hidden="${() => !labelVisible.value}">...</label>
+ * <input
+ *   :aria-labelledby="${ariaLabelledBy}"
+ *   :aria-describedby="${ariaDescribedBy}"
+ *   :aria-invalid="${ariaInvalid}" />
+ * ```
  */
 export type FieldHandle = {
-  /** Reactive ARIA attribute signals for the underlying input element. */
-  aria: FieldAriaState;
+  /** `aria-describedby` value. Non-null when helper or error text is present. */
+  ariaDescribedBy: ReadonlySignal<string | null>;
+  /** `aria-errormessage` value. Non-null when error text is present. */
+  ariaErrorMessage: ReadonlySignal<string | null>;
+  /** `aria-invalid` value. `'true'` when error text is present, otherwise `null`. */
+  ariaInvalid: ReadonlySignal<'true' | null>;
+  /** `aria-labelledby` value. Non-null when a label is visible. */
+  ariaLabelledBy: ReadonlySignal<string | null>;
   /** Reactive error + helper assistive text. */
   assistive: ReadonlySignal<ErrorHelperState>;
   /**
@@ -159,8 +142,10 @@ export type FieldHandle = {
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
   errorId: string;
   fieldId: string;
-  /** Nested label state with stable IDs and reactive show signals. */
-  label: LabelState;
+  /** Stable `id` for the label element. Stamp this on your `<label id="...">`. */
+  labelId: string;
+  /** Whether the label should be visible. Use to toggle `hidden` on the `<label>`. */
+  labelVisible: ReadonlySignal<boolean>;
   triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
 };
 
@@ -173,7 +158,7 @@ export const createField = (options: FieldOptions): FieldHandle => {
   // ── Core (formerly createFieldCore) ──────────────────────────────────────
   const disabled = computed(() => Boolean(options.disabled?.value));
   const validateOn = options.validateOn;
-  const fieldId = createStableId(options.prefix ?? 'field');
+  const fieldId = options.id ?? createStableId(options.prefix ?? 'field');
   const assistiveId = createStableId('helper');
 
   const formFieldRef = signal<{ reportValidity(): void } | null>(null);
@@ -200,29 +185,21 @@ export const createField = (options: FieldOptions): FieldHandle => {
 
   const resolvedAssistive = createErrorHelperState({ error: options.error, helper: options.helper });
 
-  const label: LabelState = {
-    id: labelId,
-    show: computed(() => labelVisible$.value),
-  };
-
-  const aria: FieldAriaState = {
-    describedBy: computed(() =>
+  return {
+    ariaDescribedBy: computed(() =>
       resolvedAssistive.value.errorText || resolvedAssistive.value.helperText ? assistiveId : null,
     ),
-    errorMessage: computed(() => (resolvedAssistive.value.errorText ? errorId : null)),
-    invalid: computed(() => (resolvedAssistive.value.errorText ? ('true' as const) : null)),
-    labelledBy: computed(() => (labelVisible$.value ? labelId : null)),
-  };
-
-  return {
-    aria,
+    ariaErrorMessage: computed(() => (resolvedAssistive.value.errorText ? errorId : null)),
+    ariaInvalid: computed(() => (resolvedAssistive.value.errorText ? ('true' as const) : null)),
+    ariaLabelledBy: computed(() => (labelVisible$.value ? labelId : null)),
     assistive: resolvedAssistive,
     assistiveId,
     bindFormField,
     disabled,
     errorId,
     fieldId,
-    label,
+    labelId,
+    labelVisible: labelVisible$,
     triggerValidation,
   };
 };

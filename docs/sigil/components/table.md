@@ -1,11 +1,11 @@
 # Table
 
-A semantic, accessible data table component with striped rows, borders, sticky header, and responsive horizontal scrolling. Use `<bit-tr head>` for header rows, `<bit-tr foot>` for footer rows, plain `<bit-tr>` for body rows, with `<bit-th>` and `<bit-td>` for cells.
+A semantic, accessible data table component with striped rows, borders, sticky header, and responsive horizontal scrolling. Use `<sg-tr head>` for header rows, `<sg-tr foot>` for footer rows, plain `<sg-tr>` for body rows, with `<sg-th>` and `<sg-td>` for cells.
 
 ## Features
 
-- 📋 **Flat row API**: Compose with `<bit-tr head>`, `<bit-tr>`, `<bit-tr foot>`, `<bit-th>`, `<bit-td>` — no wrapper elements needed
-- 📏 **3 Size Variants**: sm, md, lg
+- 📋 **Flat row API**: Compose with `<sg-tr head>`, `<sg-tr>`, `<sg-tr foot>`, `<sg-th>`, `<sg-td>` — no wrapper elements needed
+- 📏 **3 Density Variants**: `compact` · `cozy` (default) · `comfortable`
 - 🦓 **Striped rows** for easier scanning of dense data
 - 🔲 **Bordered** variant with rounded outline
 - 📌 **Sticky header** that stays visible while the body scrolls
@@ -24,28 +24,28 @@ A semantic, accessible data table component with striped rows, borders, sticky h
 ## Basic Usage
 
 ```html
-<bit-table caption="Team Members">
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Role</bit-th>
-    <bit-th>Status</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>Admin</bit-td>
-    <bit-td>Active</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>Editor</bit-td>
-    <bit-td>Active</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Carol</bit-td>
-    <bit-td>Viewer</bit-td>
-    <bit-td>Inactive</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table caption="Team Members">
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Role</sg-th>
+    <sg-th>Status</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>Admin</sg-td>
+    <sg-td>Active</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>Editor</sg-td>
+    <sg-td>Active</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Carol</sg-td>
+    <sg-td>Viewer</sg-td>
+    <sg-td>Inactive</sg-td>
+  </sg-tr>
+</sg-table>
 
 <script type="module">
   import '@vielzeug/sigil/table';
@@ -61,24 +61,24 @@ The `striped` attribute applies alternating row backgrounds, making it easier to
 <ComponentPreview>
 
 ```html
-<bit-table striped>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Email</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>alice@example.com</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>bob@example.com</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Carol</bit-td>
-    <bit-td>carol@example.com</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table striped>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Email</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>alice@example.com</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>bob@example.com</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Carol</sg-td>
+    <sg-td>carol@example.com</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -90,24 +90,24 @@ The `bordered` attribute adds an outer border and radius around the whole table.
 <ComponentPreview>
 
 ```html
-<bit-table bordered>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Email</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>alice@example.com</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>bob@example.com</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Carol</bit-td>
-    <bit-td>carol@example.com</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table bordered>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Email</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>alice@example.com</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>bob@example.com</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Carol</sg-td>
+    <sg-td>carol@example.com</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -119,63 +119,63 @@ The `fullwidth` attribute expands the table to fill 100% of its container width.
 <ComponentPreview>
 
 ```html
-<bit-table fullwidth>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Role</bit-th>
-    <bit-th>Status</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>Admin</bit-td>
-    <bit-td>Active</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>Editor</bit-td>
-    <bit-td>Inactive</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table fullwidth>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Role</sg-th>
+    <sg-th>Status</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>Admin</sg-td>
+    <sg-td>Active</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>Editor</sg-td>
+    <sg-td>Inactive</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
 
-### Size Variants
+### Density
 
-Control cell padding and font size with the `size` attribute.
+Control cell padding with the `density` attribute. Font size is unaffected.
 
 <ComponentPreview>
 
 ```html
-<!-- Compact -->
-<bit-table size="sm">
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Value</bit-th>
-  </bit-tr>
-  <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
-  <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
-</bit-table>
+<!-- Compact: tightest padding -->
+<sg-table density="compact">
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Value</sg-th>
+  </sg-tr>
+  <sg-tr><sg-td>Alpha</sg-td><sg-td>1</sg-td></sg-tr>
+  <sg-tr><sg-td>Beta</sg-td><sg-td>2</sg-td></sg-tr>
+</sg-table>
 
-<!-- Default -->
-<bit-table size="md">
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Value</bit-th>
-  </bit-tr>
-  <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
-  <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
-</bit-table>
+<!-- Cozy: default padding -->
+<sg-table density="cozy">
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Value</sg-th>
+  </sg-tr>
+  <sg-tr><sg-td>Alpha</sg-td><sg-td>1</sg-td></sg-tr>
+  <sg-tr><sg-td>Beta</sg-td><sg-td>2</sg-td></sg-tr>
+</sg-table>
 
-<!-- Spacious -->
-<bit-table size="lg">
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Value</bit-th>
-  </bit-tr>
-  <bit-tr><bit-td>Alpha</bit-td><bit-td>1</bit-td></bit-tr>
-  <bit-tr><bit-td>Beta</bit-td><bit-td>2</bit-td></bit-tr>
-</bit-table>
+<!-- Comfortable: widest padding -->
+<sg-table density="comfortable">
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Value</sg-th>
+  </sg-tr>
+  <sg-tr><sg-td>Alpha</sg-td><sg-td>1</sg-td></sg-tr>
+  <sg-tr><sg-td>Beta</sg-td><sg-td>2</sg-td></sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -187,23 +187,23 @@ Set `sticky` to keep the header row visible when the table body scrolls. Set `--
 <ComponentPreview>
 
 ```html
-<bit-table sticky style="--table-sticky-max-height: 20rem">
-  <bit-tr head>
-    <bit-th>Rank</bit-th>
-    <bit-th>Name</bit-th>
-    <bit-th>Score</bit-th>
-  </bit-tr>
-  <bit-tr><bit-td>1</bit-td><bit-td>Alice</bit-td><bit-td>98</bit-td></bit-tr>
-  <bit-tr><bit-td>2</bit-td><bit-td>Bob</bit-td><bit-td>95</bit-td></bit-tr>
-  <bit-tr><bit-td>3</bit-td><bit-td>Carol</bit-td><bit-td>91</bit-td></bit-tr>
-  <bit-tr><bit-td>4</bit-td><bit-td>Dan</bit-td><bit-td>88</bit-td></bit-tr>
-  <bit-tr><bit-td>5</bit-td><bit-td>Eve</bit-td><bit-td>85</bit-td></bit-tr>
-  <bit-tr><bit-td>6</bit-td><bit-td>Frank</bit-td><bit-td>82</bit-td></bit-tr>
-  <bit-tr><bit-td>7</bit-td><bit-td>Grace</bit-td><bit-td>79</bit-td></bit-tr>
-  <bit-tr><bit-td>8</bit-td><bit-td>Hank</bit-td><bit-td>77</bit-td></bit-tr>
-  <bit-tr><bit-td>9</bit-td><bit-td>Ivy</bit-td><bit-td>74</bit-td></bit-tr>
-  <bit-tr><bit-td>10</bit-td><bit-td>Jake</bit-td><bit-td>71</bit-td></bit-tr>
-</bit-table>
+<sg-table sticky style="--table-sticky-max-height: 20rem">
+  <sg-tr head>
+    <sg-th>Rank</sg-th>
+    <sg-th>Name</sg-th>
+    <sg-th>Score</sg-th>
+  </sg-tr>
+  <sg-tr><sg-td>1</sg-td><sg-td>Alice</sg-td><sg-td>98</sg-td></sg-tr>
+  <sg-tr><sg-td>2</sg-td><sg-td>Bob</sg-td><sg-td>95</sg-td></sg-tr>
+  <sg-tr><sg-td>3</sg-td><sg-td>Carol</sg-td><sg-td>91</sg-td></sg-tr>
+  <sg-tr><sg-td>4</sg-td><sg-td>Dan</sg-td><sg-td>88</sg-td></sg-tr>
+  <sg-tr><sg-td>5</sg-td><sg-td>Eve</sg-td><sg-td>85</sg-td></sg-tr>
+  <sg-tr><sg-td>6</sg-td><sg-td>Frank</sg-td><sg-td>82</sg-td></sg-tr>
+  <sg-tr><sg-td>7</sg-td><sg-td>Grace</sg-td><sg-td>79</sg-td></sg-tr>
+  <sg-tr><sg-td>8</sg-td><sg-td>Hank</sg-td><sg-td>77</sg-td></sg-tr>
+  <sg-tr><sg-td>9</sg-td><sg-td>Ivy</sg-td><sg-td>74</sg-td></sg-tr>
+  <sg-tr><sg-td>10</sg-td><sg-td>Jake</sg-td><sg-td>71</sg-td></sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -215,16 +215,16 @@ The `loading` attribute dims the table and sets `aria-busy="true"` while data is
 <ComponentPreview>
 
 ```html
-<bit-table loading>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Email</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>alice@example.com</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table loading>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Email</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>alice@example.com</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -236,28 +236,28 @@ The `caption` attribute renders a visible label above the table and also serves 
 <ComponentPreview>
 
 ```html
-<bit-table caption="Monthly Sales Report" striped>
-  <bit-tr head>
-    <bit-th>Month</bit-th>
-    <bit-th>Revenue</bit-th>
-    <bit-th>Growth</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>January</bit-td>
-    <bit-td>$12,400</bit-td>
-    <bit-td>+8%</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>February</bit-td>
-    <bit-td>$13,100</bit-td>
-    <bit-td>+5.6%</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>March</bit-td>
-    <bit-td>$14,800</bit-td>
-    <bit-td>+13%</bit-td>
-  </bit-tr>
-</bit-table>
+<sg-table caption="Monthly Sales Report" striped>
+  <sg-tr head>
+    <sg-th>Month</sg-th>
+    <sg-th>Revenue</sg-th>
+    <sg-th>Growth</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>January</sg-td>
+    <sg-td>$12,400</sg-td>
+    <sg-td>+8%</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>February</sg-td>
+    <sg-td>$13,100</sg-td>
+    <sg-td>+5.6%</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>March</sg-td>
+    <sg-td>$14,800</sg-td>
+    <sg-td>+13%</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -269,37 +269,37 @@ Mix attributes for a fully styled, accessible table.
 <ComponentPreview>
 
 ```html
-<bit-table caption="Active Users" striped bordered sticky>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Email</bit-th>
-    <bit-th>Role</bit-th>
-    <bit-th>Last Active</bit-th>
-  </bit-tr>
+<sg-table caption="Active Users" striped bordered sticky>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Email</sg-th>
+    <sg-th>Role</sg-th>
+    <sg-th>Last Active</sg-th>
+  </sg-tr>
 
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>alice@example.com</bit-td>
-    <bit-td>Admin</bit-td>
-    <bit-td>Today</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>bob@example.com</bit-td>
-    <bit-td>Editor</bit-td>
-    <bit-td>Yesterday</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Carol</bit-td>
-    <bit-td>carol@example.com</bit-td>
-    <bit-td>Viewer</bit-td>
-    <bit-td>3 days ago</bit-td>
-  </bit-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>alice@example.com</sg-td>
+    <sg-td>Admin</sg-td>
+    <sg-td>Today</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>bob@example.com</sg-td>
+    <sg-td>Editor</sg-td>
+    <sg-td>Yesterday</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Carol</sg-td>
+    <sg-td>carol@example.com</sg-td>
+    <sg-td>Viewer</sg-td>
+    <sg-td>3 days ago</sg-td>
+  </sg-tr>
 
-  <bit-tr foot>
-    <bit-td colspan="4">3 users total</bit-td>
-  </bit-tr>
-</bit-table>
+  <sg-tr foot>
+    <sg-td colspan="4">3 users total</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -308,74 +308,76 @@ Mix attributes for a fully styled, accessible table.
 
 ### Attributes
 
-| Attribute   | Type                    | Default | Description                                        |
-| ----------- | ----------------------- | ------- | -------------------------------------------------- |
-| `caption`   | `string`                | —       | Visible caption rendered above the table           |
-| `size`      | `'sm' \| 'md' \| 'lg'` | —       | Cell padding and font size                         |
-| `striped`   | `boolean`               | `false` | Alternating row background                         |
-| `bordered`  | `boolean`               | `false` | Outer border and rounded corners                   |
-| `fullwidth` | `boolean`               | `false` | Expands the table to 100% of its container width   |
-| `sticky`    | `boolean`               | `false` | Stick the header row to the top while body scrolls |
-| `loading`   | `boolean`               | `false` | Dims the table and sets `aria-busy="true"`         |
+| Attribute   | Type                                   | Default  | Description                                                                 |
+| ----------- | -------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `caption`   | `string`                               | —        | Visible caption rendered above the table                                    |
+| `density`   | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'` | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious |
+| `striped`   | `boolean`                              | `false`  | Alternating row background                                                  |
+| `bordered`  | `boolean`                              | `false`  | Outer border and rounded corners                                            |
+| `fullwidth` | `boolean`                              | `false`  | Expands the table to 100% of its container width                            |
+| `sticky`    | `boolean`                              | `false`  | Stick the header row to the top while body scrolls                          |
+| `loading`   | `boolean`                              | `false`  | Dims the table and sets `aria-busy="true"`                                  |
 
 ### Child Elements
 
-`bit-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`.
+`sg-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`.
 
-| Element         | Description                                                                   |
-| --------------- | ----------------------------------------------------------------------------- |
-| `<bit-tr head>` | Header row — projected into `<thead>`                                         |
-| `<bit-tr>`      | Body row — projected into `<tbody>`                                           |
-| `<bit-tr foot>` | Footer row — projected into `<tfoot>`                                         |
-| `<bit-th>`      | Header cell — mirrored as native `<th>`; `scope` is auto-inferred if omitted  |
-| `<bit-td>`      | Data cell — mirrored as native `<td>`; supports `colspan`, `rowspan`, etc.    |
+| Element        | Description                                                                  |
+| -------------- | ---------------------------------------------------------------------------- |
+| `<sg-tr head>` | Header row — projected into `<thead>`                                        |
+| `<sg-tr>`      | Body row — projected into `<tbody>`                                          |
+| `<sg-tr foot>` | Footer row — projected into `<tfoot>`                                        |
+| `<sg-th>`      | Header cell — mirrored as native `<th>`; `scope` is auto-inferred if omitted |
+| `<sg-td>`      | Data cell — mirrored as native `<td>`; supports `colspan`, `rowspan`, etc.   |
 
 ### Mirrored Attributes
 
-Attributes on `<bit-th>` and `<bit-td>` are forwarded to the generated native `<th>`/`<td>` in the shadow tree.
+Attributes on `<sg-th>` and `<sg-td>` are forwarded to the generated native `<th>`/`<td>` in the shadow tree.
 
-| Attribute  | Elements           | Description                                     |
-| ---------- | ------------------ | ----------------------------------------------- |
-| `colspan`  | `bit-th`, `bit-td` | Spans multiple columns                          |
-| `rowspan`  | `bit-th`, `bit-td` | Spans multiple rows                             |
-| `scope`    | `bit-th`           | Column/row association — auto-inferred if absent |
-| `headers`  | `bit-th`, `bit-td` | Associates cell with header IDs                 |
+| Attribute | Elements         | Description                                      |
+| --------- | ---------------- | ------------------------------------------------ |
+| `colspan` | `sg-th`, `sg-td` | Spans multiple columns                           |
+| `rowspan` | `sg-th`, `sg-td` | Spans multiple rows                              |
+| `scope`   | `sg-th`          | Column/row association — auto-inferred if absent |
+| `headers` | `sg-th`, `sg-td` | Associates cell with header IDs                  |
 
 ### Parts
 
-| Part     | Description                                            |
-| -------- | ------------------------------------------------------ |
-| `scroll` | Overflow container — target for max-height / scrolling |
-| `table`  | Generated native `<table>` element                     |
-| `head`   | Generated native `<thead>` element                     |
-| `body`   | Generated native `<tbody>` element                     |
-| `foot`   | Generated native `<tfoot>` element                     |
+| Part          | Description                                                  |
+| ------------- | ------------------------------------------------------------ |
+| `scroll`      | Overflow container — target for max-height / scrolling       |
+| `table`       | Generated native `<table>` element                           |
+| `head`        | Generated native `<thead>` element                           |
+| `body`        | Generated native `<tbody>` element                           |
+| `foot`        | Generated native `<tfoot>` element                           |
+| `cell`        | Every native `<td>` in `<tbody>` rows                        |
+| `header-cell` | Every native `<th>` / `<td>` in `<thead>` and `<tfoot>` rows |
 
 ### CSS Custom Properties
 
-| Property                     | Description                                          |
-| ---------------------------- | ---------------------------------------------------- |
-| `--table-bg`                 | Table background color                               |
-| `--table-border-color`       | Cell separator and outer border color                |
-| `--table-radius`             | Corner radius (applied when `bordered`)              |
-| `--table-shadow`             | Box shadow on the host element                       |
-| `--table-header-bg`          | Background of `<thead>` and `<tfoot>`                |
-| `--table-accent`             | Accent color used for hover states                   |
-| `--table-row-hover-bg`       | Row background on hover                              |
-| `--table-stripe-bg`          | Even-row background when `striped`                   |
-| `--table-cell-padding-x`     | Horizontal cell padding                              |
-| `--table-cell-padding-y`     | Vertical cell padding                                |
-| `--table-font-size`          | Base font size for all cells                         |
-| `--table-sticky-max-height`  | Max height of the scroll container when `sticky`     |
-| `--table-sticky-header-bg`   | Background of the sticky `<thead>` (with blur)       |
-| `--table-sticky-blur`        | Backdrop blur intensity on the sticky header         |
+| Property                    | Description                                      |
+| --------------------------- | ------------------------------------------------ |
+| `--table-bg`                | Table background color                           |
+| `--table-border-color`      | Cell separator and outer border color            |
+| `--table-radius`            | Corner radius (applied when `bordered`)          |
+| `--table-shadow`            | Box shadow on the host element                   |
+| `--table-header-bg`         | Background of `<thead>` and `<tfoot>`            |
+| `--table-accent`            | Accent color used for hover states               |
+| `--table-row-hover-bg`      | Row background on hover                          |
+| `--table-stripe-bg`         | Even-row background when `striped`               |
+| `--table-cell-padding-x`    | Horizontal cell padding                          |
+| `--table-cell-padding-y`    | Vertical cell padding                            |
+| `--table-font-size`         | Base font size for all cells                     |
+| `--table-sticky-max-height` | Max height of the scroll container when `sticky` |
+| `--table-sticky-header-bg`  | Background of the sticky `<thead>` (with blur)   |
+| `--table-sticky-blur`       | Backdrop blur intensity on the sticky header     |
 
 ## Customization
 
 <ComponentPreview>
 
 ```html
-<bit-table
+<sg-table
   style="
     --table-header-bg: #1e293b;
     --table-stripe-bg: #f1f5f9;
@@ -385,19 +387,19 @@ Attributes on `<bit-th>` and `<bit-td>` are forwarded to the generated native `<
   "
   striped
   bordered>
-  <bit-tr head>
-    <bit-th>Name</bit-th>
-    <bit-th>Status</bit-th>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Alice</bit-td>
-    <bit-td>Active</bit-td>
-  </bit-tr>
-  <bit-tr>
-    <bit-td>Bob</bit-td>
-    <bit-td>Inactive</bit-td>
-  </bit-tr>
-</bit-table>
+  <sg-tr head>
+    <sg-th>Name</sg-th>
+    <sg-th>Status</sg-th>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Alice</sg-td>
+    <sg-td>Active</sg-td>
+  </sg-tr>
+  <sg-tr>
+    <sg-td>Bob</sg-td>
+    <sg-td>Inactive</sg-td>
+  </sg-tr>
+</sg-table>
 ```
 
 </ComponentPreview>
@@ -406,19 +408,19 @@ Attributes on `<bit-th>` and `<bit-td>` are forwarded to the generated native `<
 
 The table component follows WCAG 2.1 Level AA standards.
 
-### `bit-table`
+### `sg-table`
 
 ✅ **Screen Readers**
 
 - `aria-busy` is set to `"true"` when `loading` is active.
 - `aria-label` is set to the `caption` value when provided.
-- The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `bit-table`'s shadow DOM, preserving all table semantics for assistive technologies.
+- The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `sg-table`'s shadow DOM, preserving all table semantics for assistive technologies.
 
 ✅ **Semantic Structure**
 
-- `<bit-th>` in a `<bit-tr head>` row automatically gets `scope="col"` on the native `<th>`.
-- `<bit-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
-- Use the `caption` attribute on `bit-table` to label the table for assistive technologies.
+- `<sg-th>` in a `<sg-tr head>` row automatically gets `scope="col"` on the native `<th>`.
+- `<sg-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
+- Use the `caption` attribute on `sg-table` to label the table for assistive technologies.
 
 ✅ **Keyboard Navigation**
 
@@ -426,10 +428,10 @@ The table component follows WCAG 2.1 Level AA standards.
 
 ## Best Practices
 
-1. Always use `<bit-th>` (not `<bit-td>`) for header cells — `scope` is inferred automatically.
+1. Always use `<sg-th>` (not `<sg-td>`) for header cells — `scope` is inferred automatically.
 2. Use the `caption` attribute on every data table to give it an accessible label.
 3. Prefer `striped` for tables with many rows and few columns to aid row tracking.
 4. Set `sticky` only when the table has enough rows to require scrolling; pair with `--table-sticky-max-height`.
 5. Use `loading` to indicate async data fetching instead of hiding or removing the table.
-6. Prefer `size="sm"` for dense dashboard tables.
+6. Use `density="compact"` for dense dashboard tables; `density="comfortable"` when more breathing room is needed. The default `density="cozy"` suits most cases.
 7. Avoid placing interactive elements (buttons, inputs) inside cells without ensuring their keyboard accessibility.

@@ -1,81 +1,50 @@
-# attempt
+---
+title: 'Arsenal Examples — attempt'
+description: 'attempt example for @vielzeug/arsenal.'
+---
 
-Executes an async function and returns an `AttemptResult` — never throws. On success returns `{ ok: true, value }`, on failure returns `{ ok: false, error }`.
+## attempt
 
-## Signature
+### Problem
 
-```ts
-type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
+You want to call an async function and handle success and failure in one place without try/catch — returning a discriminated union instead of throwing.
 
-async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>;
-```
+### Solution
 
-## Parameters
-
-- `fn` — Async function to execute.
-
-## Returns
-
-A promise that always resolves to:
-
-- `{ ok: true, value }` on success
-- `{ error, ok: false }` on failure — never rejects
-
-## Examples
-
-### Basic usage
+Use `attempt(fn)` to receive `{ ok: true, value }` on success or `{ ok: false, error }` on failure. It never throws.
 
 ```ts
 import { attempt } from '@vielzeug/arsenal';
 
-const result = await attempt(async () => {
-  const res = await fetch('/api/user');
-  return res.json();
-});
+const result = await attempt(() => fetch('/api/user').then((r) => r.json()));
 
 if (result.ok) {
-  console.log(result.value);
+  console.log(result.value); // typed as the resolved value
 } else {
-  console.error(result.error);
+  console.error(result.error); // the caught error
 }
 ```
 
-### Combine with retry
+#### Combining with retry
 
 ```ts
 import { attempt, retry } from '@vielzeug/arsenal';
 
 const result = await attempt(() =>
-  retry(() => fetch('/api/user').then((r) => r.json()), {
-    times: 3,
-    delay: 500,
-  }),
+  retry((signal) => fetch('/api/data', { signal }).then((r) => r.json()), { times: 3 }),
 );
 
-if (result.ok) {
-  console.log('user:', result.value);
-} else {
-  console.warn('all retries exhausted:', result.error);
+if (!result.ok) {
+  reportError(result.error);
 }
 ```
 
-### Replace try/catch in async flows
+### Pitfalls
 
-```ts
-import { attempt } from '@vielzeug/arsenal';
+- `attempt` wraps a single call — it does not retry on failure. Use `retry` for resilient calls and wrap the whole thing in `attempt` if you want a non-throwing result.
+- The `error` field is typed as `unknown`; narrow it before accessing properties.
 
-async function loadDashboard() {
-  const [users, stats] = await Promise.all([attempt(() => fetchUsers()), attempt(() => fetchStats())]);
+### Related
 
-  return {
-    users: users.ok ? users.value : [],
-    stats: stats.ok ? stats.value : null,
-  };
-}
-```
-
-## Related
-
-- [retry](./retry.md) — Retry async operations with backoff
-- [abortable](./abortable.md) — Wrap a promise to reject on signal fire
-- [waitFor](./waitFor.md) — Poll until a condition is met
+- [retry](./retry.md)
+- [parallel](./parallel.md)

@@ -144,6 +144,12 @@ onUnmounted(stop);
 
 :::
 
+### Pitfalls
+
+- For remote sources, `refresh()` must be called explicitly after mount — the source does not auto-fetch on creation.
+- Each component instance should create its own source (or share one via context/store); subscribing to a shared source that another component mutates can cause duplicate re-renders.
+- In React, wrap `createLocalSource`/`createRemoteSource` in `useMemo` to avoid recreating the source on every render.
+
 ### Related
 
 - [Local Pagination and Filtering](./local-pagination-and-filtering.md)

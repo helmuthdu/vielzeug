@@ -1,57 +1,38 @@
-# partial
+---
+title: 'Arsenal Examples — partial'
+description: 'partial example for @vielzeug/arsenal.'
+---
 
-Bind one or more leading arguments to a function, returning a new function that accepts the remaining arguments.
+## partial
 
-## Signature
+### Problem
 
-```ts
-function partial<Args extends unknown[], BoundArgs extends Partial<Args>, R>(
-  fn: (...args: Args) => R,
-  ...bound: BoundArgs
-): (...rest: RemainingArgs<Args, BoundArgs>) => R;
-```
+You need to pre-fill the leading arguments of a function to create a more specific version — for example binding a fixed multiplier or a known resource prefix.
 
-## Examples
+### Solution
 
-### Basic usage
+Use `partial(fn, ...args)` to bind leading arguments and return a new function expecting only the remaining parameters.
 
 ```ts
 import { partial } from '@vielzeug/arsenal';
 
-const add = (a: number, b: number) => a + b;
-const add10 = partial(add, 10);
-
-add10(5); // 15
-add10(20); // 30
-```
-
-### Bind multiple arguments
-
-```ts
-import { partial } from '@vielzeug/arsenal';
-
-const greet = (greeting: string, name: string, punctuation: string) => `${greeting}, ${name}${punctuation}`;
-
-const hello = partial(greet, 'Hello');
-hello('Alice', '!'); // 'Hello, Alice!'
-
-const helloAlice = partial(greet, 'Hello', 'Alice');
-helloAlice('?'); // 'Hello, Alice?'
-```
-
-### With array callbacks
-
-```ts
-import { partial } from '@vielzeug/arsenal';
-
-const multiply = (factor: number, values: number[]) => values.map((n) => n * factor);
+const multiply = (factor: number, value: number) => value * factor;
 const double = partial(multiply, 2);
+const triple = partial(multiply, 3);
 
-double([1, 2, 3]); // [2, 4, 6]
+double(5); // 10
+triple(5); // 15
+
+// Works well in pipelines
+const addPrefix = partial((prefix: string, str: string) => `${prefix}${str}`, 'api/');
+['users', 'posts'].map(addPrefix); // ['api/users', 'api/posts']
 ```
 
-## Related
+### Pitfalls
 
-- [curry](./curry.md) — Auto-curried wrapper for any function
-- [compose](./compose.md) — Right-to-left function composition
-- [pipe](./pipe.md) — Left-to-right function composition
+- Only binds leading arguments. Use `curry` for argument-at-a-time application at any position.
+
+### Related
+
+- [curry](./curry.md)
+- [compose](./compose.md)

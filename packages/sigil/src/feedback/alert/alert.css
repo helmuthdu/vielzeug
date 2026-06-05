@@ -19,10 +19,10 @@
   :host([dismissing]) {
     overflow: hidden;
     pointer-events: none;
-    animation: var(--_motion-animation, bit-alert-exit var(--transition-slow, 0.3s) ease forwards);
+    animation: var(--_motion-animation, sg-alert-exit var(--transition-slow, 0.3s) ease forwards);
   }
 
-  @keyframes bit-alert-exit {
+  @keyframes sg-alert-exit {
     0% {
       /* Use a large enough value to cover any realistic alert height. */
       max-height: 600px;

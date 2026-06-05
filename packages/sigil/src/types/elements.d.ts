@@ -8,19 +8,19 @@ export {};
 declare global {
   interface HTMLElementTagNameMap {
     // content
-    'bit-avatar': HTMLElement & BitAvatarProps;
-    'bit-avatar-group': HTMLElement & BitAvatarGroupProps;
-    'bit-breadcrumb': HTMLElement & BitBreadcrumbProps;
-    'bit-breadcrumb-item': HTMLElement & BitBreadcrumbItemProps;
-    'bit-card': HTMLElement & BitCardProps & AddEventListeners<BitCardEvents>;
-    'bit-icon': HTMLElement & BitIconProps;
-    'bit-pagination': HTMLElement & BitPaginationProps & AddEventListeners<BitPaginationEvents>;
-    'bit-separator': HTMLElement & BitSeparatorProps;
-    'bit-table': HTMLElement & BitTableProps;
-    'bit-text': HTMLElement & BitTextProps;
-    // table markers (light-DOM authoring API used by bit-table)
-    'bit-tr': HTMLElement & { foot?: boolean; head?: boolean };
-    'bit-th': HTMLElement & {
+    'sg-avatar': HTMLElement & SgAvatarProps;
+    'sg-avatar-group': HTMLElement & SgAvatarGroupProps;
+    'sg-breadcrumb': HTMLElement & SgBreadcrumbProps;
+    'sg-breadcrumb-item': HTMLElement & SgBreadcrumbItemProps;
+    'sg-card': HTMLElement & SgCardProps & AddEventListeners<SgCardEvents>;
+    'sg-icon': HTMLElement & SgIconProps;
+    'sg-pagination': HTMLElement & SgPaginationProps & AddEventListeners<SgPaginationEvents>;
+    'sg-separator': HTMLElement & SgSeparatorProps;
+    'sg-table': HTMLElement & SgTableProps;
+    'sg-text': HTMLElement & SgTextProps;
+    // table markers (light-DOM authoring API used by sg-table)
+    'sg-tr': HTMLElement & { foot?: boolean; head?: boolean };
+    'sg-th': HTMLElement & {
       abbr?: string;
       axis?: string;
       colspan?: number | string;
@@ -28,60 +28,57 @@ declare global {
       rowspan?: number | string;
       scope?: 'col' | 'colgroup' | 'row' | 'rowgroup' | string;
     };
-    'bit-td': HTMLElement & {
+    'sg-td': HTMLElement & {
       colspan?: number | string;
       headers?: string;
       rowspan?: number | string;
     };
     // disclosure
-    'bit-accordion': HTMLElement & BitAccordionProps & AddEventListeners<BitAccordionEvents>;
-    'bit-accordion-item': HTMLElement & BitAccordionItemProps & AddEventListeners<BitAccordionItemEvents>;
-    'bit-tab-item': HTMLElement & BitTabItemProps;
-    'bit-tab-panel': HTMLElement & BitTabPanelProps;
-    'bit-tabs': HTMLElement & BitTabsProps & AddEventListeners<BitTabsEvents>;
+    'sg-accordion': HTMLElement & SgAccordionProps & AddEventListeners<SgAccordionEvents>;
+    'sg-accordion-item': HTMLElement & SgAccordionItemProps & AddEventListeners<SgAccordionItemEvents>;
+    'sg-tab-item': HTMLElement & SgTabItemProps;
+    'sg-tab-panel': HTMLElement & SgTabPanelProps;
+    'sg-tabs': HTMLElement & SgTabsProps & AddEventListeners<SgTabsEvents>;
     // feedback
-    'bit-alert': HTMLElement & BitAlertProps & AddEventListeners<BitAlertEvents>;
-    'bit-badge': HTMLElement & BitBadgeProps;
-    'bit-chip': HTMLElement & BitChipProps & AddEventListeners<BitChipEvents>;
-    'bit-progress': HTMLElement & BitProgressProps;
-    'bit-skeleton': HTMLElement & BitSkeletonProps;
-    'bit-toast': ToastElement;
+    'sg-alert': HTMLElement & SgAlertProps & AddEventListeners<SgAlertEvents>;
+    'sg-badge': HTMLElement & SgBadgeProps;
+    'sg-chip': HTMLElement & SgChipProps & AddEventListeners<SgChipEvents>;
+    'sg-progress': HTMLElement & SgProgressProps;
+    'sg-skeleton': HTMLElement & SgSkeletonProps;
+    'sg-toast': ToastElement;
     // inputs
-    'bit-button': HTMLElement & BitButtonProps;
-    'bit-button-group': HTMLElement & BitButtonGroupProps;
-    'bit-checkbox': HTMLElement & BitCheckboxProps & FormValidityMethods & AddEventListeners<BitCheckboxEvents>;
-    'bit-checkbox-group': HTMLElement & BitCheckboxGroupProps;
-    'bit-combobox': HTMLElement & BitComboboxProps & FormValidityMethods & AddEventListeners<BitComboboxEvents>;
-    'bit-combobox-option': HTMLElement & BitComboboxOptionProps;
-    'bit-file-input': HTMLElement & BitFileInputProps & FormValidityMethods & AddEventListeners<BitFileInputEvents>;
-    'bit-form': HTMLElement & BitFormProps & AddEventListeners<BitFormEvents>;
-    'bit-input': HTMLElement & BitInputProps & FormValidityMethods & AddEventListeners<BitInputEvents>;
-    'bit-number-input': HTMLElement &
-      BitNumberInputProps &
-      FormValidityMethods &
-      AddEventListeners<BitNumberInputEvents>;
-    'bit-otp-input': HTMLElement & BitOtpInputProps & AddEventListeners<BitOtpInputEvents>;
-    'bit-radio': HTMLElement & BitRadioProps & FormValidityMethods & AddEventListeners<BitRadioEvents>;
-    'bit-radio-group': HTMLElement & BitRadioGroupProps;
-    'bit-rating': HTMLElement & BitRatingProps & FormValidityMethods & AddEventListeners<BitRatingEvents>;
-    'bit-select': HTMLElement & BitSelectProps & FormValidityMethods & AddEventListeners<BitSelectEvents>;
-    'bit-slider': HTMLElement & BitSliderProps & FormValidityMethods & AddEventListeners<BitSliderEvents>;
-    'bit-switch': HTMLElement & BitSwitchProps & FormValidityMethods & AddEventListeners<BitSwitchEvents>;
-    'bit-textarea': HTMLElement & BitTextareaProps & FormValidityMethods & AddEventListeners<BitTextareaEvents>;
+    'sg-button': HTMLElement & SgButtonProps;
+    'sg-button-group': HTMLElement & SgButtonGroupProps;
+    'sg-checkbox': HTMLElement & SgCheckboxProps & FormValidityMethods & AddEventListeners<SgCheckboxEvents>;
+    'sg-checkbox-group': HTMLElement & SgCheckboxGroupProps;
+    'sg-combobox': HTMLElement & SgComboboxProps & FormValidityMethods & AddEventListeners<SgComboboxEvents>;
+    'sg-combobox-option': HTMLElement & SgComboboxOptionProps;
+    'sg-file-input': HTMLElement & SgFileInputProps & FormValidityMethods & AddEventListeners<SgFileInputEvents>;
+    'sg-form': HTMLElement & SgFormProps & AddEventListeners<SgFormEvents>;
+    'sg-input': HTMLElement & SgInputProps & FormValidityMethods & AddEventListeners<SgInputEvents>;
+    'sg-number-input': HTMLElement & SgNumberInputProps & FormValidityMethods & AddEventListeners<SgNumberInputEvents>;
+    'sg-otp-input': HTMLElement & SgOtpInputProps & AddEventListeners<SgOtpInputEvents>;
+    'sg-radio': HTMLElement & SgRadioProps & FormValidityMethods & AddEventListeners<SgRadioEvents>;
+    'sg-radio-group': HTMLElement & SgRadioGroupProps;
+    'sg-rating': HTMLElement & SgRatingProps & FormValidityMethods & AddEventListeners<SgRatingEvents>;
+    'sg-select': HTMLElement & SgSelectProps & FormValidityMethods & AddEventListeners<SgSelectEvents>;
+    'sg-slider': HTMLElement & SgSliderProps & FormValidityMethods & AddEventListeners<SgSliderEvents>;
+    'sg-switch': HTMLElement & SgSwitchProps & FormValidityMethods & AddEventListeners<SgSwitchEvents>;
+    'sg-textarea': HTMLElement & SgTextareaProps & FormValidityMethods & AddEventListeners<SgTextareaEvents>;
     // layout
-    'bit-box': HTMLElement & BitBoxProps;
-    'bit-grid': HTMLElement & BitGridProps;
-    'bit-grid-item': HTMLElement & BitGridItemProps;
-    'bit-sidebar': SidebarElement & AddEventListeners<BitSidebarEvents>;
-    'bit-sidebar-group': HTMLElement & BitSidebarGroupProps & AddEventListeners<BitSidebarGroupEvents>;
-    'bit-sidebar-item': HTMLElement & BitSidebarItemProps;
+    'sg-box': HTMLElement & SgBoxProps;
+    'sg-grid': HTMLElement & SgGridProps;
+    'sg-grid-item': HTMLElement & SgGridItemProps;
+    'sg-sidebar': SidebarElement & AddEventListeners<SgSidebarEvents>;
+    'sg-sidebar-group': HTMLElement & SgSidebarGroupProps & AddEventListeners<SgSidebarGroupEvents>;
+    'sg-sidebar-item': HTMLElement & SgSidebarItemProps;
     // overlay
-    'bit-dialog': HTMLElement & BitDialogProps & AddEventListeners<BitDialogEvents>;
-    'bit-drawer': DrawerElement & AddEventListeners<BitDrawerEvents>;
-    'bit-menu': HTMLElement & BitMenuProps & AddEventListeners<BitMenuEvents>;
-    'bit-menu-item': HTMLElement & BitMenuItemProps;
-    'bit-menu-separator': HTMLElement;
-    'bit-popover': HTMLElement & BitPopoverProps & AddEventListeners<BitPopoverEvents>;
-    'bit-tooltip': HTMLElement & BitTooltipProps;
+    'sg-dialog': HTMLElement & SgDialogProps & AddEventListeners<SgDialogEvents>;
+    'sg-drawer': DrawerElement & AddEventListeners<SgDrawerEvents>;
+    'sg-menu': HTMLElement & SgMenuProps & AddEventListeners<SgMenuEvents>;
+    'sg-menu-item': HTMLElement & SgMenuItemProps;
+    'sg-menu-separator': HTMLElement;
+    'sg-popover': HTMLElement & SgPopoverProps & AddEventListeners<SgPopoverEvents>;
+    'sg-tooltip': HTMLElement & SgTooltipProps;
   }
 }

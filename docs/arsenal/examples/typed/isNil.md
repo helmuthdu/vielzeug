@@ -1,73 +1,28 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isNil'
+description: 'isNil example for @vielzeug/arsenal.'
+---
 
-# isNil
+## isNil
 
-The `isNil` utility is a type guard that checks if a value is strictly `null` or `undefined`. It is the inverse of `isDefined` and is useful for identifying missing or uninitialized data.
+### Problem
 
-## Source Code
+You need to check for both `null` and `undefined` in one guard — for example cleaning form values or skipping empty API fields.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isNil.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Type Guard**: Automatically narrows types to `null | undefined` within conditional blocks.
-- **Precise**: Correctly identifies that `0`, `false`, and `''` are NOT nil.
-
-## API
-
-```ts
-function isNil(value: unknown): value is null | undefined;
-```
-
-### Parameters
-
-- `value`: The value to check.
-
-### Returns
-
-- `true` if the value is `null` or `undefined`; otherwise, `false`.
-
-## Examples
-
-### Basic Usage
+Use `isNil(value)` to check `value === null || value === undefined`.
 
 ```ts
 import { isNil } from '@vielzeug/arsenal';
 
-isNil(null); // true
+isNil(null);      // true
 isNil(undefined); // true
-isNil(0); // false
-isNil(''); // false
-isNil(false); // false
+isNil(0);         // false
+isNil('');        // false
 ```
 
-### Type Guarding
+### Related
 
-```ts
-import { isNil } from '@vielzeug/arsenal';
-
-function cleanup(text: string | null | undefined) {
-  if (isNil(text)) {
-    return 'default';
-  }
-  // text is now narrowed to 'string'
-  return text.trim();
-}
-```
-
-## Implementation Notes
-
-- Returns `true` if `value === null || value === undefined`.
-- Throws nothing; safe for any input type.
-
-## See Also
-
-- [isDefined](./isDefined.md): The inverse check (returns true for defined values).
-- [isEmpty](./isEmpty.md): Check if a value is empty (broader than just nil).
-- [isArray](./isArray.md): Dedicated array type guard.
+- [isDefined](./isDefined.md)
+- [isEmpty](./isEmpty.md)

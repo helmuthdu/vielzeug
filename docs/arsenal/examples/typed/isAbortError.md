@@ -1,56 +1,34 @@
-# isAbortError
+---
+title: 'Arsenal Examples — isAbortError'
+description: 'isAbortError example for @vielzeug/arsenal.'
+---
 
-Returns `true` if the value is an `Error` with `name === 'AbortError'`.
+## isAbortError
 
-## Signature
+### Problem
 
-```ts
-function isAbortError(value: unknown): value is Error;
-```
+You need to distinguish an abort-caused rejection from other errors — for example silently ignoring cancellations while reporting real failures.
 
-## Examples
+### Solution
 
-### Basic usage
+Use `isAbortError(value)` to check whether an error has `name === 'AbortError'`.
 
 ```ts
 import { isAbortError } from '@vielzeug/arsenal';
 
-const ac = new AbortController();
-ac.abort();
-
 try {
-  await fetch('/api', { signal: ac.signal });
+  await abortableTask;
 } catch (err) {
-  if (isAbortError(err)) {
-    console.log('Request was cancelled');
-  } else {
-    throw err; // re-throw non-abort errors
-  }
+  if (isAbortError(err)) return; // cancelled — ignore
+  throw err; // real failure — re-throw
 }
 ```
 
-### With abortable
+### Pitfalls
 
-```ts
-import { abortable, isAbortError } from '@vielzeug/arsenal';
+- Checks `error.name === 'AbortError'`, not `instanceof DOMException`. Works for `DOMException` and any `Error` subclass with that name.
 
-const ac = new AbortController();
-const promise = abortable(
-  fetch('/api').then((r) => r.json()),
-  ac.signal,
-);
+### Related
 
-ac.abort();
-
-try {
-  await promise;
-} catch (err) {
-  console.log(isAbortError(err)); // true
-}
-```
-
-## Related
-
-- [abortError](../async/abortError.md) — Construct or extract an abort error
-- [abortable](../async/abortable.md) — Wrap a promise to reject on signal fire
-- [isError](./isError.md) — Check if a value is an `Error` instance
+- [abortable](../async/abortable.md)
+- [abortError](../async/abortError.md)

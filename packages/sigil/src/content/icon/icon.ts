@@ -47,7 +47,7 @@ const registry = new Map<string, IconNode>(
 
 /**
  * Register additional icons (or override existing ones) by name.
- * Keys may be kebab-case or PascalCase — both are accepted by `bit-icon`.
+ * Keys may be kebab-case or PascalCase — both are accepted by `sg-icon`.
  */
 export function registerIcons(icons: Record<string, IconNode>): void {
   for (const [name, node] of Object.entries(icons)) {
@@ -81,7 +81,7 @@ const parseSize = (value: string | null): number | string => {
 };
 
 /** Icon component properties */
-export type BitIconProps = {
+export type SgIconProps = {
   /** Keep stroke width visually consistent when icon size changes */
   absoluteStrokeWidth?: boolean;
   /** Accessible text label. Decorative icons should omit this. */
@@ -99,7 +99,7 @@ export type BitIconProps = {
 /**
  * Icon wrapper for consistent Lucide rendering across Block.
  *
- * @element bit-icon
+ * @element sg-icon
  *
  * @attr {string} name - Lucide icon name, e.g. `search` or `chevron-right`
  * @attr {number|string} size - Width/height (default: 16)
@@ -112,14 +112,14 @@ export type BitIconProps = {
  *
  * @example
  * ```html
- * <bit-icon name="search"></bit-icon>
- * <bit-icon name="chevron-right" size="18"></bit-icon>
- * <bit-icon name="trash-2" label="Delete"></bit-icon>
- * <bit-icon name="star" solid></bit-icon>
+ * <sg-icon name="search"></sg-icon>
+ * <sg-icon name="chevron-right" size="18"></sg-icon>
+ * <sg-icon name="trash-2" label="Delete"></sg-icon>
+ * <sg-icon name="star" solid></sg-icon>
  * ```
  */
-export const ICON_TAG = 'bit-icon' as const;
-define<BitIconProps>(ICON_TAG, {
+export const ICON_TAG = 'sg-icon' as const;
+define<SgIconProps>(ICON_TAG, {
   props: {
     absoluteStrokeWidth: prop.bool(),
     label: prop.string(),
@@ -146,7 +146,7 @@ define<BitIconProps>(ICON_TAG, {
 
       if (!iconNode) {
         if (import.meta.env.DEV) {
-          console.warn(`[bit-icon] Icon not found: "${String(name).slice(0, 64)}"`);
+          console.warn(`[sg-icon] Icon not found: "${String(name).slice(0, 64)}"`);
         }
 
         return '';

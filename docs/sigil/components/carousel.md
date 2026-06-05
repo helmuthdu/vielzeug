@@ -1,99 +1,133 @@
 # Carousel
 
-An accessible, keyboard-navigable carousel / slideshow. Place `<bit-carousel-slide>` elements as direct children. Supports autoplay, swipe gestures, indicator dots, and prev/next navigation buttons. All state is reactive — change `slide-index` at any time to jump programmatically.
+An accessible, keyboard-navigable carousel and slideshow. Place `<sg-carousel-slide>` children directly inside — no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and five layout variants including continuous marquee scrolling.
 
 ## Features
 
-- 🖼️ **Slot-based slides** — place any `<bit-carousel-slide>` children; no JS array required
-- ⌨️ **Keyboard navigation** — Arrow keys, Home, End; direction-aware (horizontal / vertical)
-- 👆 **Touch/pointer swipe** — built on `createSwipeControl`; 48 px threshold by default
-- 🔁 **Loop support** — wraps from last to first and vice versa (`loop`, default `true`)
-- ▶️ **Autoplay** — opt-in with `autoplay`; pauses on hover and focus
-- 🔘 **Progress indicators** — pill-shaped with animated fill countdown during autoplay; `role="tablist"` with per-indicator `role="tab"` and `aria-selected`
-- ◀▶ **Prev / Next buttons** — `bit-button` ghost controls; accept a `color` prop for theme-aware styling; disabled automatically when looping is off and at the edge
-- ♿ **Fully accessible** — `role="region"`, `aria-roledescription`, `aria-live`, `aria-hidden` on inactive slides
+- 🖼️ **Slot-based slides** — `<sg-carousel-slide>` children; no JS array required
+- 🎭 **5 layout variants** — `default`, `fade`, `filmstrip`, `gallery`, `marquee`
+- ↕️ **Vertical orientation** — all variants support `orientation="vertical"`
+- ⌨️ **Keyboard navigation** — Arrow keys, Home, End; direction-aware
+- 👆 **Touch/pointer swipe** — 48 px threshold, horizontal or vertical axis
+- 🔁 **Loop** — wraps last→first and first→last (default on); configurable per-variant
+- ▶️ **Autoplay** — opt-in; pauses on hover and focus; configurable interval
+- 🔘 **`sg-progress` indicators** — animated fill countdown during autoplay; `role="tablist"`
+- ♿ **Accessible** — ARIA Carousel pattern; live-region announcements on every slide change
 - 🎨 **CSS custom properties** — full theming via `--carousel-*` tokens
 
 ## Source Code
 
-::: details View Source
+::: details View Source (sg-carousel)
 <<< @/../packages/sigil/src/content/carousel/carousel.ts
+:::
+
+::: details View Source (sg-carousel-slide)
+<<< @/../packages/sigil/src/content/carousel/carousel-slide.ts
 :::
 
 ## Basic Usage
 
+Give the carousel an explicit height and a descriptive `label`. The default variant translates slides in and out horizontally.
+
 <ComponentPreview>
 
 ```html
-<bit-carousel id="c-basic" label="Team highlights" style="height:200px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">
-    Slide 1 — Alice
-  </bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">
-    Slide 2 — Bob
-  </bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">
-    Slide 3 — Carol
-  </bit-carousel-slide>
-</bit-carousel>
+<sg-carousel label="Team highlights" style="height:200px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%">
+    <sg-text color="heading">Slide 1 — Alice</sg-text>
+  </sg-carousel-slide>
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%">
+    <sg-text color="heading">Slide 2 — Bob</sg-text>
+  </sg-carousel-slide>
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%">
+    <sg-text color="heading">Slide 3 — Carol</sg-text>
+  </sg-carousel-slide>
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
 ## Autoplay
 
-Set `autoplay` to advance slides automatically. Use `autoplay-interval` to control the delay (ms). Autoplay pauses automatically when the user hovers over or focuses the carousel.
+Autoplay is **off by default**. Add the `autoplay` attribute to enable timed slide advances. The timer pauses automatically when the pointer enters the carousel or any element inside receives keyboard focus, and resumes on leave.
+
+Use `autoplay-interval` (in milliseconds, default `5000`) to control the delay. Changing `autoplay-interval` at runtime restarts the timer immediately.
 
 <ComponentPreview>
 
 ```html
-<bit-carousel
-  id="c-auto"
-  label="Auto-advancing slides"
-  autoplay
-  autoplay-interval="2500"
-  style="height:160px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">Slide A</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Slide B</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Slide C</bit-carousel-slide>
-</bit-carousel>
+<sg-carousel label="Auto-advancing slides" autoplay autoplay-interval="3000" style="height:160px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">Slide A</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Slide B</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Slide C</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
 ## No Loop
 
-Set `loop="false"` to prevent wrapping. The prev button disables at the first slide and the next button disables at the last.
+By default the carousel wraps: advancing past the last slide returns to the first. Set `loop="false"` to stop at the boundaries — the prev/next buttons disable automatically at the edges.
 
 <ComponentPreview>
 
 ```html
-<bit-carousel id="c-noloop" label="Linear slides" loop="false" style="height:160px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">First</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Middle</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Last</bit-carousel-slide>
-</bit-carousel>
+<sg-carousel label="Linear slides" loop="false" style="height:160px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">First</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Middle</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Last</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
 ## Programmatic Control
 
-Set `slide-index` at any time to jump to a specific slide. Listen to the `change` event to track the active index.
+Set `slide-index` as a property at any time to jump to a specific slide (zero-based). The host element reflects the current index back on its `slide-index` attribute after every navigation. Listen to the `change` event to react to user- or autoplay-driven advances.
 
 <ComponentPreview>
 
 ```html
 <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
-  <bit-button id="c-go-0" size="sm">Slide 1</bit-button>
-  <bit-button id="c-go-1" size="sm">Slide 2</bit-button>
-  <bit-button id="c-go-2" size="sm">Slide 3</bit-button>
+  <sg-button id="c-go-0" size="sm">Slide 1</sg-button>
+  <sg-button id="c-go-1" size="sm">Slide 2</sg-button>
+  <sg-button id="c-go-2" size="sm">Slide 3</sg-button>
 </div>
-<bit-carousel id="c-prog" label="Programmatic carousel" style="height:160px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">Slide 1</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Slide 2</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Slide 3</bit-carousel-slide>
-</bit-carousel>
+<sg-carousel id="c-prog" label="Programmatic carousel" style="height:160px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 <script>
   const c = document.getElementById('c-prog');
   [0, 1, 2].forEach((i) => {
@@ -114,118 +148,392 @@ Pass `color` to theme the prev/next navigation buttons with any design-system co
 <ComponentPreview>
 
 ```html
-<bit-carousel id="c-color" label="Colored controls" color="primary" style="height:160px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">Slide 1</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Slide 2</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Slide 3</bit-carousel-slide>
-</bit-carousel>
+<sg-carousel label="Colored controls" color="primary" style="height:160px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
 ## No Controls / No Indicators
 
-Hide the navigation buttons or indicator dots independently.
+`show-controls` and `show-indicators` are independent. Set either to `"false"` to hide it.
 
 <ComponentPreview>
 
 ```html
-<bit-carousel
-  id="c-minimal"
+<sg-carousel
   label="Minimal carousel"
   show-controls="false"
   show-indicators="false"
   autoplay
   autoplay-interval="1800"
   style="height:140px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">One</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Two</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Three</bit-carousel-slide>
-</bit-carousel>
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">One</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Two</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Three</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
 ## Vertical Orientation
 
-Set `orientation="vertical"` to switch to a vertical layout. Arrow keys change to Up/Down.
+Add `orientation="vertical"` to any variant. Slides transition top/bottom, arrow keys swap to Up/Down, indicators move to the left edge, and nav buttons group at the right-center edge.
 
 <ComponentPreview>
 
 ```html
-<bit-carousel id="c-vert" label="Vertical carousel" orientation="vertical" style="height:200px">
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0f4ff;height:100%">Top</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#f0fff4;height:100%">Middle</bit-carousel-slide>
-  <bit-carousel-slide style="display:flex;align-items:center;justify-content:center;background:#fff7f0;height:100%">Bottom</bit-carousel-slide>
-</bit-carousel>
+<sg-carousel label="Vertical carousel" orientation="vertical" style="height:240px;width:320px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">Top</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Middle</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Bottom</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
 ```
 
 </ComponentPreview>
 
+## Variants
+
+The `variant` attribute switches the slide layout and transition style. All variants support `orientation="vertical"`.
+
+### Fade
+
+Slides crossfade in-place — no lateral movement. Use for image-heavy content where translation motion may be distracting.
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Fade carousel" variant="fade" style="height:200px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+### Filmstrip
+
+All slides are visible simultaneously. The active slide expands to fill the remaining space; inactive slides collapse to `--carousel-filmstrip-inactive` (default `var(--size-16)`).
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Filmstrip carousel" variant="filmstrip" style="height:200px">
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300)"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 4</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+#### Vertical Filmstrip
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Vertical filmstrip" variant="filmstrip" orientation="vertical" style="height:300px;width:320px">
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Top</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Middle</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300)"
+    ><sg-text color="heading">Bottom</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+### Gallery
+
+The active slide dominates (~4× the size of thumbnails); the immediately adjacent slides show as thumbnails. Slides beyond the adjacent pair are hidden. Thumbnail size is controlled by `--carousel-gallery-thumbnail`.
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Gallery carousel" variant="gallery" style="height:200px">
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300)"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 4</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Slide 5</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+#### Vertical Gallery
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Vertical gallery" variant="gallery" orientation="vertical" style="height:360px;width:320px">
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 1</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Slide 2</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300)"
+    ><sg-text color="heading">Slide 3</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100)"
+    ><sg-text color="heading">Slide 4</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200)"
+    ><sg-text color="heading">Slide 5</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+### Marquee
+
+A continuously scrolling ticker. Slides are cloned internally to create a seamless loop. Scrolling pauses on `pointerenter` and resumes on `pointerleave`. Use `marquee-duration` (seconds, default `10`) to control speed — lower values scroll faster.
+
+Set `loop="false"` to run the animation once then stop. Controls and indicators are shown by default and work the same as other variants.
+
+<ComponentPreview>
+
+```html
+<sg-carousel label="Marquee ticker" variant="marquee" marquee-duration="20" style="height:120px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px"
+    ><sg-text color="heading">Item A</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px"
+    ><sg-text color="heading">Item B</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);width:200px"
+    ><sg-text color="heading">Item C</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px"
+    ><sg-text color="heading">Item D</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+#### Vertical Marquee
+
+Add `orientation="vertical"` for a top-to-bottom ticker. Set an explicit `height` on each slide to control row size.
+
+<ComponentPreview>
+
+```html
+<sg-carousel
+  label="Vertical marquee"
+  variant="marquee"
+  orientation="vertical"
+  marquee-duration="12"
+  style="height:300px;width:240px">
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:180px"
+    ><sg-text color="heading">Item A</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:180px"
+    ><sg-text color="heading">Item B</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:180px"
+    ><sg-text color="heading">Item C</sg-text></sg-carousel-slide
+  >
+  <sg-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:180px"
+    ><sg-text color="heading">Item D</sg-text></sg-carousel-slide
+  >
+</sg-carousel>
+```
+
+</ComponentPreview>
+
+## Keyboard Navigation
+
+| Key                        | Action         |
+| -------------------------- | -------------- |
+| `ArrowRight` / `ArrowDown` | Next slide     |
+| `ArrowLeft` / `ArrowUp`    | Previous slide |
+| `Home`                     | First slide    |
+| `End`                      | Last slide     |
+
+Arrow key direction adjusts automatically for `orientation="vertical"`. When `loop="false"`, navigation stops at the boundaries.
+
 ## Accessibility
 
-The carousel implements the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/):
+The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
 
-- **`role="region"`** + **`aria-roledescription="carousel"`** on the host element
-- **`aria-label`** on the host — always provide a meaningful label
-- **`role="group"`** + **`aria-roledescription="slide"`** on each `<bit-carousel-slide>`
-- **`aria-hidden="true"`** on all inactive slides
-- **`aria-live="polite"`** on the slide track — switches to `"off"` during autoplay to prevent interruptions
-- **`role="tablist"`** on the indicators container; each indicator has **`role="tab"`** and **`aria-selected`**
-- **`aria-label="Previous slide|Next slide"`** on navigation buttons; disabled attribute set when at boundary
-- Screen-reader announcements via `announce()` on every slide change
-- Autoplay **pauses on hover and focus** — respects user intent
+✅ **Screen Readers**
 
-**Keyboard interactions:**
+- `role="region"` + `aria-roledescription="carousel"` on the host
+- `role="group"` + `aria-roledescription="slide"` on each `<sg-carousel-slide>`
+- `aria-hidden="true"` on all inactive slides; `aria-label` auto-set to `"Slide N of M"` if not provided
+- `aria-live="polite"` on the track; switches to `"off"` during autoplay to suppress timed announcements
+- Prev/next buttons carry `aria-label="Previous slide"` / `aria-label="Next slide"`; `disabled` set at boundaries when `loop="false"`
+- `role="tablist"` on the indicators container; each dot has `role="tab"` and `aria-selected`
+- Screen-reader announcement via the internal `announce()` helper on every slide change
 
-| Key | Action |
-|-----|--------|
-| `ArrowRight` / `ArrowDown` | Next slide |
-| `ArrowLeft` / `ArrowUp` | Previous slide |
-| `Home` | First slide |
-| `End` | Last slide |
+✅ **Autoplay**
 
-Always provide a meaningful `label` attribute so screen readers can identify the carousel's purpose.
+When `autoplay` is on, the track uses `aria-live="off"` so automatic advances don't trigger screen reader speech. The timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
+
+✅ **Reduced Motion**
+
+The carousel responds to `prefers-reduced-motion: reduce` automatically:
+
+- `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions.
+- The marquee CSS animation is disabled entirely.
+
+::: tip Always set `label`
+The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"` — too generic when a page has multiple carousels.
+:::
+
+::: warning Marquee and motion sensitivity
+Even with `prefers-reduced-motion` support, the marquee variant still presents rapidly-changing content that can be distracting. Consider hiding the `marquee` variant entirely for users with motion sensitivity who may not have the OS preference set.
+:::
+
+## Best Practices
+
+**Do:**
+
+- Always set a descriptive `label` — the default `"Carousel"` is not specific enough for pages with multiple carousels.
+- Give the host an explicit height via `style` or CSS. The `--carousel-min-height` fallback (`240px`) is insufficient for `gallery` and `filmstrip` variants which distribute space flexibly.
+- Use `autoplay` only for decorative or media carousels (image galleries, hero banners). Omit it for instructional or interactive content.
+- Use `loop="false"` for wizard-style or sequential flows where step order matters.
+- Set an explicit `width` on each slide in `marquee` mode so the seamless loop transition point is predictable.
+
+**Don't:**
+
+- Enable `autoplay` on carousels containing forms or interactive controls — the timed advance will move content away from a user mid-interaction.
+- Rely on `--carousel-min-height` for `filmstrip` or `gallery` — set an explicit height instead.
+- Use the `marquee` variant for content that users need to read carefully; the continuous motion is unsuitable for anything requiring sustained attention.
 
 ## API Reference
 
-### Attributes / Properties
+### `sg-carousel` Attributes / Properties
 
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `color` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | — | Theme color for the prev/next navigation buttons |
-| `label` | `string` | `'Carousel'` | Accessible label for the carousel region (`aria-label`) |
-| `slide-index` | `number` | `0` | Active slide index (zero-based). Reactive — can be set at any time |
-| `loop` | `boolean` | `true` | Wrap from last slide to first and vice versa |
-| `autoplay` | `boolean` | `false` | Advance slides automatically |
-| `autoplay-interval` | `number` | `4000` | Milliseconds between automatic advances |
-| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` | Slide direction and keyboard axis |
-| `show-controls` | `boolean` | `true` | Show prev/next navigation buttons |
-| `show-indicators` | `boolean` | `true` | Show indicator dots |
+| Name                | Type                                                                      | Default        | Description                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`             | `string`                                                                  | `'Carousel'`   | `aria-label` for the `role="region"` landmark                                                                                                                                                                   |
+| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery' \| 'marquee'`            | `'default'`    | Layout and transition style                                                                                                                                                                                     |
+| `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                                                                                                                                               |
+| `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation                                                                                                                     |
+| `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last. In `marquee` mode controls animation repeat (loop indefinitely vs. play once) — navigation always loops in marquee. Setting `loop="false"` on marquee emits a dev-mode warning. |
+| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                                                                                                                                            |
+| `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive — changing it restarts the timer                                                                                                                              |
+| `marquee-duration`  | `number`                                                                  | `10`           | Duration in seconds for one full marquee cycle; lower = faster                                                                                                                                                  |
+| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color for prev/next navigation buttons                                                                                                                                                                    |
+| `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                                                                                                                                               |
+| `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                                                                                                                                                   |
 
-### Events
+### `sg-carousel` Events
 
-| Event | Detail | Description |
-|---|---|---|
-| `change` | `{ index: number }` | Fired when the active slide changes |
+| Event    | Detail              | Description                                            |
+| -------- | ------------------- | ------------------------------------------------------ |
+| `change` | `{ index: number }` | Fired on every slide change (user- or autoplay-driven) |
 
-### CSS Custom Properties
+### `sg-carousel` CSS Custom Properties
 
-| Property | Default | Description |
-|---|---|---|
-| `--carousel-min-height` | `240px` | Minimum height when no explicit height is set |
-| `--carousel-bg` | `var(--color-canvas)` | Slide area background |
-| `--carousel-radius` | `var(--rounded-xl)` | Border radius |
-| `--carousel-dot-bg` | `var(--color-contrast-300)` | Inactive indicator color |
-| `--carousel-dot-active-bg` | `var(--color-contrast-700)` | Active indicator / fill color |
-| `--carousel-transition-duration` | `0.35s` | Slide transition duration |
+| Property                         | Default                     | Description                                                                                                                                      |
+| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
+| `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
+| `--carousel-min-height`          | `240px`                     | Fallback minimum height — set an explicit height for `filmstrip` and `gallery`                                                                   |
+| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration (`default` and `fade`); also controls marquee seek animation duration. Auto-set to `0s` under `prefers-reduced-motion` |
+| `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
+| `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
+| `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |
+| `--carousel-filmstrip-gap`       | `var(--size-2)`             | Gap between slides in `filmstrip` mode                                                                                                           |
+| `--carousel-gallery-thumbnail`   | `var(--size-24)`            | Thumbnail width (horizontal) or height (vertical) in `gallery` mode                                                                              |
+| `--carousel-gallery-gap`         | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                             |
+| `--carousel-marquee-gap`         | `var(--size-4)`             | Gap between slides in `marquee` mode                                                                                                             |
 
-### CSS Parts
+### `sg-carousel` CSS Parts
 
-| Part | Element | Description |
-|---|---|---|
-| `track` | `<div>` | The slide track / live region |
-| `controls` | `<div>` | Prev/next button wrapper |
-| `prev-btn` | `<bit-button>` | Previous slide button |
-| `next-btn` | `<bit-button>` | Next slide button |
-| `indicators` | `<div>` | Indicator dots container |
+| Part         | Element       | Description                                   |
+| ------------ | ------------- | --------------------------------------------- |
+| `track`      | `<div>`       | The slide track — also the `aria-live` region |
+| `controls`   | `<div>`       | Prev/next button wrapper                      |
+| `prev-btn`   | `<sg-button>` | Previous-slide button                         |
+| `next-btn`   | `<sg-button>` | Next-slide button                             |
+| `indicators` | `<div>`       | Indicator `tablist` container                 |
+
+### `sg-carousel-slide`
+
+A transparent wrapper. It carries `role="group"` and `aria-roledescription="slide"` automatically. No public attributes or properties — all attributes below are set by `sg-carousel` to drive CSS layout and should not be set manually.
+
+| Attribute              | Set by        | Description                                                                |
+| ---------------------- | ------------- | -------------------------------------------------------------------------- |
+| `data-variant`         | `sg-carousel` | Mirrors the parent `variant` value                                         |
+| `data-orientation`     | `sg-carousel` | Mirrors the parent `orientation` value                                     |
+| `data-active`          | `sg-carousel` | Present on the currently active slide                                      |
+| `data-before`          | `sg-carousel` | Present on slides before the active one (`default` / `fade` variants)      |
+| `data-after`           | `sg-carousel` | Present on slides after the active one (`default` / `fade` variants)       |
+| `data-gallery-visible` | `sg-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode |

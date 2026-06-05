@@ -1,24 +1,32 @@
 ---
-title: omit
+title: 'Arsenal Examples — omit'
+description: 'omit example for @vielzeug/arsenal.'
 ---
 
 ## omit
 
-Creates a new object without selected keys.
+### Problem
 
-## Example
+You need to create a copy of an object with certain keys removed — for example stripping `password` before returning a user record.
+
+### Solution
+
+Use `omit(obj, keys)` to return a new object without the specified keys.
 
 ```ts
 import { omit } from '@vielzeug/arsenal';
 
-const user = { id: 1, name: 'Alice', role: 'admin', password: 'secret' };
-const publicUser = omit(user, ['password']);
-
+const user = { id: 1, name: 'Alice', password: 'secret', role: 'admin' };
+omit(user, ['password']);
 // { id: 1, name: 'Alice', role: 'admin' }
 ```
 
-## Signature
+### Pitfalls
 
-```ts
-function omit<T extends Record<string, unknown>, K extends keyof T>(obj: T, omittedKeys: readonly K[]): Omit<T, K>;
-```
+- Returns a shallow copy — nested values are not cloned.
+- For the inverse (keep a subset of keys), use `pick`.
+
+### Related
+
+- [pick](./pick.md)
+- [filterValues](./filterValues.md)

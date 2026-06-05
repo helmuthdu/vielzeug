@@ -9,7 +9,7 @@ import { safeCSSLength } from '../../utils';
 import componentStyles from './skeleton.css?inline';
 
 /** Skeleton loader component properties */
-export type BitSkeletonProps = {
+export type SgSkeletonProps = {
   /** Toggle shimmer animation */
   animated?: boolean;
   /** Height override (e.g. '1rem', '3rem') */
@@ -33,7 +33,7 @@ export type BitSkeletonProps = {
  * Control dimensions via the `--skeleton-width` and `--skeleton-height` CSS custom properties,
  * or via `width` / `height` inline styles.
  *
- * @element bit-skeleton
+ * @element sg-skeleton
  *
  * @attr {string}  variant  - Shape: 'rect' (default) | 'circle' | 'text'
  * @attr {string}  size     - Height/circle preset: 'sm' | 'md' | 'lg'
@@ -60,17 +60,17 @@ export type BitSkeletonProps = {
  * @example
  * ```html
  * <!-- Paragraph lines -->
- * <bit-skeleton variant="text" lines="3" width="100%"></bit-skeleton>
+ * <sg-skeleton variant="text" lines="3" width="100%"></sg-skeleton>
  *
  * <!-- Avatar -->
- * <bit-skeleton variant="circle" size="md"></bit-skeleton>
+ * <sg-skeleton variant="circle" size="md"></sg-skeleton>
  *
  * <!-- Card image -->
- * <bit-skeleton width="100%" height="10rem"></bit-skeleton>
+ * <sg-skeleton width="100%" height="10rem"></sg-skeleton>
  * ```
  */
-export const SKELETON_TAG = 'bit-skeleton' as const;
-define<BitSkeletonProps>(SKELETON_TAG, {
+export const SKELETON_TAG = 'sg-skeleton' as const;
+define<SgSkeletonProps>(SKELETON_TAG, {
   props: {
     ...sizableBundle,
     animated: prop.bool(true),

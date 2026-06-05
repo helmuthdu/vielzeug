@@ -1,85 +1,33 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-834_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — contains'
+description: 'contains example for @vielzeug/arsenal.'
+---
 
-# contains
+## contains
 
-The `contains` utility checks if a specific value exists within an array. Unlike the native `Array.prototype.includes()`, `contains` uses deep equality, making it suitable for finding objects and arrays within a list.
+### Problem
 
-## Source Code
+You need to check whether an array includes a value, optionally using a selector for comparison instead of strict reference equality.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/contains.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Deep Equality**: Correctly identifies objects, arrays, and nested structures.
-- **Type-safe**: Properly typed for all input values.
-
-## API
-
-```ts
-function contains<T>(array: T[], value: any): boolean;
-```
-
-### Parameters
-
-- `array`: The array to search.
-- `value`: The value to search for. Uses deep comparison for complex types.
-
-### Returns
-
-- `true` if the value is found in the array; otherwise, `false`.
-
-## Examples
-
-### Finding Primitives
+Use `contains(array, value, selector?)` to check membership. Without a selector it uses deep equality; with a selector it compares projected keys.
 
 ```ts
 import { contains } from '@vielzeug/arsenal';
 
-const numbers = [1, 2, 3, 4];
-contains(numbers, 3); // true
-contains(numbers, 9); // false
+contains([1, 2, 3], 2);         // true
+contains([1, 2, 3], 4);         // false
+
+const users = [{ id: 1 }, { id: 2 }];
+contains(users, { id: 2 }, (u) => u.id); // true
 ```
 
-### Finding Objects (Deep Equality)
+### Pitfalls
 
-```ts
-import { contains } from '@vielzeug/arsenal';
+- Without a selector, uses deep equality — may be slower for large objects. Use a selector for performance when comparing by key.
 
-const users = [
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' },
-];
+### Related
 
-// native includes() would return false here for a new object literal
-contains(users, { id: 1, name: 'Alice' }); // true
-```
-
-### Finding Nested Arrays
-
-```ts
-import { contains } from '@vielzeug/arsenal';
-
-const nested = [
-  [1, 2],
-  [3, 4],
-];
-contains(nested, [1, 2]); // true
-```
-
-## Implementation Notes
-
-- Throws `TypeError` if the first argument is not an array.
-- Uses the `isEqual` utility internally for comparisons.
-- For performance-critical code with very large arrays of primitives, consider using native `includes()`.
-
-## See Also
-
-- [isEqual](../typed/isEqual.md): The deep equality helper used by `contains`.
-- [search](./search.md): Fuzzy-search over an array of strings or objects.
-- [select](./select.md): Filter elements matching a predicate.
+- [difference](./difference.md)
+- [intersection](./intersection.md)

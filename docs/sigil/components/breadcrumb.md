@@ -1,6 +1,6 @@
 # Breadcrumb
 
-A navigational landmark that shows the user's current location in a hierarchy. Renders a semantic `<nav>` with an ordered list of `bit-breadcrumb-item` links, separated by a customizable separator glyph.
+A navigational landmark that shows the user's current location in a hierarchy. Renders a semantic `<nav>` with an ordered list of `sg-breadcrumb-item` links, separated by a customizable separator glyph.
 
 ## Features
 
@@ -19,14 +19,14 @@ A navigational landmark that shows the user's current location in a hierarchy. R
 
 ## Basic Usage
 
-Wrap `bit-breadcrumb-item` elements inside `bit-breadcrumb`. Mark the current page with `active`.
+Wrap `sg-breadcrumb-item` elements inside `sg-breadcrumb`. Mark the current page with `active`.
 
 ```html
-<bit-breadcrumb>
-  <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/products">Products</bit-breadcrumb-item>
-  <bit-breadcrumb-item active>Sneakers</bit-breadcrumb-item>
-</bit-breadcrumb>
+<sg-breadcrumb>
+  <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/products">Products</sg-breadcrumb-item>
+  <sg-breadcrumb-item active>Sneakers</sg-breadcrumb-item>
+</sg-breadcrumb>
 
 <script type="module">
   import '@vielzeug/sigil/breadcrumb';
@@ -35,25 +35,25 @@ Wrap `bit-breadcrumb-item` elements inside `bit-breadcrumb`. Mark the current pa
 
 ## Items with Icons
 
-Use the `icon` named slot on any `bit-breadcrumb-item` for a leading icon.
+Use the `icon` named slot on any `sg-breadcrumb-item` for a leading icon.
 
 <ComponentPreview>
 
 ```html
-<bit-breadcrumb>
-  <bit-breadcrumb-item href="/">
+<sg-breadcrumb>
+  <sg-breadcrumb-item href="/">
     <span slot="icon">🏠</span>
     Home
-  </bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/settings">
+  </sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/settings">
     <span slot="icon">⚙️</span>
     Settings
-  </bit-breadcrumb-item>
-  <bit-breadcrumb-item active>
+  </sg-breadcrumb-item>
+  <sg-breadcrumb-item active>
     <span slot="icon">🔔</span>
     Notifications
-  </bit-breadcrumb-item>
-</bit-breadcrumb>
+  </sg-breadcrumb-item>
+</sg-breadcrumb>
 ```
 
 </ComponentPreview>
@@ -66,25 +66,25 @@ Use the `separator` attribute to replace the default `/` separator. You can also
 
 ```html
 <!-- Chevron separator -->
-<bit-breadcrumb separator="›">
-  <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/docs">Docs</bit-breadcrumb-item>
-  <bit-breadcrumb-item active>Getting Started</bit-breadcrumb-item>
-</bit-breadcrumb>
+<sg-breadcrumb separator="›">
+  <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/docs">Docs</sg-breadcrumb-item>
+  <sg-breadcrumb-item active>Getting Started</sg-breadcrumb-item>
+</sg-breadcrumb>
 
 <!-- Dot separator -->
-<bit-breadcrumb separator="·">
-  <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/blog">Blog</bit-breadcrumb-item>
-  <bit-breadcrumb-item active>2024 in Review</bit-breadcrumb-item>
-</bit-breadcrumb>
+<sg-breadcrumb separator="·">
+  <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/blog">Blog</sg-breadcrumb-item>
+  <sg-breadcrumb-item active>2024 in Review</sg-breadcrumb-item>
+</sg-breadcrumb>
 
 <!-- Arrow separator -->
-<bit-breadcrumb separator="→">
-  <bit-breadcrumb-item href="/">Root</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/admin">Admin</bit-breadcrumb-item>
-  <bit-breadcrumb-item active>Users</bit-breadcrumb-item>
-</bit-breadcrumb>
+<sg-breadcrumb separator="→">
+  <sg-breadcrumb-item href="/">Root</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/admin">Admin</sg-breadcrumb-item>
+  <sg-breadcrumb-item active>Users</sg-breadcrumb-item>
+</sg-breadcrumb>
 ```
 
 </ComponentPreview>
@@ -96,45 +96,45 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 <ComponentPreview>
 
 ```html
-<bit-breadcrumb label="Product hierarchy">
-  <bit-breadcrumb-item href="/">Home</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/shop">Shop</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/shop/footwear">Footwear</bit-breadcrumb-item>
-  <bit-breadcrumb-item active>Running Shoes</bit-breadcrumb-item>
-</bit-breadcrumb>
+<sg-breadcrumb label="Product hierarchy">
+  <sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/shop">Shop</sg-breadcrumb-item>
+  <sg-breadcrumb-item href="/shop/footwear">Footwear</sg-breadcrumb-item>
+  <sg-breadcrumb-item active>Running Shoes</sg-breadcrumb-item>
+</sg-breadcrumb>
 ```
 
 </ComponentPreview>
 
 ## API Reference
 
-### `bit-breadcrumb` Attributes
+### `sg-breadcrumb` Attributes
 
 | Attribute   | Type     | Default        | Description                                                                 |
 | ----------- | -------- | -------------- | --------------------------------------------------------------------------- |
 | `label`     | `string` | `'Breadcrumb'` | `aria-label` applied to the wrapping `<nav>` landmark                       |
 | `separator` | `string` | `'/'`          | Separator glyph rendered between items (also sets `--breadcrumb-separator`) |
 
-### `bit-breadcrumb` Slots
+### `sg-breadcrumb` Slots
 
-| Slot      | Description                                            |
-| --------- | ------------------------------------------------------ |
-| (default) | `bit-breadcrumb-item` elements representing each crumb |
+| Slot      | Description                                           |
+| --------- | ----------------------------------------------------- |
+| (default) | `sg-breadcrumb-item` elements representing each crumb |
 
-### `bit-breadcrumb` CSS Custom Properties
+### `sg-breadcrumb` CSS Custom Properties
 
 | Property                 | Description                             | Default |
 | ------------------------ | --------------------------------------- | ------- |
 | `--breadcrumb-separator` | Separator character shown between items | `'/'`   |
 
-### `bit-breadcrumb-item` Attributes
+### `sg-breadcrumb-item` Attributes
 
 | Attribute | Type      | Default | Description                                                                     |
 | --------- | --------- | ------- | ------------------------------------------------------------------------------- |
 | `href`    | `string`  | —       | URL the item links to. Omit for non-linked crumbs.                              |
 | `active`  | `boolean` | `false` | Marks this item as the current page (`aria-current="page"`). Disables the link. |
 
-### `bit-breadcrumb-item` Slots
+### `sg-breadcrumb-item` Slots
 
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
@@ -143,13 +143,13 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 ### Events
 
-`bit-breadcrumb` and `bit-breadcrumb-item` do not emit custom events. Use standard DOM `click` listeners on individual items if you need to intercept navigation (e.g., in an SPA).
+`sg-breadcrumb` and `sg-breadcrumb-item` do not emit custom events. Use standard DOM `click` listeners on individual items if you need to intercept navigation (e.g., in an SPA).
 
 ## Accessibility
 
 The breadcrumb component follows WAI-ARIA best practices.
 
-### `bit-breadcrumb`
+### `sg-breadcrumb`
 
 ✅ **Semantic Structure**
 

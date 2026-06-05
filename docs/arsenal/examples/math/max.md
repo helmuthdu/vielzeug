@@ -1,39 +1,32 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1048_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — max'
+description: 'max example for @vielzeug/arsenal.'
+---
 
-# max
+## max
 
-Returns the largest number in an array.
+### Problem
 
-## Source Code
+You need the maximum value in an array, optionally extracting a numeric field from objects.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/math/max.ts
-:::
+### Solution
 
-## API
-
-```ts
-function max(numbers: number[]): number | undefined;
-```
-
-## Example
+Use `max(array, callback?)` to return the largest value.
 
 ```ts
 import { max } from '@vielzeug/arsenal';
 
-max([1, 5, 3, 9, 2]); // 9
-max([]); // undefined
+max([3, 1, 4, 1, 5]); // 5
+
+const scores = [{ score: 80 }, { score: 95 }, { score: 70 }];
+max(scores, (s) => s.score); // 95
 ```
 
-## Notes
+### Pitfalls
 
-- Returns `undefined` for an empty array.
-- Ignores non-numeric values (if any).
+- Returns `undefined` for empty arrays.
 
-## Related
+### Related
 
 - [min](./min.md)
 - [clamp](./clamp.md)

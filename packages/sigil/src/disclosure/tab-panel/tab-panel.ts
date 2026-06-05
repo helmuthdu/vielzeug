@@ -14,24 +14,24 @@ const TAB_PANEL_PADDING_PRESET: Record<string, string> = {
   xs: 'var(--size-1)',
 };
 
-export type BitTabPanelProps = {
-  /** Active state (managed by bit-tabs) */
+export type SgTabPanelProps = {
+  /** Active state (managed by sg-tabs) */
   active?: boolean;
   /** When true, the panel content is not rendered until first activation (preserves resources) */
   lazy?: boolean;
   /** Panel padding size: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (default: 'md' = var(--size-4)) */
   padding?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  /** Must match the `value` of its corresponding bit-tab-item */
+  /** Must match the `value` of its corresponding sg-tab-item */
   value: string;
 };
 
 /**
  * Content panel for a tab. Shown when its `value` matches the selected tab.
  *
- * @element bit-tab-panel
+ * @element sg-tab-panel
  *
- * @attr {string} value - Must match the corresponding bit-tab-item value
- * @attr {boolean} active - Toggled by the parent bit-tabs
+ * @attr {string} value - Must match the corresponding sg-tab-item value
+ * @attr {boolean} active - Toggled by the parent sg-tabs
  * @attr {string} padding - Panel padding: 'none' | 'xs' | 'sm' | 'md' (default) | 'lg' | 'xl' | '2xl'
  *
  * @slot - Panel content
@@ -46,13 +46,13 @@ export type BitTabPanelProps = {
  * @part panel - Panel container.
  * @example
  * ```html
- * <bit-tab-panel value="overview"><p>Overview content here</p></bit-tab-panel>
- * <bit-tab-panel value="settings" padding="lg"><p>Large padding</p></bit-tab-panel>
- * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
+ * <sg-tab-panel value="overview"><p>Overview content here</p></sg-tab-panel>
+ * <sg-tab-panel value="settings" padding="lg"><p>Large padding</p></sg-tab-panel>
+ * <sg-tab-panel value="code" padding="none"><pre>No padding for code</pre></sg-tab-panel>
  * ```
  */
-export const TAB_PANEL_TAG = 'bit-tab-panel' as const;
-define<BitTabPanelProps>(TAB_PANEL_TAG, {
+export const TAB_PANEL_TAG = 'sg-tab-panel' as const;
+define<SgTabPanelProps>(TAB_PANEL_TAG, {
   props: {
     active: prop.bool(false),
     lazy: prop.bool(false),

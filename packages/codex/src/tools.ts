@@ -191,7 +191,17 @@ const listComponentsTool: ToolDefinition = {
   run(_args, context) {
     if (!context.components) return error(SIGIL_UNAVAILABLE);
 
-    const tags = context.components.filter((d) => d.tagName).map((d) => ({ name: d.name, tagName: d.tagName }));
+    const tags = context.components
+      .filter((d) => d.tagName)
+      .map((d) => ({
+        attrs: (d.attributes ?? []).map((a) => ({
+          name: a.name,
+          type: a.type?.text ?? 'string',
+          ...(a.default !== undefined && { default: a.default }),
+        })),
+        description: d.description ?? '',
+        tagName: d.tagName,
+      }));
 
     return text(JSON.stringify(tags, null, 2));
   },
@@ -203,7 +213,7 @@ const getComponentTool: ToolDefinition = {
   description: 'Get a full /sigil component CEM declaration by HTML tag name.',
   inputSchema: {
     properties: {
-      tagName: { description: 'HTML custom element tag, e.g. "bit-button"', minLength: 1, type: 'string' },
+      tagName: { description: 'HTML custom element tag, e.g. "sg-button"', minLength: 1, type: 'string' },
     },
     required: ['tagName'],
     type: 'object',

@@ -11,7 +11,7 @@
     width: 100%;
   }
 
-  /* bit-input cursor override so the field still feels like a text input */
+  /* sg-input cursor override so the field still feels like a text input */
   .trigger::part(input) {
     cursor: text;
   }
@@ -19,12 +19,12 @@
   /* Allow the field to grow vertically when chips wrap to multiple rows. */
   .trigger::part(field) {
     height: auto;
-    min-height: var(--bit-input-height, var(--size-10));
+    min-height: var(--sg-input-height, var(--size-10));
   }
 
   /* Wrap chips + input across rows; suffix stays on same row as input.
      Only row-gap is set here — column spacing between chips is handled
-     via margin on bit-chip so the empty prefix slot adds no extra offset
+     via margin on sg-chip so the empty prefix slot adds no extra offset
      (which would shift the input rightward vs the inset label). */
   .trigger::part(input-row) {
     flex-wrap: wrap;
@@ -43,7 +43,7 @@
     display: contents;
   }
 
-  /* chips-list is also display:contents so individual bit-chip elements
+  /* chips-list is also display:contents so individual sg-chip elements
      are the direct flex items, wrapping inline with the search input. */
   .chips-list {
     display: contents;
@@ -51,7 +51,7 @@
 
   /* Trailing space after each chip covers both inter-chip spacing and
      the gap between the last chip and the search input. */
-  bit-chip {
+  sg-chip {
     margin-inline-end: var(--size-1);
   }
 
@@ -111,14 +111,14 @@
     border: 2px solid currentcolor;
     border-inline-end-color: transparent;
     border-radius: 50%;
-    animation: var(--_motion-animation, bit-combobox-spin 0.6s linear infinite);
+    animation: var(--_motion-animation, sg-combobox-spin 0.6s linear infinite);
   }
 
   :host([loading]) .loader {
     display: inline-block;
   }
 
-  @keyframes bit-combobox-spin {
+  @keyframes sg-combobox-spin {
     to {
       transform: rotate(360deg);
     }
@@ -275,7 +275,7 @@
        Slotted option elements (hidden data nodes)
        ======================================== */
 
-  ::slotted(bit-combobox-option) {
+  ::slotted(sg-combobox-option) {
     display: none;
   }
 }

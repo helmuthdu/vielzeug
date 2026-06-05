@@ -1,15 +1,15 @@
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-describe('bit-date-picker', () => {
+describe('sg-date-picker', () => {
   let fixture: Fixture<HTMLElement>;
 
-  // Shorthand: query inside bit-date-picker's own shadow root
+  // Shorthand: query inside sg-date-picker's own shadow root
   const shadow = () => fixture.element.shadowRoot!;
   const sq = <T extends Element = Element>(sel: string) => shadow().querySelector<T>(sel);
 
-  // Query inside bit-input's shadow root (the trigger)
-  const triggerShadow = () => shadow().querySelector('bit-input.trigger')?.shadowRoot ?? null;
+  // Query inside sg-input's shadow root (the trigger)
+  const triggerShadow = () => shadow().querySelector('sg-input.trigger')?.shadowRoot ?? null;
   const tq = <T extends Element = Element>(sel: string) => triggerShadow()?.querySelector<T>(sel) ?? null;
 
   beforeAll(async () => {
@@ -23,21 +23,21 @@ describe('bit-date-picker', () => {
   // ── Rendering ────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
-    it('renders the bit-input trigger element', async () => {
-      fixture = await mount('bit-date-picker');
+    it('renders the sg-input trigger element', async () => {
+      fixture = await mount('sg-date-picker');
 
-      expect(sq('bit-input.trigger')).toBeTruthy();
+      expect(sq('sg-input.trigger')).toBeTruthy();
     });
 
     it('renders the calendar panel (hidden by default)', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
       expect(sq('.calendar')).toBeTruthy();
       expect(sq('.calendar[data-open]')).toBeFalsy();
     });
 
     it('shows placeholder when no value is set', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { placeholder: 'Select a date' } });
+      fixture = await mount('sg-date-picker', { attrs: { placeholder: 'Select a date' } });
       await fixture.flush();
 
       const input = tq<HTMLInputElement>('input');
@@ -46,7 +46,7 @@ describe('bit-date-picker', () => {
     });
 
     it('shows formatted date when value is set', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { value: '2025-06-15' } });
+      fixture = await mount('sg-date-picker', { attrs: { value: '2025-06-15' } });
       await fixture.flush();
 
       const input = tq<HTMLInputElement>('input');
@@ -55,14 +55,14 @@ describe('bit-date-picker', () => {
     });
 
     it('renders label when label prop is set', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { label: 'Appointment date' } });
+      fixture = await mount('sg-date-picker', { attrs: { label: 'Appointment date' } });
       await fixture.flush();
 
       expect(tq('.label')?.textContent?.trim()).toBe('Appointment date');
     });
 
     it('renders helper text', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { helper: 'Choose a weekday' } });
+      fixture = await mount('sg-date-picker', { attrs: { helper: 'Choose a weekday' } });
       await fixture.flush();
 
       const helperEl = tq('.helper-text:not([hidden])') ?? tq('[part="helper"]');
@@ -71,7 +71,7 @@ describe('bit-date-picker', () => {
     });
 
     it('renders error message', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { error: 'Date is required' } });
+      fixture = await mount('sg-date-picker', { attrs: { error: 'Date is required' } });
       await fixture.flush();
 
       const errorEl = tq('[part="error"]') ?? tq('.helper-text[role="alert"]');
@@ -84,17 +84,17 @@ describe('bit-date-picker', () => {
 
   describe('Open / Close', () => {
     it('opens the calendar when the trigger is clicked', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       expect(sq('.calendar[data-open]')).toBeTruthy();
     });
 
     it('closes the calendar when the trigger is clicked again', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      const trigger = sq<HTMLElement>('bit-input.trigger')!;
+      const trigger = sq<HTMLElement>('sg-input.trigger')!;
 
       await user.click(trigger);
       await user.click(trigger);
@@ -103,25 +103,25 @@ describe('bit-date-picker', () => {
     });
 
     it('opens on Enter key on the trigger', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.press(sq<HTMLElement>('bit-input.trigger')!, 'Enter');
+      await user.press(sq<HTMLElement>('sg-input.trigger')!, 'Enter');
 
       expect(sq('.calendar[data-open]')).toBeTruthy();
     });
 
     it('opens on Space key on the trigger', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.press(sq<HTMLElement>('bit-input.trigger')!, ' ');
+      await user.press(sq<HTMLElement>('sg-input.trigger')!, ' ');
 
       expect(sq('.calendar[data-open]')).toBeTruthy();
     });
 
     it('closes on Escape key when calendar is open', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      const trigger = sq<HTMLElement>('bit-input.trigger')!;
+      const trigger = sq<HTMLElement>('sg-input.trigger')!;
 
       await user.click(trigger);
       expect(sq('.calendar[data-open]')).toBeTruthy();
@@ -136,41 +136,41 @@ describe('bit-date-picker', () => {
 
   describe('Accessibility', () => {
     it('trigger has role="combobox"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      expect(sq('bit-input.trigger')?.getAttribute('role')).toBe('combobox');
+      expect(sq('sg-input.trigger')?.getAttribute('role')).toBe('combobox');
     });
 
     it('trigger has aria-haspopup="dialog"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      expect(sq('bit-input.trigger')?.getAttribute('aria-haspopup')).toBe('dialog');
+      expect(sq('sg-input.trigger')?.getAttribute('aria-haspopup')).toBe('dialog');
     });
 
     it('aria-expanded is false when closed', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      expect(sq('bit-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
+      expect(sq('sg-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('aria-expanded is true when open', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
-      expect(sq('bit-input.trigger')?.getAttribute('aria-expanded')).toBe('true');
+      expect(sq('sg-input.trigger')?.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('calendar has role="dialog"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
       expect(sq('.calendar')?.getAttribute('role')).toBe('dialog');
     });
 
     it('day cells have role="gridcell"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const cells = sq('.cal-grid-days')?.querySelectorAll('[role="gridcell"]');
 
@@ -178,31 +178,31 @@ describe('bit-date-picker', () => {
     });
 
     it('day grid has role="grid"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       expect(sq('.cal-grid-days')?.getAttribute('role')).toBe('grid');
     });
 
     it('aria-disabled is set on the trigger when disabled', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { disabled: '' } });
+      fixture = await mount('sg-date-picker', { attrs: { disabled: '' } });
 
-      expect(sq('bit-input.trigger')?.getAttribute('aria-disabled')).toBe('true');
+      expect(sq('sg-input.trigger')?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('aria-invalid is set on the inner input when error prop is provided', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { error: 'Required' } });
+      fixture = await mount('sg-date-picker', { attrs: { error: 'Required' } });
       await fixture.flush();
 
-      // bit-input reflects aria-invalid on its inner <input>, not on the host
+      // sg-input reflects aria-invalid on its inner <input>, not on the host
       expect(tq<HTMLInputElement>('input')?.getAttribute('aria-invalid')).toBe('true');
     });
 
     it('today cell has aria-current="date"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const todayCell = sq('[aria-current="date"]');
 
@@ -210,9 +210,9 @@ describe('bit-date-picker', () => {
     });
 
     it('weekday headers have role="columnheader"', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const headers = sq('.cal-grid-days')?.querySelectorAll('[role="columnheader"]');
 
@@ -224,9 +224,9 @@ describe('bit-date-picker', () => {
 
   describe('Date selection', () => {
     it('selects a day and closes the calendar', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { value: '2025-06-01' } });
+      fixture = await mount('sg-date-picker', { attrs: { value: '2025-06-01' } });
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const cells = [...(sq('.cal-grid-days')?.querySelectorAll<HTMLElement>('.cal-cell-day') ?? [])];
       const june15 = cells.find((c) => c.dataset['iso'] === '2025-06-15');
@@ -238,13 +238,13 @@ describe('bit-date-picker', () => {
     });
 
     it('fires change event with correct value after day selection', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { value: '2025-06-01' } });
+      fixture = await mount('sg-date-picker', { attrs: { value: '2025-06-01' } });
 
       const handler = vi.fn();
 
       fixture.element.addEventListener('change', handler);
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const cells = [...(sq('.cal-grid-days')?.querySelectorAll<HTMLElement>('.cal-cell-day') ?? [])];
       const june15 = cells.find((c) => c.dataset['iso'] === '2025-06-15');
@@ -259,13 +259,13 @@ describe('bit-date-picker', () => {
     });
 
     it('does not fire change when a disabled day is clicked', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { max: '2025-06-10', value: '2025-06-01' } });
+      fixture = await mount('sg-date-picker', { attrs: { max: '2025-06-10', value: '2025-06-01' } });
 
       const handler = vi.fn();
 
       fixture.element.addEventListener('change', handler);
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const cells = [...(sq('.cal-grid-days')?.querySelectorAll<HTMLElement>('.cal-cell-day') ?? [])];
       const disabledCell = cells.find((c) => c.dataset['disabled'] === '');
@@ -281,18 +281,18 @@ describe('bit-date-picker', () => {
 
   describe('Calendar navigation', () => {
     it('renders previous and next navigation buttons', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       expect(sq('[aria-label="Previous"]')).toBeTruthy();
       expect(sq('[aria-label="Next"]')).toBeTruthy();
     });
 
     it('clicking Next changes the displayed month label', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { value: '2025-01-01' } });
+      fixture = await mount('sg-date-picker', { attrs: { value: '2025-01-01' } });
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       const labelBefore = sq<HTMLElement>('.cal-label-btn')?.textContent?.trim();
 
@@ -305,18 +305,18 @@ describe('bit-date-picker', () => {
     });
 
     it('clicking header label switches to month view', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
       await user.click(sq<HTMLElement>('.cal-label-btn')!);
 
       expect(sq('.cal-grid-months:not([hidden])')).toBeTruthy();
     });
 
     it('clicking a month in month view switches to day view', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
       await user.click(sq<HTMLElement>('.cal-label-btn')!);
 
       const monthCell = sq<HTMLElement>('.cal-cell-month:not([data-disabled])');
@@ -328,9 +328,9 @@ describe('bit-date-picker', () => {
     });
 
     it('clicking header label twice switches to year view', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
       await user.click(sq<HTMLElement>('.cal-label-btn')!);
       await user.click(sq<HTMLElement>('.cal-label-btn')!);
 
@@ -342,26 +342,26 @@ describe('bit-date-picker', () => {
 
   describe('Props', () => {
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { disabled: '' } });
+      fixture = await mount('sg-date-picker', { attrs: { disabled: '' } });
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       expect(sq('.calendar[data-open]')).toBeFalsy();
     });
 
     it('reflects open state as host attribute', async () => {
-      fixture = await mount('bit-date-picker');
+      fixture = await mount('sg-date-picker');
 
-      await user.click(sq<HTMLElement>('bit-input.trigger')!);
+      await user.click(sq<HTMLElement>('sg-input.trigger')!);
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
 
-    it('passes error to bit-input', async () => {
-      fixture = await mount('bit-date-picker', { attrs: { error: 'Required' } });
+    it('passes error to sg-input', async () => {
+      fixture = await mount('sg-date-picker', { attrs: { error: 'Required' } });
       await fixture.flush();
 
-      expect(sq('bit-input.trigger')?.getAttribute('error')).toBe('Required');
+      expect(sq('sg-input.trigger')?.getAttribute('error')).toBe('Required');
     });
   });
 });

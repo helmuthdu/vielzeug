@@ -1,7 +1,7 @@
-import { computed, define, html, onMounted, prop, syncAria } from '@vielzeug/craft';
+import { computed, createStableId, define, html, onMounted, prop, syncAria } from '@vielzeug/craft';
 import { type Placement } from '@vielzeug/orbit';
 
-import { createStableId, type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
+import { type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
 import { disablableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
@@ -16,7 +16,7 @@ const DEFAULT_POPOVER_TRIGGERS: PopoverTrigger[] = ['click'];
 const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
   parseStringTriggers(String(value ?? ''), VALID_TRIGGERS, DEFAULT_POPOVER_TRIGGERS);
 
-export type BitPopoverEvents = {
+export type SgPopoverEvents = {
   /** Emitted when the popover closes */
   close: { reason: DialogCloseReason };
   /** Emitted when the popover opens */
@@ -24,7 +24,7 @@ export type BitPopoverEvents = {
 };
 
 /** Popover component properties */
-export type BitPopoverProps = {
+export type SgPopoverProps = {
   /** Disable the popover */
   disabled?: boolean;
   /** Accessible label for the panel */
@@ -42,21 +42,31 @@ export type BitPopoverProps = {
 /**
  * A floating panel anchored to a trigger element.
  *
- * @element bit-popover
+ * @element sg-popover
  * @attr {string} placement - Preferred placement (default: 'bottom')
  * @attr {string} trigger - 'click' | 'hover' | 'focus' (default: 'click')
  * @attr {boolean} open - Controlled open state
  * @attr {number} offset - Gap in px (default: 8)
  * @attr {boolean} disabled - Disables the popover
  * @attr {string} label - aria-label on the panel
- * @fires open - When the panel opens
- * @fires close - When the panel closes
+ * @fires open - When the panel opens. detail: { reason: string }
+ * @fires close - When the panel closes. detail: { reason: string }
  * @slot - The trigger element
  * @slot content - Panel content
  * @part panel - Panel container.
+ *
+ * @example
+ * ```html
+ * <sg-popover placement="bottom" trigger="click">
+ *   <sg-button>Open info</sg-button>
+ *   <div slot="content">
+ *     <p>Popover body content goes here.</p>
+ *   </div>
+ * </sg-popover>
+ * ```
  */
-export const POPOVER_TAG = 'bit-popover' as const;
-define<BitPopoverProps, BitPopoverEvents>(POPOVER_TAG, {
+export const POPOVER_TAG = 'sg-popover' as const;
+define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
   props: {
     ...disablableBundle,
     label: prop.string(),

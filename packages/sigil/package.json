@@ -1,6 +1,30 @@
 {
   "name": "@vielzeug/sigil",
   "version": "4.0.1",
+  "description": "Accessible, themeable web components built on Craft custom element primitives.",
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "accessible",
+    "themeable",
+    "design-system",
+    "ui-components",
+    "css-custom-properties",
+    "dark-mode",
+    "typescript"
+  ],
+  "homepage": "https://vielzeug.dev/sigil/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/sigil"
+  },
+  "bugs": {
+    "url": "https://github.com/helmuthdu/vielzeug/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "customElements": "dist/custom-elements.json",
   "files": [
@@ -38,11 +62,30 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/types/index.js"
     },
-    "./styles": "./src/styles/styles.css",
-    "./styles/animation.css": "./src/styles/animation.css",
-    "./styles/layers.css": "./src/styles/layers.css",
-    "./styles/styles.css": "./src/styles/styles.css",
-    "./styles/theme.css": "./src/styles/theme.css",
+    "./styles": {
+      "import": "./dist/styles/styles.css",
+      "default": "./dist/styles/styles.css"
+    },
+    "./styles/animation.css": {
+      "import": "./dist/styles/animation.css",
+      "default": "./dist/styles/animation.css"
+    },
+    "./styles/layers.css": {
+      "import": "./dist/styles/layer.css",
+      "default": "./dist/styles/layer.css"
+    },
+    "./styles/preflight.css": {
+      "import": "./dist/styles/preflight.css",
+      "default": "./dist/styles/preflight.css"
+    },
+    "./styles/styles.css": {
+      "import": "./dist/styles/styles.css",
+      "default": "./dist/styles/styles.css"
+    },
+    "./styles/theme.css": {
+      "import": "./dist/styles/theme.css",
+      "default": "./dist/styles/theme.css"
+    },
     "./accordion": {
       "source": "./src/disclosure/accordion/accordion.ts",
       "import": "./dist/accordion.js",
@@ -71,6 +114,12 @@
       "source": "./src/content/avatar/avatar.ts",
       "import": "./dist/avatar.js",
       "require": "./dist/avatar.cjs",
+      "types": "./dist/content/avatar/avatar.d.ts"
+    },
+    "./avatar-group": {
+      "source": "./src/content/avatar/avatar.ts",
+      "import": "./dist/avatar-group.js",
+      "require": "./dist/avatar-group.cjs",
       "types": "./dist/content/avatar/avatar.d.ts"
     },
     "./badge": {
@@ -121,6 +170,12 @@
       "require": "./dist/card.cjs",
       "types": "./dist/content/card/card.d.ts"
     },
+    "./carousel": {
+      "source": "./src/content/carousel/carousel.ts",
+      "import": "./dist/carousel.js",
+      "require": "./dist/carousel.cjs",
+      "types": "./dist/content/carousel/carousel.d.ts"
+    },
     "./checkbox": {
       "source": "./src/inputs/checkbox/checkbox.ts",
       "import": "./dist/checkbox.js",
@@ -144,6 +199,18 @@
       "import": "./dist/combobox.js",
       "require": "./dist/combobox.cjs",
       "types": "./dist/inputs/combobox/combobox.d.ts"
+    },
+    "./datagrid": {
+      "source": "./src/inputs/datagrid/datagrid.ts",
+      "import": "./dist/datagrid.js",
+      "require": "./dist/datagrid.cjs",
+      "types": "./dist/inputs/datagrid/datagrid.d.ts"
+    },
+    "./date-picker": {
+      "source": "./src/inputs/date-picker/date-picker.ts",
+      "import": "./dist/date-picker.js",
+      "require": "./dist/date-picker.cjs",
+      "types": "./dist/inputs/date-picker/date-picker.d.ts"
     },
     "./dialog": {
       "source": "./src/overlay/dialog/dialog.ts",
@@ -373,5 +440,10 @@
     "typescript": "~6.0.3",
     "vite": "^8.0.14",
     "vitest": "^4.1.7"
-  }
+  },
+  "sideEffects": [
+    "./dist/*.js",
+    "./dist/*.cjs",
+    "./dist/styles/**"
+  ]
 }

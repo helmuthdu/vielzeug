@@ -1,6 +1,6 @@
 @layer sigil.base {
   :host {
-    --_backdrop-bg: var(--bit-drawer-backdrop, color-mix(in srgb, var(--color-canvas) 40%, transparent));
+    --_backdrop-bg: var(--sg-drawer-backdrop, color-mix(in srgb, var(--color-canvas) 40%, transparent));
     --_backdrop-filter: none;
     --_panel-bg: var(
       --drawer-bg,
@@ -9,8 +9,8 @@
         color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
       )
     );
-    --_panel-blur: var(--bit-drawer-panel-blur, var(--blur-md));
-    --_panel-shadow: var(--bit-drawer-shadow, var(--shadow-xl));
+    --_panel-blur: var(--sg-drawer-panel-blur, var(--blur-md));
+    --_panel-shadow: var(--sg-drawer-shadow, var(--shadow-xl));
     --_panel-border-color: light-dark(
       color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
       color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
@@ -95,7 +95,7 @@
 
     inset-block: 0;
     inset-inline-start: 0;
-    width: calc(var(--bit-drawer-size, 20rem) + var(--_panel-bleed));
+    width: calc(var(--sg-drawer-size, 20rem) + var(--_panel-bleed));
     max-width: calc(100dvw + var(--_panel-bleed));
     padding-inline-start: var(--_panel-bleed);
     margin-inline-start: calc(var(--_panel-bleed) * -1);
@@ -110,7 +110,7 @@
 
     inset-block: 0;
     inset-inline-end: 0;
-    width: calc(var(--bit-drawer-size, 20rem) + var(--_panel-bleed));
+    width: calc(var(--sg-drawer-size, 20rem) + var(--_panel-bleed));
     max-width: calc(100dvw + var(--_panel-bleed));
     padding-inline-end: var(--_panel-bleed);
     margin-inline-end: calc(var(--_panel-bleed) * -1);
@@ -124,7 +124,7 @@
 
     inset-block-start: 0;
     inset-inline: 0;
-    height: calc(var(--bit-drawer-size, 16rem) + var(--_panel-bleed));
+    height: calc(var(--sg-drawer-size, 16rem) + var(--_panel-bleed));
     max-height: calc(100dvh + var(--_panel-bleed));
     padding-block-start: var(--_panel-bleed);
     margin-block-start: calc(var(--_panel-bleed) * -1);
@@ -138,7 +138,7 @@
 
     inset-block-end: 0;
     inset-inline: 0;
-    height: calc(var(--bit-drawer-size, 16rem) + var(--_panel-bleed));
+    height: calc(var(--sg-drawer-size, 16rem) + var(--_panel-bleed));
     max-height: calc(100dvh + var(--_panel-bleed));
     padding-block-end: var(--_panel-bleed);
     margin-block-end: calc(var(--_panel-bleed) * -1);
@@ -353,13 +353,13 @@
     :host([placement='left']) .panel,
     :host(:not([placement])) .panel,
     :host([placement='right']) .panel {
-      width: calc(min(var(--bit-drawer-size, 20rem), calc(100vw - var(--size-2))) + var(--_panel-bleed));
+      width: calc(min(var(--sg-drawer-size, 20rem), calc(100vw - var(--size-2))) + var(--_panel-bleed));
       max-width: calc(100vw - var(--size-2) + var(--_panel-bleed));
     }
 
     :host([placement='top']) .panel,
     :host([placement='bottom']) .panel {
-      height: calc(min(var(--bit-drawer-size, 16rem), calc(100dvh - var(--size-2))) + var(--_panel-bleed));
+      height: calc(min(var(--sg-drawer-size, 16rem), calc(100dvh - var(--size-2))) + var(--_panel-bleed));
       max-height: calc(100dvh - var(--size-2) + var(--_panel-bleed));
     }
 

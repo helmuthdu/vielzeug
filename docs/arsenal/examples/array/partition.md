@@ -1,24 +1,38 @@
 ---
-title: partition
+title: 'Arsenal Examples — partition'
+description: 'partition example for @vielzeug/arsenal.'
 ---
 
 ## partition
 
-Splits an array into two arrays based on a predicate.
+### Problem
 
-## Example
+You need to split an array into two groups — items that pass a predicate and items that fail — in a single pass.
+
+### Solution
+
+Use `partition(array, predicate)` to receive a `[pass[], fail[]]` tuple.
 
 ```ts
 import { partition } from '@vielzeug/arsenal';
 
-const [even, odd] = partition([1, 2, 3, 4, 5], (n) => n % 2 === 0);
+const [evens, odds] = partition([1, 2, 3, 4, 5], (n) => n % 2 === 0);
+// evens: [2, 4]
+// odds:  [1, 3, 5]
 
-// even: [2, 4]
-// odd: [1, 3, 5]
+const [admins, users] = partition(
+  [{ role: 'admin' }, { role: 'user' }, { role: 'admin' }],
+  (u) => u.role === 'admin',
+);
 ```
 
-## Signature
+### Pitfalls
 
-```ts
-function partition<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): [T[], T[]];
-```
+- Both groups are always returned, even if empty — never `undefined`.
+- Order within each group follows the original array.
+
+### Related
+
+- [filterMap](./select.md)
+- [groupBy](./group.md)
+- [compact](./compact.md)

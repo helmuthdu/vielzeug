@@ -5,7 +5,7 @@ description: How to use @vielzeug/coins for monetary arithmetic, formatting, and
 
 [[toc]]
 
-## Creating Money Values
+## Basic Usage
 
 Use `money()` to construct a `Money` value from a human-readable decimal, number, or raw bigint minor units. Use `zero()` when you need an idiomatic zero starting point. The currency code is validated against `Intl.NumberFormat` — unrecognised codes throw `RangeError`.
 
@@ -380,6 +380,53 @@ function Price({ amount, currency }: { amount: bigint; currency: string }) {
     </span>
   );
 }
+```
+
+## Working with Other Vielzeug Libraries
+
+**With Tempo** — format monetary amounts alongside dates in the same pipeline:
+
+```ts
+import { money, format } from '@vielzeug/coins';
+import { formatDate } from '@vielzeug/tempo';
+
+const amount = money('1234.56', 'USD');
+const date   = new Date();
+
+console.log(`As of ${formatDate(date, 'MMM d, yyyy')}: ${format(amount)}`);
+// e.g. "As of Jun 9, 2026: $1,234.56"
+```
+
+**With Arsenal** — combine array utilities with monetary aggregation:
+
+```ts
+import { sum, money } from '@vielzeug/coins';
+import { groupBy } from '@vielzeug/arsenal';
+
+const transactions = [
+  { category: 'food',   amount: money('12.50', 'USD') },
+  { category: 'travel', amount: money('80.00', 'USD') },
+  { category: 'food',   amount: money('9.75',  'USD') },
+];
+
+const byCategory = groupBy(transactions, (t) => t.category);
+const foodTotal  = sum(byCategory.food.map((t) => t.amount));
+// foodTotal = money('22.25', 'USD')
+```
+
+**With Spell** — validate and parse currency input from user forms:
+
+```ts
+import { money, toCurrencyCode } from '@vielzeug/coins';
+import { object, string } from '@vielzeug/spell';
+
+const MoneyInput = object({
+  amount:   string().regex(/^\d+(\.\d{1,3})?$/),
+  currency: string().transform((v) => toCurrencyCode(v)),
+});
+
+const parsed = MoneyInput.parse(formData);
+const value  = money(parsed.amount, parsed.currency);
 ```
 
 ## Best Practices

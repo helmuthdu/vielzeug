@@ -43,7 +43,7 @@
   }
 
   /* Indeterminate: sliding bar */
-  @keyframes bit-progress-slide {
+  @keyframes sg-progress-slide {
     0% {
       transform: translateX(-150%) scaleX(0.6);
     }
@@ -59,12 +59,78 @@
 
   :host([indeterminate]) .fill {
     width: 40%;
-    animation: var(--_motion-animation, bit-progress-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+    animation: var(--_motion-animation, sg-progress-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
   }
 
   /* In RTL the indeterminate bar sweeps right-to-left */
   :host(:dir(rtl)[indeterminate]) .fill {
     animation-direction: reverse;
+  }
+
+  /* ========================================
+       Vertical Bar
+       ======================================== */
+
+  :host([type='vertical']) {
+    --_width: var(--progress-width, var(--size-2, 0.5rem));
+
+    display: inline-flex;
+    width: auto;
+  }
+
+  :host([type='vertical']) .wrapper {
+    flex-direction: row;
+    gap: var(--progress-label-gap, var(--space-1, 0.25rem));
+    width: auto;
+    height: 100%;
+  }
+
+  :host([type='vertical']) .track {
+    width: var(--_width);
+    height: 100%;
+    overflow: hidden;
+  }
+
+  :host([type='vertical']) .fill {
+    width: 100%;
+    height: var(--_percent, 0%);
+    transform-origin: bottom;
+    transition: var(--_motion-transition, height var(--transition-normal));
+  }
+
+  :host([type='vertical'][indeterminate]) .fill {
+    height: 40%;
+    animation: var(--_motion-animation, sg-progress-slide-v 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+  }
+
+  @keyframes sg-progress-slide-v {
+    0% {
+      transform: translateY(150%) scaleY(0.6);
+    }
+
+    50% {
+      transform: translateY(-50%) scaleY(1);
+    }
+
+    100% {
+      transform: translateY(-300%) scaleY(0.6);
+    }
+  }
+
+  .bar-row-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+  }
+
+  :host([type='vertical']) .track-outer {
+    display: flex;
+    flex: 1 1 0%;
+    align-items: stretch;
+    justify-content: center;
+    width: auto;
+    height: 100%;
   }
 
   /* ========================================
@@ -259,7 +325,7 @@
     transition: var(--_motion-transition, stroke-dashoffset var(--transition-normal));
   }
 
-  @keyframes bit-progress-spin {
+  @keyframes sg-progress-spin {
     from {
       transform: rotate(-90deg);
     }
@@ -269,7 +335,7 @@
     }
   }
 
-  @keyframes bit-progress-dash {
+  @keyframes sg-progress-dash {
     0% {
       stroke-dasharray: 1px var(--_circ);
       stroke-dashoffset: var(--_circ);
@@ -292,11 +358,11 @@
   }
 
   :host([indeterminate]) .circular-track svg {
-    animation: var(--_motion-animation, bit-progress-spin 1.4s linear infinite);
+    animation: var(--_motion-animation, sg-progress-spin 1.4s linear infinite);
   }
 
   :host([indeterminate]) .circle-fill {
-    animation: var(--_motion-animation, bit-progress-dash 1.4s ease-in-out infinite);
+    animation: var(--_motion-animation, sg-progress-dash 1.4s ease-in-out infinite);
   }
 }
 
@@ -330,5 +396,10 @@
 
   :host([indeterminate]) .circle-fill {
     stroke-dasharray: none;
+  }
+
+  :host([type='vertical'][indeterminate]) .fill {
+    height: 100%;
+    opacity: 0.6;
   }
 }

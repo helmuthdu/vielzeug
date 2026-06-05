@@ -1,51 +1,31 @@
-# isError
+---
+title: 'Arsenal Examples — isError'
+description: 'isError example for @vielzeug/arsenal.'
+---
 
-Returns `true` if the value is an instance of `Error`.
+## isError
 
-## Signature
+### Problem
 
-```ts
-function isError(value: unknown): value is Error;
-```
+You need to distinguish `Error` instances from other thrown values — TypeScript `catch` clauses type `err` as `unknown`.
 
-## Examples
+### Solution
 
-### Catch-block narrowing
+Use `isError(value)` to narrow to `Error`.
 
 ```ts
 import { isError } from '@vielzeug/arsenal';
 
 try {
-  JSON.parse('invalid');
+  riskyOperation();
 } catch (err) {
   if (isError(err)) {
-    console.log(err.message); // 'Unexpected token i in JSON at position 0'
+    console.error(err.message);
   }
 }
 ```
 
-### Filter mixed arrays
+### Related
 
-```ts
-import { isError } from '@vielzeug/arsenal';
-
-const results = [new Error('fail'), 'ok', new TypeError('bad type'), 42];
-const errors = results.filter(isError);
-// [Error('fail'), TypeError('bad type')]
-```
-
-### Distinguish from strings and objects
-
-```ts
-import { isError } from '@vielzeug/arsenal';
-
-isError(new Error('oops')); // true
-isError(new TypeError()); // true
-isError('oops'); // false
-isError({ message: 'x' }); // false
-```
-
-## Related
-
-- [isAbortError](./isAbortError.md) — Check for `AbortError` specifically
-- [assert](../function/assert.md) — Throw if a condition is falsy
+- [isAbortError](./isAbortError.md)
+- [attempt](../async/attempt.md)

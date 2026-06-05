@@ -1,106 +1,43 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-256_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — debounce'
+description: 'debounce example for @vielzeug/arsenal.'
+---
 
-# debounce
+## debounce
 
-The `debounce` utility creates a version of a function that delays its execution until a specified amount of time has passed since it was last called. This is ideal for handling rapid-fire events like window resizing, scrolling, or keystrokes.
+### Problem
 
-## Source Code
+A function is being called too frequently — for example on every keypress — and you want to delay execution until the input settles.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/function/debounce.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Efficient**: Prevents unnecessary processing by grouping multiple calls into one.
-- **Type-safe**: Preserves the argument types of the original function.
-
-## API
-
-```ts
-type DebouncedFunction = {
-  (...args: any[]): void;
-  cancel: () => void;
-  flush: () => void;
-};
-
-function debounce<T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction;
-```
-
-### Parameters
-
-- `fn`: The function you want to debounce.
-- `wait`: The number of milliseconds to wait for "silence" before actually calling `fn` (defaults to `300`).
-
-### Returns
-
-- A debounced function with two additional methods:
-  - `cancel()`: Cancels any pending execution.
-  - `flush()`: Immediately executes any pending call and cancels the timer.
-
-## Examples
-
-### Search Input Handling
+Use `debounce(fn, delay?)` to create a trailing-edge debounced version. The returned function exposes `.cancel()`, `.flush()`, and `.pending()`.
 
 ```ts
 import { debounce } from '@vielzeug/arsenal';
 
-const search = debounce((query: string) => {
-  console.log('Searching for:', query);
-  // Perform API call here
+const onSearch = debounce((query: string) => {
+  fetch(`/api/search?q=${query}`);
 }, 300);
 
-// Only the last call will execute after 300ms of inactivity
-search('a');
-search('ap');
-search('app');
-search('apple');
+input.addEventListener('input', (e) => onSearch(e.currentTarget.value));
+
+// Cancel a pending call
+onSearch.cancel();
+
+// Force immediate execution
+onSearch.flush();
+
+// Check if a call is pending
+onSearch.pending(); // boolean
 ```
 
-### Window Resize
+### Pitfalls
 
-```ts
-import { debounce } from '@vielzeug/arsenal';
+- Create the debounced function once and reuse it — creating a new instance on every render defeats the purpose.
+- `.flush()` does nothing if there is no pending call.
 
-const handleResize = debounce(() => {
-  console.log('Window resized!');
-  // Recalculate layout
-}, 250);
+### Related
 
-window.addEventListener('resize', handleResize);
-```
-
-### Using Cancel and Flush
-
-```ts
-import { debounce } from '@vielzeug/arsenal';
-
-const saveData = debounce((data) => {
-  console.log('Saving:', data);
-}, 1000);
-
-saveData({ name: 'Alice' });
-saveData({ name: 'Bob' });
-
-// Cancel pending save
-saveData.cancel();
-
-// Or immediately execute pending save
-saveData({ name: 'Charlie' });
-saveData.flush(); // Saves 'Charlie' immediately
-```
-
-## Implementation Notes
-
-- The debounced function does not return the result of the original `fn`, as execution is asynchronous.
-- Each call to the debounced function clears any existing timer and starts a new one.
-- In a Node.js environment, it uses `setTimeout` under the hood.
-
-## See Also
-
-- [throttle](./throttle.md): Execute a function at most once in a specified interval.
-- [retry](./retry.md): Automatically retry an asynchronous operation.
+- [throttle](./throttle.md)
+- [memo](./memo.md)

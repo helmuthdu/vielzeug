@@ -33,8 +33,9 @@ export const createTestListControl = <T>(items: T[], opts?: Partial<ListNavigati
  * afterEach(() => overlay.teardown());
  * ```
  */
-export const createTestOverlayControl = (overrides?: Partial<OverlayControlOptions>) => {
+export const createTestOverlayControl = (overrides?: Partial<Omit<OverlayControlOptions, 'signal'>>) => {
   let _isOpen = false;
+  const controller = new AbortController();
   const boundary = document.createElement('div');
 
   document.body.appendChild(boundary);
@@ -45,13 +46,14 @@ export const createTestOverlayControl = (overrides?: Partial<OverlayControlOptio
     setOpen: (next) => {
       _isOpen = next;
     },
+    signal: controller.signal,
     ...overrides,
   });
 
   return {
     ...overlay,
     teardown() {
-      overlay.cleanup();
+      controller.abort();
       boundary.remove();
     },
   };

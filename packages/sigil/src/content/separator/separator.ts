@@ -6,7 +6,7 @@ import { colorThemeMixin } from '../../styles';
 import componentStyles from './separator.css?inline';
 
 /** Separator component properties */
-export type BitSeparatorProps = {
+export type SgSeparatorProps = {
   /** Theme color tint */
   color?: ThemeColor;
   /** Decorative only (default true) — set to false for semantic separators */
@@ -20,12 +20,12 @@ export type BitSeparatorProps = {
 /**
  * A simple visual divider between sections of content.
  *
- * @element bit-separator
+ * @element sg-separator
  *
  * @attr {string} orientation - 'horizontal' (default) | 'vertical'
  * @attr {boolean} decorative - When true (default), aria-hidden is applied
  * @attr {string} label - Optional centered label text
- * @attr {string} color - Theme color
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @cssprop --separator-color - Line color
  * @cssprop --separator-size - Line thickness
@@ -36,13 +36,13 @@ export type BitSeparatorProps = {
  * @part label - Label element.
  * @example
  * ```html
- * <bit-separator></bit-separator>
- * <bit-separator label="or"></bit-separator>
- * <bit-separator orientation="vertical"></bit-separator>
+ * <sg-separator></sg-separator>
+ * <sg-separator label="or"></sg-separator>
+ * <sg-separator orientation="vertical"></sg-separator>
  * ```
  */
-export const SEPARATOR_TAG = 'bit-separator' as const;
-define<BitSeparatorProps>(SEPARATOR_TAG, {
+export const SEPARATOR_TAG = 'sg-separator' as const;
+define<SgSeparatorProps>(SEPARATOR_TAG, {
   props: {
     color: prop.string<ThemeColor>(),
     decorative: prop.bool(true),

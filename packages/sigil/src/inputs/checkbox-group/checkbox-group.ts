@@ -1,6 +1,7 @@
 import {
   computed,
   createContext,
+  createStableId,
   define,
   defineField,
   effect,
@@ -18,13 +19,10 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import {
   type ChoiceChangeDetail,
-  componentSignal,
+  lifecycleSignal,
   createChoiceField,
-  createStableId,
   getChoiceLabel,
   getLightChildrenByTag,
-  setBooleanAttribute,
-  setMaybeAttribute,
 } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
@@ -45,8 +43,8 @@ export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>('CheckboxG
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type BitCheckboxGroupProps = {
-  /** Theme color — propagated to all child bit-checkbox elements */
+export type SgCheckboxGroupProps = {
+  /** Theme color — propagated to all child sg-checkbox elements */
   color?: ThemeColor;
   /** Disable all checkboxes in the group */
   disabled?: boolean;
@@ -62,21 +60,21 @@ export type BitCheckboxGroupProps = {
   orientation?: 'vertical' | 'horizontal';
   /** Mark the group as required */
   required?: boolean;
-  /** Size — propagated to all child bit-checkbox elements */
+  /** Size — propagated to all child sg-checkbox elements */
   size?: ComponentSize;
   /** Comma-separated list of currently checked values */
   values?: string;
 };
 
-export type BitCheckboxGroupEvents = {
+export type SgCheckboxGroupEvents = {
   change: ChoiceChangeDetail;
 };
 
 /**
- * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
+ * A fieldset wrapper that groups `sg-checkbox` elements, provides shared
  * `color` and `size` via context, and manages multi-value selection state.
  *
- * @element bit-checkbox-group
+ * @element sg-checkbox-group
  *
  * @attr {string} label - Legend text (required for a11y)
  * @attr {string} values - Comma-separated list of checked values
@@ -84,14 +82,14 @@ export type BitCheckboxGroupEvents = {
  * @attr {string} error - Error message
  * @attr {string} helper - Helper text
  * @attr {string} name - Form field name
- * @attr {string} color - Theme color
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} orientation - Layout: 'vertical' | 'horizontal'
  * @attr {boolean} required - Required field
  *
  * @fires change - Emitted when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
  *
- * @slot - Place `bit-checkbox` elements here
+ * @slot - Place `sg-checkbox` elements here
  *
  * @cssprop --checkbox-group-direction - Checkbox control styling token.
  * @cssprop --checkbox-group-gap - Checkbox control styling token.
@@ -107,11 +105,19 @@ export type BitCheckboxGroupEvents = {
  * @part items - Items container.
  * @example
  * ```html
- * <bit-checkbox-group></bit-checkbox-group>
+ * <sg-checkbox-group name="fruits" label="Favourite fruits" required>
+ *   <sg-checkbox value="apple">Apple</sg-checkbox>
+ *   <sg-checkbox value="banana">Banana</sg-checkbox>
+ *   <sg-checkbox value="cherry">Cherry</sg-checkbox>
+ * </sg-checkbox-group>
+ * <sg-checkbox-group name="options" orientation="horizontal" color="primary">
+ *   <sg-checkbox value="a">Option A</sg-checkbox>
+ *   <sg-checkbox value="b">Option B</sg-checkbox>
+ * </sg-checkbox-group>
  * ```
  */
-export const CHECKBOX_GROUP_TAG = 'bit-checkbox-group' as const;
-define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
+export const CHECKBOX_GROUP_TAG = 'sg-checkbox-group' as const;
+define<SgCheckboxGroupProps, SgCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -135,7 +141,7 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       helper: props.helper,
       multiple: signal(true),
       prefix: 'checkbox-group',
-      signal: componentSignal(onCleanup),
+      signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.values,
     });
@@ -145,7 +151,7 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
     );
 
-    const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(el, 'bit-checkbox');
+    const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(el, 'sg-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
     const emitChange = (originalEvent?: Event) => {
       const values = checkedValues.value;
@@ -170,7 +176,7 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       values: checkedValues,
     });
 
-    // Sync checked state + color/size/disabled onto slotted bit-checkbox children
+    // Sync checked state + color/size/disabled onto slotted sg-checkbox children
     const syncChildren = () => {
       const values = checkedValues.value;
       const color = props.color.value;
@@ -181,10 +187,15 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       for (const checkbox of checkboxes) {
         const val = checkbox.getAttribute('value') ?? '';
 
-        setBooleanAttribute(checkbox, 'checked', values.includes(val));
-        setMaybeAttribute(checkbox, 'color', color);
-        setMaybeAttribute(checkbox, 'size', size);
-        setBooleanAttribute(checkbox, 'disabled', Boolean(disabled));
+        checkbox.toggleAttribute('checked', values.includes(val));
+
+        if (color) checkbox.setAttribute('color', color);
+        else checkbox.removeAttribute('color');
+
+        if (size) checkbox.setAttribute('size', size);
+        else checkbox.removeAttribute('size');
+
+        checkbox.toggleAttribute('disabled', Boolean(disabled));
       }
     };
 
@@ -248,5 +259,5 @@ define<BitCheckboxGroupProps, BitCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       </fieldset>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
+  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin, componentStyles],
 });

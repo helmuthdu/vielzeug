@@ -1,51 +1,26 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-545_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — isRegex'
+description: 'isRegex example for @vielzeug/arsenal.'
+---
 
-# isRegex
+## isRegex
 
-Checks if a value is a regular expression.
+### Problem
 
-## Source Code
+You need to check whether a value is a `RegExp` instance — for example validating a config option that accepts either a string pattern or a compiled regex.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isRegex.ts
-:::
+### Solution
 
-## API
-
-```ts
-function isRegex(value: unknown): value is RegExp;
-```
-
-### Parameters
-
-- `value`: The value to check
-
-### Returns
-
-- `true` if the value is a RegExp, `false` otherwise
-
-## Examples
-
-### Basic Usage
+Use `isRegex(value)` to narrow to `RegExp`.
 
 ```ts
 import { isRegex } from '@vielzeug/arsenal';
 
-isRegex(/abc/); // true
-isRegex(new RegExp('abc')); // true
-isRegex('abc'); // false
+function toRegex(pattern: string | RegExp): RegExp {
+  return isRegex(pattern) ? pattern : new RegExp(pattern);
+}
 ```
 
-## Implementation Notes
+### Related
 
-- Detects both literal and constructed regular expressions
-- Useful for type guards and validation
-
-## See Also
-
-- [isString](./isString.md): Check if value is a string
-- [isObject](./isObject.md): Check if value is an object
-- [typeOf](./typeOf.md): Get the type of any value
+- [isString](./isString.md)

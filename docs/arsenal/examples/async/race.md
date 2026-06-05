@@ -1,17 +1,13 @@
+---
+title: 'Arsenal — race (removed)'
+description: 'race was removed from Arsenal.'
+---
+
 # race
 
-`race()` was removed from Arsenal. Use `sleep()` to enforce a minimum delay and then await the real promise.
+`race` is not exported by `@vielzeug/arsenal`.
 
-## Replacement Pattern
+Use `abortable` with `Promise.race` or `retry` with `timeout` for time-bounded promises.
 
-```ts
-import { sleep } from '@vielzeug/arsenal';
-
-await sleep(500);
-const data = await fetchQuickData();
-```
-
-## Related
-
-- [sleep](./sleep.md) – Simple async delay
-- [defer](./defer.md) – Manually controlled promises
+- [abortable](./abortable.md)
+- [retry](./retry.md)

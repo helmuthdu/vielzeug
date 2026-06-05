@@ -1,19 +1,45 @@
 ---
-title: abortable
+title: 'Arsenal Examples — abortable'
+description: 'abortable example for @vielzeug/arsenal.'
 ---
 
 ## abortable
 
-Makes a promise abort-aware.
+### Problem
+
+You have a long-running promise that has no built-in cancellation support and need to race it against an `AbortSignal` so it rejects when the signal fires.
+
+### Solution
+
+Use `abortable(promise, signal)` to wrap any promise and reject it when the signal aborts.
 
 ```ts
-import { abortable } from '@vielzeug/arsenal';
+import { abortable, isAbortError } from '@vielzeug/arsenal';
 
 const controller = new AbortController();
-const value = abortable(
-  fetch('/api').then((r) => r.json()),
+
+const task = abortable(
+  fetch('/api/slow').then((r) => r.json()),
   controller.signal,
 );
-controller.abort(new Error('cancelled'));
-await value;
+
+setTimeout(() => controller.abort(), 2_000);
+
+try {
+  const data = await task;
+} catch (err) {
+  if (isAbortError(err)) console.log('cancelled');
+  else throw err;
+}
 ```
+
+### Pitfalls
+
+- The wrapped promise continues running after cancellation — `abortable` only rejects the returned promise, it does not stop the underlying work. Pair with `fetch`'s `signal` option for true cancellation.
+- If the signal is already aborted when `abortable` is called, the returned promise rejects immediately.
+
+### Related
+
+- [retry](./retry.md)
+- [abortError](./abortError.md)
+- [isAbortError](../typed/isAbortError.md)

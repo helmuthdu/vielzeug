@@ -19,10 +19,10 @@ A lightweight icon wrapper around a synchronous icon registry for consistent ren
 ## Basic Usage
 
 ```html
-<bit-icon name="search"></bit-icon>
-<bit-icon name="chevron-right" size="18"></bit-icon>
-<bit-icon name="trash-2" label="Delete"></bit-icon>
-<bit-icon name="star" solid></bit-icon>
+<sg-icon name="search"></sg-icon>
+<sg-icon name="chevron-right" size="18"></sg-icon>
+<sg-icon name="trash-2" label="Delete"></sg-icon>
+<sg-icon name="star" solid></sg-icon>
 
 <script type="module">
   import '@vielzeug/sigil/icon';
@@ -31,7 +31,7 @@ A lightweight icon wrapper around a synchronous icon registry for consistent ren
 
 ## Registry (Option A)
 
-`bit-icon` reads from a synchronous icon registry. The default registry is seeded from Lucide at module load.
+`sg-icon` reads from a synchronous icon registry. The default registry is seeded from Lucide at module load.
 
 You can register your own icons (or override existing ones) with `registerIcons`.
 
@@ -47,7 +47,7 @@ registerIcons({
 ```
 
 ```html
-<bit-icon name="brand-mark"></bit-icon>
+<sg-icon name="brand-mark"></sg-icon>
 ```
 
 ## Styling and Color
@@ -56,12 +56,12 @@ registerIcons({
 
 ```html
 <div style="display: flex; gap: 0.75rem; align-items: center;">
-  <bit-icon name="search"></bit-icon>
-  <bit-icon name="search" size="20"></bit-icon>
-  <bit-icon name="search" size="24"></bit-icon>
-  <span style="color: var(--color-warning);"><bit-icon name="triangle-alert"></bit-icon></span>
-  <span style="color: var(--color-success);"><bit-icon name="check"></bit-icon></span>
-  <span style="color: var(--color-warning);"><bit-icon name="star" solid></bit-icon></span>
+  <sg-icon name="search"></sg-icon>
+  <sg-icon name="search" size="20"></sg-icon>
+  <sg-icon name="search" size="24"></sg-icon>
+  <span style="color: var(--color-warning);"><sg-icon name="triangle-alert"></sg-icon></span>
+  <span style="color: var(--color-success);"><sg-icon name="check"></sg-icon></span>
+  <span style="color: var(--color-warning);"><sg-icon name="star" solid></sg-icon></span>
 </div>
 ```
 
@@ -86,7 +86,7 @@ registerIcons({
 ## Notes
 
 - There is no `color` attribute. Set icon color through CSS via `currentColor`.
-- Example: `<span style="color: var(--color-success);"><bit-icon name="check"></bit-icon></span>`
+- Example: `<span style="color: var(--color-success);"><sg-icon name="check"></sg-icon></span>`
 
 ### CSS Parts
 

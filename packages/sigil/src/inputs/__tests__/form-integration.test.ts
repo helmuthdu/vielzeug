@@ -1,6 +1,6 @@
 /**
  * Cross-component form integration tests.
- * Validates that multiple field types cooperate correctly inside a bit-form:
+ * Validates that multiple field types cooperate correctly inside a sg-form:
  * FormData values, disabled propagation, and validation cascade.
  */
 import { type Fixture, mount } from '@vielzeug/craft/testing';
@@ -24,10 +24,10 @@ describe('form integration', () => {
 
   describe('FormData collection', () => {
     it('collects values from multiple field types on submit', async () => {
-      fixture = await mount('bit-form', {
+      fixture = await mount('sg-form', {
         html: `
-          <bit-input name="username" value="alice"></bit-input>
-          <bit-textarea name="bio" value="Hello"></bit-textarea>
+          <sg-input name="username" value="alice"></sg-input>
+          <sg-textarea name="bio" value="Hello"></sg-textarea>
         `,
       });
 
@@ -45,8 +45,8 @@ describe('form integration', () => {
     });
 
     it('omits disabled field values from FormData', async () => {
-      fixture = await mount('bit-form', {
-        html: `<bit-input name="secret" value="hidden" disabled></bit-input>`,
+      fixture = await mount('sg-form', {
+        html: `<sg-input name="secret" value="hidden" disabled></sg-input>`,
       });
 
       await fixture.flush();
@@ -68,40 +68,40 @@ describe('form integration', () => {
   // ─── Disabled propagation ───────────────────────────────────────────────────
 
   describe('disabled propagation via form context', () => {
-    it('marks child bit-input disabled when form is disabled', async () => {
-      fixture = await mount('bit-form', {
+    it('marks child sg-input disabled when form is disabled', async () => {
+      fixture = await mount('sg-form', {
         attrs: { disabled: '' },
-        html: `<bit-input name="email"></bit-input>`,
+        html: `<sg-input name="email"></sg-input>`,
       });
 
       await fixture.flush();
 
-      const child = fixture.element.querySelector('bit-input');
+      const child = fixture.element.querySelector('sg-input');
 
       expect(child?.hasAttribute('disabled')).toBe(true);
     });
 
-    it('marks child bit-textarea disabled when form is disabled', async () => {
-      fixture = await mount('bit-form', {
+    it('marks child sg-textarea disabled when form is disabled', async () => {
+      fixture = await mount('sg-form', {
         attrs: { disabled: '' },
-        html: `<bit-textarea name="notes"></bit-textarea>`,
+        html: `<sg-textarea name="notes"></sg-textarea>`,
       });
 
       await fixture.flush();
 
-      const child = fixture.element.querySelector('bit-textarea');
+      const child = fixture.element.querySelector('sg-textarea');
 
       expect(child?.hasAttribute('disabled')).toBe(true);
     });
 
     it('does not disable explicitly-enabled children when form is not disabled', async () => {
-      fixture = await mount('bit-form', {
-        html: `<bit-input name="email" value="test@example.com"></bit-input>`,
+      fixture = await mount('sg-form', {
+        html: `<sg-input name="email" value="test@example.com"></sg-input>`,
       });
 
       await fixture.flush();
 
-      const child = fixture.element.querySelector('bit-input');
+      const child = fixture.element.querySelector('sg-input');
 
       expect(child?.hasAttribute('disabled')).toBe(false);
     });
@@ -111,32 +111,32 @@ describe('form integration', () => {
 
   describe('size and variant propagation', () => {
     it('propagates size to multiple child inputs', async () => {
-      fixture = await mount('bit-form', {
+      fixture = await mount('sg-form', {
         attrs: { size: 'sm' },
         html: `
-          <bit-input name="a"></bit-input>
-          <bit-textarea name="b"></bit-textarea>
+          <sg-input name="a"></sg-input>
+          <sg-textarea name="b"></sg-textarea>
         `,
       });
 
       await fixture.flush();
 
-      const input = fixture.element.querySelector('bit-input');
-      const textarea = fixture.element.querySelector('bit-textarea');
+      const input = fixture.element.querySelector('sg-input');
+      const textarea = fixture.element.querySelector('sg-textarea');
 
       expect(input?.getAttribute('size')).toBe('sm');
       expect(textarea?.getAttribute('size')).toBe('sm');
     });
 
     it('child explicit size overrides form size', async () => {
-      fixture = await mount('bit-form', {
+      fixture = await mount('sg-form', {
         attrs: { size: 'lg' },
-        html: `<bit-input name="a" size="sm"></bit-input>`,
+        html: `<sg-input name="a" size="sm"></sg-input>`,
       });
 
       await fixture.flush();
 
-      const input = fixture.element.querySelector('bit-input');
+      const input = fixture.element.querySelector('sg-input');
 
       expect(input?.getAttribute('size')).toBe('sm');
     });
@@ -145,9 +145,9 @@ describe('form integration', () => {
   // ─── Reset ──────────────────────────────────────────────────────────────────
 
   describe('form reset', () => {
-    it('emits reset event from bit-form', async () => {
-      fixture = await mount('bit-form', {
-        html: `<bit-input name="email" value="test"></bit-input>`,
+    it('emits reset event from sg-form', async () => {
+      fixture = await mount('sg-form', {
+        html: `<sg-input name="email" value="test"></sg-input>`,
       });
 
       const onReset = vi.fn();

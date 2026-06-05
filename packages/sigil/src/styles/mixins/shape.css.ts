@@ -95,32 +95,35 @@ export const roundedVariantMixin = css`
 /**
  * Size Variant Mixin
  *
- * Provides consistent size variants (sm, md, lg) across components.
- * Reduces code duplication for size-based styling.
+ * Injects the three standard size tiers (sm / md / lg) as CSS custom property
+ * blocks on `:host([size="…"])`. Per-component overrides are supplied as a raw
+ * CSS string for each tier and are appended after the shared defaults.
  *
- * @param config - Optional configuration for size-specific values
- * @returns CSSResult with size variant styles
+ * All property names use the `--_` internal convention already established by
+ * other mixins. The mapping is:
+ *
+ * | Config key   | CSS custom property  |
+ * |------------- |----------------------|
+ * | fontSize     | --_font-size         |
+ * | gap          | --_gap               |
+ * | height       | --_height            |
+ * | iconSize     | --_icon-size         |
+ * | lineHeight   | --_line-height       |
+ * | padding      | --_padding           |
+ * | size         | --_size              |
+ * | thumbSize    | --_thumb-size        |
+ * | width        | --_width             |
+ * | --foo        | --foo (pass-through) |
  *
  * @example
  * ```ts
- * import { sizeVariantMixin } from '../../styles';
- *
- * return {
- *   styles: [sizeVariantMixin(), componentStyles],
- *   template: html`...`
- * };
- * ```
- *
- * @example
- * ```ts
- * // Custom size configuration
- * return {
- *   styles: [sizeVariantMixin({
- *     sm: { size: 'var(--size-3)', fontSize: 'var(--text-2xs)' },
- *     lg: { size: 'var(--size-8)', fontSize: 'var(--text-lg)' },
- *   }), componentStyles],
- *   template: html`...`
- * };
+ * styles: [
+ *   sizeVariantMixin({
+ *     sm: { height: 'var(--size-8)', padding: 'var(--size-1-5) var(--size-3)' },
+ *     lg: { height: 'var(--size-12)', padding: 'var(--size-2-5) var(--size-5)' },
+ *   }),
+ *   componentStyles,
+ * ]
  * ```
  */
 export type SizeConfig = {
@@ -146,80 +149,53 @@ export type SizeConfig = {
   width?: string;
 };
 
-export const sizeVariantMixin = (config?: {
-  /** Large size configuration */
-  lg?: SizeConfig;
-  /** Medium size configuration (default) */
-  md?: SizeConfig;
-  /** Small size configuration */
-  sm?: SizeConfig;
-}) => {
-  const defaults = {
-    lg: {
-      fontSize: 'var(--text-base)',
-      gap: 'var(--size-2-5)',
-      size: 'var(--size-6)',
-    },
-    md: {
-      fontSize: 'var(--text-sm)',
-      gap: 'var(--size-2)',
-      size: 'var(--size-5)',
-    },
-    sm: {
-      fontSize: 'var(--text-xs)',
-      gap: 'var(--size-1-5)',
-      size: 'var(--size-4)',
-    },
-  };
+const PROP_MAP: Record<string, string> = {
+  fontSize: '--_font-size',
+  gap: '--_gap',
+  height: '--_height',
+  iconSize: '--_icon-size',
+  lineHeight: '--_line-height',
+  padding: '--_padding',
+  size: '--_size',
+  thumbSize: '--_thumb-size',
+  width: '--_width',
+};
 
-  const sm = { ...defaults.sm, ...config?.sm };
-  const md = { ...defaults.md, ...config?.md };
-  const lg = { ...defaults.lg, ...config?.lg };
+const configToBlock = (config: SizeConfig): string =>
+  Object.entries(config)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k.startsWith('--') ? k : (PROP_MAP[k] ?? `--_${k}`)}: ${v};`)
+    .join('\n        ');
 
-  // Helper to convert camelCase to kebab-case
-  const camelToKebab = (str: string): string => {
-    return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  };
-
-  // Helper to generate CSS for a size
-  const generateSizeCSS = (sizeConfig: typeof sm) => {
-    return Object.entries(sizeConfig)
-      .map(([key, value]) => {
-        if (value === undefined) return '';
-
-        // If it already starts with --, pass it through as-is (custom property)
-        if (key.startsWith('--')) {
-          return `${key}: ${value};`;
-        }
-
-        // Convert camelCase to --_kebab-case custom property
-        // Examples: gap → --_gap, fontSize → --_font-size, lineHeight → --_line-height
-        const customProperty = `--_${camelToKebab(key)}`;
-
-        return `${customProperty}: ${value};`;
-      })
-      .filter(Boolean)
-      .join('\n        ');
-  };
+export const sizeVariantMixin = (config?: { lg?: SizeConfig; md?: SizeConfig; sm?: SizeConfig }) => {
+  const sm = configToBlock({
+    fontSize: 'var(--text-xs)',
+    gap: 'var(--size-1-5)',
+    size: 'var(--size-4)',
+    ...config?.sm,
+  });
+  const md = configToBlock({
+    fontSize: 'var(--text-sm)',
+    gap: 'var(--size-2)',
+    size: 'var(--size-5)',
+    ...config?.md,
+  });
+  const lg = configToBlock({
+    fontSize: 'var(--text-base)',
+    gap: 'var(--size-2-5)',
+    size: 'var(--size-6)',
+    ...config?.lg,
+  });
 
   return css`
-    /* ========================================
-       Size Variants (Shared Mixin)
-       ======================================== */
-
-    /* Small */
     :host([size='sm']) {
-      ${generateSizeCSS(sm)}
+      ${sm}
     }
-
-    /* Medium (default, can be used for explicit md attribute) */
     :host([size='md']) {
-      ${generateSizeCSS(md)}
+      ${md}
     }
-
-    /* Large */
     :host([size='lg']) {
-      ${generateSizeCSS(lg)}
+      ${lg}
     }
   `;
 };

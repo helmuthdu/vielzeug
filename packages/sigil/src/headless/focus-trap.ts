@@ -2,8 +2,9 @@
 // Implements the WAI-ARIA modal dialog focus-containment pattern.
 //
 // When active, Tab/Shift-Tab wrap within the container's focusable descendants
-// instead of leaving it. A MutationObserver invalidates the cached focusable
-// list whenever the DOM tree inside the container changes.
+// instead of leaving it. The focusable list is re-queried on every Tab keydown
+// so DOM changes (e.g. lazy-rendered content) are always reflected without a
+// MutationObserver.
 //
 // Usage (inside a craft component):
 // ```ts
@@ -56,6 +57,12 @@ export type FocusTrapOptions = {
    * Useful to pause trapping while an inner dialog is open.
    */
   enabled?: () => boolean;
+  /**
+   * Optional `AbortSignal`. When aborted, `deactivate()` is called automatically.
+   * Prevents global `keydown` listener leaks if the component is destroyed while
+   * the trap is still active.
+   */
+  signal?: AbortSignal;
 };
 
 export type FocusTrap = {
@@ -73,8 +80,8 @@ export type FocusTrap = {
  * Creates a WAI-ARIA modal focus trap for a container element.
  *
  * When active, Tab wraps from the last focusable child to the first, and
- * Shift-Tab wraps in reverse. A `MutationObserver` invalidates the cached
- * focusable list automatically when the container's subtree changes.
+ * Shift-Tab wraps in reverse. The focusable list is re-queried live on each
+ * Tab keydown — no MutationObserver required.
  *
  * The container itself is queried lazily via `getContainer()` so it may be
  * `null` at construction time (the typical case when the container is inside
@@ -93,28 +100,18 @@ export const createFocusTrap = (
   options: FocusTrapOptions = {},
 ): FocusTrap => {
   let _active = false;
-  let _observer: MutationObserver | null = null;
-  let _cachedFocusable: HTMLElement[] | null = null;
-
-  const invalidateCache = (): void => {
-    _cachedFocusable = null;
-  };
 
   const getFocusable = (): HTMLElement[] => {
-    if (_cachedFocusable) return _cachedFocusable;
-
     const container = getContainer();
 
     if (!container) return [];
 
-    _cachedFocusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
       // Exclude elements hidden from the accessibility tree or removed from tab order.
       // aria-hidden="true" and [hidden] have long been standard; [inert] is the
       // modern successor that browsers honour natively from 2022+.
       (el) => !el.closest('[aria-hidden="true"]') && !el.closest('[hidden]') && !el.closest('[inert]'),
     );
-
-    return _cachedFocusable;
   };
 
   const handleKeydown = (event: KeyboardEvent): void => {
@@ -158,15 +155,6 @@ export const createFocusTrap = (
     if (_active) return;
 
     _active = true;
-    _cachedFocusable = null;
-
-    const container = getContainer();
-
-    if (container) {
-      _observer = new MutationObserver(invalidateCache);
-      _observer.observe(container, { childList: true, subtree: true });
-    }
-
     document.addEventListener('keydown', handleKeydown, true);
   };
 
@@ -174,13 +162,10 @@ export const createFocusTrap = (
     if (!_active) return;
 
     _active = false;
-    _cachedFocusable = null;
-
-    _observer?.disconnect();
-    _observer = null;
-
     document.removeEventListener('keydown', handleKeydown, true);
   };
+
+  options.signal?.addEventListener('abort', deactivate, { once: true });
 
   return {
     activate,

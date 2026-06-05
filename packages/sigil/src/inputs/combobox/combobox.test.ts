@@ -1,7 +1,7 @@
 import { html, signal } from '@vielzeug/craft';
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
 
-describe('bit-combobox', () => {
+describe('sg-combobox', () => {
   let fixture: Fixture<HTMLElement>;
 
   type ComboboxHost = HTMLElement & { value?: string };
@@ -15,21 +15,21 @@ describe('bit-combobox', () => {
   });
 
   /**
-   * The raw <input> lives inside bit-input's shadow DOM, which is itself inside
+   * The raw <input> lives inside sg-input's shadow DOM, which is itself inside
    * the combobox shadow DOM. This helper pierces both levels.
    */
   const getInput = (root: ShadowRoot | null | undefined = fixture.element.shadowRoot) =>
-    root?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+    root?.querySelector('sg-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
 
   const optionsHtml = `
-    <bit-combobox-option value="us">United States</bit-combobox-option>
-    <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-    <bit-combobox-option value="de">Germany</bit-combobox-option>
+    <sg-combobox-option value="us">United States</sg-combobox-option>
+    <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+    <sg-combobox-option value="de">Germany</sg-combobox-option>
   `;
 
   describe('Core Functionality', () => {
     it('renders combobox input and listbox', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', placeholder: 'Search' },
         html: optionsHtml,
       });
@@ -39,7 +39,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits search while typing', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -55,7 +55,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits open/close events with reason details', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -80,7 +80,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits trigger open reason when Enter opens a closed combobox', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -98,7 +98,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits outsideClick close reason when clicking away from the popup', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -119,7 +119,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits programmatic close reason after selecting an option in single mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -140,7 +140,7 @@ describe('bit-combobox', () => {
     });
 
     it('emits change when an option is selected', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -172,7 +172,7 @@ describe('bit-combobox', () => {
     });
 
     it('shows all options when reopened after a selection', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -198,7 +198,7 @@ describe('bit-combobox', () => {
     });
 
     it('keeps selected value and visible input text after reopen + escape close', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -225,7 +225,7 @@ describe('bit-combobox', () => {
     });
 
     it('keeps selected value and visible input text after reopen + outside click close', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -250,7 +250,7 @@ describe('bit-combobox', () => {
     });
 
     it('keeps previous selection when typing without committing a new option', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -283,33 +283,33 @@ describe('bit-combobox', () => {
 
   describe('Accessibility', () => {
     it('uses inset label placement by default', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
 
       const label = fixture.element.shadowRoot
-        ?.querySelector('bit-input.trigger')
+        ?.querySelector('sg-input.trigger')
         ?.shadowRoot?.querySelector<HTMLElement>('.label');
 
       expect(label?.hidden).toBe(false);
     });
 
     it('shows label when label-placement is outside', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', 'label-placement': 'outside' },
         html: optionsHtml,
       });
 
       const label = fixture.element.shadowRoot
-        ?.querySelector('bit-input.trigger')
+        ?.querySelector('sg-input.trigger')
         ?.shadowRoot?.querySelector<HTMLElement>('.label');
 
       expect(label?.hidden).toBe(false);
     });
 
     it('uses proper combobox and listbox roles', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -319,7 +319,7 @@ describe('bit-combobox', () => {
     });
 
     it('updates aria-expanded when dropdown opens', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -335,7 +335,7 @@ describe('bit-combobox', () => {
     });
 
     it('provides clear button with screen reader label', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { clearable: '', label: 'Country', value: 'us' },
         html: optionsHtml,
       });
@@ -344,13 +344,13 @@ describe('bit-combobox', () => {
     });
 
     it('announces helper or error text via polite live region', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { helper: 'Use arrow keys', label: 'Country' },
         html: optionsHtml,
       });
 
       const helperEl = fixture.element.shadowRoot
-        ?.querySelector('bit-input.trigger')
+        ?.querySelector('sg-input.trigger')
         ?.shadowRoot?.querySelector<HTMLElement>('.helper-text');
 
       expect(helperEl?.getAttribute('aria-live')).toBe('polite');
@@ -358,7 +358,7 @@ describe('bit-combobox', () => {
     });
 
     it('supports keyboard selection with Enter after ArrowDown', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -379,7 +379,7 @@ describe('bit-combobox', () => {
 
   describe('Edge Cases', () => {
     it('shows create row when creatable and query has no matches', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { creatable: '', label: 'Country' },
         html: optionsHtml,
       });
@@ -403,17 +403,17 @@ describe('bit-combobox', () => {
     });
 
     it('renders selected chips in multiple mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', multiple: '', value: 'us,gb' },
         html: optionsHtml,
       });
       await fixture.flush();
 
-      expect(fixture.queryAll('bit-chip').length).toBeGreaterThan(0);
+      expect(fixture.queryAll('sg-chip').length).toBeGreaterThan(0);
     });
 
     it('filters options while typing in multiple mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', multiple: '' },
         html: optionsHtml,
       });
@@ -432,15 +432,15 @@ describe('bit-combobox', () => {
     });
 
     it('shrinks list height when search narrows results', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: `
-          <bit-combobox-option value="us">United States</bit-combobox-option>
-          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-          <bit-combobox-option value="de">Germany</bit-combobox-option>
-          <bit-combobox-option value="ca">Canada</bit-combobox-option>
-          <bit-combobox-option value="jp">Japan</bit-combobox-option>
-          <bit-combobox-option value="br">Brazil</bit-combobox-option>
+          <sg-combobox-option value="us">United States</sg-combobox-option>
+          <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+          <sg-combobox-option value="de">Germany</sg-combobox-option>
+          <sg-combobox-option value="ca">Canada</sg-combobox-option>
+          <sg-combobox-option value="jp">Japan</sg-combobox-option>
+          <sg-combobox-option value="br">Brazil</sg-combobox-option>
         `,
       });
 
@@ -467,13 +467,13 @@ describe('bit-combobox', () => {
     });
 
     it('repositions filtered results to the top when the match was originally later in the list', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: `
-          <bit-combobox-option value="us">United States</bit-combobox-option>
-          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
-          <bit-combobox-option value="de">Germany</bit-combobox-option>
-          <bit-combobox-option value="ca">Canada</bit-combobox-option>
+          <sg-combobox-option value="us">United States</sg-combobox-option>
+          <sg-combobox-option value="gb">United Kingdom</sg-combobox-option>
+          <sg-combobox-option value="de">Germany</sg-combobox-option>
+          <sg-combobox-option value="ca">Canada</sg-combobox-option>
         `,
       });
 
@@ -495,14 +495,14 @@ describe('bit-combobox', () => {
     });
 
     it('continues searching in the docs multiselect flow after selecting the first item', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Technologies', multiple: '', placeholder: 'Search…' },
         html: `
-          <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
-          <bit-combobox-option value="rust">Rust</bit-combobox-option>
-          <bit-combobox-option value="go">Go</bit-combobox-option>
-          <bit-combobox-option value="python">Python</bit-combobox-option>
-          <bit-combobox-option value="java">Java</bit-combobox-option>
+          <sg-combobox-option value="ts">TypeScript</sg-combobox-option>
+          <sg-combobox-option value="rust">Rust</sg-combobox-option>
+          <sg-combobox-option value="go">Go</sg-combobox-option>
+          <sg-combobox-option value="python">Python</sg-combobox-option>
+          <sg-combobox-option value="java">Java</sg-combobox-option>
         `,
       });
 
@@ -522,7 +522,7 @@ describe('bit-combobox', () => {
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await user.type(input, 'ru');
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -535,18 +535,18 @@ describe('bit-combobox', () => {
     });
 
     it('restores focus to the live input after multiselect chip re-render', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Technologies', multiple: '', placeholder: 'Search...' },
         html: `
-          <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
-          <bit-combobox-option value="rust">Rust</bit-combobox-option>
-          <bit-combobox-option value="go">Go</bit-combobox-option>
+          <sg-combobox-option value="ts">TypeScript</sg-combobox-option>
+          <sg-combobox-option value="rust">Rust</sg-combobox-option>
+          <sg-combobox-option value="go">Go</sg-combobox-option>
         `,
       });
 
       const getLocalInput = () =>
         fixture.element.shadowRoot
-          ?.querySelector('bit-input.trigger')
+          ?.querySelector('sg-input.trigger')
           ?.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
 
       const initialInput = getLocalInput();
@@ -561,14 +561,14 @@ describe('bit-combobox', () => {
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const liveInput = getLocalInput();
 
       if (!liveInput) throw new Error('Expected combobox input to exist after chip re-render');
 
-      expect(fixture.element.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.activeElement).toBe(liveInput);
+      expect(fixture.element.shadowRoot?.querySelector('sg-input.trigger')?.shadowRoot?.activeElement).toBe(liveInput);
 
       await user.type(liveInput, 'ru');
       await fixture.flush();
@@ -579,7 +579,7 @@ describe('bit-combobox', () => {
     });
 
     it('selects filtered results with Enter after the first multiselect value', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', multiple: '' },
         html: optionsHtml,
       });
@@ -608,17 +608,17 @@ describe('bit-combobox', () => {
     });
 
     it('applies color to rendered chips in multiple mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { color: 'primary', label: 'Country', multiple: '', value: 'us,gb' },
         html: optionsHtml,
       });
       await fixture.flush();
 
-      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('primary');
+      expect(fixture.query('sg-chip')?.getAttribute('color')).toBe('primary');
     });
 
     it('updates rendered chip color when combobox color changes', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { color: 'primary', label: 'Country', multiple: '', value: 'us,gb' },
         html: optionsHtml,
       });
@@ -627,11 +627,11 @@ describe('bit-combobox', () => {
       await fixture.attr('color', 'success');
       await fixture.flush();
 
-      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('success');
+      expect(fixture.query('sg-chip')?.getAttribute('color')).toBe('success');
     });
 
     it('removes a chip when its remove button is clicked', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', multiple: '', value: 'us,gb' },
         html: optionsHtml,
       });
@@ -641,7 +641,7 @@ describe('bit-combobox', () => {
       fixture.element.addEventListener('change', onChange);
       await fixture.flush();
 
-      const chip = fixture.query<HTMLElement>('bit-chip');
+      const chip = fixture.query<HTMLElement>('sg-chip');
 
       const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('[part="remove-btn"]');
 
@@ -650,14 +650,14 @@ describe('bit-combobox', () => {
       await user.click(removeBtn!);
       await fixture.flush();
 
-      expect(fixture.queryAll('bit-chip').length).toBe(1);
+      expect(fixture.queryAll('sg-chip').length).toBe(1);
       expect(onChange).toHaveBeenCalled();
       expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['gb']);
       expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
     });
 
     it('emits change with originalEvent when cleared via clear button', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { clearable: '', label: 'Country', value: 'us' },
         html: optionsHtml,
       });
@@ -676,7 +676,7 @@ describe('bit-combobox', () => {
     });
 
     it('filters already-selected options from multiselect results without reopening', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', multiple: '' },
         html: optionsHtml,
       });
@@ -726,7 +726,7 @@ describe('bit-combobox', () => {
     });
 
     it('pre-focuses the selected option when reopening the dropdown in single-select mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', value: 'gb' },
         html: optionsHtml,
       });
@@ -745,7 +745,7 @@ describe('bit-combobox', () => {
     });
 
     it('keeps the selected option visually marked when reopening in single-select mode', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
@@ -773,7 +773,7 @@ describe('bit-combobox', () => {
     });
 
     it('normalizes csv values in single mode to the first value', async () => {
-      fixture = await mount('bit-combobox', {
+      fixture = await mount('sg-combobox', {
         attrs: { label: 'Country', value: 'us,gb' },
         html: optionsHtml,
       });
@@ -795,12 +795,12 @@ describe('bit-combobox', () => {
 
         optionsRef = options;
 
-        return html`<bit-combobox options=${options}></bit-combobox>`;
+        return html`<sg-combobox options=${options}></sg-combobox>`;
       });
 
-      const combobox = fixture.query<HTMLElement>('bit-combobox')!;
+      const combobox = fixture.query<HTMLElement>('sg-combobox')!;
       const input =
-        combobox.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
+        combobox.shadowRoot?.querySelector('sg-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
         null;
 
       await user.click(input as HTMLInputElement);
@@ -828,12 +828,12 @@ describe('bit-combobox', () => {
       fixture = await mount(() => {
         const options = signal([{ value: 'alpha' }]);
 
-        return html`<bit-combobox options=${options}></bit-combobox>`;
+        return html`<sg-combobox options=${options}></sg-combobox>`;
       });
 
-      const combobox = fixture.query<HTMLElement>('bit-combobox')!;
+      const combobox = fixture.query<HTMLElement>('sg-combobox')!;
       const input =
-        combobox.shadowRoot?.querySelector('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
+        combobox.shadowRoot?.querySelector('sg-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
         null;
 
       await user.click(input as HTMLInputElement);

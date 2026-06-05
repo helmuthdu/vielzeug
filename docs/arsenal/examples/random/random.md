@@ -1,74 +1,31 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-132_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — random'
+description: 'random example for @vielzeug/arsenal.'
+---
 
-# random
+## random
 
-The `random` utility generates a pseudo-random integer between two specified values (inclusive). It simplifies common randomization tasks like picking a range, rolling dice, or generating random offsets.
+### Problem
 
-## Source Code
+You need a random floating-point number within a specific range — for example jitter values, test data, or simulation inputs.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/random/random.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Inclusive Range**: Includes both the minimum and maximum values in the potential output.
-- **Robust**: Automatically handles cases where `min` is greater than `max` by swapping them.
-- **Integer Output**: Always returns a whole number.
-
-## API
-
-```ts
-function random(min?: number, max?: number): number;
-```
-
-### Parameters
-
-- `min`: Optional. The lower bound of the range (defaults to `0`).
-- `max`: Optional. The upper bound of the range (defaults to `100`).
-
-### Returns
-
-- A random integer between `min` and `max` (inclusive).
-
-## Examples
-
-### Basic Usage
+Use `random(min, max)` to get a number in `[min, max]`.
 
 ```ts
 import { random } from '@vielzeug/arsenal';
 
-// Random number between 0 and 100
-random();
-
-// Random number between 1 and 10
-random(1, 10);
+random(0, 1);     // e.g. 0.472
+random(10, 20);   // e.g. 14.83
+random(-5, 5);    // e.g. -2.1
 ```
 
-### Die Roll Example
+### Pitfalls
 
-```ts
-import { random } from '@vielzeug/arsenal';
+- Uses `Math.random()` — not cryptographically secure. Use `crypto.getRandomValues` for security-sensitive use cases.
 
-function rollDie() {
-  return random(1, 6);
-}
+### Related
 
-console.log(`You rolled a ${rollDie()}`);
-```
-
-## Implementation Notes
-
-- Performance-optimized using `Math.random()`.
-- Swaps `min` and `max` internally if `min > max` to prevent errors.
-- Uses `Math.floor` to ensure integer results.
-
-## See Also
-
-- [draw](./draw.md): Pick a random element from an array.
-- [shuffle](./shuffle.md): Randomly reorder an entire array.
-- [uuid](./uuid.md): Generate a unique identifier.
+- [draw](./draw.md)
+- [shuffle](./shuffle.md)

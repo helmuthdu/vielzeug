@@ -1,69 +1,27 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-444_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — pascalCase'
+description: 'pascalCase example for @vielzeug/arsenal.'
+---
 
-# pascalCase
+## pascalCase
 
-The `pascalCase` utility transforms a string into `PascalCase` format (every word capitalized, no separators). It is typically used for naming classes, components, or TypeScript types.
+### Problem
 
-## Source Code
+You need to convert a string to PascalCase — for example generating component or class names from data.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/string/pascalCase.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Robust Word Splitting**: Recognizes spaces, dashes, underscores, and dots as word boundaries.
-- **Consistent Output**: Ensures the very first character is always uppercase.
-
-## API
-
-```ts
-function pascalCase(input: string): string;
-```
-
-### Parameters
-
-- `input`: The string to transform.
-
-### Returns
-
-- The transformed string in `PascalCase`.
-
-## Examples
-
-### Basic Conversion
+Use `pascalCase(str)` to convert any case to PascalCase (each word capitalized, no separator).
 
 ```ts
 import { pascalCase } from '@vielzeug/arsenal';
 
+pascalCase('hello_world'); // 'HelloWorld'
+pascalCase('hello-world'); // 'HelloWorld'
 pascalCase('hello world'); // 'HelloWorld'
-pascalCase('foo-bar'); // 'FooBar'
-pascalCase('user_profile'); // 'UserProfile'
-pascalCase('api.version'); // 'ApiVersion'
 ```
 
-### Handling Case Transitions
+### Related
 
-```ts
-import { pascalCase } from '@vielzeug/arsenal';
-
-pascalCase('camelCaseString'); // 'CamelCaseString'
-pascalCase('web-api-v1'); // 'WebApiV1'
-pascalCase('  spaced   text '); // 'SpacedText'
-```
-
-## Implementation Notes
-
-- Removes all non-alphanumeric separators.
-- Capitalizes the first letter of every detected word and lowercases the rest (unless the word was already all caps, depending on specific heuristics).
-- Throws `TypeError` if the input is not a string.
-
-## See Also
-
-- [camelCase](./camelCase.md): Convert strings to `camelCase`.
-- [snakeCase](./snakeCase.md): Convert strings to `snake_case`.
-- [kebabCase](./kebabCase.md): Convert strings to `kebab-case`.
+- [camelCase](./camelCase.md)
+- [titleCase](./titleCase.md)

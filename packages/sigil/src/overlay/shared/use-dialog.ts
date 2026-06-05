@@ -1,9 +1,9 @@
-import { onEvent, type ReadonlySignal, watch } from '@vielzeug/craft';
+import { onCleanup, onEvent, type ReadonlySignal, watch } from '@vielzeug/craft';
 import { type Signal, signal } from '@vielzeug/ripple';
 
 import type { DialogCloseReason, OverlayControl, OverlayOpenReason } from '../../headless';
 
-import { createFocusManager, createOverlayControl } from '../../headless';
+import { lifecycleSignal, createFocusManager, createOverlayControl } from '../../headless';
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
@@ -69,13 +69,14 @@ export type UseDialogHandle = {
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 /**
- * Shared dialog-control composable for `bit-dialog` and `bit-drawer`.
+ * Shared dialog-control composable for `sg-dialog` and `sg-drawer`.
  *
  * Owns: `isOpen`, close-reason tracking, focus management, `overlay`,
  * `requestClose`, background lock/unlock, and the `close` event handler.
  * Components supply only their unique behavior via callbacks and `onNativeClose`.
  */
 export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
+  const abortSignal = lifecycleSignal(onCleanup);
   const isOpen = signal(false);
   // Internal close-reason: set atomically before dialog.close() fires.
   let pendingCloseReason: DialogCloseReason = 'programmatic';
@@ -164,6 +165,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
       isOpen.value = false;
     },
+    signal: abortSignal,
   });
 
   const requestClose = (reason: Exclude<DialogCloseReason, 'programmatic'>): void => {

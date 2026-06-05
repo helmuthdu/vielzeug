@@ -23,7 +23,7 @@ export const SELECT_OPTIONS_WITH_GROUPS = `
   </optgroup>
 `;
 
-describe('bit-select', () => {
+describe('sg-select', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -38,16 +38,16 @@ describe('bit-select', () => {
 
   describe('Rendering', () => {
     it('renders trigger and dropdown elements', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
-      expect(fixture.query('bit-input.trigger')).toBeTruthy();
+      expect(fixture.query('sg-input.trigger')).toBeTruthy();
       expect(fixture.query('.dropdown')).toBeTruthy();
     });
 
     it('renders option items in the dropdown', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const items = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
@@ -56,9 +56,9 @@ describe('bit-select', () => {
     });
 
     it('renders optgroups when provided', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS_WITH_GROUPS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS_WITH_GROUPS });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const groups = fixture.query('.dropdown')?.querySelectorAll('.optgroup-label');
@@ -67,35 +67,35 @@ describe('bit-select', () => {
     });
 
     it('renders placeholder text when no value selected', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { placeholder: 'Select item' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      const input = fixture.query('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input');
+      const input = fixture.query('sg-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input');
 
       expect(input?.placeholder).toBe('Select item');
     });
 
     it('renders helper text when set', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { helper: 'Choose one' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('helper')).toBe('Choose one');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('helper')).toBe('Choose one');
     });
 
-    it('passes error prop to bit-input', async () => {
-      fixture = await mount('bit-select', {
+    it('passes error prop to sg-input', async () => {
+      fixture = await mount('sg-select', {
         attrs: { error: 'Selection required' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('error')).toBe('Selection required');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('error')).toBe('Selection required');
     });
   });
 
@@ -103,45 +103,45 @@ describe('bit-select', () => {
 
   describe('Selection', () => {
     it('keeps chip row hidden in single mode before and after selection', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const chipsRow = fixture.query<HTMLElement>('.chips-row');
 
       expect(chipsRow?.hasAttribute('hidden')).toBe(true);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
       await user.click(fixture.query<HTMLElement>('[role="option"]')!);
       await fixture.flush();
 
       expect(chipsRow?.hasAttribute('hidden')).toBe(true);
-      expect(fixture.queryAll('bit-chip').length).toBe(0);
+      expect(fixture.queryAll('sg-chip').length).toBe(0);
     });
 
     it('shows selected value label when value is set', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { value: 'apple' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      const input = fixture.query('bit-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input');
+      const input = fixture.query('sg-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input');
 
       expect(input?.value).toBe('Apple');
     });
 
     it('opens dropdown when clicked', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
       expect(fixture.element.hasAttribute('open')).toBe(false);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
 
     it('closes dropdown after selecting an option', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
       expect(fixture.element.hasAttribute('open')).toBe(true);
 
@@ -153,7 +153,7 @@ describe('bit-select', () => {
     });
 
     it('emits open/close events with reason details', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const onOpen = vi.fn();
       const onClose = vi.fn();
@@ -161,7 +161,7 @@ describe('bit-select', () => {
       fixture.element.addEventListener('open', onOpen);
       fixture.element.addEventListener('close', onClose);
 
-      const trigger = fixture.query<HTMLElement>('bit-input.trigger')!;
+      const trigger = fixture.query<HTMLElement>('sg-input.trigger')!;
 
       await user.click(trigger);
       await fixture.flush();
@@ -175,13 +175,13 @@ describe('bit-select', () => {
     });
 
     it('emits trigger close reason when the trigger toggles the open panel shut', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const onClose = vi.fn();
 
       fixture.element.addEventListener('close', onClose);
 
-      const trigger = fixture.query<HTMLElement>('bit-input.trigger')!;
+      const trigger = fixture.query<HTMLElement>('sg-input.trigger')!;
 
       await user.click(trigger);
       await fixture.flush();
@@ -192,13 +192,13 @@ describe('bit-select', () => {
     });
 
     it('emits outsideClick close reason when clicking away from the dropdown', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const onClose = vi.fn();
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -208,13 +208,13 @@ describe('bit-select', () => {
     });
 
     it('emits programmatic close reason after selecting an option in single mode', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const onClose = vi.fn();
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
       await user.click(fixture.query<HTMLElement>('[role="option"]')!);
       await fixture.flush();
@@ -223,13 +223,13 @@ describe('bit-select', () => {
     });
 
     it('emits change event with value and originalEvent on selection', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]')!;
@@ -246,13 +246,13 @@ describe('bit-select', () => {
     });
 
     it('skips disabled options when clicked', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS_WITH_DISABLED });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS_WITH_DISABLED });
 
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const disabledOption = fixture.query('[role="option"][aria-disabled="true"]');
@@ -268,7 +268,7 @@ describe('bit-select', () => {
 
   describe('Multiple Selection', () => {
     it('allows multiple selections when multiple attribute is set', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { multiple: true },
         html: SELECT_OPTIONS,
       });
@@ -277,7 +277,7 @@ describe('bit-select', () => {
     });
 
     it('emits change event with values array for multiple select', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { multiple: true },
         html: SELECT_OPTIONS,
       });
@@ -286,7 +286,7 @@ describe('bit-select', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]')!;
@@ -299,12 +299,12 @@ describe('bit-select', () => {
     });
 
     it('updates selected state immediately for grouped options while dropdown stays open', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { multiple: true },
         html: SELECT_OPTIONS_WITH_GROUPS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const carrotOption = Array.from(fixture.queryAll<HTMLElement>('[role="option"]')).find(
@@ -326,7 +326,7 @@ describe('bit-select', () => {
 
   describe('Disabled State', () => {
     it('reflects disabled on host', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { disabled: true },
         html: SELECT_OPTIONS,
       });
@@ -335,12 +335,12 @@ describe('bit-select', () => {
     });
 
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { disabled: true },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
@@ -348,7 +348,7 @@ describe('bit-select', () => {
 
   describe('Required State', () => {
     it('reflects required on host', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { required: true },
         html: SELECT_OPTIONS,
       });
@@ -360,14 +360,14 @@ describe('bit-select', () => {
   // ─── Error State ─────────────────────────────────────────────────────────────
 
   describe('Error State', () => {
-    it('passes error prop to bit-input trigger', async () => {
-      fixture = await mount('bit-select', {
+    it('passes error prop to sg-input trigger', async () => {
+      fixture = await mount('sg-select', {
         attrs: { error: 'Required' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('error')).toBe('Required');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('error')).toBe('Required');
     });
   });
 
@@ -375,7 +375,7 @@ describe('bit-select', () => {
 
   describe('Form Integration', () => {
     it('exposes name attribute', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { name: 'fruit' },
         html: SELECT_OPTIONS,
       });
@@ -384,7 +384,7 @@ describe('bit-select', () => {
     });
 
     it('updates value attribute dynamically', async () => {
-      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+      fixture = await mount('sg-select', { html: SELECT_OPTIONS });
 
       await fixture.attr('value', 'banana');
 
@@ -392,29 +392,29 @@ describe('bit-select', () => {
     });
 
     it('renders chips after csv value update in multiple mode', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { multiple: true },
         html: SELECT_OPTIONS,
       });
 
       await fixture.attr('value', 'apple,banana');
 
-      expect(fixture.queryAll('bit-chip').length).toBe(2);
+      expect(fixture.queryAll('sg-chip').length).toBe(2);
     });
 
     it('applies color to rendered chips in multiple mode', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
         html: SELECT_OPTIONS,
       });
 
       await fixture.flush();
 
-      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('primary');
+      expect(fixture.query('sg-chip')?.getAttribute('color')).toBe('primary');
     });
 
     it('updates rendered chip color when select color changes', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
         html: SELECT_OPTIONS,
       });
@@ -423,11 +423,11 @@ describe('bit-select', () => {
       await fixture.attr('color', 'success');
       await fixture.flush();
 
-      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('success');
+      expect(fixture.query('sg-chip')?.getAttribute('color')).toBe('success');
     });
 
     it('removes a chip when its remove button is clicked', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { multiple: true, value: 'apple,banana' },
         html: SELECT_OPTIONS,
       });
@@ -437,7 +437,7 @@ describe('bit-select', () => {
       fixture.element.addEventListener('change', changeHandler);
       await fixture.flush();
 
-      const chip = fixture.query<HTMLElement>('bit-chip');
+      const chip = fixture.query<HTMLElement>('sg-chip');
       const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('.remove-btn');
 
       expect(removeBtn).toBeTruthy();
@@ -445,7 +445,7 @@ describe('bit-select', () => {
       await user.click(removeBtn!);
       await fixture.flush();
 
-      expect(fixture.queryAll('bit-chip').length).toBe(1);
+      expect(fixture.queryAll('sg-chip').length).toBe(1);
       expect(changeHandler).toHaveBeenCalled();
       expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['banana']);
       expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
@@ -459,7 +459,7 @@ describe('bit-select', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-select', {
+        fixture = await mount('sg-select', {
           attrs: { color },
           html: SELECT_OPTIONS,
         });
@@ -476,7 +476,7 @@ describe('bit-select', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-select', {
+        fixture = await mount('sg-select', {
           attrs: { size },
           html: SELECT_OPTIONS,
         });
@@ -490,13 +490,13 @@ describe('bit-select', () => {
 
   describe('Edge Cases', () => {
     it('handles empty options list', async () => {
-      fixture = await mount('bit-select');
+      fixture = await mount('sg-select');
 
       expect(fixture.element).toBeTruthy();
     });
 
     it('handles fullwidth attribute', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { fullwidth: true },
         html: SELECT_OPTIONS,
       });
@@ -512,11 +512,11 @@ describe('bit-select', () => {
         ]);
 
         return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
-          <bit-select options=${options}></bit-select>`;
+          <sg-select options=${options}></sg-select>`;
       });
 
-      const select = fixture.query<HTMLElement>('bit-select')!;
-      const trigger = select.shadowRoot?.querySelector<HTMLElement>('bit-input.trigger');
+      const select = fixture.query<HTMLElement>('sg-select')!;
+      const trigger = select.shadowRoot?.querySelector<HTMLElement>('sg-input.trigger');
 
       await user.click(trigger as HTMLInputElement);
       await fixture.flush();
@@ -549,11 +549,11 @@ describe('bit-select', () => {
       fixture = await mount(() => {
         const options = signal([{ value: 'alpha' }]);
 
-        return html`<bit-select options=${options}></bit-select>`;
+        return html`<sg-select options=${options}></sg-select>`;
       });
 
-      const select = fixture.query<HTMLElement>('bit-select')!;
-      const trigger = select.shadowRoot?.querySelector<HTMLElement>('bit-input.trigger');
+      const select = fixture.query<HTMLElement>('sg-select')!;
+      const trigger = select.shadowRoot?.querySelector<HTMLElement>('sg-input.trigger');
 
       await user.click(trigger as HTMLElement);
       await fixture.flush();
@@ -567,7 +567,7 @@ describe('bit-select', () => {
   });
 });
 
-describe('bit-select accessibility', () => {
+describe('sg-select accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
@@ -582,16 +582,16 @@ describe('bit-select accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('trigger has role="combobox"', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('role')).toBe('combobox');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('role')).toBe('combobox');
     });
 
     it('dropdown has role="listbox"', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
@@ -600,12 +600,12 @@ describe('bit-select accessibility', () => {
     });
 
     it('each option item has role="option"', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const options = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
@@ -613,14 +613,14 @@ describe('bit-select accessibility', () => {
       expect(options?.length).toBeGreaterThan(0);
     });
 
-    it('error prop is passed to bit-input trigger', async () => {
-      fixture = await mount('bit-select', {
+    it('error prop is passed to sg-input trigger', async () => {
+      fixture = await mount('sg-select', {
         attrs: { error: 'Selection required' },
         html: SELECT_OPTIONS,
       });
       await fixture.flush();
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('error')).toBe('Selection required');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('error')).toBe('Selection required');
     });
   });
 
@@ -628,48 +628,48 @@ describe('bit-select accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('trigger has aria-expanded="false" when closed', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('trigger has aria-expanded="true" when open', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('aria-expanded')).toBe('true');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('trigger has aria-expanded="false" after selection', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]') as HTMLElement;
 
       await user.click(firstOption);
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('selected option has aria-selected="true"', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit', value: 'apple' },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       await fixture.flush();
 
       const selectedOption = fixture.query('[role="option"][aria-selected="true"]');
@@ -678,12 +678,12 @@ describe('bit-select accessibility', () => {
     });
 
     it('trigger has role="combobox" (implies aria-haspopup="listbox")', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('role')).toBe('combobox');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('role')).toBe('combobox');
     });
   });
 
@@ -691,21 +691,21 @@ describe('bit-select accessibility', () => {
 
   describe('Focus Management', () => {
     it('trigger is keyboard focusable (tabindex="0")', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('tabindex')).toBe('0');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('tabindex')).toBe('0');
     });
 
     it('trigger is not focusable when disabled (tabindex="-1")', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { disabled: true, label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      expect(fixture.query('bit-input.trigger')?.getAttribute('tabindex')).toBe('-1');
+      expect(fixture.query('sg-input.trigger')?.getAttribute('tabindex')).toBe('-1');
     });
   });
 
@@ -713,43 +713,43 @@ describe('bit-select accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('opens on Enter key press on trigger', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.press(fixture.query<HTMLElement>('bit-input.trigger')!, 'Enter');
+      await user.press(fixture.query<HTMLElement>('sg-input.trigger')!, 'Enter');
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
 
     it('opens on Space key press on trigger', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.press(fixture.query<HTMLElement>('bit-input.trigger')!, ' ');
+      await user.press(fixture.query<HTMLElement>('sg-input.trigger')!, ' ');
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
 
     it('closes on Escape key press', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('bit-input.trigger')!);
+      await user.click(fixture.query<HTMLElement>('sg-input.trigger')!);
       expect(fixture.element.hasAttribute('open')).toBe(true);
 
-      await user.press(fixture.query<HTMLElement>('bit-input.trigger')!, 'Escape');
+      await user.press(fixture.query<HTMLElement>('sg-input.trigger')!, 'Escape');
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
 
     it('selects focused option with Enter when open', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
@@ -758,7 +758,7 @@ describe('bit-select accessibility', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      const trigger = fixture.query<HTMLElement>('bit-input.trigger')!;
+      const trigger = fixture.query<HTMLElement>('sg-input.trigger')!;
 
       await user.press(trigger, 'Enter');
       await fixture.flush();
@@ -773,7 +773,7 @@ describe('bit-select accessibility', () => {
     });
 
     it('selects focused option with Space when open', async () => {
-      fixture = await mount('bit-select', {
+      fixture = await mount('sg-select', {
         attrs: { label: 'Fruit' },
         html: SELECT_OPTIONS,
       });
@@ -782,7 +782,7 @@ describe('bit-select accessibility', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      const trigger = fixture.query<HTMLElement>('bit-input.trigger')!;
+      const trigger = fixture.query<HTMLElement>('sg-input.trigger')!;
 
       await user.press(trigger, ' ');
       await fixture.flush();

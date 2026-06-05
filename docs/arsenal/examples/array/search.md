@@ -1,82 +1,64 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1253_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — search'
+description: 'search example for @vielzeug/arsenal.'
+---
 
-# search
+## search
 
-The `search` utility performs a fuzzy search across an array of objects. It checks all string properties of each object and returns a filtered list of items that match the query based on a similarity threshold (tone).
+### Problem
 
-## Source Code
+You need fuzzy search over an array of objects — for example a live search box that still matches "alce" when the user types "alice" with a typo.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/array/search.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Fuzzy Matching**: Finds results even with partial or slightly misspelled queries.
-- **Auto-Scanning**: Automatically searches through all string properties of objects in the array.
-- **Configurable Sensitivity**: Adjust the "tone" to control how strict or loose the matching should be.
-
-## API
-
-```ts
-function search<T>(array: T[], query: string, tone?: number): T[];
-```
-
-### Parameters
-
-- `array`: The array of objects to search through.
-- `query`: The search string (case-insensitive).
-- `tone`: Optional. A similarity threshold between `0` and `1` (defaults to `0.25`). Higher values require a closer match.
-
-### Returns
-
-- A new array containing only the objects that match the search query.
-
-## Examples
-
-### Basic String Search
+Use `search(array, query, options?)` to filter or rank results by similarity. `mode: 'filter'` (default) returns `T[]`; `mode: 'scored'` returns `ScoredResult<T>[]` sorted by relevance.
 
 ```ts
 import { search } from '@vielzeug/arsenal';
 
 const users = [
-  { name: 'John Doe', city: 'New York' },
-  { name: 'Jane Smith', city: 'London' },
-  { name: 'Alice Jones', city: 'Paris' },
+  { id: 1, name: 'Alice Smith', role: 'admin' },
+  { id: 2, name: 'Alan Jones',  role: 'user'  },
+  { id: 3, name: 'Bob Brown',   role: 'user'  },
 ];
 
-// Searches across both 'name' and 'city'
-search(users, 'doe'); // [{ name: 'John Doe', ... }]
-search(users, 'london'); // [{ name: 'Jane Smith', ... }]
+// Filter mode: items above similarity threshold
+const filtered = search(users, 'alice');
+// [{ id: 1, name: 'Alice Smith', ... }]
 ```
 
-### Adjusting Similarity (Tone)
+#### Scored mode
 
 ```ts
 import { search } from '@vielzeug/arsenal';
 
-const products = [{ name: 'iPhone 15' }, { name: 'Pixel 8' }];
+const users = [
+  { id: 1, name: 'Alice Smith' },
+  { id: 2, name: 'Alan Jones'  },
+];
 
-// Strict match
-search(products, 'phone', 0.8); // []
-
-// Loose match (default)
-search(products, 'phone', 0.25); // [{ name: 'iPhone 15' }]
+const ranked = search(users, 'ali', { mode: 'scored', threshold: 0.3 });
+// [
+//   { item: { id: 1, ... }, score: 0.91 },
+//   { item: { id: 2, ... }, score: 0.52 },
+// ]
 ```
 
-## Implementation Notes
+#### Restrict to specific fields
 
-- Throws `TypeError` if the first argument is not an array or if `query` is not a string.
-- Returns an empty array immediately if the query is an empty string.
-- Internally leverages the `similarity` string utility to calculate match scores.
-- Only considers properties that are currently of type `string` for matching.
+```ts
+import { search } from '@vielzeug/arsenal';
 
-## See Also
+const results = search(users, 'ali', { fields: ['name'] });
+```
 
-- [select](./select.md): Filter array elements by a predicate.
-- [similarity](../string/similarity.md): The underlying string comparison helper.
-- [contains](./contains.md): Check for existence using deep equality.
+### Pitfalls
+
+- The default `threshold` is `0.25`. Lower values return more (noisier) results; raise it to `0.5+` for stricter matching.
+- `mode: 'scored'` returns `ScoredResult<T>[]`, not `T[]` — destructure `.item` to access the original object.
+- Without `fields`, all string properties of each object are scanned.
+
+### Related
+
+- [sort](./sort.md)
+- [filterMap](./select.md)

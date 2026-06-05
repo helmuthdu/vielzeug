@@ -1,66 +1,55 @@
 ---
-title: deepMerge / shallowMerge
-description: Deep and shallow object merge examples for Arsenal.
+title: 'Arsenal Examples — deepMerge / deepMergeWith / shallowMerge'
+description: 'deepMerge, deepMergeWith, and shallowMerge examples for @vielzeug/arsenal.'
 ---
 
-Arsenal provides two merge helpers:
+## deepMerge / deepMergeWith / shallowMerge
 
-- `deepMerge(...items)`: recursively merges nested objects and concatenates arrays.
-- `shallowMerge(...items)`: `Object.assign`-style top-level merge.
+### Problem
 
-## Source Code
+You need to combine configuration objects, handling nested keys correctly — without stomping nested objects the way `Object.assign` does.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/object/merge.ts
-:::
+### Solution
 
-## Examples
-
-### Deep Merge
+Use `deepMerge(...items)` for recursive merging. Use `deepMergeWith({ arrayStrategy: 'concat' })` when arrays should be concatenated. Use `shallowMerge(...items)` for a single-level `Object.assign`-style merge.
 
 ```ts
 import { deepMerge } from '@vielzeug/arsenal';
 
-const base = {
-  api: { host: 'localhost', port: 8080 },
-  features: ['auth'],
-};
+const base = { api: { host: 'localhost', port: 3000 }, retries: 3 };
+const overrides = { api: { port: 4000 }, timeout: 5_000 };
 
-const override = {
-  api: { port: 3000 },
-  features: ['metrics'],
-};
-
-const merged = deepMerge(base, override);
-// {
-//   api: { host: 'localhost', port: 3000 },
-//   features: ['auth', 'metrics']
-// }
+deepMerge(base, overrides);
+// { api: { host: 'localhost', port: 4000 }, retries: 3, timeout: 5_000 }
 ```
 
-### Shallow Merge
+#### Concatenate arrays instead of replacing them
+
+```ts
+import { deepMergeWith } from '@vielzeug/arsenal';
+
+const a = { tags: ['ts', 'node'] };
+const b = { tags: ['vue'] };
+
+deepMergeWith({ arrayStrategy: 'concat' })(a, b);
+// { tags: ['ts', 'node', 'vue'] }
+```
+
+#### Shallow merge (Object.assign-style)
 
 ```ts
 import { shallowMerge } from '@vielzeug/arsenal';
 
-const base = {
-  api: { host: 'localhost', port: 8080 },
-  timeout: 1000,
-};
-
-const override = {
-  api: { port: 3000 },
-};
-
-const merged = shallowMerge(base, override);
-// {
-//   api: { port: 3000 },
-//   timeout: 1000
-// }
+shallowMerge({ a: 1, b: 2 }, { b: 3, c: 4 });
+// { a: 1, b: 3, c: 4 }
 ```
 
-## See Also
+### Pitfalls
 
-- [diff](./diff.md): Compare object states.
-- [defaults](./defaults.md): Fill missing values.
-- [path/get](./path.md): Read merged nested values safely.
+- `deepMerge` replaces arrays by default — use `deepMergeWith` to concatenate.
+- Later arguments win on key conflicts for both functions.
+
+### Related
+
+- [defaults](./defaults.md)
+- [diff](./diff.md)

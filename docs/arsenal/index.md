@@ -74,6 +74,7 @@ const doubleAll = partial((factor: number, values: number[]) => values.map((n) =
 const doubled = doubleAll([1, 2, 3]);
 
 // Fuzzy search — filter mode (default) or scored mode
+const users = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
 const hits = search(users, 'alice', { mode: 'scored' });
 // [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
 
@@ -103,7 +104,7 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 
 - **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `search`, `take/drop`, `union/intersection`, `zip/unzip`, and more
 - **Async**: `abortable`, `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
-- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `defaults`, `deepMerge`, `deepMergeWith`, `parseJSON`, `getPath`, `stash`, `stableStringify`, `flattenPaths`, `cache`, `getOrCreate`
+- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `defaults`, `deepMerge`, `deepMergeWith`, `shallowMerge`, `parseJSON`, `getPath`, `stash`, `stableStringify`, `flattenPaths`, `cache`, `getOrCreate`
 - **Function**: `partial`, `allOf`, `anyOf`, `noneOf`, `tap`, `identity`, `constant`, `assert`, `runAll`, compose, memoization, and rate limiting
 - **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, `backoff`, plus numeric helpers
 - **Random**: `draw`, `random`, `shuffle`, `uuid`

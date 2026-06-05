@@ -1,66 +1,31 @@
-# isDefined
+---
+title: 'Arsenal Examples — isDefined'
+description: 'isDefined example for @vielzeug/arsenal.'
+---
 
-The `isDefined` utility is a type guard that checks if a value is NOT `undefined` or `null`. It is essential for safely handling optional values and cleaning up data sets.
+## isDefined
 
-## Source Code
+### Problem
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/typed/isDefined.ts
-:::
+You need to filter out `undefined` values from an array or narrow a type that includes `undefined`.
 
-## Features
+### Solution
 
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Type Guard**: Automatically narrows types to exclude `null` and `undefined`.
-- **Durable**: Unlike a simple truthiness check, it correctly identifies `0`, `false`, and `''` as defined values.
-
-## API
-
-```ts
-function isDefined<T>(value: T): value is NonNullable<T>;
-```
-
-### Parameters
-
-- `value`: The value to check.
-
-### Returns
-
-- `true` if the value is neither `null` nor `undefined`; otherwise, `false`.
-
-## Examples
-
-### Basic Usage
+Use `isDefined(value)` to narrow away `undefined`. Works directly as an `Array.filter` callback.
 
 ```ts
 import { isDefined } from '@vielzeug/arsenal';
 
-isDefined('hello'); // true
-isDefined(0); // true
-isDefined(false); // true
-isDefined(null); // false
-isDefined(undefined); // false
+const values: (number | undefined)[] = [1, undefined, 2, undefined, 3];
+const numbers: number[] = values.filter(isDefined);
+// [1, 2, 3]
 ```
 
-### Filtering Arrays
+### Pitfalls
 
-```ts
-import { isDefined } from '@vielzeug/arsenal';
+- Allows `null` through — use `isNil` to exclude both `null` and `undefined`.
 
-const data = ['a', undefined, 'b', null, 'c'];
+### Related
 
-// TypeScript correctly infers the result as string[]
-const cleanData = data.filter(isDefined);
-// ['a', 'b', 'c']
-```
-
-## Implementation Notes
-
-- Returns `true` if `value !== undefined && value !== null`.
-- Throws nothing; safe for any input type.
-
-## See Also
-
-- [isNil](./isNil.md): The inverse check (returns true for null/undefined).
-- [isEmpty](./isEmpty.md): Check if a value is empty (includes length checks).
-- [filterMap](../array/select.md): Build a new array while skipping `undefined` results.
+- [isNil](./isNil.md)
+- [compact](../array/compact.md)

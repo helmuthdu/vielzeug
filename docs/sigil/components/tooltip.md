@@ -20,12 +20,12 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 ## Basic Usage
 
-Wrap any element with `bit-tooltip` and set the `content` attribute.
+Wrap any element with `sg-tooltip` and set the `content` attribute.
 
 ```html
-<bit-tooltip content="Copy to clipboard">
+<sg-tooltip content="Copy to clipboard">
   <button>Copy</button>
-</bit-tooltip>
+</sg-tooltip>
 
 <script type="module">
   import '@vielzeug/sigil/tooltip';
@@ -37,18 +37,18 @@ Wrap any element with `bit-tooltip` and set the `content` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-tooltip content="Tooltip on top" placement="top">
-  <bit-button size="sm">Top</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Tooltip on right" placement="right">
-  <bit-button size="sm">Right</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Tooltip on bottom" placement="bottom">
-  <bit-button size="sm">Bottom</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Tooltip on left" placement="left">
-  <bit-button size="sm">Left</bit-button>
-</bit-tooltip>
+<sg-tooltip content="Tooltip on top" placement="top">
+  <sg-button size="sm">Top</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Tooltip on right" placement="right">
+  <sg-button size="sm">Right</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Tooltip on bottom" placement="bottom">
+  <sg-button size="sm">Bottom</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Tooltip on left" placement="left">
+  <sg-button size="sm">Left</sg-button>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -58,18 +58,18 @@ Wrap any element with `bit-tooltip` and set the `content` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-tooltip content="Hover trigger" trigger="hover">
-  <bit-button size="sm" variant="flat">Hover me</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Focus trigger (Tab to this button)" trigger="focus">
-  <bit-button size="sm" variant="flat">Focus me</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Click trigger" trigger="click">
-  <bit-button size="sm" variant="flat">Click me</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Hover or focus" trigger="hover,focus">
-  <bit-button size="sm" variant="flat">Hover / Focus</bit-button>
-</bit-tooltip>
+<sg-tooltip content="Hover trigger" trigger="hover">
+  <sg-button size="sm" variant="flat">Hover me</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Focus trigger (Tab to this button)" trigger="focus">
+  <sg-button size="sm" variant="flat">Focus me</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Click trigger" trigger="click">
+  <sg-button size="sm" variant="flat">Click me</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Hover or focus" trigger="hover,focus">
+  <sg-button size="sm" variant="flat">Hover / Focus</sg-button>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -79,12 +79,12 @@ Wrap any element with `bit-tooltip` and set the `content` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-tooltip content="Dark tooltip (default)">
-  <bit-button size="sm">Dark</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Light tooltip" variant="light">
-  <bit-button size="sm">Light</bit-button>
-</bit-tooltip>
+<sg-tooltip content="Dark tooltip (default)">
+  <sg-button size="sm">Dark</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Light tooltip" variant="light">
+  <sg-button size="sm">Light</sg-button>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -94,15 +94,15 @@ Wrap any element with `bit-tooltip` and set the `content` attribute.
 <ComponentPreview center>
 
 ```html
-<bit-tooltip content="Small tooltip" size="sm">
-  <bit-button size="sm">Small</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Medium tooltip (default)" size="md">
-  <bit-button size="sm">Medium</bit-button>
-</bit-tooltip>
-<bit-tooltip content="Large tooltip" size="lg">
-  <bit-button size="sm">Large</bit-button>
-</bit-tooltip>
+<sg-tooltip content="Small tooltip" size="sm">
+  <sg-button size="sm">Small</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Medium tooltip (default)" size="md">
+  <sg-button size="sm">Medium</sg-button>
+</sg-tooltip>
+<sg-tooltip content="Large tooltip" size="lg">
+  <sg-button size="sm">Large</sg-button>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -114,9 +114,9 @@ Use `delay` (milliseconds) to add a pause before the tooltip shows — useful fo
 <ComponentPreview center>
 
 ```html
-<bit-tooltip content="Appears after 600ms" delay="600">
-  <bit-button size="sm" variant="outline">Delayed</bit-button>
-</bit-tooltip>
+<sg-tooltip content="Appears after 600ms" delay="600">
+  <sg-button size="sm" variant="outline">Delayed</sg-button>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -128,12 +128,12 @@ For complex tooltip content, use the `content` named slot.
 <ComponentPreview center>
 
 ```html
-<bit-tooltip>
-  <bit-button size="sm">Keyboard shortcut</bit-button>
+<sg-tooltip>
+  <sg-button size="sm">Keyboard shortcut</sg-button>
   <span slot="content">
     Paste&nbsp;&nbsp;<kbd style="background:rgba(255,255,255,.15);border-radius:3px;padding:1px 4px;">⌘V</kbd>
   </span>
-</bit-tooltip>
+</sg-tooltip>
 ```
 
 </ComponentPreview>
@@ -143,9 +143,9 @@ For complex tooltip content, use the `content` named slot.
 Set `disabled` to suppress the tooltip entirely.
 
 ```html
-<bit-tooltip content="This won't show" disabled>
-  <bit-button>No tooltip</bit-button>
-</bit-tooltip>
+<sg-tooltip content="This won't show" disabled>
+  <sg-button>No tooltip</sg-button>
+</sg-tooltip>
 ```
 
 ## API Reference
@@ -181,7 +181,7 @@ Set `disabled` to suppress the tooltip entirely.
 
 The tooltip component follows WAI-ARIA best practices.
 
-### `bit-tooltip`
+### `sg-tooltip`
 
 ✅ **Keyboard Navigation**
 

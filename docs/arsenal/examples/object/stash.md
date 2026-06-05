@@ -1,117 +1,52 @@
-# stash
+---
+title: 'Arsenal Examples — stash'
+description: 'stash example for @vielzeug/arsenal.'
+---
 
-`stash` creates a typed in-memory cache with explicit key hashing, optional metadata, and TTL-based garbage collection.
+## stash
 
-## Source Code
+### Problem
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/object/stash.ts
-:::
+You need a typed cache with TTL expiry, stampede prevention for async factories, and an eviction callback — beyond what a plain `Map` or `cache()` provides.
 
-## Features
+### Solution
 
-- **Type-safe**: Generic typing for values, keys, and metadata.
-- **Explicit hashing**: You provide `hash(key)` to control key stability.
-- **TTL support**: Set TTL inline (`set(..., { ttlMs: 5000 })`).
-- **Stampede prevention**: `getOrSet` with async factories deduplicates concurrent calls.
-- **Eviction callback**: Optional `onEvict(key, value)` when entries are removed.
-
-## API
-
-```ts
-type CacheOptions<K, T> = {
-  hash: (key: K) => string;
-  onEvict?: (key: K, value: T) => void;
-};
-
-type CacheSetOptions = {
-  ttlMs?: number; // finite number or Infinity
-};
-
-type Stash<T, K> = {
-  get(key: K): T | undefined;
-  set(key: K, value: T, options?: CacheSetOptions): void;
-  getOrSet(key: K, factory: () => T, options?: CacheSetOptions): T;
-  getOrSet(key: K, factory: () => Promise<T>, options?: CacheSetOptions): Promise<T>;
-  delete(key: K): boolean;
-  clear(): void;
-  readonly size: number;
-  entries(): IterableIterator<[K, T]>;
-};
-
-function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K>;
-```
-
-### Parameters
-
-- `options.hash` (required): deterministic hash function for your key type.
-- `options.onEvict` (optional): called whenever an entry is removed (delete, clear, or TTL expiry).
-
-## Examples
-
-### Basic Cache Usage
+Use `stash(options)` to create a `Stash<T, K>` instance with `get`, `set`, `delete`, `clear`, `entries`, and the dual-mode `getOrSet`.
 
 ```ts
 import { stash } from '@vielzeug/arsenal';
 
-const userCache = stash<{ name: string; email: string }>({
+const userCache = stash<User, readonly [string, number]>({
   hash: (key) => JSON.stringify(key),
+  onEvict: (key, value) => console.log('evicted', key, value.name),
 });
 
-userCache.set(['user', 123], { name: 'Alice', email: 'alice@example.com' });
-
-const user = userCache.get(['user', 123]);
-console.log(user?.name); // 'Alice'
-console.log(userCache.size); // 1
+// Store with 30 second TTL
+userCache.set(['user', 1], { id: 1, name: 'Alice' }, { ttlMs: 30_000 });
+userCache.get(['user', 1]); // { id: 1, name: 'Alice' }
 ```
 
-### TTL-based expiry
+#### Async getOrSet with stampede prevention
 
 ```ts
 import { stash } from '@vielzeug/arsenal';
 
-const sessionCache = stash<string>({
-  hash: (key) => JSON.stringify(key),
-  onEvict: (key, value) => console.log(`evicted: ${String(key)}`),
-});
+const cache = stash<User>({ hash: String });
 
-sessionCache.set(['session', 'abc123'], 'user-data', { ttlMs: 5 * 60 * 1000 });
-// Entry is automatically removed after 5 minutes
+// Concurrent calls with the same key share one in-flight Promise
+const [a, b] = await Promise.all([
+  cache.getOrSet('user-1', () => fetchUser(1)),
+  cache.getOrSet('user-1', () => fetchUser(1)), // reuses the first call
+]);
 ```
 
-### Lazy Creation
+### Pitfalls
 
-```ts
-import { stash } from '@vielzeug/arsenal';
+- `getOrSet` caches `undefined` — if the factory returns `undefined`, subsequent calls return `undefined` without calling the factory again. Use `has()` semantics to distinguish "not cached" from "cached as undefined".
+- TTL expiry is checked lazily on access — expired entries are not removed until the key is read.
 
-const c = stash<number>({ hash: (key) => JSON.stringify(key) });
+### Related
 
-const value = c.getOrSet(['answer'], () => 42);
-console.log(value); // 42
-```
-
-### Iteration
-
-```ts
-import { stash } from '@vielzeug/arsenal';
-
-const c = stash<number>({ hash: (key) => JSON.stringify(key) });
-c.set(['a'], 1);
-c.set(['b'], 2);
-
-for (const [key, value] of c.entries()) {
-  console.log(key, value);
-}
-```
-
-## Implementation Notes
-
-- Hashing strategy is caller-defined via `hash(key)`.
-- GC tasks are revision-guarded to avoid stale timer races.
-- `ttlMs` supports `Infinity` to disable eviction for a key.
-- The cache is in-memory only.
-
-## See Also
-
-- [memo](../function/memo.md): Memoize function results.
-- [getOrCreate](./getOrCreate.md): Lazy-initialise a Map entry.
+- [cache](./cache.md)
+- [memo](../function/memo.md)
+- [stableStringify](./stableStringify.md)

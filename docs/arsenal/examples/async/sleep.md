@@ -1,85 +1,40 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-~0.1KB-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — sleep'
+description: 'sleep example for @vielzeug/arsenal.'
+---
 
-# sleep
+## sleep
 
-Create a Promise that resolves after a specified amount of time.
+### Problem
 
-## Signature
+You need a cancellable async delay — for example adding a minimum display time for a loading spinner or spacing retries.
 
-```typescript
-function sleep(timeout: number): Promise<void>;
-```
+### Solution
 
-## Parameters
+Use `sleep(ms, signal?)` to wait `ms` milliseconds. When a signal is provided, the sleep rejects early with an `AbortError` if the signal fires.
 
-- `timeout` – The number of milliseconds to wait before resolving the Promise
-
-## Returns
-
-A Promise that resolves after the specified time.
-
-## Examples
-
-### Basic Usage
-
-```typescript
+```ts
 import { sleep } from '@vielzeug/arsenal';
-await sleep(1000);
-console.log('Waited 1 second');
-```
 
-### In Async Workflows
+await sleep(500); // wait 500 ms
 
-```typescript
-import { sleep } from '@vielzeug/arsenal';
-async function processWithDelay() {
-  console.log('Starting...');
-  await sleep(2000);
-  console.log('Processing...');
-  await sleep(1000);
-  console.log('Done!');
+// Cancellable sleep
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 200);
+
+try {
+  await sleep(1_000, controller.signal);
+} catch {
+  // aborted after 200 ms
 }
 ```
 
-### Rate Limiting
+### Pitfalls
 
-```typescript
-import { sleep } from '@vielzeug/arsenal';
-for (const item of items) {
-  await processItem(item);
-  await sleep(100); // 100ms between each item
-}
-```
+- Without a signal, `sleep` is not cancellable — the promise will always resolve after `ms` ms.
+- The rejection value when aborted is an `AbortError` — check with `isAbortError`.
 
-### Polling with Delay
+### Related
 
-```typescript
-import { sleep } from '@vielzeug/arsenal';
-async function pollUntilReady() {
-  while (true) {
-    const status = await checkStatus();
-    if (status === 'ready') break;
-    console.log('Not ready yet, waiting...');
-    await sleep(1000);
-  }
-  console.log('Ready!');
-}
-```
-
-### Simulating Async Operations
-
-```typescript
-import { sleep } from '@vielzeug/arsenal';
-async function mockAPICall() {
-  await sleep(500); // Simulate network delay
-  return { data: 'mock data' };
-}
-```
-
-## Related
-
-- [retry](./retry.md): Retry a function with configurable backoff.
-- [waitFor](./waitFor.md) – Poll for a condition
+- [waitFor](./waitFor.md)
+- [retry](./retry.md)

@@ -1,77 +1,31 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-128_B-success" alt="Size">
-</div>
+---
+title: 'Arsenal Examples — clamp'
+description: 'clamp example for @vielzeug/arsenal.'
+---
 
-# clamp
+## clamp
 
-The `clamp` utility restricts a numeric value to be within a specified range. If the value is smaller than the minimum, it returns the minimum. If it's larger than the maximum, it returns the maximum. Otherwise, it returns the value itself.
+### Problem
 
-## Source Code
+A value may fall outside a valid range and you need to pin it to the nearest boundary — for example limiting a progress bar to 0–100 or a slider to its min/max.
 
-::: details View Source Code
-<<< @/../packages/arsenal/src/math/clamp.ts
-:::
+### Solution
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Robust**: Gracefully handles cases where `min` is greater than `max` by swapping them.
-- **Type-safe**: Properly typed for numeric inputs and results.
-
-## API
-
-```ts
-function clamp(value: number, min: number, max: number): number;
-```
-
-### Parameters
-
-- `value`: The numeric value to restrict.
-- `min`: The lower bound of the range.
-- `max`: The upper bound of the range.
-
-### Returns
-
-- The restricted value within the `[min, max]` range.
-
-## Examples
-
-### Basic Clamping
+Use `clamp(n, min, max)` to return `n` constrained to `[min, max]`.
 
 ```ts
 import { clamp } from '@vielzeug/arsenal';
 
-// Within range
-clamp(5, 0, 10); // 5
-
-// Below range
-clamp(-5, 0, 10); // 0
-
-// Above range
-clamp(15, 0, 10); // 10
+clamp(150, 0, 100); // 100
+clamp(-10, 0, 100); // 0
+clamp(50,  0, 100); // 50
 ```
 
-### Real-world Usage (UI Progress)
+### Pitfalls
 
-```ts
-import { clamp } from '@vielzeug/arsenal';
+- When `min > max`, returns `min`.
 
-function setProgress(percent: number) {
-  // Ensure percent is always between 0 and 100
-  const safePercent = clamp(percent, 0, 100);
-  console.log(`Progress: ${safePercent}%`);
-}
-```
+### Related
 
-## Implementation Notes
-
-- Performance-optimized using `Math.min` and `Math.max`.
-- If `min > max`, the utility automatically swaps them to ensure consistent behavior.
-- Throws `TypeError` if any of the arguments are not numbers.
-
-## See Also
-
-- [min](./min.md): Find the minimum value in a set.
-- [max](./max.md): Find the maximum value in a set.
-- [is](../typed/is.md): Use `is.number` for numeric guards before clamping.
+- [normalize](./normalize.md)
+- [lerp](./lerp.md)

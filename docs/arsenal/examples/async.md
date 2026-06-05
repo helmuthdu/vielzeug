@@ -3,8 +3,6 @@ title: Arsenal — Async Examples
 description: Async utility examples for Arsenal.
 ---
 
-## Async Utilities
-
 ## Quick Reference
 
 - [abortable](./async/abortable.md)
