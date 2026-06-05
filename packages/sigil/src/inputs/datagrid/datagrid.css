@@ -1,6 +1,7 @@
 @layer sigil.base {
   :host {
     /* ── Datagrid-specific token overrides on top of tableBaseMixin ─────── */
+    --_row-hover-bg: var(--datagrid-row-hover-bg, color-mix(in srgb, var(--color-contrast-500) 5%, transparent));
     --_row-selected-bg: var(--datagrid-row-selected-bg, color-mix(in srgb, var(--_accent) 10%, transparent));
     --_row-selected-border: var(--datagrid-row-selected-border, var(--_accent));
   }
@@ -41,14 +42,35 @@
     letter-spacing: 0.04em;
     white-space: nowrap;
     user-select: none;
-    border-inline-end: var(--border) solid var(--_border-color);
+    border-right: var(--border) solid var(--_border-color);
   }
 
-  .dg-th:last-child {
-    border-inline-end: none;
+  :host-context([dir='rtl']) .dg-th,
+  :dir(rtl) .dg-th {
+    border-right: none;
+    border-left: var(--border) solid var(--_border-color);
+  }
+
+  .dg-th:last-child,
+  .dg-th.dg-th-check,
+  .dg-th.dg-th-expand,
+  .dg-th.dg-th-last {
+    border-right: none;
+  }
+
+  :host-context([dir='rtl']) .dg-th:last-child,
+  :host-context([dir='rtl']) .dg-th.dg-th-check,
+  :host-context([dir='rtl']) .dg-th.dg-th-expand,
+  :host-context([dir='rtl']) .dg-th.dg-th-last,
+  :dir(rtl) .dg-th:last-child,
+  :dir(rtl) .dg-th.dg-th-check,
+  :dir(rtl) .dg-th.dg-th-expand,
+  :dir(rtl) .dg-th.dg-th-last {
+    border-left: none;
   }
 
   .dg-th-inner {
+    position: relative;
     display: flex;
     gap: var(--size-1);
     align-items: center;
@@ -105,17 +127,19 @@
 
   /* Select-all checkbox cell */
   .dg-th-check {
-    width: var(--size-10);
-    min-width: var(--size-10);
+    width: var(--size-5);
+    min-width: var(--size-5);
     padding: var(--_cell-padding-y) var(--_cell-padding-x);
-    border-inline-end: var(--border) solid var(--_border-color);
   }
 
-  /* Center the checkbox inside both header and body check cells */
   .dg-th-check,
   .dg-td-check {
     vertical-align: middle;
     text-align: center;
+  }
+
+  .dg-td.dg-td-check {
+    padding: var(--size-1) 0 0;
   }
 
   /* bit-checkbox used for select-all and row checkboxes — label-less, compact */
@@ -135,10 +159,6 @@
     transition: background var(--transition-fast);
   }
 
-  .dg-body .dg-tr:last-child {
-    border-block-end: none;
-  }
-
   .dg-body .dg-tr:hover:not([data-disabled], [aria-selected='true']) {
     background: var(--_row-hover-bg);
   }
@@ -147,7 +167,6 @@
 
   .dg-body .dg-tr[aria-selected='true'] {
     background: var(--_row-selected-bg);
-    box-shadow: inset 3px 0 0 var(--_row-selected-border);
   }
 
   .dg-body .dg-tr[data-selectable] {
@@ -183,11 +202,31 @@
     vertical-align: middle;
     color: var(--color-contrast-800);
     white-space: nowrap;
-    border-inline-end: var(--border) solid var(--_border-color);
+    border-right: var(--border) solid var(--_border-color);
   }
 
-  .dg-td:last-child {
-    border-inline-end: none;
+  :host-context([dir='rtl']) .dg-td,
+  :dir(rtl) .dg-td {
+    border-right: none;
+    border-left: var(--border) solid var(--_border-color);
+  }
+
+  .dg-td:last-child,
+  .dg-td.dg-td-check,
+  .dg-td.dg-td-expand,
+  .dg-td.dg-td-last {
+    border-right: none;
+  }
+
+  :host-context([dir='rtl']) .dg-td:last-child,
+  :host-context([dir='rtl']) .dg-td.dg-td-check,
+  :host-context([dir='rtl']) .dg-td.dg-td-expand,
+  :host-context([dir='rtl']) .dg-td.dg-td-last,
+  :dir(rtl) .dg-td:last-child,
+  :dir(rtl) .dg-td.dg-td-check,
+  :dir(rtl) .dg-td.dg-td-expand,
+  :dir(rtl) .dg-td.dg-td-last {
+    border-left: none;
   }
 
   /* ── Empty state ──────────────────────────────────────────────────────────── */
@@ -244,7 +283,6 @@
     font-size: var(--text-xs);
     color: var(--color-contrast-500);
     background: var(--_header-bg);
-    border-block-start: var(--border) solid var(--_border-color);
   }
 
   .dg-footer-info {
@@ -270,6 +308,11 @@
     display: flex;
     gap: var(--size-1);
     align-items: center;
+  }
+
+  :host-context([dir='rtl']) .dg-page-btn,
+  :dir(rtl) .dg-page-btn {
+    transform: scaleX(-1);
   }
 
   .dg-page-btn {
@@ -314,12 +357,13 @@
 
   .dg-col-resize {
     position: absolute;
-    inset-block: 0;
-    inset-inline-end: 0;
+    inset-block: calc(var(--_cell-padding-y) * -1);
+    inset-inline-end: calc((var(--_cell-padding-x) + var(--border) + 2px) * -1);
     width: var(--size-1);
     cursor: col-resize;
     user-select: none;
     background: transparent;
+    border-radius: var(--rounded);
     transition: background var(--transition-fast);
   }
 
@@ -334,6 +378,67 @@
   .dg-th:focus-visible {
     outline: 2px solid var(--_row-selected-border);
     outline-offset: -2px;
+  }
+
+  /* ── Row expansion ────────────────────────────────────────────────────────── */
+
+  .dg-tr-expanded .dg-td-expanded {
+    padding: var(--_cell-padding-y) var(--_cell-padding-x);
+    border: none;
+
+    /* Paint background + bottom separator via box-shadow so it is
+       direction-agnostic and covers the host outer border on both sides. */
+    box-shadow:
+      inset 0 0 0 9999px color-mix(in srgb, var(--color-contrast-600) 4%, var(--_bg, transparent)),
+      inset 0 calc(var(--border) * -1) 0 var(--_border-color);
+  }
+
+  .dg-tr-expanded:last-child .dg-td-expanded {
+    box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--color-contrast-900) 4%, var(--_bg, transparent));
+  }
+
+  .dg-tr:has(+ .dg-tr-expanded) {
+    border-block-end: none;
+  }
+
+  .dg-th-expand,
+  .dg-td-expand {
+    width: var(--size-8);
+    min-width: var(--size-8);
+    padding-block: var(--size-1) 0;
+    padding-inline: 0 var(--size-2);
+    text-align: center;
+    white-space: nowrap;
+    border-right: none;
+    border-left: none;
+  }
+
+  .dg-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    padding: 0;
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-sm);
+    transition: color var(--transition-fast);
+  }
+
+  .dg-expand-btn:hover:not(:disabled) {
+    color: var(--color-contrast-900);
+  }
+
+  .dg-expand-btn:focus-visible {
+    outline: 2px solid var(--_row-selected-border);
+    outline-offset: 1px;
+  }
+
+  .dg-expand-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
   }
 
   /* ── Loading overlay ──────────────────────────────────────────────────────── */

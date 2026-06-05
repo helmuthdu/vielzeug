@@ -18,8 +18,11 @@ import {
 } from '../../headless';
 import { disablableBundle, loadableBundle, sizableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
-import { createGridNav } from './datagrid-nav';
+import { COLUMN_OBSERVED_ATTRS, parseColumnChildren } from './datagrid-column';
+import { type GridNavHandle, createGridNav } from './datagrid-nav';
 import componentStyles from './datagrid.css?inline';
+
+export { COLUMN_TAG } from './datagrid-column';
 
 // ── Pure module-level helpers ─────────────────────────────────────────────────
 
@@ -43,58 +46,6 @@ export function ariaSortValue(state: SortState, key: string): 'ascending' | 'des
   return state.direction === 'asc' ? 'ascending' : 'descending';
 }
 
-// ── Declarative bit-column element ────────────────────────────────────────────
-
-/**
- * Declarative column definition for `<bit-datagrid>`.
- * Use as a child element instead of setting the `columns` prop imperatively.
- *
- * @element bit-column
- *
- * @attr {string} key - Row property key (required)
- * @attr {string} label - Header display label (required)
- * @attr {boolean} sortable - Makes the column sortable
- * @attr {string} width - CSS column width (e.g. '12rem')
- * @attr {string} header-label - Accessible label override for the column header
- *
- * @example
- * ```html
- * <bit-datagrid>
- *   <bit-column key="name" label="Name" sortable></bit-column>
- *   <bit-column key="email" label="Email" width="20rem"></bit-column>
- * </bit-datagrid>
- * ```
- */
-if (!customElements.get('bit-column'))
-  customElements.define(
-    'bit-column',
-    class extends HTMLElement {
-      connectedCallback(): void {
-        if (!this.getAttribute('key')) {
-          console.warn('[bit-column] Missing required `key` attribute.', this);
-        }
-
-        if (!this.getAttribute('label')) {
-          console.warn('[bit-column] Missing required `label` attribute.', this);
-        }
-      }
-    },
-  );
-
-export const COLUMN_TAG = 'bit-column' as const;
-
-/** Parse all `<bit-column>` children of `host` into DataGridColumn descriptors. */
-function parseColumnChildren(host: HTMLElement): DataGridColumn[] {
-  return Array.from(host.querySelectorAll(':scope > bit-column')).map((el) => ({
-    headerLabel: el.getAttribute('header-label') ?? undefined,
-    key: el.getAttribute('key') ?? '',
-    label: el.getAttribute('label') ?? '',
-    resizable: el.hasAttribute('resizable'),
-    sortable: el.hasAttribute('sortable'),
-    width: el.getAttribute('width') ?? undefined,
-  }));
-}
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type FilterDef = { key: string; label: string; options: { label?: string; value: string }[] };
@@ -102,6 +53,8 @@ export type FilterDef = { key: string; label: string; options: { label?: string;
 export type BitDataGridEvents<T = Record<string, unknown>> = {
   /** Fired when the active page changes. */
   'page-change': { pageIndex: number; pageSize: number };
+  /** Fired when a row is expanded or collapsed. */
+  'row-expand': { expanded: boolean; key: string };
   /** Fired when row selection changes. */
   'selection-change': { keys: string[]; rows: T[] };
   /** Fired when the sort column or direction changes. */
@@ -110,7 +63,9 @@ export type BitDataGridEvents<T = Record<string, unknown>> = {
 
 export type BitDataGridProps<T = Record<string, unknown>> = {
   /**
-   * Column definitions. Pass as a JS property — not serialisable to an HTML attribute.
+   * Column definitions (imperative API). Takes precedence over `<bit-column>` children.
+   * Passing `[]` explicitly clears declarative children.
+   * Pass `undefined` (or omit) to use `<bit-column>` children instead.
    * @example
    * ```js
    * grid.columns = [
@@ -124,6 +79,11 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
   disabled?: boolean;
   /** Text shown when there are no rows. */
   'empty-text'?: string;
+  /**
+   * Enable row expansion. When set, each row gets a toggle button.
+   * Requires at least one column to have a `renderExpanded` function.
+   */
+  expandable?: boolean;
   /**
    * Column filter definitions. Each entry renders a `bit-combobox` (multi-select) in the toolbar.
    * The toolbar renders automatically when filters are set, independent of the `searchable` prop.
@@ -206,6 +166,7 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  * @fires selection-change - Fired when row selection changes. detail: { keys: string[], rows: T[] }
  * @fires sort-change - Fired when sort state changes. detail: { key: string, direction: SortDirection }
  * @fires page-change - Fired when page changes. detail: { pageIndex: number, pageSize: number }
+ * @fires row-expand - Fired when a row is expanded or collapsed. detail: { expanded: boolean; key: string }
  *
  * @cssprop --datagrid-bg - Grid background color
  * @cssprop --datagrid-border-color - Grid and cell border color
@@ -214,7 +175,6 @@ export type BitDataGridProps<T = Record<string, unknown>> = {
  * @cssprop --datagrid-header-bg - Column header background
  * @cssprop --datagrid-row-hover-bg - Row hover background
  * @cssprop --datagrid-row-selected-bg - Selected row background
- * @cssprop --datagrid-row-selected-border - Inline-start accent on selected rows
  * @cssprop --datagrid-stripe-bg - Even-row stripe background
  * @cssprop --datagrid-cell-padding-x - Cell horizontal padding
  * @cssprop --datagrid-cell-padding-y - Cell vertical padding
@@ -254,6 +214,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     ...loadableBundle,
     columns: prop.ref<DataGridColumn[]>(),
     'empty-text': prop.string('No data'),
+    expandable: prop.bool(false),
     filters: prop.ref<FilterDef[]>(),
     fullwidth: prop.bool(false),
     getRowKey: prop.ref<(row: Record<string, unknown>) => string>(),
@@ -273,11 +234,31 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props['selection-mode'].value ?? 'none');
 
+    // ── Row expansion (hoisted — needed by checkOffset + effectiveColCount) ──
+    const expandedKeys = signal(new Set<string>());
+
+    // resolvedColumns is declared further below; this callback is lazy and only
+    // evaluates when .value is first read (after setup completes), so the
+    // forward closure reference is safe at runtime.
+    const hasExpander = computed(
+      () =>
+        props.expandable.value === true && resolvedColumns.value.some((c) => typeof c.renderExpanded === 'function'),
+    );
+
+    const checkOffset = computed(() => (selectionMode.value === 'multi' ? 1 : 0));
+
     // ── Page size ────────────────────────────────────────────────────────
-    // Single signal seeded from the initial prop value.
-    // The prop is treated as an initial-value-only (like `defaultValue` in React).
-    // The per-page select and external changes drive `pageSize` directly.
+    // Signal driven by the `page-size` prop. Stays in sync with prop changes
+    // so consumers can set grid['page-size'] = n reactively after mount.
+    // The per-page size selector also writes to this signal directly.
     const pageSize = signal<number>(props['page-size'].value ?? 10);
+
+    watch(
+      () => props['page-size'].value,
+      (n) => {
+        if (n != null) pageSize.value = n;
+      },
+    );
 
     // ── Declarative bit-column children ─────────────────────────────────────
     // A writable signal holding columns parsed from <bit-column> children.
@@ -293,9 +274,10 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
       });
 
       columnObserver.observe(el, {
-        attributeFilter: ['key', 'label', 'sortable', 'resizable', 'width', 'header-label'],
+        attributeFilter: COLUMN_OBSERVED_ATTRS as unknown as string[],
         attributes: true,
         childList: true,
+        subtree: true,
       });
 
       return () => columnObserver.disconnect();
@@ -309,21 +291,25 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     });
 
     // ── Key resolution ─────────────────────────────────────────────────────────
-    // Inlined — reads the prop directly so it always reflects the current value.
+    // Reads getRowKey prop dynamically so changes after mount are reflected.
 
     const resolveKey = (item: Record<string, unknown>): string => {
       const fn = props.getRowKey.value;
 
       if (fn) return fn(item);
 
-      if (item['id'] == null) {
+      const id = item['id'];
+
+      if (id == null) {
         console.warn(
-          '[bit-datagrid] Row is missing an `id` field. Provide `getRowKey` or ensure each row has a unique `id`.',
+          '[bit-datagrid] Row missing `id`. Keys will collide — provide `getRowKey` or add a unique `id` field.',
           item,
         );
+
+        return `__missing_${Math.random().toString(36).slice(2)}`;
       }
 
-      return String(item['id'] ?? '');
+      return String(id);
     };
 
     // ── Search & filters ─────────────────────────────────────────────────────────
@@ -332,7 +318,20 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     const filterValues = signal(new Map<string, Set<string>>());
     const filterDefs = computed(() => props.filters.value ?? []);
 
-    // B5: encapsulated mutation — one copy-on-write path, no inline Map copies in handlers.
+    // Prune stale filter state when columns are removed so ghost filters don't re-activate.
+    watch(
+      () => resolvedColumns.value.map((c) => c.key),
+      (activeKeys) => {
+        const keySet = new Set(activeKeys);
+        const current = filterValues.value;
+        const pruned = new Map([...current].filter(([k]) => keySet.has(k)));
+
+        if (pruned.size !== current.size) filterValues.value = pruned;
+      },
+      { immediate: false },
+    );
+
+    // encapsulated mutation — one copy-on-write path, no inline Map copies in handlers.
     const setFilter = (key: string, values: string[]): void => {
       const next = new Map(filterValues.value);
 
@@ -402,7 +401,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
     // Stores user-dragged widths as { key → px } so they survive re-renders.
     // Only columns with `resizable: true` get a drag handle.
 
-    const colWidths = signal(new Map<string, number>());
+    const colWidths = signal<Record<string, number>>({});
 
     const createColResizeHandler =
       (key: string, th: HTMLElement): ((e: PointerEvent) => void) =>
@@ -411,22 +410,20 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
         const startX = e.clientX;
         const startW = th.getBoundingClientRect().width;
+        // AbortController ensures listeners are removed even if the component
+        // is destroyed mid-drag (e.g. during SPA navigation).
+        const ac = new AbortController();
+        const { signal: sig } = ac;
 
-        const onMove = (mv: PointerEvent): void => {
-          const newW = Math.max(40, startW + mv.clientX - startX);
-          const next = new Map(colWidths.value);
+        window.addEventListener(
+          'pointermove',
+          (mv: PointerEvent) => {
+            colWidths.value = { ...colWidths.value, [key]: Math.max(40, startW + mv.clientX - startX) };
+          },
+          { signal: sig },
+        );
 
-          next.set(key, newW);
-          colWidths.value = next;
-        };
-
-        const onUp = (): void => {
-          window.removeEventListener('pointermove', onMove);
-          window.removeEventListener('pointerup', onUp);
-        };
-
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointerup', () => ac.abort(), { signal: sig });
       };
 
     // ── Cell value helper ────────────────────────────────────────────────────
@@ -449,13 +446,8 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
     // ── Pagination handlers ───────────────────────────────────────────────────
 
-    function handlePrev(): void {
-      ctrl.prevPage();
-      emit('page-change', { pageIndex: ctrl.pageIndex.value, pageSize: pageSize.value });
-    }
-
-    function handleNext(): void {
-      ctrl.nextPage();
+    function handlePage(direction: 'next' | 'prev'): void {
+      direction === 'prev' ? ctrl.prevPage() : ctrl.nextPage();
       emit('page-change', { pageIndex: ctrl.pageIndex.value, pageSize: pageSize.value });
     }
 
@@ -471,7 +463,9 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
     // ── Column count (used in keyboard nav + empty colspan) ───────────────────
 
-    const effectiveColCount = computed(() => resolvedColumns.value.length + (selectionMode.value === 'multi' ? 1 : 0));
+    const effectiveColCount = computed(
+      () => resolvedColumns.value.length + (selectionMode.value === 'multi' ? 1 : 0) + (hasExpander.value ? 1 : 0),
+    );
 
     // ── Pagination info text ──────────────────────────────────────────────────
 
@@ -488,12 +482,26 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
       return `${start} to ${end} of ${total}`;
     });
 
-    // ── Keyboard cell navigation (roving tabindex — C1 extracted to datagrid-nav.ts) ──
-    // C2+F6: activeCell signal is the single owner of tabindex state.
-    // Template reads activeCell.value to set initial + reactive tabindex,
-    // preventing re-renders from overwriting keyboard-navigated state.
+    // ── Row expansion (toggle handler) ───────────────────────────────────────
 
-    let navHandle: ReturnType<typeof createGridNav>['handle'] | null = null;
+    const toggleExpand = (key: string): void => {
+      const next = new Set(expandedKeys.value);
+      const expanded = !next.has(key);
+
+      expanded ? next.add(key) : next.delete(key);
+      expandedKeys.value = next;
+      emit('row-expand', { expanded, key });
+    };
+
+    // ── Keyboard cell navigation (roving tabindex — extracted to datagrid-nav.ts) ──
+    // navHandle is initialised with a real sentinel signal so the first render
+    // produces correct tabindex values (row=0, col=0 → '0') before onMounted.
+    // onMounted replaces it with the live handle from createGridNav.
+
+    let navHandle: GridNavHandle = {
+      activeCell: signal({ col: 0, row: 0 }),
+      focusCell: () => {},
+    };
 
     onMounted(() => {
       const shadow = el.shadowRoot!;
@@ -510,7 +518,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
 
     // Expose programmatic focusCell API on the host element (F6)
     (el as HTMLElement & { focusCell: (pos: { col: number; row: number }) => void }).focusCell = (pos) =>
-      navHandle?.focusCell(pos);
+      navHandle.focusCell(pos);
 
     // ── Template ──────────────────────────────────────────────────────────────
 
@@ -570,7 +578,11 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                       role="columnheader"
                       scope="col"
                       :tabindex="${() =>
-                        navHandle?.activeCell.value.row === 0 && navHandle?.activeCell.value.col === 0 ? '0' : '-1'}">
+                        navHandle.activeCell.value.row === 0 &&
+                        navHandle.activeCell.value.col === 0 &&
+                        checkOffset.value >= 1
+                          ? '0'
+                          : '-1'}">
                       <bit-checkbox
                         class="dg-check"
                         :checked="${() => ctrl.isAllSelected()}"
@@ -584,62 +596,70 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                   : html``}
               ${() =>
                 resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
-                  const checkOffset = selectionMode.value === 'multi' ? 1 : 0;
+                  const isLast = colIdx === resolvedColumns.value.length - 1;
 
                   return html`<th
-                    class="dg-th"
+                    class="${`dg-th${isLast && hasExpander.value ? ' dg-th-last' : ''}`}"
                     role="columnheader"
                     scope="col"
                     :tabindex="${() => {
-                      const ac = navHandle?.activeCell.value;
+                      const ac = navHandle.activeCell.value;
 
-                      return ac?.row === 0 && ac?.col === colIdx + checkOffset ? '0' : '-1';
+                      return ac.row === 0 && ac.col === colIdx + checkOffset.value ? '0' : '-1';
                     }}"
                     :aria-sort="${() => (col.sortable ? ariaSortValue(ctrl.sortState.value, col.key) : undefined)}"
                     :aria-label="${col.sortable ? undefined : (col.headerLabel ?? col.label)}"
                     :style="${() => {
-                      const dragged = colWidths.value.get(col.key);
+                      const dragged = colWidths.value[col.key];
 
                       return dragged ? `width:${dragged}px` : col.width ? `width:${col.width}` : '';
-                    }}"
-                    ref="${(thEl: HTMLElement) => {
-                      if (col.resizable) {
-                        thEl.style.position = 'relative';
-                      }
                     }}">
-                    ${() =>
-                      col.sortable
-                        ? html`<button
-                            class="dg-sort-btn"
-                            type="button"
-                            :aria-label="${col.headerLabel ?? col.label}"
-                            :disabled="${() => isDisabled.value || undefined}"
-                            @click="${() => {
-                              if (!isDisabled.value) ctrl.sortBy(col.key);
-                            }}">
-                            <span class="dg-th-inner">
-                              ${col.label}
-                              <span class="dg-sort-icon" aria-hidden="true">
-                                <bit-icon
-                                  :name="${() => sortIconName(ctrl.sortState.value, col.key)}"
-                                  size="14"
-                                  stroke-width="2"></bit-icon>
+                    <div class="dg-th-inner">
+                      ${() =>
+                        col.sortable
+                          ? html`<button
+                              class="dg-sort-btn"
+                              type="button"
+                              :aria-label="${col.headerLabel ?? col.label}"
+                              :disabled="${() => isDisabled.value || undefined}"
+                              @click="${() => {
+                                if (!isDisabled.value) ctrl.sortBy(col.key);
+                              }}">
+                              <span class="dg-sort-label">
+                                ${col.label}
+                                <span class="dg-sort-icon" aria-hidden="true">
+                                  <bit-icon
+                                    :name="${() => sortIconName(ctrl.sortState.value, col.key)}"
+                                    size="14"
+                                    stroke-width="2"></bit-icon>
+                                </span>
                               </span>
-                            </span>
-                          </button>`
-                        : col.label}
-                    ${col.resizable
-                      ? html`<span
-                          class="dg-col-resize"
-                          aria-hidden="true"
-                          ref="${(handleEl: HTMLElement) => {
-                            const th = handleEl.closest('th') as HTMLElement | null;
+                            </button>`
+                          : col.label}
+                      ${col.resizable
+                        ? html`<span
+                            class="dg-col-resize"
+                            aria-hidden="true"
+                            ref="${(handleEl: HTMLElement | null) => {
+                              if (!handleEl) return;
 
-                            if (th) handleEl.addEventListener('pointerdown', createColResizeHandler(col.key, th));
-                          }}"></span>`
-                      : html``}
+                              const th = handleEl.closest('th') as HTMLElement | null;
+
+                              if (th) handleEl.addEventListener('pointerdown', createColResizeHandler(col.key, th));
+                            }}"></span>`
+                        : html``}
+                    </div>
                   </th>`;
                 })}
+              ${() =>
+                hasExpander.value
+                  ? html`<th
+                      class="dg-th dg-th-expand"
+                      role="columnheader"
+                      scope="col"
+                      aria-label="Row details"
+                      tabindex="-1"></th>`
+                  : html``}
             </tr>
           </thead>
 
@@ -658,55 +678,97 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                     const rowIdx = itemIdx + 1;
 
                     return html`<tr
-                      class="dg-tr"
-                      part="row"
-                      role="row"
-                      :aria-selected="${() =>
-                        selectionMode.value !== 'none' ? String(ctrl.selectedKeys.value.has(key)) : null}"
-                      ?data-selectable="${isSelectable}"
-                      ?data-disabled="${isDisabled}"
-                      @click="${() => {
-                        if (isSelectable) ctrl.toggleRow(key);
-                      }}"
-                      @keydown="${(e: KeyboardEvent) => {
-                        if ((e.key === 'Enter' || e.key === ' ') && isSelectable) {
-                          e.preventDefault();
-                          ctrl.toggleRow(key);
-                        }
-                      }}">
+                        class="dg-tr"
+                        part="row"
+                        role="row"
+                        :aria-selected="${() =>
+                          selectionMode.value !== 'none' ? String(ctrl.selectedKeys.value.has(key)) : null}"
+                        :aria-expanded="${() => (hasExpander.value ? String(expandedKeys.value.has(key)) : null)}"
+                        ?data-selectable="${isSelectable}"
+                        ?data-disabled="${isDisabled}"
+                        @click="${() => {
+                          if (isSelectable) ctrl.toggleRow(key);
+                        }}"
+                        @keydown="${(e: KeyboardEvent) => {
+                          if ((e.key === 'Enter' || e.key === ' ') && isSelectable) {
+                            e.preventDefault();
+                            ctrl.toggleRow(key);
+                          }
+                        }}">
+                        ${() =>
+                          selectionMode.value === 'multi'
+                            ? html`<td class="dg-td dg-td-check" role="gridcell">
+                                <bit-checkbox
+                                  class="dg-check"
+                                  :checked="${() => ctrl.selectedKeys.value.has(key)}"
+                                  ?disabled="${isDisabled}"
+                                  aria-label="Select row"
+                                  tabindex="-1"
+                                  @click="${(e: MouseEvent) => e.stopPropagation()}"
+                                  @change="${() => {
+                                    if (!isDisabled.value) ctrl.toggleRow(key);
+                                  }}"></bit-checkbox>
+                              </td>`
+                            : html``}
+                        ${resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
+                          const value = getCellValue(col, item as Record<string, unknown>);
+
+                          const isLastCol = colIdx === resolvedColumns.value.length - 1;
+
+                          return html`<td
+                            class="${`dg-td${isLastCol && hasExpander.value ? ' dg-td-last' : ''}`}"
+                            part="cell"
+                            role="gridcell"
+                            :tabindex="${() => {
+                              const ac = navHandle.activeCell.value;
+
+                              return ac.row === rowIdx && ac.col === colIdx + checkOffset.value ? '0' : '-1';
+                            }}"
+                            :title="${value}">
+                            ${value}
+                          </td>`;
+                        })}
+                        ${() =>
+                          hasExpander.value
+                            ? html`<td class="dg-td dg-td-expand" role="gridcell">
+                                <button
+                                  class="dg-expand-btn"
+                                  type="button"
+                                  :aria-label="${() => (expandedKeys.value.has(key) ? 'Collapse row' : 'Expand row')}"
+                                  :aria-expanded="${() => String(expandedKeys.value.has(key))}"
+                                  :disabled="${() => isDisabled.value || undefined}"
+                                  @click="${(e: MouseEvent) => {
+                                    e.stopPropagation();
+
+                                    if (!isDisabled.value) toggleExpand(key);
+                                  }}">
+                                  <bit-icon
+                                    :name="${() => (expandedKeys.value.has(key) ? 'chevron-up' : 'chevron-down')}"
+                                    size="14"
+                                    stroke-width="2"
+                                    aria-hidden="true"></bit-icon>
+                                </button>
+                              </td>`
+                            : html``}
+                      </tr>
                       ${() =>
-                        selectionMode.value === 'multi'
-                          ? html`<td class="dg-td dg-td-check" role="gridcell">
-                              <bit-checkbox
-                                class="dg-check"
-                                :checked="${() => ctrl.selectedKeys.value.has(key)}"
-                                ?disabled="${isDisabled}"
-                                aria-label="Select row"
-                                tabindex="-1"
-                                @click="${(e: MouseEvent) => e.stopPropagation()}"
-                                @change="${() => {
-                                  if (!isDisabled.value) ctrl.toggleRow(key);
-                                }}"></bit-checkbox>
-                            </td>`
-                          : html``}
-                      ${resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
-                        const value = getCellValue(col, item as Record<string, unknown>);
-                        const checkOffset = selectionMode.value === 'multi' ? 1 : 0;
+                        hasExpander.value && expandedKeys.value.has(key)
+                          ? html`<tr class="dg-tr-expanded" role="row" aria-hidden="true">
+                              <td
+                                class="dg-td-expanded"
+                                role="gridcell"
+                                :colspan="${() => String(effectiveColCount.value)}"
+                                ref="${(td: HTMLElement | null) => {
+                                  if (!td) return;
 
-                        return html`<td
-                          class="dg-td"
-                          part="cell"
-                          role="gridcell"
-                          :tabindex="${() => {
-                            const ac = navHandle?.activeCell.value;
+                                  const renderer = resolvedColumns.value.find(
+                                    (c) => typeof c.renderExpanded === 'function',
+                                  );
 
-                            return ac?.row === rowIdx && ac?.col === colIdx + checkOffset ? '0' : '-1';
-                          }}"
-                          :title="${value}">
-                          ${value}
-                        </td>`;
-                      })}
-                    </tr>`;
+                                  td.innerHTML = renderer?.renderExpanded?.(item) ?? '';
+                                }}"></td>
+                            </tr>`
+                          : html``} `;
                   })}
           </tbody>
         </table>
@@ -716,7 +778,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
       ${() =>
         paginationEnabled.value
           ? html`<div class="dg-footer" part="footer" role="navigation" aria-label="Pagination">
-              <span class="dg-footer-info" aria-live="polite" aria-atomic="true">${paginationInfo}</span>
+              <span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true">${paginationInfo}</span>
               <div class="dg-footer-end">
                 ${() => {
                   const opts = props['page-size-options'].value ?? [];
@@ -745,10 +807,10 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                     type="button"
                     aria-label="Previous page"
                     ?disabled="${() => !ctrl.hasPrevPage.value || isDisabled.value}"
-                    @click="${handlePrev}">
+                    @click="${() => handlePage('prev')}">
                     <bit-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
                   </button>
-                  <span class="dg-page-label" aria-current="page">
+                  <span class="dg-page-label" dir="ltr" aria-current="page">
                     ${() => `${ctrl.pageIndex.value + 1} / ${ctrl.pageCount.value}`}
                   </span>
                   <button
@@ -756,7 +818,7 @@ define<BitDataGridProps, BitDataGridEvents>(DATAGRID_TAG, {
                     type="button"
                     aria-label="Next page"
                     ?disabled="${() => !ctrl.hasNextPage.value || isDisabled.value}"
-                    @click="${handleNext}">
+                    @click="${() => handlePage('next')}">
                     <bit-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
                   </button>
                 </div>

@@ -30,7 +30,7 @@ export const tableBaseMixin = (prefix: string) => css`
       --_border-color: var(--${prefix}-border-color, var(--color-contrast-200));
       --_radius: var(--${prefix}-radius, var(--rounded-xl));
       --_header-bg: var(--${prefix}-header-bg, var(--color-contrast-50));
-      --_accent: var(--${prefix}-accent, var(--color-primary-focus));
+      --_accent: var(--${prefix}-accent, var(--color-neutral-focus));
       --_row-hover-bg: var(--${prefix}-row-hover-bg, color-mix(in srgb, var(--_accent) 6%, transparent));
       --_stripe-bg: var(--${prefix}-stripe-bg, color-mix(in srgb, var(--color-contrast-900) 3%, transparent));
       --_cell-padding-x: var(--${prefix}-cell-padding-x, var(--size-3));

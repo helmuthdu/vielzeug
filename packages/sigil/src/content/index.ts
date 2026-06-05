@@ -1,3 +1,5 @@
+export { CAROUSEL_SLIDE_TAG, CAROUSEL_TAG } from './carousel/carousel';
+export type { BitCarouselEvents, BitCarouselProps, CarouselOrientation } from './carousel/carousel';
 export { AVATAR_GROUP_TAG, AVATAR_TAG } from './avatar/avatar';
 export type { AvatarStatus, BitAvatarGroupProps, BitAvatarProps } from './avatar/avatar';
 export { BREADCRUMB_ITEM_TAG, BREADCRUMB_TAG } from './breadcrumb/breadcrumb';

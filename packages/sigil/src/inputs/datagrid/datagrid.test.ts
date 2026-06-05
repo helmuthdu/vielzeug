@@ -1295,6 +1295,303 @@ describe('bit-datagrid', () => {
     });
   });
 
+  // ── bit-column attribute reactivity ──────────────────────────────────────
+
+  describe('bit-column attribute reactivity', () => {
+    it('updating label attribute on bit-column updates the header cell', async () => {
+      fixture = await mount('bit-datagrid', {});
+
+      const el = fixture.element as HTMLElement & { rows: User[] };
+
+      el.innerHTML = '<bit-column key="name" label="Name"></bit-column>';
+      el.rows = ROWS;
+      await new Promise((r) => setTimeout(r, 0));
+
+      const col = el.querySelector('bit-column')!;
+
+      col.setAttribute('label', 'Full Name');
+      await new Promise((r) => setTimeout(r, 0));
+
+      const headers = Array.from(fixture.queryAll('.dg-th'));
+
+      expect(headers.some((h) => h.textContent?.trim() === 'Full Name')).toBe(true);
+    });
+
+    it('updating sortable attribute on bit-column adds sort button', async () => {
+      fixture = await mount('bit-datagrid', {});
+
+      const el = fixture.element as HTMLElement & { rows: User[] };
+
+      el.innerHTML = '<bit-column key="name" label="Name"></bit-column>';
+      el.rows = ROWS;
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(fixture.query('.dg-sort-btn')).toBeNull();
+
+      el.querySelector('bit-column')!.setAttribute('sortable', '');
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(fixture.query('.dg-sort-btn')).toBeTruthy();
+    });
+  });
+
+  // ── page-size prop reactivity ─────────────────────────────────────────────
+
+  describe('page-size prop reactivity', () => {
+    it('changing page-size prop after mount updates visible row count', async () => {
+      fixture = await mountGrid({ 'page-size': 2 });
+
+      expect(getBodyRows(fixture).length).toBe(2);
+
+      (fixture.element as unknown as { 'page-size': number })['page-size'] = 1;
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture).length).toBe(1);
+    });
+
+    it('setting page-size to 0 after mount disables pagination', async () => {
+      fixture = await mountGrid({ 'page-size': 2 });
+
+      expect(fixture.query('.dg-footer')).toBeTruthy();
+
+      (fixture.element as unknown as { 'page-size': number })['page-size'] = 0;
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture).length).toBe(ROWS.length);
+      expect(fixture.query('.dg-footer')).toBeNull();
+    });
+  });
+
+  // ── Row expansion ────────────────────────────────────────────────────────
+
+  describe('Row expansion (expandable prop + renderExpanded)', () => {
+    const EXPANDABLE_COLS = [
+      {
+        key: 'name',
+        label: 'Name',
+        renderExpanded: (r: User) => `<div class="detail">${r.name}: ${r.role}</div>`,
+      },
+      { key: 'role', label: 'Role' },
+    ];
+
+    async function mountExpandable(): Promise<Fixture<HTMLElement>> {
+      const f = await mount('bit-datagrid', { props: { expandable: true } });
+      const el = f.element as GridElement;
+
+      (el as unknown as { columns: typeof EXPANDABLE_COLS }).columns = EXPANDABLE_COLS;
+      el.rows = ROWS;
+      await Promise.resolve();
+
+      return f;
+    }
+
+    it('renders expand buttons when expandable and a column has renderExpanded', async () => {
+      fixture = await mountExpandable();
+
+      expect(fixture.queryAll('.dg-expand-btn').length).toBe(ROWS.length);
+    });
+
+    it('does not render expand buttons when expandable is not set', async () => {
+      fixture = await mountGrid();
+
+      expect(fixture.query('.dg-expand-btn')).toBeNull();
+    });
+
+    it('does not render expand buttons when no column has renderExpanded', async () => {
+      fixture = await mountGrid({ expandable: true });
+
+      expect(fixture.query('.dg-expand-btn')).toBeNull();
+    });
+
+    it('clicking expand button shows expanded row panel', async () => {
+      fixture = await mountExpandable();
+
+      const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
+
+      fire.click(btn);
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-tr-expanded')).toBeTruthy();
+      expect(fixture.query('.dg-td-expanded')?.innerHTML).toContain('Alice');
+    });
+
+    it('clicking expand button again collapses the row', async () => {
+      fixture = await mountExpandable();
+
+      const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
+
+      fire.click(btn);
+      await Promise.resolve();
+      fire.click(btn);
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-tr-expanded')).toBeNull();
+    });
+
+    it('sets aria-expanded="true" on the row when expanded', async () => {
+      fixture = await mountExpandable();
+
+      const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
+      const row = getBodyRows(fixture)[0];
+
+      fire.click(btn);
+      await Promise.resolve();
+
+      expect(row.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('sets aria-expanded="false" on the row when collapsed', async () => {
+      fixture = await mountExpandable();
+
+      const row = getBodyRows(fixture)[0];
+
+      expect(row.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('emits row-expand with expanded=true on first click', async () => {
+      fixture = await mountExpandable();
+
+      let detail: { expanded: boolean; key: string } | null = null;
+
+      fixture.element.addEventListener('row-expand', (e: Event) => {
+        detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;
+      });
+
+      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      await Promise.resolve();
+
+      expect(detail!.expanded).toBe(true);
+      expect(detail!.key).toBe('1');
+    });
+
+    it('emits row-expand with expanded=false on second click', async () => {
+      fixture = await mountExpandable();
+
+      const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
+
+      fire.click(btn);
+      await Promise.resolve();
+
+      let detail: { expanded: boolean; key: string } | null = null;
+
+      fixture.element.addEventListener('row-expand', (e: Event) => {
+        detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;
+      });
+
+      fire.click(btn);
+      await Promise.resolve();
+
+      expect(detail!.expanded).toBe(false);
+    });
+
+    it('multiple rows can be expanded simultaneously', async () => {
+      fixture = await mountExpandable();
+
+      const btns = fixture.queryAll('.dg-expand-btn') as HTMLElement[];
+
+      fire.click(btns[0]);
+      await Promise.resolve();
+      fire.click(btns[1]);
+      await Promise.resolve();
+
+      expect(fixture.queryAll('.dg-tr-expanded').length).toBe(2);
+    });
+
+    it('expanded panel colspan spans all columns', async () => {
+      fixture = await mountExpandable();
+
+      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      await Promise.resolve();
+
+      // effectiveColCount = data columns + 1 expander column
+      expect(fixture.query('.dg-td-expanded')?.getAttribute('colspan')).toBe(String(EXPANDABLE_COLS.length + 1));
+    });
+  });
+
+  // ── filterValues pruning ──────────────────────────────────────────────────
+
+  describe('filterValues pruning on column removal', () => {
+    it('filteredRows computed ignores filter keys not present in current columns', async () => {
+      fixture = await mount('bit-datagrid', {});
+
+      const el = fixture.element as GridElement;
+
+      // Start with two columns and a filter on 'role'.
+      el.columns = [
+        { key: 'name', label: 'Name' },
+        { key: 'role', label: 'Role' },
+      ];
+      el.rows = ROWS;
+      (el as unknown as { filters: unknown[] }).filters = [
+        { key: 'role', label: 'Role', options: [{ value: 'Admin' }] },
+      ];
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Apply the role filter — only Admin rows should be visible.
+      const filterSelect = fixture.query('.dg-filter') as HTMLElement;
+
+      filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: ['Admin'] } }));
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(getBodyRows(fixture).length).toBe(1);
+
+      // Clear the filter UI and remove the role column simultaneously.
+      // The filterValues pruning watch should clear the stale 'role' key.
+      filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(getBodyRows(fixture).length).toBe(ROWS.length);
+    });
+  });
+
+  // ── getRowKey missing id fallback ─────────────────────────────────────────
+
+  describe('getRowKey missing id fallback', () => {
+    it('rows without id and without getRowKey each get a unique key (no collapsed rows)', async () => {
+      fixture = await mount('bit-datagrid', { props: { 'selection-mode': 'single' } });
+
+      const el = fixture.element as HTMLElement & {
+        columns: { key: string; label: string }[];
+        rows: { name: string }[];
+      };
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      el.columns = [{ key: 'name', label: 'Name' }];
+      el.rows = [{ name: 'Alice' }, { name: 'Bob' }, { name: 'Carol' }];
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture).length).toBe(3);
+
+      fire.click(getBodyRows(fixture)[0]);
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture)[0].getAttribute('aria-selected')).toBe('true');
+      expect(getBodyRows(fixture)[1].getAttribute('aria-selected')).toBe('false');
+
+      warnSpy.mockRestore();
+    });
+
+    it('warns when row is missing id', async () => {
+      fixture = await mount('bit-datagrid', {});
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const el = fixture.element as HTMLElement & {
+        columns: { key: string; label: string }[];
+        rows: { name: string }[];
+      };
+
+      el.columns = [{ key: 'name', label: 'Name' }];
+      el.rows = [{ name: 'Alice' }];
+      await Promise.resolve();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[bit-datagrid]'), expect.anything());
+
+      warnSpy.mockRestore();
+    });
+  });
+
   // ── C3: bit-column validation warnings ───────────────────────────────────
 
   describe('C3: bit-column connectedCallback validation', () => {

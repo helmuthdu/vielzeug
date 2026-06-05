@@ -1,0 +1,102 @@
+@layer sigil.base {
+  :host {
+    --_bg: var(--carousel-bg, var(--color-canvas));
+    --_radius: var(--carousel-radius, var(--rounded-xl));
+    --_dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
+    --_dot-active-bg: var(--carousel-dot-active-bg, var(--color-contrast-700));
+    --_duration: var(--carousel-transition-duration, 0.35s);
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: var(--carousel-min-height, 240px);
+    overflow: hidden;
+    touch-action: pan-y;
+    outline: none;
+    background: var(--_bg);
+    border-radius: var(--_radius);
+  }
+
+  /* ── Track ──────────────────────────────────────────────────────── */
+
+  .track {
+    position: relative;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  /* ── Controls (prev / next) ────────────────────────────────────────────── */
+
+  .controls {
+    position: absolute;
+    inset-block: 50%;
+    inset-inline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 0;
+    padding-inline: var(--size-2);
+    pointer-events: none;
+  }
+
+  .nav-btn {
+    pointer-events: auto;
+    transform: translateY(-50%);
+  }
+
+  /* ── Indicators (dots) ─────────────────────────────────────────────────── */
+
+  .indicators {
+    position: absolute;
+    inset-block-end: var(--size-3);
+    inset-inline: 0;
+    display: flex;
+    gap: var(--size-1-5);
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .indicator {
+    --progress-height: var(--size-1-5);
+    --progress-track-bg: var(--_dot-bg);
+    --progress-radius: var(--rounded-md);
+
+    width: var(--size-8) !important;
+    flex-shrink: 0;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity var(--transition-fast);
+  }
+
+  .indicator:focus-visible {
+    outline: var(--border) solid currentColor;
+    outline-offset: 2px;
+  }
+
+  .indicator:hover {
+    opacity: 0.8;
+  }
+
+  .indicator::part(fill) {
+    transition: width var(--transition-normal);
+  }
+
+  .indicator-active {
+    --progress-track-bg: color-mix(in srgb, var(--_dot-bg) 60%, transparent);
+  }
+
+  .indicator-active::part(fill) {
+    animation-name: var(--carousel-animation-name, none);
+    animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes carousel-fill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}

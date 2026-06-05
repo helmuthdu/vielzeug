@@ -96,7 +96,7 @@ function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?:
 }
 
 /** Entry stored in the cell map: native mirror element + its inferred scope fallback. */
-type CellEntry = { native: HTMLTableCellElement; inferredScope: string | undefined };
+type CellEntry = { inferredScope: string | undefined; native: HTMLTableCellElement };
 
 /**
  * (Re)build the entire native shadow table from the current light-DOM markers.
@@ -132,7 +132,7 @@ function buildTable(
       const inferredScope = isHeader ? (section === thead ? 'col' : 'row') : undefined;
 
       syncCell(cell, native, inferredScope);
-      cellMap.set(cell, { native, inferredScope });
+      cellMap.set(cell, { inferredScope, native });
       tr.appendChild(native);
     }
 

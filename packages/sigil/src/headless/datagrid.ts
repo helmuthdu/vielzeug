@@ -26,6 +26,20 @@ export type DataGridColumn<T = Record<string, unknown>> = {
   key: string;
   /** Display label for the column header. */
   label: string;
+  /**
+   * Renders the expanded detail panel for a row. When provided on any column,
+   * `<bit-datagrid expandable>` shows a toggle button in each row.
+   * Receives the full row item and returns an HTML string.
+   *
+   * @example
+   * ```js
+   * grid.columns = [{
+   *   key: 'name', label: 'Name',
+   *   renderExpanded: (row) => `<div class="detail"><b>${row.name}</b>: ${row.bio}</div>`,
+   * }];
+   * ```
+   */
+  renderExpanded?: (item: T) => string;
   /** Whether the column can be resized via a drag handle. Defaults to `false`. */
   resizable?: boolean;
   /** Whether the column is sortable. Defaults to `false`. */
