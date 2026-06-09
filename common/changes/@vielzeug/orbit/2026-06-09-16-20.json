@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/orbit",
+      "comment": "Minor release with bug fixes and improvements",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/orbit",
+  "email": ""
+}

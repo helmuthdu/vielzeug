@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/codex",
+      "comment": "Minor release with bug fixes and improvements",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/codex",
+  "email": ""
+}

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/conduit",
+      "comment": "Minor release with bug fixes and improvements",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/conduit",
+  "email": ""
+}

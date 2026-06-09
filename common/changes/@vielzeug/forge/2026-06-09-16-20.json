@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/forge",
+      "comment": "Minor release with bug fixes and improvements",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/forge",
+  "email": ""
+}
