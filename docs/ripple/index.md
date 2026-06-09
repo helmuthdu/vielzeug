@@ -40,7 +40,7 @@ exports:
 # Ripple
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
@@ -162,19 +162,19 @@ count.value = 1; // notifies automatically
 | Feature                      | Ripple                                       | Zustand          | Jotai        | Nanostores |
 | ---------------------------- | -------------------------------------------- | ---------------- | ------------ | ---------- |
 | Bundle size                  | <PackageInfo package="ripple" type="size" /> | ~3.5 kB          | ~7 kB        | ~2 kB      |
-| Zero dependencies            | ✅                                           | ❌               | ❌           | ✅         |
-| Framework-agnostic           | ✅                                           | ✅               | React-first  | ✅         |
-| Fine-grained reactivity      | ✅ (per-property)                            | ❌ (whole store) | ✅           | ✅ (atom)  |
-| Structured object stores     | ✅ (`store`, `lens`)                         | ✅               | Manual atoms | ❌         |
-| Async computed               | ✅ (`asyncComputed`)                         | Manual           | ✅           | ❌         |
-| Undo / redo history          | ✅ (`storeWithHistory`)                      | Manual           | ❌           | ❌         |
-| Computed signals             | ✅ (lazy, glitch-free)                       | Selectors        | ✅ (atoms)   | ✅         |
-| Batched writes               | ✅ (`batch`)                                 | ✅               | ✅           | ✅         |
-| Explicit cleanup / scopes    | ✅ (`scope`, `onCleanup`)                    | ❌               | ❌           | ❌         |
-| SSR support                  | ✅                                           | ✅               | ✅           | ✅         |
-| TypeScript — strict generics | ✅                                           | ✅               | ✅           | Partial    |
-| React Suspense               | ❌                                           | ❌               | ✅           | ❌         |
-| Redux DevTools               | ❌                                           | ✅               | ❌           | ❌         |
+| Zero dependencies            | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Framework-agnostic           | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | React-first  | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Fine-grained reactivity      | <sg-icon name="circle-check" size="16"></sg-icon> (per-property)                            | <sg-icon name="circle-x" size="16"></sg-icon> (whole store) | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon> (atom)  |
+| Structured object stores     | <sg-icon name="circle-check" size="16"></sg-icon> (`store`, `lens`)                         | <sg-icon name="circle-check" size="16"></sg-icon>               | Manual atoms | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Async computed               | <sg-icon name="circle-check" size="16"></sg-icon> (`asyncComputed`)                         | Manual           | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Undo / redo history          | <sg-icon name="circle-check" size="16"></sg-icon> (`storeWithHistory`)                      | Manual           | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Computed signals             | <sg-icon name="circle-check" size="16"></sg-icon> (lazy, glitch-free)                       | Selectors        | <sg-icon name="circle-check" size="16"></sg-icon> (atoms)   | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Batched writes               | <sg-icon name="circle-check" size="16"></sg-icon> (`batch`)                                 | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Explicit cleanup / scopes    | <sg-icon name="circle-check" size="16"></sg-icon> (`scope`, `onCleanup`)                    | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| SSR support                  | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| TypeScript — strict generics | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | Partial    |
+| React Suspense               | <sg-icon name="circle-x" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Redux DevTools               | <sg-icon name="circle-x" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
 
 **Use Ripple when** you need fine-grained, per-property reactivity without framework lock-in — especially for web components, vanilla JS apps, or any environment where you want zero runtime dependencies and explicit lifecycle control.
 
@@ -222,10 +222,10 @@ count.value = 1; // notifies automatically
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

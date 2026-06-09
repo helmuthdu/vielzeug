@@ -31,7 +31,30 @@ describe('component definition and rendering', () => {
         define(tag, {
           setup: () => html`<div>Second</div>`,
         });
-      }).toThrow("define('");
+      }).toThrow(`define('${tag}') was called more than once`);
+    });
+
+    it('duplicate registration error includes diagnostic guidance', () => {
+      const tag = uniqueTag('test-dup-msg');
+
+      define(tag, {
+        setup: () => html`<div>First</div>`,
+      });
+
+      let caught: unknown;
+
+      try {
+        define(tag, { setup: () => html`<div>Second</div>` });
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(Error);
+
+      const msg = (caught as Error).message;
+
+      expect(msg).toContain('more than once');
+      expect(msg).toContain('registered exactly once');
     });
   });
 

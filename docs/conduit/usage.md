@@ -244,7 +244,7 @@ const B = token<string>('B');
 container
   .factory(A, (b) => b, { deps: [B] })
   .factory(B, () => 'leaf')
-  .validate(); // ✓ throws CircularDependencyError if a cycle exists
+  .validate(); // <sg-icon name="check" size="16"></sg-icon> throws CircularDependencyError if a cycle exists
 ```
 
 `validate()` returns `this` for chaining and uses DFS to walk the full dependency graph.

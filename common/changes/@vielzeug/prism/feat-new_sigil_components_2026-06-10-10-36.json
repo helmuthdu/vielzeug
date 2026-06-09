@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/prism",
+      "comment": "Initial release",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/prism"
+}

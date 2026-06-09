@@ -1,4 +1,4 @@
-import { computed, define, defineField, html, onMounted, prop, signal } from '@vielzeug/craft';
+import { computed, define, defineField, html, prop, signal } from '@vielzeug/craft';
 import { Temporal, format } from '@vielzeug/tempo';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
@@ -19,11 +19,16 @@ export type SgCalendarEvents = {
 /**
  * A calendar event entry.
  * Dates must be ISO 8601 strings (yyyy-MM-dd).
+ *
+ * The `color` field accepts any valid CSS color value (e.g. `'#e11d48'`,
+ * `'var(--color-primary)'`). An invalid value silently falls back to the
+ * component's theme color. Only pass values you control.
  */
 export type CalendarEvent = {
   /**
    * Any CSS color value for the event dot / pill.
-   * Defaults to the component's `--_day-selected-bg` (theme color) when omitted.
+   * Defaults to the component's theme color when omitted.
+   * An invalid CSS value silently produces no custom color.
    */
   color?: string;
   /** ISO date the event falls on (yyyy-MM-dd) */
@@ -107,11 +112,11 @@ export type SgCalendarProps = {
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} locale - BCP 47 locale string
- * @attr {string} weekend-days - Comma-separated day indices to disable (0=Sun…6=Sat)
+ * @attr {string} weekend-days - JSON array of day indices to disable (0=Sun…6=Sat)
  * @attr {boolean} fullwidth - Expand to full container width
  * @attr {boolean} expanded - Large-cell calendar-app layout with top-aligned day numbers
  *
- * @fires change - Fired when a date is selected. detail: { value: Date | null, isoValue: string | null }
+ * @fires change - Fired when a date is selected. detail: { isoValue: string | null }
  *
  * @cssprop --calendar-bg - Calendar background
  * @cssprop --calendar-border-color - Calendar border color
@@ -128,17 +133,19 @@ export type SgCalendarProps = {
  *
  * @example
  * ```html
- * <!-- Single date -->
+ * <!-- Single date with bounds -->
  * <sg-calendar value="2025-06-15" min="2025-01-01" max="2025-12-31" color="primary"></sg-calendar>
- *
- * <!-- Range selection -->
- * <sg-calendar selection-mode="range" color="primary"></sg-calendar>
  *
  * <!-- Expanded calendar-app layout -->
  * <sg-calendar expanded fullwidth color="primary"></sg-calendar>
  * ```
  */
 export const CALENDAR_TAG = 'sg-calendar' as const;
+
+/** Maximum event dots/pills shown per cell before "+N" overflow */
+const MAX_EVENTS = 3;
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
   formAssociated: true,
@@ -159,21 +166,29 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
     'weekend-days': prop.json([] as number[]),
   },
 
-  setup(props, { bind, el: _el, emit }) {
-    // ── Signals ──────────────────────────────────────────────────────────────
+  setup(props, { bind, emit }) {
+    // ── Derived flags ────────────────────────────────────────────────────────
 
-    const initialDate = parseIso(props.value.value);
-    const selectedDate = signal(initialDate);
     const isDisabled = computed(() => props.disabled.value === true);
     const isExpanded = computed(() => props.expanded.value === true);
 
-    // ── Date-picker control ──────────────────────────────────────────────────
+    // ── Selected date: local-override pattern ─────────────────────────────────
+    // `localSelection` holds a user-initiated pick (or undefined = no override).
+    // `selectedDate` derives from it, falling back to the value prop reactively.
+    // This eliminates setInterval polling — external prop changes propagate
+    // through the computed graph automatically.
 
-    const locale = computed(() => props.locale.value || (typeof navigator !== 'undefined' ? navigator.language : 'en'));
+    const localSelection = signal<Temporal.PlainDate | null | undefined>(undefined);
+
+    const selectedDate = computed(() =>
+      localSelection.value !== undefined ? localSelection.value : parseIso(props.value.value),
+    );
+
+    // ── Date-picker control ──────────────────────────────────────────────────
 
     const ctrl = createDatePickerControl({
       get locale() {
-        return locale.value;
+        return props.locale.value ?? (typeof navigator !== 'undefined' ? navigator.language : 'en');
       },
       get max() {
         return parseIso(props.max.value);
@@ -182,9 +197,10 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
         return parseIso(props.min.value);
       },
       onChange(date) {
-        selectedDate.value = date;
-        ctrl.setView('day');
-        bump();
+        localSelection.value = date;
+        currentView.value = 'day';
+        displayYear.value = ctrl.displayYear();
+        displayMonth.value = ctrl.displayMonth();
         emit('change', { isoValue: toIsoString(date) });
       },
       get value() {
@@ -195,21 +211,13 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
       },
     });
 
-    // ── Version counter + explicit display signals ─────────────────────────────
-    // version drives cell arrays and view toggling.
-    // displayYear / displayMonth are explicit reactive signals that mirror ctrl's
-    // internal state — written on every mutation so label computeds invalidate
-    // correctly (reactive systems track signal *reads* as dependencies).
+    // ── Reactive display state ────────────────────────────────────────────────
+    // Three separate primitive signals — the proven pattern. Mutating any one
+    // of them invalidates only the computeds that read it.
 
-    const version = signal(0);
+    const currentView = signal<DatePickerView>('day');
     const displayYear = signal(ctrl.displayYear());
-    const displayMonth = signal(ctrl.displayMonth());
-
-    function bump(): void {
-      displayYear.value = ctrl.displayYear();
-      displayMonth.value = ctrl.displayMonth();
-      version.value++;
-    }
+    const displayMonth = signal(ctrl.displayMonth()); // 1-indexed (Temporal)
 
     // ── Form value ───────────────────────────────────────────────────────────
 
@@ -219,39 +227,12 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
       value: computed(() => toIsoString(selectedDate.value) ?? ''),
     });
 
-    // ── Sync value prop → selectedDate (via onMounted watcher with cleanup) ──
-
-    onMounted(() => {
-      let lastValueProp = props.value.value;
-
-      const id = setInterval(() => {
-        const current = props.value.value;
-
-        if (current !== lastValueProp) {
-          lastValueProp = current;
-
-          const parsed = parseIso(current);
-
-          selectedDate.value = parsed;
-
-          if (parsed) {
-            ctrl.goTo(parsed.year, parsed.month);
-            bump();
-          }
-        }
-      }, 50);
-
-      return () => clearInterval(id);
-    });
-
     // ── Events lookup ─────────────────────────────────────────────────────────
 
-    /** Map of iso-date → CalendarEvent[] for O(1) cell lookup */
     const eventsByDate = computed(() => {
       const map = new Map<string, CalendarEvent[]>();
-      const evts = props.events.value ?? [];
 
-      for (const evt of evts) {
+      for (const evt of props.events.value ?? []) {
         const list = map.get(evt.date) ?? [];
 
         list.push(evt);
@@ -261,20 +242,23 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
       return map;
     });
 
-    // ── Derived cells (version-gated — no void hacks) ─────────────────────────
+    // ── Derived cells ─────────────────────────────────────────────────────────
+    // Each reads a display signal so they re-run when navigation changes.
 
     const dayCells = computed(() => {
-      void version.value;
+      void displayYear.value;
+      void displayMonth.value;
+      void selectedDate.value; // re-run when selection changes to refresh isSelected flags
 
       return ctrl.dayCells();
     });
     const monthCells = computed(() => {
-      void version.value;
+      void displayYear.value;
 
       return ctrl.monthCells();
     });
     const yearCells = computed(() => {
-      void version.value;
+      void displayYear.value;
 
       return ctrl.yearCells();
     });
@@ -282,48 +266,59 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
 
     const displayMonth_ = computed(() => {
       const d = Temporal.PlainDate.from({ day: 1, month: displayMonth.value, year: displayYear.value });
+      const loc = props.locale.value ?? (typeof navigator !== 'undefined' ? navigator.language : 'en');
 
-      return format(d, { intl: { month: 'long' }, locale: locale.value, tz: 'UTC' });
+      return format(d, { intl: { month: 'long' }, locale: loc, tz: 'UTC' });
     });
 
     const displayYear_ = computed(() => String(displayYear.value));
     const displayLabel = computed(() => `${displayMonth_.value} ${displayYear_.value}`);
 
     // ── Navigation ───────────────────────────────────────────────────────────
-    // In year/month views navigate by year; in day view navigate by month.
 
     function handlePrev(): void {
-      if (ctrl.view() === 'day') ctrl.prevMonth();
+      if (currentView.value === 'day') ctrl.prevMonth();
       else ctrl.prevYear();
 
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
     }
 
     function handleNext(): void {
-      if (ctrl.view() === 'day') ctrl.nextMonth();
+      if (currentView.value === 'day') ctrl.nextMonth();
       else ctrl.nextYear();
 
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
     }
 
     function handleHeaderClick(): void {
-      const next: DatePickerView = ctrl.view() === 'day' ? 'month' : ctrl.view() === 'month' ? 'year' : 'day';
+      const views: DatePickerView[] = ['day', 'month', 'year'];
+      const next = views[(views.indexOf(currentView.value) + 1) % views.length];
 
       ctrl.setView(next);
-      bump();
+      currentView.value = next;
     }
 
-    function handleSelectMonth(monthIndex: number): void {
-      // monthIndex from monthCells is 0-based (index prop) — convert to 1-based for ctrl
-      ctrl.goTo(ctrl.displayYear(), monthIndex + 1);
+    // ── Selection handlers — all disabled guards live here ────────────────────
+
+    function handleSelectMonth(month: number): void {
+      if (isDisabled.value) return;
+
+      ctrl.goTo(ctrl.displayYear(), month);
       ctrl.setView('day');
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
+      currentView.value = 'day';
     }
 
     function handleSelectYear(year: number): void {
+      if (isDisabled.value) return;
+
       ctrl.goTo(year, ctrl.displayMonth());
       ctrl.setView('month');
-      bump();
+      displayYear.value = ctrl.displayYear();
+      currentView.value = 'month';
     }
 
     function handleSelectDay(isoStr: string): void {
@@ -333,8 +328,47 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
 
       if (!date) return;
 
-      ctrl.select(date);
-      bump();
+      ctrl.select(date); // ctrl.select() internally rejects disabled/out-of-range dates
+    }
+
+    // ── Day-cell keyboard navigation (full ARIA grid pattern) ─────────────────
+
+    function handleDayKeydown(e: KeyboardEvent): void {
+      const cell = e.currentTarget as HTMLElement;
+      const grid = cell.closest('.cal-grid-days');
+
+      if (!grid) return;
+
+      const allCells = Array.from(grid.querySelectorAll<HTMLElement>('.cal-cell-day'));
+      const idx = allCells.indexOf(cell);
+
+      if (idx === -1) return;
+
+      let target: HTMLElement | undefined;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleSelectDay(cell.dataset.iso ?? '');
+
+        return;
+      } else if (e.key === 'ArrowRight') {
+        target = allCells[idx + 1];
+      } else if (e.key === 'ArrowLeft') {
+        target = allCells[idx - 1];
+      } else if (e.key === 'ArrowDown') {
+        target = allCells[idx + 7];
+      } else if (e.key === 'ArrowUp') {
+        target = allCells[idx - 7];
+      } else if (e.key === 'Home') {
+        target = allCells[Math.floor(idx / 7) * 7]; // first cell in same row
+      } else if (e.key === 'End') {
+        target = allCells[Math.floor(idx / 7) * 7 + 6]; // last cell in same row
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      target?.focus();
     }
 
     // ── Host bindings ────────────────────────────────────────────────────────
@@ -343,7 +377,7 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
       attr: {
         'aria-disabled': () => (isDisabled.value ? 'true' : null),
         'aria-label': () => displayLabel.value,
-        role: () => 'group',
+        role: 'group',
       },
       class: {
         'is-disabled': isDisabled,
@@ -363,7 +397,8 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
           <button
             class="cal-label-btn"
             type="button"
-            :aria-label="${() => `Switch to ${ctrl.view() === 'day' ? 'month' : 'year'} view`}"
+            :aria-label="${() =>
+              `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             ?disabled="${isDisabled}"
             @click="${handleHeaderClick}">
             <span class="cal-label-month">${displayMonth_}</span><span class="cal-label-sep" aria-hidden="true">/</span
@@ -381,11 +416,7 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
           role="grid"
           part="grid"
           :aria-label="${() => displayLabel.value}"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'day';
-          }}">
+          ?hidden="${() => currentView.value !== 'day'}">
           ${() =>
             weekdayLabels.value.map(
               (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
@@ -407,44 +438,22 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
                   data-iso="${cell.iso}"
                   data-day="${String(cell.day)}"
                   tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled) handleSelectDay(cell.iso);
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-
-                      if (!cell.isDisabled) handleSelectDay(cell.iso);
-                    } else if (e.key === 'ArrowRight') {
-                      e.preventDefault();
-
-                      const next = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement | null;
-
-                      next?.focus();
-                    } else if (e.key === 'ArrowLeft') {
-                      e.preventDefault();
-
-                      const prev = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement | null;
-
-                      prev?.focus();
-                    }
-                  }}">
+                  @click="${() => handleSelectDay(cell.iso)}"
+                  @keydown="${handleDayKeydown}">
                   ${String(cell.day)}
                   ${() => {
                     const evts = eventsByDate.value.get(cell.iso) ?? [];
 
                     if (!evts.length) return html``;
 
-                    const MAX_PILLS = 3;
+                    const shown = evts.slice(0, MAX_EVENTS);
+                    const overflow = evts.length - MAX_EVENTS;
 
                     if (isExpanded.value) {
-                      const shownPills = evts.slice(0, MAX_PILLS);
-                      const pillOverflow = evts.length - MAX_PILLS;
-
                       return html`<div
                         class="cal-events"
                         aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
-                        ${shownPills.map(
+                        ${shown.map(
                           (evt) =>
                             html`<sg-badge
                               class="cal-event-pill"
@@ -456,15 +465,11 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
                               ${evt.label}
                             </sg-badge>`,
                         )}
-                        ${pillOverflow > 0
-                          ? html`<span class="cal-event-pill-overflow" aria-hidden="true">+${pillOverflow} more</span>`
+                        ${overflow > 0
+                          ? html`<span class="cal-event-pill-overflow" aria-hidden="true">+${overflow} more</span>`
                           : html``}
                       </div>`;
                     }
-
-                    const MAX_DOTS = MAX_PILLS;
-                    const shown = evts.slice(0, MAX_DOTS);
-                    const overflow = evts.length - MAX_DOTS;
 
                     return html`<div
                       class="cal-dots"
@@ -495,11 +500,7 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
           class="cal-grid cal-grid-months"
           role="grid"
           :aria-label="${() => displayYear_.value}"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'month';
-          }}">
+          ?hidden="${() => currentView.value !== 'month'}">
           ${() =>
             monthCells.value.map(
               (cell) =>
@@ -511,14 +512,11 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
                   ?data-selected="${() => cell.isSelected}"
                   ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
                   tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled && !isDisabled.value) handleSelectMonth(cell.index);
-                  }}"
+                  @click="${() => handleSelectMonth(cell.month)}"
                   @keydown="${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-
-                      if (!cell.isDisabled && !isDisabled.value) handleSelectMonth(cell.index);
+                      handleSelectMonth(cell.month);
                     }
                   }}">
                   ${cell.shortLabel}
@@ -531,11 +529,7 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
           class="cal-grid cal-grid-years"
           role="grid"
           aria-label="Select year"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'year';
-          }}">
+          ?hidden="${() => currentView.value !== 'year'}">
           ${() =>
             yearCells.value.map(
               (cell) =>
@@ -547,14 +541,11 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
                   ?data-selected="${() => cell.isSelected}"
                   ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
                   tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled && !isDisabled.value) handleSelectYear(cell.year);
-                  }}"
+                  @click="${() => handleSelectYear(cell.year)}"
                   @keydown="${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-
-                      if (!cell.isDisabled && !isDisabled.value) handleSelectYear(cell.year);
+                      handleSelectYear(cell.year);
                     }
                   }}">
                   ${String(cell.year)}

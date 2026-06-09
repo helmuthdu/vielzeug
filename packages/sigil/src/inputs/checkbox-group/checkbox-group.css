@@ -24,8 +24,8 @@
 
   .checkbox-group-items {
     display: flex;
-    flex-direction: var(--sg-checkbox-group-direction, column);
-    gap: var(--sg-checkbox-group-gap, var(--size-2));
+    flex-direction: var(--checkbox-group-direction, column);
+    gap: var(--checkbox-group-gap, var(--size-2));
   }
 
   .helper-text {

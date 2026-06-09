@@ -4,14 +4,14 @@ A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `val
 
 ## Features
 
-- ↔️ **Layout Orientation** — `vertical` (default) or `horizontal` with automatic wrapping
-- ✅ **Validation Strategy** — configure when validation runs: on `submit`, on `blur`, or on every `change`
-- 🎨 **Uniform Styling** — set `variant` and `size` once instead of on every individual field
-- 📡 **Context Propagation** — `disabled`, `size`, `variant`, and `validateOn` automatically apply to all child form fields
-- 📤 **Submit / Reset Events** — intercepts native events and emits `submit` with `FormData` and `reset`
-- 🔒 **Bulk Disable** — set `disabled` once to freeze every field while a submit request is in flight
-- 🔗 **Native `<form>`** — renders a real `<form>` in the shadow DOM so submit buttons and `FormData` work correctly
-- 🚫 **No-Validate Mode** — suppress native browser validation popups with `novalidate`
+- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Layout Orientation** — `vertical` (default) or `horizontal` with automatic wrapping
+- <sg-icon name="circle-check" size="16"></sg-icon> **Validation Strategy** — configure when validation runs: on `submit`, on `blur`, or on every `change`
+- <sg-icon name="palette" size="16"></sg-icon> **Uniform Styling** — set `variant` and `size` once instead of on every individual field
+- <sg-icon name="radio-tower" size="16"></sg-icon> **Context Propagation** — `disabled`, `size`, `variant`, and `validateOn` automatically apply to all child form fields
+- <sg-icon name="upload" size="16"></sg-icon> **Submit / Reset Events** — intercepts native events and emits `submit` with `FormData` and `reset`
+- <sg-icon name="lock" size="16"></sg-icon> **Bulk Disable** — set `disabled` once to freeze every field while a submit request is in flight
+- <sg-icon name="link" size="16"></sg-icon> **Native `<form>`** — renders a real `<form>` in the shadow DOM so submit buttons and `FormData` work correctly
+- <sg-icon name="ban" size="16"></sg-icon> **No-Validate Mode** — suppress native browser validation popups with `novalidate`
 
 ## Source Code
 
@@ -199,7 +199,7 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 | Property     | Description                         | Default               |
 | ------------ | ----------------------------------- | --------------------- |
-| `--form-gap` | Spacing between child form controls | `var(--size-4, 1rem)` |
+| `--form-gap` | Gap between form control rows | `var(--size-4)` |
 
 ### Context Provided
 
@@ -218,11 +218,11 @@ The form component follows WCAG 2.1 Level AA standards.
 
 ### `sg-form`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` navigates between child form fields.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Renders a native `<form>` in the shadow root, preserving semantic form behaviour.
 - `aria-disabled` reflects the disabled state on the `<form>`.

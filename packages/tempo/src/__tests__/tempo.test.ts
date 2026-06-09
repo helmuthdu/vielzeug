@@ -233,18 +233,17 @@ describe('difference', () => {
   });
   it('computes duration between two PlainDate inputs with tz', () => {
     expect(
-      difference(
-        Temporal.PlainDate.from('2026-01-01'),
-        Temporal.PlainDate.from('2026-03-21'),
-        { largestUnit: 'day', tz: 'UTC' },
-      ).days,
+      difference(Temporal.PlainDate.from('2026-01-01'), Temporal.PlainDate.from('2026-03-21'), {
+        largestUnit: 'day',
+        tz: 'UTC',
+      }).days,
     ).toBe(79);
   });
   it('respects roundingMode when smallestUnit is set', () => {
     const dur = difference(
       Temporal.Instant.from('2026-03-21T10:00:00Z'),
       Temporal.Instant.from('2026-03-21T10:01:29Z'),
-      { largestUnit: 'minute', smallestUnit: 'minute', roundingMode: 'ceil' },
+      { largestUnit: 'minute', roundingMode: 'ceil', smallestUnit: 'minute' },
     );
 
     expect(dur.minutes).toBe(2);

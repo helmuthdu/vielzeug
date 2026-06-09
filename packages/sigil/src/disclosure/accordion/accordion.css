@@ -1,9 +1,13 @@
 @layer sigil.base {
   :host {
+    --_bg: var(--accordion-bg);
+    --_border-color: var(--accordion-border-color);
+
     display: flex;
     flex-direction: column;
     gap: var(--size-2);
     width: 100%;
+    background: var(--_bg);
   }
 
   ::slotted(sg-accordion-item) {
@@ -27,7 +31,7 @@
   }
 
   :host([variant='text']) ::slotted(sg-accordion-item:not(:last-child)) {
-    border-bottom: 1px solid var(--color-contrast-200);
+    border-bottom: 1px solid var(--accordion-divider-color, var(--color-contrast-200));
   }
 
   /* Contained variants - grouped appearance */
@@ -42,33 +46,37 @@
 
   /* Solid variant (default) */
   :host([variant='solid']) {
-    background: var(--color-contrast-50);
-    border: var(--border) solid var(--color-contrast-200);
-    box-shadow: var(--shadow-xs);
+    --_bg: var(--accordion-bg, var(--color-contrast-50));
+    --_border-color: var(--accordion-border-color, var(--color-contrast-200));
+
+    border: var(--border) solid var(--_border-color);
+    box-shadow: var(--accordion-shadow, var(--shadow-xs));
   }
 
   /* Flat variant */
   :host([variant='flat']) {
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
-    box-shadow: var(--inset-shadow-xs);
+    --_bg: var(--accordion-bg, var(--color-contrast-100));
+    --_border-color: var(--accordion-border-color, var(--color-contrast-200));
+
+    border: var(--border) solid var(--_border-color);
+    box-shadow: var(--accordion-shadow, var(--inset-shadow-xs));
   }
 
   /* Glass & Frost - Shared styles */
   :host([variant='glass']),
   :host([variant='frost']) {
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    box-shadow: var(--accordion-shadow, var(--shadow-md), var(--inset-shadow-xs));
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
   }
 
   /* Glass variant - translucent with blur */
   :host([variant='glass']) {
-    background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    --_bg: var(--accordion-bg, color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%));
   }
 
   /* Frost variant - canvas-based transparency */
   :host([variant='frost']) {
-    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    --_bg: var(--accordion-bg, color-mix(in srgb, var(--color-canvas) 55%, transparent));
   }
 
   /* Nested item border radius for glass and frost variants */

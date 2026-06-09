@@ -4,17 +4,17 @@ A versatile typography component with semantic variants for consistent text styl
 
 ## Features
 
-- 🎨 **6 Semantic Variants**: body, heading, label, caption, overline, code
-- 📏 **6 Sizes**: xs, sm, md, lg, xl, 2xl (body scale) — heading variant uses the heading scale
-- ⚖️ **4 Font Weights**: normal, medium, semibold, bold
-- 🌈 **12 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, tertiary, disabled, contrast)
-- 📐 **4 Alignments**: left, center, right, justify
-- ✂️ **Truncate**: Single-line ellipsis truncation
-- 📋 **Line Clamp**: Multi-line truncation with ellipsis via `lines` prop
-- 🔤 **Semantic HTML**: Render as different HTML tags (span, p, div, h1-h6, label, code)
-- ♿ **Accessible**: `as="h1"–"h6"` sets `role="heading"` + `aria-level` automatically
-- 🎭 **Italic Style**: Font style support
-- 🔧 **Customizable**: CSS custom properties for full control
+- <sg-icon name="palette" size="16"></sg-icon> **6 Semantic Variants**: body, heading, label, caption, overline, code
+- <sg-icon name="ruler" size="16"></sg-icon> **6 Sizes**: xs, sm, md, lg, xl, 2xl (body scale) — heading variant uses the heading scale
+- <sg-icon name="scale" size="16"></sg-icon> **4 Font Weights**: normal, medium, semibold, bold
+- <sg-icon name="rainbow" size="16"></sg-icon> **12 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, tertiary, disabled, contrast)
+- <sg-icon name="triangle-right" size="16"></sg-icon> **4 Alignments**: left, center, right, justify
+- <sg-icon name="scissors" size="16"></sg-icon> **Truncate**: Single-line ellipsis truncation
+- <sg-icon name="clipboard" size="16"></sg-icon> **Line Clamp**: Multi-line truncation with ellipsis via `lines` prop
+- <sg-icon name="type" size="16"></sg-icon> **Semantic HTML**: Render as different HTML tags (span, p, div, h1-h6, label, code)
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `as="h1"–"h6"` sets `role="heading"` + `aria-level` automatically
+- <sg-icon name="theater" size="16"></sg-icon> **Italic Style**: Font style support
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties for full control
 
 ## Source Code
 
@@ -26,10 +26,6 @@ A versatile typography component with semantic variants for consistent text styl
 
 ```html
 <sg-text>Regular paragraph text</sg-text>
-
-<script type="module">
-  import '@vielzeug/sigil/text';
-</script>
 ```
 
 ## Variants
@@ -376,12 +372,12 @@ Use semantic colors for feedback.
 
 ```html
 <sg-text color="success" weight="medium" style="display: block; margin-bottom: var(--size-2);">
-  ✓ Your changes have been saved successfully
+  <sg-icon name="check" size="16"></sg-icon> Your changes have been saved successfully
 </sg-text>
 <sg-text color="warning" weight="medium" style="display: block; margin-bottom: var(--size-2);">
-  ⚠ Please review the highlighted fields
+  <sg-icon name="triangle-alert" size="16"></sg-icon> Please review the highlighted fields
 </sg-text>
-<sg-text color="error" weight="medium" style="display: block;"> ✗ An error occurred. Please try again </sg-text>
+<sg-text color="error" weight="medium" style="display: block;"> <sg-icon name="x" size="16"></sg-icon> An error occurred. Please try again </sg-text>
 ```
 
 </ComponentPreview>
@@ -454,17 +450,17 @@ The text component follows WAI-ARIA best practices.
 
 ### `sg-text`
 
-✅ **Automatic Heading ARIA**
+<sg-icon name="circle-check" size="16"></sg-icon> **Automatic Heading ARIA**
 
 - `as="h1"` through `as="h6"` automatically sets `role="heading"` and the matching `aria-level` (1–6) on the host element. Screen readers announce the correct heading level without any extra markup.
 - Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Use the `as` attribute to give the element correct document semantics (`h1`–`h6`, `p`, `label`, etc.).
 - `as="span"`, `as="label"`, and `as="code"` render as `display: inline` matching their native HTML counterparts.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `rem` units to respect user's browser font size preferences.
 - Maintains WCAG-compliant line height (1.5 default for body text).

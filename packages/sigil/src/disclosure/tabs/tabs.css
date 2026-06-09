@@ -84,13 +84,15 @@
   :host,
   :host([variant='solid']) {
     --tabs-tab-gap: var(--size-1);
+    --_tablist-bg: var(--tabs-tablist-bg, var(--color-contrast-100));
+    --_tablist-border-color: var(--tabs-tablist-border-color, var(--color-contrast-200));
   }
 
   :host [role='tablist'],
   :host([variant='solid']) [role='tablist'] {
     padding: var(--size-1);
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
+    background: var(--_tablist-bg);
+    border: var(--border) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
   }
 
@@ -101,9 +103,11 @@
 
   /* ─── flat ─── */
   :host([variant='flat']) {
+    --_tablist-border-color: var(--tabs-tablist-border-color, var(--color-contrast-200));
+
     overflow: hidden;
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
+    background: var(--tabs-bg, var(--color-contrast-100));
+    border: var(--border) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
     box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
   }
@@ -113,7 +117,7 @@
     padding: var(--size-1);
     background: transparent;
     border: none;
-    border-bottom: var(--border) solid var(--color-contrast-200);
+    border-bottom: var(--border) solid var(--_tablist-border-color);
     border-radius: 0;
   }
 
@@ -122,11 +126,15 @@
   }
 
   /* ─── bordered ─── */
+  :host([variant='bordered']) {
+    --_tablist-border-color: var(--tabs-tablist-border-color, var(--color-contrast-200));
+  }
+
   :host([variant='bordered']) [role='tablist'] {
     gap: var(--size-1);
     padding: var(--size-1);
     background: transparent;
-    border: var(--border) solid var(--color-contrast-200);
+    border: var(--border) solid var(--_tablist-border-color);
     border-bottom: none;
     border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
   }
@@ -136,13 +144,13 @@
   }
 
   :host([variant='bordered']) .panels {
-    border: var(--border) solid var(--color-contrast-200);
+    border: var(--border) solid var(--_tablist-border-color);
     border-radius: 0 0 var(--tabs-radius) var(--tabs-radius);
   }
 
   :host([variant='bordered'][orientation='vertical']) [role='tablist'] {
     border-right: none;
-    border-bottom: var(--border) solid var(--color-contrast-200);
+    border-bottom: var(--border) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius) 0 0 var(--tabs-radius);
   }
 
@@ -164,10 +172,18 @@
   }
 
   /* ─── glass ─── */
+  :host([variant='glass']) {
+    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in srgb, var(--color-secondary) 20%, transparent));
+    --_tablist-border-color: var(
+      --tabs-tablist-border-color,
+      color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent)
+    );
+  }
+
   :host([variant='glass']) [role='tablist'] {
     padding: var(--size-1);
-    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
-    border: var(--border) solid color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+    background: var(--_tablist-bg);
+    border: var(--border) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
@@ -178,10 +194,18 @@
   }
 
   /* ─── frost ─── */
+  :host([variant='frost']) {
+    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in srgb, var(--color-canvas) 55%, transparent));
+    --_tablist-border-color: var(
+      --tabs-tablist-border-color,
+      color-mix(in srgb, var(--color-contrast-300) 50%, transparent)
+    );
+  }
+
   :host([variant='frost']) [role='tablist'] {
     padding: var(--size-1);
-    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    border: var(--border) solid color-mix(in srgb, var(--color-contrast-300) 50%, transparent);
+    background: var(--_tablist-bg);
+    border: var(--border) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);

@@ -27,6 +27,32 @@ export function registerRainbowProperty() {
 }
 
 /**
+ * Register the --shine-angle CSS custom property so browsers can
+ * interpolate it inside conic-gradient().
+ * Called automatically by shineEffectMixin on first use.
+ */
+let shineRegistered = false;
+
+export function registerShineProperty() {
+  if (shineRegistered) return;
+
+  if (typeof CSS !== 'undefined' && CSS.registerProperty) {
+    try {
+      CSS.registerProperty({
+        inherits: false,
+        initialValue: '0deg',
+        name: '--shine-angle',
+        syntax: '<angle>',
+      });
+    } catch {
+      // Already registered — safe to ignore
+    }
+  }
+
+  shineRegistered = true;
+}
+
+/**
  * Rainbow Border Effect Mixin
  *
  * Animated rainbow border with glow effect.
@@ -53,14 +79,14 @@ export const rainbowEffectMixin = (selector: string) => {
        Rainbow Border Effect
        ======================================== */
 
-    :host([rainbow]) ${selector} {
+    :host([effect='rainbow']) ${selector} {
       position: relative;
       border: var(--border-2) solid transparent !important;
       overflow: visible;
     }
 
     /* Rainbow border and glow layers */
-    :host([rainbow]) ${selector}::before, :host([rainbow]) ${selector}::after {
+    :host([effect='rainbow']) ${selector}::before, :host([effect='rainbow']) ${selector}::after {
       content: '';
       position: absolute;
       inset: calc(-1 * var(--border-2));
@@ -98,7 +124,7 @@ export const rainbowEffectMixin = (selector: string) => {
     }
 
     /* Turn one pseudo layer into glow halo */
-    :host([rainbow]) ${selector}::after {
+    :host([effect='rainbow']) ${selector}::after {
       filter: blur(var(--blur-xl));
     }
 
@@ -113,7 +139,94 @@ export const rainbowEffectMixin = (selector: string) => {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      :host([rainbow]) ${selector}::before, :host([rainbow]) ${selector}::after {
+      :host([effect='rainbow']) ${selector}::before, :host([effect='rainbow']) ${selector}::after {
+        animation: none;
+      }
+    }
+  `;
+};
+
+/**
+ * Shine Border Effect Mixin
+ *
+ * Animated color-aware border shine. A tight arc of the component's own
+ * theme color rotates around the border, producing the glossy "shimmer"
+ * look seen in modern card and button designs.
+ *
+ * Respects the `color` attribute via `--_theme-*` tokens — no extra
+ * configuration needed. Falls back to the neutral theme when no color
+ * is set.
+ *
+ * @param selector - CSS selector for the inner element (e.g., 'button', '.box')
+ * @returns CSSResult with shine border animation
+ *
+ * @example
+ * ```ts
+ * styles: [shineEffectMixin('button'), componentStyles]
+ * ```
+ */
+export const shineEffectMixin = (selector: string) => {
+  registerShineProperty();
+
+  return css`
+    /* ========================================
+       Shine Border Effect
+       ======================================== */
+
+    :host([effect='shine']) ${selector} {
+      position: relative;
+      overflow: visible;
+      --_shine-color: light-dark(
+        oklch(from var(--_theme-focus) 0.6 calc(c * 1.2) h),
+        oklch(from var(--_theme-focus) 0.85 calc(c * 1.2) h)
+      );
+    }
+
+    /* Shine border — single pseudo, glow via box-shadow (follows border-radius, no artifacts) */
+    :host([effect='shine']) ${selector}::before {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * var(--border-2));
+      border: var(--border-2) solid transparent;
+      border-radius: calc(var(--_radius, 0px) + var(--border-2));
+
+      /* Two comet tails 180deg apart, same shape rotating together */
+      background:
+        conic-gradient(from var(--shine-angle), transparent 0%, transparent 75%, var(--_shine-color) 100%) border-box,
+        conic-gradient(
+            from calc(var(--shine-angle) + 180deg),
+            transparent 0%,
+            transparent 75%,
+            var(--_shine-color) 100%
+          )
+          border-box;
+
+      -webkit-mask:
+        conic-gradient(red 0 0) no-clip subtract,
+        conic-gradient(red 0 0) padding-box;
+      mask:
+        conic-gradient(red 0 0) no-clip subtract,
+        conic-gradient(red 0 0) padding-box;
+
+      /* Use the theme's own focus-shadow — color-aware, well-tuned, no artifacts */
+      box-shadow: var(--_theme-focus-shadow);
+
+      pointer-events: none;
+      animation: shine-rotate 2.5s linear infinite;
+    }
+
+    /* ========================================
+       Animation
+       ======================================== */
+
+    @keyframes shine-rotate {
+      to {
+        --shine-angle: 1turn;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :host([effect='shine']) ${selector}::before {
         animation: none;
       }
     }

@@ -62,6 +62,7 @@ export type SgAlertProps = {
  * @cssprop --alert-bg - Background color
  * @cssprop --alert-color - Text/icon color
  * @cssprop --alert-border-color - Border color
+ * @cssprop --alert-shadow - Box shadow
  * @cssprop --alert-radius - Border radius
  * @cssprop --alert-padding - Padding
  * @cssprop --alert-gap - Gap between icon, body, and close button

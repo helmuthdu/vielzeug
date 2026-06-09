@@ -252,11 +252,11 @@ Always import `@vielzeug/sigil/styles` before any component registration. Withou
 ### 2. Use Named Component Imports for Tree-Shaking
 
 ```ts
-// ✅ registers only what you use
+// <sg-icon name="circle-check" size="16"></sg-icon> registers only what you use
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/input';
 
-// ❌ registers all components — larger bundle
+// <sg-icon name="circle-x" size="16"></sg-icon> registers all components — larger bundle
 import '@vielzeug/sigil';
 ```
 
@@ -272,10 +272,10 @@ sg-button {
 ### 4. Use Declarative Attributes Over JavaScript
 
 ```html
-<!-- ✅ prefer attribute-driven state -->
+<!-- <sg-icon name="circle-check" size="16"></sg-icon> prefer attribute-driven state -->
 <sg-button loading disabled>Saving…</sg-button>
 
-<!-- ❌ avoid manual DOM manipulation when an attribute exists -->
+<!-- <sg-icon name="circle-x" size="16"></sg-icon> avoid manual DOM manipulation when an attribute exists -->
 <sg-button id="btn">Save</sg-button>
 <script>
   document.getElementById('btn').setAttribute('loading', '');

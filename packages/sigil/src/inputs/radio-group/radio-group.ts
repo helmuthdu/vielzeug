@@ -85,17 +85,8 @@ export type SgRadioGroupEvents = {
  *
  * @slot - Place `sg-radio` elements here
  *
- * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-600 - Contrast color token for text and surfaces.
- * @cssprop --color-error - Error state color token.
- * @cssprop --font-medium - Font-weight token.
- * @cssprop --leading-tight - Line-height token.
- * @cssprop --radio-group-direction - Radio control styling token.
- * @cssprop --radio-group-gap - Radio control styling token.
- * @cssprop --size-1-5 - Spacing/sizing token.
- * @cssprop --size-2 - Spacing/sizing token.
- * @cssprop --text-sm - Font-size token.
- * @cssprop --text-xs - Font-size token.
+ * @cssprop --radio-group-direction - Flex direction of the items list ('row' | 'column')
+ * @cssprop --radio-group-gap - Gap between radio items
  * @part items - Items container.
  * @example
  * ```html

@@ -96,11 +96,11 @@ export type SgSliderProps = {
  * @part thumb-end   - Range end thumb
  * @part label       - Label element
  *
- * @cssprop --slider-height - Track height
- * @cssprop --slider-size   - Thumb dimensions
- * @cssprop --slider-track  - Track background color
- * @cssprop --slider-fill   - Fill background color
- * @cssprop --slider-thumb  - Thumb background color
+ * @cssprop --slider-height    - Track height
+ * @cssprop --slider-size      - Thumb dimensions
+ * @cssprop --slider-track-bg  - Track background color
+ * @cssprop --slider-fill      - Active fill color
+ * @cssprop --slider-thumb-bg  - Thumb background color
  *
  * @example
  * ```html

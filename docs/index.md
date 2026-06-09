@@ -56,6 +56,9 @@ features:
   - title: '@vielzeug/orbit'
     details: "<img src='/logo-orbit.svg' class='logo-highlight-smaller' alt='Orbit Logo' width='72'/>Floating-element positioning for tooltips, popovers, and dropdowns."
     link: /orbit/
+  - title: '@vielzeug/prism'
+    details: "<img src='/logo-prism.svg' class='logo-highlight-smaller' alt='Prism Logo' width='72'/>Charting library — line, bar, and area charts with signal support and CSS theming."
+    link: /prism/
   - title: '@vielzeug/ripple'
     details: "<img src='/logo-ripple.svg' class='logo-highlight-smaller' alt='Ripple Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /ripple/
@@ -88,14 +91,14 @@ features:
     link: /wayfinder/
 ---
 
-## 🚀 Why Vielzeug?
+## <sg-icon name="rocket" size="16"></sg-icon> Why Vielzeug?
 
 - **Type-safe**: Built with TypeScript from the ground up for the best DX.
 - **Zero/Low Dependencies**: Keep your bundle size small and your supply chain secure.
 - **Consistent API**: Learn one package, and you'll feel at home in all of them.
 - **Modern**: Optimized for ES Modules, tree-shaking, and modern runtimes.
 
-## 🏁 Quick Start
+## <sg-icon name="flag" size="16"></sg-icon> Quick Start
 
 ::: code-group
 
@@ -122,7 +125,7 @@ const search = debounce((query) => api.search(query), 300);
 const price = currency({ amount: 123456n, currency: 'USD' }); // "$1,234.56"
 ```
 
-## 💬 Community & Support
+## <sg-icon name="message-circle" size="16"></sg-icon> Community & Support
 
 Have questions? Found a bug? Want to contribute?
 

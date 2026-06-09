@@ -461,7 +461,7 @@ container
   .factory(A, (b) => ..., { deps: [B] })
   .factory(B, (c) => ..., { deps: [C] })
   .value(C, 'leaf')
-  .validate(); // ✓ no cycles
+  .validate(); // <sg-icon name="check" size="16"></sg-icon> no cycles
 ```
 
 ---

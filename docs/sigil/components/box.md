@@ -4,13 +4,13 @@ A foundational layout primitive with theming support. Box provides a simple, sem
 
 ## Features
 
-- 🎨 **4 Variants**: solid, flat, glass, frost
-- 🌈 **6 Color Themes**: primary, secondary, info, success, warning, error
-- 🌟 **Rainbow Border**: Animated rainbow border with glow effect
-- 📏 **5 Padding Sizes**: none, sm, md, lg, xl
-- 🎭 **6 Elevation Levels**: Customizable shadow depths (0–5)
-- 🧱 **Foundation Component**: Designed to be the base for layouts and compositions
-- 🎨 **Customizable**: CSS custom properties for complete control
+- <sg-icon name="palette" size="16"></sg-icon> **4 Variants**: solid, flat, glass, frost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
+- <sg-icon name="star" size="16"></sg-icon> **Animated Border**: Rainbow border effect via `effect="rainbow"`
+- <sg-icon name="ruler" size="16"></sg-icon> **5 Padding Sizes**: none, sm, md, lg, xl
+- <sg-icon name="theater" size="16"></sg-icon> **6 Elevation Levels**: Customizable shadow depths (0–5)
+- <sg-icon name="box" size="16"></sg-icon> **Foundation Component**: Designed to be the base for layouts and compositions
+- <sg-icon name="palette" size="16"></sg-icon> **Customizable**: CSS custom properties for complete control
 
 ## Source Code
 
@@ -166,7 +166,7 @@ Animated rainbow border effect — works on any variant.
 ```html
 <sg-box
   variant="frost"
-  rainbow
+  effect="rainbow"
   padding="lg"
   style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
   <sg-text variant="heading" size="lg">Rainbow Box</sg-text>
@@ -187,7 +187,7 @@ Animated rainbow border effect — works on any variant.
 | `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding               |
 | `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)             |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius                  |
-| `rainbow`   | `boolean`                                                                 | `false` | Animated rainbow border effect |
+| `effect`    | `'rainbow'`                                                               | —       | Animated border effect         |
 | `fullwidth` | `boolean`                                                                 | `false` | Expand to full width           |
 
 ### Slots
@@ -222,12 +222,12 @@ The box component follows WAI-ARIA best practices.
 
 ### `sg-box`
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.).
 - Elevation changes are purely visual and do not affect accessibility.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Glass and frost variants maintain readable contrast ratios.
 

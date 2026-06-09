@@ -4,15 +4,15 @@ A modern file upload component with drag-and-drop support, file list management,
 
 ## Features
 
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 📎 **Click to Browse** — opens the native file picker on click or keyboard activation
-- 📏 **3 Sizes** — sm, md, lg
-- 🔒 **Constraints** — `accept`, `max-size`, `max-files` filtering built-in
-- 🔗 **Form-Associated** — participates in native form submission via `FormData`
-- 🔲 **Multiple Selection** — toggle via `multiple` attribute
-- 🖱️ **Drag & Drop** — drop files directly onto the dropzone
-- 🗂️ **File List** — displays selected files with name, size, and individual remove buttons
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="paperclip" size="16"></sg-icon> **Click to Browse** — opens the native file picker on click or keyboard activation
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="lock" size="16"></sg-icon> **Constraints** — `accept`, `max-size`, `max-files` filtering built-in
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission via `FormData`
+- <sg-icon name="square" size="16"></sg-icon> **Multiple Selection** — toggle via `multiple` attribute
+- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Drag & Drop** — drop files directly onto the dropzone
+- <sg-icon name="folder-open" size="16"></sg-icon> **File List** — displays selected files with name, size, and individual remove buttons
 
 ## Source Code
 
@@ -24,10 +24,6 @@ A modern file upload component with drag-and-drop support, file list management,
 
 ```html
 <sg-file-input label="Upload files"></sg-file-input>
-
-<script type="module">
-  import '@vielzeug/sigil/file-input';
-</script>
 ```
 
 ## Visual Options
@@ -307,11 +303,15 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 | Property                    | Description               | Default                     |
 | --------------------------- | ------------------------- | --------------------------- |
-| `--file-input-bg`           | Dropzone background color | `var(--color-contrast-100)` |
-| `--file-input-border-color` | Dropzone border color     | `var(--color-contrast-300)` |
-| `--file-input-radius`       | Border radius             | `var(--rounded-lg)`         |
-| `--file-input-min-height`   | Minimum dropzone height   | `var(--size-40)`            |
-| `--file-input-font-size`    | Font size                 | `var(--text-sm)`            |
+| `--file-input-bg`                   | Dropzone background color                              | Variant-dependent   |
+| `--file-input-border-color`         | Dropzone border color                                  | Variant-dependent   |
+| `--file-input-radius`               | Border radius                                          | `var(--rounded-lg)` |
+| `--file-input-min-height`           | Minimum dropzone height                                | `var(--size-40)`    |
+| `--file-input-font-size`            | Font size                                              | `var(--text-sm)`    |
+| `--file-input-hover-bg`             | Dropzone background on hover (flat/ghost variants)     | Variant-dependent   |
+| `--file-input-hover-border-color`   | Dropzone border on hover (flat/bordered variants)      | Variant-dependent   |
+| `--file-input-focus-bg`             | Dropzone background when focused/drag-over (flat)      | Variant-dependent   |
+| `--file-input-focus-border-color`   | Dropzone border when focused/drag-over (flat)          | Variant-dependent   |
 
 ## Accessibility
 
@@ -319,12 +319,12 @@ The file input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-file-input`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker.
 - Remove buttons inside the file list are individually focusable.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text.
 - Each remove button has a descriptive `aria-label` (e.g. `"Remove report.pdf"`).

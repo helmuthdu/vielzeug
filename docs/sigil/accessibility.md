@@ -73,58 +73,58 @@ Before each minor release, run the checklist below manually or with a screen rea
 
 | Component         | `role`                    | Keyboard              | ARIA attrs                                                          | axe | Notes                           |
 | ----------------- | ------------------------- | --------------------- | ------------------------------------------------------------------- | --- | ------------------------------- |
-| `sg-button`       | `button` (implicit)       | ✅ Enter/Space        | `aria-disabled`, `aria-busy`                                        | ✅  | Icon-only requires `aria-label` |
-| `sg-input`        | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
-| `sg-textarea`     | `textbox` (native)        | ✅                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | ✅  |                                 |
-| `sg-select`       | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
-| `sg-combobox`     | `combobox`                | ✅ Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | ✅  |                                 |
-| `sg-checkbox`     | `checkbox` (native)       | ✅ Space              | `aria-checked`, `aria-required`                                     | ✅  |                                 |
-| `sg-radio`        | `radio` (native)          | ✅ Arrow keys         | `aria-checked`                                                      | ✅  | Group nav                       |
-| `sg-switch`       | `switch`                  | ✅ Space              | `aria-checked`                                                      | ✅  |                                 |
-| `sg-slider`       | `slider`                  | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |                                 |
-| `sg-rating`       | `radiogroup` + `radio`    | ✅ Arrow keys         | `aria-label` per star                                               | ✅  |                                 |
-| `sg-number-input` | `spinbutton`              | ✅ Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                   | ✅  |                                 |
-| `sg-otp-input`    | group of `spinbutton`     | ✅ Arrow/Tab          | `aria-label` per cell                                               | ✅  |                                 |
-| `sg-file-input`   | `button`-triggered native | ✅                    | `aria-label`                                                        | ✅  |                                 |
+| `sg-button`       | `button` (implicit)       | <sg-icon name="circle-check" size="16"></sg-icon> Enter/Space        | `aria-disabled`, `aria-busy`                                        | <sg-icon name="circle-check" size="16"></sg-icon>  | Icon-only requires `aria-label` |
+| `sg-input`        | `textbox` (native)        | <sg-icon name="circle-check" size="16"></sg-icon>                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-textarea`     | `textbox` (native)        | <sg-icon name="circle-check" size="16"></sg-icon>                    | `aria-describedby`, `aria-invalid`, `aria-required`                 | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-select`       | `combobox`                | <sg-icon name="circle-check" size="16"></sg-icon> Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-combobox`     | `combobox`                | <sg-icon name="circle-check" size="16"></sg-icon> Arrow/Enter/Escape | `aria-expanded`, `aria-activedescendant`                            | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-checkbox`     | `checkbox` (native)       | <sg-icon name="circle-check" size="16"></sg-icon> Space              | `aria-checked`, `aria-required`                                     | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-radio`        | `radio` (native)          | <sg-icon name="circle-check" size="16"></sg-icon> Arrow keys         | `aria-checked`                                                      | <sg-icon name="circle-check" size="16"></sg-icon>  | Group nav                       |
+| `sg-switch`       | `switch`                  | <sg-icon name="circle-check" size="16"></sg-icon> Space              | `aria-checked`                                                      | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-slider`       | `slider`                  | <sg-icon name="circle-check" size="16"></sg-icon> Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-rating`       | `radiogroup` + `radio`    | <sg-icon name="circle-check" size="16"></sg-icon> Arrow keys         | `aria-label` per star                                               | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-number-input` | `spinbutton`              | <sg-icon name="circle-check" size="16"></sg-icon> Arrow keys         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                   | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-otp-input`    | group of `spinbutton`     | <sg-icon name="circle-check" size="16"></sg-icon> Arrow/Tab          | `aria-label` per cell                                               | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
+| `sg-file-input`   | `button`-triggered native | <sg-icon name="circle-check" size="16"></sg-icon>                    | `aria-label`                                                        | <sg-icon name="circle-check" size="16"></sg-icon>  |                                 |
 
 ### Feedback
 
 | Component      | `role`                      | Keyboard     | ARIA attrs                                                          | axe | Notes      |
 | -------------- | --------------------------- | ------------ | ------------------------------------------------------------------- | --- | ---------- |
-| `sg-alert`     | `alert` / `status`          | ✅ (dismiss) | `aria-live` via region                                              | ✅  |            |
-| `sg-toast`     | `alert` / `status`          | ✅ (dismiss) | `aria-live="polite"` or `"assertive"`                               | ✅  |            |
-| `sg-progress`  | `progressbar`               | —            | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | ✅  |            |
-| `sg-skeleton`  | none                        | —            | `aria-hidden="true"` on bones                                       | ✅  | Decorative |
-| `sg-badge`     | none                        | —            | `aria-label` if meaningful                                          | ✅  |            |
-| `sg-chip`      | `button` (when interactive) | ✅ Enter     | `aria-pressed`, `aria-label`                                        | ✅  |            |
-| **`sg-async`** | dynamic                     | —            | `aria-busy`, `aria-live`, `role="alert"` in error                   | ✅  | New        |
+| `sg-alert`     | `alert` / `status`          | <sg-icon name="circle-check" size="16"></sg-icon> (dismiss) | `aria-live` via region                                              | <sg-icon name="circle-check" size="16"></sg-icon>  |            |
+| `sg-toast`     | `alert` / `status`          | <sg-icon name="circle-check" size="16"></sg-icon> (dismiss) | `aria-live="polite"` or `"assertive"`                               | <sg-icon name="circle-check" size="16"></sg-icon>  |            |
+| `sg-progress`  | `progressbar`               | —            | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` | <sg-icon name="circle-check" size="16"></sg-icon>  |            |
+| `sg-skeleton`  | none                        | —            | `aria-hidden="true"` on bones                                       | <sg-icon name="circle-check" size="16"></sg-icon>  | Decorative |
+| `sg-badge`     | none                        | —            | `aria-label` if meaningful                                          | <sg-icon name="circle-check" size="16"></sg-icon>  |            |
+| `sg-chip`      | `button` (when interactive) | <sg-icon name="circle-check" size="16"></sg-icon> Enter     | `aria-pressed`, `aria-label`                                        | <sg-icon name="circle-check" size="16"></sg-icon>  |            |
+| **`sg-async`** | dynamic                     | —            | `aria-busy`, `aria-live`, `role="alert"` in error                   | <sg-icon name="circle-check" size="16"></sg-icon>  | New        |
 
 ### Disclosure
 
 | Component      | `role`                         | Keyboard       | ARIA attrs                                          | axe | Notes |
 | -------------- | ------------------------------ | -------------- | --------------------------------------------------- | --- | ----- |
-| `sg-accordion` | `button` + region              | ✅ Enter/Space | `aria-expanded`, `aria-controls`                    | ✅  |       |
-| `sg-tabs`      | `tablist` + `tab` + `tabpanel` | ✅ Arrow keys  | `aria-selected`, `aria-controls`, `aria-labelledby` | ✅  |       |
+| `sg-accordion` | `button` + region              | <sg-icon name="circle-check" size="16"></sg-icon> Enter/Space | `aria-expanded`, `aria-controls`                    | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
+| `sg-tabs`      | `tablist` + `tab` + `tabpanel` | <sg-icon name="circle-check" size="16"></sg-icon> Arrow keys  | `aria-selected`, `aria-controls`, `aria-labelledby` | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
 
 ### Overlay
 
 | Component    | `role`              | Keyboard              | ARIA attrs                       | axe | Notes                   |
 | ------------ | ------------------- | --------------------- | -------------------------------- | --- | ----------------------- |
-| `sg-dialog`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
-| `sg-drawer`  | `dialog`            | ✅ Escape, focus trap | `aria-modal`, `aria-labelledby`  | ✅  | Focus restored on close |
-| `sg-popover` | `dialog` / `menu`   | ✅ Escape             | `aria-expanded`, `aria-haspopup` | ✅  |                         |
-| `sg-menu`    | `menu` + `menuitem` | ✅ Arrow/Enter/Escape | `aria-orientation`               | ✅  |                         |
-| `sg-tooltip` | `tooltip`           | ✅ Escape             | `aria-describedby` on trigger    | ✅  |                         |
+| `sg-dialog`  | `dialog`            | <sg-icon name="circle-check" size="16"></sg-icon> Escape, focus trap | `aria-modal`, `aria-labelledby`  | <sg-icon name="circle-check" size="16"></sg-icon>  | Focus restored on close |
+| `sg-drawer`  | `dialog`            | <sg-icon name="circle-check" size="16"></sg-icon> Escape, focus trap | `aria-modal`, `aria-labelledby`  | <sg-icon name="circle-check" size="16"></sg-icon>  | Focus restored on close |
+| `sg-popover` | `dialog` / `menu`   | <sg-icon name="circle-check" size="16"></sg-icon> Escape             | `aria-expanded`, `aria-haspopup` | <sg-icon name="circle-check" size="16"></sg-icon>  |                         |
+| `sg-menu`    | `menu` + `menuitem` | <sg-icon name="circle-check" size="16"></sg-icon> Arrow/Enter/Escape | `aria-orientation`               | <sg-icon name="circle-check" size="16"></sg-icon>  |                         |
+| `sg-tooltip` | `tooltip`           | <sg-icon name="circle-check" size="16"></sg-icon> Escape             | `aria-describedby` on trigger    | <sg-icon name="circle-check" size="16"></sg-icon>  |                         |
 
 ### Content
 
 | Component       | `role`                      | Keyboard       | ARIA attrs                   | axe | Notes |
 | --------------- | --------------------------- | -------------- | ---------------------------- | --- | ----- |
-| `sg-card`       | `button` (interactive mode) | ✅ Enter/Space | `aria-disabled`, `aria-busy` | ✅  |       |
-| `sg-table`      | `table` (native)            | ✅             | `aria-label`, `aria-busy`    | ✅  |       |
-| `sg-pagination` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
-| `sg-breadcrumb` | `navigation`                | ✅             | `aria-label`, `aria-current` | ✅  |       |
-| `sg-avatar`     | none                        | —              | `alt` or `aria-label`        | ✅  |       |
+| `sg-card`       | `button` (interactive mode) | <sg-icon name="circle-check" size="16"></sg-icon> Enter/Space | `aria-disabled`, `aria-busy` | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
+| `sg-table`      | `table` (native)            | <sg-icon name="circle-check" size="16"></sg-icon>             | `aria-label`, `aria-busy`    | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
+| `sg-pagination` | `navigation`                | <sg-icon name="circle-check" size="16"></sg-icon>             | `aria-label`, `aria-current` | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
+| `sg-breadcrumb` | `navigation`                | <sg-icon name="circle-check" size="16"></sg-icon>             | `aria-label`, `aria-current` | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
+| `sg-avatar`     | none                        | —              | `alt` or `aria-label`        | <sg-icon name="circle-check" size="16"></sg-icon>  |       |
 
 ### Layout
 

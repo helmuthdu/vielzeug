@@ -4,22 +4,22 @@ An autocomplete input that combines a text field with a filterable dropdown list
 
 ## Features
 
-- ⌨️ **Full Keyboard Nav** — ArrowDown/Up, Enter, Escape, Home, End, Tab
-- ⏳ **Loading State** — `loading` attribute shows a spinner while options are being fetched
-- ⚡ **Virtualised Rendering** — powered by `@vielzeug/scroll` for smooth performance with large option lists
-- ✨ **Creatable** — allow users to create new options when no match is found
-- ❌ **Clearable** — optional clear button to reset the value
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 🏷️ **Label Placement** — inset (default) or outside
-- 📏 **3 Sizes** — sm, md, lg
-- 📝 **Helper & Error Text** — inline helper or error message below the field
-- 🔍 **Live Filtering** — options narrow as the user types
-- 🔗 **Form-Associated** — participates in native form submission
-- 🔲 **Multiselect** — `multiple` mode shows selected values as removable chips
-- 🖼️ **Option Icons** — each option supports a leading `icon` named slot
-- 🚫 **No-Filter Mode** — keeps all options visible for server-side search
-- 🧩 **Component Options** — place `<sg-combobox-option>` children for rich, slot-based option content
+- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — ArrowDown/Up, Enter, Escape, Home, End, Tab
+- <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a spinner while options are being fetched
+- <sg-icon name="zap" size="16"></sg-icon> **Virtualised Rendering** — powered by `@vielzeug/scroll` for smooth performance with large option lists
+- <sg-icon name="sparkles" size="16"></sg-icon> **Creatable** — allow users to create new options when no match is found
+- <sg-icon name="circle-x" size="16"></sg-icon> **Clearable** — optional clear button to reset the value
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (default) or outside
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline helper or error message below the field
+- <sg-icon name="search" size="16"></sg-icon> **Live Filtering** — options narrow as the user types
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
+- <sg-icon name="square" size="16"></sg-icon> **Multiselect** — `multiple` mode shows selected values as removable chips
+- <sg-icon name="image" size="16"></sg-icon> **Option Icons** — each option supports a leading `icon` named slot
+- <sg-icon name="ban" size="16"></sg-icon> **No-Filter Mode** — keeps all options visible for server-side search
+- <sg-icon name="puzzle" size="16"></sg-icon> **Component Options** — place `<sg-combobox-option>` children for rich, slot-based option content
 
 ## Source Code
 
@@ -85,19 +85,19 @@ Add an `icon` named slot inside any `<sg-combobox-option>` for a leading icon. T
 ```html
 <sg-combobox label="Role" placeholder="Select a role…">
   <sg-combobox-option value="admin">
-    <span slot="icon">👑</span>
+    <span slot="icon"><sg-icon name="crown" size="16"></sg-icon></span>
     Administrator
   </sg-combobox-option>
   <sg-combobox-option value="editor">
-    <span slot="icon">✏️</span>
+    <span slot="icon"><sg-icon name="pencil" size="16"></sg-icon>️</span>
     Editor
   </sg-combobox-option>
   <sg-combobox-option value="viewer">
-    <span slot="icon">👁️</span>
+    <span slot="icon"><sg-icon name="eye" size="16"></sg-icon>️</span>
     Viewer
   </sg-combobox-option>
   <sg-combobox-option value="guest" disabled>
-    <span slot="icon">🚫</span>
+    <span slot="icon"><sg-icon name="ban" size="16"></sg-icon></span>
     Guest (disabled)
   </sg-combobox-option>
 </sg-combobox>
@@ -491,12 +491,14 @@ cb.addEventListener('close', (e) => {
 
 | Property                  | Description                | Default                |
 | ------------------------- | -------------------------- | ---------------------- |
-| `--combobox-font-size`    | Input / option font size   | `--text-sm`            |
-| `--combobox-gap`          | Gap between field elements | `--size-2`             |
-| `--combobox-padding`      | Field padding              | Inner paddings         |
-| `--combobox-radius`       | Field border radius        | `--rounded-lg`         |
-| `--combobox-bg`           | Field background color     | `--color-contrast-100` |
-| `--combobox-border-color` | Default border color       | `--color-contrast-300` |
+| `--combobox-dropdown-bg`              | Dropdown panel background color                    | Theme-dependent       |
+| `--combobox-dropdown-border-color`    | Dropdown panel border color                        | Theme-dependent       |
+| `--combobox-option-hover-bg`          | Option background on hover                         | Theme-dependent       |
+| `--combobox-option-focus-bg`          | Option background when keyboard-focused            | Theme-dependent       |
+| `--combobox-option-selected-bg`       | Option background when selected                    | Theme-dependent       |
+| `--combobox-option-selected-focus-bg` | Option background when selected and focused        | Theme-dependent       |
+| `--input-bg`                          | Field background (passed through to `sg-input`)    | Variant-dependent     |
+| `--input-border-color`                | Field border color (passed through to `sg-input`)  | Variant-dependent     |
 
 ## Accessibility
 
@@ -504,12 +506,12 @@ The combobox component follows WCAG 2.1 Level AA standards.
 
 ### `sg-combobox`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the input; `ArrowDown` / `ArrowUp` navigate the option list.
 - `Enter` confirms selection; `Escape` closes the dropdown.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="combobox"` with `aria-expanded`, `aria-controls`, `aria-activedescendant`, and `aria-autocomplete="list"`.
 - The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected` and `aria-disabled`.

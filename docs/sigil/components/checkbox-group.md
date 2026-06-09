@@ -26,11 +26,6 @@ title: Checkbox Group
   <sg-checkbox value="music">Music</sg-checkbox>
   <sg-checkbox value="travel">Travel</sg-checkbox>
 </sg-checkbox-group>
-
-<script type="module">
-  import '@vielzeug/sigil/checkbox-group';
-  import '@vielzeug/sigil/checkbox';
-</script>
 ```
 
 ## Form Submission

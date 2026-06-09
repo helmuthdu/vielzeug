@@ -2,7 +2,6 @@
   :host {
     --_bg: var(--button-bg, var(--color-contrast-50));
     --_color: var(--button-color, var(--color-contrast-900));
-    --_border: var(--button-border, var(--border));
     --_border-color: var(--button-border-color, var(--color-contrast-200));
     --_radius: var(--button-radius, var(--rounded-lg));
 
@@ -48,11 +47,11 @@
     cursor: pointer;
     user-select: none;
     background: var(--_bg);
-    border: var(--_border) solid var(--_border-color);
-    border-block-start-width: var(--button-border-top, var(--_border));
-    border-block-end-width: var(--button-border-bottom, var(--_border));
-    border-inline-start-width: var(--button-border-start, var(--_border));
-    border-inline-end-width: var(--button-border-end, var(--_border));
+    border: var(--button-border, var(--border)) solid var(--_border-color);
+    border-block-start-width: var(--button-border-top, var(--button-border, var(--border)));
+    border-block-end-width: var(--button-border-bottom, var(--button-border, var(--border)));
+    border-inline-start-width: var(--button-border-start, var(--button-border, var(--border)));
+    border-inline-end-width: var(--button-border-end, var(--button-border, var(--border)));
     border-radius: var(--_radius);
     transition: var(
       --_motion-transition,
@@ -72,6 +71,22 @@
   button:focus-visible,
   a:focus-visible {
     outline: none;
+  }
+
+  .loader {
+    position: absolute;
+    width: 1em;
+    height: 1em;
+    border: var(--border-2) solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: var(--_motion-animation, spin 0.6s linear infinite);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .content {
@@ -105,143 +120,7 @@
     display: flex;
     width: 100%;
   }
-}
 
-@layer sigil.variants {
-  :host([icon-only]) :is(button, a) {
-    aspect-ratio: 1;
-    padding: 0;
-  }
-
-  /* Solid (Default) - Full theme color background */
-  :host(:not([variant])) :is(button, a),
-  :host([variant='solid']) :is(button, a) {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
-    border-color: var(--_theme-base);
-  }
-
-  :host(:not([variant])) :is(button, a):hover,
-  :host([variant='solid']) :is(button, a):hover {
-    background: var(--_theme-focus);
-  }
-
-  :host(:not([variant])) :is(button, a):active,
-  :host([variant='solid']) :is(button, a):active {
-    background: var(--_theme-content);
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  /* Flat - Subtle background with theme color text */
-  :host([variant='flat']) :is(button, a) {
-    color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100));
-    border-color: color-mix(in srgb, var(--_theme-focus) 20%, transparent);
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  :host([variant='flat']) :is(button, a):hover {
-    color: var(--_theme-contrast);
-    background: var(--_theme-focus);
-    box-shadow: var(--inset-shadow-xs);
-  }
-
-  :host([variant='flat']) :is(button, a):active {
-    color: var(--_theme-contrast);
-    background: var(--_theme-content);
-    box-shadow: var(--inset-shadow-sm);
-  }
-
-  /* Bordered - Outlined with filled background */
-  :host([variant='bordered']) :is(button, a) {
-    color: var(--_theme-base);
-    background: var(--_theme-backdrop);
-    border-color: var(--_theme-border);
-    box-shadow: var(--inset-shadow-xs);
-  }
-
-  :host([variant='bordered']) :is(button, a):hover {
-    color: var(--_theme-contrast);
-    background: var(--_theme-focus);
-    border-color: var(--_theme-focus);
-    box-shadow: var(--inset-shadow-xs);
-  }
-
-  :host([variant='bordered']) :is(button, a):active {
-    color: var(--_theme-contrast);
-    background: var(--_theme-content);
-    box-shadow: var(--inset-shadow-sm);
-  }
-
-  /* Outline - Transparent with colored border */
-  :host([variant='outline']) :is(button, a) {
-    color: var(--_theme-base);
-    background: transparent;
-    border-color: var(--_theme-base);
-  }
-
-  :host([variant='outline']) :is(button, a):hover {
-    background: var(--_theme-backdrop);
-    border-color: var(--_theme-focus);
-  }
-
-  :host([variant='outline']) :is(button, a):active {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  /* Ghost - Transparent until interaction */
-  :host([variant='ghost']) :is(button, a) {
-    color: var(--_theme-base);
-    background: transparent;
-    border-color: transparent;
-    border-width: 0;
-  }
-
-  :host([variant='ghost']) :is(button, a):hover {
-    background: var(--_theme-backdrop);
-  }
-
-  :host([variant='ghost']) :is(button, a):active {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  /* Text - Minimal styling, color on hover */
-  :host([variant='text']) :is(button, a) {
-    color: var(--_theme-base);
-    background: transparent;
-    border-color: transparent;
-    border-width: 0;
-  }
-
-  :host([variant='text']) :is(button, a):hover {
-    color: var(--_theme-focus);
-  }
-
-  :host([variant='text']) :is(button, a):active {
-    color: var(--_theme-content);
-  }
-
-  /* Additional button-specific frost active states */
-  :host([variant='frost']:not([color])) :is(button, a):active {
-    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-    border-color: color-mix(in srgb, var(--theme-focus) 40%, transparent);
-  }
-
-  :host([variant='frost'][color]) :is(button, a):active {
-    background: color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%);
-    border-color: color-mix(in srgb, var(--_theme-focus) 65%, transparent);
-  }
-}
-
-/* ========================================
-     Other Variants & States
-     ======================================== */
-
-@layer sigil.overrides {
   /* Icon-only always uses perfect circle */
   :host([rounded][icon-only]) :is(button, a) {
     border-radius: 50%;
@@ -252,37 +131,174 @@
   }
 }
 
-/* ========================================
-     Loading Spinner (unlayered for easy override)
-     ======================================== */
+@layer sigil.variants {
+  :host([icon-only]) :is(button, a) {
+    aspect-ratio: 1;
+    padding: 0;
+  }
 
-.loader {
-  position: absolute;
-  width: 1em;
-  height: 1em;
-  border: var(--border-2) solid currentcolor;
-  border-inline-end-color: transparent;
-  border-radius: 50%;
-  animation: var(--_motion-animation, spin 0.6s linear infinite);
-}
+  /* ── Per-variant token assignments ─────────────────────────────────────────
+     Each variant sets --_bg/--_color/--_border-color (consuming the public
+     --button-* tokens as overrides) plus optional --_hover-* / --_active-*
+     tokens for interactive states.
+     The shared :is(button, a):hover / :active rules below read these tokens.
+     ─────────────────────────────────────────────────────────────────────── */
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+  /* Solid (Default) */
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_bg: var(--button-bg, var(--_theme-base));
+    --_color: var(--button-color, var(--_theme-contrast));
+    --_border-color: var(--button-border-color, var(--_theme-base));
+    --_hover-bg: var(--_theme-focus);
+    --_active-bg: var(--_theme-content);
+  }
+
+  /* Flat */
+  :host([variant='flat']) {
+    --_bg: var(--button-bg, color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100)));
+    --_color: var(--button-color, var(--_theme-base));
+    --_border-color: var(--button-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
+    --_hover-bg: var(--_theme-focus);
+    --_hover-color: var(--_theme-contrast);
+    --_active-bg: var(--_theme-content);
+    --_active-color: var(--_theme-contrast);
+  }
+
+  :host([variant='flat']) :is(button, a) {
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) :is(button, a):hover {
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='flat']) :is(button, a):active {
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Bordered */
+  :host([variant='bordered']) {
+    --_bg: var(--button-bg, var(--_theme-backdrop));
+    --_color: var(--button-color, var(--_theme-base));
+    --_border-color: var(--button-border-color, var(--_theme-border));
+    --_hover-bg: var(--_theme-focus);
+    --_hover-color: var(--_theme-contrast);
+    --_hover-border-color: var(--_theme-focus);
+    --_active-bg: var(--_theme-content);
+    --_active-color: var(--_theme-contrast);
+  }
+
+  :host([variant='bordered']) :is(button, a) {
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='bordered']) :is(button, a):hover {
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='bordered']) :is(button, a):active {
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Outline */
+  :host([variant='outline']) {
+    --_bg: var(--button-bg, transparent);
+    --_color: var(--button-color, var(--_theme-base));
+    --_border-color: var(--button-border-color, var(--_theme-base));
+    --_hover-bg: var(--_theme-backdrop);
+    --_hover-border-color: var(--_theme-focus);
+    --_active-bg: var(--_theme-base);
+    --_active-color: var(--_theme-contrast);
+  }
+
+  /* Ghost */
+  :host([variant='ghost']) {
+    --_bg: var(--button-bg, transparent);
+    --_color: var(--button-color, var(--_theme-base));
+    --_border-color: var(--button-border-color, transparent);
+    --_hover-bg: var(--_theme-backdrop);
+    --_active-bg: var(--_theme-base);
+    --_active-color: var(--_theme-contrast);
+  }
+
+  :host([variant='ghost']) :is(button, a) {
+    border-width: 0;
+  }
+
+  /* Text */
+  :host([variant='text']) {
+    --_bg: var(--button-bg, transparent);
+    --_color: var(--button-color, var(--_theme-base));
+    --_border-color: var(--button-border-color, transparent);
+    --_hover-color: var(--_theme-focus);
+    --_active-color: var(--_theme-content);
+  }
+
+  :host([variant='text']) :is(button, a) {
+    border-width: 0;
+  }
+
+  /* Frost — sets its own interactive tokens so the shared rules below apply uniformly */
+  :host([variant='frost']:not([color])) {
+    --_hover-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--color-canvas) 70%, transparent));
+    --_hover-border-color: var(
+      --button-frost-active-border-color,
+      color-mix(in srgb, var(--_theme-focus) 40%, transparent)
+    );
+    --_active-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--color-canvas) 70%, transparent));
+    --_active-border-color: var(
+      --button-frost-active-border-color,
+      color-mix(in srgb, var(--_theme-focus) 40%, transparent)
+    );
+  }
+
+  :host([variant='frost'][color]) {
+    --_hover-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_hover-border-color: var(
+      --button-frost-active-border-color,
+      color-mix(in srgb, var(--_theme-focus) 65%, transparent)
+    );
+    --_active-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_active-border-color: var(
+      --button-frost-active-border-color,
+      color-mix(in srgb, var(--_theme-focus) 65%, transparent)
+    );
+  }
+
+  /* ── Shared interactive states — all variants use --_* tokens set above ── */
+
+  :is(button, a):hover {
+    color: var(--_hover-color, var(--_color));
+    background: var(--_hover-bg, var(--_bg));
+    border-color: var(--_hover-border-color, var(--_border-color));
+  }
+
+  :is(button, a):active {
+    color: var(--_active-color, var(--_color));
+    background: var(--_active-bg, var(--_bg));
+    border-color: var(--_active-border-color, var(--_border-color));
+    box-shadow: var(--inset-shadow-2xs);
   }
 }
 
-/* Focus ring & hover halo — unlayered so it wins over all @layer variant rules */
-button:focus-visible,
-a:focus-visible,
-button:hover,
-a:hover {
-  outline: none;
-  box-shadow: var(--_theme-shadow);
-}
+@layer sigil.overrides {
+  /* Focus ring — wins over variant box-shadow rules */
+  button:focus-visible,
+  a:focus-visible {
+    outline: none;
+    box-shadow: var(--_theme-shadow);
+  }
 
-/* Text variant: no halo on hover or focus */
-:host([variant='text']) button:hover,
-:host([variant='text']) a:hover {
-  box-shadow: none;
+  /* Hover halo — applies the theme glow on hover for all non-text variants */
+  button:hover,
+  a:hover {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Text variant: suppress halo — no box-shadow decoration on hover */
+  :host([variant='text']) button:hover,
+  :host([variant='text']) a:hover {
+    box-shadow: none;
+  }
 }

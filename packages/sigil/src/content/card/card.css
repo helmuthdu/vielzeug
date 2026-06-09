@@ -86,51 +86,69 @@
 }
 
 @layer sigil.variants {
-  /* Default (no variant) */
+  /* Default — bordered card with shadow */
+  :host(:not([variant], [color])) {
+    --_shadow: var(--card-shadow, var(--shadow-sm));
+  }
+
   :host(:not([variant], [color])) .card {
     border: var(--_border) solid var(--_border-color);
     box-shadow: var(--_shadow);
   }
 
+  /* Default + color — tinted backdrop */
+  :host(:not([variant])[color]) {
+    --_bg: var(--card-bg, var(--_theme-backdrop));
+    --_border-color: var(--card-border-color, var(--_theme-border));
+  }
+
   :host(:not([variant])[color]) .card {
-    background: var(--_theme-backdrop);
-    border: var(--_border) solid var(--_theme-border);
+    border: var(--_border) solid var(--_border-color);
   }
 
-  :host(:not([variant])[color]:hover) .card {
-    background: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
-    border-color: var(--_theme-focus);
+  :host(:not([variant])[color]:hover) {
+    --_bg: var(--card-bg, color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50)));
+    --_border-color: var(--card-border-color, var(--_theme-focus));
   }
 
-  /* Solid */
+  /* Solid — fully filled with theme color */
+  :host([variant='solid']) {
+    --_bg: var(--card-bg, var(--_theme-base));
+    --_color: var(--card-color, var(--_theme-contrast));
+    --_border-color: var(--card-border-color, var(--_theme-base));
+    --_shadow: var(--card-shadow, var(--shadow-sm));
+  }
+
   :host([variant='solid']) .card {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
-    border: var(--_border) solid var(--_theme-base);
+    border: var(--_border) solid var(--_border-color);
     box-shadow: var(--_shadow);
   }
 
-  /* Flat */
-  :host([variant='flat']) .card {
-    background: var(--_theme-backdrop);
-    border: var(--_border) solid color-mix(in srgb, var(--_theme-border) 50%, transparent);
+  /* Flat — tinted backdrop, subtle border */
+  :host([variant='flat']) {
+    --_bg: var(--card-bg, var(--_theme-backdrop));
+    --_border-color: var(--card-border-color, color-mix(in srgb, var(--_theme-border) 50%, transparent));
   }
 
-  /* Glass */
+  :host([variant='flat']) .card {
+    border: var(--_border) solid var(--_border-color);
+  }
+
+  /* Glass — frosted blur panel */
   :host([variant='glass']) .card {
     text-shadow: var(--text-shadow-xs);
     border: var(--_border) solid var(--_border-color);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    box-shadow: var(--card-shadow, var(--shadow-md)), var(--inset-shadow-xs);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
   }
 
   :host([variant='glass']:hover) .card {
-    box-shadow: var(--shadow-xl), var(--inset-shadow-sm);
+    box-shadow: var(--card-hover-shadow, var(--shadow-xl)), var(--inset-shadow-sm);
     backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
   }
 
   :host([variant='glass'][interactive]:hover) .card {
-    box-shadow: var(--shadow-2xl), var(--inset-shadow-sm);
+    box-shadow: var(--card-hover-shadow, var(--shadow-2xl)), var(--inset-shadow-sm);
   }
 }
 

@@ -4,14 +4,14 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 
 ## Features
 
-- ⌨️ **Keyboard Navigation** — `↑`/`↓` arrows step by `step`; `Page Up`/`Page Down` step by `large-step`
-- ➕➖ **Spin Buttons** — click or hold to increment / decrement
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 📏 **3 Sizes** — sm, md, lg
-- 🔗 **Form-Associated** — `name` attribute & native form `reset` support
-- 🔘 **Nullable Mode** — allows an empty / null state
-- 🔢 **Min / Max Clamping** — values are automatically clamped to the configured range
+- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — `↑`/`↓` arrows step by `step`; `Page Up`/`Page Down` step by `large-step`
+- <sg-icon name="plus" size="16"></sg-icon><sg-icon name="minus" size="16"></sg-icon> **Spin Buttons** — click or hold to increment / decrement
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
+- <sg-icon name="circle-dot" size="16"></sg-icon> **Nullable Mode** — allows an empty / null state
+- <sg-icon name="hash" size="16"></sg-icon> **Min / Max Clamping** — values are automatically clamped to the configured range
 
 ## Source Code
 
@@ -23,10 +23,6 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 
 ```html
 <sg-number-input label="Quantity" value="1" min="0" max="100"></sg-number-input>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 ## Min / Max / Step
@@ -192,12 +188,12 @@ The number input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-number-input`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `↑` / `↓` step the value by `step`; `Page Up` / `Page Down` step by `large-step`.
 - `Tab` moves focus in and out.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.
 - Spin buttons use `aria-label` ("Increment" / "Decrement") and `aria-disabled` when the value is at `min` / `max`.

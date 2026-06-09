@@ -1,5 +1,8 @@
 import { createContext, define, html, prop, provide, type ReadonlySignal } from '@vielzeug/craft';
 
+import type { ComponentSize, ThemeColor } from '../../shared';
+import type { ButtonVariant } from '../button/button';
+
 import { sizableBundle, themableBundle } from '../../shared';
 import styles from './button-group.css?inline';
 
@@ -8,7 +11,7 @@ export type SgButtonGroupProps = {
   /** Join buttons together into a single unit */
   attached?: boolean;
   /** Theme color tint for all child buttons */
-  color?: string;
+  color?: ThemeColor;
   /** Group children span full width */
   fullwidth?: boolean;
   /** Label for screen readers */
@@ -16,16 +19,16 @@ export type SgButtonGroupProps = {
   /** Layout direction */
   orientation?: 'horizontal' | 'vertical';
   /** Shared size for all child buttons */
-  size?: string;
+  size?: ComponentSize;
   /** Shared visual variant for all child buttons */
-  variant?: string;
+  variant?: ButtonVariant;
 };
 
-/** Shared context for button groups */
+/** Shared context propagated from sg-button-group to child sg-button elements */
 export type ButtonGroupContext = {
-  color: ReadonlySignal<string | undefined>;
-  size: ReadonlySignal<string | undefined>;
-  variant: ReadonlySignal<string | undefined>;
+  color: ReadonlySignal<ThemeColor | undefined>;
+  size: ReadonlySignal<ComponentSize | undefined>;
+  variant: ReadonlySignal<ButtonVariant | undefined>;
 };
 
 export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('SgButtonGroup');
@@ -46,13 +49,11 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('S
  *
  * @slot - Place sg-button elements here
  *
- * @cssprop --button-border-start - Button styling token.
- * @cssprop --button-border-top - Button styling token.
- * @cssprop --button-radius - Button styling token.
- * @cssprop --group-gap - Group layout/styling token.
- * @cssprop --group-radius - Group layout/styling token.
- * @cssprop --rounded-lg - Border radius token.
- * @cssprop --size-2 - Spacing/sizing token.
+ * @cssprop --group-gap - Gap between buttons (non-attached mode)
+ * @cssprop --group-radius - Border radius of the group container
+ * @cssprop --button-radius - Passed through to child buttons to control corner radius
+ * @cssprop --button-border-start - Passed through to suppress start borders in attached mode
+ * @cssprop --button-border-top - Passed through to suppress top borders in vertical attached mode
  * @part group - Group container.
  * @example
  * ```html

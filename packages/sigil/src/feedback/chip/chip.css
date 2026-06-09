@@ -130,61 +130,76 @@
 
 @layer sigil.variants {
   /* Solid (Default) — full theme color fill */
-  :host(:not([variant])) .chip,
-  :host([variant='solid']) .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-base, var(--color-contrast-700));
-    border-color: transparent;
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_bg: var(--chip-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_color: var(--chip-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-800)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
   }
 
   /* Flat — subtle tint */
-  :host([variant='flat']) .chip {
-    color: var(--_theme-base, var(--color-contrast-800));
-    background: color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent);
-    border-color: transparent;
+  :host([variant='flat']) {
+    --_bg: var(--chip-bg, color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent));
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-800)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
   /* Bordered — backdrop fill with themed border */
-  :host([variant='bordered']) .chip {
-    color: var(--_theme-base, var(--color-contrast-900));
-    background: var(--_theme-backdrop, var(--color-contrast-50));
-    border-color: var(--_theme-border, var(--color-contrast-300));
-  }
-
-  :host([variant='bordered']) .remove-btn {
-    color: var(--_theme-backdrop, var(--color-contrast-50));
-    background: var(--_theme-focus, var(--color-contrast-700));
-    border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-  }
-
-  :host([variant='bordered']) .remove-btn:hover {
-    background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-    opacity: 1;
+  :host([variant='bordered']) {
+    --_bg: var(--chip-bg, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, var(--_theme-border, var(--color-contrast-300)));
+    --_remove-bg: var(--chip-remove-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_remove-color: var(--chip-remove-color, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_hover-border-color: var(--chip-hover-border-color, var(--_theme-focus, var(--color-contrast-700)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
   /* Outline — transparent with colored border */
-  :host([variant='outline']) .chip {
-    color: var(--_theme-base, var(--color-contrast-900));
-    background: transparent;
-    border-color: var(--_theme-base, var(--color-contrast-400));
-  }
-
-  :host([variant='outline']) .remove-btn {
-    color: var(--_theme-backdrop, var(--color-contrast-50));
-    background: var(--_theme-focus, var(--color-contrast-700));
-    border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-  }
-
-  :host([variant='outline']) .remove-btn:hover {
-    background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-    opacity: 1;
+  :host([variant='outline']) {
+    --_bg: var(--chip-bg, transparent);
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, var(--_theme-base, var(--color-contrast-400)));
+    --_remove-bg: var(--chip-remove-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_remove-color: var(--chip-remove-color, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-backdrop, var(--color-contrast-100)));
+    --_hover-border-color: var(--chip-hover-border-color, var(--_theme-focus, var(--color-contrast-700)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
   /* Ghost — transparent, no border */
-  :host([variant='ghost']) .chip {
-    color: var(--_theme-base, var(--color-contrast-900));
-    background: transparent;
-    border-color: transparent;
+  :host([variant='ghost']) {
+    --_bg: var(--chip-bg, transparent);
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-backdrop, var(--color-contrast-100)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
+  }
+
+  /* ── Remove button theming (tokens set per-variant above) ── */
+
+  :host([variant='bordered']) .remove-btn,
+  :host([variant='outline']) .remove-btn {
+    color: var(--_remove-color);
+    background: var(--_remove-bg);
+    border: var(--border) solid var(--_remove-bg);
+  }
+
+  :host([variant='bordered']) .remove-btn:hover,
+  :host([variant='outline']) .remove-btn:hover {
+    background: var(--chip-remove-hover-bg, color-mix(in srgb, var(--_remove-bg) 80%, black));
+    opacity: 1;
   }
 
   :host([variant='ghost']) .remove-btn {
@@ -192,70 +207,44 @@
   }
 
   :host([variant='ghost']) .remove-btn:hover {
-    background: color-mix(in srgb, currentcolor 15%, transparent);
+    background: var(--chip-remove-hover-bg, color-mix(in srgb, currentcolor 15%, transparent));
   }
 
   /* ========================================
      Hover / Active Feedback — interactive modes
      ======================================== */
 
-  /* Solid (default) */
-  :host(:not([variant]):is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip,
-  :host([variant='solid']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
-    background: var(--_theme-focus, var(--color-contrast-800));
+  :host(
+      :is(
+          :not([variant]),
+          [variant='solid'],
+          [variant='flat'],
+          [variant='bordered'],
+          [variant='outline'],
+          [variant='ghost']
+        ):is([mode='selectable'], [mode='action']):not([disabled])
+    )
+    .chip-btn:hover
+    .chip {
+    color: var(--_hover-color, var(--_color));
+    background: var(--_hover-bg, var(--_bg));
+    border-color: var(--_hover-border-color, var(--_border-color));
   }
 
-  :host(:not([variant]):is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip,
-  :host([variant='solid']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
-    background: var(--_theme-content, var(--color-contrast-900));
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  /* Flat */
-  :host([variant='flat']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-focus, var(--color-contrast-700));
-  }
-
-  :host([variant='flat']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-content, var(--color-contrast-900));
-    box-shadow: var(--inset-shadow-sm);
-  }
-
-  /* Bordered */
-  :host([variant='bordered']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-focus, var(--color-contrast-700));
-    border-color: var(--_theme-focus, var(--color-contrast-700));
-  }
-
-  :host([variant='bordered']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-content, var(--color-contrast-900));
-    box-shadow: var(--inset-shadow-sm);
-  }
-
-  /* Outline */
-  :host([variant='outline']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
-    background: var(--_theme-backdrop, var(--color-contrast-100));
-    border-color: var(--_theme-focus, var(--color-contrast-700));
-  }
-
-  :host([variant='outline']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-base, var(--color-contrast-700));
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  /* Ghost */
-  :host([variant='ghost']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
-    background: var(--_theme-backdrop, var(--color-contrast-100));
-  }
-
-  :host([variant='ghost']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
-    color: var(--_theme-contrast, var(--color-contrast-50));
-    background: var(--_theme-base, var(--color-contrast-700));
+  :host(
+      :is(
+          :not([variant]),
+          [variant='solid'],
+          [variant='flat'],
+          [variant='bordered'],
+          [variant='outline'],
+          [variant='ghost']
+        ):is([mode='selectable'], [mode='action']):not([disabled])
+    )
+    .chip-btn:active
+    .chip {
+    color: var(--_active-color, var(--_color));
+    background: var(--_active-bg, var(--_bg));
     box-shadow: var(--inset-shadow-2xs);
   }
 }

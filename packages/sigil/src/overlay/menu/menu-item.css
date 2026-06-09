@@ -1,5 +1,15 @@
 @layer sigil.base {
   :host {
+    --_hover-bg: var(--menu-item-hover-bg, var(--color-contrast-100));
+    --_focus-color: var(--menu-item-focus-color, var(--color-primary));
+    --_focus-bg: var(--menu-item-focus-bg, color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100)));
+    --_selection-bg: var(
+      --menu-item-selection-bg,
+      color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas))
+    );
+    --_checked-color: var(--menu-item-checked-color, var(--color-primary));
+    --_checked-bg: var(--menu-item-checked-bg, color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas)));
+
     display: block;
     outline: none;
   }
@@ -33,23 +43,23 @@
   }
 
   :host(:not([disabled])) .item:hover {
-    background: var(--color-contrast-100);
+    background: var(--_hover-bg);
   }
 
   :host(:focus-visible) .item {
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100));
+    color: var(--_focus-color);
+    background: var(--_focus-bg);
   }
 
   .item.is-checkbox,
   .item.is-radio {
-    background: color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas));
+    background: var(--_selection-bg);
   }
 
   .item.is-checked {
     font-weight: var(--font-medium);
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas));
+    color: var(--_checked-color);
+    background: var(--_checked-bg);
   }
 
   :host([disabled]) .item {

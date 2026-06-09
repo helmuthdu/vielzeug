@@ -45,6 +45,7 @@ export type SgAccordionItemProps = {
  * @slot - Accordion item content (shown when expanded)
  *
  * @cssprop --accordion-item-bg - Background color
+ * @cssprop --accordion-item-hover-bg - Background color on hover
  * @cssprop --accordion-item-border-color - Border color
  * @cssprop --accordion-item-title-color - Title text color
  * @cssprop --accordion-item-subtitle-color - Subtitle text color

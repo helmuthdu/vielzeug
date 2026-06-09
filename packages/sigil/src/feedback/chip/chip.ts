@@ -102,15 +102,23 @@ export type SgChipProps = ChipBaseProps &
  * @slot         - Chip label text
  * @slot icon    - Leading icon or decoration
  *
- * @cssprop --chip-bg           - Background color
- * @cssprop --chip-color        - Text color
- * @cssprop --chip-border-color - Border color
- * @cssprop --chip-radius       - Border radius
- * @cssprop --chip-font-size    - Font size
- * @cssprop --chip-font-weight  - Font weight
- * @cssprop --chip-padding-x    - Horizontal padding
- * @cssprop --chip-padding-y    - Vertical padding
- * @cssprop --chip-gap          - Gap between icon, label and remove button
+ * @cssprop --chip-bg              - Background color
+ * @cssprop --chip-color           - Text color
+ * @cssprop --chip-border-color    - Border color
+ * @cssprop --chip-radius          - Border radius
+ * @cssprop --chip-font-size       - Font size
+ * @cssprop --chip-font-weight     - Font weight
+ * @cssprop --chip-padding-x       - Horizontal padding
+ * @cssprop --chip-padding-y       - Vertical padding
+ * @cssprop --chip-gap             - Gap between icon, label and remove button
+ * @cssprop --chip-hover-bg        - Background on hover (interactive modes)
+ * @cssprop --chip-hover-color     - Text color on hover (interactive modes)
+ * @cssprop --chip-hover-border-color - Border color on hover (interactive modes)
+ * @cssprop --chip-active-bg       - Background when pressed (interactive modes)
+ * @cssprop --chip-active-color    - Text color when pressed (interactive modes)
+ * @cssprop --chip-remove-bg       - Remove button background (bordered/outline variants)
+ * @cssprop --chip-remove-color    - Remove button icon color (bordered/outline variants)
+ * @cssprop --chip-remove-hover-bg - Remove button background on hover
  *
  * @part remove-btn - Remove action button.
  * @part chip-btn - Shadow part for the `chip-btn` element.

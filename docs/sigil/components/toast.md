@@ -4,17 +4,17 @@ A fixed toast notification container with Time Machine-style stacking animation.
 
 ## Features
 
-- 📚 **Time Machine Stacking**: 3D stacking with a 3-tier perspective effect
-- 🖱️ **Hover & Focus Expand**: expand to list on mouse hover or keyboard focus
-- ⏸️ **Pause on Hover/Focus**: auto-dismiss timers pause on both hover and `focusin` (WCAG 2.1)
-- 📍 **6 Positions**: `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`
-- ⏱️ **Auto-dismiss**: configurable per-toast duration (default 5 s)
-- 🔄 **Live Updates**: update a toast's content or duration in-place
-- 🔗 **Promise Integration**: `toast.promise()` ties a toast to an async operation
-- 🔔 **`onDismiss` Callback**: per-toast callback fired after removal completes
-- 🔊 **Smart Urgency**: `error` toasts automatically use `assertive` live region; all others use `polite`
-- 🎯 **Singleton Service**: `toast.add()` — no DOM queries required
-- 🔢 **Max Limit**: configurable maximum number of toasts in the DOM
+- <sg-icon name="book-open" size="16"></sg-icon> **Time Machine Stacking**: 3D stacking with a 3-tier perspective effect
+- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Hover & Focus Expand**: expand to list on mouse hover or keyboard focus
+- <sg-icon name="pause" size="16"></sg-icon> **Pause on Hover/Focus**: auto-dismiss timers pause on both hover and `focusin` (WCAG 2.1)
+- <sg-icon name="map-pin" size="16"></sg-icon> **6 Positions**: `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`
+- <sg-icon name="timer" size="16"></sg-icon> **Auto-dismiss**: configurable per-toast duration (default 5 s)
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Live Updates**: update a toast's content or duration in-place
+- <sg-icon name="link" size="16"></sg-icon> **Promise Integration**: `toast.promise()` ties a toast to an async operation
+- <sg-icon name="bell" size="16"></sg-icon> **`onDismiss` Callback**: per-toast callback fired after removal completes
+- <sg-icon name="volume-2" size="16"></sg-icon> **Smart Urgency**: `error` toasts automatically use `assertive` live region; all others use `polite`
+- <sg-icon name="crosshair" size="16"></sg-icon> **Singleton Service**: `toast.add()` — no DOM queries required
+- <sg-icon name="hash" size="16"></sg-icon> **Max Limit**: configurable maximum number of toasts in the DOM
 
 ## Source Code
 
@@ -393,11 +393,11 @@ The toast component follows WAI-ARIA best practices.
 
 ### `sg-toast`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `sg-alert` carries `role="alert"` with `aria-live="polite"` (`assertive` for `error` color) — screen readers announce new toasts automatically.
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Auto-dismiss timers pause on both `mouseenter` and `focusin`, satisfying WCAG 2.1 SC 2.2.3.
 - Dismiss buttons are keyboard-reachable and labelled `"Dismiss alert"`.

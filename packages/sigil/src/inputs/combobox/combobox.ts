@@ -47,18 +47,14 @@ export type { SgComboboxEvents, SgComboboxProps } from './combobox.types';
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
  *
  * @slot - Slotted combobox options and option groups
- * @cssprop --border - Border token for the combobox field and dropdown
- * @cssprop --color-canvas - Surface background for the combobox and its menu
- * @cssprop --color-contrast-100 - Hover background for option rows and field chrome
- * @cssprop --color-contrast-200 - Divider and border contrast color
- * @cssprop --color-contrast-300 - Subtle contrast tone for disabled or muted UI
- * @cssprop --color-contrast-400 - Secondary text color inside the field
- * @cssprop --color-contrast-50 - Soft background for the dropdown and inset label
- * @cssprop --color-contrast-500 - Helper and placeholder text color
- * @cssprop --color-contrast-600 - Stronger text color for selected values
- * @cssprop --color-contrast-900 - Deep contrast color used for focus and emphasis
- * @cssprop --color-error - Error accent color for invalid states
- * @cssprop --color-error-focus-shadow - Error focus ring shadow for validation states
+ * @cssprop --combobox-dropdown-bg - Dropdown panel background color
+ * @cssprop --combobox-dropdown-border-color - Dropdown panel border color
+ * @cssprop --combobox-option-hover-bg - Option background on hover
+ * @cssprop --combobox-option-focus-bg - Option background when keyboard-focused
+ * @cssprop --combobox-option-selected-bg - Option background when selected
+ * @cssprop --combobox-option-selected-focus-bg - Option background when selected and focused
+ * @cssprop --input-bg - Field background (passed through to sg-input)
+ * @cssprop --input-border-color - Field border color (passed through to sg-input)
  *
  * @part wrapper - Root wrapper around the entire field
  * @part label - Label element shown inside or outside the field

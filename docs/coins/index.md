@@ -48,7 +48,7 @@ exports:
 # Coins
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/coins` &nbsp;·&nbsp; **Category:** Utilities
 
@@ -132,12 +132,12 @@ a.amount + b.amount + c.amount === price.amount; // true — always
 | Feature                      | Coins                                       | Dinero.js v2 | currency.js          |
 | ---------------------------- | ------------------------------------------- | ------------ | -------------------- |
 | Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB       | ~2.5 kB              |
-| Zero dependencies            | ✅                                          | ✅           | ✅                   |
-| `bigint` minor units         | ✅                                          | ❌ (number)  | ❌ (number)          |
-| TypeScript-native            | ✅                                          | ✅           | ⚠️ third-party types |
-| Validated currency codes     | ✅                                          | ❌           | ❌                   |
-| Locale-aware formatting      | ✅                                          | ✅           | ⚠️ manual            |
-| Largest Remainder allocation | ✅                                          | ✅           | ❌                   |
+| Zero dependencies            | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>                   |
+| `bigint` minor units         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon> (number)  | <sg-icon name="circle-x" size="16"></sg-icon> (number)          |
+| TypeScript-native            | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
+| Validated currency codes     | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                   |
+| Locale-aware formatting      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
+| Largest Remainder allocation | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                   |
 
 **Use Coins when** you need exact bigint arithmetic with validated currencies, typed allocation, and `Intl`-powered formatting in a single zero-dependency package.
 
@@ -160,11 +160,11 @@ a.amount + b.amount + c.amount === price.amount; // true — always
 
 | Environment  | Support |
 | ------------ | ------- |
-| Browser      | ✅      |
-| Node.js      | ✅      |
-| SSR          | ✅      |
-| Deno         | ✅      |
-| React Native | ✅      |
+| Browser      | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js      | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR          | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| React Native | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

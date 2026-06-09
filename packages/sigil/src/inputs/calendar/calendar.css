@@ -136,6 +136,10 @@
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--size-0-5);
+
+    /* Reserve max height (6 week rows + 1 header) so the panel never shrinks
+       on 5-week months or when switching to month/year view. */
+    min-height: calc(7 * var(--size-10) + 6 * var(--size-0-5));
   }
 
   .cal-cell {
@@ -228,13 +232,14 @@
 
   .cal-grid-months,
   .cal-grid-years {
-    flex-flow: row wrap;
+    /* 4-column grid — same width as cal-grid-days, natural height. */
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--size-1);
   }
 
   .cal-cell-month,
   .cal-cell-year {
-    flex: 0 0 calc(25% - var(--size-1));
     height: var(--size-10);
     font-size: var(--text-sm);
     color: var(--color-contrast-800);
@@ -424,12 +429,12 @@
   :host([expanded]) .cal-grid-months,
   :host([expanded]) .cal-grid-years {
     gap: var(--size-2);
+    min-height: 0;
     padding: var(--size-4);
   }
 
   :host([expanded]) .cal-cell-month,
   :host([expanded]) .cal-cell-year {
-    flex: 0 0 calc(25% - var(--size-2));
     min-height: var(--size-16);
     font-size: var(--text-base);
     border: var(--border) solid var(--_border-color);

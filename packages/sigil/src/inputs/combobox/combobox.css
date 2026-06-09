@@ -1,5 +1,21 @@
 @layer sigil.base {
   :host {
+    --_dropdown-bg: var(--combobox-dropdown-bg, var(--color-canvas));
+    --_dropdown-border-color: var(--combobox-dropdown-border-color, var(--color-contrast-200));
+    --_option-hover-bg: var(--combobox-option-hover-bg, var(--color-contrast-100));
+    --_option-focus-bg: var(
+      --combobox-option-focus-bg,
+      color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100))
+    );
+    --_option-selected-bg: var(
+      --combobox-option-selected-bg,
+      color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50))
+    );
+    --_option-selected-focus-bg: var(
+      --combobox-option-selected-focus-bg,
+      color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100))
+    );
+
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
@@ -19,7 +35,7 @@
   /* Allow the field to grow vertically when chips wrap to multiple rows. */
   .trigger::part(field) {
     height: auto;
-    min-height: var(--sg-input-height, var(--size-10));
+    min-height: var(--input-height, var(--size-10));
   }
 
   /* Wrap chips + input across rows; suffix stays on same row as input.
@@ -143,8 +159,8 @@
     text-align: start;
     pointer-events: none;
     scrollbar-width: thin;
-    background: var(--color-canvas);
-    border: var(--border) solid var(--color-contrast-200);
+    background: var(--_dropdown-bg);
+    border: var(--border) solid var(--_dropdown-border-color);
     border-radius: var(--_radius);
     box-shadow: var(--shadow-lg);
     opacity: 0;
@@ -192,24 +208,24 @@
   }
 
   .option:hover:not([data-disabled]) {
-    background: var(--color-contrast-100);
+    background: var(--_option-hover-bg);
   }
 
   .option[data-focused]:not([data-disabled]) {
     color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
+    background: var(--_option-focus-bg);
   }
 
   .option[data-selected],
   .option[aria-selected='true'] {
     font-weight: var(--font-medium);
     color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
+    background: var(--_option-selected-bg);
   }
 
   .option[data-selected][data-focused],
   .option[aria-selected='true'][data-focused] {
-    background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
+    background: var(--_option-selected-focus-bg);
   }
 
   .option[data-disabled] {

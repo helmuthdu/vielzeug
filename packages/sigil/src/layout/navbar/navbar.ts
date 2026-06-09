@@ -194,18 +194,20 @@ export type SgNavbarItemProps = {
  * @slot end - Content rendered in the right/end region
  * @slot mobile-menu - Controls and links rendered inside the mobile overflow panel
  *
- * @cssprop --blur-lg - Blur strength for floating navbar backdrops
- * @cssprop --blur-md - Blur strength for the mobile panel backdrop
- * @cssprop --border - Border token used by the navbar surface and separators
- * @cssprop --color-canvas - Base navbar and mobile panel background
- * @cssprop --color-contrast-100 - Hover/active background for navbar chrome
- * @cssprop --color-contrast-200 - Divider and border contrast color
- * @cssprop --color-contrast-400 - Muted text color for secondary navbar content
- * @cssprop --color-contrast-50 - Soft background for mobile and floating states
- * @cssprop --color-contrast-500 - Secondary text color in the navbar chrome
- * @cssprop --color-contrast-700 - Strong text color for navbar items
- * @cssprop --color-contrast-900 - Deep contrast color used in navbar shadows
- * @cssprop --color-primary - Accent color for active and highlighted navbar states
+ * @cssprop --navbar-height - Navbar bar height
+ * @cssprop --navbar-width - Max width of the navbar content
+ * @cssprop --navbar-offset - Horizontal offset for floating/sticky positioning
+ * @cssprop --navbar-bg - Navbar background color
+ * @cssprop --navbar-color - Navbar text color
+ * @cssprop --navbar-border-color - Navbar border color
+ * @cssprop --navbar-shadow - Navbar box shadow
+ * @cssprop --navbar-radius - Border radius (floating/sticky modes)
+ * @cssprop --navbar-backdrop-filter - Backdrop filter for blur effect
+ * @cssprop --navbar-item-color - Nav item text color
+ * @cssprop --navbar-item-hover-color - Nav item hover text color
+ * @cssprop --navbar-item-hover-bg - Nav item hover background
+ * @cssprop --navbar-item-active-color - Nav item active/current text color
+ * @cssprop --navbar-item-active-bg - Nav item active/current background
  * @part nav - Outer navigation landmark
  * @part bar - Main navbar row container
  * @part logo - Logo slot container

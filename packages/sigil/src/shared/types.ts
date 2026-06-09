@@ -30,6 +30,9 @@ export type PaddingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 /** Button form-submission types */
 export type ButtonType = 'button' | 'submit' | 'reset';
 
+/** Anchor browsing-context values */
+export type LinkTarget = '_blank' | '_self' | '_parent' | '_top';
+
 /** Allowed HTML5 input type values for `<sg-input>` */
 export type InputType =
   | 'text'

@@ -11,12 +11,12 @@ A zero-boilerplate wrapper that drives the right UI for every stage of an async 
 
 ## Features
 
-- 🔄 **5 statuses**: `idle`, `loading`, `empty`, `error`, `success`
-- 💀 **Default skeleton** loading state — no setup needed
-- 📭 **Built-in empty state** with configurable label and description
-- ⚠️ **Built-in error state** with optional retry button
-- 🎰 **Fully slottable** — replace any built-in view with your own content
-- ♿ **Automatic ARIA** — `aria-busy`, `aria-live`, `role="alert"` managed for you
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **5 statuses**: `idle`, `loading`, `empty`, `error`, `success`
+- <sg-icon name="skull" size="16"></sg-icon> **Default skeleton** loading state — no setup needed
+- <sg-icon name="mail-open" size="16"></sg-icon> **Built-in empty state** with configurable label and description
+- <sg-icon name="triangle-alert" size="16"></sg-icon> **Built-in error state** with optional retry button
+- <sg-icon name="shuffle" size="16"></sg-icon> **Fully slottable** — replace any built-in view with your own content
+- <sg-icon name="accessibility" size="16"></sg-icon> **Automatic ARIA** — `aria-busy`, `aria-live`, `role="alert"` managed for you
 
 ## Source Code
 
@@ -28,11 +28,6 @@ A zero-boilerplate wrapper that drives the right UI for every stage of an async 
 
 ```html
 <sg-async status="loading"></sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/skeleton';
-</script>
 ```
 
 Switch `status` from your data layer:
@@ -59,11 +54,6 @@ The default loading view renders a skeleton stack automatically. No slot require
 
 ```html
 <sg-async status="loading" style="width: 100%; max-width: 24rem;"></sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/skeleton';
-</script>
 ```
 
 </ComponentPreview>
@@ -82,11 +72,6 @@ The default loading view renders a skeleton stack automatically. No slot require
     </div>
   </div>
 </sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/skeleton';
-</script>
 ```
 
 </ComponentPreview>
@@ -101,10 +86,6 @@ The default loading view renders a skeleton stack automatically. No slot require
   empty-label="No results found"
   empty-description="Try adjusting your search or filters."
   style="width: 100%; max-width: 24rem;"></sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-</script>
 ```
 
 </ComponentPreview>
@@ -118,17 +99,11 @@ The default loading view renders a skeleton stack automatically. No slot require
   <div
     slot="empty"
     style="display: flex; flex-direction: column; align-items: center; gap: var(--size-3); padding: var(--size-10) var(--size-6); text-align: center;">
-    <sg-avatar size="xl" label="📭"></sg-avatar>
+    <sg-avatar size="xl" label="<sg-icon name="mail-open" size="16"></sg-icon>"></sg-avatar>
     <p style="font-size: var(--text-sm); color: var(--color-contrast-500);">Your inbox is empty</p>
     <sg-button variant="outline" size="sm">Compose message</sg-button>
   </div>
 </sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/avatar';
-  import '@vielzeug/sigil/button';
-</script>
 ```
 
 </ComponentPreview>
@@ -144,10 +119,6 @@ The default loading view renders a skeleton stack automatically. No slot require
   error-description="Check your connection and try again."
   retryable
   style="width: 100%; max-width: 24rem;"></sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-</script>
 ```
 
 </ComponentPreview>
@@ -167,12 +138,6 @@ The default loading view renders a skeleton stack automatically. No slot require
     </sg-alert>
   </div>
 </sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/alert';
-  import '@vielzeug/sigil/button';
-</script>
 ```
 
 </ComponentPreview>
@@ -188,11 +153,6 @@ The default loading view renders a skeleton stack automatically. No slot require
     <p>Everything loaded successfully.</p>
   </sg-card>
 </sg-async>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/card';
-</script>
 ```
 
 </ComponentPreview>
@@ -234,11 +194,6 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
     empty-label="No orders yet"
     empty-description="Orders will appear here once placed."></sg-async>
 </sg-card>
-
-<script type="module">
-  import '@vielzeug/sigil/async';
-  import '@vielzeug/sigil/card';
-</script>
 ```
 
 </ComponentPreview>

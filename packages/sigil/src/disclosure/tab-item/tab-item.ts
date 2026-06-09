@@ -37,18 +37,15 @@ export type SgTabItemProps = {
  * @slot - Tab label
  * @slot suffix - Badge or count after the label
  *
- * @cssprop --border-2 - Border token.
- * @cssprop --color-canvas - Base surface background color.
- * @cssprop --color-contrast - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-0 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-100 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-200 - Contrast color token for text and surfaces.
- * @cssprop --color-secondary-contrast - Secondary accent color token.
- * @cssprop --font-medium - Font-weight token.
- * @cssprop --inset-shadow-xs - Component styling token.
- * @cssprop --rounded-lg - Border radius token.
- * @cssprop --shadow-xs - Shadow/elevation token.
- * @cssprop --size-1 - Spacing/sizing token.
+ * @cssprop --tab-item-radius - Button border radius
+ * @cssprop --tab-item-transition - Transition duration/easing
+ * @cssprop --tab-item-padding - Button padding
+ * @cssprop --tab-item-font-size - Button font size
+ * @cssprop --tab-item-color - Default text color
+ * @cssprop --tab-item-hover-bg - Background on hover
+ * @cssprop --tab-item-active-bg - Background when active/selected
+ * @cssprop --tab-item-active-color - Text color when active/selected
+ * @cssprop --tab-item-active-shadow - Box shadow when active/selected
  * @part tab - Tab trigger element.
  * @example
  * ```html

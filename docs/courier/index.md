@@ -49,7 +49,7 @@ exports:
 # Courier
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
@@ -127,11 +127,11 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 | --------------------- | --------------------------------------------- | -------------- | ------ |
 | Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB         | ~5 kB  |
 | Built on              | fetch                                         | XMLHttpRequest | fetch  |
-| Type-safe path params | ✅                                            | Manual         | Manual |
-| Query cache           | ✅                                            | ❌             | ❌     |
-| SSE + streaming       | ✅                                            | ❌             | ❌     |
-| Standalone mutations  | ✅                                            | ❌             | ❌     |
-| Zero dependencies     | ✅                                            | ❌             | ❌     |
+| Type-safe path params | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Manual         | Manual |
+| Query cache           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
+| SSE + streaming       | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
+| Standalone mutations  | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
+| Zero dependencies     | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
 
 **Use Courier when** your app needs typed HTTP, a query cache, tracked mutations, or SSE — especially when you want all of these sharing one interceptor pipeline and zero extra dependencies.
 
@@ -159,10 +159,10 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

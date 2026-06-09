@@ -1,12 +1,12 @@
 @layer sigil.base {
   :host {
-    --_width: var(--sg-switch-width, var(--size-10));
-    --_height: var(--sg-switch-height, var(--size-5));
+    --_width: var(--switch-width, var(--size-10));
+    --_height: var(--switch-height, var(--size-5));
     --_padding: var(--size-0-5);
     --_thumb-size: calc(var(--_height) - var(--_padding) * 2);
-    --_track-bg: var(--sg-switch-track, var(--color-contrast-300));
-    --_thumb-bg: var(--sg-switch-thumb, white);
-    --_font-size: var(--sg-switch-font-size, var(--text-sm));
+    --_track-bg: var(--switch-track-bg, var(--color-contrast-300));
+    --_thumb-bg: var(--switch-thumb-bg, white);
+    --_font-size: var(--switch-font-size, var(--text-sm));
 
     display: inline-flex;
     flex-wrap: wrap;
@@ -75,7 +75,7 @@
 @layer sigil.overrides {
   /* Map theme variables to switch-specific variables */
   :host {
-    --_active-bg: var(--sg-switch-bg, var(--_theme-base));
+    --_active-bg: var(--switch-checked-bg, var(--_theme-base));
     --_focus-shadow: var(--_theme-shadow);
   }
 

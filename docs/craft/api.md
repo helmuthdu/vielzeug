@@ -15,7 +15,7 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `onMounted()`         | DOM-ready callback after template mounts       | Sync           | DOM queries inside setup() run before mount                   |
 | `onCleanup()`         | Register teardown for component disconnect     | Sync           | Must be called synchronously during setup                     |
 | `onElement()`         | Run callback when a ref resolves to an element | Sync           | Re-runs when the element reference changes                    |
-| `onEvent()`           | Scoped event listener with auto-cleanup        | Sync           | Must be called during setup or scope.run()                    |
+| `onEvent()`           | Scoped event listener with auto-cleanup        | Sync           | No-ops silently when target is `null`/`undefined`             |
 | `prop.*`              | Typed prop helpers (string, bool, number, …)   | Sync           | Prop values are signals — read `.value`                       |
 | `provide/inject`      | Context API for parent-to-descendant sharing   | Sync           | `inject()` throws if called outside setup                     |
 | `ref()`               | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                         |
@@ -110,7 +110,7 @@ Registers work that runs after the component template is mounted. Multiple calls
 
 ### `onEvent(target, event, listener, options?)`
 
-Adds an event listener and automatically removes it on cleanup. Must be called during setup or `scope.run()`.
+Adds an event listener and automatically removes it on cleanup. Must be called during setup or `scope.run()`. Silently no-ops when `target` is `null` or `undefined`, making it safe to use with reactive refs that may not yet be resolved.
 
 ### `onCleanup(fn)`
 
@@ -133,6 +133,7 @@ Runs `callback` when a `ref()` resolves to an element and re-runs when that elem
 | `prop.number(defaultValue?)`        | `PropDef<number>`  | Uses `Number(...)` parsing                                                                                   |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union                                                                           |
 | `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse; `reflect: false` by default                                                                      |
+| `prop.ref<T>(defaultValue?)`        | `PropDef<T>`       | JS-only property — never reads/writes an attribute; use for functions, arrays, or non-serialisable objects   |
 
 When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 
@@ -140,6 +141,22 @@ When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 props: {
   data: { default: '', parse: (v) => v ?? '', reflect: false },
 }
+```
+
+Use `prop.ref<T>()` for props that hold JS-only values (functions, rich objects) that cannot be serialised through an HTML attribute:
+
+```ts
+define('data-grid', {
+  props: {
+    getRowKey: prop.ref<(row: unknown) => string>(),
+    columns:   prop.ref<DataGridColumn[]>([]),
+    onSort:    prop.ref<(key: string) => void>(),
+  },
+  setup(props) {
+    // Set from JS: grid.getRowKey = (row) => row.id
+    return html`...`;
+  },
+});
 ```
 
 ## Template and Directives

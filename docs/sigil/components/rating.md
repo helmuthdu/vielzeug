@@ -4,14 +4,13 @@ A star-based rating input that lets users select a score. Supports hover preview
 
 ## Features
 
-- ⌨️ **Keyboard Navigation** — `←`/`→` arrows adjust value; `Home`/`End` jump to extremes
-- ⭐ **Configurable Stars** — any number of stars via `max` (default 5)
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 📏 **3 Sizes** — sm, md, lg
-- 🔒 **Readonly & Disabled** — readonly shows a non-interactive score; disabled removes from tab order
-- 🧱 **Solid Fill Mode** — selected stars can render as solid-filled via `solid`
-- 🔗 **Form-Associated** — `name` attribute & native form `reset` support
-- 🖱️ **Hover Preview** — stars fill on hover before selection is committed
+- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — `←`/`→` arrows adjust value; `Home`/`End` jump to extremes
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="lock" size="16"></sg-icon> **Readonly & Disabled** — readonly shows a non-interactive score; disabled removes from tab order
+- <sg-icon name="box" size="16"></sg-icon> **Solid Fill Mode** — selected stars can render as solid-filled via `solid`
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
+- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Hover Preview** — stars fill on hover before selection is committed
 
 ## Source Code
 
@@ -23,10 +22,6 @@ A star-based rating input that lets users select a score. Supports hover preview
 
 ```html
 <sg-rating label="Product rating" value="3"></sg-rating>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 Listen for changes:
@@ -35,8 +30,6 @@ Listen for changes:
 <sg-rating id="rating" label="Rate this article" color="warning"></sg-rating>
 
 <script type="module">
-  import '@vielzeug/sigil';
-
   document.getElementById('rating').addEventListener('change', (e) => {
     console.log('Rating:', e.detail.value);
   });
@@ -129,25 +122,32 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 | `readonly` | `boolean`                                                                 | `false` | Prevents user interaction; shows value only  |
 | `solid`    | `boolean`                                                                 | `false` | Fills selected stars instead of outline-only |
 | `disabled` | `boolean`                                                                 | `false` | Disables the rating input                    |
-| `label`    | `string`                                                                  | —       | Accessible label for the rating group        |
+| `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group     |
 | `name`     | `string`                                                                  | —       | Form field name                              |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Star highlight color                         |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Star size                                    |
 
 ### Events
 
-| Event    | Detail              | Description                          |
-| -------- | ------------------- | ------------------------------------ |
-| `change` | `{ value: number }` | Fired when the user selects a rating |
+| Event    | Detail                                        | Description                          |
+| -------- | --------------------------------------------- | ------------------------------------ |
+| `change` | `{ value: number; originalEvent?: Event }` | Fired when the user selects a rating |
+
+### Parts
+
+| Part    | Description               |
+| ------- | ------------------------- |
+| `stars` | Stars container element   |
+| `star`  | Individual star button    |
 
 ### CSS Custom Properties
 
-| Property                | Description                       |
-| ----------------------- | --------------------------------- |
-| `--rating-star-size`    | Size of each star icon            |
-| `--rating-color-empty`  | Color of unselected stars         |
-| `--rating-color-filled` | Color of selected / hovered stars |
-| `--rating-gap`          | Gap between stars                 |
+| Property                | Default                          | Description                       |
+| ----------------------- | -------------------------------- | --------------------------------- |
+| `--rating-star-size`    | `var(--size-7)`                  | Size of each star icon            |
+| `--rating-color-empty`  | `var(--color-contrast-200)`      | Color of unselected stars         |
+| `--rating-color-filled` | `var(--color-warning)` (themed)  | Color of selected / hovered stars |
+| `--rating-gap`          | `var(--size-0_5)`                | Gap between stars                 |
 
 ## Accessibility
 
@@ -155,17 +155,29 @@ The rating component follows WCAG 2.1 Level AA standards.
 
 ### `sg-rating`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `←` / `→` arrow keys move and commit the selection.
 - `Home` / `End` jump to 1 / max; `Tab` moves focus in and out.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The group uses `role="radiogroup"`; each star uses `role="radio"` with `aria-checked` reflecting the current selection.
-- `aria-labelledby` links the group label.
+- The group `aria-label` comes from the `label` attribute (default: `'Rating'`).
 - `aria-disabled` reflects the disabled state; `aria-readonly` reflects the readonly state.
 - Hover previews stars visually without committing the value.
+
+<sg-icon name="circle-check" size="16"></sg-icon> **Forced Colors**
+
+- In `forced-colors` environments unfilled stars use `ButtonText` and filled stars use `Highlight`, ensuring visible distinction without relying on color alone.
+
+<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+
+- The sparkle particle animation is suppressed when `prefers-reduced-motion: reduce` is active.
+
+## Sparkle Effect
+
+When a user selects a star, a burst of particle sparks radiates from the chosen star. The animation uses the current filled color and respects `prefers-reduced-motion` — particles are hidden entirely when the user has requested reduced motion.
 
 ## Best Practices
 

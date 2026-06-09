@@ -4,16 +4,16 @@ A feedback banner for surface-level status messages — errors, warnings, succes
 
 ## Features
 
-- 🎨 **3 Variants**: `flat` (default), `solid`, `bordered`
-- 🌈 **6 Color Themes**: `primary`, `secondary`, `info`, `success`, `warning`, `error`
-- 📏 **3 Sizes**: `sm`, `md`, `lg`
-- ✖️ **Dismissible**: animated close button — plays a smooth fade+collapse animation before hiding
-- 🖼️ **Icon Slot**: prepend any SVG or icon font glyph
-- 🏷️ **Heading**: optional bold heading above the message
-- 🕐 **Meta Slot**: timestamp or secondary info alongside the heading
-- 🔘 **Actions Slot**: call-to-action buttons below the message (or horizontal)
-- 🎯 **Accented**: left accent border for flat and bordered variants
-- ♿ **Accessible**: `role="alert"` + smart `aria-live`, labelled close button
+- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: `flat` (default), `solid`, `bordered`
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: `primary`, `secondary`, `info`, `success`, `warning`, `error`
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: `sm`, `md`, `lg`
+- <sg-icon name="x" size="16"></sg-icon>️ **Dismissible**: animated close button — plays a smooth fade+collapse animation before hiding
+- <sg-icon name="image" size="16"></sg-icon> **Icon Slot**: prepend any SVG or icon font glyph
+- <sg-icon name="tag" size="16"></sg-icon> **Heading**: optional bold heading above the message
+- <sg-icon name="clock" size="16"></sg-icon> **Meta Slot**: timestamp or secondary info alongside the heading
+- <sg-icon name="circle-dot" size="16"></sg-icon> **Actions Slot**: call-to-action buttons below the message (or horizontal)
+- <sg-icon name="crosshair" size="16"></sg-icon> **Accented**: left accent border for flat and bordered variants
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="alert"` + smart `aria-live`, labelled close button
 
 ## Source Code
 
@@ -25,10 +25,6 @@ A feedback banner for surface-level status messages — errors, warnings, succes
 
 ```html
 <sg-alert color="success">Your changes have been saved.</sg-alert>
-
-<script type="module">
-  import '@vielzeug/sigil/alert';
-</script>
 ```
 
 ## Variants
@@ -132,10 +128,6 @@ Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely w
   You do not have permission to perform this action.
 </sg-alert>
 
-<script type="module">
-  import '@vielzeug/sigil/alert';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -282,6 +274,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | `--alert-bg`           | Background color                  | Theme-dependent               |
 | `--alert-color`        | Text and icon color               | Theme-dependent               |
 | `--alert-border-color` | Border color                      | Theme-dependent               |
+| `--alert-shadow`       | Box shadow                        | Theme-dependent               |
 | `--alert-radius`       | Border radius                     | `var(--rounded-lg)`           |
 | `--alert-padding`      | Internal padding                  | `var(--size-3) var(--size-4)` |
 | `--alert-gap`          | Gap between icon, body, and close | `var(--size-3)`               |
@@ -293,13 +286,13 @@ The alert component follows WAI-ARIA best practices.
 
 ### `sg-alert`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="alert"` with `aria-live="polite"` — screen readers announce the alert on insertion.
 - `aria-live` is `assertive` when `color="error"` so urgent errors interrupt immediately; all other severities use `polite`.
 - `[dismissed]` uses `display: none`, removing the element from the accessibility tree entirely.
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - The close button is keyboard-reachable and has `aria-label="Dismiss alert"`.
 - `[dismissing]` disables `pointer-events` during the exit animation to prevent double-activation.

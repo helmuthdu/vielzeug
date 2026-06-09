@@ -4,16 +4,16 @@ An accessible, keyboard-navigable carousel and slideshow. Place `<sg-carousel-sl
 
 ## Features
 
-- 🖼️ **Slot-based slides** — `<sg-carousel-slide>` children; no JS array required
-- 🎭 **5 layout variants** — `default`, `fade`, `filmstrip`, `gallery`, `marquee`
-- ↕️ **Vertical orientation** — all variants support `orientation="vertical"`
-- ⌨️ **Keyboard navigation** — Arrow keys, Home, End; direction-aware
-- 👆 **Touch/pointer swipe** — 48 px threshold, horizontal or vertical axis
-- 🔁 **Loop** — wraps last→first and first→last (default on); configurable per-variant
-- ▶️ **Autoplay** — opt-in; pauses on hover and focus; configurable interval
-- 🔘 **`sg-progress` indicators** — animated fill countdown during autoplay; `role="tablist"`
-- ♿ **Accessible** — ARIA Carousel pattern; live-region announcements on every slide change
-- 🎨 **CSS custom properties** — full theming via `--carousel-*` tokens
+- <sg-icon name="image" size="16"></sg-icon> **Slot-based slides** — `<sg-carousel-slide>` children; no JS array required
+- <sg-icon name="theater" size="16"></sg-icon> **5 layout variants** — `default`, `fade`, `filmstrip`, `gallery`, `marquee`
+- <sg-icon name="arrow-up-down" size="16"></sg-icon> **Vertical orientation** — all variants support `orientation="vertical"`
+- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard navigation** — Arrow keys, Home, End; direction-aware
+- <sg-icon name="pointer" size="16"></sg-icon> **Touch/pointer swipe** — 48 px threshold, horizontal or vertical axis
+- <sg-icon name="repeat" size="16"></sg-icon> **Loop** — wraps last→first and first→last (default on); configurable per-variant
+- <sg-icon name="play" size="16"></sg-icon> **Autoplay** — opt-in; pauses on hover and focus; configurable interval
+- <sg-icon name="circle-dot" size="16"></sg-icon> **`sg-progress` indicators** — animated fill countdown during autoplay; `role="tablist"`
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — ARIA Carousel pattern; live-region announcements on every slide change
+- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — full theming via `--carousel-*` tokens
 
 ## Source Code
 
@@ -430,7 +430,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 
 The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `role="region"` + `aria-roledescription="carousel"` on the host
 - `role="group"` + `aria-roledescription="slide"` on each `<sg-carousel-slide>`
@@ -440,11 +440,11 @@ The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg
 - `role="tablist"` on the indicators container; each dot has `role="tab"` and `aria-selected`
 - Screen-reader announcement via the internal `announce()` helper on every slide change
 
-✅ **Autoplay**
+<sg-icon name="circle-check" size="16"></sg-icon> **Autoplay**
 
 When `autoplay` is on, the track uses `aria-live="off"` so automatic advances don't trigger screen reader speech. The timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
 
-✅ **Reduced Motion**
+<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
 
 The carousel responds to `prefers-reduced-motion: reduce` automatically:
 

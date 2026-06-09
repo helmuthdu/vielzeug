@@ -4,18 +4,18 @@ A fully-featured, form-associated select widget that reads native `<option>` and
 
 ## Features
 
-- ⌨️ **Full Keyboard Nav** — Arrow keys, Enter, Space, Escape, Home, End, Tab
-- ⏳ **Loading State** — `loading` attribute shows a loading indicator while options are being fetched
-- ♿ **ARIA Combobox** — `role="combobox"`, `role="listbox"`, `role="option"` with live attributes
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 🏷️ **Label Placement** — inset (floating) or outside
-- 📋 **Native Options** — use standard `<option>` and `<optgroup>` children; no custom syntax
-- 📏 **3 Sizes** — sm, md, lg
-- 📝 **Helper & Error Text** — inline helper or error message below the control
-- 🔗 **Form-Associated** — participates in native form submission
-- 🔲 **Multiple Selection** — chip-based multi-select via `multiple` attribute
-- 🧩 **Grouped Options** — `<optgroup label="...">` renders as section headers
+- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — Arrow keys, Enter, Space, Escape, Home, End, Tab
+- <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a loading indicator while options are being fetched
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA Combobox** — `role="combobox"`, `role="listbox"`, `role="option"` with live attributes
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (floating) or outside
+- <sg-icon name="clipboard" size="16"></sg-icon> **Native Options** — use standard `<option>` and `<optgroup>` children; no custom syntax
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline helper or error message below the control
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
+- <sg-icon name="square" size="16"></sg-icon> **Multiple Selection** — chip-based multi-select via `multiple` attribute
+- <sg-icon name="puzzle" size="16"></sg-icon> **Grouped Options** — `<optgroup label="...">` renders as section headers
 
 ## Source Code
 
@@ -35,10 +35,6 @@ Place `<option>` children directly inside `sg-select`.
   <option value="de">Germany</option>
   <option value="jp">Japan</option>
 </sg-select>
-
-<script type="module">
-  import '@vielzeug/sigil/select';
-</script>
 ```
 
 ## Visual Options
@@ -361,12 +357,12 @@ The select component follows WCAG 2.1 Level AA standards.
 
 ### `sg-select`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the trigger; `Enter` / `Space` open the dropdown.
 - Arrow keys navigate options; `Home` / `End` jump to first / last; `Escape` closes; `Tab` closes and moves focus out.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The trigger uses `role="combobox"` with `aria-haspopup="listbox"`, `aria-expanded`, and `aria-activedescendant`.
 - The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected`; `aria-multiselectable` is set when `multiple` is active.

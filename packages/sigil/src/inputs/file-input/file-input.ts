@@ -93,18 +93,15 @@ export type SgFileInputEvents = {
  * @fires change - detail: { files: File[], value: File[] }
  * @fires remove - detail: { file: File, files: File[] }
  *
- * @cssprop --border - Border token for the file field and dropzone
- * @cssprop --border-2 - Stronger border token used for hover and focus states
- * @cssprop --color-canvas - Base background for the file input surface
- * @cssprop --color-contrast-100 - Hover background for the dropzone and file list
- * @cssprop --color-contrast-200 - Divider and border contrast color
- * @cssprop --color-contrast-300 - Muted contrast tone for secondary details
- * @cssprop --color-contrast-400 - Secondary text color for helper content
- * @cssprop --color-contrast-50 - Soft background used for the dropzone surface
- * @cssprop --color-contrast-500 - Primary body text color in the field
- * @cssprop --color-contrast-700 - Strong text color for labels and filenames
- * @cssprop --color-error - Error accent color for invalid and rejected states
- * @cssprop --color-error-backdrop - Error tint used behind invalid dropzone states
+ * @cssprop --file-input-bg - Dropzone background color
+ * @cssprop --file-input-border-color - Dropzone border color
+ * @cssprop --file-input-font-size - Font size
+ * @cssprop --file-input-radius - Dropzone border radius
+ * @cssprop --file-input-min-height - Minimum dropzone height
+ * @cssprop --file-input-hover-bg - Dropzone background on hover (flat/ghost variants)
+ * @cssprop --file-input-hover-border-color - Dropzone border on hover (flat/bordered variants)
+ * @cssprop --file-input-focus-bg - Dropzone background when focused/drag-over (flat variant)
+ * @cssprop --file-input-focus-border-color - Dropzone border when focused/drag-over (flat variant)
  * @part wrapper - Root wrapper around the file input field
  * @part label - Visible label rendered above the dropzone
  * @part dropzone - Interactive drag-and-drop target

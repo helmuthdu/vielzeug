@@ -28,7 +28,7 @@ exports:
 # Conduit
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/conduit` &nbsp;·&nbsp; **Category:** Di
 
@@ -107,12 +107,12 @@ await container.dispose(); // all hooks run automatically
 | Feature                     | Conduit                                       | tsyringe                | InversifyJS                      |
 | --------------------------- | --------------------------------------------- | ----------------------- | -------------------------------- |
 | Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                   | ~45 kB                           |
-| Typed token ergonomics      | ✅                                            | Partial                 | Partial                          |
-| Async-first resolution      | ✅                                            | Partial                 | Partial                          |
-| Child container scopes      | ✅                                            | ✅                      | ✅                               |
-| Explicit disposal lifecycle | ✅                                            | ❌                      | Partial                          |
-| Decorator-free usage        | ✅                                            | ❌ (decorator-oriented) | ⚠️ (commonly decorator-oriented) |
-| Zero dependencies           | ✅                                            | ✅                      | ❌                               |
+| Typed token ergonomics      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
+| Async-first resolution      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
+| Child container scopes      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>                      | <sg-icon name="circle-check" size="16"></sg-icon>                               |
+| Explicit disposal lifecycle | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>                      | Partial                          |
+| Decorator-free usage        | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
+| Zero dependencies           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>                      | <sg-icon name="circle-x" size="16"></sg-icon>                               |
 
 **Use Conduit when** you need a compact typed container with explicit scopes and lifecycle control.
 
@@ -142,10 +142,10 @@ await container.dispose(); // all hooks run automatically
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

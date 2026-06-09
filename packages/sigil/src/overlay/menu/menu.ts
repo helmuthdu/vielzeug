@@ -74,6 +74,13 @@ export type SgMenuProps = {
  * @slot - Item label/content
  * @slot icon - Optional leading icon content
  *
+ * @cssprop --menu-item-hover-bg - Background on hover
+ * @cssprop --menu-item-focus-color - Text color when keyboard-focused
+ * @cssprop --menu-item-focus-bg - Background when keyboard-focused
+ * @cssprop --menu-item-selection-bg - Background for checkbox/radio items (unselected)
+ * @cssprop --menu-item-checked-color - Text color when checked
+ * @cssprop --menu-item-checked-bg - Background when checked
+ *
  * @part item - Root item container element.
  * @part item-label - Label text container.
  * @part icon-slot - Leading icon slot container.

@@ -17,7 +17,7 @@ exports: [createForm, toFormData, ValidationModes, FORM_ERROR]
 # Forge
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/forge` &nbsp;·&nbsp; **Category:** Forms
 
@@ -103,14 +103,14 @@ await form.submit(submit);
 | Feature                    | Forge                                       | React Hook Form | VeeValidate |
 | -------------------------- | ------------------------------------------- | --------------- | ----------- |
 | Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
-| Framework-agnostic         | ✅                                          | React only      | Vue only    |
-| Typed dot-path APIs        | ✅                                          | Partial         | Partial     |
-| Result-based submit flow   | ✅                                          | ❌              | ❌          |
-| Live field observation     | ✅                                          | ✅              | ✅          |
-| Full array helpers         | ✅                                          | ✅              | ✅          |
-| Scoped sub-forms           | ✅                                          | ❌              | ❌          |
-| Form + field subscriptions | ✅                                          | ✅              | ✅          |
-| Zero dependencies          | ✅                                          | ❌              | ❌          |
+| Framework-agnostic         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | React only      | Vue only    |
+| Typed dot-path APIs        | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial         | Partial     |
+| Result-based submit flow   | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
+| Live field observation     | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
+| Full array helpers         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
+| Scoped sub-forms           | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
+| Form + field subscriptions | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
+| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
 
 **Use Forge when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
 
@@ -144,8 +144,8 @@ await form.submit(submit);
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js 22+ | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js 22+ | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

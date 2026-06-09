@@ -9,20 +9,20 @@ A customizable boolean form control with indeterminate state support, plus a gro
 
 **Checkbox**
 
-- ♿ **Accessible** — `aria-checked` including `"mixed"` for indeterminate; keyboard toggle
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎛️ **Indeterminate State** — partial selection indicator for "select all" patterns
-- 🎭 **States** — checked, unchecked, indeterminate, disabled
-- 📏 **3 Sizes** — sm, md, lg
-- 🔧 **Customizable** — CSS custom properties for size, radius, and colors
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — `aria-checked` including `"mixed"` for indeterminate; keyboard toggle
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="sliders-horizontal" size="16"></sg-icon> **Indeterminate State** — partial selection indicator for "select all" patterns
+- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, indeterminate, disabled
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for size, radius, and colors
 
 **Checkbox Group**
 
-- ↕️ **2 Orientations** — vertical & horizontal
-- 💬 **Validation Feedback** — `helper` and `error` text with ARIA wiring
-- 📝 **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `sg-form`
-- 📡 **Context Propagation** — `color`, `size`, and `disabled` propagate to all child checkboxes
-- 🗂️ **Semantic Markup** — renders as `<fieldset>` + `<legend>` for proper screen reader grouping
+- <sg-icon name="arrow-up-down" size="16"></sg-icon> **2 Orientations** — vertical & horizontal
+- <sg-icon name="message-circle" size="16"></sg-icon> **Validation Feedback** — `helper` and `error` text with ARIA wiring
+- <sg-icon name="file-pen" size="16"></sg-icon> **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `sg-form`
+- <sg-icon name="radio-tower" size="16"></sg-icon> **Context Propagation** — `color`, `size`, and `disabled` propagate to all child checkboxes
+- <sg-icon name="folder-open" size="16"></sg-icon> **Semantic Markup** — renders as `<fieldset>` + `<legend>` for proper screen reader grouping
 
 ## Source Code
 
@@ -40,10 +40,6 @@ A customizable boolean form control with indeterminate state support, plus a gro
 
 ```html
 <sg-checkbox>Accept terms and conditions</sg-checkbox>
-
-<script type="module">
-  import '@vielzeug/sigil/checkbox';
-</script>
 ```
 
 ### Colors
@@ -138,11 +134,6 @@ checkbox.addEventListener('change', (e) => {
   <sg-checkbox value="music">Music</sg-checkbox>
   <sg-checkbox value="travel">Travel</sg-checkbox>
 </sg-checkbox-group>
-
-<script type="module">
-  import '@vielzeug/sigil/checkbox-group';
-  import '@vielzeug/sigil/checkbox';
-</script>
 ```
 
 ### Orientation
@@ -394,11 +385,11 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 
 ### `sg-checkbox`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` toggle the focused checkbox; `Tab` moves focus in and out.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="checkbox"` with `aria-checked` set to `"true"`, `"false"`, or `"mixed"` for indeterminate.
 - `aria-labelledby` links the label; `aria-describedby` links helper text; `aria-errormessage` links error text.
@@ -406,15 +397,15 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 
 ### `sg-checkbox-group`
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` moves to the next checkbox within the group.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-required` and `aria-invalid` reflect the group validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
 

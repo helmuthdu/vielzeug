@@ -94,7 +94,7 @@ exports: [export1, export2, export3]
 # <PackageName>
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/<pkg>` &nbsp;·&nbsp; **Category:** <Category>
 
@@ -139,8 +139,8 @@ yarn add @vielzeug/<pkg>
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | ✅                                          | ...            | ...            |
-| <Key differentiator> | ✅                                          | ...            | ...            |
+| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | ...            | ...            |
+| <Key differentiator> | <sg-icon name="circle-check" size="16"></sg-icon>                                          | ...            | ...            |
 
 **Use <PackageName> when** <concrete situation where this is the right choice>.
 
@@ -154,10 +154,10 @@ yarn add @vielzeug/<pkg>
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅ / ❌ |
-| Node.js     | ✅ / ❌ |
-| SSR         | ✅ / ❌ |
-| Deno        | ✅ / ❌ |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
 
 ## Documentation
 
@@ -178,7 +178,7 @@ yarn add @vielzeug/<pkg>
 - **AI-agent friendly metadata** (new): Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`.
 - **Quick Reference block** (new): Add a `<details>` block immediately after the `#` heading with key exports, category, and when to use.
 - The Before/After code block in "Why" must be a single fenced block with a `// Before` comment block followed by a `// After` comment block, not two separate blocks with prose between them.
-- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `✅`, `❌`, `⚠️` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
+- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `<sg-icon name="circle-check" size="16"></sg-icon>`, `<sg-icon name="circle-x" size="16"></sg-icon>`, `<sg-icon name="triangle-alert" size="16"></sg-icon>` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
 - "Use when / Consider when" must both be present. They are italic-free, direct statements.
 
 ## `usage.md` — Usage Guide

@@ -94,15 +94,19 @@ const VALID_INPUT_TYPES = [
  * @part input - The input element
  * @part helper - The helper text element
  *
- * @cssprop --sg-input-bg - Background color (maps to internal --_bg)
- * @cssprop --sg-input-color - Text color (maps to internal --_color)
- * @cssprop --sg-input-border-color - Border color
- * @cssprop --sg-input-focus-color - Focus ring / border color
- * @cssprop --sg-input-placeholder-color - Placeholder text color
- * @cssprop --sg-input-radius - Border radius override
- * @cssprop --sg-input-padding - Inner padding (vertical horizontal)
- * @cssprop --sg-input-gap - Gap between prefix/suffix and input
- * @cssprop --sg-input-font-size - Font size override
+ * @cssprop --input-bg - Background color
+ * @cssprop --input-color - Text color
+ * @cssprop --input-border-color - Border color
+ * @cssprop --input-placeholder-color - Placeholder text color
+ * @cssprop --input-radius - Border radius
+ * @cssprop --input-padding - Inner padding (block inline)
+ * @cssprop --input-gap - Gap between prefix/suffix icons and input text
+ * @cssprop --input-font-size - Font size
+ * @cssprop --input-height - Field height
+ * @cssprop --input-hover-bg - Field background on hover (flat/ghost variants)
+ * @cssprop --input-hover-border-color - Field border on hover (flat/bordered variants)
+ * @cssprop --input-focus-bg - Field background when focused (flat variant)
+ * @cssprop --input-focus-border-color - Field border when focused (flat/text variants)
  *
  * @example
  * ```html

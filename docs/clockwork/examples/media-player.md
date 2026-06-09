@@ -86,8 +86,8 @@ const playerMachine = defineMachine<'idle' | 'loading' | 'playing' | 'paused' | 
       },
     },
     playing: {
-      entry: () => console.log('▶ Playing...'),
-      exit: () => console.log('⏸ Paused'),
+      entry: () => console.log('<sg-icon name="play" size="16"></sg-icon> Playing...'),
+      exit: () => console.log('<sg-icon name="pause" size="16"></sg-icon> Paused'),
       on: {
         PAUSE: [{ target: 'paused' }],
         SEEK: [
@@ -165,10 +165,10 @@ player.subscribe((state) => console.log('State:', state.value, 'Volume:', player
 
 // Once loading completes: state → 'paused'
 setTimeout(() => {
-  player.send({ type: 'PLAY' }); // state: 'playing' (logs "▶ Playing...")
+  player.send({ type: 'PLAY' }); // state: 'playing' (logs "<sg-icon name="play" size="16"></sg-icon> Playing...")
   player.send({ type: 'SEEK', time: 30 }); // Seek to 30s
   player.send({ type: 'VOLUME', level: 50 }); // Volume to 50%
-  player.send({ type: 'PAUSE' }); // state: 'paused' (logs "⏸ Paused")
+  player.send({ type: 'PAUSE' }); // state: 'paused' (logs "<sg-icon name="pause" size="16"></sg-icon> Paused")
 }, 100);
 ```
 

@@ -17,7 +17,7 @@ exports: [defineMachine, interpret, resolveTransition, MachineError]
 # Clockwork
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/clockwork` &nbsp;·&nbsp; **Category:** State
 
@@ -124,13 +124,13 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 | Feature                    | Clockwork                                       | xstate              | zustand   |
 | -------------------------- | ----------------------------------------------- | ------------------- | --------- |
 | Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
-| Zero dependencies          | ✅                                              | ❌ 5+ deps          | ✅        |
-| Typed discriminated events | ✅                                              | ⚠️ Partial          | ❌        |
-| Reactive signals           | ✅ Native                                       | ❌ Observer pattern | ✅ Native |
-| Persistence adapter        | ✅ Pluggable                                    | ✅                  | ✅        |
-| Hierarchical states        | ✅ Compound + leaf resolution                   | ✅                  | ❌        |
-| Middleware pipeline        | ✅ Composable                                   | ❌                  | ✅        |
-| Context isolation          | ✅ Cloned on every transition                   | ✅                  | ❌        |
+| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon> 5+ deps          | <sg-icon name="circle-check" size="16"></sg-icon>        |
+| Typed discriminated events | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial          | <sg-icon name="circle-x" size="16"></sg-icon>        |
+| Reactive signals           | <sg-icon name="circle-check" size="16"></sg-icon> Native                                       | <sg-icon name="circle-x" size="16"></sg-icon> Observer pattern | <sg-icon name="circle-check" size="16"></sg-icon> Native |
+| Persistence adapter        | <sg-icon name="circle-check" size="16"></sg-icon> Pluggable                                    | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-check" size="16"></sg-icon>        |
+| Hierarchical states        | <sg-icon name="circle-check" size="16"></sg-icon> Compound + leaf resolution                   | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-x" size="16"></sg-icon>        |
+| Middleware pipeline        | <sg-icon name="circle-check" size="16"></sg-icon> Composable                                   | <sg-icon name="circle-x" size="16"></sg-icon>                  | <sg-icon name="circle-check" size="16"></sg-icon>        |
+| Context isolation          | <sg-icon name="circle-check" size="16"></sg-icon> Cloned on every transition                   | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-x" size="16"></sg-icon>        |
 
 **Use Clockwork when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
 
@@ -166,10 +166,10 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

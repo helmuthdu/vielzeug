@@ -4,14 +4,14 @@ A slide-in panel that overlays page content from any edge of the screen. Built o
 
 ## Features
 
-- 🔒 **Native `<dialog>`** — top-layer stacking, built-in focus trap, browser `Escape` handling
-- ↔️ **4 Placements**: left, right (default), top, bottom
-- 📐 **4 Sizes**: sm, md, lg, full
-- 🔘 **Dismissible** — optional close (×) button in the header
-- 🌫️ **Backdrop Styles** — `opaque` (default), `blur`, or `transparent`
-- 🧩 **Flexible slots** — `header`, default body, and `footer`
-- 🎞️ **Smooth animations** — slide-in/out transitions with backdrop fade
-- ♿ **Accessible**: `role="dialog"`, `aria-modal`, `aria-labelledby` from `label` prop
+- <sg-icon name="lock" size="16"></sg-icon> **Native `<dialog>`** — top-layer stacking, built-in focus trap, browser `Escape` handling
+- <sg-icon name="arrow-left-right" size="16"></sg-icon> **4 Placements**: left, right (default), top, bottom
+- <sg-icon name="triangle-right" size="16"></sg-icon> **4 Sizes**: sm, md, lg, full
+- <sg-icon name="circle-dot" size="16"></sg-icon> **Dismissible** — optional close (×) button in the header
+- <sg-icon name="cloud-fog" size="16"></sg-icon>️ **Backdrop Styles** — `opaque` (default), `blur`, or `transparent`
+- <sg-icon name="puzzle" size="16"></sg-icon> **Flexible slots** — `header`, default body, and `footer`
+- <sg-icon name="film" size="16"></sg-icon>️ **Smooth animations** — slide-in/out transitions with backdrop fade
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"`, `aria-modal`, `aria-labelledby` from `label` prop
 
 ## Source Code
 
@@ -292,10 +292,11 @@ Use `backdrop` to match dialog behavior:
 
 | Property            | Description                                |
 | ------------------- | ------------------------------------------ |
-| `--drawer-backdrop` | Backdrop color (default: `rgba(0,0,0,.5)`) |
-| `--drawer-bg`       | Panel background color                     |
-| `--drawer-size`     | Override the panel width or height         |
-| `--drawer-shadow`   | Panel box shadow                           |
+| `--drawer-backdrop-bg`  | Backdrop background color          |
+| `--drawer-bg`           | Panel background color             |
+| `--drawer-size`         | Panel width (horizontal) or height (vertical) |
+| `--drawer-shadow`       | Panel box shadow                   |
+| `--drawer-panel-blur`   | Panel backdrop blur amount         |
 
 ## Accessibility
 
@@ -303,18 +304,18 @@ The drawer component follows the WAI-ARIA Dialog Pattern best practices.
 
 ### `sg-drawer`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` / `Shift+Tab` move focus between focusable elements inside the panel.
 - `Escape` closes the drawer (when `dismissible` is set).
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert.
 - Provide a `label` attribute to give screen readers a descriptive panel title.
 - The close button has `aria-label="Close"` when `dismissible` is set.
 
-✅ **Focus Management**
+<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
 
 - Focus moves into the panel on open and returns to the trigger element on close.
 

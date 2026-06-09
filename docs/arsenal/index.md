@@ -17,7 +17,7 @@ related: [tempo, sourcerer, spell, coins]
 # Arsenal
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/arsenal` &nbsp;·&nbsp; **Category:** Utilities
 
@@ -92,12 +92,12 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 | Feature                     | Arsenal                                       | lodash-es | Remeda  |
 | --------------------------- | --------------------------------------------- | --------- | ------- |
 | Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB    | ~18 kB  |
-| TypeScript-first ergonomics | ✅                                            | Partial   | ✅      |
-| Deep utility coverage       | ✅                                            | ✅        | Partial |
-| Async control-flow helpers  | ✅                                            | Partial   | ❌      |
-| Typed predicate functions   | ✅                                            | ❌        | Partial |
-| Tree-shakeable modules      | ✅                                            | ✅        | ✅      |
-| Zero dependencies           | ✅                                            | ✅        | ✅      |
+| TypeScript-first ergonomics | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deep utility coverage       | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | Partial |
+| Async control-flow helpers  | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Typed predicate functions   | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>        | Partial |
+| Tree-shakeable modules      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Zero dependencies           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 **Use Arsenal when** you want one compact, typed utility layer that covers array/object/function/async/math use cases. For money handling, use [`@vielzeug/coins`](/coins/).
 
@@ -117,10 +117,10 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

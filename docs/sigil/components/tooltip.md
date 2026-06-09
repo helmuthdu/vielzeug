@@ -4,13 +4,13 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 ## Features
 
-- 📍 **4 Placements**: top (default), bottom, left, right — with viewport-aware auto-flip
-- ⚡ **3 Trigger Modes**: hover, focus, click — comma-separated for combinations
-- ⏱️ **Show Delay**: configurable delay before appearing
-- 🎨 **2 Variants**: dark (default), light
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: `role="tooltip"`, `aria-describedby` wiring, keyboard `Escape` dismiss
-- 🔧 **Powered by orbit**: uses `@vielzeug/orbit` for viewport-aware auto-positioning (`flip`, `shift`, `autoUpdate`)
+- <sg-icon name="map-pin" size="16"></sg-icon> **4 Placements**: top (default), bottom, left, right — with viewport-aware auto-flip
+- <sg-icon name="zap" size="16"></sg-icon> **3 Trigger Modes**: hover, focus, click — comma-separated for combinations
+- <sg-icon name="timer" size="16"></sg-icon> **Show Delay**: configurable delay before appearing
+- <sg-icon name="palette" size="16"></sg-icon> **2 Variants**: dark (default), light
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="tooltip"`, `aria-describedby` wiring, keyboard `Escape` dismiss
+- <sg-icon name="wrench" size="16"></sg-icon> **Powered by orbit**: uses `@vielzeug/orbit` for viewport-aware auto-positioning (`flip`, `shift`, `autoUpdate`)
 
 ## Source Code
 
@@ -26,10 +26,6 @@ Wrap any element with `sg-tooltip` and set the `content` attribute.
 <sg-tooltip content="Copy to clipboard">
   <button>Copy</button>
 </sg-tooltip>
-
-<script type="module">
-  import '@vielzeug/sigil/tooltip';
-</script>
 ```
 
 ## Placement
@@ -183,11 +179,11 @@ The tooltip component follows WAI-ARIA best practices.
 
 ### `sg-tooltip`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Pressing `Escape` while a tooltip is visible dismisses it.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The tooltip bubble has `role="tooltip"`.
 - The trigger element is augmented with `aria-describedby` pointing to the tooltip — this happens automatically when using the `focus` trigger.

@@ -45,18 +45,12 @@ export type SgSwitchProps = CheckableProps & {
  *
  * @slot - Switch label text
  *
- * @cssprop --color-contrast - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-400 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
- * @cssprop --color-error - Error state color token.
- * @cssprop --leading-tight - Line-height token.
- * @cssprop --rounded-full - Border radius token.
- * @cssprop --shadow-sm - Shadow/elevation token.
- * @cssprop --size-0-5 - Spacing/sizing token.
- * @cssprop --size-10 - Spacing/sizing token.
- * @cssprop --size-11 - Spacing/sizing token.
- * @cssprop --size-2-5 - Spacing/sizing token.
+ * @cssprop --switch-width - Track width
+ * @cssprop --switch-height - Track height
+ * @cssprop --switch-track-bg - Inactive track background color
+ * @cssprop --switch-checked-bg - Active/checked track background color
+ * @cssprop --switch-thumb-bg - Thumb background color
+ * @cssprop --switch-font-size - Label font size
  * @part switch - The switch wrapper element
  * @part track - The switch track element
  * @part thumb - The switch thumb element

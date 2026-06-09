@@ -17,7 +17,7 @@ exports: [createI18n, createFormatter, bindPlural]
 # Lingua
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** I18n
 
@@ -129,14 +129,14 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 | Feature                           | Lingua                                       | i18next | FormatJS |
 | --------------------------------- | -------------------------------------------- | ------- | -------- |
 | Bundle size                       | <PackageInfo package="lingua" type="size" /> | ~24 kB  | ~16 kB   |
-| Typed key ergonomics              | ✅                                           | Partial | Partial  |
-| Deterministic fallback chain      | ✅                                           | ✅      | ✅       |
-| Async locale preload              | ✅                                           | ✅      | ✅       |
-| Partial catalog merging           | ✅ (`merge()`)                               | Partial | ❌       |
-| Runtime snapshots + subscriptions | ✅                                           | ❌      | ❌       |
-| External formatter bridge         | ✅ (`@vielzeug/lingua/format`)               | Partial | ✅       |
-| Framework agnostic                | ✅                                           | ✅      | ✅       |
-| Zero dependencies                 | ✅                                           | ❌      | ❌       |
+| Typed key ergonomics              | <sg-icon name="circle-check" size="16"></sg-icon>                                           | Partial | Partial  |
+| Deterministic fallback chain      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>       |
+| Async locale preload              | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>       |
+| Partial catalog merging           | <sg-icon name="circle-check" size="16"></sg-icon> (`merge()`)                               | Partial | <sg-icon name="circle-x" size="16"></sg-icon>       |
+| Runtime snapshots + subscriptions | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>       |
+| External formatter bridge         | <sg-icon name="circle-check" size="16"></sg-icon> (`@vielzeug/lingua/format`)               | Partial | <sg-icon name="circle-check" size="16"></sg-icon>       |
+| Framework agnostic                | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>       |
+| Zero dependencies                 | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>       |
 
 **Use Lingua when** you want a compact, typed runtime with deterministic fallback behavior and framework-agnostic reactive state.
 
@@ -160,10 +160,10 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

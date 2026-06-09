@@ -17,7 +17,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder]
 # Grip
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/grip` &nbsp;·&nbsp; **Category:** Ui Interaction
 
@@ -121,13 +121,13 @@ const zone = createDropZone({
 | Feature             | Grip                                       | SortableJS | dnd-kit |
 | ------------------- | ------------------------------------------ | ---------- | ------- |
 | Bundle size         | <PackageInfo package="grip" type="size" /> | ~15 kB     | ~30 kB  |
-| Framework agnostic  | ✅                                         | ✅         | ✅      |
-| MIME type filtering | ✅ Pre-validated                           | ❌         | ❌      |
-| Counter-based hover | ✅                                         | ❌         | N/A     |
-| Sortable lists      | ✅                                         | ✅         | ✅      |
-| Drag handles        | ✅                                         | ✅         | ✅      |
-| `using` support     | ✅                                         | ❌         | ❌      |
-| Zero dependencies   | ✅                                         | ✅         | ❌      |
+| Framework agnostic  | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| MIME type filtering | <sg-icon name="circle-check" size="16"></sg-icon> Pre-validated                           | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Counter-based hover | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>         | N/A     |
+| Sortable lists      | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Drag handles        | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| `using` support     | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Zero dependencies   | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
 
 **Use Grip when** you need reliable file drop zones with MIME filtering or sortable lists in a framework-agnostic environment.
 
@@ -158,10 +158,10 @@ const zone = createDropZone({
 
 | Environment | Support       |
 | ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>            |
+| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| SSR         | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>            |
 
 ### Prerequisites
 

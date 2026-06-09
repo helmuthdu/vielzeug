@@ -4,14 +4,14 @@ A customizable text input component with multiple types, variants, and validatio
 
 ## Features
 
-- ♿ **Accessible** — Full keyboard support, ARIA attributes, screen reader friendly
-- 🌈 **5 Semantic Colors** — primary, secondary, success, warning, error
-- 🎨 **6 Variants** — solid, flat, bordered, outline, ghost, text
-- 🏷️ **Integrated Label** — Support for wide inset labels that span across slots
-- 💡 **Helper Text** — Add descriptive text or complex content below the input
-- 📏 **3 Sizes** — sm, md, lg
-- 📝 **7 Input Types** — text, email, password, search, url, tel, number
-- 🔧 **Prefix/Suffix Slots** — Add icons or buttons before/after input
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — Full keyboard support, ARIA attributes, screen reader friendly
+- <sg-icon name="rainbow" size="16"></sg-icon> **5 Semantic Colors** — primary, secondary, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **6 Variants** — solid, flat, bordered, outline, ghost, text
+- <sg-icon name="tag" size="16"></sg-icon> **Integrated Label** — Support for wide inset labels that span across slots
+- <sg-icon name="lightbulb" size="16"></sg-icon> **Helper Text** — Add descriptive text or complex content below the input
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="file-pen" size="16"></sg-icon> **7 Input Types** — text, email, password, search, url, tel, number
+- <sg-icon name="wrench" size="16"></sg-icon> **Prefix/Suffix Slots** — Add icons or buttons before/after input
 
 ## Source Code
 
@@ -23,11 +23,6 @@ A customizable text input component with multiple types, variants, and validatio
 
 ```html
 <sg-input type="text" placeholder="Enter your name"></sg-input>
-
-<script type="module">
-  import '@vielzeug/sigil/input';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 ## Visual Options
@@ -288,11 +283,21 @@ Prevent interaction or modification of the input.
 
 ### CSS Custom Properties
 
-| Property             | Description      | Default                    |
-| -------------------- | ---------------- | -------------------------- |
-| `--_theme-bg`        | Background color | `var(--color-contrast-50)` |
-| `--_theme-radius`    | Border radius    | `var(--rounded-lg)`        |
-| `--_theme-font-size` | Font size        | `var(--text-sm)`           |
+| Property                       | Description                                                   | Default           |
+| ------------------------------ | ------------------------------------------------------------- | ----------------- |
+| `--input-bg`                   | Background color                                              | Variant-dependent |
+| `--input-color`                | Text color                                                    | Variant-dependent |
+| `--input-border-color`         | Border color                                                  | Variant-dependent |
+| `--input-placeholder-color`    | Placeholder text color                                        | Theme-dependent   |
+| `--input-radius`               | Border radius                                                 | `var(--rounded-lg)` |
+| `--input-padding`              | Inner padding (block inline)                                  | Size-dependent    |
+| `--input-gap`                  | Gap between prefix/suffix icons and input text                | Size-dependent    |
+| `--input-font-size`            | Font size                                                     | Size-dependent    |
+| `--input-height`               | Field height                                                  | Size-dependent    |
+| `--input-hover-bg`             | Field background on hover (flat/ghost variants)               | Variant-dependent |
+| `--input-hover-border-color`   | Field border on hover (flat/bordered variants)                | Variant-dependent |
+| `--input-focus-bg`             | Field background when focused (flat variant)                  | Variant-dependent |
+| `--input-focus-border-color`   | Field border when focused (flat/text variants)                | Variant-dependent |
 
 ## Accessibility
 
@@ -300,12 +305,12 @@ The input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-input`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the input.
 - Native input behavior (Enter to commit, etc.).
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Proper ARIA states (disabled, required, readonly).
 - Associated labels via `aria-label` or `<label>`.

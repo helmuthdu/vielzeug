@@ -32,7 +32,7 @@ exports:
 # Vault
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/vault` &nbsp;·&nbsp; **Category:** Storage
 
@@ -116,12 +116,12 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 | Feature                 | Vault                                       | idb-keyval | Raw Web Storage   |
 | ----------------------- | ------------------------------------------- | ---------- | ----------------- |
 | Bundle size             | <PackageInfo package="vault" type="size" /> | ~1.3 kB    | Native            |
-| TypeScript schema types | ✅                                          | ❌         | ❌                |
-| Query builder           | ✅                                          | ❌         | ❌                |
-| TTL                     | ✅                                          | ❌         | Manual            |
-| Multiple backends       | ✅                                          | IDB only   | localStorage only |
-| Reactivity              | ✅                                          | ❌         | ❌                |
-| Zero dependencies       | ✅                                          | ✅         | Native            |
+| TypeScript schema types | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>                |
+| Query builder           | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>                |
+| TTL                     | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>         | Manual            |
+| Multiple backends       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | IDB only   | localStorage only |
+| Reactivity              | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>                |
+| Zero dependencies       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>         | Native            |
 
 **Use Vault when** you need typed, queryable browser storage with TTL and reactivity across LocalStorage, SessionStorage, IndexedDB, and Memory from a single consistent API.
 
@@ -190,9 +190,9 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 
 | Environment | Support                                                                |
 | ----------- | ---------------------------------------------------------------------- |
-| Browser     | ✅                                                                     |
-| Node.js     | ⚠️ (`createMemory` works; browser adapters require web APIs)           |
-| SSR         | ⚠️ (`createMemory` works directly; browser adapters require polyfills) |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>                                                                     |
+| Node.js     | <sg-icon name="triangle-alert" size="16"></sg-icon> (`createMemory` works; browser adapters require web APIs)           |
+| SSR         | <sg-icon name="triangle-alert" size="16"></sg-icon> (`createMemory` works directly; browser adapters require polyfills) |
 
 ## Documentation
 

@@ -56,18 +56,13 @@ export type SgCheckboxProps = CheckableProps & {
  *
  * @slot - Checkbox label text
  *
- * @cssprop --border-2 - Border token.
- * @cssprop --checkbox-bg - Checkbox control styling token.
- * @cssprop --checkbox-border-color - Checkbox control styling token.
- * @cssprop --checkbox-checked-bg - Checkbox control styling token.
- * @cssprop --checkbox-color - Checkbox control styling token.
- * @cssprop --checkbox-font-size - Checkbox control styling token.
- * @cssprop --checkbox-radius - Checkbox control styling token.
- * @cssprop --checkbox-size - Checkbox control styling token.
- * @cssprop --color-contrast - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-200 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
+ * @cssprop --checkbox-size - Control size (width and height)
+ * @cssprop --checkbox-radius - Control border radius
+ * @cssprop --checkbox-bg - Unchecked background color
+ * @cssprop --checkbox-border-color - Unchecked border color
+ * @cssprop --checkbox-checked-bg - Checked/indeterminate background color
+ * @cssprop --checkbox-color - Checkmark icon color
+ * @cssprop --checkbox-font-size - Label font size
  * @part checkbox - The checkbox wrapper element
  * @part box - The visual checkbox box
  * @part label - The label element

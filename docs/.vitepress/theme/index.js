@@ -9,6 +9,8 @@ import Repl from './components/REPL.vue';
 
 // Import Sigil styles - using direct paths for monorepo
 import '@vielzeug/sigil/styles/styles.css';
+// Import Prism chart styles
+import '@vielzeug/prism/theme/prism.css';
 
 import './theme.css';
 
@@ -21,16 +23,20 @@ if (typeof window !== 'undefined') {
 
 export default {
   ...DefaultTheme,
-  enhanceApp({ app }) {
+  async enhanceApp({ app }) {
     app.component('REPL', Repl);
     app.component('ColorPalette', ColorPalette);
     app.component('PackageBadges', PackageBadges);
     app.component('PackageInfo', PackageInfo);
     app.component('ComponentPreview', ComponentPreview);
 
-    // Make Rune available on a window object
     if (typeof window !== 'undefined') {
       window.Rune = Rune;
+
+      const [prism, ripple] = await Promise.all([import('@vielzeug/prism'), import('@vielzeug/ripple')]);
+
+      window.Prism = prism;
+      window.Ripple = ripple;
     }
   },
 };

@@ -25,7 +25,7 @@ exports:
 # Scroll
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
 
@@ -125,11 +125,11 @@ const virt = createVirtualizer(scrollEl, {
 | Feature            | Scroll                                       | TanStack Virtual | react-window |
 | ------------------ | -------------------------------------------- | ---------------- | ------------ |
 | Bundle size        | <PackageInfo package="scroll" type="size" /> | ~5 kB            | ~8 kB        |
-| Framework agnostic | ✅                                           | ✅               | React only   |
-| Variable heights   | ✅ Measured                                  | ✅               | ⚠️ Static    |
-| O(log n) lookup    | ✅                                           | ✅               | ✅           |
-| `using` support    | ✅                                           | ❌               | ❌           |
-| Zero dependencies  | ✅                                           | ✅               | ✅           |
+| Framework agnostic | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | React only   |
+| Variable heights   | <sg-icon name="circle-check" size="16"></sg-icon> Measured                                  | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="triangle-alert" size="16"></sg-icon> Static    |
+| O(log n) lookup    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           |
+| `using` support    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           |
+| Zero dependencies  | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           |
 
 **Use Scroll when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
 
@@ -160,10 +160,10 @@ const virt = createVirtualizer(scrollEl, {
 
 | Environment | Support       |
 | ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>            |
+| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| SSR         | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>            |
 
 Requires a browser DOM environment with a fixed-height scroll container (`overflow: auto`) and a positioned inner list element. Items must be positioned absolutely from virtual item offsets.
 

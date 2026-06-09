@@ -144,6 +144,7 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: var(--size-0-5);
+    min-height: calc(7 * var(--size-10) + 6 * var(--size-0-5));
   }
 
   .cal-cell {
@@ -206,13 +207,14 @@
 
   .cal-grid-months,
   .cal-grid-years {
-    flex-flow: row wrap;
+    /* 4-column grid — same width as cal-grid-days, natural height. */
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--size-1);
   }
 
   .cal-cell-month,
   .cal-cell-year {
-    flex: 0 0 calc(25% - var(--size-1));
     height: var(--size-10);
     font-size: var(--text-sm);
     color: var(--color-contrast-800);

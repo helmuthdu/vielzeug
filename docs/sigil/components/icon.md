@@ -4,11 +4,11 @@ A lightweight icon wrapper around a synchronous icon registry for consistent ren
 
 ## Features
 
-- 🧩 **Single API** — consistent `name`, `size`, and a11y behavior
-- ♿ **Accessible by default** — decorative when unlabeled, semantic when `label` is set
-- 🎨 **Theme-friendly** — uses `currentColor` so color is controlled with CSS
-- 📏 **Flexible sizing** — number (px) or CSS length values
-- 🧱 **Solid mode** — enable `solid` for filled icon rendering
+- <sg-icon name="puzzle" size="16"></sg-icon> **Single API** — consistent `name`, `size`, and a11y behavior
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible by default** — decorative when unlabeled, semantic when `label` is set
+- <sg-icon name="palette" size="16"></sg-icon> **Theme-friendly** — uses `currentColor` so color is controlled with CSS
+- <sg-icon name="ruler" size="16"></sg-icon> **Flexible sizing** — number (px) or CSS length values
+- <sg-icon name="box" size="16"></sg-icon> **Solid mode** — enable `solid` for filled icon rendering
 
 ## Source Code
 
@@ -23,10 +23,6 @@ A lightweight icon wrapper around a synchronous icon registry for consistent ren
 <sg-icon name="chevron-right" size="18"></sg-icon>
 <sg-icon name="trash-2" label="Delete"></sg-icon>
 <sg-icon name="star" solid></sg-icon>
-
-<script type="module">
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 ## Registry (Option A)

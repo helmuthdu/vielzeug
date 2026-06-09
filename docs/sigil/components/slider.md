@@ -7,14 +7,14 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 ## Features
 
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 📏 **3 Sizes** — sm, md, lg
-- ↔️ **Range Mode** — two-thumb selection with `from`/`to` bounds
-- ⌨️ **Keyboard Navigation** — Arrow keys step the value; Home/End jump to min/max
-- 👆 **Touch Support** — Smooth pointer-event dragging on mobile
-- ♿ **ARIA Slider** — `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
-- 📊 **Flexible Bounds** — Configurable `min`, `max`, and `step`
-- 🔧 **Customizable** — CSS custom properties for track, fill, and thumb colors
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Range Mode** — two-thumb selection with `from`/`to` bounds
+- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — Arrow keys step the value; Home/End jump to min/max
+- <sg-icon name="pointer" size="16"></sg-icon> **Touch Support** — Smooth pointer-event dragging on mobile
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA Slider** — `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
+- <sg-icon name="bar-chart-2" size="16"></sg-icon> **Flexible Bounds** — Configurable `min`, `max`, and `step`
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for track, fill, and thumb colors
 
 ## Source Code
 
@@ -26,10 +26,6 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 ```html
 <sg-slider value="50">Volume</sg-slider>
-
-<script type="module">
-  import '@vielzeug/sigil/slider';
-</script>
 ```
 
 ## Visual Options
@@ -94,10 +90,6 @@ Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` 
 
 ```html
 <sg-slider range from="20" to="80">Price range</sg-slider>
-
-<script type="module">
-  import '@vielzeug/sigil/slider';
-</script>
 ```
 
 <ComponentPreview center vertical>
@@ -212,11 +204,11 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 | Property          | Description                     | Default                     |
 | ----------------- | ------------------------------- | --------------------------- |
-| `--slider-height` | Height of the slider track      | Size-dependent              |
-| `--slider-size`   | Diameter of the thumb           | Size-dependent              |
-| `--slider-track`  | Track background color          | `var(--color-contrast-300)` |
-| `--slider-fill`   | Filled portion background color | Theme color                 |
-| `--slider-thumb`  | Thumb background color          | `var(--color-contrast-100)` |
+| `--slider-height`   | Height of the slider track  | Size-dependent              |
+| `--slider-size`     | Thumb diameter              | Size-dependent              |
+| `--slider-track-bg` | Track background color      | `var(--color-contrast-300)` |
+| `--slider-fill`     | Active fill color           | Theme color                 |
+| `--slider-thumb-bg` | Thumb background color      | `var(--color-contrast-100)` |
 
 ## Accessibility
 
@@ -224,21 +216,21 @@ The slider component follows WAI-ARIA best practices.
 
 ### `sg-slider`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Arrow Right` / `Arrow Up` — increase value by one step
 - `Arrow Left` / `Arrow Down` — decrease value by one step
 - `Home` — jump to minimum value
 - `End` — jump to maximum value
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The thumb has `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`.
 - Provide `value-text` or `from-value-text` / `to-value-text` when the raw number needs a unit (e.g. `"$80"`, `"75%"`).
 - In range mode, each thumb has its own accessible label and independent ARIA attributes.
 - `aria-disabled` is set when `disabled` is active.
 
-✅ **Touch & Focus**
+<sg-icon name="circle-check" size="16"></sg-icon> **Touch & Focus**
 
 - Touch-friendly draggable thumb with a minimum 44 × 44 px hit area.
 - `Tab` focuses the slider; `Shift+Tab` blurs it.

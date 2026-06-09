@@ -1,6 +1,121 @@
 ---
 description: Synchronise the VitePress documentation for a Vielzeug package with its current source code, following the canonical Vielzeug Documentation Template. Updates index.md, api.md, usage.md, examples.md, and examples/*.md so they match the actual API and template rules.
 ---
+You are a software engineer creating a new package in a monorepo project.
+
+Your task is to scaffold and implement a new package with a clear, single responsibility, following the monorepo's established conventions and tooling.
+
+Package Context:
+
+- Monorepo contains multiple utility / component / service packages.
+- Each package should have a distinct, non-overlapping purpose.
+- New package name: {package-name}
+- Package scope: {e.g., @scope/pkg-name}
+- Package description: {brief description of what it does}
+
+Goals:
+
+1. Define a clear, focused responsibility for the new package.
+2. Scaffold the package following existing monorepo structure and conventions.
+3. Implement the core functionality with clean, minimal, well-tested code.
+4. Ensure proper TypeScript types, documentation, and build configuration.
+5. Integrate the package into the monorepo (workspace config, dependency management, etc.).
+
+Package Structure (align with monorepo conventions):
+
+Typical structure (adjust as needed):
+
+packages/{package-name}/
+├── src/
+│   ├── __tests__/      # unit tests
+│   ├── index.ts        # public API exports
+│   ├── core/           # main implementation
+│   ├── utils/          # internal utilities (if any)
+│   └── types/          # TypeScript type definitions
+├── package.json
+├── tsconfig.json
+└── README.md
+
+Implementation Guidelines:
+
+- Follow existing code style, linting rules, and formatting conventions.
+- Export a minimal, intentional public API. Avoid exposing internal utilities.
+- Use strict TypeScript. No implicit any, no unsafe casts unless justified.
+- Prefer pure functions and immutable data structures where appropriate.
+- Handle errors explicitly; avoid silent failures.
+- Document public APIs with TSDoc comments.
+- It should have no external dependencies, inter-package dependencies are allowed.
+
+Testing Guidelines:
+
+- Write unit tests for all public APIs and critical internal logic.
+- Cover core functionality, edge cases, and error scenarios.
+- Each test should validate one behavior.
+- Use simple, deterministic test patterns.
+- Mock only external dependencies (e.g., network, filesystem) when necessary.
+
+Build Configuration:
+
+- Use the monorepo's shared build tooling (e.g., tsup, rollup, vite, tsc).
+- Configure package.json exports, main, module, types fields appropriately.
+- Ensure build outputs are clean and include type declarations.
+- Update Rush configuration if using Rush (e.g., rush.json).
+- Add package to monorepo workspace (e.g., pnpm-workspace.yaml, lerna.json, or nx.json).
+
+Documentation:
+
+- Create a README.md with:
+    - Package overview and purpose
+    - Installation instructions
+    - Basic usage example
+    - API reference (link to detailed docs if needed)
+    - Any peer dependencies or environment requirements
+- Add inline TSDoc for all public exports.
+
+Integration into Monorepo:
+
+- Update root workspace configuration to include the new package.
+- Add dependency relationships if this package depends on other monorepo packages.
+- Ensure versioning strategy aligns with monorepo (independent or fixed).
+- Update any root-level documentation or navigation (e.g., combined API docs).
+
+Output Format:
+
+Provide the following deliverables:
+
+1. Package Manifest (package.json)
+    - Name, version (0.0.0 or 1.0.0), description, main entry points, scripts, dependencies.
+
+2. TypeScript Configuration (tsconfig.json)
+    - Extend from root tsconfig if applicable; set compiler options for the package.
+
+3. Source Code (src/index.ts and core modules)
+    - Implementation of the package's functionality.
+
+4. Tests (__tests__/*.test.ts)
+    - Core tests covering public API and critical behavior.
+
+5. README.md
+    - Overview, installation, usage example, API summary.
+
+6. Workspace Integration Notes
+    - Steps to add to monorepo (e.g., update pnpm-workspace.yaml, run install).
+
+Quality Checklist (verify before finalizing):
+
+- Package has a clear, non-overlapping responsibility.
+- Public API is minimal and intentional.
+- TypeScript compiles with no errors.
+- All tests pass.
+- Build outputs are correct (esm, cjs, types).
+- Documentation matches implementation.
+- No unnecessary dependencies or code.
+- Package is discoverable by the monorepo tooling.
+
+Collaboration Note:
+
+- If the new package depends on other packages in the monorepo, use workspace protocols (e.g., "workspace:*") for local dependencies.
+- Ensure the dependency graph does not create cycles.
 
 # pkg-docs — Documentation Sync
 
@@ -119,7 +234,7 @@ exports: [export1, export2, export3]
 # <PackageName>
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/<pkg>` · **Category:** <Category>
 
@@ -169,8 +284,8 @@ yarn add @vielzeug/<pkg>
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | ✅                                          | ...            | ...            |
-| <Key differentiator> | ✅                                          | ...            | ...            |
+| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon> | ...            | ...            |
+| <Key differentiator> | <sg-icon name="circle-check" size="16"></sg-icon> | ...            | ...            |
 
 **Use <PackageName> when** <concrete situation where this is the right choice>.
 
@@ -184,10 +299,10 @@ yarn add @vielzeug/<pkg>
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅ / ❌ |
-| Node.js     | ✅ / ❌ |
-| SSR         | ✅ / ❌ |
-| Deno        | ✅ / ❌ |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
 
 ## Documentation
 

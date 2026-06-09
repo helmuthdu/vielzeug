@@ -17,7 +17,7 @@ exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 # Wayfinder
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/wayfinder` &nbsp;·&nbsp; **Category:** Routing
 
@@ -117,22 +117,22 @@ router.subscribe((state) => {
 | Feature                              | Wayfinder                                       | page.js | Navigo  |
 | ------------------------------------ | ----------------------------------------------- | ------- | ------- |
 | Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB   | ~5 kB   |
-| History mode                         | ✅                                              | ✅      | ✅      |
-| Memory history (tests / non-browser) | ✅                                              | ❌      | ❌      |
-| Typed path params                    | ✅                                              | ❌      | ❌      |
-| Named navigation                     | ✅                                              | ❌      | Partial |
-| Middleware                           | ✅                                              | ✅      | ✅      |
-| Data loaders with AbortSignal        | ✅                                              | ❌      | ❌      |
-| Lazy route loading                   | ✅                                              | ❌      | ❌      |
-| Declarative redirects                | ✅                                              | ❌      | ❌      |
-| Search param validation              | ✅                                              | ❌      | ❌      |
-| Error in state                       | ✅                                              | ❌      | ❌      |
-| History state in context             | ✅                                              | ❌      | ❌      |
-| Leave guards                         | ✅                                              | ❌      | ❌      |
-| Hover prefetching (`preload()`)      | ✅                                              | ❌      | ❌      |
-| Scroll restoration                   | ✅                                              | ❌      | ❌      |
-| View Transition API                  | ✅                                              | ❌      | ❌      |
-| Zero dependencies                    | ✅                                              | ✅      | ✅      |
+| History mode                         | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Memory history (tests / non-browser) | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Typed path params                    | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Named navigation                     | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | Partial |
+| Middleware                           | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Data loaders with AbortSignal        | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Lazy route loading                   | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Declarative redirects                | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Search param validation              | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Error in state                       | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| History state in context             | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Leave guards                         | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Hover prefetching (`preload()`)      | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Scroll restoration                   | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| View Transition API                  | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Zero dependencies                    | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Features
 
@@ -163,10 +163,10 @@ router.subscribe((state) => {
 
 | Environment       | Support                                    |
 | ----------------- | ------------------------------------------ |
-| Browser           | ✅                                         |
-| Node.js           | ✅ (via `createMemoryHistory` + `match()`) |
-| SSR data prefetch | ✅ (via `match(url, signal?)`)             |
-| Deno              | ✅ (via `createMemoryHistory` + `match()`) |
+| Browser           | <sg-icon name="circle-check" size="16"></sg-icon>                                         |
+| Node.js           | <sg-icon name="circle-check" size="16"></sg-icon> (via `createMemoryHistory` + `match()`) |
+| SSR data prefetch | <sg-icon name="circle-check" size="16"></sg-icon> (via `match(url, signal?)`)             |
+| Deno              | <sg-icon name="circle-check" size="16"></sg-icon> (via `createMemoryHistory` + `match()`) |
 
 ## Documentation
 

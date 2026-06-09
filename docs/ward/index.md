@@ -31,7 +31,7 @@ exports:
 # Ward
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
 
@@ -121,13 +121,13 @@ bound.rulesInScope('posts');
 | Feature                           | Ward                                       | CASL    | AccessControl        |
 | --------------------------------- | ------------------------------------------ | ------- | -------------------- |
 | Bundle size                       | <PackageInfo package="ward" type="size" /> | ~11 kB  | ~7 kB                |
-| Typed rule contracts              | ✅                                         | Partial | Partial              |
-| Deterministic deny precedence     | ✅                                         | ✅      | ✅                   |
-| Rule predicates with request data | ✅                                         | ✅      | ⚠️ (manual patterns) |
-| Wildcard action support           | ✅                                         | ✅      | ✅                   |
-| Principal-bound API               | ✅ (`forUser`)                             | Partial | ❌                   |
-| Explainable decisions             | ✅                                         | Partial | ❌                   |
-| Zero dependencies                 | ✅                                         | ❌      | ❌                   |
+| Typed rule contracts              | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Partial | Partial              |
+| Deterministic deny precedence     | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>                   |
+| Rule predicates with request data | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
+| Wildcard action support           | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>                   |
+| Principal-bound API               | <sg-icon name="circle-check" size="16"></sg-icon> (`forUser`)                             | Partial | <sg-icon name="circle-x" size="16"></sg-icon>                   |
+| Explainable decisions             | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Partial | <sg-icon name="circle-x" size="16"></sg-icon>                   |
+| Zero dependencies                 | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>                   |
 
 **Use Ward when** you want predictable authorization decisions with typed rules and explicit introspection APIs.
 
@@ -156,10 +156,10 @@ bound.rulesInScope('posts');
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

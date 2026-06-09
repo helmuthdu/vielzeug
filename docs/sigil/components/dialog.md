@@ -4,15 +4,15 @@ A modal dialog that blocks page interaction, traps focus, and dismisses on `Esca
 
 ## Features
 
-- 🔒 **Native `<dialog>`** — correct top-layer stacking, built-in backdrop, browser focus trapping
-- ⌨️ **`Escape` to close** — handled by the browser natively
-- 🎯 **Controlled open state** — toggle with the `open` attribute or property
-- 🔘 **Dismissible** — optional close (×) button in the header
-- 🛡️ **Persistent mode** — prevent accidental close via backdrop click
-- 🧩 **Flexible slots** — `header`, default body, and `footer`
-- 📐 **5 Sizes**: sm, md, lg, xl, full
-- 🎨 **3 Variants**: default, plain, bordered
-- ♿ **Accessible**: `role="dialog"`, `aria-modal="true"`, `aria-label` from `label` prop, labelled close button
+- <sg-icon name="lock" size="16"></sg-icon> **Native `<dialog>`** — correct top-layer stacking, built-in backdrop, browser focus trapping
+- <sg-icon name="keyboard" size="16"></sg-icon> **`Escape` to close** — handled by the browser natively
+- <sg-icon name="crosshair" size="16"></sg-icon> **Controlled open state** — toggle with the `open` attribute or property
+- <sg-icon name="circle-dot" size="16"></sg-icon> **Dismissible** — optional close (×) button in the header
+- <sg-icon name="shield" size="16"></sg-icon>️ **Persistent mode** — prevent accidental close via backdrop click
+- <sg-icon name="puzzle" size="16"></sg-icon> **Flexible slots** — `header`, default body, and `footer`
+- <sg-icon name="triangle-right" size="16"></sg-icon> **5 Sizes**: sm, md, lg, xl, full
+- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: default, plain, bordered
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"`, `aria-modal="true"`, `aria-label` from `label` prop, labelled close button
 
 ## Source Code
 
@@ -367,7 +367,7 @@ The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w
 
 ### `sg-dialog`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 | Key           | Action                                                                    |
 | ------------- | ------------------------------------------------------------------------- |
@@ -375,14 +375,14 @@ The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w
 | `Shift + Tab` | Move focus to the previous focusable element (wraps around)               |
 | `Escape`      | Close the dialog (handled natively by the browser)                        |
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The inner `<dialog>` element carries `role="dialog"` implicitly — no extra ARIA role is needed.
 - `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open.
 - When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open.
 - When `dismissible` is set, the close button has a descriptive `aria-label="Close dialog"`.
 
-✅ **Focus Management**
+<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
 
 - On open, the browser moves focus into the dialog panel automatically — no manual `focus()` call required.
 - Focus is trapped inside the dialog while it is open; pressing `Tab` cycles only through interactive elements within the panel.

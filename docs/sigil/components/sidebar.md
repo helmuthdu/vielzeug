@@ -4,14 +4,14 @@ A collapsible navigation sidebar with labelled groups and individual items. It u
 
 ## Features
 
-- 🗂️ **3 Sub-components**: `sg-sidebar`, `sg-sidebar-group`, `sg-sidebar-item`
-- 🔄 **Collapsible**: smooth icon-only mode with animated width transition
-- 🎨 **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
-- 🔗 **Link or button**: `sg-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
-- 📌 **Active indicator**: visual pill indicator for the current page item
-- 🔘 **Collapsible groups**: native `<details>/<summary>` interaction with optional toggle event
-- ♿ **Accessible**: `role="navigation"`, `aria-current="page"`, `aria-expanded`, keyboard navigation
-- ⌨️ **Imperative API**: `setCollapsed(next)`, `toggle()` methods on the element
+- <sg-icon name="folder-open" size="16"></sg-icon> **3 Sub-components**: `sg-sidebar`, `sg-sidebar-group`, `sg-sidebar-item`
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Collapsible**: smooth icon-only mode with animated width transition
+- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
+- <sg-icon name="link" size="16"></sg-icon> **Link or button**: `sg-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
+- <sg-icon name="map-pin" size="16"></sg-icon> **Active indicator**: visual pill indicator for the current page item
+- <sg-icon name="circle-dot" size="16"></sg-icon> **Collapsible groups**: native `<details>/<summary>` interaction with optional toggle event
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="navigation"`, `aria-current="page"`, `aria-expanded`, keyboard navigation
+- <sg-icon name="keyboard" size="16"></sg-icon> **Imperative API**: `setCollapsed(next)`, `toggle()` methods on the element
 
 ## Source Code
 
@@ -31,10 +31,6 @@ Wrap groups and items inside `sg-sidebar`. Mark the current page with `active`.
     <sg-sidebar-item href="/settings">Settings</sg-sidebar-item>
   </sg-sidebar-group>
 </sg-sidebar>
-
-<script type="module">
-  import '@vielzeug/sigil/sidebar';
-</script>
 ```
 
 ## Collapsible Sidebar

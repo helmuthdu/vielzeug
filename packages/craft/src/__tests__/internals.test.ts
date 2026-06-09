@@ -1,3 +1,4 @@
+import { debugFlush } from '../devtools';
 import { CraftitError, html, reportRuntimeError } from '../index';
 import { ComponentPhase } from '../types';
 import {
@@ -157,5 +158,20 @@ describe('Type guards', () => {
       expect(isHtmlResult(result)).toBe(true);
       expect(result.fragment).toBe(frag);
     });
+  });
+});
+
+describe('debugFlush()', () => {
+  it('resolves without error', async () => {
+    await expect(debugFlush()).resolves.toBeUndefined();
+  });
+
+  it('passes logger messages to console.debug', async () => {
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    await debugFlush({ maxTurns: 1 });
+
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

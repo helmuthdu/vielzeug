@@ -91,17 +91,8 @@ export type SgCheckboxGroupEvents = {
  *
  * @slot - Place `sg-checkbox` elements here
  *
- * @cssprop --checkbox-group-direction - Checkbox control styling token.
- * @cssprop --checkbox-group-gap - Checkbox control styling token.
- * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-600 - Contrast color token for text and surfaces.
- * @cssprop --color-error - Error state color token.
- * @cssprop --font-medium - Font-weight token.
- * @cssprop --leading-tight - Line-height token.
- * @cssprop --size-1-5 - Spacing/sizing token.
- * @cssprop --size-2 - Spacing/sizing token.
- * @cssprop --text-sm - Font-size token.
- * @cssprop --text-xs - Font-size token.
+ * @cssprop --checkbox-group-direction - Flex direction of the items list ('row' | 'column')
+ * @cssprop --checkbox-group-gap - Gap between checkbox items
  * @part items - Items container.
  * @example
  * ```html

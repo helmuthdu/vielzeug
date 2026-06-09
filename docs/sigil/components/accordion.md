@@ -4,10 +4,10 @@ A flexible accordion component for organizing collapsible content sections. Buil
 
 ## Features
 
-- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
-- 🔄 **Selection Modes**: Single or multiple expansion
-- 📏 **3 Sizes**: sm, md, lg- 🎬 **Smooth Animation**: content height animates via CSS `grid-template-rows` — no layout thrashing- ♿ **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
-- 🎯 **Flexible Content**: Support for icons, subtitles, and custom content
+- <sg-icon name="palette" size="16"></sg-icon> **6 Variants**: solid, flat, bordered, outline, ghost, text
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Selection Modes**: Single or multiple expansion
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg- <sg-icon name="clapperboard" size="16"></sg-icon> **Smooth Animation**: content height animates via CSS `grid-template-rows` — no layout thrashing- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
+- <sg-icon name="crosshair" size="16"></sg-icon> **Flexible Content**: Support for icons, subtitles, and custom content
 
 ## Source Code
 
@@ -28,11 +28,6 @@ A flexible accordion component for organizing collapsible content sections. Buil
     Content for the first section goes here.
   </sg-accordion-item>
 </sg-accordion>
-
-<script type="module">
-  import '@vielzeug/sigil/accordion';
-  import '@vielzeug/sigil/accordion-item';
-</script>
 ```
 
 ## Visual Options
@@ -83,7 +78,7 @@ Only one item can be expanded at a time.
 
 ### Variants
 
-Eight visual variants applied to all items via the parent accordion.
+Six standard variants plus glass and frost — applied to all items via the parent accordion.
 
 <ComponentPreview vertical>
 
@@ -180,11 +175,6 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
   </sg-accordion-item>
 </sg-accordion>
 
-<script type="module">
-  import '@vielzeug/sigil/accordion';
-  import '@vielzeug/sigil/accordion-item';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -248,11 +238,6 @@ Add icons or descriptive subtitles using slots.
   </sg-accordion-item>
 </sg-accordion>
 
-<script type="module">
-  import '@vielzeug/sigil/accordion';
-  import '@vielzeug/sigil/accordion-item';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -286,8 +271,8 @@ Prevent interaction with specific items.
 
 | Attribute        | Type                                                                | Default      | Description                                           |
 | ---------------- | ------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
-| `selection-mode` | `'single' \| 'multiple'`                                            | `'multiple'` | Whether multiple items can be expanded simultaneously |
-| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'`    | Visual variant applied to all items                   |
+| `selection-mode` | `'single' \| 'multiple'`                                                                    | `'multiple'` | Whether multiple items can be expanded simultaneously |
+| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`    | Visual variant applied to all items                   |
 | `size`           | `'sm' \| 'md' \| 'lg'`                                              | `'md'`       | Size applied to all items                             |
 
 ### `sg-accordion-item` Attributes
@@ -296,7 +281,7 @@ Prevent interaction with specific items.
 | ---------- | ------------------------------------------------------------------- | --------- | --------------------------------------- |
 | `expanded` | `boolean`                                                           | `false`   | Whether the item is expanded            |
 | `disabled` | `boolean`                                                           | `false`   | Disable the item (prevents toggling)    |
-| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'` | Visual variant (usually set via parent) |
+| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'` | Visual variant (usually set via parent) |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                              | `'md'`    | Size (usually set via parent)           |
 
 ### Slots
@@ -330,10 +315,13 @@ Prevent interaction with specific items.
 
 | Property                      | Description                                       | Default                    |
 | ----------------------------- | ------------------------------------------------- | -------------------------- |
-| `--accordion-item-bg`         | Background color                                  | `transparent`              |
-| `--accordion-item-radius`     | Border radius                                     | `0.375rem`                 |
-| `--accordion-item-padding`    | Inner padding                                     | Size-dependent             |
+| `--accordion-item-bg`         | Item background color                             | `transparent`              |
+| `--accordion-item-radius`     | Item border radius                                | `var(--rounded-lg)`        |
+| `--accordion-item-padding`    | Item inner padding                                | Size-dependent             |
 | `--accordion-item-transition` | Transition duration for expand/collapse animation | `var(--transition-normal)` |
+| `--accordion-border-color`    | Container border color (solid/flat variants)      | Theme-dependent            |
+| `--accordion-divider-color`   | Divider color between items (text variant)        | Theme-dependent            |
+| `--accordion-shadow`          | Container box shadow                              | Theme-dependent            |
 
 ## Accessibility
 
@@ -341,18 +329,18 @@ The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
 ### `sg-accordion`
 
-✅ **Native Semantics**
+<sg-icon name="circle-check" size="16"></sg-icon> **Native Semantics**
 
 - Built with native `<details>` and `<summary>` elements.
 - Progressive enhancement - works without JavaScript.
 
-✅ **Smooth Animation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Smooth Animation**
 
 - Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing.
 - Respects `prefers-reduced-motion`: the transition plays only when the user hasn’t opted out of animations.
 - Override the speed with `--accordion-item-transition`.
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Enter` and `Space` toggle expansion.
 - `Tab` moves focus between accordion items.

@@ -46,85 +46,78 @@
 
 @layer sigil.variants {
   /* ─── solid / default ─── */
-  :host button:hover,
-  :host([variant='solid']) button:hover {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-200);
-  }
-
-  :host([active]) button,
-  :host([variant='solid'][active]) button {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-0, var(--color-canvas));
-    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  :host,
+  :host([variant='solid']) {
+    --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
+    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
+    --_active-color: var(--tab-item-active-color, var(--text-color-heading));
+    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
 
   /* ─── flat ─── */
-  :host([variant='flat']) button:hover {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-200);
-  }
-
-  :host([variant='flat'][active]) button {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-0, var(--color-canvas));
-    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  :host([variant='flat']) {
+    --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
+    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
+    --_active-color: var(--tab-item-active-color, var(--text-color-heading));
+    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
 
   /* ─── bordered ─── */
-  :host([variant='bordered']) button:hover {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-200);
-  }
-
-  :host([variant='bordered'][active]) button {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-0, var(--color-canvas));
-    box-shadow: var(--shadow-xs);
+  :host([variant='bordered']) {
+    --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
+    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
+    --_active-color: var(--tab-item-active-color, var(--text-color-heading));
+    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs));
   }
 
   /* ─── ghost ─── */
-  :host([variant='ghost']) button:hover {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-100);
-  }
-
-  :host([variant='ghost'][active]) button {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
+  :host([variant='ghost']) {
+    --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-100));
+    --_active-bg: var(--tab-item-active-bg, var(--_theme-base));
+    --_active-color: var(--tab-item-active-color, var(--_theme-contrast));
   }
 
   /* ─── glass ─── */
+  :host([variant='glass']) {
+    --_color: var(--tab-item-color, color-mix(in srgb, var(--color-secondary-contrast) 70%, transparent));
+    --_hover-bg: var(--tab-item-hover-bg, color-mix(in srgb, var(--color-secondary-contrast) 10%, transparent));
+    --_active-bg: var(--tab-item-active-bg, color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent));
+    --_active-color: var(--tab-item-active-color, var(--color-secondary-contrast));
+    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
+  }
+
   :host([variant='glass']) button {
-    color: color-mix(in srgb, var(--color-secondary-contrast) 70%, transparent);
+    color: var(--_color);
     text-shadow: var(--text-shadow-2xs);
   }
 
   :host([variant='glass']) button:hover {
-    color: var(--color-secondary-contrast);
-    background: color-mix(in srgb, var(--color-secondary-contrast) 10%, transparent);
-  }
-
-  :host([variant='glass'][active]) button {
-    color: var(--color-secondary-contrast);
-    background: color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
-    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+    color: var(--tab-item-active-color, var(--color-secondary-contrast));
   }
 
   /* ─── frost ─── */
+  :host([variant='frost']) {
+    --_hover-bg: var(--tab-item-hover-bg, color-mix(in srgb, var(--color-contrast) 10%, transparent));
+    --_active-bg: var(--tab-item-active-bg, color-mix(in srgb, var(--color-canvas) 60%, transparent));
+    --_active-color: var(--tab-item-active-color, var(--text-color-heading));
+    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
+  }
+
   :host([variant='frost']) button {
     color: var(--text-color-secondary);
   }
 
-  :host([variant='frost']) button:hover {
-    color: var(--text-color-heading);
-    background: color-mix(in srgb, var(--color-contrast) 10%, transparent);
+  /* ─── Shared interactive states (read per-variant --_* tokens) ─── */
+
+  :host button:hover {
+    color: var(--tab-item-active-color, var(--text-color-heading));
+    background: var(--_hover-bg);
   }
 
-  :host([variant='frost'][active]) button {
-    color: var(--text-color-heading);
-    background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
-    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  :host([active]) button {
+    color: var(--_active-color);
+    background: var(--_active-bg);
+    box-shadow: var(--_active-shadow);
   }
 
   /* ─── sizes ─── */

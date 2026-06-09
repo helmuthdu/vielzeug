@@ -4,12 +4,12 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 
 ## Features
 
-- ⚡ **Touch-Optimized** — 44 × 44 px minimum touch target for mobile
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎭 **States** — checked, unchecked, disabled
-- 📏 **3 Sizes** — sm, md, lg
-- 🔗 **Form-Associated** — participates in native form submission
-- 🔧 **Customizable** — CSS custom properties for styling
+- <sg-icon name="zap" size="16"></sg-icon> **Touch-Optimized** — 44 × 44 px minimum touch target for mobile
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, disabled
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for styling
 
 ## Source Code
 
@@ -21,10 +21,6 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 
 ```html
 <sg-switch>Enable notifications</sg-switch>
-
-<script type="module">
-  import '@vielzeug/sigil/switch';
-</script>
 ```
 
 ## Visual Options
@@ -166,12 +162,12 @@ Listen to change events for custom logic.
 
 | Property             | Description                   | Default                |
 | -------------------- | ----------------------------- | ---------------------- |
-| `--switch-width`     | Width of the switch track     | Size-dependent         |
-| `--switch-height`    | Height of the switch track    | Size-dependent         |
-| `--switch-bg`        | Background when checked       | Color-dependent        |
-| `--switch-track`     | Background of unchecked track | `--color-contrast-300` |
-| `--switch-thumb`     | Background of the thumb       | `white`                |
-| `--switch-font-size` | Font size of the label        | Size-dependent         |
+| `--switch-width`       | Track width                           | Size-dependent  |
+| `--switch-height`      | Track height                          | Size-dependent  |
+| `--switch-track-bg`    | Inactive (unchecked) track background | Theme-dependent |
+| `--switch-checked-bg`  | Active (checked) track background     | Color-dependent |
+| `--switch-thumb-bg`    | Thumb background color                | Theme-dependent |
+| `--switch-font-size`   | Label font size                       | Size-dependent  |
 
 ## Accessibility
 
@@ -179,12 +175,12 @@ The switch component follows WCAG 2.1 Level AA standards.
 
 ### `sg-switch`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` toggle the switch.
 - `Tab` moves focus to and from the control.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`).
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.

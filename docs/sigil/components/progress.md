@@ -6,16 +6,16 @@ For loading placeholders before progress can be determined, see [Skeleton](./ske
 
 ## Features
 
-- 📊 **2 Types**: `linear` (default) and `circular`
-- 🌈 **6 Color Themes**: primary, secondary, info, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- 🔄 **Indeterminate Mode**: animated sliding bar or spinning circle when progress is unknown
-- 🏷️ **Label**: visible trailing text (linear) or large text centered inside the ring (circular); moves to a header row when combined with `title` on linear
-- 📌 **Title**: header text above the bar (linear) or smaller text below the label inside the ring (circular)
-- 💬 **Floating Label**: chip anchored above the fill endpoint — moves as value changes (linear only)
-- ♿ **Accessible**: `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label`
-- 🎨 **Customizable**: CSS custom properties for colors, size, and border radius
-- 🎭 **Reduced Motion**: animations are disabled automatically for users who prefer reduced motion
+- <sg-icon name="bar-chart-2" size="16"></sg-icon> **2 Types**: `linear` (default) and `circular`
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Indeterminate Mode**: animated sliding bar or spinning circle when progress is unknown
+- <sg-icon name="tag" size="16"></sg-icon> **Label**: visible trailing text (linear) or large text centered inside the ring (circular); moves to a header row when combined with `title` on linear
+- <sg-icon name="map-pin" size="16"></sg-icon> **Title**: header text above the bar (linear) or smaller text below the label inside the ring (circular)
+- <sg-icon name="message-circle" size="16"></sg-icon> **Floating Label**: chip anchored above the fill endpoint — moves as value changes (linear only)
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label`
+- <sg-icon name="palette" size="16"></sg-icon> **Customizable**: CSS custom properties for colors, size, and border radius
+- <sg-icon name="theater" size="16"></sg-icon> **Reduced Motion**: animations are disabled automatically for users who prefer reduced motion
 
 ## Source Code
 
@@ -27,10 +27,6 @@ For loading placeholders before progress can be determined, see [Skeleton](./ske
 
 ```html
 <sg-progress value="45"></sg-progress>
-
-<script type="module">
-  import '@vielzeug/sigil/progress';
-</script>
 ```
 
 ## Linear Bar
@@ -276,7 +272,7 @@ The progress component follows WAI-ARIA best practices.
 
 ### `sg-progress`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `role="progressbar"` is applied to the track element.
 - `aria-valuenow` reflects the current `value` (omitted when `indeterminate`).

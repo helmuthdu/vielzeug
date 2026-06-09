@@ -34,7 +34,7 @@ exports:
 # Spell
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
@@ -136,11 +136,11 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 | Feature           | Spell                                       | Zod    | Yup     |
 | ----------------- | ------------------------------------------- | ------ | ------- |
 | Bundle size       | <PackageInfo package="spell" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | ✅ `Infer<T>`                               | ✅     | Partial |
-| Coercion API      | ✅ `s.coerce.*`                             | ✅     | ✅      |
-| Async validation  | ✅ `.check()`                               | ✅     | ✅      |
-| Error flattening  | ✅ `flatten()` + `flattenFirst()`           | ✅     | Partial |
-| Zero dependencies | ✅                                          | ✅     | ❌      |
+| Type inference    | <sg-icon name="circle-check" size="16"></sg-icon> `Infer<T>`                               | <sg-icon name="circle-check" size="16"></sg-icon>     | Partial |
+| Coercion API      | <sg-icon name="circle-check" size="16"></sg-icon> `s.coerce.*`                             | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Async validation  | <sg-icon name="circle-check" size="16"></sg-icon> `.check()`                               | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Error flattening  | <sg-icon name="circle-check" size="16"></sg-icon> `flatten()` + `flattenFirst()`           | <sg-icon name="circle-check" size="16"></sg-icon>     | Partial |
+| Zero dependencies | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-x" size="16"></sg-icon>      |
 
 **Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
 
@@ -161,10 +161,10 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

@@ -49,10 +49,11 @@ export type DateCell = {
 };
 
 export type MonthCell = {
-  index: number;
   isDisabled: boolean;
   isSelected: boolean;
   label: string;
+  /** 1-based month number (Temporal convention: 1 = January … 12 = December) */
+  month: number;
   shortLabel: string;
 };
 
@@ -83,16 +84,12 @@ export type DatePickerControlOptions = {
 export type DatePickerControl = {
   /** Ordered day cells for the visible month grid (includes leading/trailing days) */
   dayCells(): DateCell[];
-  /** Formatted display month/year label e.g. "June 2025" */
-  displayLabel(): string;
   /** Month currently shown in the header (1-indexed, Temporal convention) */
   displayMonth(): number;
   /** Year currently shown in the header */
   displayYear(): number;
   /** Jump to a specific display month/year without selecting */
   goTo(year: number, month: number): void;
-  /** True if a given date is outside the min/max bounds */
-  isOutOfRange(date: Temporal.PlainDate): boolean;
   /** All 12 month cells */
   monthCells(): MonthCell[];
   /** Move display month forward by one */
@@ -129,11 +126,11 @@ function todayPlain(): Temporal.PlainDate {
 
 /**
  * Converts a `Temporal.PlainDate.dayOfWeek` value (1=Mon…7=Sun) to the
- * legacy 0-based weekday index (0=Sun…6=Sat) used in the `weekendDays` prop.
+ * 0-based weekday index (0=Sun…6=Sat) used in the `weekendDays` prop.
  * @internal
  */
-function temporalDowToLegacy(dow: number): number {
-  // Temporal: 1=Mon, 2=Tue, …, 7=Sun  →  legacy: 0=Sun, 1=Mon, …, 6=Sat
+function temporalDowToIndex(dow: number): number {
+  // Temporal: 1=Mon, 2=Tue, …, 7=Sun  →  0=Sun, 1=Mon, …, 6=Sat
   return dow % 7;
 }
 
@@ -145,6 +142,9 @@ function temporalDowToLegacy(dow: number): number {
  * All state is held in plain mutable variables — suitable for wrapping in any
  * reactive layer (craft `signal`, Vue ref, etc.). The factory returns a stable
  * handle object; callers are responsible for reactivity.
+ *
+ * Options with getter-based live bindings (e.g. `get min() { ... }`) are read
+ * on every call so the control always reflects the latest reactive state.
  *
  * @example
  * ```ts
@@ -159,9 +159,6 @@ function temporalDowToLegacy(dow: number): number {
  * ```
  */
 export function createDatePickerControl(options: DatePickerControlOptions): DatePickerControl {
-  const locale = options.locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en');
-  const weekendDays = options.weekendDays ?? [];
-
   // ── Mutable state ─────────────────────────────────────────────────────────
 
   let _selected: Temporal.PlainDate | null = options.value ?? null;
@@ -171,6 +168,16 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
 
   let _displayYear = initial.year;
   let _displayMonth = initial.month; // 1-indexed (Temporal convention)
+
+  // ── Live option accessors (always read from options for reactive compat) ───
+
+  function locale(): string {
+    return options.locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en');
+  }
+
+  function weekendDays(): number[] {
+    return options.weekendDays ?? [];
+  }
 
   // ── Range / disabled helpers ───────────────────────────────────────────────
 
@@ -185,7 +192,7 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
   function isDayDisabled(date: Temporal.PlainDate): boolean {
     if (isOutOfRange(date)) return true;
 
-    if (weekendDays.includes(temporalDowToLegacy(date.dayOfWeek))) return true;
+    if (weekendDays().includes(temporalDowToIndex(date.dayOfWeek))) return true;
 
     return false;
   }
@@ -197,7 +204,7 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
     const firstOfMonth = Temporal.PlainDate.from({ day: 1, month: _displayMonth, year: _displayYear });
 
     // Sunday-start grid: Temporal dayOfWeek is 1=Mon…7=Sun, convert to 0=Sun offset
-    const startOffset = temporalDowToLegacy(firstOfMonth.dayOfWeek);
+    const startOffset = temporalDowToIndex(firstOfMonth.dayOfWeek);
     const cells: DateCell[] = [];
 
     // Leading days from previous month
@@ -255,6 +262,7 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
 
   function buildMonthCells(): MonthCell[] {
     const cells: MonthCell[] = [];
+    const loc = locale();
 
     for (let m = 1; m <= 12; m++) {
       const plain = Temporal.PlainDate.from({ day: 1, month: m, year: _displayYear });
@@ -269,11 +277,11 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
           : false);
 
       cells.push({
-        index: m - 1, // keep 0-indexed for backward compat with template
         isDisabled,
         isSelected: _selected !== null && _selected.year === _displayYear && _selected.month === m,
-        label: format(plain, { intl: { month: 'long' }, locale, tz: 'UTC' }),
-        shortLabel: format(plain, { intl: { month: 'short' }, locale, tz: 'UTC' }),
+        label: format(plain, { intl: { month: 'long' }, locale: loc, tz: 'UTC' }),
+        month: m,
+        shortLabel: format(plain, { intl: { month: 'short' }, locale: loc, tz: 'UTC' }),
       });
     }
 
@@ -309,23 +317,17 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
   function buildWeekdayLabels(): string[] {
     // 2024-01-07 is a Sunday — use it as the Sunday anchor
     const sunday = parsePlainDate('2024-01-07');
+    const loc = locale();
 
     return Array.from({ length: 7 }, (_, i) =>
-      format(sunday.add({ days: i }), { intl: { weekday: 'short' }, locale, tz: 'UTC' }),
+      format(sunday.add({ days: i }), { intl: { weekday: 'short' }, locale: loc, tz: 'UTC' }),
     );
-  }
-
-  function buildDisplayLabel(): string {
-    const d = Temporal.PlainDate.from({ day: 1, month: _displayMonth, year: _displayYear });
-
-    return format(d, { intl: { month: 'long', year: 'numeric' }, locale, tz: 'UTC' });
   }
 
   // ── Handle ────────────────────────────────────────────────────────────────
 
   return {
     dayCells: buildDayCells,
-    displayLabel: buildDisplayLabel,
     displayMonth: () => _displayMonth,
     displayYear: () => _displayYear,
 
@@ -333,8 +335,6 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
       _displayYear = year;
       _displayMonth = Math.max(1, Math.min(12, month));
     },
-
-    isOutOfRange,
 
     monthCells: buildMonthCells,
 

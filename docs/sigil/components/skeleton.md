@@ -4,15 +4,14 @@ A loading placeholder component for representing content that has not loaded yet
 
 ## Features
 
-- Three visual variants: rect, circle, text
-- Size variants: sm, md, lg
-- First-class `width`, `height`, and `radius` attributes
-- Multi-line text skeletons via `lines`
-- Runtime animation toggle via `animated="false"`
-- Diagonal striped pattern via `striped` for design-mode placeholders
-- Shimmer animation with reduced-motion fallback
-- Fully styleable through CSS custom properties
-- Forced-colors support for high-contrast environments
+- <sg-icon name="theater" size="16"></sg-icon> **3 Variants** — rect, circle, text
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="wrench" size="16"></sg-icon> **Dimension overrides** — first-class `width`, `height`, and `radius` attributes
+- <sg-icon name="file-pen" size="16"></sg-icon> **Multi-line text skeletons** via `lines`
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Animation toggle** — disable shimmer with `animated="false"`
+- <sg-icon name="scan-line" size="16"></sg-icon> **Striped pattern** via `striped` for design-mode placeholders
+- <sg-icon name="palette" size="16"></sg-icon> **Fully themeable** through CSS custom properties
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — reduced-motion and forced-colors support
 
 ## Source Code
 
@@ -25,10 +24,6 @@ A loading placeholder component for representing content that has not loaded yet
 ```html
 <sg-skeleton></sg-skeleton>
 <sg-skeleton width="12rem" height="1rem"></sg-skeleton>
-
-<script type="module">
-  import '@vielzeug/sigil/skeleton';
-</script>
 ```
 
 ## Variants
@@ -169,13 +164,20 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 | Attribute  | Type                           | Default  | Description                                       |
 | ---------- | ------------------------------ | -------- | ------------------------------------------------- |
 | `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                               |
-| `size`     | `'sm' \| 'md' \| 'lg'`         | -        | Height preset (`text`) and circle size (`circle`) |
-| `width`    | `string`                       | -        | Width override (e.g. `12rem`, `70%`)              |
-| `height`   | `string`                       | -        | Height override                                   |
-| `radius`   | `string`                       | -        | Border-radius override                            |
+| `size`     | `'sm' \| 'md' \| 'lg'`         | —        | Height preset for `rect`/`text`; diameter for `circle` |
+| `width`    | `string`                       | —        | Width override (e.g. `12rem`, `70%`)              |
+| `height`   | `string`                       | —        | Height override                                   |
+| `radius`   | `string`                       | —        | Border-radius override                            |
 | `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer         |
 | `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)           |
 | `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer        |
+
+### Parts
+
+| Part    | Description                            |
+| ------- | -------------------------------------- |
+| `stack` | Outer container wrapping all bones     |
+| `bone`  | Individual skeleton bone element       |
 
 ### Events
 
@@ -194,8 +196,14 @@ This component does not emit custom events.
 | `--skeleton-line-gap`        | Gap between text lines                                    | `var(--size-2)`             |
 | `--skeleton-last-line-width` | Width of the final text line                              | `60%`                       |
 | `--skeleton-duration`        | Shimmer animation duration                                | `1.6s`                      |
-| `--skeleton-stripe-size`     | Spacing between the 1px diagonal lines (`striped`)        | `8px`                       |
+| `--skeleton-stripe-size`     | SVG tile size controlling diagonal stripe density (`striped`) | `8px`                   |
 | `--skeleton-stripe-color`    | Color of the diagonal lines and dashed border (`striped`) | `var(--color-contrast-400)` |
+
+## Performance
+
+The shimmer animation is automatically paused when the element scrolls out of the viewport, using an `IntersectionObserver`. This prevents off-screen animations from consuming GPU resources.
+
+Animation can also be disabled entirely with `animated="false"` — useful for static mockups or when the parent already shows a loading spinner.
 
 ## Accessibility
 
@@ -203,12 +211,19 @@ The skeleton component follows WAI-ARIA best practices.
 
 ### `sg-skeleton`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Skeleton placeholders are decorative and non-interactive.
-- The internal visual element is marked with `aria-hidden="true"`.
+- Each bone is marked with `aria-hidden="true"`; no content is announced.
 - No focusable roles or tab stops are exposed.
-- Animation is disabled for users with `prefers-reduced-motion: reduce`.
+
+<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+
+- Shimmer animation respects `prefers-reduced-motion: reduce`.
+
+<sg-icon name="circle-check" size="16"></sg-icon> **Forced Colors**
+
+- In `forced-colors` environments the bone renders with `ButtonFace` background and `ButtonText` border for high-contrast visibility.
 
 ## Related Components
 

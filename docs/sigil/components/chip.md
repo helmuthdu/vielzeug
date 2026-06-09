@@ -4,14 +4,14 @@ A compact, styled label for tags, filters, and selected values. Supports a leadi
 
 ## Features
 
-- 🎨 **5 Variants**: solid, flat, bordered, outline, ghost
-- 🌈 **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- ❌ **Removable**: optional × button that fires `remove`
-- ✅ **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
-- ⚡ **Action**: stateless button-like chip that fires a `click` event
-- 🖼️ **Icon Slot**: prepend an icon or decoration
-- ♿ **Accessible**: remove button has a contextual `aria-label` including the chip value
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants**: solid, flat, bordered, outline, ghost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="circle-x" size="16"></sg-icon> **Removable**: optional × button that fires `remove`
+- <sg-icon name="circle-check" size="16"></sg-icon> **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
+- <sg-icon name="zap" size="16"></sg-icon> **Action**: stateless button-like chip that fires a `click` event
+- <sg-icon name="image" size="16"></sg-icon> **Icon Slot**: prepend an icon or decoration
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: remove button has a contextual `aria-label` including the chip value
 
 ## Source Code
 
@@ -137,11 +137,6 @@ Set `mode="action"` to make the chip behave like a button — it fires a `click`
   <sg-icon slot="icon" name="trash-2" size="12"></sg-icon>
   Remove
 </sg-chip>
-
-<script type="module">
-  import '@vielzeug/sigil/chip';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -169,11 +164,6 @@ Use the `icon` named slot to prepend a leading icon or glyph.
   <sg-icon slot="icon" name="clock" size="12"></sg-icon>
   Pending
 </sg-chip>
-
-<script type="module">
-  import '@vielzeug/sigil/chip';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -263,15 +253,23 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 | Property              | Description                                | Default           |
 | --------------------- | ------------------------------------------ | ----------------- |
-| `--chip-bg`           | Background color                           | Variant-dependent |
-| `--chip-color`        | Text color                                 | Variant-dependent |
-| `--chip-border-color` | Border color                               | Variant-dependent |
-| `--chip-radius`       | Border radius                              | `--rounded-full`  |
-| `--chip-font-size`    | Font size                                  | `--text-sm`       |
-| `--chip-font-weight`  | Font weight                                | `--font-medium`   |
-| `--chip-padding-x`    | Horizontal padding                         | `--size-2-5`      |
-| `--chip-padding-y`    | Vertical padding                           | `--size-0-5`      |
-| `--chip-gap`          | Gap between icon, label, and remove button | `--size-1`        |
+| `--chip-bg`                    | Background color                              | Variant-dependent |
+| `--chip-color`                 | Text color                                    | Variant-dependent |
+| `--chip-border-color`          | Border color                                  | Variant-dependent |
+| `--chip-radius`                | Border radius                                 | `var(--rounded-full)` |
+| `--chip-font-size`             | Font size                                     | `var(--text-sm)`  |
+| `--chip-font-weight`           | Font weight                                   | `var(--font-medium)` |
+| `--chip-padding-x`             | Horizontal padding                            | `var(--size-2-5)` |
+| `--chip-padding-y`             | Vertical padding                              | `var(--size-0-5)` |
+| `--chip-gap`                   | Gap between icon, label, and remove button    | `var(--size-1)`   |
+| `--chip-hover-bg`              | Background on hover (interactive modes)       | Variant-dependent |
+| `--chip-hover-color`           | Text color on hover (interactive modes)       | Variant-dependent |
+| `--chip-hover-border-color`    | Border color on hover (interactive modes)     | Variant-dependent |
+| `--chip-active-bg`             | Background when pressed (interactive modes)   | Variant-dependent |
+| `--chip-active-color`          | Text color when pressed (interactive modes)   | Variant-dependent |
+| `--chip-remove-bg`             | Remove button background (bordered/outline)   | Variant-dependent |
+| `--chip-remove-color`          | Remove button icon color (bordered/outline)   | Variant-dependent |
+| `--chip-remove-hover-bg`       | Remove button background on hover             | Variant-dependent |
 
 ## Accessibility
 
@@ -279,12 +277,12 @@ The chip component follows WAI-ARIA best practices.
 
 ### `sg-chip`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - The remove button is keyboard-accessible.
 - When `disabled`, the remove button has the `disabled` attribute preventing activation.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The remove button has a contextual `aria-label`: `"Remove {value}"` when `value` is set, `"Remove"` otherwise.
 - Selectable chips use `role="checkbox"` and `aria-checked` while preserving the visible label as the accessible name.

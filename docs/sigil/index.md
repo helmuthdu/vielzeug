@@ -80,7 +80,7 @@ exports:
 # Sigil
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/sigil` &nbsp;·&nbsp; **Category:** Ui Components
 
@@ -216,7 +216,7 @@ Every project needs UI primitives. Sigil provides accessible web components that
 | Bundle size        | <PackageInfo package="sigil" type="size" /> | ~145 kB  | ~200 kB      |
 | Built with         | Craft                                       | Lit      | Lit          |
 | Accessible         | WCAG AA                                     | WCAG AA  | WCAG AA      |
-| Framework agnostic | ✅                                          | ✅       | ✅           |
+| Framework agnostic | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>           |
 
 **Use Sigil when** you want accessible web components that match the Vielzeug design system without a heavy framework dependency.
 
@@ -235,10 +235,10 @@ Every project needs UI primitives. Sigil provides accessible web components that
 
 | Environment | Support       |
 | ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>            |
+| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| SSR         | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
+| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>            |
 
 ### Prerequisites
 

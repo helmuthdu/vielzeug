@@ -91,6 +91,7 @@ export const effect = (fn: EffectCallback): (() => void) => {
 
 /**
  * Attach a scoped event listener that is automatically removed on component disconnect.
+ * Silently no-ops when `target` is `null` or `undefined` (safe for reactive targets).
  */
 export function onEvent<K extends keyof HTMLElementEventMap>(
   target: EventTarget | null | undefined,

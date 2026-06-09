@@ -525,7 +525,7 @@ encodeQuery<TFilter, TSort>(
 
 Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
-> ⚠️ `filter` and `sort` are serialised with `stableStringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+> <sg-icon name="triangle-alert" size="16"></sg-icon> `filter` and `sort` are serialised with `stableStringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
 
 **Example:**
 

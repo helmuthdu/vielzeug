@@ -5,16 +5,16 @@ A segmented one-time password input that renders individual cells for each digit
 ## Features
 
 - ⌫ **Backspace Navigation** — moves focus backward and clears the cell
-- ⏭️ **Auto-Advance** — focus moves to the next cell automatically on input
-- ➗ **Optional Separator** — visual divider between cells
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 📋 **Paste Support** — pastes fill all cells at once
-- 📏 **3 Sizes** — sm, md, lg
-- 🔒 **Masked Mode** — renders `•` characters instead of input values
-- 🔗 **Form-Associated** — `name` attribute & native form `reset` support
-- 🔢 **Configurable Length** — any number of cells (default 6)
-- 🔤 **Two Input Types** — `numeric` (digits only) or `alphanumeric`
+- <sg-icon name="skip-forward" size="16"></sg-icon>️ **Auto-Advance** — focus moves to the next cell automatically on input
+- <sg-icon name="divide" size="16"></sg-icon> **Optional Separator** — visual divider between cells
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="clipboard" size="16"></sg-icon> **Paste Support** — pastes fill all cells at once
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="lock" size="16"></sg-icon> **Masked Mode** — renders `•` characters instead of input values
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
+- <sg-icon name="hash" size="16"></sg-icon> **Configurable Length** — any number of cells (default 6)
+- <sg-icon name="type" size="16"></sg-icon> **Two Input Types** — `numeric` (digits only) or `alphanumeric`
 
 ## Source Code
 
@@ -26,10 +26,6 @@ A segmented one-time password input that renders individual cells for each digit
 
 ```html
 <sg-otp-input label="Verification code" color="primary"></sg-otp-input>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 Listen for completion:
@@ -173,12 +169,17 @@ Use `separator` to add a visual divider between cells.
 
 | Property                  | Description                    |
 | ------------------------- | ------------------------------ |
-| `--otp-cell-size`         | Width and height of each cell  |
-| `--otp-cell-gap`          | Gap between cells              |
-| `--otp-cell-font-size`    | Font size inside each cell     |
-| `--otp-cell-radius`       | Cell border radius             |
-| `--otp-cell-border-color` | Default cell border color      |
-| `--otp-cell-focus-border` | Cell border color when focused |
+| `--otp-cell-size`               | Width and height of each cell                         |
+| `--otp-cell-gap`                | Gap between cells                                     |
+| `--otp-cell-font-size`          | Font size inside each cell                            |
+| `--otp-cell-radius`             | Cell border radius                                    |
+| `--otp-cell-bg`                 | Cell background color                                 |
+| `--otp-cell-border-color`       | Default cell border color                             |
+| `--otp-cell-focus-border`       | Focused border/caret color                            |
+| `--otp-cell-hover-bg`           | Cell background on hover (flat/ghost variants)        |
+| `--otp-cell-hover-border-color` | Cell border on hover (flat/bordered variants)         |
+| `--otp-cell-focus-bg`           | Cell background when focused (flat variant)           |
+| `--otp-cell-focus-border-color` | Cell border when focused (flat variant)               |
 
 ## Accessibility
 
@@ -186,12 +187,12 @@ The OTP input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-otp-input`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Focus auto-advances to the next cell on valid input; `Backspace` moves back and clears the cell.
 - `Tab` moves focus out of the group; paste fills all cells at once.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 - `autocomplete="one-time-code"` is set automatically on each cell input.

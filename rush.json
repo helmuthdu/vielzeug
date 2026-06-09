@@ -49,6 +49,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/prism",
+      "projectFolder": "packages/prism",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/forge",
       "projectFolder": "packages/forge",
       "shouldPublish": true,

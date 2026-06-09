@@ -35,7 +35,7 @@ exports:
 # Orbit
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/orbit` &nbsp;·&nbsp; **Category:** Ui Positioning
 
@@ -103,13 +103,13 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 | Feature                  | Orbit                                       | Floating UI | Popper  |
 | ------------------------ | ------------------------------------------- | ----------- | ------- |
 | Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB      | ~6 kB   |
-| Middleware pipeline      | ✅                                          | ✅          | ✅      |
-| Direct compute API       | ✅                                          | ✅          | ✅      |
-| High-level follow API    | ✅                                          | ✅          | Partial |
-| Inline anchor middleware | ✅                                          | ✅          | ❌      |
-| Auto-update helpers      | ✅                                          | ✅          | ✅      |
-| Framework agnostic       | ✅                                          | ✅          | ✅      |
-| Zero dependencies        | ✅                                          | ✅          | ✅      |
+| Middleware pipeline      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Direct compute API       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| High-level follow API    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | Partial |
+| Inline anchor middleware | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Auto-update helpers      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Framework agnostic       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Zero dependencies        | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 **Use Orbit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
 
@@ -150,10 +150,10 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 
 | Environment | Support                                          |
 | ----------- | ------------------------------------------------ |
-| Browser     | ✅                                               |
-| Node.js     | ❌ (use `@vielzeug/orbit/ssr` for SSR rendering) |
-| SSR         | ✅ via `@vielzeug/orbit/ssr`                     |
-| Deno        | ❌                                               |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>                                               |
+| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (use `@vielzeug/orbit/ssr` for SSR rendering) |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> via `@vielzeug/orbit/ssr`                     |
+| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>                                               |
 
 ## Documentation
 

@@ -127,7 +127,7 @@ exports: [export1, export2, export3]
 # <PackageName>
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/<pkg>` · **Category:** <Category>
 
@@ -179,8 +179,8 @@ yarn add @vielzeug/<pkg>
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | ✅                                          | ...            | ...            |
-| <Key differentiator> | ✅                                          | ...            | ...            |
+| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon> | ...            | ...            |
+| <Key differentiator> | <sg-icon name="circle-check" size="16"></sg-icon> | ...            | ...            |
 
 **Use <PackageName> when** <concrete situation where this is the right choice>.
 
@@ -194,10 +194,10 @@ yarn add @vielzeug/<pkg>
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅ / ❌ |
-| Node.js     | ✅ / ❌ |
-| SSR         | ✅ / ❌ |
-| Deno        | ✅ / ❌ |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
 
 ## Documentation
 

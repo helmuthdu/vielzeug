@@ -26,7 +26,7 @@ exports:
 # Worker
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/familiar` &nbsp;·&nbsp; **Category:** Workers
 
@@ -108,17 +108,17 @@ typedWorker.dispose();
 | Feature           | Worker                                         | Comlink | workerpool |
 | ----------------- | ---------------------------------------------- | ------- | ---------- |
 | Bundle size       | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
-| Worker pools      | ✅                                             | ❌      | ✅         |
-| Typed payloads    | ✅                                             | Partial | ❌         |
-| Timeout support   | ✅                                             | ❌      | ✅         |
-| Priority queue    | ✅                                             | ❌      | ❌         |
-| AbortSignal       | ✅ Queued tasks                                | ❌      | ❌         |
-| Streaming         | ✅ `runStream()`                               | ❌      | ❌         |
-| Heartbeat         | ✅ Auto for inline workers                     | ❌      | ❌         |
-| Typed errors      | ✅ `instanceof WorkerTimeoutError` etc.        | ❌      | ❌         |
-| Testing utilities | ✅                                             | ❌      | ❌         |
-| Module workers    | ✅ `createModuleWorker`                        | ✅      | ❌         |
-| Zero dependencies | ✅                                             | ✅      | ❌         |
+| Worker pools      | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Typed payloads    | <sg-icon name="circle-check" size="16"></sg-icon>                                             | Partial | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Timeout support   | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>         |
+| Priority queue    | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| AbortSignal       | <sg-icon name="circle-check" size="16"></sg-icon> Queued tasks                                | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Streaming         | <sg-icon name="circle-check" size="16"></sg-icon> `runStream()`                               | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Heartbeat         | <sg-icon name="circle-check" size="16"></sg-icon> Auto for inline workers                     | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Typed errors      | <sg-icon name="circle-check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc.        | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Testing utilities | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Module workers    | <sg-icon name="circle-check" size="16"></sg-icon> `createModuleWorker`                        | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
+| Zero dependencies | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
 
 **Use Worker when** you need typed, awaitable Web Workers with pooling, priorities, timeouts, streaming, and cancellation.
 
@@ -149,10 +149,10 @@ typedWorker.dispose();
 
 | Environment | Support                                                                          |
 | ----------- | -------------------------------------------------------------------------------- |
-| Browser     | ✅ Full support                                                                  |
-| Node.js     | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
-| SSR         | ⚠️ `createWorker()` is safe; `run()` requires a compatible Worker implementation |
-| Deno        | ⚠️ Support depends on Worker compatibility                                       |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> Full support                                                                  |
+| Node.js     | <sg-icon name="triangle-alert" size="16"></sg-icon> `createWorker()` is safe; `run()` requires a compatible Worker implementation |
+| SSR         | <sg-icon name="triangle-alert" size="16"></sg-icon> `createWorker()` is safe; `run()` requires a compatible Worker implementation |
+| Deno        | <sg-icon name="triangle-alert" size="16"></sg-icon> Support depends on Worker compatibility                                       |
 
 ## Documentation
 

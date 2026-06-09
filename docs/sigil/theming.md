@@ -114,10 +114,10 @@ Six role-based text color tokens are derived from the contrast scale. Use these 
 | `--text-color-contrast`  | `--color-contrast-100` | Text on dark/colored backgrounds  |
 
 ```css
-/* ✅ Good — semantic token adapts to light and dark automatically */
+/* <sg-icon name="circle-check" size="16"></sg-icon> Good — semantic token adapts to light and dark automatically */
 color: var(--text-color-body);
 
-/* ❌ Avoid — raw contrast value is less expressive */
+/* <sg-icon name="circle-x" size="16"></sg-icon> Avoid — raw contrast value is less expressive */
 color: var(--color-contrast-800);
 ```
 
@@ -238,7 +238,7 @@ Used exclusively by `variant="heading"` on `<sg-text>`:
 All Sigil tokens are defined inside `@layer sigil.tokens { … }`. This means any unlayered `:root` rule in your own stylesheet wins automatically — no `!important` needed for overrides.
 
 ```css
-/* ✅ This beats sigil.tokens without !important */
+/* <sg-icon name="circle-check" size="16"></sg-icon> This beats sigil.tokens without !important */
 :root {
   --color-primary: hsl(200deg 100% 45%);
 }
@@ -464,11 +464,11 @@ applyTheme('ocean');
 Prefer semantic tokens over raw contrast values:
 
 ```css
-/* ✅ Good — semantic tokens */
+/* <sg-icon name="circle-check" size="16"></sg-icon> Good — semantic tokens */
 color: var(--text-color-body);
 background: var(--color-primary-backdrop);
 
-/* ❌ Avoid — raw contrast values */
+/* <sg-icon name="circle-x" size="16"></sg-icon> Avoid — raw contrast values */
 color: var(--color-contrast-800);
 background: hsl(260deg 85% 65% / 20%);
 ```
@@ -478,11 +478,11 @@ background: hsl(260deg 85% 65% / 20%);
 Use the background range (50–400) for surfaces and the text range (500–900) for text:
 
 ```css
-/* ✅ Good */
+/* <sg-icon name="circle-check" size="16"></sg-icon> Good */
 background: var(--color-contrast-100); /* card surface */
 color: var(--text-color-body); /* body text */
 
-/* ❌ Avoid — text-range value used as background */
+/* <sg-icon name="circle-x" size="16"></sg-icon> Avoid — text-range value used as background */
 background: var(--color-contrast-700);
 ```
 
@@ -492,10 +492,10 @@ Flat overrides are always light (or always dark). Wrap in `light-dark()` to keep
 
 ```css
 :root {
-  /* ✅ Adapts to light and dark */
+  /* <sg-icon name="circle-check" size="16"></sg-icon> Adapts to light and dark */
   --color-primary: light-dark(hsl(200deg 100% 45%), hsl(200deg 100% 62%));
 
-  /* ⚠️ Static — always the same regardless of color scheme */
+  /* <sg-icon name="triangle-alert" size="16"></sg-icon> Static — always the same regardless of color scheme */
   --color-primary: hsl(200deg 100% 50%);
 }
 ```
@@ -510,7 +510,7 @@ When customizing colors, verify contrast ratios:
 ```css
 :root {
   --custom-bg: hsl(210deg 5% 98%);
-  --custom-text: hsl(210deg 4% 12%); /* ~17:1 contrast — AAA ✅ */
+  --custom-text: hsl(210deg 4% 12%); /* ~17:1 contrast — AAA <sg-icon name="circle-check" size="16"></sg-icon> */
 }
 ```
 

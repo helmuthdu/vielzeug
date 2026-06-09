@@ -4,14 +4,14 @@ A multi-line text input with integrated label, helper text, character counter, a
 
 ## Features
 
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎨 **6 Variants** — solid, flat, bordered, outline, ghost, frost
-- 🏷️ **Label Placement** — inset (floating-style) or outside
-- 📏 **3 Sizes** — sm, md, lg
-- 📐 **Auto Resize** — grows vertically with content; no scrollbar
-- 📝 **Helper & Error Text** — descriptive text or validation errors below the field
-- 🔗 **Form-Associated** — participates in native form submission
-- 🔢 **Character Counter** — live counter with near-limit and at-limit colour feedback
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **6 Variants** — solid, flat, bordered, outline, ghost, frost
+- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (floating-style) or outside
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="triangle-right" size="16"></sg-icon> **Auto Resize** — grows vertically with content; no scrollbar
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — descriptive text or validation errors below the field
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
+- <sg-icon name="hash" size="16"></sg-icon> **Character Counter** — live counter with near-limit and at-limit colour feedback
 
 ## Source Code
 
@@ -23,10 +23,6 @@ A multi-line text input with integrated label, helper text, character counter, a
 
 ```html
 <sg-textarea label="Message" placeholder="Write something..."></sg-textarea>
-
-<script type="module">
-  import '@vielzeug/sigil/textarea';
-</script>
 ```
 
 ## Visual Options
@@ -202,14 +198,20 @@ Control the resize handle with the `resize` attribute.
 
 | Property                       | Description       | Default                       |
 | ------------------------------ | ----------------- | ----------------------------- |
-| `--textarea-bg`                | Background color  | `var(--color-contrast-100)`   |
-| `--textarea-border-color`      | Border color      | `var(--color-contrast-300)`   |
-| `--textarea-radius`            | Border radius     | `var(--rounded-lg)`           |
-| `--textarea-padding`           | Padding           | `var(--size-2) var(--size-3)` |
-| `--textarea-font-size`         | Font size         | `var(--text-sm)`              |
-| `--textarea-placeholder-color` | Placeholder color | `var(--color-contrast-500)`   |
-| `--textarea-min-height`        | Minimum height    | `var(--size-24)`              |
-| `--textarea-max-height`        | Maximum height    | `none`                        |
+| `--textarea-bg`                   | Background color                                            | Variant-dependent             |
+| `--textarea-border-color`         | Border color                                                | Variant-dependent             |
+| `--textarea-radius`               | Border radius                                               | `var(--rounded-lg)`           |
+| `--textarea-padding`              | Inner padding (block inline)                                | `var(--size-2) var(--size-3)` |
+| `--textarea-gap`                  | Gap between label and field                                 | Size-dependent                |
+| `--textarea-font-size`            | Font size                                                   | `var(--text-sm)`              |
+| `--textarea-placeholder-color`    | Placeholder text color                                      | Theme-dependent               |
+| `--textarea-min-height`           | Minimum field height                                        | `var(--size-24)`              |
+| `--textarea-max-height`           | Maximum field height (`none` = unlimited)                   | `none`                        |
+| `--textarea-resize`               | CSS resize direction (`vertical`/`horizontal`/`both`/`none`) | `vertical`                   |
+| `--textarea-hover-bg`             | Field background on hover (flat/ghost variants)             | Variant-dependent             |
+| `--textarea-hover-border-color`   | Field border on hover (flat/bordered variants)              | Variant-dependent             |
+| `--textarea-focus-bg`             | Field background when focused (flat variant)                | Variant-dependent             |
+| `--textarea-focus-border-color`   | Field border when focused (flat variant)                    | Variant-dependent             |
 
 ## Accessibility
 
@@ -217,12 +219,12 @@ The textarea component follows WCAG 2.1 Level AA standards.
 
 ### `sg-textarea`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the field; `Shift+Tab` blurs it.
 - Native textarea keyboard behaviour applies within the field.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.
 - `aria-invalid` is set when `error` is provided; `aria-required` reflects the `required` attribute.

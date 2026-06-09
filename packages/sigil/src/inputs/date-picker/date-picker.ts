@@ -151,7 +151,16 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
     // ── Signals ─────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
-    const selectedDate = signal(parseIso(props.value.value));
+
+    // ── Selected date: local-override pattern ──────────────────────────────
+    // localSelection holds a user-initiated pick (or undefined = no override).
+    // selectedDate falls back to the value prop reactively — no setInterval needed.
+
+    const localSelection = signal<Temporal.PlainDate | null | undefined>(undefined);
+
+    const selectedDate = computed(() =>
+      localSelection.value !== undefined ? localSelection.value : parseIso(props.value.value),
+    );
 
     // ── Form context ────────────────────────────────────────────────────────
 
@@ -174,10 +183,12 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
         return parseIso(props.min.value);
       },
       onChange(date) {
-        selectedDate.value = date;
+        localSelection.value = date;
         isOpen.value = false;
         ctrl.setView('day');
-        bump();
+        currentView.value = 'day';
+        displayYear.value = ctrl.displayYear();
+        displayMonth.value = ctrl.displayMonth();
         emit('change', { isoValue: toIsoString(date) });
       },
       get value() {
@@ -188,20 +199,12 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
       },
     });
 
-    // ── Version counter + explicit display signals ──────────────────────────
-    // version drives cell arrays and view toggling.
-    // displayYear / displayMonth mirror ctrl's internal state as proper reactive
-    // signals so label computeds invalidate on every mutation.
+    // ── Reactive display state ────────────────────────────────────────────
+    // Three separate primitive signals — the proven pattern.
 
-    const version = signal(0);
+    const currentView = signal<DatePickerView>('day');
     const displayYear = signal(ctrl.displayYear());
-    const displayMonth = signal(ctrl.displayMonth());
-
-    function bump(): void {
-      displayYear.value = ctrl.displayYear();
-      displayMonth.value = ctrl.displayMonth();
-      version.value++;
-    }
+    const displayMonth = signal(ctrl.displayMonth()); // 1-indexed (Temporal)
 
     // ── Form value (host is formAssociated) ──────────────────────────────────
 
@@ -212,31 +215,6 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
     });
 
     const dialogId = `date-picker-${Math.random().toString(36).slice(2, 9)}-calendar`;
-
-    // ── Sync value prop → selectedDate (with cleanup) ─────────────────────────
-
-    onMounted(() => {
-      let lastValueProp = props.value.value;
-
-      const id = setInterval(() => {
-        const current = props.value.value;
-
-        if (current !== lastValueProp) {
-          lastValueProp = current;
-
-          const parsed = parseIso(current);
-
-          selectedDate.value = parsed;
-
-          if (parsed) {
-            ctrl.goTo(parsed.year, parsed.month);
-            bump();
-          }
-        }
-      }, 50);
-
-      return () => clearInterval(id);
-    });
 
     // ── Derived display values ───────────────────────────────────────────────
 
@@ -256,17 +234,19 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
     const displayLabel = computed(() => `${displayMonth_.value} ${displayYear_.value}`);
 
     const dayCells = computed(() => {
-      void version.value;
+      void displayYear.value;
+      void displayMonth.value;
+      void selectedDate.value; // re-run when selection changes to refresh isSelected flags
 
       return ctrl.dayCells();
     });
     const monthCells = computed(() => {
-      void version.value;
+      void displayYear.value;
 
       return ctrl.monthCells();
     });
     const yearCells = computed(() => {
-      void version.value;
+      void displayYear.value;
 
       return ctrl.yearCells();
     });
@@ -277,37 +257,42 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
     // In year/month views navigate by year; in day view navigate by month.
 
     function handlePrev(): void {
-      if (ctrl.view() === 'day') ctrl.prevMonth();
+      if (currentView.value === 'day') ctrl.prevMonth();
       else ctrl.prevYear();
 
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
     }
 
     function handleNext(): void {
-      if (ctrl.view() === 'day') ctrl.nextMonth();
+      if (currentView.value === 'day') ctrl.nextMonth();
       else ctrl.nextYear();
 
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
     }
 
     function handleHeaderClick(): void {
-      const next: DatePickerView = ctrl.view() === 'day' ? 'month' : ctrl.view() === 'month' ? 'year' : 'day';
+      const views: DatePickerView[] = ['day', 'month', 'year'];
+      const next = views[(views.indexOf(currentView.value) + 1) % views.length];
 
       ctrl.setView(next);
-      bump();
+      currentView.value = next;
     }
 
-    function handleSelectMonth(monthIndex: number): void {
-      // monthIndex is 0-based (from monthCells.index) — ctrl expects 1-based
-      ctrl.goTo(ctrl.displayYear(), monthIndex + 1);
+    function handleSelectMonth(month: number): void {
+      ctrl.goTo(ctrl.displayYear(), month);
       ctrl.setView('day');
-      bump();
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
+      currentView.value = 'day';
     }
 
     function handleSelectYear(year: number): void {
       ctrl.goTo(year, ctrl.displayMonth());
       ctrl.setView('month');
-      bump();
+      displayYear.value = ctrl.displayYear();
+      currentView.value = 'month';
     }
 
     function handleSelectDay(isoStr: string): void {
@@ -316,7 +301,44 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
       if (!date) return;
 
       ctrl.select(date);
-      bump();
+    }
+
+    function handleDayKeydown(e: KeyboardEvent): void {
+      const cell = e.currentTarget as HTMLElement;
+      const grid = cell.closest('.cal-grid-days');
+
+      if (!grid) return;
+
+      const allCells = Array.from(grid.querySelectorAll<HTMLElement>('.cal-cell-day'));
+      const idx = allCells.indexOf(cell);
+
+      if (idx === -1) return;
+
+      let target: HTMLElement | undefined;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleSelectDay(cell.dataset.iso ?? '');
+
+        return;
+      } else if (e.key === 'ArrowRight') {
+        target = allCells[idx + 1];
+      } else if (e.key === 'ArrowLeft') {
+        target = allCells[idx - 1];
+      } else if (e.key === 'ArrowDown') {
+        target = allCells[idx + 7];
+      } else if (e.key === 'ArrowUp') {
+        target = allCells[idx - 7];
+      } else if (e.key === 'Home') {
+        target = allCells[Math.floor(idx / 7) * 7];
+      } else if (e.key === 'End') {
+        target = allCells[Math.floor(idx / 7) * 7 + 6];
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      target?.focus();
     }
 
     // ── Open / close ─────────────────────────────────────────────────────────
@@ -326,17 +348,21 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
 
       isOpen.value = true;
       ctrl.setView('day');
+      currentView.value = 'day';
 
       const sel = selectedDate.value;
 
-      if (sel) ctrl.goTo(sel.year, sel.month);
-
-      bump();
+      if (sel) {
+        ctrl.goTo(sel.year, sel.month);
+        displayYear.value = ctrl.displayYear();
+        displayMonth.value = ctrl.displayMonth();
+      }
     }
 
     function closePicker(): void {
       isOpen.value = false;
       ctrl.setView('day');
+      currentView.value = 'day';
     }
 
     function handleTriggerClick(): void {
@@ -453,7 +479,8 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
           <button
             class="cal-label-btn"
             type="button"
-            :aria-label="${() => `Switch to ${ctrl.view() === 'day' ? 'month' : 'year'} view`}"
+            :aria-label="${() =>
+              `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             @click="${handleHeaderClick}">
             <span class="cal-label-month">${displayMonth_}</span><span class="cal-label-sep" aria-hidden="true">/</span
             ><span class="cal-label-year">${displayYear_}</span>
@@ -469,11 +496,7 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
           role="grid"
           part="grid"
           :aria-label="${() => displayLabel.value}"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'day';
-          }}">
+          ?hidden="${() => currentView.value !== 'day'}">
           ${() =>
             weekdayLabels.value.map(
               (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
@@ -494,16 +517,8 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
                   ?data-disabled="${() => cell.isDisabled}"
                   data-iso="${cell.iso}"
                   tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled) handleSelectDay(cell.iso);
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-
-                      if (!cell.isDisabled) handleSelectDay(cell.iso);
-                    }
-                  }}">
+                  @click="${() => handleSelectDay(cell.iso)}"
+                  @keydown="${handleDayKeydown}">
                   ${String(cell.day)}
                 </div>`,
             )}
@@ -514,11 +529,7 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
           class="cal-grid cal-grid-months"
           role="grid"
           :aria-label="${() => displayYear_.value}"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'month';
-          }}">
+          ?hidden="${() => currentView.value !== 'month'}">
           ${() =>
             monthCells.value.map(
               (cell) =>
@@ -531,13 +542,13 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
                   ?data-disabled="${() => cell.isDisabled}"
                   tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
                   @click="${() => {
-                    if (!cell.isDisabled) handleSelectMonth(cell.index);
+                    if (!cell.isDisabled) handleSelectMonth(cell.month);
                   }}"
                   @keydown="${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
 
-                      if (!cell.isDisabled) handleSelectMonth(cell.index);
+                      if (!cell.isDisabled) handleSelectMonth(cell.month);
                     }
                   }}">
                   ${cell.shortLabel}
@@ -550,11 +561,7 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
           class="cal-grid cal-grid-years"
           role="grid"
           aria-label="Select year"
-          ?hidden="${() => {
-            void version.value;
-
-            return ctrl.view() !== 'year';
-          }}">
+          ?hidden="${() => currentView.value !== 'year'}">
           ${() =>
             yearCells.value.map(
               (cell) =>

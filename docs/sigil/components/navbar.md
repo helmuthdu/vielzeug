@@ -4,13 +4,13 @@ A responsive navigation bar with desktop and mobile layouts, plus sticky and flo
 
 ## Features
 
-- 📱 **Responsive by default**: desktop and mobile layouts with configurable media query breakpoint
-- 📌 **Sticky mode**: pins the navbar to the top of the viewport
-- 🫧 **Floating mode**: detached top navbar with rounded panel styling
-- 🔄 **Floating + Sticky transition**: starts floating, becomes full-width sticky when scrolling past `scroll-threshold`
-- 🎛️ **Imperative API**: open/close/toggle mobile menu from code
-- ♿ **Accessible semantics**: nav landmark label, expanded state, keyboard-close on Escape
-- 🧩 **Composable slots**: `logo`, `start`, default, `end`, and `mobile-menu`
+- <sg-icon name="smartphone" size="16"></sg-icon> **Responsive by default**: desktop and mobile layouts with configurable media query breakpoint
+- <sg-icon name="map-pin" size="16"></sg-icon> **Sticky mode**: pins the navbar to the top of the viewport
+- <sg-icon name="cloud-fog" size="16"></sg-icon> **Floating mode**: detached navbar with rounded panel styling and fixed positioning
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Floating + Sticky transition**: starts floating, becomes full-width sticky when scrolling past `scroll-threshold`
+- <sg-icon name="sliders-horizontal" size="16"></sg-icon> **Imperative API**: open/close/toggle mobile menu from code
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible semantics**: nav landmark label, expanded state, keyboard-close on Escape
+- <sg-icon name="puzzle" size="16"></sg-icon> **Composable slots**: `logo`, `start`, default, `end`, and `mobile-menu`
 
 ## Source Code
 
@@ -344,10 +344,23 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
 | `breakpoint`            | `string`                                                             | `'(max-width: 768px)'` | Media query used for mobile mode                                               |
 | `container-breakpoints` | `boolean`                                                            | `false`                | Evaluates parseable `max-width` breakpoints against the navbar container width |
-| `variant`               | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'glass' \| 'frost'` | —                      | Surface style variant                                                          |
+| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'glass' \| 'frost'` | —                      | Surface style variant                                                          |
 | `color`                 | `ThemeColor`                                                         | —                      | Theme color                                                                    |
 | `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
 | `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
+
+### `sg-navbar` Parts
+
+| Part            | Description                                      |
+| --------------- | ------------------------------------------------ |
+| `nav`           | Outer `<nav>` landmark element                   |
+| `bar`           | Main navbar row container                        |
+| `logo`          | Logo slot container                              |
+| `start`         | Leading (start) content region                   |
+| `center`        | Center content region                            |
+| `end`           | Trailing (end) content region                    |
+| `mobile-toggle` | Mobile menu toggle button                        |
+| `mobile-menu`   | Mobile overflow panel                            |
 
 ### `sg-navbar` Slots
 
@@ -365,6 +378,25 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | -------------------- | ------------------- | ----------------------------------------- |
 | `mobile-menu-change` | `{ open: boolean }` | Fired when mobile menu open state changes |
 
+### `sg-navbar` CSS Custom Properties
+
+| Property                        | Description                                      | Default         |
+| ------------------------------- | ------------------------------------------------ | --------------- |
+| `--navbar-height`               | Navbar bar height                                | Theme-dependent |
+| `--navbar-width`                | Max width of the navbar content                  | Theme-dependent |
+| `--navbar-offset`               | Horizontal offset for floating/sticky positioning | Theme-dependent |
+| `--navbar-bg`                   | Navbar background color                          | Theme-dependent |
+| `--navbar-color`                | Navbar text color                                | Theme-dependent |
+| `--navbar-border-color`         | Navbar border color                              | Theme-dependent |
+| `--navbar-shadow`               | Navbar box shadow                                | Theme-dependent |
+| `--navbar-radius`               | Border radius (floating/sticky modes)            | Theme-dependent |
+| `--navbar-backdrop-filter`      | Backdrop filter for blur effect                  | Theme-dependent |
+| `--navbar-item-color`           | Nav item text color                              | Theme-dependent |
+| `--navbar-item-hover-color`     | Nav item hover text color                        | Theme-dependent |
+| `--navbar-item-hover-bg`        | Nav item hover background                        | Theme-dependent |
+| `--navbar-item-active-color`    | Nav item active/current text color               | Theme-dependent |
+| `--navbar-item-active-bg`       | Nav item active/current background               | Theme-dependent |
+
 ### `sg-navbar-item` Attributes
 
 | Attribute  | Type      | Default | Description                                        |
@@ -374,6 +406,23 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `disabled` | `boolean` | `false` | Disables interaction                               |
 | `rel`      | `string`  | —       | Link relationship when `href` is set               |
 | `target`   | `string`  | —       | Link target when `href` is set                     |
+
+### `sg-navbar-item` Slots
+
+| Slot      | Description                            |
+| --------- | -------------------------------------- |
+| (default) | Item label text                        |
+| `icon`    | Optional leading icon                  |
+| `end`     | Optional trailing content              |
+
+### `sg-navbar-item` Parts
+
+| Part         | Description                        |
+| ------------ | ---------------------------------- |
+| `item`       | Root clickable element (anchor or button) |
+| `item-icon`  | Leading icon container             |
+| `item-label` | Label text container               |
+| `item-end`   | Trailing content container         |
 
 ## Related Components
 

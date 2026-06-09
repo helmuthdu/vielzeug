@@ -53,7 +53,7 @@ exports:
 # Tempo
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date Time
 
@@ -124,11 +124,11 @@ const reminder = shift(meeting, { minutes: -15 });
 | Feature        | Tempo                                       | date-fns | Day.js  | Native Date |
 | -------------- | ------------------------------------------- | -------- | ------- | ----------- |
 | Bundle size    | <PackageInfo package="tempo" type="size" /> | ~10 kB   | ~3 kB   | 0 kB        |
-| DST-safe math  | ✅ (Temporal)                               | Manual   | Manual  | ❌          |
-| Timezone aware | ✅ Full support                             | ✅       | ✅      | Partial     |
-| Immutable      | ✅                                          | ✅       | ✅      | ❌          |
-| Format presets | ✅ (`'short'`, `'medium'`, `'long'`, etc.)  | ❌       | ❌      | ❌          |
-| Type inference | ✅ Full TypeScript                          | Partial  | Partial | ❌          |
+| DST-safe math  | <sg-icon name="circle-check" size="16"></sg-icon> (Temporal)                               | Manual   | Manual  | <sg-icon name="circle-x" size="16"></sg-icon>          |
+| Timezone aware | <sg-icon name="circle-check" size="16"></sg-icon> Full support                             | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>      | Partial     |
+| Immutable      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>          |
+| Format presets | <sg-icon name="circle-check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.)  | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>          |
+| Type inference | <sg-icon name="circle-check" size="16"></sg-icon> Full TypeScript                          | Partial  | Partial | <sg-icon name="circle-x" size="16"></sg-icon>          |
 
 **Use Tempo when** you need reliable timezone handling, DST-safe arithmetic, and clean Temporal-based APIs without heavy dependencies.
 
@@ -154,10 +154,10 @@ const reminder = shift(meeting, { minutes: -15 });
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

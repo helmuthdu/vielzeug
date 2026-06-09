@@ -1,18 +1,18 @@
 # Calendar
 
-An accessible, always-visible inline calendar. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, theming, and native form association. Use this when you want the calendar rendered inline in the page rather than inside a picker popup — see [Date Picker](/sigil/components/date-picker) for the trigger+popup variant.
+An accessible, always-visible inline calendar. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, theming, and native form association. Use this when you want the calendar rendered directly in the page — see [Date Picker](/sigil/components/date-picker) for the trigger + popup variant.
 
 ## Features
 
-- ⌨️ **Full keyboard nav** — Enter, Space, ArrowLeft, ArrowRight on day cells; Enter/Space on month and year cells
-- ♿ **ARIA** — `role="group"` host, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today, `aria-disabled` on disabled cells
-- 📅 **Three views** — Day → Month → Year drill-down with cycling header label
-- 🌍 **Internationalised** — Uses `Intl.DateTimeFormat`; pass any BCP 47 locale string
-- 🚫 **Min / Max bounds** — ISO 8601 `min` / `max` attributes; out-of-range days are disabled
-- 📆 **Weekend disabling** — `weekend-days="0,6"` disables any combination of weekdays
-- 🔗 **Form-associated** — participates in native form submission; value is the ISO date string
-- 🌈 **6 semantic colors** — primary, secondary, info, success, warning, error
-- 🎨 **CSS custom properties** — full theming control via `--calendar-*` tokens
+- <sg-icon name="keyboard" size="16"></sg-icon> **Full keyboard nav** — Arrow keys (including `ArrowUp`/`ArrowDown` for row jumping), `Home`/`End`, `Enter`/`Space`
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA** — `role="group"` host, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today, `aria-disabled` on disabled cells
+- <sg-icon name="calendar" size="16"></sg-icon> **Three views** — Day → Month → Year cycling via the header label button
+- <sg-icon name="globe" size="16"></sg-icon> **Internationalised** — `Intl.DateTimeFormat`; pass any BCP 47 locale string
+- <sg-icon name="ban" size="16"></sg-icon> **Min / Max bounds** — ISO 8601 `min` / `max`; out-of-range days are disabled
+- <sg-icon name="calendar-days" size="16"></sg-icon> **Weekend disabling** — JSON array of day-of-week indices, e.g. `weekend-days="[0,6]"`
+- <sg-icon name="link" size="16"></sg-icon> **Form-associated** — participates in native `<form>` submission; value is the ISO date string
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 semantic colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — `--calendar-*` tokens for full theming control
 
 ## Source Code
 
@@ -45,17 +45,19 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 <ComponentPreview vertical height="340px">
 
 ```html
-<sg-calendar value="2025-06-15" min="2025-06-01" max="2025-06-30"> </sg-calendar>
+<sg-calendar value="2025-06-15" min="2025-06-01" max="2025-06-30"></sg-calendar>
 ```
 
 </ComponentPreview>
 
 ## Disabled Weekends
 
+Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weekend-days`.
+
 <ComponentPreview vertical height="340px">
 
 ```html
-<sg-calendar weekend-days="0,6"></sg-calendar>
+<sg-calendar weekend-days="[0,6]"></sg-calendar>
 ```
 
 </ComponentPreview>
@@ -85,13 +87,13 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 </ComponentPreview>
 
-## Events
+## Calendar Events
 
-Pass an array of `CalendarEvent` objects via the `events` JS property. Each entry needs an `id`, a `date` (ISO 8601), and a `label`. An optional `color` accepts any CSS color value.
+Pass an array of `CalendarEvent` objects via the `events` JS property. Each entry requires an `id`, a `date` (ISO 8601), and a `label`. An optional `color` accepts any CSS color value.
 
-**Normal mode** — up to 3 colored dots are shown at the bottom of the day cell; if there are more, a `+N` overflow count is appended.
+**Normal mode** — up to 3 colored dots per cell; additional events appear as a `+N` count.
 
-**Expanded mode** — up to 3 colored pills with their labels are shown. Additional events are summarised as a muted `+N more` indicator.
+**Expanded mode** — up to 3 colored pills with labels; additional events appear as `+N more`.
 
 <ComponentPreview vertical height="380px">
 
@@ -133,7 +135,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 
 ### Events overflow
 
-When a day has more than 3 events, the first 3 are shown and the rest are summarised as `+N more`. This applies to both dots (normal mode) and pills (expanded mode).
+When a day has more than 3 events, the first 3 are shown and the rest are summarised. This applies to both dots (normal mode) and pills (expanded mode).
 
 <ComponentPreview vertical height="380px">
 
@@ -171,7 +173,7 @@ When a day has more than 3 events, the first 3 are shown and the rest are summar
 
 ## Expanded Layout
 
-Use `expanded` for a full-page, calendar-app style layout. Cells become tall with the day number shown as a circle in the top-left corner — leaving the rest of the cell open for event content. The minimum cell height defaults to `var(--size-24)` and is overridable via `--calendar-expanded-cell-height`.
+Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes tall with the day number shown as a circle in the top-left corner, leaving the remaining space for event content. The minimum cell height defaults to `var(--size-28)` and can be overridden with `--calendar-expanded-cell-height`.
 
 <ComponentPreview vertical height="680px">
 
@@ -232,34 +234,42 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 </ComponentPreview>
 
+## Listening for Changes
+
+```js
+document.querySelector('sg-calendar').addEventListener('change', (e) => {
+  console.log(e.detail.isoValue); // '2025-06-15' or null
+});
+```
+
 ## API Reference
 
 ### Props
 
-| Prop           | Type              | Default        | Description                                                                                         |
-| -------------- | ----------------- | -------------- | --------------------------------------------------------------------------------------------------- |
-| `value`        | `string`          | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                     |
-| `min`          | `string`          | —              | Earliest selectable date (`yyyy-MM-dd`)                                                             |
-| `max`          | `string`          | —              | Latest selectable date (`yyyy-MM-dd`)                                                               |
-| `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `[0,6]` for weekends |
-| `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                            |
-| `color`        | `string`          | —              | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                |
-| `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                |
-| `rounded`      | `string`          | —              | Border radius override                                                                              |
-| `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                             |
-| `required`     | `boolean`         | `false`        | Required field (form association)                                                                   |
-| `name`         | `string`          | —              | Form field name                                                                                     |
-| `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode                             |
-| `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                     |
-| `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                             |
+| Prop           | Type              | Default        | Description                                                                                              |
+| -------------- | ----------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `value`        | `string`          | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                          |
+| `min`          | `string`          | —              | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                       |
+| `max`          | `string`          | —              | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                         |
+| `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"`   |
+| `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                                 |
+| `color`        | `string`          | —              | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                    |
+| `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                     |
+| `rounded`      | `string`          | —              | Border radius override                                                                                   |
+| `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                                  |
+| `required`     | `boolean`         | `false`        | Required field (form association)                                                                        |
+| `name`         | `string`          | —              | Form field name                                                                                          |
+| `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property             |
+| `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                          |
+| `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                                  |
 
 ### CalendarEvent
 
 | Field   | Type     | Required | Description                                                    |
 | ------- | -------- | -------- | -------------------------------------------------------------- |
-| `id`    | `string` | ✓        | Unique identifier                                              |
-| `date`  | `string` | ✓        | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
-| `label` | `string` | ✓        | Short label shown in the cell (pill text or tooltip for dot)   |
+| `id`    | `string` | <sg-icon name="check" size="16"></sg-icon>        | Unique identifier                                              |
+| `date`  | `string` | <sg-icon name="check" size="16"></sg-icon>        | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
+| `label` | `string` | <sg-icon name="check" size="16"></sg-icon>        | Short label shown in the cell (pill text in expanded mode)     |
 | `color` | `string` | —        | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
@@ -270,16 +280,16 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 ### CSS Custom Properties
 
-| Property                          | Description                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| `--calendar-bg`                   | Calendar background colour                                                        |
-| `--calendar-border-color`         | Calendar border colour                                                            |
-| `--calendar-radius`               | Calendar border radius                                                            |
-| `--calendar-shadow`               | Calendar drop shadow                                                              |
-| `--calendar-day-selected-bg`      | Background of the selected day cell                                               |
-| `--calendar-day-today-color`      | Colour of today's date number                                                     |
-| `--calendar-day-outside-opacity`  | Opacity of days outside the visible month                                         |
-| `--calendar-expanded-cell-height` | Minimum height of each day cell in the expanded layout (default `var(--size-24)`) |
+| Property                          | Default           | Description                                              |
+| --------------------------------- | ----------------- | -------------------------------------------------------- |
+| `--calendar-bg`                   | `--color-canvas`  | Calendar background colour                               |
+| `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                              |
+| `--calendar-radius`               | `--rounded-xl`    | Calendar border radius                                   |
+| `--calendar-shadow`               | `--shadow-md`     | Calendar drop shadow                                     |
+| `--calendar-day-selected-bg`      | theme focus color | Background of the selected day cell                      |
+| `--calendar-day-today-color`      | theme focus color | Color of today's date number                             |
+| `--calendar-day-outside-opacity`  | `0.35`            | Opacity of days outside the visible month                |
+| `--calendar-expanded-cell-height` | `var(--size-28)`  | Minimum height of each day cell in the expanded layout   |
 
 ### Parts
 
@@ -292,18 +302,50 @@ Use `expanded` for a full-page, calendar-app style layout. Cells become tall wit
 
 ## Accessibility
 
-`sg-calendar` is built with first-class accessibility:
+`sg-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/).
 
-- **Roles**: the host element carries `role="group"` and `aria-label` (the currently visible month/year). The day grid uses `role="grid"` with `role="gridcell"` on each day cell.
+- **Roles**: the host element carries `role="group"` and `aria-label` (the currently visible month/year). The day grid uses `role="grid"` with `role="columnheader"` for weekday headers and `role="gridcell"` on each day cell.
 - **Selection state**: selected days have `aria-selected="true"`; unselected have `aria-selected="false"`.
 - **Today**: today's cell has `aria-current="date"`.
-- **Disabled cells**: out-of-range and weekend days have `aria-disabled="true"` and `tabindex="-1"` so they are skipped by keyboard navigation.
-- **Keyboard navigation**:
-  - `Enter` / `Space` — select focused day, month, or year cell
-  - `ArrowRight` / `ArrowLeft` — move focus between adjacent day cells
-  - Navigation buttons (`Previous` / `Next`) are standard `<button>` elements with descriptive `aria-label`
-  - The header label button announces which view will open next (`"Switch to month view"`)
-- **Disabled state**: when `disabled` is set, the host gets `aria-disabled="true"`, all cells are `tabindex="-1"`, and no interaction is processed.
+- **Disabled cells**: out-of-range and disabled-weekday cells have `aria-disabled="true"` and `tabindex="-1"`, removing them from tab order.
+- **Disabled host**: when `disabled` is set, the host gets `aria-disabled="true"`, all cells become `tabindex="-1"`, and no interaction is processed.
+
+### Keyboard Navigation
+
+**Day grid**
+
+| Key                     | Action                                              |
+| ----------------------- | --------------------------------------------------- |
+| `ArrowRight`            | Move focus to the next day                          |
+| `ArrowLeft`             | Move focus to the previous day                      |
+| `ArrowDown`             | Move focus one week forward (same weekday)          |
+| `ArrowUp`               | Move focus one week back (same weekday)             |
+| `Home`                  | Move focus to the first day of the current row      |
+| `End`                   | Move focus to the last day of the current row       |
+| `Enter` / `Space`       | Select the focused day                              |
+
+**Month and year grids**
+
+| Key               | Action                          |
+| ----------------- | ------------------------------- |
+| `Enter` / `Space` | Select the focused month / year |
+
+**Header controls**
+
+| Key               | Action                                               |
+| ----------------- | ---------------------------------------------------- |
+| Click / `Enter`   | Previous / Next button — navigate by month or year   |
+| Click / `Enter`   | Label button — cycle view: Day → Month → Year → Day  |
+
+## View Cycling
+
+The header label button cycles through three views on each click:
+
+1. **Day** — the standard month grid; Previous/Next navigate by month
+2. **Month** — a 4×3 grid of abbreviated month names; click a month to return to day view at that month
+3. **Year** — a 4×3 grid of year numbers; click a year to go to month view for that year
+
+The calendar panel maintains a stable size across all three views — day view reserves space for a maximum 6-week month, and month/year views fill the same width.
 
 ## Related Components
 

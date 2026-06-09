@@ -4,12 +4,11 @@ A floating interactive panel anchored to a trigger element. Unlike a tooltip, a 
 
 ## Features
 
-- 📍 **12 Placements** — top/bottom/left/right with start/end/center variants; auto-flips near viewport edges
-- ⚡ **3 Trigger modes**: click (default), hover, focus — comma-separated for combinations
-- 🎯 **Controlled open state** — use the `open` attribute for programmatic control
-- 🔧 **Powered by [orbit](../../orbit/index)** — efficient auto-updating position via `@vielzeug/orbit`
-- 🪟 **Native Popover API** — uses `popover` attribute for correct top-layer stacking
-- ♿ **Accessible**: `role="dialog"` on panel, configurable `aria-label`
+- <sg-icon name="map-pin" size="16"></sg-icon> **12 Placements** — top/bottom/left/right with start/end/center variants; auto-flips near viewport edges
+- <sg-icon name="zap" size="16"></sg-icon> **3 Trigger modes**: click (default), hover, focus — comma-separated for combinations
+- <sg-icon name="crosshair" size="16"></sg-icon> **Controlled open state** — use the `open` attribute for programmatic control
+- <sg-icon name="wrench" size="16"></sg-icon> **Powered by [orbit](../../orbit/index)** — efficient auto-updating position via `@vielzeug/orbit`
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"` on panel, configurable `aria-label`
 
 ## Source Code
 
@@ -28,10 +27,6 @@ Wrap the trigger element in the default slot and place panel content in the `con
     <p>This is the popover content.</p>
   </div>
 </sg-popover>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 ## Placement
@@ -95,7 +90,7 @@ The `content` slot accepts any HTML — forms, cards, images, custom layouts.
 
 ```html
 <sg-popover placement="bottom-start">
-  <sg-button color="primary">What's new ✦</sg-button>
+  <sg-button color="primary">What's new <sg-icon name="star" size="16"></sg-icon></sg-button>
   <div slot="content" style="padding:1rem; display:flex; flex-direction:column; gap:0.5rem; max-width:18rem;">
     <p style="margin:0; font-weight:600; font-size:0.875rem;">Version 2.4 released</p>
     <p style="margin:0; font-size:0.8125rem; color:var(--color-contrast-600); line-height:1.5;">
@@ -207,18 +202,18 @@ The popover component follows WAI-ARIA best practices.
 
 ### `sg-popover`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Escape` closes the popover and returns focus to the trigger.
 - `Tab` moves focus through interactive elements inside the panel.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The panel uses `role="dialog"` when `label` is set, giving screen readers a concise title on open.
 - The trigger element receives `aria-expanded` and `aria-controls` reflecting the open state.
 - Provide a `label` attribute to give the panel an accessible name.
 
-✅ **Focus Management**
+<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
 
 - Focus moves into the panel on open (when `trigger` includes `click` or `focus`).
 - Focus returns to the trigger element on close.

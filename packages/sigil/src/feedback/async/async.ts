@@ -41,15 +41,6 @@ export type SgAsyncProps = {
  * @cssprop --async-color - Text/icon color used by default async state content
  * @cssprop --async-gap - Vertical spacing between icon, title, description, and actions
  * @cssprop --async-icon-size - Icon size for built-in loading/empty/error visuals
- * @cssprop --color-contrast-500 - Secondary description text color
- * @cssprop --color-contrast-700 - Primary heading text color for neutral states
- * @cssprop --color-error-500 - Base error color for the default error icon
- * @cssprop --color-error-600 - Strong error color for titles and emphasis
- * @cssprop --color-error-700 - Deep error color for high-contrast error text
- * @cssprop --font-medium - Font weight used by default state descriptions
- * @cssprop --font-semibold - Font weight used by default state titles
- * @cssprop --leading-relaxed - Line-height for default state descriptions
- * @cssprop --rounded-md - Corner radius for default state surfaces and placeholders
  * @example
  * ```html
  * <!-- Success state: default slot is shown -->

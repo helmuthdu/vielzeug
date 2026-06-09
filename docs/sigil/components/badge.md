@@ -4,11 +4,11 @@ A compact label for counts, statuses, and short metadata. Supports numeric overf
 
 ## Features
 
-- 🎨 **5 Variants**: solid, flat, bordered, outline, frost
-- 🌈 **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- 🔢 **Count Mode**: display numeric counts with an optional max cap (e.g. `99+`)
-- 🔴 **Dot Mode**: minimal dot indicator when no label needed- 📌 **Overlay Mode**: `anchor` prop pins the badge to a corner of any slotted content- 🔧 **Icon Slot**: prepend an icon inside the badge
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants**: solid, flat, bordered, outline, frost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="hash" size="16"></sg-icon> **Count Mode**: display numeric counts with an optional max cap (e.g. `99+`)
+- <sg-icon name="circle" size="16"></sg-icon> **Dot Mode**: minimal dot indicator when no label needed- <sg-icon name="map-pin" size="16"></sg-icon> **Overlay Mode**: `anchor` prop pins the badge to a corner of any slotted content- <sg-icon name="wrench" size="16"></sg-icon> **Icon Slot**: prepend an icon inside the badge
 
 ## Source Code
 
@@ -20,10 +20,6 @@ A compact label for counts, statuses, and short metadata. Supports numeric overf
 
 ```html
 <sg-badge color="primary">New</sg-badge>
-
-<script type="module">
-  import '@vielzeug/sigil/badge';
-</script>
 ```
 
 ## Visual Options
@@ -184,13 +180,6 @@ Use the `anchor` prop with the `target` slot to pin a badge to the corner of any
 <sg-badge color="warning" count="12" anchor="top-start">
   <sg-button slot="target" variant="outline" size="sm">Messages</sg-button>
 </sg-badge>
-
-<script type="module">
-  import '@vielzeug/sigil/badge';
-  import '@vielzeug/sigil/button';
-  import '@vielzeug/sigil/avatar';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -324,7 +313,7 @@ The badge component follows WAI-ARIA best practices.
 
 ### `sg-badge`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Badge text content is read by screen readers as inline text.
 - Count badges expose the full value (or `{max}+`) as visible text that is read aloud.

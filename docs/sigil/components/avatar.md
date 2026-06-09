@@ -4,12 +4,12 @@ A circular (or shaped) user representation that renders an image, falls back to 
 
 ## Features
 
-- 🖼️ **Three-tier fallback**: image → initials → generic person icon
-- 🟢 **Status indicator**: online, offline, busy, away badge
-- 🎨 **6 Theme Colors**: primary, secondary, info, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- 🔵 **Rounded variants**: sm, md, lg, full (default)
-- 🔧 **Customizable via CSS custom properties**
+- <sg-icon name="image" size="16"></sg-icon> **Three-tier fallback**: image → initials → generic person icon
+- <sg-icon name="circle" size="16"></sg-icon> **Status indicator**: online, offline, busy, away badge
+- <sg-icon name="palette" size="16"></sg-icon> **6 Theme Colors**: primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="circle" size="16"></sg-icon> **Rounded variants**: sm, md, lg, full (default)
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable via CSS custom properties**
 
 ## Source Code
 
@@ -21,10 +21,6 @@ A circular (or shaped) user representation that renders an image, falls back to 
 
 ```html
 <sg-avatar src="https://i.pravatar.cc/150?img=1" alt="Jane Doe"></sg-avatar>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 ## Fallback to Initials
@@ -182,7 +178,7 @@ The avatar component follows WAI-ARIA best practices.
 
 ### `sg-avatar`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Provide a meaningful `alt` attribute — it serves as the accessible name and is also used to derive initials automatically.
 - Initials backgrounds are decorative; the `alt` text provides the accessible name.

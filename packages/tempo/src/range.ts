@@ -81,7 +81,9 @@ export function recurrence(
 
   // Eager validation — fires at call time, not on first iteration.
   if (count === undefined && until === undefined) {
-    throw new RangeError('recurrence: either count or until must be specified. Pass { count: n } for a fixed number of occurrences, { until: date } for a date boundary, or both.');
+    throw new RangeError(
+      'recurrence: either count or until must be specified. Pass { count: n } for a fixed number of occurrences, { until: date } for a date boundary, or both.',
+    );
   }
 
   const tz = inferTimeZone(start, options);

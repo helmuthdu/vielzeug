@@ -40,7 +40,7 @@ exports:
 # Sourcerer
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/sourcerer` &nbsp;·&nbsp; **Category:** Data
 
@@ -142,14 +142,14 @@ await source.searchNow(search);
 | Feature                             | Sourcerer                                       | TanStack Query | SWR            |
 | ----------------------------------- | ----------------------------------------------- | -------------- | -------------- |
 | Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB         | ~6 kB          |
-| In-memory source primitive          | ✅                                              | ❌             | ❌             |
-| Remote source primitive             | ✅                                              | ✅             | ✅             |
-| Cursor-based pagination             | ✅                                              | Partial        | Partial        |
-| Infinite scroll source              | ✅                                              | ✅             | ✅             |
-| Typed page/filter/sort/search model | ✅                                              | Partial        | Partial        |
-| Optimistic updates                  | ✅                                              | ✅             | ✅             |
-| URL query encode/decode helpers     | ✅                                              | Partial        | Partial        |
-| Framework agnostic                  | ✅                                              | ✅             | ⚠️ React-first |
+| In-memory source primitive          | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>             |
+| Remote source primitive             | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
+| Cursor-based pagination             | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Infinite scroll source              | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
+| Typed page/filter/sort/search model | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Optimistic updates                  | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
+| URL query encode/decode helpers     | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Framework agnostic                  | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
 
 **Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists, with built-in support for pagination, search, filters, and optimistic mutation.
 
@@ -168,10 +168,10 @@ await source.searchNow(search);
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

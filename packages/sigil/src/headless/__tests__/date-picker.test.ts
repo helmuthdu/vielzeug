@@ -269,12 +269,19 @@ describe('createDatePickerControl', () => {
       expect(makeCtrl().monthCells().length).toBe(12);
     });
 
+    it('each cell carries a 1-based month number', () => {
+      const cells = makeCtrl().monthCells();
+
+      expect(cells[0].month).toBe(1); // January
+      expect(cells[11].month).toBe(12); // December
+    });
+
     it('marks the selected month as isSelected', () => {
       const ctrl = makeCtrl({ value: plain(2025, 6, 15) }); // June
       const selected = ctrl.monthCells().find((c) => c.isSelected);
 
-      // monthCells[].index is 0-based (June = index 5)
-      expect(selected?.index).toBe(5);
+      // month is 1-based (June = 6)
+      expect(selected?.month).toBe(6);
     });
   });
 
@@ -305,54 +312,6 @@ describe('createDatePickerControl', () => {
   describe('weekdayLabels', () => {
     it('returns 7 labels', () => {
       expect(makeCtrl().weekdayLabels().length).toBe(7);
-    });
-  });
-
-  // ── Display label ────────────────────────────────────────────────────────
-
-  describe('displayLabel', () => {
-    it('returns a non-empty string', () => {
-      const ctrl = makeCtrl({ value: plain(2025, 6, 1) });
-
-      expect(ctrl.displayLabel().length).toBeGreaterThan(0);
-    });
-  });
-
-  // ── isOutOfRange ─────────────────────────────────────────────────────────
-
-  describe('isOutOfRange', () => {
-    it('returns true for date below min', () => {
-      const ctrl = makeCtrl({ min: plain(2025, 6, 10) });
-
-      expect(ctrl.isOutOfRange(plain(2025, 6, 9))).toBe(true);
-    });
-
-    it('returns true for date above max', () => {
-      const ctrl = makeCtrl({ max: plain(2025, 6, 20) });
-
-      expect(ctrl.isOutOfRange(plain(2025, 6, 21))).toBe(true);
-    });
-
-    it('returns false for date within range', () => {
-      const ctrl = makeCtrl({ max: plain(2025, 6, 20), min: plain(2025, 6, 10) });
-
-      expect(ctrl.isOutOfRange(plain(2025, 6, 15))).toBe(false);
-    });
-
-    it('returns false when no bounds are set', () => {
-      expect(makeCtrl().isOutOfRange(plain(2025, 6, 15))).toBe(false);
-    });
-
-    it('inclusive: min boundary is not out of range', () => {
-      const ctrl = makeCtrl({ min: plain(2025, 6, 10) });
-
-      expect(ctrl.isOutOfRange(plain(2025, 6, 10))).toBe(false);
-    });
-
-    it('inclusive: max boundary is not out of range', () => {
-      const ctrl = makeCtrl({ max: plain(2025, 6, 20) });
-
-      expect(ctrl.isOutOfRange(plain(2025, 6, 20))).toBe(false);
     });
   });
 });

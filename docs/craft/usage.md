@@ -433,7 +433,7 @@ define('theme-toggle', {
   setup() {
     return html`
       <button @click=${() => (theme.value = isDark.value ? 'light' : 'dark')}>
-        ${() => (isDark.value ? '☀️' : '🌙')}
+        ${() => (isDark.value ? '<sg-icon name="sun" size="16"></sg-icon>' : '<sg-icon name="moon" size="16"></sg-icon>')}
       </button>
     `;
   },

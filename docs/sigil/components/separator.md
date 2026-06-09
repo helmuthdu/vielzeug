@@ -4,11 +4,11 @@ A simple visual divider for separating sections of content. Supports horizontal 
 
 ## Features
 
-- ↔️ **Horizontal** (default) and ↕️ **Vertical** orientations
-- 🏷️ **Optional label** — centered text on the divider line
-- 🎨 **6 Theme Colors**: primary, secondary, info, success, warning, error
-- ♿ **Accessible**: decorative mode sets `aria-hidden`; semantic mode uses `role="separator"`
-- 🔧 **Customizable** line thickness, color, and spacing via CSS custom properties
+- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Horizontal** (default) and <sg-icon name="arrow-up-down" size="16"></sg-icon> **Vertical** orientations
+- <sg-icon name="tag" size="16"></sg-icon> **Optional label** — centered text on the divider line
+- <sg-icon name="palette" size="16"></sg-icon> **6 Theme Colors**: primary, secondary, info, success, warning, error
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: decorative mode sets `aria-hidden`; semantic mode uses `role="separator"`
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** line thickness, color, and spacing via CSS custom properties
 
 ## Source Code
 
@@ -22,10 +22,6 @@ A simple visual divider for separating sections of content. Supports horizontal 
 <p>Section one content.</p>
 <sg-separator></sg-separator>
 <p>Section two content.</p>
-
-<script type="module">
-  import '@vielzeug/sigil';
-</script>
 ```
 
 ## Horizontal (Default)
@@ -131,7 +127,7 @@ The separator component follows WAI-ARIA best practices.
 
 ### `sg-separator`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - By default, the separator is decorative and has `aria-hidden="true"`.
 - Set `decorative="false"` for separators that carry structural meaning and pair with `aria-label` to describe the separation.

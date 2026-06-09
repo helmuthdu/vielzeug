@@ -4,16 +4,16 @@ An accessible, keyboard-navigable time picker with a scrollable clock dropdown. 
 
 ## Features
 
-- ⌨️ **Full Keyboard Nav** — Arrow keys cycle hours/minutes/period; Enter confirms; Escape dismisses
-- ♿ **ARIA** — `role="combobox"` trigger, `role="listbox"` dropdown, `role="group"` columns, `role="option"` cells with `aria-selected` and `aria-disabled`
-- 🕐 **12 / 24-hour modes** — set `time-format="12"` for AM/PM display with a dedicated period column
-- ⏱️ **Minute steps** — `minute-step` controls the increment (1–59, default 5)
-- 🚫 **Min / Max bounds** — disable out-of-range hour and minute options
-- 🔗 **Form-Associated** — participates in native form submission; value is the 24-hour `HH:MM` string
-- 📏 **3 Sizes** — sm, md, lg
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 📝 **Helper & Error Text** — inline assistive text below the trigger
+- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — Arrow keys cycle hours/minutes/period; Enter confirms; Escape dismisses
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA** — `role="combobox"` trigger, `role="listbox"` dropdown, `role="group"` columns, `role="option"` cells with `aria-selected` and `aria-disabled`
+- <sg-icon name="clock" size="16"></sg-icon> **12 / 24-hour modes** — set `time-format="12"` for AM/PM display with a dedicated period column
+- <sg-icon name="timer" size="16"></sg-icon> **Minute steps** — `minute-step` controls the increment (1–59, default 5)
+- <sg-icon name="ban" size="16"></sg-icon> **Min / Max bounds** — disable out-of-range hour and minute options
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission; value is the 24-hour `HH:MM` string
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline assistive text below the trigger
 
 ## Source Code
 

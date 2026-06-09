@@ -205,7 +205,7 @@ getPath(item, path, defaultValue?, options?: { throwOnMissing?: boolean })
 getPath(obj, 'a.b.c');         // 3
 getPath(obj, 'd.1');           // array index access
 getPath(obj, 'x.y', 'fallback'); // fallback when path is missing
-getPath(obj, 'a[0]');          // ✗ TypeError: use 'a.0' instead
+getPath(obj, 'a[0]');          // <sg-icon name="x" size="16"></sg-icon> TypeError: use 'a.0' instead
 ```
 
 ### stableStringify

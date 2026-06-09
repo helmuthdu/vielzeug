@@ -78,10 +78,10 @@ The TypeScript compiler will reject keys that do not exist on `T`, and downstrea
 Chain `.index(field)` to register secondary indexes (IndexedDB only). Calling `.index()` twice with the same field throws `VaultError` synchronously:
 
 ```ts
-// ✅ valid
+// <sg-icon name="circle-check" size="16"></sg-icon> valid
 const schema = { products: table<Product>('id').index('category').index('name') };
 
-// ❌ throws VaultError: table index "category" is already registered
+// <sg-icon name="circle-x" size="16"></sg-icon> throws VaultError: table index "category" is already registered
 const bad = table<Product>('id').index('category').index('category');
 ```
 

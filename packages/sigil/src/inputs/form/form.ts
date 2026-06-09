@@ -44,8 +44,7 @@ export type SgFormEvents = {
  * @fires reset - detail: { originalEvent }
  *
  * @slot - Form controls and content rendered inside the form element.
- * @cssprop --form-gap - Form layout/styling token.
- * @cssprop --size-4 - Spacing/sizing token.
+ * @cssprop --form-gap - Gap between form control rows
  * @part form - Form root element.
  * @example
  * ```html

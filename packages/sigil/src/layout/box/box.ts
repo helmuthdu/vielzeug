@@ -9,14 +9,14 @@ import componentStyles from './box.css?inline';
 export type SgBoxProps = {
   /** Theme color */
   color?: ThemeColor;
+  /** Animated border effect */
+  effect?: 'rainbow';
   /** Shadow elevation level (0–5) */
   elevation?: ElevationLevel;
   /** Full width mode (100% of container) */
   fullwidth?: boolean;
   /** Internal padding size */
   padding?: PaddingSize;
-  /** Enable animated rainbow border effect */
-  rainbow?: boolean;
   /** Border radius size */
   rounded?: RoundedSize;
   /** Visual style variant */
@@ -33,7 +33,7 @@ export type SgBoxProps = {
  * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {boolean} rainbow - Enable animated rainbow border effect
+ * @attr {string} effect - Animated border effect: 'rainbow'
  * @attr {boolean} fullwidth - Expand to full width
  *
  * @slot - Default slot for content
@@ -52,17 +52,17 @@ export type SgBoxProps = {
  * ```html
  * <sg-box padding="lg" elevation="2">Simple content</sg-box>
  * <sg-box variant="glass" color="primary">Glass effect</sg-box>
- * <sg-box variant="frost" rainbow>Frosted glass</sg-box>
+ * <sg-box variant="frost" effect="rainbow">Frosted glass</sg-box>
  * ```
  */
 export const BOX_TAG = 'sg-box' as const;
 define<SgBoxProps>(BOX_TAG, {
   props: {
     color: prop.string<ThemeColor>(),
+    effect: prop.string<'rainbow'>(),
     elevation: prop.number<ElevationLevel>(),
     fullwidth: prop.bool(),
     padding: prop.string<PaddingSize>(),
-    rainbow: prop.bool(),
     rounded: prop.string<RoundedSize>(),
     variant: prop.string<'flat' | 'solid' | 'frost' | 'glass'>(),
   },
@@ -70,5 +70,5 @@ define<SgBoxProps>(BOX_TAG, {
     return html`<div class="box" part="box"><slot></slot></div>`;
   },
 
-  styles: [...surfaceMixins, rainbowEffectMixin('.box'), frostVariantMixin('.box'), componentStyles],
+  styles: [...surfaceMixins, frostVariantMixin('.box'), rainbowEffectMixin('.box'), componentStyles],
 });

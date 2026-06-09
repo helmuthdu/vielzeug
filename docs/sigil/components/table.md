@@ -4,16 +4,16 @@ A semantic, accessible data table component with striped rows, borders, sticky h
 
 ## Features
 
-- 📋 **Flat row API**: Compose with `<sg-tr head>`, `<sg-tr>`, `<sg-tr foot>`, `<sg-th>`, `<sg-td>` — no wrapper elements needed
-- 📏 **3 Density Variants**: `compact` · `cozy` (default) · `comfortable`
-- 🦓 **Striped rows** for easier scanning of dense data
-- 🔲 **Bordered** variant with rounded outline
-- 📌 **Sticky header** that stays visible while the body scrolls
-- 🔄 **Loading / busy state** with reduced opacity and `aria-busy`
-- 📱 **Responsive**: horizontal scroll container prevents layout overflow
-- 🏷️ **Visible caption** rendered above the table, also used as `aria-label`
-- ♿ **Fully Accessible**: WCAG 2.1 Level AA compliant
-- 🎨 **CSS custom properties** for complete styling control
+- <sg-icon name="clipboard" size="16"></sg-icon> **Flat row API**: Compose with `<sg-tr head>`, `<sg-tr>`, `<sg-tr foot>`, `<sg-th>`, `<sg-td>` — no wrapper elements needed
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Density Variants**: `compact` · `cozy` (default) · `comfortable`
+- <sg-icon name="scan-line" size="16"></sg-icon> **Striped rows** for easier scanning of dense data
+- <sg-icon name="square" size="16"></sg-icon> **Bordered** variant with rounded outline
+- <sg-icon name="map-pin" size="16"></sg-icon> **Sticky header** that stays visible while the body scrolls
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Loading / busy state** with reduced opacity and `aria-busy`
+- <sg-icon name="smartphone" size="16"></sg-icon> **Responsive**: horizontal scroll container prevents layout overflow
+- <sg-icon name="tag" size="16"></sg-icon> **Visible caption** rendered above the table, also used as `aria-label`
+- <sg-icon name="accessibility" size="16"></sg-icon> **Fully Accessible**: WCAG 2.1 Level AA compliant
+- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** for complete styling control
 
 ## Source Code
 
@@ -46,10 +46,6 @@ A semantic, accessible data table component with striped rows, borders, sticky h
     <sg-td>Inactive</sg-td>
   </sg-tr>
 </sg-table>
-
-<script type="module">
-  import '@vielzeug/sigil/table';
-</script>
 ```
 
 ## Visual Options
@@ -410,19 +406,19 @@ The table component follows WCAG 2.1 Level AA standards.
 
 ### `sg-table`
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-busy` is set to `"true"` when `loading` is active.
 - `aria-label` is set to the `caption` value when provided.
 - The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `sg-table`'s shadow DOM, preserving all table semantics for assistive technologies.
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - `<sg-th>` in a `<sg-tr head>` row automatically gets `scope="col"` on the native `<th>`.
 - `<sg-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
 - Use the `caption` attribute on `sg-table` to label the table for assistive technologies.
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Standard browser table keyboard navigation applies (Tab, arrow keys with screen readers).
 

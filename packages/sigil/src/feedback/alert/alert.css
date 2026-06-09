@@ -234,29 +234,28 @@
 }
 
 @layer sigil.variants {
-  :host(:not([variant])) .alert,
-  :host([variant='flat']) .alert {
-    color: var(--_theme-base);
-    background: var(--color-canvas);
-    border-color: var(--_theme-base);
-    box-shadow: var(--shadow-none);
+  /* Flat (Default) — canvas background, theme-colored border and text */
+  :host(:not([variant])),
+  :host([variant='flat']) {
+    --_bg: var(--alert-bg, var(--color-canvas));
+    --_color: var(--alert-color, var(--_theme-base));
+    --_border-color: var(--alert-border-color, var(--_theme-base));
+    --_shadow: var(--alert-shadow, var(--shadow-none));
   }
 
-  :host([variant='solid']) .alert {
-    color: var(--_theme-contrast);
-    background: var(--_theme-base);
-    border-color: var(--_theme-base);
-    box-shadow: var(--shadow-xs);
+  /* Solid — fully filled with theme color */
+  :host([variant='solid']) {
+    --_bg: var(--alert-bg, var(--_theme-base));
+    --_color: var(--alert-color, var(--_theme-contrast));
+    --_border-color: var(--alert-border-color, var(--_theme-base));
+    --_shadow: var(--alert-shadow, var(--shadow-xs));
   }
 
-  :host([variant='solid']) .close {
-    color: var(--_theme-contrast);
-  }
-
-  :host([variant='bordered']) .alert {
-    color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-backdrop), var(--color-canvas));
-    border-color: color-mix(in srgb, var(--_theme-focus) 30%, transparent);
-    box-shadow: var(--inset-shadow-2xs);
+  /* Bordered — tinted background with a subtle themed border */
+  :host([variant='bordered']) {
+    --_bg: var(--alert-bg, color-mix(in srgb, var(--_theme-backdrop), var(--color-canvas)));
+    --_color: var(--alert-color, var(--_theme-base));
+    --_border-color: var(--alert-border-color, color-mix(in srgb, var(--_theme-focus) 30%, transparent));
+    --_shadow: var(--alert-shadow, var(--inset-shadow-2xs));
   }
 }

@@ -7,12 +7,12 @@ A radio button and a group wrapper for mutually exclusive selections.
 
 ## Features
 
-- ↕️ **2 Orientations** (group) — vertical & horizontal
-- ♿ **Accessible** — ARIA roles, roving tabindex, arrow key nav
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 🎭 **States** — checked, unchecked, disabled
-- 📏 **3 Sizes** — sm, md, lg
-- 📝 **Helper & Error Text** (group) — inline validation feedback
+- <sg-icon name="arrow-up-down" size="16"></sg-icon> **2 Orientations** (group) — vertical & horizontal
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — ARIA roles, roving tabindex, arrow key nav
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, disabled
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** (group) — inline validation feedback
 
 ## Source Code
 
@@ -31,10 +31,6 @@ A radio button and a group wrapper for mutually exclusive selections.
 ```html
 <sg-radio name="choice" value="option1" checked>Option 1</sg-radio>
 <sg-radio name="choice" value="option2">Option 2</sg-radio>
-
-<script type="module">
-  import '@vielzeug/sigil/radio';
-</script>
 ```
 
 ::: tip Radio Groups
@@ -98,11 +94,6 @@ Prevent interaction and reduce opacity for unavailable options.
   <sg-radio value="medium">Medium</sg-radio>
   <sg-radio value="large">Large</sg-radio>
 </sg-radio-group>
-
-<script type="module">
-  import '@vielzeug/sigil/radio-group';
-  import '@vielzeug/sigil/radio';
-</script>
 ```
 
 ### Orientation
@@ -235,11 +226,14 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ### `sg-radio` CSS Custom Properties
 
-| Property             | Description             | Default         |
-| -------------------- | ----------------------- | --------------- |
-| `--radio-size`       | Size of the circle      | Size-dependent  |
-| `--radio-checked-bg` | Background when checked | Color-dependent |
-| `--radio-color`      | Inner dot color         | `white`         |
+| Property                  | Description                           | Default         |
+| ------------------------- | ------------------------------------- | --------------- |
+| `--radio-size`            | Control size (width and height)       | Size-dependent  |
+| `--radio-bg`              | Unchecked background color            | Theme-dependent |
+| `--radio-border-color`    | Unchecked border color                | Theme-dependent |
+| `--radio-checked-bg`      | Selected indicator background color   | Color-dependent |
+| `--radio-color`           | Selected indicator dot color          | Theme-dependent |
+| `--radio-font-size`       | Label font size                       | Size-dependent  |
 
 ### `sg-radio-group` Attributes
 
@@ -281,23 +275,23 @@ The radio components follow WCAG 2.1 Level AA standards.
 
 ### `sg-radio`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` select a radio; `Tab` moves focus in and out of the group.
 - Arrow keys navigate between radios within a group using a roving tabindex.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="radio"` with `aria-checked` reflecting the current state.
 - `aria-disabled` reflects the disabled state.
 
 ### `sg-radio-group`
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
 

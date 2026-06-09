@@ -45,18 +45,10 @@ export type SgAccordionProps = {
  *
  * @slot - `sg-accordion-item` elements
  *
- * @cssprop --blur-lg - Backdrop blur for frosted accordion variants
- * @cssprop --border - Border token used for accordion item outlines
- * @cssprop --color-canvas - Base panel background color
- * @cssprop --color-contrast - Primary text contrast color within items
- * @cssprop --color-contrast-100 - Hover and active background contrast tone
- * @cssprop --color-contrast-200 - Divider and border contrast color
- * @cssprop --color-contrast-50 - Soft background for subtle variants
- * @cssprop --color-secondary - Accent color for selected or emphasized states
- * @cssprop --inset-shadow-xs - Inset shadow used for bordered/flat depth
- * @cssprop --rounded-lg - Corner radius for accordion item containers
- * @cssprop --shadow-md - Elevated shadow for prominent accordion styles
- * @cssprop --shadow-xs - Subtle shadow for default accordion depth
+ * @cssprop --accordion-bg - Container background color (solid/flat/glass/frost variants)
+ * @cssprop --accordion-border-color - Container border color (solid/flat variants)
+ * @cssprop --accordion-divider-color - Divider color between items (text variant)
+ * @cssprop --accordion-shadow - Container box shadow
  * @example
  * ```html
  * <sg-accordion selection-mode="single">

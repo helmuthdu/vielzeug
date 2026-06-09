@@ -4,21 +4,21 @@ An accessible, keyboard-navigable data grid with built-in column sorting, row-le
 
 ## Features
 
-- 📊 **Declarative column API** — define `key`, `label`, `sortable`, `resizable`, `width`, and optional `cell` / `renderExpanded` renderers per column
-- 📝 **Declarative HTML API** — use `<sg-column>` child elements instead of the `columns` JS property
-- ↕️ **Column sorting** — click/Enter cycles `none → asc → desc`; emits `sort-change`; `sort-mode="server"` passes sorting responsibility to the consumer
-- ↔️ **Column resizing** — set `resizable: true` on a column for a drag handle; widths persist across re-renders
-- ✅ **Single & multi selection** — `selection-mode="single"` or `"multi"` with a dedicated checkbox column; emits `selection-change`; `selected-keys` prop for controlled/programmatic selection
-- 📄 **Built-in pagination** — configurable `page-size` (reactive after mount); prev/next controls with `aria-live` info text; emits `page-change`
-- 🔽 **Row expansion** — `expandable` + `renderExpanded` per column renders an inline detail panel; emits `row-expand`
-- 🔍 **Search & filters** — `searchable` for full-text search; `filters` prop for multi-select column filters via `sg-combobox`; stale filters are pruned automatically when columns change
-- 🦓 **Striped rows** — `striped` attribute for alternate-row backgrounds
-- 🔄 **Loading state** — `loading` attribute reduces opacity and sets `aria-busy`
-- 🚫 **Disabled state** — `disabled` blocks all interaction and sets `aria-disabled`
-- 🏷️ **Empty state** — configurable `empty-text` when no rows are present
-- ♿ **Fully accessible** — `role="grid"`, `role="columnheader"`, `role="gridcell"`, `aria-sort`, `aria-selected`, `aria-expanded`, `aria-live` pagination info; roving tabindex cell navigation
-- ⌨️ **Keyboard navigation** — ARIA Grid pattern; Arrow keys move between cells; Enter/Space on sort buttons and selectable rows
-- 🎨 **CSS custom properties** — full theming via `--datagrid-*` tokens
+- <sg-icon name="bar-chart-2" size="16"></sg-icon> **Declarative column API** — define `key`, `label`, `sortable`, `resizable`, `width`, and optional `cell` / `renderExpanded` renderers per column
+- <sg-icon name="file-pen" size="16"></sg-icon> **Declarative HTML API** — use `<sg-column>` child elements instead of the `columns` JS property
+- <sg-icon name="arrow-up-down" size="16"></sg-icon> **Column sorting** — click/Enter cycles `none → asc → desc`; emits `sort-change`; `sort-mode="server"` passes sorting responsibility to the consumer
+- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Column resizing** — set `resizable: true` on a column for a drag handle; widths persist across re-renders
+- <sg-icon name="circle-check" size="16"></sg-icon> **Single & multi selection** — `selection-mode="single"` or `"multi"` with a dedicated checkbox column; emits `selection-change`; `selected-keys` prop for controlled/programmatic selection
+- <sg-icon name="file-text" size="16"></sg-icon> **Built-in pagination** — configurable `page-size` (reactive after mount); prev/next controls with `aria-live` info text; emits `page-change`
+- <sg-icon name="chevron-down" size="16"></sg-icon> **Row expansion** — `expandable` + `renderExpanded` per column renders an inline detail panel; emits `row-expand`
+- <sg-icon name="search" size="16"></sg-icon> **Search & filters** — `searchable` for full-text search; `filters` prop for multi-select column filters via `sg-combobox`; stale filters are pruned automatically when columns change
+- <sg-icon name="scan-line" size="16"></sg-icon> **Striped rows** — `striped` attribute for alternate-row backgrounds
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Loading state** — `loading` attribute reduces opacity and sets `aria-busy`
+- <sg-icon name="ban" size="16"></sg-icon> **Disabled state** — `disabled` blocks all interaction and sets `aria-disabled`
+- <sg-icon name="tag" size="16"></sg-icon> **Empty state** — configurable `empty-text` when no rows are present
+- <sg-icon name="accessibility" size="16"></sg-icon> **Fully accessible** — `role="grid"`, `role="columnheader"`, `role="gridcell"`, `aria-sort`, `aria-selected`, `aria-expanded`, `aria-live` pagination info; roving tabindex cell navigation
+- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard navigation** — ARIA Grid pattern; Arrow keys move between cells; Enter/Space on sort buttons and selectable rows
+- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — full theming via `--datagrid-*` tokens
 
 ## Source Code
 
@@ -376,7 +376,7 @@ Set `resizable: true` on any column to add a drag handle on its right edge. Drag
 
 ## Row Expansion
 
-Add `expandable` to the grid and supply a `renderExpanded` function on one or more columns. Each row gets a toggle button (▶) that shows an inline detail panel spanning all columns.
+Add `expandable` to the grid and supply a `renderExpanded` function on one or more columns. Each row gets a toggle button (<sg-icon name="play" size="16"></sg-icon>) that shows an inline detail panel spanning all columns.
 
 - Multiple rows can be expanded simultaneously.
 - The `row-expand` event fires with `{ key, expanded }` on each toggle.

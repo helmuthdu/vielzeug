@@ -4,12 +4,12 @@ A navigational landmark that shows the user's current location in a hierarchy. R
 
 ## Features
 
-- 📍 **Semantic HTML**: renders `<nav>` → `<ol>` → `<li>` for proper landmark semantics
-- ✅ **active prop**: marks the current page — adds `aria-current="page"` and disables the link
-- 🔗 **Flexible hrefs**: each item accepts an `href` for standard navigation
-- 🎨 **Custom separator**: override the separator character per-instance or via CSS variable
-- 🖼️ **Icon slot**: each item supports a leading `icon` slot
-- ♿ **ARIA**: `aria-label` on `<nav>`, `aria-current="page"` on active item, `aria-disabled` on the active link
+- <sg-icon name="map-pin" size="16"></sg-icon> **Semantic HTML**: renders `<nav>` → `<ol>` → `<li>` for proper landmark semantics
+- <sg-icon name="circle-check" size="16"></sg-icon> **active prop**: marks the current page — adds `aria-current="page"` and disables the link
+- <sg-icon name="link" size="16"></sg-icon> **Flexible hrefs**: each item accepts an `href` for standard navigation
+- <sg-icon name="palette" size="16"></sg-icon> **Custom separator**: override the separator character per-instance or via CSS variable
+- <sg-icon name="image" size="16"></sg-icon> **Icon slot**: each item supports a leading `icon` slot
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA**: `aria-label` on `<nav>`, `aria-current="page"` on active item, `aria-disabled` on the active link
 
 ## Source Code
 
@@ -27,10 +27,6 @@ Wrap `sg-breadcrumb-item` elements inside `sg-breadcrumb`. Mark the current page
   <sg-breadcrumb-item href="/products">Products</sg-breadcrumb-item>
   <sg-breadcrumb-item active>Sneakers</sg-breadcrumb-item>
 </sg-breadcrumb>
-
-<script type="module">
-  import '@vielzeug/sigil/breadcrumb';
-</script>
 ```
 
 ## Items with Icons
@@ -42,15 +38,15 @@ Use the `icon` named slot on any `sg-breadcrumb-item` for a leading icon.
 ```html
 <sg-breadcrumb>
   <sg-breadcrumb-item href="/">
-    <span slot="icon">🏠</span>
+    <span slot="icon"><sg-icon name="house" size="16"></sg-icon></span>
     Home
   </sg-breadcrumb-item>
   <sg-breadcrumb-item href="/settings">
-    <span slot="icon">⚙️</span>
+    <span slot="icon"><sg-icon name="settings" size="16"></sg-icon>️</span>
     Settings
   </sg-breadcrumb-item>
   <sg-breadcrumb-item active>
-    <span slot="icon">🔔</span>
+    <span slot="icon"><sg-icon name="bell" size="16"></sg-icon></span>
     Notifications
   </sg-breadcrumb-item>
 </sg-breadcrumb>
@@ -151,12 +147,12 @@ The breadcrumb component follows WAI-ARIA best practices.
 
 ### `sg-breadcrumb`
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders a `<nav>` element with `aria-label` matching the `label` attribute — it serves as a navigation landmark.
 - Items are rendered as `<li>` elements inside an `<ol>`, conveying the sequential structure to screen readers.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The `active` item receives `aria-current="page"` and `aria-disabled="true"` so it is announced as the current location and not activated when clicked.
 - The separator is rendered via CSS `content` (or a hidden `aria-hidden` element) so it is not read aloud.

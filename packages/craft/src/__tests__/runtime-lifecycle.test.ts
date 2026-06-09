@@ -136,6 +136,17 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
 });
 
 describe('onEvent()', () => {
+  it('does not throw when target is null or undefined', async () => {
+    await expect(
+      mount(() => {
+        onEvent(null, 'click', () => {});
+        onEvent(undefined, 'click', () => {});
+
+        return html`<div></div>`;
+      }),
+    ).resolves.toBeDefined();
+  });
+
   it('attaches listener and cleans it up on unmount', async () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;

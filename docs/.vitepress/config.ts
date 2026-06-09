@@ -242,6 +242,7 @@ export default defineConfig({
               { link: '/grip/', text: 'Grip' },
               { link: '/lingua/', text: 'Lingua' },
               { link: '/orbit/', text: 'Orbit' },
+              { link: '/prism/', text: 'Prism' },
               { link: '/scroll/', text: 'Scroll' },
             ],
             text: 'Frontend & Logic',
@@ -1091,6 +1092,44 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/prism/': [
+        { link: '/prism/', text: 'Overview' },
+        {
+          items: [
+            { link: '/prism/usage#reactivity-with-signals', text: 'Reactivity' },
+            { link: '/prism/usage#line-charts', text: 'Line Charts' },
+            { link: '/prism/usage#bar-charts', text: 'Bar Charts' },
+            { link: '/prism/usage#area-charts', text: 'Area Charts' },
+            { link: '/prism/usage#axes-and-grid', text: 'Axes & Grid' },
+            { link: '/prism/usage#tooltips', text: 'Tooltips' },
+            { link: '/prism/usage#theming', text: 'Theming' },
+            { link: '/prism/usage#scales-standalone', text: 'Scales' },
+            { link: '/prism/usage#lifecycle-and-cleanup', text: 'Lifecycle' },
+          ],
+          link: '/prism/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/prism/api#chart-factories', text: 'Chart Factories' },
+            { link: '/prism/api#scale-factories', text: 'Scale Factories' },
+            { link: '/prism/api#types', text: 'Types' },
+          ],
+          link: '/prism/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/prism/examples#line-chart', text: 'Line Chart' },
+            { link: '/prism/examples#bar-chart', text: 'Bar Chart' },
+            { link: '/prism/examples#area-chart', text: 'Area Chart' },
+            { link: '/prism/examples#reactive-chart', text: 'Reactive Chart' },
+            { link: '/prism/examples#custom-tooltip', text: 'Custom Tooltip' },
+          ],
+          link: '/prism/examples',
+          text: 'Examples',
+        },
+      ],
       '/ripple/': [
         { link: '/ripple/', text: 'Overview' },
         {
@@ -1693,6 +1732,7 @@ export default defineConfig({
         '@vielzeug/herald': resolve(__dirname, '../../packages/herald/src'),
         '@vielzeug/lingua': resolve(__dirname, '../../packages/lingua/src'),
         '@vielzeug/orbit': resolve(__dirname, '../../packages/orbit/src'),
+        '@vielzeug/prism': resolve(__dirname, '../../packages/prism/src'),
         '@vielzeug/ripple': resolve(__dirname, '../../packages/ripple/src'),
         '@vielzeug/rune': resolve(__dirname, '../../packages/rune/src'),
         '@vielzeug/scroll': resolve(__dirname, '../../packages/scroll/src'),

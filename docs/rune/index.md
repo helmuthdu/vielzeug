@@ -35,7 +35,7 @@ exports:
 # Rune
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
 
@@ -140,13 +140,13 @@ api.info({ data }, 'GET /users');
 | Feature              | Rune                                       | Winston       | Pino       | console |
 | -------------------- | ------------------------------------------ | ------------- | ---------- | ------- |
 | Bundle size          | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
-| Browser support      | ✅                                         | ❌            | ❌         | ✅      |
-| Scoped loggers       | ✅                                         | Manual        | Child      | ❌      |
-| Pluggable transports | ✅ Built-in factories                      | ✅ Transports | ✅ Streams | ❌      |
-| Structured log entry | ✅ `LogEntry` type                         | Partial       | ✅         | ❌      |
-| Lazy bindings        | ✅ `lazy(fn)`                              | ❌            | ❌         | ❌      |
-| Styled output        | ✅ CSS badges                              | Text only     | Text only  | Manual  |
-| Zero dependencies    | ✅                                         | ❌ (15+)      | ❌ (5+)    | N/A     |
+| Browser support      | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>            | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Scoped loggers       | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Manual        | Child      | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Pluggable transports | <sg-icon name="circle-check" size="16"></sg-icon> Built-in factories                      | <sg-icon name="circle-check" size="16"></sg-icon> Transports | <sg-icon name="circle-check" size="16"></sg-icon> Streams | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Structured log entry | <sg-icon name="circle-check" size="16"></sg-icon> `LogEntry` type                         | Partial       | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Lazy bindings        | <sg-icon name="circle-check" size="16"></sg-icon> `lazy(fn)`                              | <sg-icon name="circle-x" size="16"></sg-icon>            | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
+| Styled output        | <sg-icon name="circle-check" size="16"></sg-icon> CSS badges                              | Text only     | Text only  | Manual  |
+| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon> (15+)      | <sg-icon name="circle-x" size="16"></sg-icon> (5+)    | N/A     |
 
 **Use Rune when** you need isomorphic logging (browser + Node.js), namespaced module loggers, or remote error delivery without a heavy dependency chain.
 
@@ -174,10 +174,10 @@ api.info({ data }, 'GET /users');
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

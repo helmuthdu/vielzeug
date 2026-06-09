@@ -4,16 +4,16 @@ A flexible CSS Grid layout component with element-width responsive columns, name
 
 ## Features
 
-- 📐 **12-Column System**: Fixed 1–12 column layouts plus auto-fit mode
-- 📱 **Element-Width Responsive**: Breakpoints respond to the element's own width via ResizeObserver — works correctly inside sidebars, modals, and nested layouts
-- 🎯 **Explicit Breakpoint Control**: Set columns at sm, md, lg, and xl widths with dedicated attributes
-- 📏 **Row Support**: Define explicit row layouts for dashboard grids
-- 🗺️ **Named Grid Areas**: Use `areas` to define named regions directly on the grid
-- 🔄 **Flow Control**: Row, column, and dense packing modes
-- 📊 **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
-- 🧲 **Alignment Control**: Align and justify items with CSS Grid properties
-- 🎨 **Grid Item Component**: Precise placement with `sg-grid-item` using named areas, spans, or raw CSS grid shorthand
-- 🔧 **Customizable**: CSS custom properties available as fallbacks
+- <sg-icon name="triangle-right" size="16"></sg-icon> **12-Column System**: Fixed 1–12 column layouts plus auto-fit mode
+- <sg-icon name="smartphone" size="16"></sg-icon> **Element-Width Responsive**: Breakpoints respond to the element's own width via ResizeObserver — works correctly inside sidebars, modals, and nested layouts
+- <sg-icon name="crosshair" size="16"></sg-icon> **Explicit Breakpoint Control**: Set columns at sm, md, lg, and xl widths with dedicated attributes
+- <sg-icon name="ruler" size="16"></sg-icon> **Row Support**: Define explicit row layouts for dashboard grids
+- <sg-icon name="map" size="16"></sg-icon>️ **Named Grid Areas**: Use `areas` to define named regions directly on the grid
+- <sg-icon name="refresh-cw" size="16"></sg-icon> **Flow Control**: Row, column, and dense packing modes
+- <sg-icon name="bar-chart-2" size="16"></sg-icon> **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
+- <sg-icon name="magnet" size="16"></sg-icon> **Alignment Control**: Align and justify items with CSS Grid properties
+- <sg-icon name="palette" size="16"></sg-icon> **Grid Item Component**: Precise placement with `sg-grid-item` using named areas, spans, or raw CSS grid shorthand
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties available as fallbacks
 
 ## Source Code
 
@@ -33,11 +33,6 @@ A flexible CSS Grid layout component with element-width responsive columns, name
   <sg-card>Item 2</sg-card>
   <sg-card>Item 3</sg-card>
 </sg-grid>
-
-<script type="module">
-  import '@vielzeug/sigil/grid';
-  import '@vielzeug/sigil/card';
-</script>
 ```
 
 ## Column Layouts
@@ -556,7 +551,7 @@ These are fallback values — attributes take precedence when set.
       <sg-text>This is the main featured area.</sg-text>
     </sg-card>
   </sg-grid-item>
-  <sg-card padding="md" color="secondary"> <sg-text variant="heading" size="md">✨ Side</sg-text></sg-card>
+  <sg-card padding="md" color="secondary"> <sg-text variant="heading" size="md"><sg-icon name="sparkles" size="16"></sg-icon> Side</sg-text></sg-card>
   <sg-card padding="md"><sg-text>Item 2</sg-text></sg-card>
   <sg-card padding="md"><sg-text>Item 3</sg-text></sg-card>
   <sg-grid-item col-span="2">
@@ -579,11 +574,11 @@ These are fallback values — attributes take precedence when set.
   gap="md"
   style="width: 100%; min-height: 400px;">
   <sg-box padding="xl" color="primary" style="grid-area: hero;">
-    <sg-text variant="heading" size="lg">🎯 Main Feature</sg-text>
+    <sg-text variant="heading" size="lg"><sg-icon name="crosshair" size="16"></sg-icon> Main Feature</sg-text>
     <sg-text>Large hero section for your most important content.</sg-text>
   </sg-box>
   <sg-box padding="lg" color="secondary" style="grid-area: side;">
-    <sg-text variant="heading" size="md">✨ Side</sg-text>
+    <sg-text variant="heading" size="md"><sg-icon name="sparkles" size="16"></sg-icon> Side</sg-text>
   </sg-box>
   <sg-box padding="md" style="grid-area: a;"><sg-text variant="heading" size="md">A</sg-text></sg-box>
   <sg-box padding="md" style="grid-area: b;"><sg-text variant="heading" size="md">B</sg-text></sg-box>
@@ -600,12 +595,12 @@ The grid component follows WAI-ARIA best practices.
 
 ### `sg-grid`
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Maintains semantic HTML structure and document reading order by default.
 - Grid layout is purely visual — keyboard navigation follows DOM order.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - Compatible with screen readers.
 - Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement.

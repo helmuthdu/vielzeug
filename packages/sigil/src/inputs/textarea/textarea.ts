@@ -67,18 +67,20 @@ export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'f
  *
  * @slot helper - Complex helper content
  *
- * @cssprop --border - Border token.
- * @cssprop --color-canvas - Base surface background color.
- * @cssprop --color-contrast-100 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-400 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-50 - Contrast color token for text and surfaces.
- * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
- * @cssprop --color-error - Error state color token.
- * @cssprop --color-error-focus-shadow - Focus ring shadow color.
- * @cssprop --color-primary-focus-shadow - Focus ring shadow color.
- * @cssprop --color-warning - Warning state color token.
- * @cssprop --font-medium - Font-weight token.
+ * @cssprop --textarea-bg - Background color
+ * @cssprop --textarea-border-color - Border color
+ * @cssprop --textarea-placeholder-color - Placeholder text color
+ * @cssprop --textarea-radius - Border radius
+ * @cssprop --textarea-padding - Inner padding (block inline)
+ * @cssprop --textarea-gap - Gap between label and field
+ * @cssprop --textarea-font-size - Font size
+ * @cssprop --textarea-min-height - Minimum field height
+ * @cssprop --textarea-max-height - Maximum field height (none = unlimited)
+ * @cssprop --textarea-resize - CSS resize direction ('vertical' | 'horizontal' | 'both' | 'none')
+ * @cssprop --textarea-hover-bg - Field background on hover (flat/ghost variants)
+ * @cssprop --textarea-hover-border-color - Field border on hover (flat/bordered variants)
+ * @cssprop --textarea-focus-bg - Field background when focused (flat variant)
+ * @cssprop --textarea-focus-border-color - Field border when focused (flat variant)
  *
  * @part wrapper - Outer wrapper element.
  * @part label - Label element.

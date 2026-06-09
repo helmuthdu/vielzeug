@@ -1,0 +1,342 @@
+@layer prism.tokens {
+  :root {
+    /* ========================================
+       Series Color Palette
+       Colorblind-safe palette based on Wong (2011) and IBM Design.
+       Distinguishable under deuteranopia, protanopia, and tritanopia.
+       Ordered for maximum perceptual contrast between adjacent series.
+       ======================================== */
+    --prism-color-1: #0072b2; /* Blue */
+    --prism-color-2: #e69f00; /* Orange */
+    --prism-color-3: #009e73; /* Bluish green */
+    --prism-color-4: #cc79a7; /* Reddish purple */
+    --prism-color-5: #56b4e9; /* Sky blue */
+    --prism-color-6: #d55e00; /* Vermilion */
+    --prism-color-7: #f0e442; /* Yellow */
+    --prism-color-8: #000; /* Black */
+
+    /* ========================================
+       Chart Structure
+       Core layout and background tokens
+       ======================================== */
+    --prism-bg: transparent;
+    --prism-border-radius: 0.375rem;
+
+    /* ========================================
+       Axes & Grid
+       Structural lines and labels
+       ======================================== */
+    --prism-axis-color: hsl(215deg 16% 47%);
+    --prism-axis-width: 1;
+    --prism-grid-color: hsl(220deg 10% 75%);
+    --prism-grid-width: 1;
+    --prism-grid-dash: none;
+    --prism-grid-opacity: 0.25;
+
+    /* ========================================
+       Typography
+       Chart labels, ticks, and titles
+       ======================================== */
+    --prism-text-color: hsl(215deg 25% 27%);
+    --prism-text-color-secondary: hsl(215deg 16% 47%);
+    --prism-font-family: system-ui, -apple-system, sans-serif;
+    --prism-font-size: 0.75rem;
+    --prism-font-size-label: 0.6875rem;
+    --prism-font-size-title: 0.875rem;
+    --prism-font-weight: 400;
+    --prism-font-weight-title: 600;
+
+    /* ========================================
+       Tooltip
+       Floating data detail overlay
+       ======================================== */
+    --prism-tooltip-bg: hsl(222deg 47% 11%);
+    --prism-tooltip-color: hsl(210deg 40% 98%);
+    --prism-tooltip-border: hsl(215deg 19% 25%);
+    --prism-tooltip-radius: 0.375rem;
+    --prism-tooltip-padding: 0.375rem 0.625rem;
+    --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+    --prism-tooltip-font-size: 0.75rem;
+
+    /* ========================================
+       Crosshair
+       Hover guide lines
+       ======================================== */
+    --prism-crosshair-color: hsl(215deg 16% 47%);
+    --prism-crosshair-width: 1;
+    --prism-crosshair-dash: 4 2;
+    --prism-crosshair-opacity: 0.6;
+
+    /* ========================================
+       Data Points
+       Dot markers on line/area charts
+       ======================================== */
+    --prism-point-radius: 3;
+    --prism-point-radius-hover: 5;
+    --prism-point-stroke-width: 0;
+    --prism-point-stroke: none;
+
+    /* ========================================
+       Bars
+       Bar chart element styling
+       ======================================== */
+    --prism-bar-radius: 2px;
+    --prism-bar-hover-opacity: 0.8;
+    --prism-bar-gap: 0.1;
+
+    /* ========================================
+       Area
+       Area chart fill styling
+       ======================================== */
+    --prism-area-opacity: 0.25;
+    --prism-area-stroke-width: 2;
+
+    /* ========================================
+       Line
+       Line chart stroke styling
+       ======================================== */
+    --prism-line-width: 2;
+    --prism-line-width-hover: 2.5;
+
+    /* ========================================
+       Transitions & Animation
+       Respects prefers-reduced-motion
+       ======================================== */
+    --prism-duration-fast: 150ms;
+    --prism-duration: 300ms;
+    --prism-duration-slow: 500ms;
+    --prism-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --prism-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --prism-transition: var(--prism-duration) var(--prism-ease);
+    --prism-transition-fast: var(--prism-duration-fast) var(--prism-ease);
+
+    /* ========================================
+       Legend
+       Series labels below/beside chart
+       ======================================== */
+    --prism-legend-gap: 1rem;
+    --prism-legend-dot-size: 0.5rem;
+    --prism-legend-font-size: 0.75rem;
+  }
+
+  /* ========================================
+     Dark Mode
+     Triggered by OS preference or html.dark class
+     ======================================== */
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --prism-color-1: #56b4e9; /* Sky blue (brighter in dark) */
+      --prism-color-2: #e69f00; /* Orange */
+      --prism-color-3: #009e73; /* Bluish green */
+      --prism-color-4: #cc79a7; /* Reddish purple */
+      --prism-color-5: #0072b2; /* Blue */
+      --prism-color-6: #d55e00; /* Vermilion */
+      --prism-color-7: #f0e442; /* Yellow */
+      --prism-color-8: #fff; /* White (replaces black for dark bg) */
+      --prism-axis-color: hsl(215deg 16% 47%);
+      --prism-grid-color: hsl(220deg 10% 25%);
+      --prism-grid-opacity: 0.5;
+      --prism-text-color: hsl(214deg 32% 91%);
+      --prism-text-color-secondary: hsl(215deg 16% 57%);
+      --prism-tooltip-bg: hsl(222deg 47% 6%);
+      --prism-tooltip-color: hsl(210deg 40% 96%);
+      --prism-tooltip-border: hsl(215deg 19% 18%);
+      --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+      --prism-crosshair-color: hsl(215deg 16% 57%);
+      --prism-point-stroke: none;
+    }
+  }
+
+  html.dark {
+    --prism-color-1: #56b4e9;
+    --prism-color-2: #e69f00;
+    --prism-color-3: #009e73;
+    --prism-color-4: #cc79a7;
+    --prism-color-5: #0072b2;
+    --prism-color-6: #d55e00;
+    --prism-color-7: #f0e442;
+    --prism-color-8: #fff;
+    --prism-axis-color: hsl(215deg 16% 47%);
+    --prism-grid-color: hsl(215deg 12% 18%);
+    --prism-text-color: hsl(214deg 32% 91%);
+    --prism-text-color-secondary: hsl(215deg 16% 57%);
+    --prism-tooltip-bg: hsl(222deg 47% 6%);
+    --prism-tooltip-color: hsl(210deg 40% 96%);
+    --prism-tooltip-border: hsl(215deg 19% 18%);
+    --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+    --prism-crosshair-color: hsl(215deg 16% 57%);
+    --prism-point-stroke: none;
+  }
+
+  /* ========================================
+     Reduced Motion
+     Disable all chart transitions/animations
+     ======================================== */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --prism-duration-fast: 0ms;
+      --prism-duration: 0ms;
+      --prism-duration-slow: 0ms;
+      --prism-transition: none;
+      --prism-transition-fast: none;
+    }
+  }
+}
+
+/* ========================================
+   Component Styles
+   Structural CSS for chart elements
+   ======================================== */
+
+@layer prism.base {
+  .prism-chart {
+    font-family: var(--prism-font-family);
+    font-size: var(--prism-font-size);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Axes */
+  .prism-axis-line,
+  .prism-axis-tick {
+    stroke: var(--prism-axis-color);
+    stroke-width: var(--prism-axis-width);
+  }
+
+  .prism-axis-label {
+    font-size: var(--prism-font-size-label);
+    font-weight: var(--prism-font-weight);
+    fill: var(--prism-text-color-secondary);
+  }
+
+  .prism-axis-title {
+    font-size: var(--prism-font-size-title);
+    font-weight: var(--prism-font-weight-title);
+    fill: var(--prism-text-color);
+  }
+
+  /* Grid */
+  .prism-grid-line {
+    opacity: var(--prism-grid-opacity);
+    stroke: var(--prism-grid-color);
+    stroke-width: var(--prism-grid-width);
+    stroke-dasharray: var(--prism-grid-dash);
+  }
+
+  /* Crosshair */
+  .prism-crosshair-v,
+  .prism-crosshair-h {
+    opacity: var(--prism-crosshair-opacity);
+    stroke: var(--prism-crosshair-color);
+    stroke-width: var(--prism-crosshair-width);
+    stroke-dasharray: var(--prism-crosshair-dash);
+  }
+
+  /* Line chart */
+  .prism-line-path {
+    fill: none;
+    stroke-width: var(--prism-line-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke-width var(--prism-transition-fast);
+  }
+
+  .prism-line-series:hover .prism-line-path {
+    stroke-width: var(--prism-line-width-hover);
+  }
+
+  .prism-line-dot {
+    stroke: var(--prism-point-stroke);
+    stroke-width: var(--prism-point-stroke-width);
+    transition: r var(--prism-transition-fast);
+  }
+
+  .prism-line-dot:hover {
+    r: var(--prism-point-radius-hover);
+  }
+
+  /* Bar chart */
+  .prism-bar {
+    transition:
+      opacity var(--prism-transition-fast),
+      filter var(--prism-transition-fast);
+  }
+
+  .prism-bar:hover {
+    opacity: var(--prism-bar-hover-opacity);
+    filter: brightness(1.05);
+  }
+
+  /* Area chart */
+  .prism-area-fill {
+    opacity: var(--prism-area-opacity);
+    transition: opacity var(--prism-transition-fast);
+  }
+
+  .prism-area-series:hover .prism-area-fill {
+    opacity: calc(var(--prism-area-opacity) * 1.4);
+  }
+
+  .prism-area-line {
+    fill: none;
+    stroke-width: var(--prism-area-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Legend */
+  .prism-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--prism-legend-gap);
+    padding: 0.5rem 0;
+    font-family: var(--prism-font-family);
+    font-size: var(--prism-legend-font-size);
+    color: var(--prism-text-color);
+  }
+
+  .prism-legend--bottom,
+  .prism-legend--top {
+    justify-content: center;
+  }
+
+  .prism-legend--left,
+  .prism-legend--right {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .prism-legend-item {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+  }
+
+  .prism-legend-dot {
+    flex-shrink: 0;
+    width: var(--prism-legend-dot-size);
+    height: var(--prism-legend-dot-size);
+    border-radius: 50%;
+  }
+
+  .prism-legend-label {
+    color: var(--prism-text-color-secondary);
+  }
+
+  /* Tooltip (applied inline but structural styles here) */
+  .prism-tooltip {
+    position: absolute;
+    z-index: 10;
+    padding: var(--prism-tooltip-padding);
+    font-size: var(--prism-tooltip-font-size);
+    color: var(--prism-tooltip-color);
+    white-space: nowrap;
+    pointer-events: none;
+    background: var(--prism-tooltip-bg);
+    border: 1px solid var(--prism-tooltip-border);
+    border-radius: var(--prism-tooltip-radius);
+    box-shadow: var(--prism-tooltip-shadow);
+    opacity: 0;
+    transition: opacity var(--prism-transition-fast);
+  }
+}

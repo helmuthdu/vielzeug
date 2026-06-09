@@ -17,7 +17,7 @@ exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBun
 # Codex
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/codex`  ·  **Category:** AI Tooling
 
@@ -82,11 +82,11 @@ const html = await res.text();
 | Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
 | ------------------------- | ----------------------------------------- | ------------ | ------------------ |
 | Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
-| Zero external deps        | ❌ (MCP SDK)                              | ✅           | ✅                 |
-| Structured metadata       | ✅                                        | ❌           | ❌                 |
-| Sigil component CEM       | ✅                                        | ❌           | ❌                 |
-| Offline / snapshot-backed | ✅                                        | ❌           | ❌                 |
-| Stdio + HTTP transports   | ✅                                        | ❌           | ❌                 |
+| Zero external deps        | <sg-icon name="circle-x" size="16"></sg-icon> (MCP SDK)                              | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>                 |
+| Structured metadata       | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
+| Sigil component CEM       | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
+| Offline / snapshot-backed | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
+| Stdio + HTTP transports   | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
 
 **Use `@vielzeug/codex` when** you are building or configuring an AI agent that needs reliable, offline access to Vielzeug documentation and component metadata.
 
@@ -135,11 +135,11 @@ const html = await res.text();
 
 | Environment                 | Support |
 | --------------------------- | ------- |
-| Node.js 22+                 | ✅      |
-| Claude Desktop (stdio)      | ✅      |
-| GitHub Copilot Chat (stdio) | ✅      |
-| Remote agents (HTTP)        | ✅      |
-| Browser                     | ❌      |
+| Node.js 22+                 | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Claude Desktop (stdio)      | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| GitHub Copilot Chat (stdio) | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Remote agents (HTTP)        | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Browser                     | <sg-icon name="circle-x" size="16"></sg-icon>      |
 
 ## Documentation
 

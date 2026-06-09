@@ -36,13 +36,8 @@ export type SgTabPanelProps = {
  *
  * @slot - Panel content
  *
- * @cssprop --ease-out - Animation easing token.
- * @cssprop --size-4 - Spacing/sizing token.
- * @cssprop --tab-panel-font-size - Tabs layout/styling token.
- * @cssprop --tab-panel-padding - Tabs layout/styling token.
- * @cssprop --text-color-body - Font-size token.
- * @cssprop --text-sm - Font-size token.
- * @cssprop --transition-normal - Transition timing token.
+ * @cssprop --tab-panel-padding - Inner padding of the panel content area
+ * @cssprop --tab-panel-font-size - Font size of the panel content
  * @part panel - Panel container.
  * @example
  * ```html

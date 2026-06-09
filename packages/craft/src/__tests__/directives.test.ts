@@ -47,6 +47,57 @@ describe('Directive: each()', () => {
     expect(query('.empty')?.textContent).toBe('Empty');
   });
 
+  it('should clear fallback when list becomes non-empty', async () => {
+    const items = signal<number[]>([]);
+    const { act, query, queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            items,
+            (n) => n,
+            (n) => html`<li class="item">${n}</li>`,
+            () => html`<div class="empty">Empty</div>`,
+          )}
+        </ul>`,
+    );
+
+    expect(query('.empty')).not.toBeNull();
+
+    await act(() => {
+      items.value = [1, 2];
+    });
+
+    expect(query('.empty')).toBeNull();
+    expect(queryAll('.item')).toHaveLength(2);
+  });
+
+  it('should recreate items after list empties and repopulates', async () => {
+    const items = signal([1, 2]);
+    const { act, queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            items,
+            (n) => n,
+            (n) => html`<li class="item">${n}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(queryAll('.item')).toHaveLength(2);
+
+    await act(() => {
+      items.value = [];
+    });
+    expect(queryAll('.item')).toHaveLength(0);
+
+    await act(() => {
+      items.value = [3, 4, 5];
+    });
+    expect(queryAll('.item')).toHaveLength(3);
+    expect(queryAll('.item').map((el) => el.textContent)).toEqual(['3', '4', '5']);
+  });
+
   it('should support key function', async () => {
     const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);

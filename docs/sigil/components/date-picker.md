@@ -4,17 +4,17 @@ An accessible, keyboard-navigable date picker with an inline calendar popup. Sup
 
 ## Features
 
-- ⌨️ **Full Keyboard Nav** — Enter, Space, Escape, Arrow keys on individual day cells
-- ♿ **ARIA** — `role="combobox"` trigger, `role="dialog"` calendar, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today
-- 📅 **Three views** — Day → Month → Year drill-down with animated header label cycling
-- 🌍 **Internationalised** — Uses `Intl.DateTimeFormat`; pass any BCP 47 locale string
-- 🚫 **Min / Max bounds** — ISO 8601 `min` / `max` attributes; out-of-range days are disabled
-- 📆 **Weekend disabling** — `weekend-days="0,6"` disables Sundays and Saturdays
-- 🔗 **Form-Associated** — participates in native form submission; value is the ISO date string
-- 📏 **3 Sizes** — sm, md, lg
-- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
-- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- 📝 **Helper & Error Text** — inline assistive text below the trigger
+- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — Enter, Space, Escape, Arrow keys on individual day cells
+- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA** — `role="combobox"` trigger, `role="dialog"` calendar, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today
+- <sg-icon name="calendar" size="16"></sg-icon> **Three views** — Day → Month → Year drill-down with animated header label cycling
+- <sg-icon name="globe" size="16"></sg-icon> **Internationalised** — Uses `Intl.DateTimeFormat`; pass any BCP 47 locale string
+- <sg-icon name="ban" size="16"></sg-icon> **Min / Max bounds** — ISO 8601 `min` / `max` attributes; out-of-range days are disabled
+- <sg-icon name="calendar-days" size="16"></sg-icon> **Weekend disabling** — `weekend-days="0,6"` disables Sundays and Saturdays
+- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission; value is the ISO date string
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline assistive text below the trigger
 
 ## Source Code
 
@@ -36,8 +36,7 @@ Listen for the `change` event to react to selections:
 
 ```js
 document.querySelector('sg-date-picker').addEventListener('change', (e) => {
-  console.log(e.detail.isoValue); // '2025-06-15'
-  console.log(e.detail.value); // Date object
+  console.log(e.detail.isoValue); // '2025-06-15' or null
 });
 ```
 
@@ -55,12 +54,12 @@ Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 
 ## Disabling Weekends
 
-Pass comma-separated day-of-week indices (0 = Sunday, 6 = Saturday) to `weekend-days`.
+Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weekend-days`.
 
 <ComponentPreview vertical height="400px">
 
 ```html
-<sg-date-picker label="Business day" weekend-days="0,6"> </sg-date-picker>
+<sg-date-picker label="Business day" weekend-days="[0,6]"></sg-date-picker>
 ```
 
 </ComponentPreview>
@@ -188,7 +187,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 | `error`           | `string`               | —              | Error message (shown below trigger in error color)                          |
 | `helper`          | `string`               | —              | Helper text (shown below trigger)                                           |
 | `locale`          | `string`               | browser locale | BCP 47 locale for day/month names                                           |
-| `weekend-days`    | `string`               | —              | Comma-separated day indices to disable (e.g. `"0,6"`)                       |
+| `weekend-days`    | `string`               | —              | JSON array of day indices to disable (e.g. `"[0,6]"`)                       |
 | `color`           | `string`               | —              | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
 | `size`            | `string`               | `'md'`         | Size variant: `sm`, `md`, `lg`                                              |
 | `variant`         | `string`               | —              | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
@@ -197,9 +196,9 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ### Events
 
-| Event    | Detail                                              | Description                              |
-| -------- | --------------------------------------------------- | ---------------------------------------- |
-| `change` | `{ value: Date \| null, isoValue: string \| null }` | Fired when a date is selected or cleared |
+| Event    | Detail                         | Description                                                                                  |
+| -------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| `change` | `{ isoValue: string \| null }` | Fired when a date is selected. `isoValue` is the ISO 8601 date string or `null` when cleared |
 
 ### CSS Custom Properties
 
@@ -233,6 +232,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 - Today's date receives `aria-current="date"`.
 - Weekday column headers use `role="columnheader"`.
 - `Escape` closes the calendar from any focused element inside it.
+- Arrow keys navigate day cells: `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, `Home`/`End` move to the first/last day of the current row.
 - The trigger `aria-expanded` attribute reflects open/closed state.
 - Disabled days have `tabindex="-1"` and `pointer-events: none`.
 

@@ -3091,6 +3091,7 @@ describe('ripple', () => {
       expect(() => {
         s.replace((state) => {
           (state as { count: number }).count = 99; // would throw if proxy
+
           return { count: state.count + 1 }; // 99 + 1 = 100
         });
       }).not.toThrow();

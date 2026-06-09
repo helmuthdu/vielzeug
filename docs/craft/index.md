@@ -53,7 +53,7 @@ exports:
 # Craft
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/craft` &nbsp;·&nbsp; **Category:** UI Primitives
 
@@ -153,12 +153,12 @@ define('my-counter', {
 | Feature                    | Craft                                       | Lit                           | Stencil           |
 | -------------------------- | ------------------------------------------- | ----------------------------- | ----------------- |
 | Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
-| Signal-first runtime       | ✅                                          | ❌ (separate signals package) | ❌                |
-| Functional component setup | ✅                                          | Partial                       | ❌                |
-| Typed prop helpers         | ✅                                          | Partial                       | ✅                |
-| Host binding helpers       | ✅                                          | Partial                       | Partial           |
-| Form-associated helpers    | ✅                                          | Manual                        | Partial           |
-| Zero dependencies          | ✅                                          | ✅                            | ❌                |
+| Signal-first runtime       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon> (separate signals package) | <sg-icon name="circle-x" size="16"></sg-icon>                |
+| Functional component setup | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="circle-x" size="16"></sg-icon>                |
+| Typed prop helpers         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="circle-check" size="16"></sg-icon>                |
+| Host binding helpers       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | Partial           |
+| Form-associated helpers    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Manual                        | Partial           |
+| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>                            | <sg-icon name="circle-x" size="16"></sg-icon>                |
 
 **Use Craft when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
 
@@ -168,7 +168,7 @@ define('my-counter', {
 
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related ripple APIs
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
-- Props via `prop.*` helpers or raw `PropDef` objects
+- Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.ref`) or raw `PropDef` objects
 - Setup returns an `HTMLResult` directly: `return html\`...\``
 - Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
 - Directives: `each`, `classMap`, `styleMap`, `when`, `live`, `raw`
@@ -191,10 +191,10 @@ define('my-counter', {
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

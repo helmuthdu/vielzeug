@@ -4,12 +4,12 @@ A flexible tabs component for organizing content into switchable panels. Keyboar
 
 ## Features
 
-- 🎨 **6 Variants**: solid, flat, bordered, ghost, glass, frost
-- 🌈 **7 Colors**: primary, secondary, info, success, warning, error (+ neutral default)
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: Full ARIA roles (`tablist`, `tab`, `tabpanel`), keyboard navigation
-- 🔀 **Panel Transitions**: Fade + slide-up animation on panel reveal
-- 🧩 **Composable**: Three separate elements — `sg-tabs`, `sg-tab-item`, `sg-tab-panel`
+- <sg-icon name="palette" size="16"></sg-icon> **6 Variants**: solid, flat, bordered, ghost, glass, frost
+- <sg-icon name="rainbow" size="16"></sg-icon> **7 Colors**: primary, secondary, info, success, warning, error (+ neutral default)
+- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
+- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Full ARIA roles (`tablist`, `tab`, `tabpanel`), keyboard navigation
+- <sg-icon name="shuffle" size="16"></sg-icon> **Panel Transitions**: Fade + slide-up animation on panel reveal
+- <sg-icon name="puzzle" size="16"></sg-icon> **Composable**: Three separate elements — `sg-tabs`, `sg-tab-item`, `sg-tab-panel`
 
 ## Source Code
 
@@ -37,12 +37,6 @@ A flexible tabs component for organizing content into switchable panels. Keyboar
   <sg-tab-panel value="settings"><p>Settings content.</p></sg-tab-panel>
   <sg-tab-panel value="billing"><p>Billing content.</p></sg-tab-panel>
 </sg-tabs>
-
-<script type="module">
-  import '@vielzeug/sigil/tabs';
-  import '@vielzeug/sigil/tab-item';
-  import '@vielzeug/sigil/tab-panel';
-</script>
 ```
 
 ## Visual Options
@@ -326,13 +320,6 @@ Use the `prefix` and `suffix` slots on `sg-tab-item` to add icons or notificatio
   <sg-tab-panel value="drafts"><p>Drafts content.</p></sg-tab-panel>
 </sg-tabs>
 
-<script type="module">
-  import '@vielzeug/sigil/tabs';
-  import '@vielzeug/sigil/tab-item';
-  import '@vielzeug/sigil/tab-panel';
-  import '@vielzeug/sigil/badge';
-  import '@vielzeug/sigil/icon';
-</script>
 ```
 
 </ComponentPreview>
@@ -391,12 +378,14 @@ Disabled tabs are skipped during keyboard navigation.
 
 ### `sg-tabs` Attributes
 
-| Attribute | Type                                                                      | Default   | Description                             |
-| --------- | ------------------------------------------------------------------------- | --------- | --------------------------------------- |
-| `value`   | `string`                                                                  | —         | Value of the currently selected tab     |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'` | Visual style of the tab bar             |
-| `size`    | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Size applied to all tab items           |
-| `color`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Theme color propagated to all tab items |
+| Attribute     | Type                                                                      | Default        | Description                                                  |
+| ------------- | ------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------ |
+| `value`       | `string`                                                                  | —              | Value of the currently selected tab                          |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                  |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                      |
+| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                    |
+| `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
 
 ### `sg-tabs` Events
 
@@ -440,11 +429,21 @@ Disabled tabs are skipped during keyboard navigation.
 
 ### CSS Custom Properties
 
-| Property              | Default                    | Description                            |
-| --------------------- | -------------------------- | -------------------------------------- |
-| `--tabs-transition`   | `var(--transition-normal)` | Transition speed for tab hover states  |
-| `--tabs-radius`       | `var(--rounded-lg)`        | Border radius of the tab bar container |
-| `--tab-panel-padding` | `var(--size-4)`            | Padding inside each tab panel          |
+| Property                       | Default                    | Description                                                        |
+| ------------------------------ | -------------------------- | ------------------------------------------------------------------ |
+| `--tabs-radius`                | `var(--rounded-lg)`        | Border radius of the tablist container and panels                  |
+| `--tabs-transition`            | `var(--transition-normal)` | Transition duration/easing for the active indicator                |
+| `--tabs-indicator-color`       | Theme color                | Color of the sliding active indicator line                         |
+| `--tabs-bg`                    | Theme-dependent            | Background of the host element (flat variant)                      |
+| `--tabs-tablist-bg`            | Theme-dependent            | Tablist container background (solid/glass/frost variants)          |
+| `--tabs-tablist-border-color`  | Theme-dependent            | Tablist container border color                                     |
+| `--tab-panel-padding`          | `var(--size-4)`            | Padding inside each tab panel                                      |
+| `--tab-item-radius`            | Theme-dependent            | Tab button border radius                                           |
+| `--tab-item-color`             | Theme-dependent            | Default tab text color                                             |
+| `--tab-item-hover-bg`          | Theme-dependent            | Tab background on hover                                            |
+| `--tab-item-active-bg`         | Theme-dependent            | Tab background when active/selected                                |
+| `--tab-item-active-color`      | Theme-dependent            | Tab text color when active/selected                                |
+| `--tab-item-active-shadow`     | Theme-dependent            | Box shadow when active/selected                                    |
 
 ## Accessibility
 
@@ -452,12 +451,12 @@ The tabs component follows the WAI-ARIA Tabs Pattern best practices.
 
 ### `sg-tabs`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last.
 - Disabled tabs are skipped during keyboard navigation.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - The tab list has `role="tablist"`.
 - Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel.

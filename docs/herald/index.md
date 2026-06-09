@@ -17,7 +17,7 @@ exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedE
 # Herald
 
 <details>
-<summary>⚡ Quick Reference</summary>
+<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
 
 **Package:** `@vielzeug/herald` &nbsp;·&nbsp; **Category:** Events
 
@@ -124,15 +124,15 @@ for await (const event of bus.events('cart:updated')) {
 | Feature              | Herald                                       | mitt     | EventEmitter3 |
 | -------------------- | -------------------------------------------- | -------- | ------------- |
 | Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
-| TypeScript inference | ✅ Full                                      | ⚠️ Basic | ⚠️ Basic      |
-| Async/await (`wait`) | ✅                                           | ❌       | ❌            |
-| Async streaming      | ✅                                           | ❌       | ❌            |
-| AbortSignal          | ✅                                           | ❌       | ❌            |
-| Event piping         | ✅                                           | ❌       | ❌            |
-| Wildcard (`onAny`)   | ✅                                           | ✅       | ❌            |
-| Disposal signal      | ✅                                           | ❌       | ❌            |
-| Error isolation      | ✅                                           | ❌       | ❌            |
-| Zero dependencies    | ✅                                           | ✅       | ✅            |
+| TypeScript inference | <sg-icon name="circle-check" size="16"></sg-icon> Full                                      | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic      |
+| Async/await (`wait`) | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Async streaming      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| AbortSignal          | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Event piping         | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Wildcard (`onAny`)   | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Disposal signal      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Error isolation      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
+| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>            |
 
 **Use Herald when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
 
@@ -166,10 +166,10 @@ for await (const event of bus.events('cart:updated')) {
 
 | Environment | Support |
 | ----------- | ------- |
-| Browser     | ✅      |
-| Node.js     | ✅      |
-| SSR         | ✅      |
-| Deno        | ✅      |
+| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
+| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
 

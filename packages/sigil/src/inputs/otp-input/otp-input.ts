@@ -67,8 +67,13 @@ export type SgOtpInputProps = {
  * @cssprop --otp-cell-gap - Gap between cells
  * @cssprop --otp-cell-font-size - Font size inside cells
  * @cssprop --otp-cell-radius - Border radius of cells
+ * @cssprop --otp-cell-bg - Cell background color
  * @cssprop --otp-cell-border-color - Default border color
- * @cssprop --otp-cell-focus-border - Focused border color
+ * @cssprop --otp-cell-focus-border - Focused border/caret color
+ * @cssprop --otp-cell-hover-bg - Cell background on hover (flat/ghost variants)
+ * @cssprop --otp-cell-hover-border-color - Cell border on hover (flat/bordered variants)
+ * @cssprop --otp-cell-focus-bg - Cell background when focused (flat variant)
+ * @cssprop --otp-cell-focus-border-color - Cell border when focused (flat variant)
  *
  * @part group - Group container.
  * @part cell - Shadow part for the `cell` element.

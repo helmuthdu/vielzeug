@@ -12,7 +12,12 @@ import { colorThemeMixin, elevationMixin } from './mixins/theme.css';
 // Accessibility Mixins
 export { coarsePointerMixin, reducedMotionMixin } from './mixins/accessibility.css';
 // Effects
-export { rainbowEffectMixin, registerRainbowProperty } from './mixins/animation.css';
+export {
+  rainbowEffectMixin,
+  registerRainbowProperty,
+  registerShineProperty,
+  shineEffectMixin,
+} from './mixins/animation.css';
 // Shape Mixins (padding, rounded, size)
 export { paddingMixin, roundedVariantMixin, sizeVariantMixin } from './mixins/shape.css';
 // State Mixins

@@ -4,16 +4,16 @@ A versatile and feature-rich card container component with purposeful variants, 
 
 ## Features
 
-- 🎨 **4 Variants**: solid, flat, glass, frost
-- 🌈 **6 Color Themes**: primary, secondary, info, success, warning, error
-- 📏 **5 Padding Sizes**: none, sm, md, lg, xl
-- 📊 **6 Elevation Levels**: 0-5 for precise shadow control
-- 🖼️ **5 Slots**: media, header, content, footer, actions
-- 📱 **Horizontal orientation** for side-by-side media layouts
-- 🎯 **Interactive States**: interactive, disabled, loading
-- ♿ **Fully Accessible**: WCAG 2.1 Level AA compliant with keyboard navigation
-- 🔧 **Customizable**: CSS custom properties for complete control
-- ⚡ **Custom Events**: Emits `activate` with event details (`trigger`, `originalEvent`)
+- <sg-icon name="palette" size="16"></sg-icon> **4 Variants**: solid, flat, glass, frost
+- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
+- <sg-icon name="ruler" size="16"></sg-icon> **5 Padding Sizes**: none, sm, md, lg, xl
+- <sg-icon name="bar-chart-2" size="16"></sg-icon> **6 Elevation Levels**: 0-5 for precise shadow control
+- <sg-icon name="image" size="16"></sg-icon> **5 Slots**: media, header, content, footer, actions
+- <sg-icon name="smartphone" size="16"></sg-icon> **Horizontal orientation** for side-by-side media layouts
+- <sg-icon name="crosshair" size="16"></sg-icon> **Interactive States**: interactive, disabled, loading
+- <sg-icon name="accessibility" size="16"></sg-icon> **Fully Accessible**: WCAG 2.1 Level AA compliant with keyboard navigation
+- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties for complete control
+- <sg-icon name="zap" size="16"></sg-icon> **Custom Events**: Emits `activate` with event details (`trigger`, `originalEvent`)
 
 ## Source Code
 
@@ -34,12 +34,6 @@ A versatile and feature-rich card container component with purposeful variants, 
     <sg-button size="sm" variant="ghost">Secondary</sg-button>
   </div>
 </sg-card>
-
-<script type="module">
-  import '@vielzeug/sigil/card';
-  import '@vielzeug/sigil/button';
-  import '@vielzeug/sigil/text';
-</script>
 ```
 
 ## Visual Options
@@ -239,7 +233,7 @@ Set `orientation="horizontal"` for a side-by-side media + content layout. The ve
   <div
     slot="media"
     style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
-    📷
+    <sg-icon name="camera" size="16"></sg-icon>
   </div>
   <sg-text slot="header" variant="heading" size="md">Horizontal Card</sg-text>
   <sg-text>Media appears on the left side, perfect for list items, product cards, and profile layouts.</sg-text>
@@ -385,7 +379,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
   <div
     slot="media"
     style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
-    📦
+    <sg-icon name="package" size="16"></sg-icon>
   </div>
   <div style="padding: var(--size-4)">
     <sg-text variant="heading" size="lg">Premium Package</sg-text>
@@ -414,7 +408,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
   <div style="display: flex; align-items: start; gap: var(--size-3)">
     <div
       style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-success); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
-      ✓
+      <sg-icon name="check" size="16"></sg-icon>
     </div>
     <div style="flex: 1">
       <sg-text variant="heading" color="success"> Success! </sg-text>
@@ -456,7 +450,7 @@ Perfect for compact layouts and list views:
     <div
       slot="media"
       style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
-      📱
+      <sg-icon name="smartphone" size="16"></sg-icon>
     </div>
     <sg-text slot="header" variant="heading" size="md">Smartphone Pro</sg-text>
     <sg-text>Latest model with advanced features.</sg-text>
@@ -470,7 +464,7 @@ Perfect for compact layouts and list views:
     <div
       slot="media"
       style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
-      💻
+      <sg-icon name="laptop" size="16"></sg-icon>
     </div>
     <sg-text slot="header" variant="heading" size="md">Laptop Elite</sg-text>
     <sg-text>Powerful performance for professionals.</sg-text>
@@ -566,19 +560,19 @@ The card component follows WCAG 2.1 Level AA standards.
 
 ### `sg-card`
 
-✅ **Keyboard Navigation**
+<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Enter` / `Space` activate the card when `interactive` is set.
 - `Tab` moves focus to the card.
 - Disabled cards have `tabindex="-1"` and cannot receive focus.
 
-✅ **Screen Readers**
+<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
 
 - `role="button"` is applied when `interactive` is set; `aria-disabled` reflects the disabled state.
 - `aria-busy` reflects the loading state.
 - Proper content hierarchy with semantic slots for screen reader users.
 
-✅ **Semantic Structure**
+<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
 
 - Uses semantic HTML for proper content organization.
 - Compliant with WCAG 2.1 Level AA color contrast requirements.

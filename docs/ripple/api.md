@@ -549,7 +549,7 @@ Like `scope()`, but accepts an async setup function. Captures `onCleanup()` regi
 
 ```ts
 const s = await asyncScope(async () => {
-  onCleanup(() => resourceA.close()); // ✓ captured — before any await
+  onCleanup(() => resourceA.close()); // <sg-icon name="check" size="16"></sg-icon> captured — before any await
   const db = await openDB(); // reactive tracking ends here
   // onCleanup() here would throw INVALID_CLEANUP
 });

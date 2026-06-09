@@ -1,6 +1,6 @@
 import { computed, define, defineField, html, inject, prop } from '@vielzeug/craft';
 
-import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
 
 import { commonProps } from '../../shared';
 import {
@@ -12,13 +12,21 @@ import {
   rainbowEffectMixin,
   reducedMotionMixin,
   roundedVariantMixin,
+  shineEffectMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { computeSafeRel } from '../../utils';
+import { useLinkProps } from '../../utils';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
+import { useFormAction } from '../shared';
 import componentStyles from './button.css?inline';
 
-const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
+export const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
+
+/** Visual variant for sg-button — derived from BUTTON_VARIANTS for a single source of truth. */
+export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
+
+/** Animated border effect for sg-button. */
+export type ButtonEffect = 'shine' | 'rainbow';
 
 /** Button component properties */
 export type SgButtonProps = {
@@ -26,6 +34,8 @@ export type SgButtonProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
+  /** Animated border effect: 'shine' (color-aware neon sweep) or 'rainbow' */
+  effect?: ButtonEffect;
   /** Full width button (100% of container) */
   fullwidth?: boolean;
   /** When set, renders an `<a>` instead of `<button>` */
@@ -36,8 +46,6 @@ export type SgButtonProps = {
   label?: string;
   /** Show loading state with spinner */
   loading?: boolean;
-  /** Enable animated rainbow border effect */
-  rainbow?: boolean;
   /** Link rel attribute (requires href) */
   rel?: string;
   /** Border radius size */
@@ -45,16 +53,16 @@ export type SgButtonProps = {
   /** Component size */
   size?: ComponentSize;
   /** Link target (requires href) */
-  target?: '_blank' | '_self' | '_parent' | '_top';
+  target?: LinkTarget;
   /** HTML button type attribute */
   type?: ButtonType;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass'>;
+  variant?: ButtonVariant;
 };
 
 /**
  * A customizable button component with multiple variants, sizes, and states.
- * Supports icons, loading states, and special effects like frost and rainbow.
+ * Supports icons, loading states, and animated border effects.
  *
  * @element sg-button
  *
@@ -62,39 +70,40 @@ export type SgButtonProps = {
  * @attr {boolean} disabled - Disable button interaction
  * @attr {boolean} loading - Show loading state with spinner
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost'
  * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {boolean} rainbow - Enable animated rainbow border effect
+ * @attr {string} effect - Animated border effect: 'shine' | 'rainbow'
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
  *
- * @fires click - Emitted when button is clicked (unless disabled/loading). detail: { originalEvent: MouseEvent }
+ * @fires click - Emitted when button is clicked (unless disabled/loading)
  *
  * @slot - Button content (text, icons, etc.)
  * @slot prefix - Content before the button text (e.g., icons)
  * @slot suffix - Content after the button text (e.g., icons, badges)
  *
- * @part button - The button element
+ * @part button - The inner button or anchor element
  * @part loader - The loading spinner element
  * @part content - The button content wrapper
  *
- * @cssprop --button-bg - Background color
- * @cssprop --button-color - Text color
- * @cssprop --button-hover-bg - Hover background
- * @cssprop --button-active-bg - Active/pressed background
- * @cssprop --button-border - Border width
- * @cssprop --button-border-color - Border color
- * @cssprop --button-radius - Border radius
- * @cssprop --button-padding - Inner padding
- * @cssprop --button-gap - Gap between icon and text
- * @cssprop --button-font-size - Font size
+ * @cssprop --button-bg - Background color override
+ * @cssprop --button-color - Text color override
+ * @cssprop --button-border - Border width override
+ * @cssprop --button-border-color - Border color override
+ * @cssprop --button-radius - Border radius override
+ * @cssprop --button-padding - Inner padding override
+ * @cssprop --button-gap - Gap between icon and text override
+ * @cssprop --button-font-size - Font size override
+ * @cssprop --button-frost-active-bg - Background when pressed (frost variant)
+ * @cssprop --button-frost-active-border-color - Border color when pressed (frost variant)
  *
  * @example
  * ```html
  * <sg-button variant="solid" color="primary">Click me</sg-button>
  * <sg-button loading color="success">Processing...</sg-button>
- * <sg-button variant="frost" rainbow>Special Button</sg-button>
+ * <sg-button effect="shine" color="primary">Shine</sg-button>
+ * <sg-button effect="rainbow" variant="frost">Rainbow</sg-button>
  * ```
  */
 export const BUTTON_TAG = 'sg-button' as const;
@@ -102,77 +111,52 @@ define<SgButtonProps>(BUTTON_TAG, {
   formAssociated: true,
   props: {
     ...commonProps,
+    effect: prop.string<ButtonEffect>(),
     fullwidth: prop.bool(false),
     href: prop.string(),
     iconOnly: prop.bool(false),
     label: prop.string(),
-    rainbow: prop.bool(false),
     rel: prop.string(),
-    target: prop.string<'_blank' | '_self' | '_parent' | '_top'>(),
+    target: prop.string<LinkTarget>(),
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
   setup(props, { bind, el }) {
-    // Derive effective color/size/variant — prefer group context, fall back to own prop.
+    // Prefer group context over own props for color/size/variant.
     const groupCtx = inject(BUTTON_GROUP_CTX);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
     const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
     const effectiveVariant = computed(() => groupCtx?.variant.value ?? props.variant.value);
 
-    const isLink = computed(() => !!props.href.value);
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
-    // Automatically add noopener/noreferrer when opening in a new tab to prevent
-    // reverse tabnapping (opened page accessing window.opener to redirect origin).
-    const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
+    // isLink and effectiveRel are computed from signals — correct even if href changes at runtime.
+    const { effectiveRel, isLink } = useLinkProps(props.href, props.rel, props.target);
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
+    // getForm() returns null for link mode at runtime, so no form actions fire.
     const formField = defineField({
       disabled: isDisabled,
       toFormValue: () => null,
       value: computed(() => ''),
     });
 
-    // Unified click handler for both links and buttons.
-    // Forward only when native click didn't traverse to host (jsdom/shadow interop).
-    const handleClick = (e: MouseEvent) => {
-      if (isDisabled.value) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
+    const handleClick = useFormAction(
+      () => (isLink.value ? null : formField.internals.form),
+      props.type,
+      isDisabled,
+      el,
+    );
 
-        return;
-      }
-
-      // If it's a form button, handle submit/reset
-      if (isLink.value) return;
-
-      const form = formField.internals.form;
-
-      if (form) {
-        if (props.type.value === 'submit') {
-          e.preventDefault();
-          form.requestSubmit();
-        } else if (props.type.value === 'reset') {
-          e.preventDefault();
-          form.reset();
-        }
-      }
-
-      const path = e.composedPath();
-      const reachedHost = path.includes(el);
-
-      if (!reachedHost) {
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      }
-    };
-
+    // ARIA attributes live on the host; delegatesFocus ensures AT reads them correctly.
     bind({
       attr: {
         'aria-busy': props.loading,
         'aria-disabled': isDisabled,
         'aria-label': props.label,
         color: effectiveColor,
+        effect: props.effect,
         size: effectiveSize,
         variant: effectiveVariant,
       },
@@ -187,21 +171,13 @@ define<SgButtonProps>(BUTTON_TAG, {
               :target="${props.target}"
               :rel="${effectiveRel}"
               role="button"
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
               @click="${handleClick}">
               <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
               <slot name="prefix"></slot>
               <span class="content" part="content"><slot></slot></span>
               <slot name="suffix"></slot>
             </a>`
-          : html`<button
-              part="button"
-              type="button"
-              ?disabled=${isDisabled}
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-              @click="${handleClick}">
+          : html`<button part="button" type="button" ?disabled=${isDisabled} @click="${handleClick}">
               <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
               <slot name="prefix"></slot>
               <span class="content" part="content"><slot></slot></span>
@@ -236,6 +212,7 @@ define<SgButtonProps>(BUTTON_TAG, {
     }),
     frostVariantMixin('button'),
     rainbowEffectMixin('button'),
+    shineEffectMixin('button'),
     disabledLoadingMixin,
     componentStyles,
   ],
