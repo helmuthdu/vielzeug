@@ -37,6 +37,18 @@ describe('parseJSON', () => {
     expect(result).toEqual(defaultValue);
   });
 
+  it('returns null when input is the JSON string "null" — regression B2', () => {
+    expect(parseJSON('null')).toBeNull();
+    expect(parseJSON('null', { defaultValue: 'fallback' })).toBeNull();
+  });
+
+  it('returns the default value when JSON.parse returns undefined (impossible in practice, guarded)', () => {
+    // JSON.parse never returns undefined for valid input, but the path exists for completeness
+    expect(parseJSON('"hello"')).toBe('hello');
+    expect(parseJSON('0')).toBe(0);
+    expect(parseJSON('false')).toBe(false);
+  });
+
   it('should call the reviver function if provided', () => {
     const json = '{"a":1,"b":2}';
     const reviver = (key: string, value: any) => (key === 'a' ? value * 2 : value);

@@ -98,7 +98,7 @@ export interface ShiftOptions extends DetectOverflowOptions {
 export function shift(options: ShiftOptions = {}): TypedMiddleware<'shift', ShiftData> {
   const { crossAxis = true, limiter, mainAxis = false } = options;
 
-  return tagMiddleware(function shiftMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  function shiftMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const overflow = detectOverflow(state, options);
     const side = getSide(state.placement);
     const isVertical = side === 'top' || side === 'bottom';
@@ -122,5 +122,7 @@ export function shift(options: ShiftOptions = {}): TypedMiddleware<'shift', Shif
     }
 
     return { data: { shift: { x: dx, y: dy } }, x: state.x + dx, y: state.y + dy };
-  }, 'shift');
+  }
+
+  return tagMiddleware<'shift', ShiftData, typeof shiftMiddleware>(shiftMiddleware, 'shift');
 }

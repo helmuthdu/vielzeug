@@ -494,7 +494,7 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async isEmpty(table) {
-      return (await getCachedCount(table)) === 0;
+      return timed(table, 'isEmpty', async () => (await getCachedCount(table)) === 0);
     },
 
     async keys(table) {

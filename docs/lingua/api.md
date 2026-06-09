@@ -13,6 +13,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.t()`                 | Translate a leaf key with optional vars              | Sync           | Missing keys use `onMissingKey` or return the key itself             |
 | `i18n.tp()`                | Translate a plural branch key                        | Sync           | `count` is injected automatically — do not pass it in `vars`         |
 | `i18n.bind()`              | Create a cached, re-usable translation function      | Sync           | Invalidates automatically on locale/catalog change                   |
+| `i18n.bindPlural()`        | Create a reusable plural translation function        | Sync           | No key caching — plural form depends on count at call time           |
 | `i18n.setLocale()`         | Switch the active locale                             | Async          | Await before rendering; throws if locale is not registered           |
 | `i18n.preload()`           | Pre-load a locale catalog without switching          | Async          | Locale must be registered first                                      |
 | `i18n.register()`          | Replace a locale's full catalog at runtime           | Sync           | Replaces entirely — use `merge()` to add keys                        |
@@ -85,17 +86,18 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `t(key, vars?)`                  | `(key: MessageLeafKeys<M> \| string, vars?: TranslateVars) => string`                     | Translate a leaf key with optional variable interpolation.                                               |
 | `tp(key, count, options?)`       | `(key: MessageBranchKeys<M> \| string, count: number, options?: TpOptions) => string`     | Translate a plural branch key.                                                                           |
 | `bind(key)`                      | `(key: MessageLeafKeys<M> \| string) => (vars?: TranslateVars) => string`                 | Return a cached translation function for hot-path use.                                                   |
+| `bindPlural(key)`                | `(key: MessageBranchKeys<M> \| string) => (count: number, options?: TpOptions) => string` | Return a reusable plural translation function. Always does a live lookup; no per-key caching.            |
 | `preload(locale)`                | `(locale: Locale) => Promise<void>`                                                       | Load a catalog without switching the active locale.                                                      |
 | `setLocale(locale)`              | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and bump version. On load failure, locale is unchanged (rollback guarantee). |
 | `register(locale, source)`       | `(locale: Locale, source: LocaleSource<M>) => void`                                       | Replace the full catalog for a locale. Clears namespace dedup markers.                                   |
-| `merge(locale, source)`          | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                              | Overlay keys onto an existing catalog.                                                                   |
+| `merge(locale, source)`          | `(locale: Locale, source: LocaleSource<Messages>) => Promise<void>`                       | Overlay keys onto an existing catalog. Source does not need to satisfy the full `M` shape.               |
 | `scope(prefix)`                  | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper.                                                      |
 | `fork(overrides?)`               | `(overrides?: Omit<I18nOptions<M>, 'catalogs' \| 'compile'>) => I18n<M>`                  | Create an isolated child instance. Inherits compile mode from parent.                                    |
-| `has(key)`                       | `(key: MessageLeafKeys<M> \| string) => boolean`                                          | Check if a leaf key exists in the active fallback chain.                                                 |
+| `has(key)`                       | `(key: MessageLeafKeys<M> \| string) => boolean`                                          | Check if a leaf key exists in the active fallback chain. Pipe-plural base keys return `false`.           |
 | `getSupportedLocales(sorted?)`   | `(sorted?: boolean) => Locale[]`                                                          | Return all registered locales.                                                                           |
 | `getSnapshot()`                  | `() => I18nSnapshot`                                                                      | Return the current `{ locale, version }` snapshot.                                                       |
 | `getState()`                     | `() => I18nState`                                                                         | Serialise loaded catalogs + active locale for SSR hydration.                                             |
-| `restoreState(state)`            | `(state: I18nState) => void`                                                              | Hydrate from serialised state. Notifies subscribers once.                                                |
+| `restoreState(state)`            | `(state: I18nState) => void`                                                              | Hydrate from serialised state. Throws `[lingua/E006]` if `state.locale` has no catalog in the state.     |
 | `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory<M>) => void`                                      | Register a per-locale namespace source factory.                                                          |
 | `loadNamespace(ns, locale?)`     | `(ns: string, locale?: Locale) => Promise<void>`                                          | Load a namespace for a locale (defaults to active locale).                                               |
 | `subscribe(callback, options?)`  | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe` | Subscribe to changes. Supports `{ immediate, signal }`. Already-aborted signal skips registration.       |
@@ -163,13 +165,37 @@ await i18n.setLocale('fr');
 greet({ name: 'Alice' }); // => French greeting
 ```
 
+### `bindPlural()`
+
+```ts
+bindPlural(key: MessageBranchKeys<M> | string): (count: number, options?: TpOptions) => string
+```
+
+Returns a plural-translation function bound to a specific branch key. Unlike `bind()`, there is no per-key
+caching — plural form resolution depends on `count` at call time, so each call does a fresh lookup. Use it
+for hot-path plural renders such as notification counts or reactive list sizes.
+
+```ts
+const inbox = i18n.bindPlural('inbox');
+
+inbox(0); // => 'No messages'
+inbox(1); // => 'One message'
+inbox(5); // => '5 messages'
+inbox(1, { ordinal: true }); // => '1st'
+
+// Works with pipe-plural shorthand
+const alerts = i18n.bindPlural('alerts'); // catalog: 'One alert|{count} alerts'
+alerts(3); // => '3 alerts'
+```
+
 ### `merge()`
 
 ```ts
-merge(locale: Locale, source: LocaleSource<M>): Promise<void>
+merge(locale: Locale, source: LocaleSource<Messages>): Promise<void>
 ```
 
 Loads `source` and writes its keys into the existing catalog for `locale`. Keys absent from `source` are preserved.
+`source` accepts any `Messages`-shaped object — it does not need to satisfy the full `M` shape, so partial overlays are allowed.
 
 - Waits for any in-flight dynamic load on the target locale before applying.
 - Bumps the version and notifies subscribers only when the merged locale is in the active fallback chain.
@@ -598,3 +624,4 @@ type ListFormatOptions = {
 | `[lingua/E003]` | `tp()` receives `options.vars.count` (injected automatically).                                             |
 | `[lingua/E004]` | Any API receives a string that is not a valid BCP 47 tag (`createI18n`, `setLocale`, `register`, `merge`). |
 | `[lingua/E005]` | `loadNamespace()` is called for a namespace that has not been registered.                                  |
+| `[lingua/E006]` | `restoreState()` is called with a `state.locale` that has no corresponding entry in `state.catalogs`.      |

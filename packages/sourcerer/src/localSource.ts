@@ -69,14 +69,20 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
 
   // ── Sync recompute ──────────────────────────────────────────────────────────
   const recomputeSync = (): void => {
-    let next: readonly T[] = query ? searchFn(rawData, query) : rawData;
+    try {
+      let next: readonly T[] = query ? searchFn(rawData, query) : rawData;
 
-    if (filterFn) next = next.filter(filterFn);
+      if (filterFn) next = next.filter(filterFn);
 
-    if (sortFn) next = [...next].sort(sortFn);
+      if (sortFn) next = [...next].sort(sortFn);
 
-    page = clampPage(page, pageCount(next.length, limit));
-    view = next;
+      page = clampPage(page, pageCount(next.length, limit));
+      view = next;
+      error = null;
+    } catch (e: unknown) {
+      error = new SourceError(extractError(e), { cause: e });
+      view = [];
+    }
   };
 
   // ── Async recompute ─────────────────────────────────────────────────────────

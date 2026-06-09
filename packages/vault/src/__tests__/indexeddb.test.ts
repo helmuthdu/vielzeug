@@ -388,6 +388,17 @@ describe('IndexedDB adapter', () => {
     expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
   });
 
+  test('count() inside batch() returns correct value for non-TTL table (native store.count path)', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const result = await db.batch(['users'], (tx) => tx.count('users'));
+
+    expect(result).toBe(2);
+  });
+
   test('pruneExpired deletes TTL-expired records via cursor and returns correct count', async () => {
     // Only fake Date.now — faking all timers blocks IDB async operations in the test environment.
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -707,6 +718,10 @@ describe('Secondary indexes (F5)', () => {
 
   test('table().index() chaining creates correct schema entry', () => {
     expect(indexedSchema.products.indexes).toEqual(['category', 'name']);
+  });
+
+  test('table().index() throws VaultError on duplicate field', () => {
+    expect(() => table<{ id: number; name: string }>('id').index('name').index('name')).toThrow(VaultError);
   });
 });
 

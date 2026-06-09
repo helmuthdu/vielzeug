@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugRouter } from '@vielzeug/wayfinder/debug';
+ * import { debugRouter } from '@vielzeug/wayfinder/devtools';
  * ```
  */
 
@@ -23,7 +23,7 @@ import { createRouter } from './router';
  *
  * @example
  * ```ts
- * import { debugRouter } from '@vielzeug/wayfinder/debug';
+ * import { debugRouter } from '@vielzeug/wayfinder/devtools';
  *
  * const router = debugRouter({ routes });
  * // [wayfinder:nav] loading  /users

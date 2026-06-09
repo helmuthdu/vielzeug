@@ -17,7 +17,7 @@ Use `dropLast(array, n?)` to return a new array without the last `n` items.
 import { dropLast } from '@vielzeug/arsenal';
 
 dropLast([1, 2, 3, 4, 5], 2); // [1, 2, 3]
-dropLast([1, 2, 3]);           // [1, 2]
+dropLast([1, 2, 3]); // [1, 2]
 ```
 
 ### Pitfalls

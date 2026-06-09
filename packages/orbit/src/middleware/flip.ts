@@ -16,7 +16,7 @@ export interface FlipOptions extends DetectOverflowOptions {
  * Falls back to the candidate with the least total overflow when no candidate fits.
  */
 export function flip(options: FlipOptions = {}): TypedMiddleware<'flip', FlipData> {
-  return tagMiddleware(function flipMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  function flipMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const currentOverflow = detectOverflow(state, options);
 
     if (!hasOverflow(currentOverflow)) return;
@@ -53,5 +53,7 @@ export function flip(options: FlipOptions = {}): TypedMiddleware<'flip', FlipDat
         reset: { placement: bestPlacement },
       };
     }
-  }, 'flip');
+  }
+
+  return tagMiddleware<'flip', FlipData, typeof flipMiddleware>(flipMiddleware, 'flip');
 }

@@ -17,8 +17,8 @@ Use `drop(array, n?)` to return a new array with the first `n` items removed. De
 import { drop } from '@vielzeug/arsenal';
 
 drop([1, 2, 3, 4, 5], 2); // [3, 4, 5]
-drop([1, 2, 3]);            // [2, 3]
-drop([1, 2, 3], 10);        // []
+drop([1, 2, 3]); // [2, 3]
+drop([1, 2, 3], 10); // []
 ```
 
 ### Pitfalls

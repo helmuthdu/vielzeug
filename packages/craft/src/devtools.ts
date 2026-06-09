@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugFlush } from '@vielzeug/craft/debug';
+ * import { debugFlush } from '@vielzeug/craft/devtools';
  * ```
  */
 
@@ -23,7 +23,7 @@ import { flush } from './testing/flush';
  *
  * @example
  * ```ts
- * import { debugFlush } from '@vielzeug/craft/debug';
+ * import { debugFlush } from '@vielzeug/craft/devtools';
  *
  * // in a test
  * await debugFlush();

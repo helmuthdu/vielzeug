@@ -93,6 +93,7 @@ const inGbp = exchange(inEur, eurToGbp); // { amount: 7912n, currency: 'GBP' }
 - `ExchangeRate.rate` must be a **string**, not a `number`. Passing `rate: 0.92` looks right but introduces IEEE-754 drift before the bigint conversion; the type system enforces `string`, but a cast would bypass it.
 - `ExchangeRate.from` and `to` require `CurrencyCode` values (obtained via `toCurrencyCode()`), not plain strings. If you pass an unvalidated string TypeScript will reject it at compile time.
 - `exchange()` throws `TypeError` if `money.currency !== rate.from`. Validate that the source currency matches before calling, especially when reusing rate objects across different money values.
+- `ExchangeRate.rate` must be a **non-empty** string. An empty string `''` throws `RangeError: Exchange rate must be a non-empty decimal string`. Guard against empty API responses before constructing the rate object.
 - Each intermediate step in a chain introduces its own rounding. Chaining two `'floor'` conversions loses more precision than a single direct rate. Use a direct USD→GBP rate where precision matters.
 
 ### Related

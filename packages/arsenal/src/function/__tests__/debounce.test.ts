@@ -1,4 +1,4 @@
-import { debounce } from '../debounce';
+import { debounce, type DebounceOptions } from '../debounce';
 
 describe('debounce', () => {
   beforeEach(() => {
@@ -102,5 +102,74 @@ describe('debounce', () => {
 
     expect(fn).not.toBeCalled();
     expect(result).toBe(undefined);
+  });
+
+  describe('leading edge', () => {
+    it('fires immediately on the first call with { leading: true, trailing: false }', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+
+      debounced('a');
+      expect(fn).toBeCalledTimes(1);
+      expect(fn).toBeCalledWith('a');
+    });
+
+    it('does not fire trailing call when trailing is false', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+
+      debounced('a');
+      vi.advanceTimersByTime(200);
+      expect(fn).toBeCalledTimes(1);
+    });
+
+    it('silences subsequent calls within the delay window', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+
+      debounced('a');
+      debounced('b');
+      debounced('c');
+      vi.advanceTimersByTime(200);
+      expect(fn).toBeCalledTimes(1);
+    });
+
+    it('fires again after the window elapses', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+
+      debounced('a');
+      vi.advanceTimersByTime(150);
+      debounced('b');
+      expect(fn).toBeCalledTimes(2);
+    });
+
+    it('fires on both edges with { leading: true, trailing: true }', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: true });
+
+      debounced('a');
+      expect(fn).toBeCalledTimes(1);
+
+      debounced('b');
+      vi.advanceTimersByTime(100);
+      expect(fn).toBeCalledTimes(2);
+    });
+
+    it('cancel resets leadingFired so next call fires immediately again', () => {
+      const fn = vi.fn();
+      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+
+      debounced('a');
+      debounced.cancel();
+      debounced('b');
+      expect(fn).toBeCalledTimes(2);
+    });
+  });
+
+  it('DebounceOptions type is exported', () => {
+    const _opts: DebounceOptions = { leading: true, trailing: false };
+
+    expect(_opts).toBeDefined();
   });
 });

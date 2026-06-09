@@ -138,7 +138,6 @@ const LIBRARY_EXPORTS = {
     'arrow',
     'hide',
     'limitShift',
-    'inline',
     'tooltip',
     'dropdown',
     'popover',
@@ -157,7 +156,7 @@ const LIBRARY_EXPORTS = {
     'sampleTransport',
     'redactTransport',
   ],
-  clockwork: ['defineMachine', 'interpret', 'resolveTransition', 'assign', 'MachineError'],
+  clockwork: ['defineMachine', 'interpret', 'resolveTransition', 'MachineError'],
   ward: ['createWard', 'owns', 'WILDCARD', 'ANONYMOUS'],
   wayfinder: ['createRouter', 'createBrowserHistory', 'createMemoryHistory', 'redirectTo', 'Router'],
   sourcerer: [

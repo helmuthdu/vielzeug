@@ -16,9 +16,9 @@ Use `titleCase(str)` to capitalize each word.
 ```ts
 import { titleCase } from '@vielzeug/arsenal';
 
-titleCase('hello world');    // 'Hello World'
-titleCase('the quick fox');  // 'The Quick Fox'
-titleCase('hello-world');    // 'Hello-World'
+titleCase('hello world'); // 'Hello World'
+titleCase('the quick fox'); // 'The Quick Fox'
+titleCase('hello-world'); // 'Hello-World'
 ```
 
 ### Related

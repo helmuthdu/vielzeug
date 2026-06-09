@@ -168,6 +168,8 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       core.cancelTimer();
       currentPage = 1;
       loadedPages = 0;
+      items = [];
+      total = 0;
       search = '';
 
       return doFetch();
@@ -177,6 +179,10 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       if (q === search) return;
 
       search = q;
+      items = [];
+      total = 0;
+      loadedPages = 0;
+      currentPage = 1;
       core.schedule(() => {
         void doFetch();
       }, debounceMs);
@@ -189,6 +195,10 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
       core.cancelTimer();
       search = q;
+      items = [];
+      total = 0;
+      loadedPages = 0;
+      currentPage = 1;
 
       return doFetch();
     },
@@ -199,6 +209,10 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       if (next === limit) return Promise.resolve();
 
       limit = next;
+      items = [];
+      total = 0;
+      currentPage = 1;
+      loadedPages = 0;
 
       return doFetch();
     },

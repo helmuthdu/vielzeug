@@ -74,7 +74,10 @@ const doubleAll = partial((factor: number, values: number[]) => values.map((n) =
 const doubled = doubleAll([1, 2, 3]);
 
 // Fuzzy search — filter mode (default) or scored mode
-const users = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+];
 const hits = search(users, 'alice', { mode: 'scored' });
 // [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
 

@@ -67,6 +67,10 @@ export type Formatter = {
   clear(): void;
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
+  /**
+   * Formats a duration using `Intl.DurationFormat` when available, or a compact labeled fallback
+   * (e.g. `'1h 30min'`). Returns `''` when every field of `value` is `undefined`.
+   */
   duration(value: DurationValue, options?: DurationFormatOptions): string;
   list(value: Array<string | number>, options?: ListFormatOptions): string;
   /** Formats a number with the current locale. */
@@ -125,6 +129,7 @@ function durationLabeled(value: DurationValue): string {
  */
 export function createFormatter(source: string | (() => string)): Formatter {
   const numberCache = new Map<string, Intl.NumberFormat>();
+  const currencyCache = new Map<string, Intl.NumberFormat>();
   const dateCache = new Map<string, Intl.DateTimeFormat>();
   const relativeCache = new Map<string, Intl.RelativeTimeFormat>();
   const listCache = new Map<string, Intl.ListFormat>();
@@ -153,6 +158,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
   return {
     clear() {
       numberCache.clear();
+      currencyCache.clear();
       dateCache.clear();
       relativeCache.clear();
       listCache.clear();
@@ -163,7 +169,9 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };
 
-      return getOrCreate(numberCache, cachedKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(value);
+      return getOrCreate(currencyCache, cachedKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(
+        value,
+      );
     },
 
     date(value, options) {

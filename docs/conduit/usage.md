@@ -78,7 +78,7 @@ const container = await createContainer().load(loggingModule, configModule);
 
 ## Resolution
 
-Call `resolve()` for a single provider. Use `resolveOptional()` when a missing token should return `undefined` rather than throw.
+Call `resolve()` for a single provider. Use `resolveOptional()` when a missing token should return `undefined` rather than throw. Use `resolveOrDefault()` when you have a fallback value to supply directly.
 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
@@ -89,6 +89,7 @@ const container = createContainer();
 
 const service = await container.resolve(Service);
 const maybePlugin = await container.resolveOptional(Plugin); // undefined if not registered
+const plugin = await container.resolveOrDefault(Plugin, defaultPlugin); // fallback if not registered
 ```
 
 ## Checking Registration
@@ -119,6 +120,8 @@ const logger = container.resolveSync(Logger);
 ```
 
 `resolveSync()` throws `SyncResolutionError` for transient factories (never cached) and for unresolved singletons/scoped instances. It throws `ScopedResolutionError` when called on the root container for a scoped token.
+
+> **Note:** `resolveAll()` only pre-warms `'singleton'` factories. Factories registered with `'scoped'`, `'transient'`, or a `ScopeToken` lifetime are **not** resolved by `resolveAll()`.
 
 ## Lifetimes
 
@@ -418,7 +421,7 @@ Listener errors are silently swallowed — a failing listener never disrupts con
 - Call `validate()` after bulk registration to catch cycles early.
 - Call `freeze()` after all registrations are done to prevent accidental late additions.
 - Use `resolveAll()` once at startup, then `resolveSync()` in hot paths.
-- Use `tryResolve()` when optional providers are expected to be absent; use `resolveOptional()` for one-off nullable checks.
+- Use `tryResolve()` when optional providers are expected to be absent; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
 - Use `resolveMany()` to resolve multiple well-known providers at startup in parallel.
 - Scope child containers (or named-scope containers) to request or component lifetimes — dispose them with the scope.
 - Attach `dispose` hooks to both factory and value registrations for external resources that need cleanup.

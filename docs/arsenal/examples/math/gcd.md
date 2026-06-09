@@ -17,8 +17,8 @@ Use `gcd(a, b)` to return the largest integer that divides both `a` and `b`.
 import { gcd } from '@vielzeug/arsenal';
 
 gcd(12, 8); // 4
-gcd(7, 5);  // 1
-gcd(0, 5);  // 5
+gcd(7, 5); // 1
+gcd(0, 5); // 5
 ```
 
 ### Related

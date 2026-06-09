@@ -2,7 +2,12 @@ import { stableStringify } from '@vielzeug/arsenal';
 
 import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } from './types';
 
-/** Serialises a `SourceQuery` or `RemoteSourceQuery` into plain URL-safe string params. */
+/**
+ * Serialises a `SourceQuery` or `RemoteSourceQuery` into plain URL-safe string params.
+ *
+ * ⚠️ `filter` and `sort` are serialised with `stableStringify`. Circular object references
+ * will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+ */
 export const encodeQuery = <TFilter = unknown, TSort = unknown>(
   query: RemoteSourceQuery<TFilter, TSort> | SourceQuery,
 ): QueryParams => {
@@ -76,8 +81,8 @@ export const decodeQuery = <TFilter = unknown, TSort = unknown>(
   const rawFilter = raw['filter'];
   const rawSort = raw['sort'];
 
-  const filter = typeof rawFilter === 'string' ? parseJson<TFilter>('filter', rawFilter) : undefined;
-  const sort = typeof rawSort === 'string' ? parseJson<TSort>('sort', rawSort) : undefined;
+  const filter = rawFilter !== undefined ? parseJson<TFilter>('filter', rawFilter) : undefined;
+  const sort = rawSort !== undefined ? parseJson<TSort>('sort', rawSort) : undefined;
 
   const result: Partial<RemoteSourceQuery<TFilter, TSort>> = {
     ...(filter !== undefined && { filter }),

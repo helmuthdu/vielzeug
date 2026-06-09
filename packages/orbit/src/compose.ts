@@ -23,7 +23,11 @@ export function compose(...middleware: Array<Middleware | null | undefined | fal
   const mws = middleware.filter(Boolean) as Middleware[];
 
   if (import.meta.env.DEV) {
-    const names = mws.map((mw) => (mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME] ?? null);
+    const names = mws.map((mw) => {
+      const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
+
+      return typeof tag === 'string' ? tag : null;
+    });
 
     validateMiddlewareNames(names, 'compose()');
   }

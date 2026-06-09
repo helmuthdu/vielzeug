@@ -14,6 +14,7 @@ description: Complete API reference for @vielzeug/coins.
 | `add()` / `subtract()`                       | Add or subtract same-currency values                         | Sync      | Throws `TypeError` on currency mismatch                                                                                |
 | `multiply()`                                 | Scale a money value by a factor                              | Sync      | Default rounding is `'half-away-from-zero'`; use string factors for lossless fractions                                 |
 | `divide()`                                   | Divide a money value by a divisor                            | Sync      | Throws `RangeError` on division by zero                                                                                |
+| `percentage()`                               | Compute a percentage of a money value                        | Sync      | Use string `pct` for lossless fractions; default rounding `'half-away-from-zero'`                                      |
 | `abs()` / `negate()`                         | Absolute value / sign flip                                   | Sync      |                                                                                                                        |
 | `allocate()`                                 | Distribute across weighted shares (LRM)                      | Sync      | All ratios zero → `RangeError`; any negative ratio → `RangeError`                                                      |
 | `splitEvenly()`                              | Distribute into equal shares                                 | Sync      | Sugar over `allocate`; non-positive `parts` → `RangeError`                                                             |
@@ -24,6 +25,7 @@ description: Complete API reference for @vielzeug/coins.
 | `compare()`                                  | Three-way comparison                                         | Sync      | Throws `TypeError` on currency mismatch                                                                                |
 | `isEqual()` / `greaterThan()` etc.           | Boolean comparisons                                          | Sync      | All throw `TypeError` on currency mismatch                                                                             |
 | `isZero()` / `isPositive()` / `isNegative()` | Sign predicates                                              | Sync      |                                                                                                                        |
+| `isNonNegative()` / `isNonPositive()`        | Non-strict sign predicates (>= 0 / <= 0)                     | Sync      |                                                                                                                        |
 | `format()`                                   | Locale-aware currency string                                 | Sync      | Uses `Intl.NumberFormat`; `maximumFractionDigits < minimumFractionDigits` → `RangeError`                               |
 | `formatParts()`                              | Typed part array for custom rendering                        | Sync      | Joining all `value` fields equals `format()` output                                                                    |
 | `exchange()`                                 | Convert between currencies                                   | Sync      | `rate` must be a non-negative decimal string; throws `TypeError` on currency mismatch, `RangeError` for negative rates |
@@ -153,6 +155,20 @@ function negate(m: Money): Money;
 
 Returns the money with its sign flipped.
 
+### `percentage(money, pct, mode?)`
+
+```ts
+function percentage(m: Money, pct: number | string, mode?: RoundingMode): Money;
+```
+
+Returns `pct`% of `m` — i.e. `m × (pct / 100)`. Use a decimal string for `pct` to avoid IEEE-754 rounding on fractional percentages. Defaults to `'half-away-from-zero'` rounding.
+
+```ts
+percentage(money('100.00', 'USD'), 10); // $10.00
+percentage(money('199.99', 'USD'), '8.5'); // $17.00
+percentage(money('100.00', 'USD'), 0); // $0.00
+```
+
 ## Allocation
 
 ### `allocate(money, ratios)`
@@ -261,12 +277,14 @@ function lessThan(a: Money, b: Money): boolean;
 function lessThanOrEqual(a: Money, b: Money): boolean;
 ```
 
-### `isZero(money)` · `isPositive(money)` · `isNegative(money)`
+### `isZero(money)` · `isPositive(money)` · `isNegative(money)` · `isNonNegative(money)` · `isNonPositive(money)`
 
 ```ts
 function isZero(m: Money): boolean; // amount === 0n
 function isPositive(m: Money): boolean; // amount > 0n
 function isNegative(m: Money): boolean; // amount < 0n
+function isNonNegative(m: Money): boolean; // amount >= 0n
+function isNonPositive(m: Money): boolean; // amount <= 0n
 ```
 
 ## Serialization
@@ -384,7 +402,7 @@ function exchange(m: Money, rate: ExchangeRate, mode?: RoundingMode): Money;
 
 Converts `m` to the currency specified in `rate.to` using lossless bigint arithmetic. The `rate.rate` field must be a decimal string.
 
-Throws `TypeError` if `m.currency !== rate.from`. Throws `RangeError` if `rate.rate` is negative. Accepts an optional `RoundingMode` (default `'half-away-from-zero'`).
+Throws `TypeError` if `m.currency !== rate.from`. Throws `RangeError` if `rate.rate` is negative or an empty string. Accepts an optional `RoundingMode` (default `'half-away-from-zero'`).
 
 ```ts
 const usd = toCurrencyCode('USD');
@@ -399,7 +417,7 @@ exchange(money('100.00', 'USD'), { from: usd, rate: '0.92', to: eur }, 'floor');
 
 ## Rounding Modes
 
-Used by `multiply`, `divide`, and `exchange` when the result contains a fractional minor unit.
+Used by `multiply`, `divide`, `percentage`, and `exchange` when the result contains a fractional minor unit.
 
 | Mode                    | Description                                        |
 | ----------------------- | -------------------------------------------------- |

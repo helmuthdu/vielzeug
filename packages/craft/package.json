@@ -15,11 +15,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./debug": {
-      "source": "./src/debug.ts",
-      "types": "./dist/debug.d.ts",
-      "import": "./dist/debug.js",
-      "require": "./dist/debug.cjs"
+    "./devtools": {
+      "source": "./src/devtools.ts",
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.js",
+      "require": "./dist/devtools.cjs"
     },
     "./observers": {
       "source": "./src/observers/index.ts",
@@ -36,13 +36,13 @@
   },
   "scripts": {
     "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {

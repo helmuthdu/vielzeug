@@ -16,9 +16,9 @@ Use `allocate(amount, ratiosOrParts)` to divide `amount` according to the given 
 ```ts
 import { allocate } from '@vielzeug/arsenal';
 
-allocate(100, [1, 1, 1]);     // [34, 33, 33] — sum is 100
-allocate(100, [50, 25, 25]);  // [50, 25, 25]
-allocate(10, [1, 2, 7]);      // [1, 2, 7]
+allocate(100, [1, 1, 1]); // [34, 33, 33] — sum is 100
+allocate(100, [50, 25, 25]); // [50, 25, 25]
+allocate(10, [1, 2, 7]); // [1, 2, 7]
 ```
 
 ### Pitfalls

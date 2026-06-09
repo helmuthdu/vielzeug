@@ -238,6 +238,19 @@ describe('scorePackage', () => {
     expect(hit?.matchedPages).toContain('api');
   });
 
+  it('matches multi-word queries with AND logic across words', () => {
+    const pkg = makePkg({ description: 'Reactive signal library for state management' });
+
+    expect(scorePackage(pkg, 'reactive signal')).not.toBeNull();
+    expect(scorePackage(pkg, 'reactive zzz_no_match')).toBeNull();
+  });
+
+  it('returns null for a query of only whitespace', () => {
+    const pkg = makePkg({ description: 'anything' });
+
+    expect(scorePackage(pkg, '   ')).toBeNull();
+  });
+
   it('reports both "keywords" and "exports" when both match', () => {
     const pkg = makePkg({ exports: ['signal'], keywords: ['signal'] });
     const hit = scorePackage(pkg, 'signal');
@@ -417,5 +430,13 @@ describe('index.ts re-exports', () => {
   it('exports loadData and packageMeta from data.js', () => {
     expect(typeof loadData).toBe('function');
     expect(typeof packageMeta).toBe('function');
+  });
+
+  it('createServerFromDisk returns a Server instance without throwing', async () => {
+    const { createServerFromDisk } = await import('../index.js');
+    const server = createServerFromDisk();
+
+    expect(server).toBeDefined();
+    expect(typeof server.connect).toBe('function');
   });
 });

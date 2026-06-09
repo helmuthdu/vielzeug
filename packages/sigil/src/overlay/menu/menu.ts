@@ -74,6 +74,10 @@ export type SgMenuProps = {
  * @slot - Item label/content
  * @slot icon - Optional leading icon content
  *
+ * @part item - Root item container element.
+ * @part item-label - Label text container.
+ * @part icon-slot - Leading icon slot container.
+ *
  * @example
  * ```html
  * <sg-menu-item value="edit">Edit</sg-menu-item>

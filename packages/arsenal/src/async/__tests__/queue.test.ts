@@ -1,4 +1,4 @@
-import { queue } from '../queue';
+import { queue, type Queue } from '../queue';
 
 describe('queue', () => {
   it('processes tasks sequentially with concurrency 1', async () => {
@@ -102,5 +102,11 @@ describe('queue', () => {
 
     await expect(p1).rejects.toThrow('boom');
     await expect(p2).resolves.toBe('ok');
+  });
+
+  it('Queue type is exported and usable for variable typing', () => {
+    const q: Queue = queue();
+
+    expect(q.size).toBe(0);
   });
 });

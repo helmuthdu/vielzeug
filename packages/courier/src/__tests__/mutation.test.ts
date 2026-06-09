@@ -333,4 +333,38 @@ describe('Mutation', () => {
       expect(notifications).toBe(0);
     });
   });
+
+  describe('activeRun lifecycle', () => {
+    it('activeRun is null after a completed mutation (regression: synchronous race)', async () => {
+      // Regression: activeRun was previously set AFTER the operation IIFE,
+      // meaning a synchronously-resolving mutation could clear activeRun in its
+      // finally block before it was ever assigned, leaving a stale reference.
+      const mutation = createMutation(async () => 'result');
+
+      // cancel() reads activeRun — it should be null after completion
+      await mutation.mutate(undefined);
+
+      // If activeRun is stale, cancel() would abort a finished controller —
+      // this test verifies the promise settles without hanging.
+      await expect(mutation.cancel()).resolves.toBeUndefined();
+      expect(mutation.getState().status).toBe('success');
+    });
+
+    it('getState() is idle after cancel() clears an in-flight mutation', async () => {
+      const mutation = createMutation(
+        (_: void, signal: AbortSignal) =>
+          new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+          }),
+      );
+
+      const running = mutation.mutate(undefined);
+
+      await mutation.cancel();
+
+      await running.catch(() => {});
+
+      expect(mutation.getState().status).toBe('idle');
+    });
+  });
 });

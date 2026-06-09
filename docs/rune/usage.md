@@ -115,9 +115,15 @@ const batch = batchTransport({
 
 const log = createLogger({ transports: [batch] });
 
-// on shutdown
-process.on('exit', () => batch.dispose());
+// on shutdown — dispose the batch directly, or use log.dispose()
+process.on('exit', () => log.dispose());
 ```
+
+`log.dispose()` walks the logger's transport array and calls `.dispose()` on any `BatchTransport` instances it finds, making it convenient for shutdown without keeping separate references.
+
+::: warning
+`log.dispose()` only inspects top-level transports. A `batchTransport` wrapped inside `pipe()` is not discovered — hold a direct reference and dispose it manually in that case.
+:::
 
 ### Node.js: Structured JSON Logging
 
@@ -251,7 +257,8 @@ log.info('b'); // tick: 2
 
 ```ts
 const api = Rune.child({ namespace: 'api' });
-const auth = api.child({ namespace: 'api.auth' });
+const auth = api.child({ namespace: 'auth' }); // → 'api.auth' (dot-joined automatically)
+const root = api.child({ namespace: '/root' }); // → 'root' (/ prefix = absolute, ignores parent)
 
 api.info('GET /users');
 auth.warn('token expiring');
@@ -274,7 +281,7 @@ Child and parent configs remain independent after creation.
 
 ## Timing
 
-`time(label, fn)` measures execution time of sync or async functions. Unlike `console.time`, it emits a structured `debug` entry with `{ duration_ms }` that flows through all transports — including remote.
+`time(label, fn, opts?)` measures execution time of sync or async functions. Emits a structured entry with `{ duration_ms }` in context and `label` as the message. When `fn` throws or rejects, the entry also includes `{ err }` with the serialized error.
 
 ```ts
 // Sync
@@ -283,7 +290,11 @@ const result = log.time('parse', () => parseDocument(input));
 
 // Async
 const users = await log.time('db.users', () => db.query('SELECT * FROM users'));
-// groupEnd / timeEnd is called even on rejection
+// Emits even on rejection, with { err } included in context
+
+// Custom level
+log.time('health-check', () => ping(), 'info');
+log.time('health-check', () => ping(), { level: 'info' }); // equivalent
 
 // Skipped when logLevel is 'off', but fn still executes
 ```
@@ -292,16 +303,25 @@ To forward timing data to a remote endpoint, include `remoteTransport` in the pi
 
 ## Groups
 
-`group(label, fn)` and `groupCollapsed(label, fn)` wrap a callback in a console group, ensuring `groupEnd` is called even when the callback throws or rejects.
+`group(label, fn, level?)` and `groupCollapsed(label, fn, level?)` wrap a callback in a console group, ensuring `groupEnd` is called even when the callback throws or rejects.
 
 ```ts
 await log.groupCollapsed('Job', async () => {
   await log.time('process', () => runJob());
   log.info('Done');
 });
+
+// Gate the group header on a log level — suppresses when logLevel is above 'debug'
+log.group(
+  'verbose trace',
+  () => {
+    log.debug('internal state', state);
+  },
+  'debug',
+);
 ```
 
-When `logLevel` is `'off'`, the group wrapper is bypassed but the callback still executes.
+When `logLevel` is `'off'`, the group wrapper is bypassed but the callback still executes. When a `level` is provided and it is below the configured threshold, the group header is skipped but the callback still runs.
 
 ## Framework Integration
 

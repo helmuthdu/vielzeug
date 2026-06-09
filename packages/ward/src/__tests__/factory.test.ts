@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import type { BoundWard, WardLoggerContext, WardPredicate } from '../index';
 
 import { ANONYMOUS, createWard, owns, WILDCARD } from '../index';
@@ -307,14 +309,14 @@ describe('ward: decision APIs', () => {
     expect(decisions[2]).toEqual({ allowed: false, reason: 'no-matching-rule' });
   });
 
-  it('returns the authored rule shape from explain instead of leaking normalized priority', () => {
+  it('returns the normalized rule shape from explain, including priority: 0 when not authored', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
     const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(decision).toEqual({
       allowed: true,
-      rule: { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      rule: { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
     });
   });
 
@@ -329,7 +331,7 @@ describe('ward: decision APIs', () => {
     expect(decision).toEqual({
       allowed: false,
       reason: 'explicit-deny',
-      rule: { action: 'read', effect: 'deny', resource: 'posts', role: ['blocked'] },
+      rule: { action: 'read', effect: 'deny', priority: 0, resource: 'posts', role: ['blocked'] },
     });
   });
 
@@ -417,7 +419,7 @@ describe('ward: rulesInScope', () => {
     ]);
 
     expect(permit.rulesInScope({ id: 'u1', roles: ['viewer', 'blocked'] }, 'posts')).toEqual([
-      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
       { action: WILDCARD, effect: 'deny', priority: 100, resource: 'posts', role: ['blocked'] },
     ]);
   });
@@ -445,7 +447,7 @@ describe('ward: rulesInScope', () => {
     ]);
 
     expect(permit.rulesInScope(null, 'posts')).toEqual([
-      { action: 'read', effect: 'allow', resource: 'posts', role: [ANONYMOUS] },
+      { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: [ANONYMOUS] },
     ]);
   });
 
@@ -491,7 +493,7 @@ describe('ward: bound view', () => {
     expect(bound.explain('posts', 'update')).toEqual({
       allowed: false,
       reason: 'explicit-deny',
-      rule: { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
+      rule: { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
     });
   });
 
@@ -509,17 +511,17 @@ describe('ward: bound view', () => {
         { action: 'update', resource: 'posts' },
       ]),
     ).toEqual([
-      { allowed: true, rule: { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] } },
+      { allowed: true, rule: { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] } },
       {
         allowed: false,
         reason: 'explicit-deny',
-        rule: { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
+        rule: { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
       },
     ]);
 
     expect(bound.rulesInScope('posts')).toEqual([
-      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
-      { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
+      { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
+      { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
     ]);
   });
 
@@ -1318,5 +1320,56 @@ describe('ward: detectConflicts — maxConflicts option', () => {
     );
 
     expect(permit.detectConflicts()).toHaveLength(1);
+  });
+
+  it('returns empty array when maxConflicts is 0 (detection disabled)', () => {
+    const permit = createWard(
+      [
+        { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+        { action: 'read', effect: 'deny', resource: 'posts', role: ['viewer'] },
+      ],
+      { maxConflicts: 0 },
+    );
+
+    expect(permit.detectConflicts()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Conflict detection — strict + onConflict combined
+// ---------------------------------------------------------------------------
+
+describe('ward: detectConflicts — strict and onConflict options', () => {
+  it('calls onConflict for each conflict and then throws when strict is also set', () => {
+    const onConflict = vi.fn();
+
+    expect(() => {
+      createWard(
+        [
+          { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+          { action: 'read', effect: 'deny', resource: 'posts', role: ['viewer'] },
+        ],
+        { onConflict, strict: true },
+      );
+    }).toThrow('[ward]');
+
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(onConflict.mock.calls[0][0]).toMatchObject({ kind: 'duplicate' });
+  });
+
+  it('calls onConflict without throwing when strict is false', () => {
+    const onConflict = vi.fn();
+
+    expect(() => {
+      createWard(
+        [
+          { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+          { action: 'read', effect: 'deny', resource: 'posts', role: ['viewer'] },
+        ],
+        { onConflict, strict: false },
+      );
+    }).not.toThrow();
+
+    expect(onConflict).toHaveBeenCalledTimes(1);
   });
 });

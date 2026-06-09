@@ -17,37 +17,37 @@ Sigil is designed to be highly customizable through CSS Custom Properties (CSS v
 
 Sigil provides a comprehensive set of design tokens organized into the following categories:
 
-| Category                   | Prefix                                 | Description                                 |
-| -------------------------- | -------------------------------------- | ------------------------------------------- |
-| **Spacing Scale**          | `--size-{n}`                           | 4px-increment spacing (0 → 96)              |
-| **Container Sizes**        | `--size-{2xs–7xl}`                     | Named width breakpoints (256px → 1280px)    |
-| **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}` | Keyword size utilities                   |
-| **Viewport & Breakpoints** | `--size-screen-*`                      | Viewport units + breakpoint values          |
-| **Aspect Ratios**          | `--aspect-*`                           | Common aspect ratios (square, video, wide…) |
-| **3D Perspective**         | `--perspective-*`                      | Transform perspective distances             |
-| **Grid Templates**         | `--grid-{1–12}`                        | CSS Grid column repeat helpers              |
-| **Border Widths**          | `--border-*`                           | Stroke widths + ring utilities              |
-| **Border Radius**          | `--rounded-*`                          | Corner rounding scale                       |
-| **Blur Effects**           | `--blur-*`                             | Blur filter scale                           |
-| **Box Shadows**            | `--shadow-*`                           | Elevation shadows                           |
-| **Inset Shadows**          | `--inset-shadow-*`                     | Inner shadow scale                          |
-| **Drop Shadows**           | `--drop-shadow-*`                      | CSS filter drop-shadows                     |
-| **Text Shadows**           | `--text-shadow-*`                      | Typographic text shadows                    |
-| **Halo Shadows**           | `--halo-shadow-*`                      | Branded glow shadows per semantic color     |
-| **Font Families**          | `--font-{sans,serif,mono}`             | System font stacks                          |
-| **Font Weights**           | `--font-*`                             | Numeric weight scale (100–900)              |
-| **Letter Spacing**         | `--tracking-*`                         | Tracking utilities                          |
-| **Line Heights**           | `--leading-*`                          | Relative (named) + absolute (numeric) line height scale |
-| **Body Text Scale**        | `--text-{xs–2xl}`                      | 6-step body font size scale                 |
-| **Heading Scale**          | `--heading-{xs–2xl}`                   | 6-step heading font size scale              |
-| **Semantic Text Colors**   | `--text-color-*`                       | Role-based text color tokens                |
-| **Transitions**            | `--transition-*`                       | Pre-built timing + easing combos            |
+| Category                   | Prefix                                         | Description                                                      |
+| -------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| **Spacing Scale**          | `--size-{n}`                                   | 4px-increment spacing (0 → 96)                                   |
+| **Container Sizes**        | `--size-{2xs–7xl}`                             | Named width breakpoints (256px → 1280px)                         |
+| **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}`    | Keyword size utilities                                           |
+| **Viewport & Breakpoints** | `--size-screen-*`                              | Viewport units + breakpoint values                               |
+| **Aspect Ratios**          | `--aspect-*`                                   | Common aspect ratios (square, video, wide…)                      |
+| **3D Perspective**         | `--perspective-*`                              | Transform perspective distances                                  |
+| **Grid Templates**         | `--grid-{1–12}`                                | CSS Grid column repeat helpers                                   |
+| **Border Widths**          | `--border-*`                                   | Stroke widths + ring utilities                                   |
+| **Border Radius**          | `--rounded-*`                                  | Corner rounding scale                                            |
+| **Blur Effects**           | `--blur-*`                                     | Blur filter scale                                                |
+| **Box Shadows**            | `--shadow-*`                                   | Elevation shadows                                                |
+| **Inset Shadows**          | `--inset-shadow-*`                             | Inner shadow scale                                               |
+| **Drop Shadows**           | `--drop-shadow-*`                              | CSS filter drop-shadows                                          |
+| **Text Shadows**           | `--text-shadow-*`                              | Typographic text shadows                                         |
+| **Halo Shadows**           | `--halo-shadow-*`                              | Branded glow shadows per semantic color                          |
+| **Font Families**          | `--font-{sans,serif,mono}`                     | System font stacks                                               |
+| **Font Weights**           | `--font-*`                                     | Numeric weight scale (100–900)                                   |
+| **Letter Spacing**         | `--tracking-*`                                 | Tracking utilities                                               |
+| **Line Heights**           | `--leading-*`                                  | Relative (named) + absolute (numeric) line height scale          |
+| **Body Text Scale**        | `--text-{xs–2xl}`                              | 6-step body font size scale                                      |
+| **Heading Scale**          | `--heading-{xs–2xl}`                           | 6-step heading font size scale                                   |
+| **Semantic Text Colors**   | `--text-color-*`                               | Role-based text color tokens                                     |
+| **Transitions**            | `--transition-*`                               | Pre-built timing + easing combos                                 |
 | **Durations**              | `--duration-{75,100,150,200,300,500,700,1000}` | Millisecond step scale (all zero under `prefers-reduced-motion`) |
-| **Easing Functions**       | `--ease-*`                             | Named cubic-bezier curves                   |
-| **Contrast Scale**         | `--color-contrast-{50–900}`            | 10-step light/dark adaptive palette         |
-| **Canvas / Contrast**      | `--color-canvas`, `--color-contrast`   | Aliases for `contrast-50` and `contrast-900` |
-| **Semantic Colors**        | `--color-{name}-*`                     | 7 sub-tokens per semantic color             |
-| **Section Spacing**        | `--section-spacing`                    | Default block section gap (`2rem`)          |
+| **Easing Functions**       | `--ease-*`                                     | Named cubic-bezier curves                                        |
+| **Contrast Scale**         | `--color-contrast-{50–900}`                    | 10-step light/dark adaptive palette                              |
+| **Canvas / Contrast**      | `--color-canvas`, `--color-contrast`           | Aliases for `contrast-50` and `contrast-900`                     |
+| **Semantic Colors**        | `--color-{name}-*`                             | 7 sub-tokens per semantic color                                  |
+| **Section Spacing**        | `--section-spacing`                            | Default block section gap (`2rem`)                               |
 
 ## Color Palette
 
@@ -95,10 +95,10 @@ All text color values (500–900) meet or exceed WCAG AA standards. Values 700�
 
 Two convenience aliases are provided for the most common surface and text needs:
 
-| Token              | Resolves to              | Usage                               |
-| ------------------ | ------------------------ | ----------------------------------- |
-| `--color-canvas`   | `--color-contrast-50`    | Default page/component background   |
-| `--color-contrast` | `--color-contrast-900`   | Maximum-contrast text/icon color    |
+| Token              | Resolves to            | Usage                             |
+| ------------------ | ---------------------- | --------------------------------- |
+| `--color-canvas`   | `--color-contrast-50`  | Default page/component background |
+| `--color-contrast` | `--color-contrast-900` | Maximum-contrast text/icon color  |
 
 ## Semantic Text Colors
 
@@ -210,21 +210,21 @@ Used exclusively by `variant="heading"` on `<sg-text>`:
 
 ```css
 --leading-none: 1;
---leading-tight: 1.15;    /* headings */
+--leading-tight: 1.15; /* headings */
 --leading-snug: 1.375;
---leading-normal: 1.5;    /* body text — WCAG recommended */
+--leading-normal: 1.5; /* body text — WCAG recommended */
 --leading-relaxed: 1.625;
 --leading-loose: 2;
 
 /* Absolute (pixel-aligned) */
---leading-3: 0.75rem;  /* 12px */
---leading-4: 1rem;     /* 16px */
---leading-5: 1.25rem;  /* 20px */
---leading-6: 1.5rem;   /* 24px */
---leading-7: 1.75rem;  /* 28px */
---leading-8: 2rem;     /* 32px */
---leading-9: 2.25rem;  /* 36px */
---leading-10: 2.5rem;  /* 40px */
+--leading-3: 0.75rem; /* 12px */
+--leading-4: 1rem; /* 16px */
+--leading-5: 1.25rem; /* 20px */
+--leading-6: 1.5rem; /* 24px */
+--leading-7: 1.75rem; /* 28px */
+--leading-8: 2rem; /* 32px */
+--leading-9: 2.25rem; /* 36px */
+--leading-10: 2.5rem; /* 40px */
 ```
 
 ### Letter Spacing

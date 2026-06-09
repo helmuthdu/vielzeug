@@ -10,6 +10,8 @@ import {
   greaterThanOrEqual,
   isEqual,
   isNegative,
+  isNonNegative,
+  isNonPositive,
   isPositive,
   isZero,
   lessThan,
@@ -19,6 +21,7 @@ import {
   money,
   multiply,
   negate,
+  percentage,
   splitEvenly,
   subtract,
   sum,
@@ -699,6 +702,17 @@ describe('sum', () => {
     expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(TypeError);
     expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
   });
+
+  it('detects mismatch at any position (not just adjacent pairs)', () => {
+    expect(() => sum([money('1.00', 'USD'), money('2.00', 'USD'), money('3.00', 'EUR')])).toThrow(TypeError);
+    expect(() => sum([money('1.00', 'USD'), money('2.00', 'EUR'), money('3.00', 'USD')])).toThrow(TypeError);
+  });
+
+  it('sums a large array without intermediate Money objects', () => {
+    const items = Array.from({ length: 100 }, () => money('1.00', 'USD'));
+
+    expect(sum(items)).toEqual({ amount: 10000n, currency: 'USD' });
+  });
 });
 
 describe('min', () => {
@@ -756,6 +770,18 @@ describe('comparison predicates', () => {
     expect(isNegative(money('-1.00', 'USD'))).toBe(true);
     expect(isNegative(money('0.00', 'USD'))).toBe(false);
     expect(isNegative(five)).toBe(false);
+  });
+
+  it('isNonNegative', () => {
+    expect(isNonNegative(five)).toBe(true);
+    expect(isNonNegative(money('0.00', 'USD'))).toBe(true);
+    expect(isNonNegative(money('-1.00', 'USD'))).toBe(false);
+  });
+
+  it('isNonPositive', () => {
+    expect(isNonPositive(money('-1.00', 'USD'))).toBe(true);
+    expect(isNonPositive(money('0.00', 'USD'))).toBe(true);
+    expect(isNonPositive(five)).toBe(false);
   });
 
   it('greaterThan', () => {
@@ -926,5 +952,69 @@ describe('toNumber', () => {
     const huge = money(BigInt('9'.repeat(400)), 'USD');
 
     expect(toNumber(huge)).toBe(Infinity);
+  });
+});
+
+describe('percentage', () => {
+  it('computes 10% of $100.00', () => {
+    expect(percentage(money('100.00', 'USD'), 10)).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('computes 50% of $100.00', () => {
+    expect(percentage(money('100.00', 'USD'), 50)).toEqual({ amount: 5000n, currency: 'USD' });
+  });
+
+  it('computes 100% (full amount)', () => {
+    expect(percentage(money('99.99', 'USD'), 100)).toEqual({ amount: 9999n, currency: 'USD' });
+  });
+
+  it('computes 0% (zero result)', () => {
+    expect(percentage(money('100.00', 'USD'), 0)).toEqual({ amount: 0n, currency: 'USD' });
+  });
+
+  it('computes decimal string percentage losslessly', () => {
+    // 8.5% of $199.99 = $16.9991... → rounds to $17.00
+    expect(percentage(money('199.99', 'USD'), '8.5')).toEqual({ amount: 1700n, currency: 'USD' });
+  });
+
+  it('computes fractional percentage with number', () => {
+    // 33.33% of $9.00 = 2.9997 → rounds to $3.00
+    expect(percentage(money('9.00', 'USD'), 33.33)).toEqual({ amount: 300n, currency: 'USD' });
+  });
+
+  it('handles negative money (positive percentage)', () => {
+    expect(percentage(money('-100.00', 'USD'), 10)).toEqual({ amount: -1000n, currency: 'USD' });
+  });
+
+  it('handles negative percentage', () => {
+    expect(percentage(money('100.00', 'USD'), -10)).toEqual({ amount: -1000n, currency: 'USD' });
+  });
+
+  it('handles negative money with negative percentage (double negative = positive)', () => {
+    expect(percentage(money('-100.00', 'USD'), -10)).toEqual({ amount: 1000n, currency: 'USD' });
+  });
+
+  it('works with zero-decimal currencies', () => {
+    expect(percentage(money('1000', 'JPY'), 10)).toEqual({ amount: 100n, currency: 'JPY' });
+  });
+
+  describe('rounding modes', () => {
+    it("'floor' rounds down (toward −∞)", () => {
+      // 10% of $1.99 = 0.199 cents → floor = 0.19 = 19 minor units? No: 199 * 10/1000 = 1.99 → floor = 1
+      expect(percentage(money('0.19', 'USD'), 10, 'floor')).toEqual({ amount: 1n, currency: 'USD' });
+    });
+
+    it("'ceiling' rounds up (toward +∞)", () => {
+      expect(percentage(money('0.19', 'USD'), 10, 'ceiling')).toEqual({ amount: 2n, currency: 'USD' });
+    });
+
+    it("'down' truncates toward zero", () => {
+      expect(percentage(money('0.19', 'USD'), 10, 'down')).toEqual({ amount: 1n, currency: 'USD' });
+    });
+  });
+
+  it('preserves currency', () => {
+    expect(percentage(money('100.00', 'EUR'), 10).currency).toBe('EUR');
+    expect(percentage(money('1000', 'JPY'), 10).currency).toBe('JPY');
   });
 });

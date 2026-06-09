@@ -34,6 +34,7 @@ export class SubscriptionImpl implements Subscription {
 export class AsyncSubscriptionImpl implements AsyncSubscription {
   private awaitDone_: () => Promise<void>;
   private syncStop_: Subscription;
+  private disposeAsyncPromise_: Promise<void> | null = null;
 
   constructor(syncStop: Subscription, awaitDone: () => Promise<void>) {
     this.awaitDone_ = awaitDone;
@@ -44,9 +45,13 @@ export class AsyncSubscriptionImpl implements AsyncSubscription {
     this.syncStop_.dispose();
   }
 
-  async disposeAsync(): Promise<void> {
+  disposeAsync(): Promise<void> {
+    if (this.disposeAsyncPromise_ !== null) return this.disposeAsyncPromise_;
+
     this.dispose();
-    await this.awaitDone_();
+    this.disposeAsyncPromise_ = this.awaitDone_();
+
+    return this.disposeAsyncPromise_;
   }
 
   [Symbol.dispose](): void {

@@ -17,8 +17,8 @@ Use `take(array, n?)` to return the first `n` items. Default is 1.
 import { take } from '@vielzeug/arsenal';
 
 take([1, 2, 3, 4, 5], 3); // [1, 2, 3]
-take([1, 2, 3]);            // [1]
-take([1, 2, 3], 10);        // [1, 2, 3]
+take([1, 2, 3]); // [1]
+take([1, 2, 3], 10); // [1, 2, 3]
 ```
 
 ### Pitfalls

@@ -327,6 +327,32 @@ describe('createInfiniteSource', () => {
 
       expect(source.current).toEqual(['page-1']);
     });
+
+    it('current is [] immediately after reset() before fetch resolves', async () => {
+      let resolve!: (v: { items: string[]; total: number }) => void;
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce({ items: ['first'], total: 5 })
+        .mockImplementationOnce(
+          () =>
+            new Promise<{ items: string[]; total: number }>((r) => {
+              resolve = r;
+            }),
+        );
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.reset();
+      expect(source.current).toEqual(['first']);
+
+      const resetPromise = source.reset();
+
+      expect(source.current).toEqual([]);
+
+      resolve({ items: ['second'], total: 5 });
+      await resetPromise;
+
+      expect(source.current).toEqual(['second']);
+    });
   });
 
   describe('search', () => {

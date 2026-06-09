@@ -75,6 +75,16 @@ const schema = {
 
 The TypeScript compiler will reject keys that do not exist on `T`, and downstream operations (`get`, `delete`, `has`, `upsert`) accept only the correct key type.
 
+Chain `.index(field)` to register secondary indexes (IndexedDB only). Calling `.index()` twice with the same field throws `VaultError` synchronously:
+
+```ts
+// ✅ valid
+const schema = { products: table<Product>('id').index('category').index('name') };
+
+// ❌ throws VaultError: table index "category" is already registered
+const bad = table<Product>('id').index('category').index('category');
+```
+
 ## TTL Helper
 
 ```ts
@@ -631,6 +641,7 @@ type MetricsEvent = {
     | 'getMany'
     | 'getOrDefault'
     | 'has'
+    | 'isEmpty'
     | 'keys'
     | 'put'
     | 'putAll'

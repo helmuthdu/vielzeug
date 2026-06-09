@@ -19,7 +19,11 @@ import { uniq } from '@vielzeug/arsenal';
 uniq([1, 2, 2, 3, 1]);
 // [1, 2, 3]
 
-const users = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }, { id: 1, name: 'Alice (dup)' }];
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+  { id: 1, name: 'Alice (dup)' },
+];
 uniq(users, (u) => u.id);
 // [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]
 ```

@@ -883,7 +883,7 @@ timeDiff(Temporal.Instant.from('2026-01-01T00:00:00Z'), Temporal.ZonedDateTime.f
 humanize(diff: TimeDiffResult): string;
 ```
 
-Converts a `TimeDiffResult` to a human-readable English string. Uses the singular form when `value === 1`, plural otherwise.
+Converts a `TimeDiffResult` to a human-readable English string. Uses the singular form when `value === 1`, plural otherwise. Output is **English-only** — use `formatRelative()` for localized relative strings.
 
 **Example:**
 

@@ -157,7 +157,7 @@ router.subscribe((state) => {
 - Wildcard routes for catch-all cases
 - Base-path support for app subdirectories
 - View Transition API with per-navigation override
-- **Debug logging** via `debugRouter()` (`@vielzeug/wayfinder/debug`) — logs every navigation phase change with `[wayfinder:nav]` prefixes; tree-shaken from production bundles
+- **Debug logging** via `debugRouter()` (`@vielzeug/wayfinder/devtools`) — logs every navigation phase change with `[wayfinder:nav]` prefixes; tree-shaken from production bundles
 
 ## Compatibility
 

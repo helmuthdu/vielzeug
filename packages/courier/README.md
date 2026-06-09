@@ -7,7 +7,7 @@ related: [spell, ripple, vault]
 exports: [createApi, createCourier, createMutation, createQuery, createStream, createTransportCore, HttpError]
 ---
 
-# /courier
+# @vielzeug/courier
 
 > Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
 
@@ -16,7 +16,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/courier` &nbsp;·&nbsp; **Category:** Http
+**Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
 **Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`
 
@@ -26,20 +26,20 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 
 </details>
 
-`/courier` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/courier` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /courier
-npm install /courier
-yarn add /courier
+pnpm add @vielzeug/courier
+npm install @vielzeug/courier
+yarn add @vielzeug/courier
 ```
 
 ## Quick Start
 
 ```ts
-import { createCourier } from '/courier';
+import { createCourier } from '@vielzeug/courier';
 
 type NewUser = { name: string };
 type User = { id: number; name: string };

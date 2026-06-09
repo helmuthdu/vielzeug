@@ -16,9 +16,18 @@ Use `flatten(array, depth?)` to recursively flatten. Default depth is `1`.
 ```ts
 import { flatten } from '@vielzeug/arsenal';
 
-flatten([[1, 2], [3, [4, 5]]]);      // [1, 2, 3, [4, 5]]
-flatten([[1, 2], [3, [4, 5]]], 2);   // [1, 2, 3, 4, 5]
-flatten([[[1]], [[2]]], Infinity);    // [1, 2]
+flatten([
+  [1, 2],
+  [3, [4, 5]],
+]); // [1, 2, 3, [4, 5]]
+flatten(
+  [
+    [1, 2],
+    [3, [4, 5]],
+  ],
+  2,
+); // [1, 2, 3, 4, 5]
+flatten([[[1]], [[2]]], Infinity); // [1, 2]
 ```
 
 ### Pitfalls

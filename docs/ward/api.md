@@ -32,10 +32,10 @@ description: Complete API reference for @vielzeug/ward.
 
 ## Package Entry Points
 
-| Import                 | Purpose                                  |
-| ---------------------- | ---------------------------------------- |
-| `@vielzeug/ward`       | Main exports and types                   |
-| `@vielzeug/ward/debug` | `debugWard` — decision logger (dev only) |
+| Import                    | Purpose                                  |
+| ------------------------- | ---------------------------------------- |
+| `@vielzeug/ward`          | Main exports and types                   |
+| `@vielzeug/ward/devtools` | `debugWard` — decision logger (dev only) |
 
 ## Constants
 
@@ -52,7 +52,7 @@ description: Complete API reference for @vielzeug/ward.
 | `resource` | `string`                      | ✅       | Resource identifier. Use `WILDCARD` to match any resource.                                                                                                                                                  |
 | `action`   | `string`                      | ✅       | Action identifier. Use `WILDCARD` to match any action.                                                                                                                                                      |
 | `effect`   | `'allow' \| 'deny'`           | ✅       | Whether the rule grants or denies access.                                                                                                                                                                   |
-| `priority` | `number`                      | —        | Higher value wins. Defaults to `0`. Must be a finite number.                                                                                                                                                |
+| `priority` | `number`                      | —        | Higher value wins. Optional in `WardRuleInput` (defaults to `0`); always a `number` on `WardRule`. Must be a finite number.                                                                                 |
 | `when`     | `WardPredicate<TData>`        | —        | Runtime predicate evaluated only for authenticated principals.                                                                                                                                              |
 
 ### Multi-Role Rules
@@ -83,7 +83,7 @@ For specificity scoring, a multi-role rule is treated as specific (score 1) unle
 
 ```ts
 createWard<TAction extends string = string, TData = unknown>(
-  rules?: readonly WardRule<TAction, TData>[],
+  rules?: readonly WardRuleInput<TAction, TData>[],
   options?: WardOptions<TAction, TData>,
 ): Ward<TAction, TData>
 ```
@@ -97,7 +97,7 @@ Creates an immutable ward instance with the given rules. All rules are compiled 
 | `logger`       | `(context: WardLoggerContext) => void` | `undefined` | Called after every decision method (`can`, `checkAll`, `trace`, etc.). Not called by `allowedActions` or `rulesInScope`. |
 | `onConflict`   | `(conflict: WardConflict) => void`     | `undefined` | Called synchronously for each conflict detected at creation time.                                                        |
 | `strict`       | `boolean`                              | `false`     | Throws immediately if any rule conflicts are detected.                                                                   |
-| `maxConflicts` | `number`                               | `Infinity`  | Caps the number of conflicts returned by `detectConflicts()`.                                                            |
+| `maxConflicts` | `number`                               | `Infinity`  | Caps the number of conflicts returned by `detectConflicts()`. Set to `0` to disable conflict detection entirely.         |
 
 **Winner selection** when multiple rules match:
 
@@ -705,17 +705,26 @@ type WardPredicate<TData = unknown> = (ctx: RuleContext<TData>) => boolean;
 
 ### `WardRuleInput` / `WardRule`
 
-`WardRuleInput` is the shape accepted by `createWard` and the fluent `rule()` builder (`role` may be a string or array). `WardRule` is the normalized output shape (`role` is always `readonly string[]`). Returned rules are **frozen** objects.
+`WardRuleInput` is the shape accepted by `createWard` and the fluent `rule()` builder (`role` may be a string or array). `WardRule` is the normalized output shape: `role` is always `readonly string[]`, and `priority` is always a `number` (defaulted to `0` when not provided). Returned rules are **frozen** objects.
 
 ```ts
 type WardRuleInput<TAction extends string = string, TData = unknown> = {
   action: TAction | typeof WILDCARD;
   effect: 'allow' | 'deny';
-  priority?: number;
+  priority?: number; // optional in input — defaults to 0
   resource: string | typeof WILDCARD;
   role: string | readonly string[];
   when?: WardPredicate<TData>;
 };
+
+type WardRule<TAction extends string = string, TData = unknown> = Readonly<{
+  action: TAction | typeof WILDCARD;
+  effect: 'allow' | 'deny';
+  priority: number; // always present — 0 when not authored
+  resource: string | typeof WILDCARD;
+  role: readonly string[];
+  when?: WardPredicate<TData>;
+}>;
 ```
 
 ### `WardDecision`
@@ -820,18 +829,18 @@ type WardTrace<TAction extends string = string, TData = unknown> = {
 };
 ```
 
-## `debugWard(rules, options?)` <Badge type="tip" text="@vielzeug/ward/debug" />
+## `debugWard(rules, options?)` <Badge type="tip" text="@vielzeug/ward/devtools" />
 
 ```ts
-import { debugWard } from '@vielzeug/ward/debug';
+import { debugWard } from '@vielzeug/ward/devtools';
 
 const permit = debugWard(rules);
 
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
-// [ward:decision] allow             viewer  posts  read
+// [ward:decision] allow             (allow)   viewer  posts  read
 
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
-// [ward:decision] no-matching-rule  viewer  posts  delete
+// [ward:decision] no-matching-rule            viewer  posts  delete
 ```
 
 Wraps `createWard()` with a `logger` pre-wired to `console.debug`. Returns the same `Ward` instance — all methods are identical to `createWard()`.

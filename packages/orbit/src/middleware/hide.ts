@@ -21,7 +21,7 @@ export interface HideOptions extends DetectOverflowOptions {
 export function hide(options: HideOptions = {}): TypedMiddleware<'hide', HideData> {
   const strategy = options.strategy ?? 'both';
 
-  return tagMiddleware(function hideMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  function hideMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const boundary = getBoundaryRect(options.boundary ?? state.boundary);
     const padding = toSideObject(options.padding ?? state.padding);
     const next: HideData = {};
@@ -42,5 +42,7 @@ export function hide(options: HideOptions = {}): TypedMiddleware<'hide', HideDat
     }
 
     return { data: { hide: next } };
-  }, 'hide');
+  }
+
+  return tagMiddleware<'hide', HideData, typeof hideMiddleware>(hideMiddleware, 'hide');
 }

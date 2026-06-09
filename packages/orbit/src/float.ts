@@ -172,6 +172,10 @@ export function float(
       console.warn(
         '[orbit] preferCssAnchor is ignored when a custom apply callback is provided. Falling back to JS positioning.',
       );
+    } else if (!isCssAnchorPositioningSupported()) {
+      console.warn(
+        '[orbit] preferCssAnchor: CSS Anchor Positioning is not supported in this browser. Falling back to JS positioning.',
+      );
     }
   }
 

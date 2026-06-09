@@ -20,7 +20,9 @@ export type CourierRequestConfig<P extends string = string> = PathConfig<P> & {
   body?: unknown;
   /**
    * Set to `false` to bypass in-flight deduplication for this request.
-   * Idempotent methods (GET, HEAD, OPTIONS, DELETE) are deduplicated by default.
+   * Safe + idempotent methods (GET, HEAD, OPTIONS) are deduplicated by default.
+   * DELETE is idempotent but has side-effects, so it does not auto-dedupe;
+   * pass an explicit `dedupeKey` to opt in.
    */
   dedupe?: boolean;
   /** Explicit deduplication key for non-idempotent requests. */

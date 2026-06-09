@@ -21,7 +21,9 @@ await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 })
 
 // Wait for a flag
 let ready = false;
-setTimeout(() => { ready = true; }, 500);
+setTimeout(() => {
+  ready = true;
+}, 500);
 await waitFor(() => ready);
 ```
 

@@ -17,7 +17,7 @@ Use `deepClone(value)` to produce a fully independent copy of the value.
 import { deepClone } from '@vielzeug/arsenal';
 
 const original = { user: { name: 'Alice', roles: ['admin'] } };
-const copy     = deepClone(original);
+const copy = deepClone(original);
 
 copy.user.roles.push('editor');
 console.log(original.user.roles); // ['admin'] — unchanged

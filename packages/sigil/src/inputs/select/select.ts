@@ -110,6 +110,9 @@ export type SgSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' 
  * @cssprop --select-font-size - Font size
  * @cssprop --select-placeholder-color - Placeholder text color
  *
+ * @part trigger - The `sg-input` trigger element that opens the dropdown.
+ * @part dropdown - The dropdown listbox panel container.
+ *
  * @example
  * ```html
  * <sg-select label="Role" value="admin">
@@ -452,6 +455,7 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
     return html`<slot style="display:none"></slot>
       <sg-input
         class="trigger"
+        part="trigger"
         readonly
         tabindex="${tabIndexAttr}"
         role="combobox"
@@ -502,6 +506,7 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
       </sg-input>
       <div
         class="dropdown"
+        part="dropdown"
         ?data-open="${isOpen}"
         role="listbox"
         id="${listboxId}"

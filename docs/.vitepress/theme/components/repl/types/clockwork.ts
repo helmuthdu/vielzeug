@@ -6,7 +6,10 @@ declare module '/clockwork' {
 
   export type EventByType<Ev extends MachineEvent, Type extends EventType<Ev>> = Extract<Ev, { type: Type }>;
 
-  export type LifecycleEvent = { readonly type: '$init' } | { readonly type: '$hydrate' };
+  export type LifecycleEvent =
+    | { readonly type: '$init' }
+    | { readonly type: '$hydrate' }
+    | { readonly delay: number; readonly type: '$after' };
 
   export type ActionArgs<Ctx extends object, Ev extends MachineEvent = MachineEvent> = {
     context: Ctx;
@@ -17,11 +20,14 @@ declare module '/clockwork' {
     args: ActionArgs<Ctx, Ev>,
   ) => void;
 
-  export type EntryFn<Ctx extends object> = (args: { context: Ctx }) => void;
-
   export type GuardFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (
     args: ActionArgs<Ctx, Ev>,
   ) => boolean;
+
+  export type LifecycleFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: {
+    context: Ctx;
+    readonly event: Ev | LifecycleEvent;
+  }) => void;
 
   export type TransitionDef<
     State extends string,
@@ -41,15 +47,22 @@ declare module '/clockwork' {
     Type extends EventType<Ev> = EventType<Ev>,
   > = TransitionDef<State, Ctx, Ev, Type> | Array<TransitionDef<State, Ctx, Ev, Type>>;
 
+  export type AfterDef<State extends string, Ctx extends object> = {
+    actions?: Array<(args: { context: Ctx; readonly event: { readonly delay: number; readonly type: '$after' } }) => void>;
+    delay: number;
+    guard?: (args: { readonly context: Readonly<Ctx> }) => boolean;
+    target: State;
+  };
+
   export type InvokeSourceArgs<Ctx extends object, Ev extends MachineEvent> = {
     readonly context: Readonly<Ctx>;
-    readonly event: Ev | LifecycleEvent;
+    readonly entryEvent: Ev | LifecycleEvent;
     readonly signal: AbortSignal;
   };
 
   export type InvokeDispatchArgs<Ctx extends object, Ev extends MachineEvent> = {
     readonly context: Readonly<Ctx>;
-    readonly event: Ev | LifecycleEvent;
+    readonly entryEvent: Ev | LifecycleEvent;
   };
 
   export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
@@ -59,13 +72,16 @@ declare module '/clockwork' {
   };
 
   export type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    entry?: EntryFn<Ctx>;
-    exit?: ActionFn<Ctx, Ev>;
+    after?: Array<AfterDef<State, Ctx>>;
+    entry?: LifecycleFn<Ctx, Ev>;
+    exit?: LifecycleFn<Ctx, Ev>;
+    initial?: string;
     invoke?: Array<InvokeDef<Ctx, Ev>>;
     on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
+    states?: Record<string, StateNode<string, Ctx, Ev>>;
   };
 
-  export type ContextValidator<Ctx extends object> = (context: unknown) => context is Ctx;
+  export type ContextValidator<Ctx extends object> = (context: Ctx) => boolean;
 
   export type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = {
     context?: Ctx;
@@ -85,68 +101,54 @@ declare module '/clockwork' {
 
   export type PersistenceAdapter<State extends string, Ctx extends object> = {
     clear?: () => void;
-    load?: () => MachineSnapshot<State, Ctx> | undefined;
-    save?: (snapshot: MachineSnapshot<State, Ctx>) => void;
+    load: () => MachineSnapshot<State, Ctx> | undefined;
+    save: (snapshot: MachineSnapshot<State, Ctx>) => void;
   };
 
-  export type GuardEvaluationInfo<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    readonly context: Readonly<Ctx>;
-    readonly event: Ev;
-    readonly from: State;
-    readonly passed: boolean;
-    readonly target: State;
+  export type DebugEvent<State extends string, Ctx extends object, Ev extends MachineEvent> =
+    | { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State; type: 'guard' }
+    | { event: Ev; from: State; type: 'transition-skipped' }
+    | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-start' }
+    | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; result: unknown; state: State; type: 'invoke-done' }
+    | { context: Readonly<Ctx>; error: unknown; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-error' }
+    | { context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: number; state: State; type: 'invoke-abort' };
+
+  export type DebugOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
+    onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
+    onTransition?: (info: { event: Ev | LifecycleEvent; from: State; to: State }) => void;
+    traceLimit?: number;
   };
 
-  export type TransitionSkippedInfo<State extends string, Ev extends MachineEvent> = {
-    readonly event: Ev;
-    readonly from: State;
-  };
-
-  export type InvokeDebugInfo<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    readonly context: Readonly<Ctx>;
-    readonly event: Ev | LifecycleEvent;
-    readonly invokeId: number;
-    readonly state: State;
-  };
-
-  export type DebugHooks<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-    onEvaluateGuard?: (info: GuardEvaluationInfo<State, Ctx, Ev>) => void;
-    onInvokeAbort?: (info: InvokeDebugInfo<State, Ctx, Ev>) => void;
-    onInvokeDone?: (info: InvokeDebugInfo<State, Ctx, Ev> & { readonly result: unknown }) => void;
-    onInvokeError?: (info: InvokeDebugInfo<State, Ctx, Ev> & { readonly error: unknown }) => void;
-    onInvokeStart?: (info: InvokeDebugInfo<State, Ctx, Ev>) => void;
-    onTransitionSkipped?: (info: TransitionSkippedInfo<State, Ev>) => void;
-  };
+  export type MiddlewareFn<State extends string, Ctx extends object, Ev extends MachineEvent> = (
+    event: Ev,
+    snapshot: { readonly context: Readonly<Ctx>; readonly state: State },
+    next: () => boolean,
+  ) => boolean;
 
   export type TransitionTraceEntry<State extends string, Ev extends MachineEvent> = {
-    readonly event: Ev;
+    readonly event: Ev | LifecycleEvent;
     readonly from: State;
-    readonly invokeId?: number;
     readonly timestamp: number;
     readonly to: State;
   };
 
   export type InterpretOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
     clone?: <T>(value: T) => T;
-    debug?: DebugHooks<State, Ctx, Ev>;
+    debug?: DebugOptions<State, Ctx, Ev>;
     maxTransitionsPerFlush?: number;
-    onTransition?: (info: { event: Ev; from: State; to: State }) => void;
+    middleware?: Array<MiddlewareFn<State, Ctx, Ev>>;
     persistence?: PersistenceAdapter<State, Ctx>;
     snapshot?: MachineSnapshot<State, Ctx>;
-    traceLimit?: number;
-    validateSnapshot?: ContextValidator<Ctx>;
   };
 
   export type MachineErrorCode =
+    | 'MACHINE_INVALID_AFTER_DELAY'
     | 'MACHINE_INVALID_INITIAL_STATE'
     | 'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH'
     | 'MACHINE_INVALID_SNAPSHOT_STATE'
-    | 'MACHINE_INVALID_TRANSITION'
     | 'MACHINE_INVALID_TRANSITION_ARRAY'
-    | 'MACHINE_INVALID_TRANSITION_HANDLER'
-    | 'MACHINE_INVALID_TYPE_HANDLER'
-    | 'MACHINE_INVALID_TYPE_IN_TRANSITION'
     | 'MACHINE_INVALID_VALIDATE_CONTEXT'
+    | 'MACHINE_MISSING_COMPOUND_INITIAL'
     | 'MACHINE_TRANSITION_LOOP_GUARD'
     | 'MACHINE_UNKNOWN_TARGET';
 
@@ -160,11 +162,11 @@ declare module '/clockwork' {
     readonly context: import('/ripple').ReadonlySignal<Ctx>;
     readonly state: import('/ripple').ReadonlySignal<State>;
     can(event: Ev): boolean;
-    clearPersistence(): void;
     getSnapshot(): MachineSnapshot<State, Ctx>;
     getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-    matches(...states: State[]): boolean;
+    matches(...states: string[]): boolean;
     send(event: Ev): boolean;
+    subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
     [Symbol.dispose](): void;
   }
 
@@ -185,9 +187,5 @@ declare module '/clockwork' {
       state: State;
     },
   ): TransitionDef<State, Ctx, Ev> | undefined;
-
-  export function assign<Ctx extends object, Ev extends MachineEvent = MachineEvent>(
-    fn: (args: ActionArgs<Ctx, Ev>) => Partial<Ctx>,
-  ): ActionFn<Ctx, Ev>;
 }
 `;

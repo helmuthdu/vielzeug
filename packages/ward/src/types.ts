@@ -37,12 +37,13 @@ export type WardRuleInput<TAction extends string = string, TData = unknown> = {
 /**
  * Output shape returned from decisions, `rulesInScope`, and `WardConflict`.
  * `role` is always a `readonly string[]` — normalized from the input form.
+ * `priority` is always a `number` — defaulted to `0` when not provided in the input.
  * The rule object is frozen and must not be mutated.
  */
 export type WardRule<TAction extends string = string, TData = unknown> = Readonly<{
   action: TAction | typeof WILDCARD;
   effect: 'allow' | 'deny';
-  priority?: number;
+  priority: number;
   resource: string | typeof WILDCARD;
   role: readonly string[];
   when?: WardPredicate<TData>;
@@ -213,6 +214,7 @@ export type WardOptions<TAction extends string = string, TData = unknown> = {
   /**
    * Maximum number of conflicts returned by `detectConflicts()`. Defaults to `Infinity`.
    * Use to cap the O(n²) overhead for large auto-generated policies.
+   * Setting this to `0` disables conflict detection entirely — `detectConflicts()` will always return `[]`.
    */
   maxConflicts?: number;
   /**

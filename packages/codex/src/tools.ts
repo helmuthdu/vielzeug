@@ -64,7 +64,7 @@ interface ToolDefinition {
 
 const listPackagesTool: ToolDefinition = {
   description:
-    'List all vielzeug packages with metadata (version, description, category, keywords, exports, available doc pages). Pass packageSlug to filter to a single-item result array.',
+    'List all vielzeug packages with metadata (version, description, category, keywords, exports, availableDocPages, hasSource). Returns a JSON array of PackageMeta objects sorted by slug. Pass packageSlug to filter to a single-item array. Use this tool first to discover available packages, then call get-docs or get-source for details.',
   inputSchema: {
     properties: {
       packageSlug: {
@@ -94,7 +94,8 @@ const listPackagesTool: ToolDefinition = {
 // --- get-docs ---
 
 const getDocsTool: ToolDefinition = {
-  description: 'Read package documentation by slug. Pages: index (default), api, usage, examples.',
+  description:
+    'Read a documentation page for a vielzeug package. Returns Markdown text. page defaults to "index" (overview + quick start). Use "api" for full API reference, "usage" for how-to guide, "examples" for recipe index. Check availableDocPages from list-packages before requesting a specific page.',
   inputSchema: {
     properties: {
       packageSlug: { description: 'Package folder name, e.g. "ripple"', minLength: 1, type: 'string' },
@@ -130,7 +131,8 @@ const getDocsTool: ToolDefinition = {
 // --- get-source ---
 
 const getSourceTool: ToolDefinition = {
-  description: 'Read the public API source (src/index.ts) for a vielzeug package.',
+  description:
+    'Read the full src/index.ts source of a vielzeug package. Returns TypeScript text with all exported function signatures, types, and JSDoc. Use this when you need exact type signatures or implementation details not covered by docs. Check hasSource from list-packages first — returns isError if no source is bundled.',
   inputSchema: {
     properties: {
       packageSlug: { description: 'Package folder name, e.g. "ripple"', minLength: 1, type: 'string' },
@@ -158,7 +160,7 @@ const getSourceTool: ToolDefinition = {
 
 const searchPackagesTool: ToolDefinition = {
   description:
-    'Search packages by keyword across name, description, category, keywords, and docs. Returns ranked matches with all matched categories and pages.',
+    'Search vielzeug packages by keyword across name, description, category, keywords, exports, and docs. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports, 1=docs. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
   inputSchema: {
     properties: { query: { description: 'Non-empty search term', minLength: 1, type: 'string' } },
     required: ['query'],
@@ -185,7 +187,8 @@ const SIGIL_UNAVAILABLE =
   'Sigil component metadata is unavailable in this snapshot. If using the monorepo, build /sigil first then run prepare:data. Published releases include this data automatically.';
 
 const listComponentsTool: ToolDefinition = {
-  description: 'List all /sigil web component tags from bundled CEM metadata.',
+  description:
+    'List all @vielzeug/sigil web component tags from bundled Custom Elements Manifest (CEM) metadata. Returns a JSON array with tagName, description, and attrs (name, type, default). Use this to discover available components before calling get-component for full details. Returns isError if sigil was not built before data generation.',
   inputSchema: { properties: {}, type: 'object' },
   name: 'list-components',
   run(_args, context) {
@@ -210,7 +213,8 @@ const listComponentsTool: ToolDefinition = {
 // --- get-component ---
 
 const getComponentTool: ToolDefinition = {
-  description: 'Get a full /sigil component CEM declaration by HTML tag name.',
+  description:
+    'Get the full Custom Elements Manifest (CEM) declaration for a single @vielzeug/sigil component by its HTML tag name (e.g. "sg-button"). Returns a JSON object with attributes, events, slots, CSS parts, CSS properties, and member methods. Call list-components first to get valid tag names.',
   inputSchema: {
     properties: {
       tagName: { description: 'HTML custom element tag, e.g. "sg-button"', minLength: 1, type: 'string' },

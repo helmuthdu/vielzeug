@@ -11,6 +11,7 @@ description: Complete API reference for the Orbit floating positioning library.
 | ------------------- | ------------------------------------------------------------ | --------------------------- | ------------------------------------------------------ |
 | `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.cleanup()` on teardown                    |
 | `computePosition()` | Compute position once without auto-update                    | Sync                        | Does not watch for layout changes                      |
+| `computeOnce()`     | One-shot async position via microtask deferral               | Async                       | Defers to microtask queue, not next animation frame    |
 | `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup       | Call cleanup on teardown                               |
 | `detectOverflow()`  | Per-side overflow of the floating rect against boundary      | Sync                        | Positive = overflow, negative = remaining space        |
 | `compose()`         | Validate middleware order and return typed array             | Sync, throws                | Throws at call time on bad ordering                    |
@@ -35,7 +36,7 @@ description: Complete API reference for the Orbit floating positioning library.
 | `@vielzeug/orbit/inline`   | `inline` middleware for multi-line refs      |
 | `@vielzeug/orbit/presets`  | Pre-configured middleware stacks             |
 | `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/debug`    | Visual debug overlay (dev only)              |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (dev only)              |
 | `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering        |
 
 ## Core Functions
@@ -43,10 +44,10 @@ description: Complete API reference for the Orbit floating positioning library.
 ### `float(reference, floating, options?)`
 
 ```ts
-float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): Cleanup;
+float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): FloatHandle;
 ```
 
-Positions `floating` relative to `reference` and keeps it in sync. Returns a `Cleanup` function — **always call it** to remove scroll and resize listeners.
+Positions `floating` relative to `reference` and keeps it in sync. Returns a `FloatHandle` — **always call `handle.cleanup()`** to remove scroll and resize listeners.
 
 By default, writes `left` and `top` CSS properties. The floating element must have `position: fixed`.
 
@@ -55,13 +56,13 @@ By default, writes `left` and `top` CSS properties. The floating element must ha
 ```ts
 import { float, flip, offset, shift } from '@vielzeug/orbit';
 
-const cleanup = float(trigger, tooltip, {
+const handle = float(trigger, tooltip, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
 
 // on teardown:
-cleanup();
+handle.cleanup();
 ```
 
 **Options — `FloatOptions`**
@@ -76,7 +77,32 @@ cleanup();
 
 When `preferCssAnchor: true`, `float()` uses native CSS Anchor Positioning in supporting browsers (no scroll listeners, no JS updates). It falls back to JS positioning when the browser does not support it, when `middleware` is non-empty, or when a custom `apply` is provided.
 
-**Returns:** `Cleanup` (`() => void`)
+**Returns:** `FloatHandle`
+
+---
+
+### `computeOnce(reference, floating, options?)`
+
+```ts
+computeOnce(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
+```
+
+Deferred one-shot position computation. Schedules `computePosition` in the next microtask and resolves with the result. Useful in async component lifecycles (e.g. after `await nextTick()`) where DOM layout may not yet be stable.
+
+> **Note:** This defers to the microtask queue, not the next animation frame. For post-layout measurements, wrap in `requestAnimationFrame` instead.
+
+**Returns:** `Promise<ComputePositionResult>`
+
+**Example:**
+
+```ts
+import { computeOnce } from '@vielzeug/orbit';
+
+// e.g. in a Vue onMounted or React useEffect:
+const result = await computeOnce(reference, floating, { placement: 'top' });
+floating.style.left = `${result.x}px`;
+floating.style.top = `${result.y}px`;
+```
 
 ---
 
@@ -892,6 +918,59 @@ interface PositioningPreset {
   placement: Placement;
   middleware: Middleware[];
 }
+```
+
+### `SizeData`
+
+```ts
+interface SizeData {
+  availableWidth: number;
+  availableHeight: number;
+}
+```
+
+Written to `middlewareData.size` by the `size()` middleware.
+
+### `TypedMiddleware`
+
+```ts
+type TypedMiddleware<K extends string, D> = Middleware & {
+  readonly __middlewareKey: K;
+  readonly __middlewareData: D;
+};
+```
+
+A branded `Middleware` subtype returned by built-in middleware factories (`flip`, `shift`, `size`, `arrow`, `hide`). Enables typed `middlewareData` inference via `TypedComputePositionResult`.
+
+### `InferMiddlewareData`
+
+```ts
+type InferMiddlewareData<M extends Middleware[]> = ...
+```
+
+Infers a typed `middlewareData` object from a `TypedMiddleware[]` tuple. Each key is optional (middleware may or may not write data on a given run).
+
+### `TypedComputePositionResult`
+
+```ts
+type TypedComputePositionResult<M extends Middleware[]> = ComputePositionResult & {
+  middlewareData: InferMiddlewareData<M>;
+};
+```
+
+Casts `computePosition`'s result to a typed `middlewareData` shape inferred from the middleware array. Use with `as TypedComputePositionResult<typeof myMiddleware>`.
+
+**Example:**
+
+```ts
+import type { TypedComputePositionResult } from '@vielzeug/orbit';
+import { computePosition, flip, shift } from '@vielzeug/orbit';
+
+const mw = [flip(), shift()] as const;
+const result = computePosition(ref, el, { middleware: [...mw] }) as TypedComputePositionResult<typeof mw>;
+
+// result.middlewareData.flip?.skippedPlacements is Placement[]
+// result.middlewareData.shift?.x is number
 ```
 
 ### `MiddlewareData`

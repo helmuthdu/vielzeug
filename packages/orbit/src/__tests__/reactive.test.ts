@@ -67,22 +67,15 @@ describe('createFloatState', () => {
     expect(() => handle.cleanup()).not.toThrow();
   });
 
-  it('emits a DEV warning when cssAnchor path is active', () => {
+  it('emits a DEV warn when preferCssAnchor is true but browser does not support it', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 80 }));
-
-    const handle = createFloatState(reference as unknown as HTMLElement, floating, {
-      autoUpdate: false,
-      preferCssAnchor: true,
-    });
+    const handle = createFloatState(reference, floating, { autoUpdate: false, preferCssAnchor: true });
 
     handle.cleanup();
 
-    // If CSS Anchor Positioning is unsupported in jsdom, cssAnchor will be false and no warning fires.
-    // If it were supported and active, the warning would be present.
-    // Either outcome is valid in this test environment.
-    expect(warnSpy).toHaveBeenCalledTimes(warnSpy.mock.calls.length);
+    // jsdom does not support CSS Anchor Positioning, so a DEV warn should fire.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));
   });
 });

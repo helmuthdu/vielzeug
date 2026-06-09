@@ -16,13 +16,7 @@ Use `countBy(array, selector)` to produce a `Record<string, number>` of key → 
 ```ts
 import { countBy } from '@vielzeug/arsenal';
 
-const users = [
-  { role: 'admin' },
-  { role: 'user' },
-  { role: 'user' },
-  { role: 'admin' },
-  { role: 'guest' },
-];
+const users = [{ role: 'admin' }, { role: 'user' }, { role: 'user' }, { role: 'admin' }, { role: 'guest' }];
 
 countBy(users, (u) => u.role);
 // { admin: 2, user: 2, guest: 1 }

@@ -233,7 +233,15 @@ export function allocate(m: Money, ratios: readonly (number | string)[]): [Money
 export function sum(moneys: readonly Money[]): Money {
   if (moneys.length === 0) throw new RangeError('sum requires at least one Money value');
 
-  return moneys.reduce(add);
+  const currency = moneys[0]!.currency;
+
+  for (let i = 1; i < moneys.length; i++) {
+    if (moneys[i]!.currency !== currency) {
+      throw new TypeError(`Currency mismatch: ${currency} and ${moneys[i]!.currency}`);
+    }
+  }
+
+  return { amount: moneys.reduce((acc, m) => acc + m.amount, 0n), currency };
 }
 
 /**
@@ -316,6 +324,31 @@ export function negate(m: Money): Money {
   return { amount: -m.amount, currency: m.currency };
 }
 
+/**
+ * Returns `percentage`% of `money`, i.e. `money × (percentage / 100)`.
+ * Use a string percentage for lossless precision (e.g. `'8.5'` for 8.5%).
+ *
+ * @param mode Rounding mode for fractional minor units. Defaults to `'half-away-from-zero'`.
+ *
+ * @example
+ * ```ts
+ * percentage(money('100.00', 'USD'), 10)      // $10.00
+ * percentage(money('199.99', 'USD'), '8.5')   // $16.99
+ * ```
+ */
+export function percentage(m: Money, pct: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
+  const { denominator, negative: pctNegative, numerator } = parseRational(String(pct));
+  const scale = 100n;
+  const negative = m.amount < 0n !== pctNegative;
+  const absAmount = m.amount < 0n ? -m.amount : m.amount;
+  const raw = absAmount * numerator;
+  const divisor = denominator * scale;
+  const quotient = raw / divisor;
+  const result = applyRounding(quotient, raw % divisor, divisor, mode, negative);
+
+  return { amount: negative ? -result : result, currency: m.currency };
+}
+
 // ─── Comparison ──────────────────────────────────────────────────────────────
 
 /**
@@ -378,6 +411,16 @@ export function isPositive(m: Money): boolean {
 /** Returns `true` if the amount is strictly negative (< 0). */
 export function isNegative(m: Money): boolean {
   return m.amount < 0n;
+}
+
+/** Returns `true` if the amount is zero or positive (>= 0). */
+export function isNonNegative(m: Money): boolean {
+  return m.amount >= 0n;
+}
+
+/** Returns `true` if the amount is zero or negative (<= 0). */
+export function isNonPositive(m: Money): boolean {
+  return m.amount <= 0n;
 }
 
 // ─── Serialization ───────────────────────────────────────────────────────────

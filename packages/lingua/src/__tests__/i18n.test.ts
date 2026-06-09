@@ -911,6 +911,48 @@ describe('createI18n', () => {
 
       expect(nav.fmt).toBe(i18n.fmt);
     });
+
+    test('tp() passes TpOptions through correctly', () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: {
+            leaderboard: {
+              place: { few: '{count}rd', one: '{count}st', other: '{count}th', two: '{count}nd' },
+            },
+          },
+        },
+      });
+      const board = i18n.scope('leaderboard');
+
+      expect(board.tp('place', 1, { ordinal: true })).toBe('1st');
+      expect(board.tp('place', 2, { ordinal: true })).toBe('2nd');
+      expect(board.tp('place', 4, { ordinal: true })).toBe('4th');
+    });
+  });
+
+  // ─── prototype pollution guard ─────────────────────────────────────────────
+
+  describe('prototype pollution guard', () => {
+    test('__proto__ key in catalog is silently skipped', () => {
+      const evil = JSON.parse('{"__proto__": "hacked", "hello": "Hello"}') as Record<string, string>;
+
+      expect(() => {
+        const i18n = createI18n({ catalogs: { en: evil as any } });
+
+        expect(i18n.t('hello')).toBe('Hello');
+        // __proto__ key must not appear as a catalog entry
+        expect(i18n.has('__proto__' as any)).toBe(false);
+      }).not.toThrow();
+    });
+
+    test('nested __proto__ key in catalog is silently skipped', () => {
+      const evil = JSON.parse('{"nav": {"__proto__": "hacked", "home": "Home"}}') as Record<string, unknown>;
+
+      const i18n = createI18n({ catalogs: { en: evil as any } });
+
+      expect(i18n.t('nav.home')).toBe('Home');
+      expect(i18n.has('nav.__proto__' as any)).toBe(false);
+    });
   });
 
   // ─── merge() ────────────────────────────────────────────────────────────────
@@ -1316,6 +1358,30 @@ describe('createI18n', () => {
 
       expect(callback).not.toHaveBeenCalled();
     });
+
+    test('subscriber that throws on immediate is not added to the active subscriber set', async () => {
+      const errors: unknown[] = [];
+      const i18n = createI18n({
+        catalogs: { en: {}, fr: {} },
+        locale: 'en',
+        onSubscriberError: (e) => errors.push(e),
+      });
+
+      let callCount = 0;
+      const throwingCb = vi.fn(() => {
+        callCount++;
+        throw new Error('immediate error');
+      });
+
+      i18n.subscribe(throwingCb, { immediate: true });
+
+      // The immediate invocation threw — onSubscriberError was called
+      expect(errors).toHaveLength(1);
+
+      // Trigger a bump; the subscriber must NOT fire again
+      await i18n.setLocale('fr');
+      expect(callCount).toBe(1);
+    });
   });
 
   // ─── compile mode (F2) ────────────────────────────────────────────────────
@@ -1693,6 +1759,71 @@ describe('createI18n', () => {
     });
   });
 
+  // ─── bindPlural() ─────────────────────────────────────────────────────────
+
+  describe('bindPlural()', () => {
+    test('returns a function that translates a plural key', () => {
+      const i18n = createI18n({
+        catalogs: { en: { inbox: { one: 'One message', other: '{count} messages' } } },
+      });
+      const inbox = i18n.bindPlural('inbox');
+
+      expect(inbox(1)).toBe('One message');
+      expect(inbox(5)).toBe('5 messages');
+    });
+
+    test('calls onMissingKey for an unknown plural key', () => {
+      const i18n = createI18n({ onMissingKey: (k) => `MISSING:${k}` });
+      const fn = i18n.bindPlural('ghost' as any);
+
+      expect(fn(1)).toBe('MISSING:ghost');
+    });
+
+    test('invalidates after setLocale()', async () => {
+      const i18n = createI18n({
+        catalogs: {
+          de: { items: { one: 'Ein Element', other: '{count} Elemente' } },
+          en: { items: { one: 'One item', other: '{count} items' } },
+        },
+        locale: 'en',
+      });
+      const items = i18n.bindPlural('items');
+
+      expect(items(1)).toBe('One item');
+      await i18n.setLocale('de');
+      expect(items(1)).toBe('Ein Element');
+    });
+
+    test('supports TpOptions ordinal', () => {
+      const i18n = createI18n({
+        catalogs: { en: { position: { few: '{count}rd', one: '{count}st', other: '{count}th', two: '{count}nd' } } },
+      });
+      const pos = i18n.bindPlural('position');
+
+      expect(pos(1, { ordinal: true })).toBe('1st');
+      expect(pos(2, { ordinal: true })).toBe('2nd');
+    });
+
+    test('works with compile: true', () => {
+      const i18n = createI18n({
+        catalogs: { en: { inbox: { one: 'One message', other: '{count} messages' } } },
+        compile: true,
+      });
+      const inbox = i18n.bindPlural('inbox');
+
+      expect(inbox(1)).toBe('One message');
+      expect(inbox(7)).toBe('7 messages');
+    });
+
+    test('works with pipe-plural shorthand expansion', () => {
+      const i18n = createI18n({ catalogs: { en: { alerts: 'One alert|{count} alerts' } } });
+      const alerts = i18n.bindPlural('alerts');
+
+      expect(alerts(1)).toBe('One alert');
+      expect(alerts(5)).toBe('5 alerts');
+    });
+  });
+
   // ─── fork() (F4) ──────────────────────────────────────────────────────────
 
   describe('fork()', () => {
@@ -1905,10 +2036,16 @@ describe('createI18n', () => {
   // ─── restoreState() — knownLocales consistency ────────────────────────────
 
   describe('restoreState() — knownLocales consistency', () => {
-    test('active locale appears in getSupportedLocales() even when absent from state.catalogs', () => {
+    test('throws [lingua/E006] when state.locale is absent from state.catalogs', () => {
       const i18n = createI18n();
 
-      i18n.restoreState({ catalogs: {}, locale: 'fr' });
+      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr' })).toThrowError('[lingua/E006]');
+    });
+
+    test('active locale appears in getSupportedLocales() after valid restoreState()', () => {
+      const i18n = createI18n();
+
+      i18n.restoreState({ catalogs: { fr: { hello: 'Bonjour' } }, locale: 'fr' });
       expect(i18n.getSupportedLocales()).toContain('fr');
     });
   });

@@ -17,7 +17,7 @@ Use `diff(before, after)` to get a partial object containing only the changed ke
 import { diff, DELETED } from '@vielzeug/arsenal';
 
 const before = { host: 'localhost', port: 3000, secure: false };
-const after  = { host: 'localhost', port: 4000 };
+const after = { host: 'localhost', port: 4000 };
 
 diff(before, after);
 // { port: 4000, secure: DELETED }

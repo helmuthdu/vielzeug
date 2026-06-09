@@ -18,8 +18,8 @@ import { search } from '@vielzeug/arsenal';
 
 const users = [
   { id: 1, name: 'Alice Smith', role: 'admin' },
-  { id: 2, name: 'Alan Jones',  role: 'user'  },
-  { id: 3, name: 'Bob Brown',   role: 'user'  },
+  { id: 2, name: 'Alan Jones', role: 'user' },
+  { id: 3, name: 'Bob Brown', role: 'user' },
 ];
 
 // Filter mode: items above similarity threshold
@@ -34,7 +34,7 @@ import { search } from '@vielzeug/arsenal';
 
 const users = [
   { id: 1, name: 'Alice Smith' },
-  { id: 2, name: 'Alan Jones'  },
+  { id: 2, name: 'Alan Jones' },
 ];
 
 const ranked = search(users, 'ali', { mode: 'scored', threshold: 0.3 });
@@ -49,6 +49,10 @@ const ranked = search(users, 'ali', { mode: 'scored', threshold: 0.3 });
 ```ts
 import { search } from '@vielzeug/arsenal';
 
+const users = [
+  { id: 1, name: 'Alice Smith' },
+  { id: 2, name: 'Alan Jones' },
+];
 const results = search(users, 'ali', { fields: ['name'] });
 ```
 

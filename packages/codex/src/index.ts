@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
 import type { BundledData } from './types.js';
 
+import { loadData } from './data.js';
 import { registerResources } from './resources.js';
 import { registerTools } from './tools.js';
 
@@ -19,4 +20,9 @@ export function createServer(data: BundledData): Server {
   registerResources(server, data);
 
   return server;
+}
+
+/** Convenience factory: loads bundled data from disk and creates the MCP server in one call. */
+export function createServerFromDisk(): Server {
+  return createServer(loadData());
 }

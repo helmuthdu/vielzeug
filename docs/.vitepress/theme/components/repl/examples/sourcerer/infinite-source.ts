@@ -26,6 +26,10 @@ await source.loadMore()
 await source.loadMore()
 console.log('After exhaustion:', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
 
+// reset() also clears items immediately — current is [] until the new fetch resolves
+await source.reset()
+console.log('After reset:', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
+
 source.dispose()`,
   name: 'Infinite Source',
 };

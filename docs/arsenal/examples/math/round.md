@@ -18,7 +18,7 @@ import { round } from '@vielzeug/arsenal';
 
 round(3.14159, 2); // 3.14
 round(3.14159, 0); // 3
-round(1.005, 2);   // 1.01
+round(1.005, 2); // 1.01
 ```
 
 ### Pitfalls

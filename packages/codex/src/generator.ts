@@ -88,8 +88,19 @@ interface RushProject {
   projectFolder: string;
 }
 
-function toStringArray(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String);
+function toStringArray(value: unknown, key?: string): string[] {
+  if (Array.isArray(value)) {
+    // parseFrontmatter always returns string[], but guard defensively for future callers.
+    const nonStrings = value.filter((v) => typeof v !== 'string');
+
+    if (nonStrings.length > 0) {
+      process.stderr.write(
+        `codex generator warning: frontmatter field "${key ?? 'unknown'}" contains non-string items (${nonStrings.map(String).join(', ')}) — coercing to string.\n`,
+      );
+    }
+
+    return value.map(String);
+  }
 
   return value ? [String(value)] : [];
 }
@@ -125,10 +136,10 @@ function processPackage(repoRoot: string, project: RushProject, sigilComponents:
           ? pkgJson['description']
           : '',
     docs,
-    exports: toStringArray(frontmatter['exports']),
-    keywords: toStringArray(frontmatter['keywords']),
+    exports: toStringArray(frontmatter['exports'], 'exports'),
+    keywords: toStringArray(frontmatter['keywords'], 'keywords'),
     name: String(project.packageName),
-    related: toStringArray(frontmatter['related']),
+    related: toStringArray(frontmatter['related'], 'related'),
     slug,
     version: typeof pkgJson['version'] === 'string' ? pkgJson['version'] : null,
   };

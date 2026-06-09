@@ -183,3 +183,37 @@ export type AsyncScopeSetup = () => Promise<void>;
 // Needed by reactive-base.ts (kept here to avoid the circular dep
 // reactive-base → types → reactive-base).
 export type Subscriber = () => void;
+
+// ── DevTools hook types ───────────────────────────────────────────────────────
+//
+// Defined here (core bundle) so devtools-hook.ts can reference the type without
+// importing the sub-path module (@vielzeug/ripple/devtools).
+
+/** Event emitted when a signal's value changes. */
+export type WriteEvent = { name: string | undefined; newValue: unknown; oldValue: unknown };
+
+/** Event emitted when a computed recomputes, or when an effect runs. */
+export type NamedEvent = { name: string | undefined };
+
+/** Event emitted when a signal, computed, or effect is disposed. */
+export type DisposeEvent = { kind: 'signal' | 'computed' | 'effect'; name: string | undefined };
+
+/** Event emitted when a store-level mutation occurs. `path` is populated for `kind: 'lens'`. */
+export type MutateEvent = {
+  kind: 'patch' | 'replace' | 'reset' | 'lens';
+  name: string | undefined;
+  path?: string;
+};
+
+export type RippleDevToolsHook = {
+  /** Called when a computed signal recomputes. */
+  compute?(event: NamedEvent): void;
+  /** Called when a signal, computed, or effect is disposed. */
+  dispose?(event: DisposeEvent): void;
+  /** Called when a store-level mutation (patch/replace/reset/lens) occurs. */
+  mutate?(event: MutateEvent): void;
+  /** Called when an effect starts running. */
+  run?(event: NamedEvent): void;
+  /** Called when a signal's value changes. */
+  write?(event: WriteEvent): void;
+};

@@ -4,7 +4,7 @@ package: conduit
 category: di
 keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
 related: [rune, herald, ward]
-exports: [createContainer, token, scope]
+exports: [createContainer, token, scope, CircularDependencyError, ProviderNotFoundError, DuplicateRegistrationError, SyncResolutionError, ScopedResolutionError, ContainerDisposedError]
 ---
 
 # @vielzeug/conduit
@@ -74,6 +74,7 @@ await container.dispose();
 - Sync `resolveSync()` for cached values and post-warm-up hot paths
 - `resolveMany()` to resolve multiple tokens in parallel with typed tuples
 - `tryResolve()` for result-object resolution without throwing
+- `resolveOrDefault()` to resolve with a caller-supplied fallback when a token is absent
 - `resolveAll()` to eagerly warm all singletons at startup
 - `has()` to check registration without executing the factory
 - `ContainerModule` for grouping and async provider setup

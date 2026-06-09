@@ -17,12 +17,12 @@ Use `isPrimitive(value)` to narrow to `string | number | boolean`.
 import { isPrimitive } from '@vielzeug/arsenal';
 
 isPrimitive('hello'); // true
-isPrimitive(42);      // true
-isPrimitive(true);    // true
+isPrimitive(42); // true
+isPrimitive(true); // true
 
-isPrimitive(null);    // false
-isPrimitive({});      // false
-isPrimitive([]);      // false
+isPrimitive(null); // false
+isPrimitive({}); // false
+isPrimitive([]); // false
 ```
 
 ### Related

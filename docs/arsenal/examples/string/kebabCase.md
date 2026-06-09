@@ -16,9 +16,9 @@ Use `kebabCase(str)` to convert any case to lowercase kebab-case.
 ```ts
 import { kebabCase } from '@vielzeug/arsenal';
 
-kebabCase('helloWorld');   // 'hello-world'
-kebabCase('hello_world');  // 'hello-world'
-kebabCase('Hello World');  // 'hello-world'
+kebabCase('helloWorld'); // 'hello-world'
+kebabCase('hello_world'); // 'hello-world'
+kebabCase('Hello World'); // 'hello-world'
 ```
 
 ### Related

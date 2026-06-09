@@ -15,7 +15,7 @@ Right-click context menu pinned to the cursor position using a virtual reference
 
 ```ts
 import { computePosition } from '@vielzeug/orbit';
-import { presets } from '@vielzeug/orbit/presets';
+import { contextMenu } from '@vielzeug/orbit/presets';
 
 const menu = document.querySelector<HTMLElement>('#context-menu')!;
 
@@ -28,7 +28,7 @@ document.addEventListener('contextmenu', (e) => {
 
   menu.style.display = 'block';
 
-  const { x, y } = computePosition(virtualRef, menu, presets.contextMenu());
+  const { x, y } = computePosition(virtualRef, menu, contextMenu());
 
   menu.style.left = `${x}px`;
   menu.style.top = `${y}px`;

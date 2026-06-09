@@ -2,6 +2,7 @@ import { arrayFormattingExample } from './array-formatting';
 import { asyncLoadingExample } from './async-loading';
 import { basicSetupExample } from './basic-setup';
 import { basicTranslationExample } from './basic-translation';
+import { bindPluralExample } from './bind-plural';
 import { fmtFormatterExample } from './fmt-formatter';
 import { formattingHelpersExample } from './formatting-helpers';
 import { namespacesExample } from './namespaces';
@@ -17,6 +18,7 @@ export const linguaExamples = {
   'async-loading': asyncLoadingExample,
   'basic-setup': basicSetupExample,
   'basic-translation': basicTranslationExample,
+  'bind-plural': bindPluralExample,
   'fmt-formatter': fmtFormatterExample,
   'formatting-helpers': formattingHelpersExample,
   namespaces: namespacesExample,

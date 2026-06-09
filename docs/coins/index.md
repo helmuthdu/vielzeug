@@ -26,6 +26,9 @@ exports:
     isZero,
     isPositive,
     isNegative,
+    isNonNegative,
+    isNonPositive,
+    percentage,
     format,
     formatParts,
     exchange,
@@ -144,10 +147,10 @@ a.amount + b.amount + c.amount === price.amount; // true — always
 
 - `money()` — create from decimal string, number, or bigint minor units; currency code validated at creation time
 - `toCurrencyCode()` — brand and cache ISO 4217 codes; result is type-safe in `ExchangeRate`
-- Arithmetic — `add`, `subtract`, `multiply`, `divide`, `abs`, `negate`; all throw `TypeError` on currency mismatch
+- Arithmetic — `add`, `subtract`, `multiply`, `divide`, `percentage`, `abs`, `negate`; all throw `TypeError` on currency mismatch
 - Allocation — `allocate` (weighted) and `splitEvenly` (equal); Largest Remainder Method guarantees exact totals
 - Aggregates — `sum`, `min`, `max`, `clamp`
-- Comparison — `compare`, `isEqual`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`
+- Comparison — `compare`, `isEqual`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`, `isNonNegative`, `isNonPositive`
 - `format()` — `Intl.NumberFormat`-powered string output with symbol / code / name / narrowSymbol styles
 - `formatParts()` — typed part array for custom UI rendering (superscript cents, coloured symbols, etc.)
 - `exchange()` — currency conversion using string rates; rounding mode configurable

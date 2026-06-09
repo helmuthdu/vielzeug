@@ -691,6 +691,11 @@ define<SgNavbarProps, SgNavbarEvents>(NAVBAR_TAG, {
  * @slot - Item label
  * @slot icon - Optional icon before the label
  *
+ * @part item - Root clickable element (anchor or button).
+ * @part item-icon - Leading icon container.
+ * @part item-label - Label text container.
+ * @part item-end - Trailing content container.
+ *
  * @example
  * ```html
  * <sg-navbar-item href="/home">Home</sg-navbar-item>

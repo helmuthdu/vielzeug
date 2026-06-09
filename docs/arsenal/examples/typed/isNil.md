@@ -16,10 +16,10 @@ Use `isNil(value)` to check `value === null || value === undefined`.
 ```ts
 import { isNil } from '@vielzeug/arsenal';
 
-isNil(null);      // true
+isNil(null); // true
 isNil(undefined); // true
-isNil(0);         // false
-isNil('');        // false
+isNil(0); // false
+isNil(''); // false
 ```
 
 ### Related

@@ -16,8 +16,8 @@ Use `isArray(value, itemGuard?)` to guard array type. Without `itemGuard` it che
 ```ts
 import { isArray, isString } from '@vielzeug/arsenal';
 
-isArray([1, 2, 3]);         // true
-isArray('not an array');    // false
+isArray([1, 2, 3]); // true
+isArray('not an array'); // false
 
 if (isArray(value, isString)) {
   value; // string[]

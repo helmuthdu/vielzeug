@@ -135,6 +135,13 @@ describe('exchange', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: 'not-a-number', to: eur })).toThrow(RangeError);
     });
 
+    it('throws RangeError for empty string rate', () => {
+      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur })).toThrow(
+        'non-empty decimal string',
+      );
+    });
+
     it('throws RangeError for negative exchange rate', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(RangeError);
       expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(

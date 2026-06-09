@@ -19,6 +19,7 @@ export type {
   CursorSource,
   CursorSourceQuery,
   DerivedSource,
+  MergedSource,
   FetchEvent,
   InfiniteConfig,
   InfiniteMeta,

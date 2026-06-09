@@ -109,7 +109,7 @@ console.log((await scopeA.resolve(RequestId)) === idA); // true — same scope, 
 
 ### Related
 
-- [Named Scopes](./multi-providers.md)
+- [Named Scopes](./named-scopes.md)
 - [Child Containers](./child-containers.md)
 - [Sync Resolution](./sync-resolution.md)
 - [Dispose Lifecycle](./dispose-lifecycle.md)

@@ -7,28 +7,28 @@ description: Complete API surface for @vielzeug/sourcerer.
 
 ## API At a Glance
 
-| Symbol                       | Purpose                                                                    | Common gotcha                                                  |
-| ---------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `createLocalSource()`        | In-memory reactive collection with filter, sort, and search                | Default `searchFn` is fuzzy, not substring                     |
-| `createRemoteSource()`       | Async server-backed collection with page navigation                        | Fetches on creation; set `autoFetch: false` to delay           |
-| `createCursorSource()`       | Async collection navigated by cursor tokens                                | `next()`/`prev()` are no-ops when the cursor is absent         |
-| `createInfiniteSource()`     | Async append-mode (infinite scroll) collection                             | `loadMore()` is a no-op once `meta.hasMore` is `false`         |
-| `deriveSource()`             | Create a reactive projection of another source                             | Derived source disposes automatically when parent disposes     |
-| `mergeSource()`              | Combine multiple sources into one reactive source                          | All sources must share the same item type                      |
-| `toSignals()`                | Wrap any source in Ripple computed signals                                 | Must call `dispose()` or signals leak                          |
-| `SourceError`                | Structured error class with `message`, `cause`, `query`, `attempt`         | Extends `Error`; access context via getters, not object spread |
-| `SourceTimeoutError`         | Error thrown when `ready()` times out                                      | Extends `Error`; check with `instanceof SourceTimeoutError`    |
-| `sourceState()`              | Derive a discriminated union (`loading`/`error`/`success`) from any source | —                                                              |
-| `itemRange()`                | Compute 1-based display range from `SourceMeta`                            | Returns `{ start: 0, end: 0 }` when `totalItems === 0`         |
-| `prefetchSource()`           | SSR: fetch first page, return serialisable snapshot                        | **Throws `SourceError`** if fetch fails                        |
-| `prefetchSourceWithSource()` | SSR: fetch first page, return both snapshot and live source                | Caller must call `source.dispose()`                            |
-| `composeFetch()`             | Layer middleware around a `fetch`-shaped function                          | Middlewares execute left-to-right (first = outermost)          |
-| `filterContains()`           | Preset predicate: case-insensitive substring match                         | Matches against a getter's string value                        |
-| `filterEquals()`             | Preset predicate: strict equality match                                    | Uses `Object.is` semantics                                     |
-| `filterRange()`              | Preset predicate: inclusive min/max range                                  | Works with numbers and Dates                                   |
-| `sortBy()`                   | Preset comparator: sort by a getter value                                  | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates   |
-| `encodeQuery()`              | Serialize source query to URL params                                       | Filter and sort are JSON-stringified                           |
-| `decodeQuery()`              | Deserialize URL params (or `URLSearchParams`) to a source query            | Malformed JSON is silently dropped by default                  |
+| Symbol                       | Purpose                                                                    | Common gotcha                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `createLocalSource()`        | In-memory reactive collection with filter, sort, and search                | Default `searchFn` is fuzzy, not substring                                    |
+| `createRemoteSource()`       | Async server-backed collection with page navigation                        | Fetches on creation; set `autoFetch: false` to delay                          |
+| `createCursorSource()`       | Async collection navigated by cursor tokens                                | `next()`/`prev()` are no-ops when the cursor is absent                        |
+| `createInfiniteSource()`     | Async append-mode (infinite scroll) collection                             | `loadMore()` is a no-op once `meta.hasMore` is `false`                        |
+| `deriveSource()`             | Create a reactive projection of another source                             | Derived source disposes automatically when parent disposes                    |
+| `mergeSource()`              | Combine multiple sources into one `MergedSource<T>`                        | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>` |
+| `toSignals()`                | Wrap any source in Ripple computed signals                                 | Must call `dispose()` or signals leak                                         |
+| `SourceError`                | Structured error class with `message`, `cause`, `query`, `attempt`         | Extends `Error`; access context via getters, not object spread                |
+| `SourceTimeoutError`         | Error thrown when `ready()` times out                                      | Extends `Error`; check with `instanceof SourceTimeoutError`                   |
+| `sourceState()`              | Derive a discriminated union (`loading`/`error`/`success`) from any source | —                                                                             |
+| `itemRange()`                | Compute 1-based display range from `SourceMeta`                            | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                        |
+| `prefetchSource()`           | SSR: fetch first page, return serialisable snapshot                        | **Throws `SourceError`** if fetch fails                                       |
+| `prefetchSourceWithSource()` | SSR: fetch first page, return both snapshot and live source                | Caller must call `source.dispose()`                                           |
+| `composeFetch()`             | Layer middleware around a `fetch`-shaped function                          | Middlewares execute left-to-right (first = outermost)                         |
+| `filterContains()`           | Preset predicate: case-insensitive substring match                         | Matches against a getter's string value                                       |
+| `filterEquals()`             | Preset predicate: strict equality match                                    | Uses `Object.is` semantics                                                    |
+| `filterRange()`              | Preset predicate: inclusive min/max range                                  | Works with numbers and Dates                                                  |
+| `sortBy()`                   | Preset comparator: sort by a getter value                                  | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates                  |
+| `encodeQuery()`              | Serialize source query to URL params                                       | Filter and sort are JSON-stringified                                          |
+| `decodeQuery()`              | Deserialize URL params (or `URLSearchParams`) to a source query            | Malformed JSON is silently dropped by default                                 |
 
 ## Package Entry Point
 
@@ -276,6 +276,7 @@ optimisticUpdate(
 - The returned rollback function is a **no-op** once the next successful fetch has settled.
 - On fetch failure, state is restored to the pre-optimistic items (not empty).
 - Only one optimistic update can be active at a time — a second call throws.
+- If `mutator` throws, the optimistic state is **not applied** and no `rollback` is needed — the source remains in its pre-update state.
 
 ## `CursorSource<T>` Methods
 
@@ -303,10 +304,10 @@ optimisticUpdate(
 | `flush()`             | Flush pending debounced search                                                    |
 | `loadMore()`          | Fetch the next page and append to `current` (no-op when `meta.hasMore === false`) |
 | `ready(timeout?)`     | Resolve when idle; optional timeout                                               |
-| `reset()`             | Clear accumulated items and fetch from page 1                                     |
-| `search(query)`       | Debounced search (resets accumulator)                                             |
-| `searchNow(query)`    | Immediate search (resets accumulator)                                             |
-| `setLimit(limit)`     | Set page size and restart from page 1                                             |
+| `reset()`             | Clear accumulated items **immediately** and fetch from page 1                     |
+| `search(query)`       | Debounced search — **clears items immediately**; fetch fires after debounce       |
+| `searchNow(query)`    | Immediate search — **clears items immediately** and fetches                       |
+| `setLimit(limit)`     | Set page size — **clears items immediately** and restarts from page 1             |
 | `subscribe(listener)` | Subscribe; returns unsubscribe                                                    |
 | `toQuery()`           | Return the current state as an `InfiniteSourceQuery`                              |
 
@@ -524,6 +525,8 @@ encodeQuery<TFilter, TSort>(
 
 Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
+> ⚠️ `filter` and `sort` are serialised with `stableStringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+
 **Example:**
 
 ```ts
@@ -551,6 +554,7 @@ Accepts either a `Record<string, string | string[] | undefined>` or a `URLSearch
 - When `strict: false` (default), malformed `filter`/`sort` JSON is silently dropped.
 - When `strict: true`, malformed JSON throws.
 - `search` is omitted from the result when absent (no `search: ''` default).
+- Array-valued params (`filter[]`, `sort[]`, etc.) use the first element, consistent with `search`.
 
 **Example:**
 
@@ -622,6 +626,13 @@ type InfiniteMeta = Readonly<{
 type ReactiveSource<T, TMeta> = {
   readonly current: readonly T[];
   readonly meta: TMeta;
+  subscribe(listener: () => void): () => void;
+};
+
+// Returned by mergeSource() — has no meta because parent sources may have different meta shapes
+type MergedSource<T> = {
+  readonly current: readonly T[];
+  dispose(): void;
   subscribe(listener: () => void): () => void;
 };
 

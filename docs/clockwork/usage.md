@@ -449,7 +449,7 @@ The callback fires only when `state` or `context` reference changes — not on e
 For quick console-based debugging, use `debugInterpret` from the dedicated sub-path. It pre-wires `onDebug` and `onTransition` to `console.debug`/`console.group` and is tree-shaken from production bundles.
 
 ```ts
-import { debugInterpret } from '@vielzeug/clockwork/debug';
+import { debugInterpret } from '@vielzeug/clockwork/devtools';
 
 const m = debugInterpret(machine);
 m.send({ type: 'START' });

@@ -24,6 +24,10 @@ export function lazy(fn: () => unknown): LazyBinding {
  * Resolve any lazy bindings in the given object, returning a plain Bindings object.
  * Non-lazy values are passed through unchanged. Single-pass: allocates only when a lazy
  * binding is actually present (copy-on-first-lazy).
+ *
+ * **Shallow only** — if a lazy factory returns an object that itself contains lazy bindings,
+ * those nested lazy values are NOT resolved. Only top-level keys of the bindings object
+ * are checked.
  */
 export function resolveBindings(bindings: Bindings): Bindings {
   let resolved: Bindings | undefined;
@@ -31,7 +35,12 @@ export function resolveBindings(bindings: Bindings): Bindings {
   for (const [k, v] of Object.entries(bindings)) {
     if (isLazyBinding(v)) {
       resolved ??= { ...bindings };
-      resolved[k] = v.fn();
+
+      try {
+        resolved[k] = v.fn();
+      } catch {
+        resolved[k] = undefined;
+      }
     }
   }
 

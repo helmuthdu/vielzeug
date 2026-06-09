@@ -16,16 +16,19 @@ Use `memo(fn, options?)` to memoize with optional `ttl` (ms), `maxSize` (LRU cap
 ```ts
 import { memo } from '@vielzeug/arsenal';
 
-const expensiveCalc = memo((n: number) => {
-  // simulate expensive work
-  return n * n;
-}, { maxSize: 100 });
+const expensiveCalc = memo(
+  (n: number) => {
+    // simulate expensive work
+    return n * n;
+  },
+  { maxSize: 100 },
+);
 
 expensiveCalc(4); // computed: 16
 expensiveCalc(4); // cached: 16
 expensiveCalc.size; // 1
 expensiveCalc.invalidate(4); // removes entry for 4
-expensiveCalc.clear();       // clears all entries
+expensiveCalc.clear(); // clears all entries
 ```
 
 #### Async memoization with in-flight deduplication
@@ -33,10 +36,7 @@ expensiveCalc.clear();       // clears all entries
 ```ts
 import { memo } from '@vielzeug/arsenal';
 
-const fetchUser = memo(
-  (id: number) => fetch(`/api/users/${id}`).then((r) => r.json()),
-  { maxSize: 50, ttl: 60_000 },
-);
+const fetchUser = memo((id: number) => fetch(`/api/users/${id}`).then((r) => r.json()), { maxSize: 50, ttl: 60_000 });
 
 // Concurrent calls with the same id share one in-flight Promise
 const [a, b] = await Promise.all([fetchUser(1), fetchUser(1)]);

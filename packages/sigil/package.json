@@ -49,7 +49,8 @@
     "./testing": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing/index.d.ts",
-      "import": "./dist/testing/index.js"
+      "import": "./dist/testing/index.js",
+      "require": "./dist/testing/index.cjs"
     },
     "./headless": {
       "source": "./src/headless/index.ts",
@@ -413,14 +414,14 @@
   },
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config sigil-manifest.mjs",
-    "build": "pnpm run sync:exports && pnpm run check:manifest && vite build && pnpm run build:core && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
-    "build:core": "vite build --config vite.bundle.config.ts",
+    "build": "pnpm run sync:exports && pnpm run check:manifest && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:manifest": "node ./sigil-manifest.mjs check-exports",
     "dev": "vite",
     "preview": "vite preview",
     "sync:exports": "node ./sigil-manifest.mjs sync-exports",
-    "test": "vitest"
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "dependencies": {
     "@vielzeug/craft": "workspace:*",

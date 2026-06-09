@@ -8,6 +8,8 @@ export function omit<T extends Obj, K extends keyof T>(obj: T, omittedKeys: read
   const out = {} as Omit<T, K>;
 
   for (const key of Object.keys(obj) as Array<keyof T>) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+
     if (!blacklist.has(key)) {
       (out as T)[key] = obj[key];
     }

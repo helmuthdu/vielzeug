@@ -37,9 +37,9 @@ const q = queue({ concurrency: 1 });
 q.add(() => sleep(100));
 q.add(() => sleep(100));
 
-q.active;  // tasks currently running
+q.active; // tasks currently running
 q.pending; // tasks waiting to start
-q.size;    // active + pending
+q.size; // active + pending
 
 q.clear(); // discard pending tasks (running tasks continue)
 ```

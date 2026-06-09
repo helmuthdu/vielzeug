@@ -78,8 +78,8 @@ formatRelative(Temporal.Instant.from('2026-03-21T10:00:45Z'), { base, locale: 'd
 
 ### Pitfalls
 
-- When both `pattern` and `intl` are provided, `intl` wins silently. Do not pass `pattern` expecting it to act as a fallback when `intl` is present.
-- `formatRelative()` only accepts `Temporal.Instant` or `Temporal.ZonedDateTime` inputs. Passing a `PlainDateTime` throws.
+- `pattern` and `intl` are mutually exclusive at the TypeScript type level (`FormatOptions` is a discriminated union). TypeScript will report an error if you attempt to pass both — do not rely on one overriding the other.
+- `formatRelative()` only accepts `Temporal.Instant` or `Temporal.ZonedDateTime` inputs. Passing a `PlainDateTime` or `PlainDate` throws a `TypeError`.
 - Locale strings must be valid BCP 47 tags. An invalid locale (e.g., `'english'`) may silently fall back to the system locale or throw depending on the runtime.
 
 ### Related

@@ -1,3 +1,5 @@
+import type { MergedSource } from './types';
+
 import { createSourceCore } from './core';
 
 /**
@@ -30,7 +32,7 @@ export function mergeSource<T>(
     subscribe(listener: () => void): () => void;
   }>,
   combine: (allItems: ReadonlyArray<readonly T[]>) => readonly T[],
-): { readonly current: readonly T[]; dispose(): void; subscribe(listener: () => void): () => void } {
+): MergedSource<T> {
   const core = createSourceCore();
   let cachedCurrent: readonly T[] = combine(sources.map((s) => s.current));
 

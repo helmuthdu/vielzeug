@@ -149,7 +149,7 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 - **Middleware** — Composable event interception pipeline
 - **Persistence** — Snapshot save/load adapter
 - **Tracing** — Ring buffer of transitions for debugging
-- **Debug events** — Discriminated union callback with zero overhead when omitted; use `debugInterpret()` from `@vielzeug/clockwork/debug` for pre-wired console logging
+- **Debug events** — Discriminated union callback with zero overhead when omitted; use `debugInterpret()` from `@vielzeug/clockwork/devtools` for pre-wired console logging
 - **Event queue** — FIFO processing with configurable infinite-loop guard
 - **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure
 - **Subscribe** — Change-detection subscription without direct ripple dependency
@@ -157,10 +157,10 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 
 ## Sub-paths
 
-| Import                      | Purpose                                                 |
-| --------------------------- | ------------------------------------------------------- |
-| `@vielzeug/clockwork`       | All exports and types                                   |
-| `@vielzeug/clockwork/debug` | `debugInterpret` — pre-wired console logging (dev only) |
+| Import                         | Purpose                                                 |
+| ------------------------------ | ------------------------------------------------------- |
+| `@vielzeug/clockwork`          | All exports and types                                   |
+| `@vielzeug/clockwork/devtools` | `debugInterpret` — pre-wired console logging (dev only) |
 
 ## Compatibility
 

@@ -99,7 +99,7 @@ type ScoredResult<T> = { item: T; score: number };
 - `abortable(promise, signal)` — reject a promise when a signal fires
 - `abortError(signal?)` — extract the abort reason or construct a `DOMException('AbortError')`
 - `parallel(array, callback, options?)` — bounded concurrent fan-out; `options.limit` caps concurrency
-- `queue(options?)` — serialised promise queue; `options.concurrency` defaults to 1; returned object exposes `.active` (running), `.pending` (queued), `.size` (total), `.add()`, `.clear()`, `.onIdle()`
+- `queue(options?)` — serialised promise queue; `options.concurrency` defaults to 1; returned object exposes `.active` (running), `.pending` (queued), `.size` (total), `.add()`, `.clear()`, `.onIdle()`. The return type is exported as `Queue`.
 - `retry(fn, options?)` — see [retry options](#retry)
 - `sleep(ms, signal?)` — delay that respects an AbortSignal
 - `attempt(fn)` — wrap an async function; returns `{ ok: true, value } | { ok: false, error }` — never throws
@@ -117,7 +117,7 @@ retry(
     signal?: AbortSignal;       // external cancellation signal
     shouldRetry?: (error: unknown, failureIndex: number) => boolean;
     //   failureIndex is 0-based (0 = first failure, 1 = second, …)
-    //   NOT called on the final (exhausting) attempt
+    //   NOT called on the final (exhausting) attempt — use onError for unconditional observation
     onError?: (error: unknown) => void; // called with the last error before re-throwing
   },
 ): Promise<T>
@@ -133,7 +133,7 @@ retry(
 - `compose(...fns)` — right-to-left function composition
 - `constant(value)` — returns a function that always returns the same value
 - `curry(fn, arity?)` — auto-curried wrapper
-- `debounce(fn, delay?)` — trailing-edge debounce; returns `.cancel()`, `.flush()`, `.pending()`
+- `debounce(fn, delay?, options?)` — debounce with `{ leading?, trailing? }` options (default: trailing only); returns `.cancel()`, `.flush()`, `.pending()`. Use `{ leading: true, trailing: false }` to fire immediately then cool-down.
 - `identity(value)` — returns its argument unchanged
 - `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function; returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size` (number of cached entries)
 - `noneOf(...predicates)` — NOR combinator
@@ -171,7 +171,7 @@ retry(
 ## Object
 
 - `cache(maxSize)` — simple bounded FIFO cache (`get` / `set`)
-- `defaults(target, ...sources)`
+- `defaults(target, ...sources)` — fills `undefined` keys from sources; first source wins (never overwrites already-set keys)
 - `diff(before?, after?, compareFn?)`
 - `deepMerge(...items)` — arrays replaced by default
 - `deepMergeWith(options)` — `{ arrayStrategy: 'concat' }` to concatenate
@@ -189,7 +189,7 @@ retry(
 - `mapKeys(obj, mapper)`
 - `mapValues(obj, mapper)`
 - `omit(obj, keys)`
-- `parseJSON(json, options?)`
+- `parseJSON(json, options?)` — parses JSON; `null`/`undefined` input → `defaultValue`; invalid JSON → `defaultValue`; the JSON string `"null"` returns `null` (not `defaultValue`)
 - `pick(obj, keys)`
 - `prune(value)`
 - `stableStringify(value, options?)` — see [stableStringify](#stablestringify)
@@ -219,6 +219,9 @@ stableStringify(new Set([3, 1, 2]))       // '[Set:1,2,3]'
 stableStringify(new Date('2024-01-01T00:00:00Z')) // '[Date:2024-01-01T00:00:00.000Z]'
 stableStringify(new MyClass())            // String(instance) by default
 stableStringify(new MyClass(), { strict: true }) // throws TypeError
+// Circular references produce '[Circular]' instead of a stack overflow
+const o: any = { x: 1 }; o.self = o;
+stableStringify(o)                        // '{"self":[Circular],"x":1}'
 ```
 
 ### stash
@@ -278,7 +281,7 @@ All predicates are standalone named exports. There is no `is` namespace.
 - `isDate(value)`
 - `isDefined(value)` — not `undefined`
 - `isEmpty(value)` — empty string, array, object, Map, or Set
-- `isEqual(a, b, options?)` — deep or shallow equality; handles circular refs, `Date`, `Map`, `Set`
+- `isEqual(a, b, options?)` — deep or shallow equality; handles circular refs, `Date`, `Map`, `Set`; `Map`/`Set` are never equal to plain objects
 - `isError(value)`
 - `isFunction(value)`
 - `isMatch(object, source)` — partial structural match; `Map`/`Set` sources always return `false`
@@ -300,6 +303,16 @@ export type Obj = Record<string, unknown>;
 export type Primitive = string | number | boolean;
 export type Unsubscribe = () => void;
 export type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
+export type RetryOptions = {
+  times?: number;
+  delay?: number | ((attempt: number) => number);
+  timeout?: number;
+  signal?: AbortSignal;
+  shouldRetry?: (error: unknown, attempt: number) => boolean;
+  onError?: (error: unknown) => void;
+};
+export type Queue = ReturnType<typeof queue>;
+export type DebounceOptions = { leading?: boolean; trailing?: boolean };
 export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & {
   clear(): void;
   invalidate(...args: Parameters<T>): void;

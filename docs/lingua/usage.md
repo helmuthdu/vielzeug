@@ -184,6 +184,32 @@ await i18n.setLocale('de');
 greet({ name: 'Alice' }); // => German greeting
 ```
 
+## Bound Plural Functions
+
+`bindPlural(key)` is the plural counterpart to `bind()`. It returns a function permanently bound to one plural branch key.
+Unlike `bind()`, there is no per-key caching — plural form resolution requires the `count` value at call time.
+Use it for reactive counts, notification badges, or any hot-path plural render.
+
+```ts
+const inbox = i18n.bindPlural('inbox');
+
+inbox(0); // => 'No messages'
+inbox(1); // => 'One message'
+inbox(5); // => '5 messages'
+inbox(1, { ordinal: true }); // => '1st'
+
+// Follows locale changes automatically
+await i18n.setLocale('de');
+inbox(3); // => '3 Nachrichten'
+```
+
+Works with pipe-plural shorthand:
+
+```ts
+const alerts = i18n.bindPlural('alerts'); // catalog: 'One alert|{count} alerts'
+alerts(3); // => '3 alerts'
+```
+
 ## Forking for SSR and Testing
 
 `fork(overrides?)` creates a child instance that inherits the parent's current catalog snapshot, loaders, and

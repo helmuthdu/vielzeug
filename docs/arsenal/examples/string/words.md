@@ -16,11 +16,11 @@ Use `words(str)` to extract words as a `string[]`.
 ```ts
 import { words } from '@vielzeug/arsenal';
 
-words('hello world');    // ['hello', 'world']
-words('helloWorld');     // ['hello', 'World']
-words('hello-world');    // ['hello', 'world']
-words('hello_world');    // ['hello', 'world']
-words('FOO_BAR_BAZ');    // ['FOO', 'BAR', 'BAZ']
+words('hello world'); // ['hello', 'world']
+words('helloWorld'); // ['hello', 'World']
+words('hello-world'); // ['hello', 'world']
+words('hello_world'); // ['hello', 'world']
+words('FOO_BAR_BAZ'); // ['FOO', 'BAR', 'BAZ']
 ```
 
 ### Related

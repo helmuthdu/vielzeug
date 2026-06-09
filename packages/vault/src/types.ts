@@ -1,5 +1,6 @@
 import type { QueryBuilder } from './query';
 
+import { VaultError } from './errors';
 import { assertTtlMs, type TtlMs, type VaultCodec } from './ttl';
 
 /* -------------------- Re-export TtlMs and VaultCodec for public API -------------------- */
@@ -62,6 +63,10 @@ export function table<T extends Record<string, unknown>, Key extends keyof T & s
       ...entry,
       index: <F extends keyof T & string>(field: F): TableBuilder<T, Key> => {
         const current = (entry.indexes ?? []) as readonly (keyof T & string)[];
+
+        if (current.includes(field)) {
+          throw new VaultError(`table index "${field}" is already registered`);
+        }
 
         return makeBuilder({ ...entry, indexes: [...current, field] });
       },
@@ -224,6 +229,7 @@ export type MetricsEvent = {
     | 'getMany'
     | 'getOrDefault'
     | 'has'
+    | 'isEmpty'
     | 'keys'
     | 'put'
     | 'putAll'

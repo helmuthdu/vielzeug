@@ -16,13 +16,13 @@ Use `isPlainObject(value)` to narrow to `Record<string, unknown>`. Returns `true
 ```ts
 import { isPlainObject } from '@vielzeug/arsenal';
 
-isPlainObject({});              // true
-isPlainObject({ a: 1 });        // true
+isPlainObject({}); // true
+isPlainObject({ a: 1 }); // true
 isPlainObject(Object.create(null)); // true
 
-isPlainObject([]);              // false — array
-isPlainObject(new Date());      // false — class instance
-isPlainObject(null);            // false
+isPlainObject([]); // false — array
+isPlainObject(new Date()); // false — class instance
+isPlainObject(null); // false
 ```
 
 ### Related

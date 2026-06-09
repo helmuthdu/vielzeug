@@ -29,7 +29,7 @@ const isSpecialAge = anyOf<number>(
   (age) => age === 100,
 );
 
-isSpecialAge(0);  // true
+isSpecialAge(0); // true
 isSpecialAge(50); // false
 
 const noEvens = noneOf<number>((n) => n % 2 === 0);

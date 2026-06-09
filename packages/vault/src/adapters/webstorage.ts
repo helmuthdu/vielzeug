@@ -233,6 +233,32 @@ function createWebStorageAdapter<S extends AnySchema>(
       return records;
     },
 
+    async getAllKeys<K extends keyof S & string>(table: K): Promise<KeyOf<S, K>[]> {
+      const prefix = getPrefix(table);
+      const keys: KeyOf<S, K>[] = [];
+      const expiredStorageKeys: string[] = [];
+
+      for (const storageKey of ownedKeys) {
+        if (!storageKey.startsWith(prefix)) continue;
+
+        const value = parseEntry<RecordOf<S, K>>(storageKey);
+
+        if (value === undefined) {
+          expiredStorageKeys.push(storageKey);
+          continue;
+        }
+
+        // Extract the record key from the already-decoded value (avoids a second parse).
+        keys.push((value as Record<string, unknown>)[schema[table].key] as KeyOf<S, K>);
+      }
+
+      for (const storageKey of expiredStorageKeys) {
+        evict(storageKey);
+      }
+
+      return keys;
+    },
+
     async getRawCount<K extends keyof S & string>(table: K): Promise<number> {
       const prefix = getPrefix(table);
       let count = 0;

@@ -236,7 +236,12 @@ export type RuneOptions = {
   logLevel?: LogLevel;
   /** Middleware pipeline applied to every entry before dispatch to transports. */
   middleware?: LogMiddleware[];
-  /** Dot-separated namespace prefix, e.g. 'app.api'. */
+  /**
+   * Namespace for this logger. When passed to `child()`, it is automatically
+   * dot-joined to the parent namespace (e.g. parent `'api'` + child `'auth'` → `'api.auth'`).
+   * Prefix with `/` to set an absolute namespace that replaces the parent
+   * (e.g. `'/root'` → `'root'`, ignoring the parent namespace).
+   */
   namespace?: string;
   /**
    * Override the timestamp source. Accepts any zero-arg function returning a Date.
@@ -280,6 +285,17 @@ export type RuneConfig = {
   transports: Transport[];
 };
 
+/* ─── TimeOptions ─── */
+
+/**
+ * Options for the `time()` method. Can be passed as a plain `LogType` string
+ * (e.g. `'info'`) or as an object to allow future extension.
+ */
+export type TimeOptions = {
+  /** Log level for the timing entry. Default: `'debug'`. */
+  level?: LogType;
+};
+
 /* ─── Log method ─── */
 
 /**
@@ -303,14 +319,30 @@ export type Logger = {
   /** Snapshot of current resolved configuration. */
   readonly config: Readonly<RuneConfig>;
   debug: LogMethod;
+  /**
+   * Dispose all `BatchTransport` instances in the transport array (calls their `.dispose()`).
+   * Call on app shutdown to flush pending entries and stop interval timers.
+   * Safe to call on loggers without batch transports — it is a no-op in that case.
+   * **Note:** only top-level transports are inspected. A `batchTransport` wrapped inside
+   * `pipe(...)` will not be discovered; hold a reference to the batch and dispose it manually.
+   */
+  dispose: () => void;
   /** Returns true if entries at this level will pass the configured threshold. */
   enabled: (type: LogLevel) => boolean;
   error: LogMethod;
   fatal: LogMethod;
-  /** Wrap a callback in a console group, closing it even on throw/reject. */
-  group: <T>(label: string, fn: () => T) => T;
-  /** Wrap a callback in a collapsed console group, closing it even on throw/reject. */
-  groupCollapsed: <T>(label: string, fn: () => T) => T;
+  /**
+   * Wrap a callback in a console group, closing it even on throw/reject.
+   * Pass a `level` to gate the group header on the configured log threshold
+   * (e.g. `level: 'debug'` suppresses the group when `logLevel` is above `'debug'`).
+   * Default: always renders (unless `logLevel` is `'off'`).
+   */
+  group: <T>(label: string, fn: () => T, level?: LogType) => T;
+  /**
+   * Same as `group`, using `console.groupCollapsed`.
+   * Pass a `level` to gate the group on the configured log threshold.
+   */
+  groupCollapsed: <T>(label: string, fn: () => T, level?: LogType) => T;
   info: LogMethod;
   /**
    * Restore the log level to the value set at construction time, undoing any `setLevel()` calls.
@@ -324,11 +356,21 @@ export type Logger = {
    */
   setLevel: (level: LogLevel) => void;
   /**
-   * Measure execution time and emit a structured entry with duration_ms in context and label as the message.
-   * @param opts - Log level for the timing entry. Default: 'debug'. Accepts a `LogType` string or `{ level?: LogType }`.
+   * Measure execution time of `fn` and emit a structured log entry.
+   * The entry message is `label`; context contains `{ duration_ms }` (rounded to 2 dp).
+   * When `fn` throws or rejects, the entry also includes `{ err }` with the serialized error.
+   * @param label - Human-readable description of the operation.
+   * @param fn - Synchronous or async function to time.
+   * @param opts - Log level for the timing entry. Default: `'debug'`.
+   *   Accepts a `LogType` string or a `TimeOptions` object `{ level?: LogType }`.
    */
-  time: <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }) => T;
-  /** Add a middleware function to the pipeline for this logger. Returns a new logger. */
+  time: <T>(label: string, fn: () => T, opts?: LogType | TimeOptions) => T;
+  /**
+   * Add a middleware function to the pipeline. Returns a **new** logger — the original is unchanged.
+   * Discarding the return value is a common mistake: always assign the result.
+   * @example
+   * const log = baseLog.use(tracingMiddleware); // ✓ keep the result
+   */
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
   /** Derive a child logger with additional pinned bindings. */

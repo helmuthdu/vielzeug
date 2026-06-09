@@ -10,7 +10,7 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        debug: resolve(__dirname, 'src/debug.ts'),
+        devtools: resolve(__dirname, 'src/devtools.ts'),
         index: resolve(__dirname, 'src/index.ts'),
         inline: resolve(__dirname, 'src/inline.ts'),
         presets: resolve(__dirname, 'src/presets.ts'),
@@ -22,6 +22,7 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
+          external: ['@vielzeug/arsenal', '@vielzeug/ripple'],
           output: {
             minify: true,
           },

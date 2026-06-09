@@ -32,9 +32,9 @@ export function parseJSON<T = unknown>(
   if (isNil(json)) return defaultValue;
 
   try {
-    const value = JSON.parse(json, reviver as Parameters<typeof JSON.parse>[1]);
+    const value = JSON.parse(json, reviver as Parameters<typeof JSON.parse>[1]) as unknown;
 
-    return (value ?? defaultValue) as T | undefined;
+    return (value === undefined ? defaultValue : value) as T | undefined;
   } catch {
     return defaultValue;
   }

@@ -7,10 +7,14 @@ import { getConfig } from '../../vite.config';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
-  mergeConfig(
-    getConfig(__dirname, {
-      name: 'scroll',
-    }),
-    {},
-  ),
+  mergeConfig(getConfig(__dirname, { name: 'scroll' }), {
+    build: {
+      rolldownOptions: {
+        external: ['@vielzeug/ripple'],
+        output: {
+          minify: true,
+        },
+      },
+    },
+  }),
 );

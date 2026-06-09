@@ -1,0 +1,4 @@
+export const objectParseJSONExample = {
+  code: "import { parseJSON } from '@vielzeug/arsenal'\n\n// Happy path\nconsole.log(parseJSON('{\"a\":1}'))              // { a: 1 }\nconsole.log(parseJSON('[1,2,3]'))              // [1, 2, 3]\n\n// Invalid JSON → defaultValue\nconsole.log(parseJSON('bad', { defaultValue: {} })) // {}\n\n// Null input → defaultValue\nconsole.log(parseJSON(null, { defaultValue: 'fallback' })) // 'fallback'\n\n// JSON string 'null' → null (not defaultValue!)\nconsole.log(parseJSON('null'))                // null\nconsole.log(parseJSON('null', { defaultValue: 'oops' })) // null (not 'oops')\n\n// JSON false/0 are preserved correctly\nconsole.log(parseJSON('false'))               // false\nconsole.log(parseJSON('0'))                   // 0",
+  name: 'parseJSON - Safe JSON parsing with defaultValue',
+};

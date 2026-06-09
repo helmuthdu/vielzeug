@@ -16,9 +16,9 @@ Use `lerp(a, b, t)` where `t=0` returns `a`, `t=1` returns `b`, and values betwe
 ```ts
 import { lerp } from '@vielzeug/arsenal';
 
-lerp(0, 100, 0);    // 0
-lerp(0, 100, 0.5);  // 50
-lerp(0, 100, 1);    // 100
+lerp(0, 100, 0); // 0
+lerp(0, 100, 0.5); // 50
+lerp(0, 100, 1); // 100
 lerp(0, 100, 0.25); // 25
 ```
 

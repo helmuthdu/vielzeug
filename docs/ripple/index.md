@@ -25,7 +25,6 @@ exports:
     isSignal,
     isComputed,
     isStore,
-    installDevTools,
     getSignalName,
     getDevToolsHook,
     StateError,
@@ -45,7 +44,7 @@ exports:
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`, `installDevTools`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
@@ -160,17 +159,26 @@ effect(() => console.log(count.value)); // auto-tracks dependencies
 count.value = 1; // notifies automatically
 ```
 
-| Feature                 | Ripple                                       | Zustand | Jotai  | Nanostores |
-| ----------------------- | -------------------------------------------- | ------- | ------ | ---------- |
-| Bundle size             | <PackageInfo package="ripple" type="size" /> | ~3.5 kB | ~7 kB  | ~2 kB      |
-| Framework-agnostic      | ✅                                           | ✅      | React  | ✅         |
-| Fine-grained reactivity | ✅                                           | ❌      | ✅     | ✅         |
-| Structured stores       | ✅                                           | ✅      | Manual | ❌         |
-| Zero dependencies       | ✅                                           | ❌      | ❌     | ✅         |
+| Feature                      | Ripple                                       | Zustand          | Jotai        | Nanostores |
+| ---------------------------- | -------------------------------------------- | ---------------- | ------------ | ---------- |
+| Bundle size                  | <PackageInfo package="ripple" type="size" /> | ~3.5 kB          | ~7 kB        | ~2 kB      |
+| Zero dependencies            | ✅                                           | ❌               | ❌           | ✅         |
+| Framework-agnostic           | ✅                                           | ✅               | React-first  | ✅         |
+| Fine-grained reactivity      | ✅ (per-property)                            | ❌ (whole store) | ✅           | ✅ (atom)  |
+| Structured object stores     | ✅ (`store`, `lens`)                         | ✅               | Manual atoms | ❌         |
+| Async computed               | ✅ (`asyncComputed`)                         | Manual           | ✅           | ❌         |
+| Undo / redo history          | ✅ (`storeWithHistory`)                      | Manual           | ❌           | ❌         |
+| Computed signals             | ✅ (lazy, glitch-free)                       | Selectors        | ✅ (atoms)   | ✅         |
+| Batched writes               | ✅ (`batch`)                                 | ✅               | ✅           | ✅         |
+| Explicit cleanup / scopes    | ✅ (`scope`, `onCleanup`)                    | ❌               | ❌           | ❌         |
+| SSR support                  | ✅                                           | ✅               | ✅           | ✅         |
+| TypeScript — strict generics | ✅                                           | ✅               | ✅           | Partial    |
+| React Suspense               | ❌                                           | ❌               | ✅           | ❌         |
+| Redux DevTools               | ❌                                           | ✅               | ❌           | ❌         |
 
-**Use Ripple when** you need fine-grained reactivity without framework lock-in, or when building web components and vanilla JS apps.
+**Use Ripple when** you need fine-grained, per-property reactivity without framework lock-in — especially for web components, vanilla JS apps, or any environment where you want zero runtime dependencies and explicit lifecycle control.
 
-**Consider alternatives when** you need DevTools integration (Zustand), React Suspense support (Jotai), or server-side stores.
+**Consider alternatives when** you are React-only and need Suspense or React Query integration (Jotai), need Redux DevTools out of the box (Zustand), or need a minimal atom store with no extra features (Nanostores).
 
 ## Features
 
@@ -186,7 +194,7 @@ count.value = 1; // notifies automatically
 - **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
 - **`asyncScope(setup)`** — async variant of `scope()`; captures cleanups from the synchronous preamble before the first `await`
 - **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level
-- **`debugEffect(fn, options?)`** (`@vielzeug/ripple/debug`) — like `effect()`, but logs changed reactive sources to the console before each re-run; tree-shaken from production bundles
+- **`debugEffect(fn, options?)`** — like `effect()`, but logs reactive deps on every run; import from `@vielzeug/ripple/devtools` — tree-shaken from production bundles
 - **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
 - **`.map<U>(fn, options?)`** — combinator on all signal types; creates a derived `ComputedSignal<U>`
 - **`.filter(predicate)`** — combinator on all signal types; creates a `ComputedSignal<T | undefined>` via a predicate
@@ -196,20 +204,19 @@ count.value = 1; // notifies automatically
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
 - **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`
-- **`installDevTools(hook)`** — install a global `__RIPPLE_DEVTOOLS__` hook to observe signal writes, effect runs, and computed recomputes
-- **`getSignalName(signal)`** — look up the name registered for a named signal; returns `undefined` for unnamed signals
-- **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`
+- **`getSignalName(signal)`** — look up the registered name for a named signal; returns `undefined` for unnamed signals
+- **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
 ## Sub-paths
 
-| Import                   | Purpose                                            |
-| ------------------------ | -------------------------------------------------- |
-| `@vielzeug/ripple`       | All exports and types                              |
-| `@vielzeug/ripple/debug` | `debugEffect` — reactive source tracing (dev only) |
-| `@vielzeug/ripple/ssr`   | No-op stubs for server-side rendering              |
+| Import                      | Purpose                                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `@vielzeug/ripple`          | All exports and types                                                                                |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
+| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                                                |
 
 ## Compatibility
 

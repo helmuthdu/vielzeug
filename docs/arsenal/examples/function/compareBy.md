@@ -17,12 +17,12 @@ Use `compareBy(selectors)` to create a comparator from an object of `{ field: 'a
 import { compareBy } from '@vielzeug/arsenal';
 
 const users = [
-  { name: 'Bob',   age: 30 },
+  { name: 'Bob', age: 30 },
   { name: 'Alice', age: 30 },
   { name: 'Carol', age: 25 },
 ];
 
-const byAgeDescNameAsc = compareBy<typeof users[0]>({ age: 'desc', name: 'asc' });
+const byAgeDescNameAsc = compareBy<(typeof users)[0]>({ age: 'desc', name: 'asc' });
 
 users.sort(byAgeDescNameAsc);
 // [{ name: 'Alice', age: 30 }, { name: 'Bob', age: 30 }, { name: 'Carol', age: 25 }]

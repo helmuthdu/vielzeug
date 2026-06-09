@@ -198,12 +198,12 @@ import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
 
 Shared types used across multiple components:
 
-| Type              | Package path              | Description                              |
-| ----------------- | ------------------------- | ---------------------------------------- |
-| `ColorVariant`    | `@vielzeug/sigil`         | `'primary' \| 'secondary' \| 'error' \| 'warning' \| 'success' \| 'info'` |
-| `SizeVariant`     | `@vielzeug/sigil`         | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'` |
-| `IconNode`        | `@vielzeug/sigil/icon`    | Lucide-compatible `[string, object, ...children]` tuple |
-| `componentSignal` | `@vielzeug/sigil`         | Returns an `AbortSignal` tied to a component's cleanup lifecycle |
+| Type              | Package path           | Description                                                               |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------- |
+| `ColorVariant`    | `@vielzeug/sigil`      | `'primary' \| 'secondary' \| 'error' \| 'warning' \| 'success' \| 'info'` |
+| `SizeVariant`     | `@vielzeug/sigil`      | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                    |
+| `IconNode`        | `@vielzeug/sigil/icon` | Lucide-compatible `[string, object, ...children]` tuple                   |
+| `componentSignal` | `@vielzeug/sigil`      | Returns an `AbortSignal` tied to a component's cleanup lifecycle          |
 
 ## Notes
 

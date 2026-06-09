@@ -53,7 +53,9 @@ export function loadData(): BundledData {
       );
     }
 
-    throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+
+    throw new Error(`Failed to read bundled MCP data at ${DATA_FILE}: ${detail}.`, { cause: error });
   }
 
   let parsed: unknown;

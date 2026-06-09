@@ -16,7 +16,7 @@ Use `rotate(array, positions, options?)` to rotate left (positive) or right (neg
 ```ts
 import { rotate } from '@vielzeug/arsenal';
 
-rotate([1, 2, 3, 4, 5], 2);  // [3, 4, 5, 1, 2]
+rotate([1, 2, 3, 4, 5], 2); // [3, 4, 5, 1, 2]
 rotate([1, 2, 3, 4, 5], -1); // [5, 1, 2, 3, 4]
 ```
 

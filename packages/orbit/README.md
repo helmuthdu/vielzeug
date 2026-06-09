@@ -7,7 +7,7 @@ related: [craft, sigil, grip]
 exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, compose, limitShift]
 ---
 
-# /orbit
+# @vielzeug/orbit
 
 > Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
@@ -16,7 +16,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, 
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/orbit` &nbsp;·&nbsp; **Category:** Ui-positioning
+**Package:** `@vielzeug/orbit` &nbsp;·&nbsp; **Category:** UI Positioning
 
 **Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`, `compose`, `limitShift`
 
@@ -26,7 +26,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, 
 
 </details>
 
-`/orbit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/orbit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
@@ -72,7 +72,7 @@ handle.cleanup();
 | `@vielzeug/orbit/presets` | Pre-configured middleware stacks |
 | `@vielzeug/orbit/inline` | `inline` middleware for multi-line references |
 | `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/debug` | Visual debug overlay (development only) |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (development only) |
 | `@vielzeug/orbit/ssr` | No-op stubs for server-side rendering |
 
 ## Documentation

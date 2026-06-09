@@ -1,4 +1,5 @@
 import { basicSetupExample } from './basic-setup';
+import { conflictDetectionExample } from './conflict-detection';
 import { dynamicPermissionsExample } from './dynamic-permissions';
 import { multiRoleRulesExample } from './multi-role-rules';
 import { permissionChecksExample } from './permission-checks';
@@ -9,6 +10,7 @@ import { wildcardPermissionsExample } from './wildcard-permissions';
 
 export const wardExamples = {
   'basic-setup': basicSetupExample,
+  'conflict-detection': conflictDetectionExample,
   'dynamic-permissions': dynamicPermissionsExample,
   'multi-role-rules': multiRoleRulesExample,
   'permission-checks': permissionChecksExample,

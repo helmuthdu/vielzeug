@@ -226,6 +226,20 @@ export type I18n<M extends Messages = Messages> = {
    * users.forEach(u => greet({ name: u.name }));
    */
   bind(key: MessageLeafKeys<M> | (string & {})): (vars?: TranslateVars) => string;
+  /**
+   * Returns a bound plural-translation function for a specific branch key.
+   * Mirrors `bind()` for plural keys — useful for hot-path plural renders such as
+   * notification counts or reactive list sizes.
+   *
+   * The returned function caches the plural-form lookup and invalidates on any catalog or locale change.
+   *
+   * @example
+   * const inbox = i18n.bindPlural('inbox');
+   * inbox(0);  // => 'No messages'
+   * inbox(3);  // => '3 messages'
+   * inbox(1, { ordinal: true }); // ordinal plural
+   */
+  bindPlural(key: MessageBranchKeys<M> | (string & {})): (count: number, options?: TpOptions) => string;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
   /**
@@ -263,7 +277,19 @@ export type I18n<M extends Messages = Messages> = {
    * i18n.restoreState(state);
    */
   getState(): I18nState;
+  /**
+   * Returns all registered locales.
+   * - Default (no argument): locales in registration order.
+   * - `getSupportedLocales(true)`: sorted in ascending code-point order (not locale-aware).
+   */
   getSupportedLocales(sorted?: boolean): Locale[];
+  /**
+   * Returns `true` if the given leaf key exists in the active fallback chain.
+   *
+   * **Pipe-plural keys:** pipe-delimited shorthand (e.g. `'One|{count}'`) is expanded into
+   * sub-keys at registration time (e.g. `inbox.one`, `inbox.other`). Calling `has('inbox')`
+   * returns `false` because the base key is no longer present — use `has('inbox.one')` instead.
+   */
   has(key: MessageLeafKeys<M> | (string & {})): boolean;
   /**
    * Loads a registered namespace's translations for a locale and merges them into the catalog.
@@ -281,11 +307,12 @@ export type I18n<M extends Messages = Messages> = {
   readonly locale: Locale;
   /**
    * Merges additional messages into a locale's catalog without replacing existing keys.
+   * Accepts a partial overlay — only the provided keys are merged; existing keys are preserved.
+   * If the locale has a pending dynamic load in progress, merge waits for it to complete first.
    *
-   * If the locale has a pending dynamic load in progress, `merge` waits for it to complete
-   * first so no base catalog keys are lost.
-   *
-   * **Calling `register()` after `merge()`** replaces the entire catalog, discarding merged keys.
+   * **Note:** `source` accepts any `Messages`-shaped object, intentionally looser than `M`, so
+   * partial overlays do not need to satisfy the full catalog shape. Calling `register()` after
+   * a merge replaces the entire catalog, discarding all merged keys.
    */
   merge(locale: Locale, source: LocaleSource<Messages>): Promise<void>;
   preload(locale: Locale): Promise<void>;
@@ -310,6 +337,9 @@ export type I18n<M extends Messages = Messages> = {
    * with `${prefix}.`, reducing repetition within a message namespace.
    * The `fmt` property exposes the same formatter as the parent instance.
    *
+   * **Note:** returns a new object on every call — store the result in a variable rather
+   * than calling `scope()` inline on each render.
+   *
    * @example
    * const nav = i18n.scope('nav');
    * nav.t('home');        // i18n.t('nav.home')
@@ -324,6 +354,8 @@ export type I18n<M extends Messages = Messages> = {
    * (stale locale responses are discarded).
    *
    * If loading fails, the active locale is **not changed** — it remains at its previous value.
+   *
+   * @throws `[lingua/E001]` if the locale is not registered (neither a static catalog nor a loader).
    */
   setLocale(locale: Locale): Promise<void>;
   /**
@@ -429,8 +461,15 @@ function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]
   return { chain: [...set], set };
 }
 
+// Keys that could pollute Object prototypes if a catalog arrives from untrusted JSON.
+// Using a Map for storage prevents actual pollution, but we skip these keys as
+// defense-in-depth in case a plain-object path is introduced in future.
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function flattenStrings(messages: Messages, result = new Map<string, string>(), prefix?: string): Map<string, string> {
   for (const [key, value] of Object.entries(messages)) {
+    if (UNSAFE_KEYS.has(key)) continue;
+
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (typeof value === 'string') {
@@ -580,16 +619,15 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   if (cfg.catalogs) {
     for (const [loc, source] of Object.entries(cfg.catalogs)) {
       const normalized = canon(loc);
-      const typedSource = source as LocaleSource<M>;
 
       knownLocales.add(normalized);
 
-      if (typeof typedSource === 'function') {
-        loaders.set(normalized, typedSource as Loader<M>);
+      if (typeof source === 'function') {
+        loaders.set(normalized, source as Loader<M>);
       } else {
         const entry = new CatalogEntry(withCompile);
 
-        entry.setAll(flattenStrings(typedSource as M));
+        entry.setAll(flattenStrings(source as M));
         catalogs.set(normalized, entry);
       }
     }
@@ -637,14 +675,14 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     return task;
   };
 
-  const merge = async (loc: Locale, source: LocaleSource<M>): Promise<void> => {
+  const merge = async (loc: Locale, source: LocaleSource<Messages>): Promise<void> => {
     const normalized = canon(loc);
 
     // Wait for any pending dynamic load to complete first so base catalog keys
     // are not overwritten by the merge source.
     if (loaders.has(normalized)) await preload(normalized);
 
-    const mergeMessages = typeof source === 'function' ? await (source as Loader<M>)() : (source as M);
+    const mergeMessages = typeof source === 'function' ? await (source as Loader<Messages>)() : (source as Messages);
     const mergeFlat = flattenStrings(mergeMessages);
     const existing = catalogs.get(normalized);
 
@@ -729,16 +767,20 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     // If the signal is already aborted, skip adding the listener entirely.
     if (options?.signal?.aborted) return unsubscribe;
 
-    subscribers.add(callback);
-
+    // Fire the immediate callback *before* registering the subscriber.
+    // If it throws, onSubscriberError handles it and we return early — the
+    // subscriber is never added, so it cannot throw again on future bumps.
     if (options?.immediate === true) {
       try {
         callback(snapshot);
       } catch (error) {
         onSubscriberError(error);
+
+        return unsubscribe;
       }
     }
 
+    subscribers.add(callback);
     options?.signal?.addEventListener('abort', unsubscribe, { once: true });
 
     return unsubscribe;
@@ -763,12 +805,23 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       };
     },
 
+    bindPlural(key: MessageBranchKeys<M> | (string & {})): (count: number, options?: TpOptions) => string {
+      const base = String(key);
+
+      // bindPlural delegates to translatePlural on every call — no per-key caching needed
+      // because plural resolution depends on both key and count (unlike bind()).
+      return (count: number, options?: TpOptions): string => translatePlural(base, count, options);
+    },
+
     fmt,
 
     fork(overrides?: Omit<I18nOptions<M>, 'catalogs' | 'compile'>): I18n<M> {
       const forkedCatalogs: Record<Locale, LocaleSource<M>> = {};
 
       // Snapshot all currently resolved catalogs as plain-object sources.
+      // entry.strings is already a flat dot-key → string map, which is a valid Messages
+      // (all leaves are strings). createI18n will re-flatten it — that loop is a no-op
+      // since every value is already a string leaf.
       for (const [loc, entry] of catalogs) {
         forkedCatalogs[loc] = Object.fromEntries(entry.strings) as unknown as M;
       }
@@ -869,6 +922,10 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     },
 
     restoreState(state: I18nState): void {
+      if (!Object.hasOwn(state.catalogs, state.locale)) {
+        throw new Error(`[lingua/E006] restoreState: locale "${state.locale}" has no catalog in the provided state.`);
+      }
+
       for (const [loc, flatCatalog] of Object.entries(state.catalogs)) {
         const normalized = canon(loc);
         const entry = new CatalogEntry(withCompile);

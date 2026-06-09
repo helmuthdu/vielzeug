@@ -369,6 +369,61 @@ describe('createBehaviorBus - replay error handling', () => {
   });
 });
 
+describe('createBehaviorBus - replay option validation', () => {
+  it('throws RangeError when replay is 0', () => {
+    expect(() => createBehaviorBus<TestEvents>({}, { replay: 0 })).toThrow(RangeError);
+  });
+
+  it('throws RangeError when replay is negative', () => {
+    expect(() => createBehaviorBus<TestEvents>({}, { replay: -1 })).toThrow(RangeError);
+  });
+
+  it('throws RangeError when replay is a non-integer', () => {
+    expect(() => createBehaviorBus<TestEvents>({}, { replay: 1.5 })).toThrow(RangeError);
+  });
+
+  it('accepts replay: 1 (default)', () => {
+    expect(() => createBehaviorBus<TestEvents>({}, { replay: 1 })).not.toThrow();
+  });
+});
+
+describe('createBehaviorBus - BusOptions passthrough (logger / maxListeners)', () => {
+  it('routes debug output through logger.debug', () => {
+    const logs: string[] = [];
+    const bus = createBehaviorBus<TestEvents>({}, { logger: { debug: (m) => logs.push(m) } });
+
+    bus.emit('count', 1);
+
+    expect(logs.some((l) => l.includes('[herald:emit]'))).toBe(true);
+
+    bus.dispose();
+  });
+
+  it('warns when maxListeners is exceeded', () => {
+    const warns: string[] = [];
+    const bus = createBehaviorBus<TestEvents>({}, { logger: { warn: (m) => warns.push(m) }, maxListeners: 1 });
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+
+    expect(warns).toHaveLength(1);
+    expect(warns[0]).toContain('[herald:warn]');
+
+    bus.dispose();
+  });
+
+  it('bus name appears in log messages', () => {
+    const logs: string[] = [];
+    const bus = createBehaviorBus<TestEvents>({}, { logger: { debug: (m) => logs.push(m) }, name: 'settings' });
+
+    bus.emit('count', 5);
+
+    expect(logs.some((l) => l.includes('(settings)'))).toBe(true);
+
+    bus.dispose();
+  });
+});
+
 describe('createBehaviorBus - reset()', () => {
   it('reset(event) clears the buffer for that event — new subscribers get no replay', () => {
     const bus = createBehaviorBus<TestEvents>({ count: 42 });

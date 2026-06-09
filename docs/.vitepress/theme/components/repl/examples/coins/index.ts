@@ -3,6 +3,7 @@ import { arithmeticBasicExample } from './arithmetic-basic';
 import { exchangeBasicExample } from './exchange-basic';
 import { formatBasicExample } from './format-basic';
 import { moneyBasicExample } from './money-basic';
+import { percentageBasicExample } from './percentage-basic';
 
 export const coinsExamples = {
   'allocation-basic': allocationBasicExample,
@@ -10,4 +11,5 @@ export const coinsExamples = {
   'exchange-basic': exchangeBasicExample,
   'format-basic': formatBasicExample,
   'money-basic': moneyBasicExample,
+  'percentage-basic': percentageBasicExample,
 };

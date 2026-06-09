@@ -237,7 +237,14 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       const prevTotal = total;
 
       optimistic = { active: true, prevItems, prevTotal };
-      items = mutator(items);
+
+      try {
+        items = mutator(items);
+      } catch (e: unknown) {
+        optimistic = null;
+        throw e;
+      }
+
       total = options?.total ?? total;
       commit();
 
@@ -311,9 +318,14 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
         changed = true;
       }
 
-      if (patch.page !== undefined && patch.page !== page) {
-        page = patch.page;
-        changed = true;
+      if (patch.page !== undefined) {
+        const clamped =
+          total > 0 ? clampPage(patch.page, pageCount(total, limit)) : Math.max(1, Math.trunc(patch.page));
+
+        if (clamped !== page) {
+          page = clamped;
+          changed = true;
+        }
       }
 
       if (!changed) return Promise.resolve();

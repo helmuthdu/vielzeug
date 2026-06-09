@@ -7,32 +7,36 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 ## API At a Glance
 
-| Symbol               | Purpose                                        | Execution mode | Common gotcha                                                        |
-| -------------------- | ---------------------------------------------- | -------------- | -------------------------------------------------------------------- |
-| `signal()`           | Create reactive primitive values               | Sync           | Write signals inside batch/effect-safe flows                         |
-| `computed()`         | Derive memoized values from dependencies       | Sync           | Avoid side effects inside computed callbacks                         |
-| `effect()`           | Run and re-run sync side effects               | Sync           | Dispose when no longer needed to prevent memory leaks                |
-| `effectAsync()`      | Run async side effects with AbortSignal        | Async          | Read reactive deps synchronously before the first `await`            |
-| `asyncComputed()`    | Async computed with lifecycle state            | Async          | Status is `'idle'` until first run; read `.value.status`             |
-| `watch()`            | Subscribe to value changes                     | Sync           | Does not fire immediately unlike `effect()`                          |
-| `batch()`            | Coalesce multiple writes                       | Sync           | Nested batches merge into the outermost                              |
-| `untrack()`          | Read without subscribing                       | Sync           | Only suppresses dependency registration, value is still read         |
-| `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | Returns `ComputedSignal<T>`; dispose it when done                    |
-| `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO             |
-| `asyncScope()`       | Async variant of `scope()` for async setup     | Async          | `onCleanup()` only works before the first `await`                    |
-| `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/debug`; tree-shaken from production |
-| `store()`            | Create object-like state container             | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`  |
-| `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer        |
-| `installDevTools()`  | Install global DevTools observation hook       | Sync           | Pass `null` to uninstall                                             |
-| `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                      |
-| `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                         |
-| `isStore()`          | Type guard for stores                          | Sync           | Returns `false` for plain signals and computed signals               |
+| Symbol               | Purpose                                        | Execution mode | Common gotcha                                                           |
+| -------------------- | ---------------------------------------------- | -------------- | ----------------------------------------------------------------------- |
+| `signal()`           | Create reactive primitive values               | Sync           | Write signals inside batch/effect-safe flows                            |
+| `computed()`         | Derive memoized values from dependencies       | Sync           | Avoid side effects inside computed callbacks                            |
+| `effect()`           | Run and re-run sync side effects               | Sync           | Dispose when no longer needed to prevent memory leaks                   |
+| `effectAsync()`      | Run async side effects with AbortSignal        | Async          | Read reactive deps synchronously before the first `await`               |
+| `asyncComputed()`    | Async computed with lifecycle state            | Async          | Status is `'idle'` until first run; read `.value.status`                |
+| `watch()`            | Subscribe to value changes                     | Sync           | Does not fire immediately unlike `effect()`                             |
+| `batch()`            | Coalesce multiple writes                       | Sync           | Nested batches merge into the outermost                                 |
+| `untrack()`          | Read without subscribing                       | Sync           | Only suppresses dependency registration, value is still read            |
+| `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | Returns `ComputedSignal<T>`; dispose it when done                       |
+| `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                |
+| `asyncScope()`       | Async variant of `scope()` for async setup     | Async          | `onCleanup()` only works before the first `await`                       |
+| `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production |
+| `store()`            | Create object-like state container             | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`     |
+| `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer           |
+| `installDevTools()`  | Install DevTools observation hook              | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall    |
+| `getDevToolsHook()`  | Return current DevTools hook                   | Sync           | Returns `null` if none installed                                        |
+| `getSignalName()`    | Look up registered name for a signal/store     | Sync           | Returns `undefined` for unnamed signals and stores                      |
+| `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                         |
+| `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                            |
+| `isStore()`          | Type guard for stores                          | Sync           | Returns `false` for plain signals and computed signals                  |
 
 ## Package Entry Point
 
-| Import             | Purpose                |
-| ------------------ | ---------------------- |
-| `@vielzeug/ripple` | Main exports and types |
+| Import                      | Purpose                                                                     |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `@vielzeug/ripple`          | All core exports and types (including `RippleDevToolsHook` and event types) |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from prod          |
+| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                       |
 
 ## Signal Primitives
 
@@ -413,6 +417,43 @@ isStore(computed(() => 1)); // false
 
 ---
 
+### `scope`
+
+```ts
+function scope(setup?: () => void): Scope;
+```
+
+Creates an isolated cleanup context not tied to any reactive source. Use it to collect teardown callbacks and release them all at once.
+
+If `setup` is provided, it runs immediately inside the scope so `onCleanup()` calls in setup are captured without a separate `scope.run(setup)` call. Otherwise, call `scope.run(fn)` to activate the scope manually. `dispose()` runs all cleanups in **LIFO order** and is idempotent.
+
+```ts
+// With optional setup (shorthand):
+const s = scope(() => {
+  const id = setInterval(() => tick(), 1000);
+  onCleanup(() => clearInterval(id));
+});
+
+// Without setup (explicit run):
+const s2 = scope();
+s2.run(() => {
+  onCleanup(() => cleanup());
+});
+
+// later:
+s.dispose(); // or: using s = scope(...)
+```
+
+**Parameters**
+
+| Parameter | Type         | Description                                              |
+| --------- | ------------ | -------------------------------------------------------- |
+| `setup`   | `() => void` | Optional. Runs immediately inside the scope on creation. |
+
+**Returns** — `Scope`
+
+See also: [`Scope`](#scope-1), [`asyncScope`](#asyncscope)
+
 ---
 
 ### `asyncComputed`
@@ -471,19 +512,19 @@ See also: [`AsyncComputedState<T>`](#asynccomputedstate), [`AsyncComputedOptions
 ### `debugEffect`
 
 ::: info Sub-path import
-`debugEffect` is exported from `@vielzeug/ripple/debug`, not the main entry point. This keeps it tree-shaken from production bundles.
+`debugEffect` is exported from `@vielzeug/ripple/devtools`, not the main entry point. This keeps it tree-shaken from production bundles.
 :::
 
 ```ts
 function debugEffect(fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription;
 ```
 
-Like `effect()`, but logs the reactive sources that changed before each re-run to the console using `console.group`. Does not log on the initial run.
+Like `effect()`, but logs reactive dependency information on every run using `console.group`: the initial run lists all subscribed deps; subsequent runs list which deps changed and their version delta.
 
 Use instead of `effect()` when debugging unexpected re-renders — the output shows which source triggered the re-run and how its version advanced.
 
 ```ts
-import { debugEffect } from '@vielzeug/ripple/debug';
+import { debugEffect } from '@vielzeug/ripple/devtools';
 
 const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 'renderUser' });
 // On re-run: console.group '[ripple:debug] "renderUser" re-running — changed sources:'
@@ -591,7 +632,7 @@ See also: [`StoreWithHistory<T>`](#storewithhistory)
 store.lens<P extends string>(path: P): Signal<PathValue<T, P>>;
 ```
 
-Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `StateError('INVALID_STORE')` is thrown.
+Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `StateError('INVALID_STORE')` is thrown. Path segments `__proto__`, `constructor`, and `prototype` are forbidden and throw `StateError('INVALID_STORE')` immediately.
 
 The lens `Signal` is disposed and evicted from the cache when `store.lens()` is called with that same path after the lens was disposed.
 
@@ -715,14 +756,14 @@ try {
 
 **Error codes**
 
-| Code              | Thrown when                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `COMPUTED_CYCLE`  | A computed function reads another computed that depends on it                                                                                |
-| `DISPOSED_READ`   | `.value`, `.peek()`, or `.subscribe()` is called on a disposed computed                                                                      |
-| `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                              |
-| `INFINITE_LOOP`   | Flush or effect loop exceeds `maxIterations` (default 100)                                                                                   |
-| `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                    |
-| `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; or `store.lens()` path traverses a `null` or non-object intermediate |
+| Code              | Thrown when                                                                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COMPUTED_CYCLE`  | A computed function reads another computed that depends on it                                                                                                                                                                    |
+| `DISPOSED_READ`   | `.value`, `.peek()`, or `.subscribe()` is called on a disposed computed                                                                                                                                                          |
+| `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                                                                                                                  |
+| `INFINITE_LOOP`   | Flush or effect loop exceeds `maxIterations` (default 100)                                                                                                                                                                       |
+| `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                        |
+| `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; or a lens path contains a forbidden segment (`__proto__`, `constructor`, `prototype`) |
 
 Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
 
@@ -789,13 +830,13 @@ interface Store<T extends object> extends ReadonlySignal<Readonly<T>> {
 }
 ```
 
-| Member            | Description                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| `.value` (get)    | Read current state; tracked inside `effect`/`computed`; returns a read-only proxy                |
-| `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy |
-| `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                             |
-| `.replace(fn)`    | Receive current state; return value replaces it; same-reference return is a silent no-op         |
-| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                           |
+| Member            | Description                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `.value` (get)    | Read current state; tracked inside `effect`/`computed`; returns a read-only proxy                                   |
+| `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy                    |
+| `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                |
+| `.replace(fn)`    | Receive a plain shallow copy of current state; return the new state; returning the same reference is a silent no-op |
+| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                              |
 
 Inherits `map()` and `filter()` from `ReadonlySignal<T>` for creating derived computed signals from the store value.
 
@@ -995,6 +1036,16 @@ type AsyncComputedOptions<T> = ReactiveOptions<AsyncComputedState<T>> & {
 
 ---
 
+### `AsyncScopeSetup`
+
+```ts
+type AsyncScopeSetup = () => Promise<void>;
+```
+
+Describes the setup function accepted by `asyncScope()`. `onCleanup()` calls within this function must occur before the first `await`.
+
+---
+
 ### `StoreWithHistory`
 
 ```ts
@@ -1020,25 +1071,44 @@ Returned by `storeWithHistory()`. Extends `Store<T>` with snapshot navigation.
 ### `RippleDevToolsHook`
 
 ```ts
+// Shared by compute() and run() — only carries the node name.
+type NamedEvent = { name: string | undefined };
+
+type WriteEvent = { name: string | undefined; newValue: unknown; oldValue: unknown };
+type DisposeEvent = { kind: 'signal' | 'computed' | 'effect'; name: string | undefined };
+type MutateEvent = {
+  kind: 'patch' | 'replace' | 'reset' | 'lens';
+  name: string | undefined;
+  path?: string; // populated for kind: 'lens'
+};
+
 type RippleDevToolsHook = {
-  onSignalWrite?(signal: ReadonlySignal<unknown>, name: string | undefined, newValue: unknown): void;
-  onEffectRun?(name: string | undefined): void;
-  onEffectDispose?(name: string | undefined): void;
-  onComputedRecompute?(name: string | undefined): void;
+  compute?(event: NamedEvent): void;
+  dispose?(event: DisposeEvent): void;
+  mutate?(event: MutateEvent): void;
+  run?(event: NamedEvent): void;
+  write?(event: WriteEvent): void;
 };
 ```
 
-All methods are optional. Install via `installDevTools(hook)`, uninstall with `installDevTools(null)`. The hook is stored on `globalThis.__RIPPLE_DEVTOOLS__`.
+All methods are optional. Each receives a single event object — add new fields in the future without breaking existing consumers. Install via `installDevTools(hook)`, uninstall with `installDevTools(null)`. The active hook is stored in a module-level variable; `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension DevTools.
 
 ```ts
-import { installDevTools } from '@vielzeug/ripple';
+import { installDevTools } from '@vielzeug/ripple/devtools';
 
 installDevTools({
-  onSignalWrite(signal, name, newValue) {
-    console.log(`[ripple] ${name ?? '(unnamed)'} =`, newValue);
+  write({ name, oldValue, newValue }) {
+    console.log(`[ripple] ${name ?? '(unnamed)'}: ${String(oldValue)} → ${String(newValue)}`);
   },
-  onEffectRun(name) {
+  run({ name }) {
     performance.mark(`effect:${name ?? 'anon'}`);
+  },
+  dispose({ kind, name }) {
+    console.log(`[ripple] ${kind} "${name ?? '(unnamed)'}" disposed`);
+  },
+  mutate({ kind, name, path }) {
+    const target = path ? `${name ?? '(unnamed)'}[${path}]` : (name ?? '(unnamed)');
+    console.log(`[ripple] store ${target} ${kind}`);
   },
 });
 ```
@@ -1056,20 +1126,24 @@ type WatchOptions<T> = ReactiveOptions<T> & { immediate?: boolean };
 
 ## DevTools
 
+::: info Sub-path import
+`installDevTools` and `debugEffect` are exported from `@vielzeug/ripple/devtools`, not the main entry point. This keeps them tree-shaken from production bundles.
+:::
+
 ### `installDevTools`
 
 ```ts
 function installDevTools(hook: RippleDevToolsHook | null): void;
 ```
 
-Installs a DevTools observation hook on `globalThis.__RIPPLE_DEVTOOLS__`. Pass `null` to uninstall.
+Installs a DevTools observation hook. The hook is stored in a module-level variable (O(1) read on every signal write). `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension tools. Pass `null` to uninstall.
 
 ```ts
-import { installDevTools } from '@vielzeug/ripple';
+import { installDevTools } from '@vielzeug/ripple/devtools';
 
 installDevTools({
-  onSignalWrite(signal, name, newValue) {
-    console.log(`${name ?? 'signal'} =`, newValue);
+  write({ name, oldValue, newValue }) {
+    console.log(`${name ?? 'signal'}: ${String(oldValue)} → ${String(newValue)}`);
   },
 });
 
@@ -1095,7 +1169,7 @@ Returns the currently installed hook, or `null` if none is installed.
 function getSignalName(signal: object): string | undefined;
 ```
 
-Looks up the registered name for a signal from the internal `WeakMap` registry. Returns `undefined` for unnamed or unknown objects.
+Looks up the registered name for a signal, computed, or store from the internal `WeakMap` registry. Returns `undefined` for unnamed or unknown objects. Named stores are registered at construction time — `getSignalName(store({ x: 0 }, { name: 'myStore' }))` returns `'myStore'`.
 
 ## Notification Timing
 

@@ -23,25 +23,36 @@ export interface SearchHit {
 // Scoring
 // ---------------------------------------------------------------------------
 
+/** Returns true if every term in `terms` appears in `haystack` (case-insensitive). */
+function allTermsMatch(haystack: string, terms: string[]): boolean {
+  const lower = haystack.toLowerCase();
+
+  return terms.every((t) => lower.includes(t));
+}
+
 export function scorePackage(pkg: BundledPackage, query: string): SearchHit | null {
-  const term = query.toLowerCase();
-  const has = (s: string) => s.toLowerCase().includes(term);
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+
+  if (terms.length === 0) return null;
 
   let score = 0;
   const matchedIn: SearchHit['matchedIn'] = [];
   const matchedPages: string[] = [];
 
-  if ([pkg.name, pkg.description, pkg.category].some(has)) {
+  if ([pkg.name, pkg.description, pkg.category].some((s) => allTermsMatch(s, terms))) {
     score = Math.max(score, 3);
     matchedIn.push('metadata');
   }
 
-  if (pkg.keywords.some(has)) {
+  if (pkg.keywords.some((kw) => allTermsMatch(kw, terms))) {
     score = Math.max(score, 2);
     matchedIn.push('keywords');
   }
 
-  if (pkg.exports.some(has)) {
+  if (pkg.exports.some((ex) => allTermsMatch(ex, terms))) {
     score = Math.max(score, 2);
     matchedIn.push('exports');
   }
@@ -49,7 +60,7 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
   for (const page of pkg.availableDocPages) {
     const content = pkg.docs[page];
 
-    if (typeof content === 'string' && has(content)) {
+    if (typeof content === 'string' && allTermsMatch(content, terms)) {
       score = Math.max(score, 1);
 
       if (!matchedIn.includes('docs')) matchedIn.push('docs');
@@ -58,7 +69,7 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
     }
   }
 
-  if (pkg.apiSource && has(pkg.apiSource)) {
+  if (pkg.apiSource && allTermsMatch(pkg.apiSource, terms)) {
     score = Math.max(score, 1);
 
     if (!matchedIn.includes('docs')) matchedIn.push('docs');

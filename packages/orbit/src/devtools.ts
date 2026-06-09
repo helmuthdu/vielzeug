@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugFloat } from '@vielzeug/orbit/debug';
+ * import { debugFloat } from '@vielzeug/orbit/devtools';
  * ```
  */
 
@@ -86,7 +86,7 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  *
  * @example
  * ```ts
- * import { debugFloat } from '@vielzeug/orbit/debug';
+ * import { debugFloat } from '@vielzeug/orbit/devtools';
  *
  * const handle = debugFloat(reference, tooltip, {
  *   placement: 'top',

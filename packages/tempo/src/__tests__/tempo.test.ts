@@ -231,6 +231,24 @@ describe('difference', () => {
       }),
     ).toThrow(MISSING_TZ);
   });
+  it('computes duration between two PlainDate inputs with tz', () => {
+    expect(
+      difference(
+        Temporal.PlainDate.from('2026-01-01'),
+        Temporal.PlainDate.from('2026-03-21'),
+        { largestUnit: 'day', tz: 'UTC' },
+      ).days,
+    ).toBe(79);
+  });
+  it('respects roundingMode when smallestUnit is set', () => {
+    const dur = difference(
+      Temporal.Instant.from('2026-03-21T10:00:00Z'),
+      Temporal.Instant.from('2026-03-21T10:01:29Z'),
+      { largestUnit: 'minute', smallestUnit: 'minute', roundingMode: 'ceil' },
+    );
+
+    expect(dur.minutes).toBe(2);
+  });
   it('returns a negative Duration when start is after end', () => {
     const dur = difference(
       Temporal.ZonedDateTime.from('2026-03-21T12:00:00+00:00[UTC]'),
@@ -496,6 +514,15 @@ describe('formatRelative', () => {
       }),
     ).toBe('in 5 hours');
   });
+  it('accepts ZonedDateTime as base', () => {
+    expect(
+      formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+        base: Temporal.ZonedDateTime.from('2026-03-21T10:00:00+00:00[UTC]'),
+        locale: 'en-US',
+        numeric: 'always',
+      }),
+    ).toBe('in 2 hours');
+  });
 });
 
 describe('parseDuration', () => {
@@ -571,6 +598,14 @@ describe('expires', () => {
   });
   it('accepts ZonedDateTime', () => {
     expect(expires(Temporal.Now.zonedDateTimeISO('UTC').add({ days: 10 }), T)).toBe('warning');
+  });
+  it('uses the pinned now param for deterministic classification', () => {
+    const pinnedNow = Temporal.Instant.from('2026-06-01T00:00:00Z');
+    const threeDaysLater = Temporal.Instant.from('2026-06-04T00:00:00Z');
+    const tenDaysLater = Temporal.Instant.from('2026-06-11T00:00:00Z');
+
+    expect(expires(threeDaysLater, T, {}, pinnedNow)).toBe('critical');
+    expect(expires(tenDaysLater, T, {}, pinnedNow)).toBe('warning');
   });
   it('requires tz for plain inputs', () => {
     expect(() => expires(parsePlainDateTime('2000-01-01'), T)).toThrow(MISSING_TZ);
@@ -895,7 +930,9 @@ describe('recurrence', () => {
     const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
 
     // Should throw at call time, not lazily on first iteration
-    expect(() => recurrence(start, { frequency: 'daily' } as never, opts)).toThrow(RangeError);
+    expect(() => recurrence(start, { frequency: 'daily' } as never, opts)).toThrow(
+      'recurrence: either count or until must be specified',
+    );
   });
 
   it('accepts Instant start with explicit tz', () => {
@@ -1039,5 +1076,8 @@ describe('humanize', () => {
     expect(humanize({ unit: 'week', value: 4 })).toBe('4 weeks');
     expect(humanize({ unit: 'minute', value: 30 })).toBe('30 minutes');
     expect(humanize({ unit: 'second', value: 1 })).toBe('1 second');
+  });
+  it('formats singular week', () => {
+    expect(humanize({ unit: 'week', value: 1 })).toBe('1 week');
   });
 });

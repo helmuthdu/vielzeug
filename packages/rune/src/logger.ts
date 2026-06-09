@@ -1,4 +1,15 @@
-import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneConfig, RuneOptions } from './types';
+import type {
+  BatchTransport,
+  Bindings,
+  LogEntry,
+  Logger,
+  LogLevel,
+  LogMiddleware,
+  LogType,
+  RuneConfig,
+  RuneOptions,
+  TimeOptions,
+} from './types';
 
 import { resolveBindings } from './lazy';
 import { DEFAULT_TRANSPORT, renderGroup, resolveTheme } from './transports';
@@ -117,12 +128,14 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     let current: LogEntry = entry;
 
     if (cfg.middleware.length > 0) {
-      let c: LogEntry | null = entry;
+      let c: LogEntry = entry;
 
       for (const mw of cfg.middleware) {
-        c = mw(c);
+        const next = mw(c);
 
-        if (c === null) return;
+        if (next == null) return;
+
+        c = next;
       }
 
       current = c;
@@ -156,37 +169,57 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     });
   };
 
-  const timeImpl = <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }): T => {
+  const timeImpl = <T>(label: string, fn: () => T, opts?: LogType | TimeOptions): T => {
     const level: LogType = typeof opts === 'string' ? opts : (opts?.level ?? 'debug');
     const start = performance.now();
 
     // R7: label is the human message; duration_ms goes into context (not the other way around)
-    const done = (): void => {
+    const done = (thrownErr?: unknown): void => {
       const duration_ms = Math.round((performance.now() - start) * 100) / 100;
+      const ctx: Bindings = { duration_ms };
 
-      emit(level, { duration_ms }, label);
+      if (thrownErr !== undefined)
+        ctx['err'] = serializeError(thrownErr instanceof Error ? thrownErr : new Error(String(thrownErr)));
+
+      emit(level, ctx, label);
     };
 
     try {
       const result = fn();
 
       if (result instanceof Promise) {
-        return result.finally(done) as T;
+        return result.then(
+          (v) => {
+            done();
+
+            return v;
+          },
+          (err: unknown) => {
+            done(err);
+
+            return Promise.reject(err) as never;
+          },
+        ) as T;
       }
 
       done();
 
       return result;
     } catch (err) {
-      done();
+      done(err);
       throw err;
     }
   };
 
   // R1: theme comes from cfg — no symbol scanning of transports
   // R5: resolvedTheme is pre-computed once per logger instance
-  const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T): T => {
+  const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T, level?: LogType): T => {
     if (cfg.logLevel === 'off') return fn();
+
+    if (level !== undefined && !passes(level)) {
+      // level supplied but below threshold — skip group header, still run fn
+      return fn();
+    }
 
     renderGroup(collapsed, label, cfg.namespace, resolvedTheme);
 
@@ -228,6 +261,14 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
 
+    dispose: (): void => {
+      for (const t of cfg.transports) {
+        if (typeof (t as BatchTransport).dispose === 'function') {
+          (t as BatchTransport).dispose();
+        }
+      }
+    },
+
     // R6: isLevelEnabled now handles 'off' → false, so no special-case needed
     enabled: (type: LogLevel): boolean => isLevelEnabled(cfg.logLevel, type),
 
@@ -235,9 +276,9 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     fatal: (m: unknown, s?: unknown, t?: unknown) => emit('fatal', m, s, t),
 
-    group: (label, fn) => wrapGroup(false, label, fn),
+    group: (label, fn, level) => wrapGroup(false, label, fn, level),
 
-    groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
+    groupCollapsed: (label, fn, level) => wrapGroup(true, label, fn, level),
 
     info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
 

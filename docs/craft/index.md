@@ -176,14 +176,14 @@ define('my-counter', {
 - Form-associated helpers with `defineField()` and `createFormContext()` (with reactive `error` signal for submit errors)
 - Observers (`@vielzeug/craft/observers`)
 - Testing utilities (`@vielzeug/craft/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
-- Debug utilities (`@vielzeug/craft/debug`) — `debugFlush()` for diagnosing update timing
+- Debug utilities (`@vielzeug/craft/devtools`) — `debugFlush()` for diagnosing update timing
 
 ## Package Entry Points
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
 | `@vielzeug/craft`           | Core component API, directives, utilities, ripple re-exports                  |
-| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
+| `@vielzeug/craft/devtools`  | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
 | `@vielzeug/craft/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
 

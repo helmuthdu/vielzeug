@@ -139,6 +139,37 @@ import '@vielzeug/sigil/styles';
 import '@vielzeug/sigil';
 ```
 
+### CDN / Vanilla HTML
+
+Use the self-contained IIFE bundle to load Sigil directly from a CDN in any HTML page — no build step required:
+
+```html
+<!-- 1. Styles -->
+<link rel="stylesheet" href="https://unpkg.com/@vielzeug/sigil/dist/styles/styles.css" />
+
+<!-- 2. All components (IIFE — registers global Sigil namespace) -->
+<script src="https://unpkg.com/@vielzeug/sigil/dist/sigil.iife.js"></script>
+```
+
+For bundler-based projects that still want a CDN URL, use the ESM bundle via an import map:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@vielzeug/sigil": "https://esm.sh/@vielzeug/sigil",
+      "@vielzeug/sigil/button": "https://esm.sh/@vielzeug/sigil/button",
+      "@vielzeug/sigil/input": "https://esm.sh/@vielzeug/sigil/input"
+    }
+  }
+</script>
+
+<script type="module">
+  import '@vielzeug/sigil/button';
+  import '@vielzeug/sigil/input';
+</script>
+```
+
 ### Package Entry Points
 
 | Import                   | Purpose                                   |

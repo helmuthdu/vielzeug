@@ -239,9 +239,16 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
     onCrossTabMessage: channel
       ? (notify) => {
           channel.onmessage = (event: MessageEvent<unknown>) => {
-            if (!isBroadcastMsg(event.data)) return;
+            let msg: MemoryBroadcastMsg;
 
-            const msg = event.data;
+            try {
+              if (!isBroadcastMsg(event.data)) return;
+
+              msg = event.data;
+            } catch {
+              return;
+            }
+
             const store = tables.get(msg.table);
 
             if (!store) return;

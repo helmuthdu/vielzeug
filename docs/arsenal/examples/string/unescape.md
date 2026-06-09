@@ -17,7 +17,7 @@ Use `unescape(value)` to convert HTML entities back to their original characters
 import { unescape } from '@vielzeug/arsenal';
 
 unescape('&lt;b&gt;Hello&lt;/b&gt;'); // '<b>Hello</b>'
-unescape('Alice &amp; Bob');           // 'Alice & Bob'
+unescape('Alice &amp; Bob'); // 'Alice & Bob'
 ```
 
 ### Related

@@ -188,6 +188,24 @@ describe('LocalStorage adapter', () => {
     // Cross-tab write to phantom table must not trigger a users observer
   });
 
+  test('keys() returns only live primary keys without fetching full records', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    await db.put('users', { id: 3, name: 'Carol' }, ttl.ms(1000));
+
+    vi.advanceTimersByTime(2000); // Carol expires
+
+    const keys = await db.keys('users');
+
+    vi.useRealTimers();
+
+    expect(keys.sort()).toEqual([1, 2]);
+  });
+
   test('isEmpty() returns true for empty table, false when records exist', async () => {
     expect(await db.isEmpty('users')).toBe(true);
 

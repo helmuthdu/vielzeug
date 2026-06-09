@@ -16,19 +16,16 @@ Use `retry(fn, options)` to re-run an async function up to `times` attempts. The
 ```ts
 import { retry, backoff } from '@vielzeug/arsenal';
 
-const data = await retry(
-  (signal) => fetch('/api/health', { signal }).then((r) => r.json()),
-  {
-    times: 4,
-    timeout: 5_000,
-    delay: (failureIndex) => backoff(failureIndex), // 1s, 2s, 4s, 8s
-    shouldRetry: (err, failureIndex) => {
-      // failureIndex is 0-based: 0 = first failure
-      // NOT called on the final exhausting attempt
-      return failureIndex < 3 && !(err instanceof TypeError);
-    },
+const data = await retry((signal) => fetch('/api/health', { signal }).then((r) => r.json()), {
+  times: 4,
+  timeout: 5_000,
+  delay: (failureIndex) => backoff(failureIndex), // 1s, 2s, 4s, 8s
+  shouldRetry: (err, failureIndex) => {
+    // failureIndex is 0-based: 0 = first failure
+    // NOT called on the final exhausting attempt
+    return failureIndex < 3 && !(err instanceof TypeError);
   },
-);
+});
 ```
 
 #### Basic usage
@@ -46,10 +43,10 @@ import { retry } from '@vielzeug/arsenal';
 
 const controller = new AbortController();
 
-const result = await retry(
-  (signal) => fetch('/api/data', { signal }).then((r) => r.json()),
-  { times: 3, signal: controller.signal },
-);
+const result = await retry((signal) => fetch('/api/data', { signal }).then((r) => r.json()), {
+  times: 3,
+  signal: controller.signal,
+});
 
 controller.abort(); // cancels retries mid-flight
 ```

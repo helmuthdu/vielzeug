@@ -66,15 +66,15 @@
     }
   },
   "scripts": {
-    "build": "pnpm run verify:exports && vite build && pnpm run build:core && pnpm run build:types",
-    "build:core": "vite build --config vite.bundle.config.ts",
+    "build": "pnpm run verify:exports && vite build && pnpm run build:bundle && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "pnpm run verify:exports && vitest",
-    "verify:exports": "node ./scripts/generate-barrels.mjs --check"
+    "verify:exports": "node ./scripts/generate-barrels.mjs --check",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
     "access": "public",

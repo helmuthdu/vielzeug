@@ -16,8 +16,8 @@ Use `contains(array, value, selector?)` to check membership. Without a selector 
 ```ts
 import { contains } from '@vielzeug/arsenal';
 
-contains([1, 2, 3], 2);         // true
-contains([1, 2, 3], 4);         // false
+contains([1, 2, 3], 2); // true
+contains([1, 2, 3], 4); // false
 
 const users = [{ id: 1 }, { id: 2 }];
 contains(users, { id: 2 }, (u) => u.id); // true

@@ -17,7 +17,7 @@ Use `sort(array, selectors)` with an object of `{ field: 'asc' | 'desc' }` pairs
 import { sort } from '@vielzeug/arsenal';
 
 const users = [
-  { name: 'Bob',   age: 30 },
+  { name: 'Bob', age: 30 },
   { name: 'Alice', age: 30 },
   { name: 'Carol', age: 25 },
 ];

@@ -136,14 +136,15 @@ Argument rules:
 
 ### Utilities
 
-| Method                      | Returns   | Description                                                                                                                                                                           |
-| --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled(level)`            | `boolean` | True if entries at this level pass the configured threshold                                                                                                                           |
-| `setLevel(level)`           | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot.                                   |
-| `resetLevel()`              | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls.                                                                                         |
-| `time(label, fn, opts?)`    | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. `opts` accepts a `LogType` string or `{ level?: LogType }`. |
-| `group(label, fn)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Always calls `console.group` regardless of transports.                                                                |
-| `groupCollapsed(label, fn)` | `T`       | Same as `group`, using `console.groupCollapsed`                                                                                                                                       |
+| Method                              | Returns   | Description                                                                                                                                                                                                                            |
+| ----------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled(level)`                    | `boolean` | True if entries at this level pass the configured threshold                                                                                                                                                                            |
+| `setLevel(level)`                   | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot.                                                                                    |
+| `resetLevel()`                      | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls.                                                                                                                                          |
+| `time(label, fn, opts?)`            | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. When `fn` throws or rejects, `{ err }` is also included. `opts` accepts a `LogType` string or `TimeOptions`. |
+| `group(label, fn, level?)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Pass `level` to gate the group header on the configured threshold (e.g. `'debug'` suppresses when `logLevel` is `'warn'`).                                             |
+| `groupCollapsed(label, fn, level?)` | `T`       | Same as `group`, using `console.groupCollapsed`.                                                                                                                                                                                       |
+| `dispose()`                         | `void`    | Calls `.dispose()` on any `BatchTransport` in the transport array. Call on shutdown. No-op if there are no batch transports. Only inspects top-level transports (not those inside `pipe()`).                                           |
 
 ### Properties
 
@@ -565,19 +566,20 @@ type Logger = {
   readonly bindings: Readonly<Bindings>;
   readonly config: Readonly<RuneConfig>;
   child: (overrides?: RuneOptions) => Logger;
+  dispose: () => void;
+  enabled: (type: LogLevel) => boolean;
+  group: <T>(label: string, fn: () => T, level?: LogType) => T;
+  groupCollapsed: <T>(label: string, fn: () => T, level?: LogType) => T;
+  resetLevel: () => void;
+  setLevel: (level: LogLevel) => void;
+  time: <T>(label: string, fn: () => T, opts?: LogType | TimeOptions) => T;
   use: (middleware: LogMiddleware) => Logger;
   withBindings: (bindings: Bindings) => Logger;
-  enabled: (type: LogLevel) => boolean;
-  setLevel: (level: LogLevel) => void;
-  resetLevel: () => void;
-  time: <T>(label: string, fn: () => T, opts?: LogType | { level?: LogType }) => T;
-  group: <T>(label: string, fn: () => T) => T;
-  groupCollapsed: <T>(label: string, fn: () => T) => T;
   debug: LogMethod;
-  info: LogMethod;
-  warn: LogMethod;
   error: LogMethod;
   fatal: LogMethod;
+  info: LogMethod;
+  warn: LogMethod;
 };
 ```
 
@@ -634,3 +636,11 @@ type Logger = {
 | `keys`        | `string[]`  | —              | Required. Field names to redact |
 | `replacement` | `string`    | `'[REDACTED]'` | Replacement value               |
 | `transport`   | `Transport` | —              | Required. Downstream transport  |
+
+### TimeOptions
+
+Options accepted by `time()` as the third argument. Can also be passed as a plain `LogType` string for brevity.
+
+| Field   | Type      | Default   | Description                    |
+| ------- | --------- | --------- | ------------------------------ |
+| `level` | `LogType` | `'debug'` | Log level for the timing entry |

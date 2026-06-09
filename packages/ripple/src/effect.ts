@@ -10,7 +10,7 @@ import type {
   Subscription,
 } from './types';
 
-import { getDevToolsHook } from './devtools';
+import { getDevToolsHook } from './devtools-hook';
 import { collectErrors, rethrowWith, runAll, StateError } from './error';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
@@ -122,7 +122,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
         isDirty = false;
         teardown();
 
-        getDevToolsHook()?.onEffectRun?.(effectName);
+        getDevToolsHook()?.run?.({ name: effectName });
 
         let returnedCleanup: CleanupFn | void = undefined;
 
@@ -167,7 +167,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
 
     isDisposed = true;
     teardown();
-    getDevToolsHook()?.onEffectDispose?.(effectName);
+    getDevToolsHook()?.dispose?.({ kind: 'effect', name: effectName });
   });
 };
 
@@ -246,6 +246,25 @@ export const onCleanup = (fn: CleanupFn): void => {
   ctx.cleanups.push(fn);
 };
 
+/**
+ * Creates a lifecycle scope that collects `onCleanup()` registrations and runs
+ * them in reverse order when `dispose()` is called.
+ *
+ * The optional `setup` callback is run immediately inside the scope so that
+ * `onCleanup()` calls in setup are captured without requiring a separate
+ * `scope.run(setup)` call.
+ *
+ * @example
+ * ```ts
+ * const s = scope(() => {
+ *   const sub = effect(() => { ... });
+ *   onCleanup(() => sub.dispose());
+ * });
+ *
+ * // later:
+ * s.dispose(); // or: using s = scope(...)
+ * ```
+ */
 export const scope = (setup?: () => void): Scope => {
   const cleanups: CleanupFn[] = [];
   let disposed = false;

@@ -27,6 +27,8 @@ export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'hal
     throw new TypeError(`Currency mismatch: ${m.currency} and ${rate.from}`);
   }
 
+  if (rate.rate === '') throw new RangeError('Exchange rate must be a non-empty decimal string');
+
   const { denominator, negative: rateNegative, numerator } = parseRational(rate.rate);
 
   if (rateNegative) throw new RangeError('Exchange rate must be non-negative');

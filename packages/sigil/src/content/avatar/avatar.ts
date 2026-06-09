@@ -197,6 +197,8 @@ export type SgAvatarGroupProps = {
  *
  * @cssprop --avatar-group-overlap - Negative margin creating the overlap (default: -0.75rem)
  *
+ * @part overflow - Overflow count badge shown when avatars exceed `max`.
+ *
  * @example
  * ```html
  * <sg-avatar-group max="3">

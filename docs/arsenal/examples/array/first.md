@@ -16,9 +16,9 @@ Use `first(array, fallback?)` to get the first element. Returns `fallback` (defa
 ```ts
 import { first } from '@vielzeug/arsenal';
 
-first([10, 20, 30]);      // 10
-first([]);                // undefined
-first([], 0);             // 0
+first([10, 20, 30]); // 10
+first([]); // undefined
+first([], 0); // 0
 ```
 
 ### Pitfalls

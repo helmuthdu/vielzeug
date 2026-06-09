@@ -150,7 +150,7 @@ bound.rulesInScope('posts');
 - Principal-bound API via `ward.forUser(principal)`
 - Fluent rule builder via `rule()` with `.priority()` support
 - Built-in Express and Hono middleware guards via `createExpressGuard`, `createHonoGuard`, `guardRequest`, and `guardRequestWith`
-- **Debug logging** via `debugWard()` (`@vielzeug/ward/debug`) — logs every `can()` decision with `[ward:decision]` prefixes; tree-shaken from production bundles
+- **Debug logging** via `debugWard()` (`@vielzeug/ward/devtools`) — logs every authorization decision (`can`, `explain`, `trace`, etc.) with `[ward:decision]` prefixes including rule effect; tree-shaken from production bundles
 
 ## Compatibility
 

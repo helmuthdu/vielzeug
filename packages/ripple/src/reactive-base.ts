@@ -1,6 +1,6 @@
 import type { Subscriber } from './types';
 
-import { registerSignal } from './devtools';
+import { registerSignal } from './registry';
 import { IS_COMPUTED, IS_SIGNAL } from './symbols';
 
 // ── Global FinalizationRegistry (F1) ──────────────────────────────────────────

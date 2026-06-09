@@ -143,7 +143,7 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 | `@vielzeug/orbit/presets`  | Pre-configured middleware stacks              |
 | `@vielzeug/orbit/inline`   | `inline` middleware for multi-line references |
 | `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)  |
-| `@vielzeug/orbit/debug`    | Visual debug overlay (development only)       |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)       |
 | `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
 
 ## Compatibility

@@ -1,6 +1,7 @@
 import { effect } from '@vielzeug/ripple';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { debugInterpret } from '../devtools.js';
 import {
   defineMachine,
   interpret,
@@ -784,6 +785,22 @@ describe('subscribe (R7: change-detection)', () => {
 
     expect(snapshots).toHaveLength(1);
   });
+
+  it('unsubscribing inside a subscriber callback stops further notifications', () => {
+    const m = interpret(trafficDefinition);
+    const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
+
+    const unsub = m.subscribe((snap) => {
+      snapshots.push(snap);
+      unsub();
+    });
+
+    m.send({ type: 'NEXT' }); // fires once — subscriber calls unsub
+    m.send({ type: 'NEXT' }); // should not fire again
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0].state).toBe('yellow');
+  });
 });
 
 describe('middleware (R1: unified send)', () => {
@@ -1434,6 +1451,21 @@ describe('getTrace — no traceLimit', () => {
 
     expect(m.getTrace()).toHaveLength(0);
   });
+
+  it('returns only filled entries when fewer transitions than traceLimit', () => {
+    const m = interpret(trafficDefinition, { debug: { traceLimit: 10 } });
+
+    m.send({ type: 'NEXT' }); // green→yellow
+    m.send({ type: 'NEXT' }); // yellow→red
+
+    const trace = m.getTrace();
+
+    expect(trace).toHaveLength(2);
+    expect(trace[0].from).toBe('green');
+    expect(trace[0].to).toBe('yellow');
+    expect(trace[1].from).toBe('yellow');
+    expect(trace[1].to).toBe('red');
+  });
 });
 
 describe('getTrace immutability', () => {
@@ -1457,5 +1489,171 @@ describe('getTrace immutability', () => {
 
     expect(trace1).toEqual(trace2);
     expect(trace1[0]).not.toBe(trace2[0]);
+  });
+});
+
+describe('debugInterpret', () => {
+  it('transitions correctly and logs to console.debug', () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    const m = debugInterpret(trafficDefinition);
+
+    expect(m.state.value).toBe('green');
+    m.send({ type: 'NEXT' });
+    expect(m.state.value).toBe('yellow');
+
+    expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('NEXT: green → yellow'));
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('guard'));
+
+    vi.restoreAllMocks();
+  });
+
+  it('returns a MachineInstance with the same API as interpret', () => {
+    const m = debugInterpret(trafficDefinition);
+
+    expect(typeof m.send).toBe('function');
+    expect(typeof m.can).toBe('function');
+    expect(typeof m.matches).toBe('function');
+    expect(typeof m.getSnapshot).toBe('function');
+    expect(typeof m.subscribe).toBe('function');
+    expect(typeof m[Symbol.dispose]).toBe('function');
+  });
+
+  it('logs skipped transitions via onDebug', () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    const m = debugInterpret(trafficDefinition);
+
+    // @ts-expect-error unknown event
+    m.send({ type: 'UNKNOWN' });
+
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('no matching transition'));
+
+    vi.restoreAllMocks();
+  });
+});
+
+describe('snapshot hierarchical state validation', () => {
+  it('accepts a valid nested snapshot state', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+      initial: 'idle',
+      states: {
+        active: {
+          initial: 'running',
+          states: {
+            paused: {},
+            running: {},
+          },
+        },
+        idle: { on: { GO: { target: 'active' } } },
+      },
+    });
+
+    expect(() =>
+      interpret(machine, { snapshot: { context: {}, state: 'active.running' as 'idle' | 'active' } }),
+    ).not.toThrow();
+  });
+
+  it('rejects a snapshot with a non-existent nested state', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+      initial: 'idle',
+      states: {
+        active: {
+          initial: 'running',
+          states: {
+            running: {},
+          },
+        },
+        idle: { on: { GO: { target: 'active' } } },
+      },
+    });
+
+    expect(() =>
+      interpret(machine, { snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } }),
+    ).toThrow(MachineError);
+  });
+});
+
+describe('re-entrant send', () => {
+  it('queues events sent inside an action and processes them after the current transition', () => {
+    type Event = { type: 'A' } | { type: 'B' };
+
+    const machine = defineMachine<'start' | 'middle' | 'end', Record<string, never>, Event>({
+      initial: 'start',
+      states: {
+        end: {},
+        middle: { on: { B: { target: 'end' } } },
+        start: {
+          on: {
+            A: {
+              actions: [
+                () => {
+                  m.send({ type: 'B' });
+                },
+              ],
+              target: 'middle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    m.send({ type: 'A' });
+
+    expect(m.state.value).toBe('end');
+  });
+});
+
+describe('matches() edge cases', () => {
+  it('returns false with no arguments', () => {
+    const m = interpret(trafficDefinition);
+
+    expect(m.matches()).toBe(false);
+  });
+
+  it('returns false after dispose', () => {
+    const m = interpret(trafficDefinition);
+
+    m[Symbol.dispose]();
+
+    expect(m.matches('green')).toBe(false);
+  });
+
+  it('returns true for a parent state when in a child state', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+      initial: 'idle',
+      states: {
+        active: {
+          initial: 'running',
+          states: {
+            running: {},
+          },
+        },
+        idle: { on: { GO: { target: 'active' } } },
+      },
+    });
+
+    const m = interpret(machine);
+
+    m.send({ type: 'GO' });
+
+    expect(m.state.value).toBe('active.running');
+    expect(m.matches('active')).toBe(true);
+    expect(m.matches('active.running')).toBe(true);
+    expect(m.matches('idle')).toBe(false);
   });
 });

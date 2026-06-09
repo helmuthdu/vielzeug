@@ -1,7 +1,9 @@
 import type { ComputedSignal, PathValue, ReactiveOptions, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
+import { getDevToolsHook } from './devtools-hook';
 import { StateError } from './error';
+import { registerSignal } from './registry';
 import { batch } from './scheduling';
 import { SignalImpl } from './signal';
 import { IS_SIGNAL, IS_STORE } from './symbols';
@@ -123,7 +125,7 @@ class LensSignal<V> implements Signal<V> {
 // R10: The readonlyProxy_ is shallowly protected — top-level set/delete throws,
 //      but nested object properties are plain references. See store.value JSDoc.
 
-class StoreImpl<T extends object> {
+export class StoreImpl<T extends object> {
   declare [IS_SIGNAL]: true;
   declare [IS_STORE]: true;
 
@@ -136,10 +138,16 @@ class StoreImpl<T extends object> {
   private readonly readonlyProxy_: Readonly<T>;
   private readonly version_: SignalImpl<number>;
 
+  /** @internal Installed by `storeWithHistory` to observe each top-level key change. */
+  _onMutation_?: (key: string, newValue: unknown) => void;
+
   constructor(initial: T, name?: string) {
     this[IS_SIGNAL] = true;
     this[IS_STORE] = true;
     this.name = name;
+
+    if (name !== undefined) registerSignal(this, name);
+
     this.current_ = structuredClone(initial);
     this.initial_ = structuredClone(initial);
     this.lensCache_ = new Map();
@@ -199,6 +207,7 @@ class StoreImpl<T extends object> {
     (this.current_ as Record<string, unknown>)[key] = newValue;
     this.propSignalFor_(key).value = newValue as never;
     this.version_.value = this.version_.peek() + 1;
+    this._onMutation_?.(key, newValue);
   }
 
   /**
@@ -255,13 +264,16 @@ class StoreImpl<T extends object> {
         this.applyTopLevelChange_(key, (partial as Record<string, unknown>)[key]);
       }
     });
+
+    getDevToolsHook()?.mutate?.({ kind: 'patch', name: this.name });
   }
 
   replace(fn: (state: Readonly<T>) => T): void {
     const current = this.current_;
-    const next = fn(this.readonlyProxy_);
+    const snapshot = { ...current } as Readonly<T>;
+    const next = fn(snapshot);
 
-    if (next === current) return;
+    if (next === snapshot) return;
 
     batch(() => {
       for (const key of Object.keys(current)) {
@@ -274,10 +286,21 @@ class StoreImpl<T extends object> {
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
     });
+
+    getDevToolsHook()?.mutate?.({ kind: 'replace', name: this.name });
   }
 
   reset(): void {
-    this.replace(() => structuredClone(this.initial_));
+    const current = this.current_;
+    const next = structuredClone(this.initial_);
+
+    batch(() => {
+      for (const key of Object.keys(current)) {
+        this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
+      }
+    });
+
+    getDevToolsHook()?.mutate?.({ kind: 'reset', name: this.name });
   }
 
   lens<P extends string>(path: P): Signal<PathValue<T, P>> {
@@ -290,6 +313,13 @@ class StoreImpl<T extends object> {
     };
 
     const parts = path.split('.');
+
+    for (const part of parts) {
+      if (part === '__proto__' || part === 'constructor' || part === 'prototype') {
+        throw new StateError('INVALID_STORE', `Unsafe path segment "${part}" in lens path "${path}".`);
+      }
+    }
+
     let lens: LensSignal<unknown>;
 
     if (parts.length === 1) {
@@ -298,7 +328,10 @@ class StoreImpl<T extends object> {
 
       lens = new LensSignal<PathValue<T, P>>(
         propSig,
-        (v) => this.applyTopLevelChange_(parts[0]!, v),
+        (v) => {
+          this.applyTopLevelChange_(parts[0]!, v);
+          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
+        },
         evict,
         // propSig lifecycle is owned by the store — do not dispose it
       ) as unknown as LensSignal<unknown>;
@@ -317,6 +350,7 @@ class StoreImpl<T extends object> {
           if (Object.is(current, v)) return;
 
           batch(() => this.setPath_(parts, v));
+          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
         },
         evict,
         () => readComputed.dispose(),

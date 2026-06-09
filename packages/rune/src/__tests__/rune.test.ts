@@ -2011,4 +2011,201 @@ describe('batchTransport maxBuffer', () => {
   });
 });
 
+/* ─── time() error context ─── */
+
+describe('time() error context', () => {
+  it('includes err in context when sync fn throws', () => {
+    const { entries, log } = setup();
+
+    expect(() =>
+      log.time('op', () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].context).toMatchObject({
+      duration_ms: expect.any(Number),
+      err: expect.objectContaining({ message: 'boom', name: 'Error' }),
+    });
+    expect(entries[0].message).toBe('op');
+  });
+
+  it('includes err in context when async fn rejects', async () => {
+    const { entries, log } = setup();
+
+    await expect(log.time('async-op', () => Promise.reject(new Error('async-boom')))).rejects.toThrow('async-boom');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].context).toMatchObject({
+      duration_ms: expect.any(Number),
+      err: expect.objectContaining({ message: 'async-boom' }),
+    });
+  });
+
+  it('does not include err in context on success', () => {
+    const { entries, log } = setup();
+
+    log.time('ok-op', () => 42);
+
+    expect(entries[0].context).toEqual({ duration_ms: expect.any(Number) });
+    expect(entries[0].context).not.toHaveProperty('err');
+  });
+
+  it('serialises non-Error thrown values', () => {
+    const { entries, log } = setup();
+
+    expect(() =>
+      log.time('str-throw', () => {
+        throw 'oops';
+      }),
+    ).toThrow('oops');
+
+    expect(entries[0].context).toMatchObject({
+      err: expect.objectContaining({ message: 'oops' }),
+    });
+  });
+});
+
+/* ─── group() level gating ─── */
+
+describe('group() level gating', () => {
+  it('renders group header when level passes the threshold', () => {
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => undefined);
+    const groupEndSpy = vi.spyOn(console, 'groupEnd').mockImplementation(() => undefined);
+    const log = createLogger({ logLevel: 'info' });
+
+    log.group('my-group', () => {}, 'info');
+
+    expect(groupSpy).toHaveBeenCalledTimes(1);
+    expect(groupEndSpy).toHaveBeenCalledTimes(1);
+    groupSpy.mockRestore();
+    groupEndSpy.mockRestore();
+  });
+
+  it('suppresses group header when level is below threshold', () => {
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => undefined);
+    const log = createLogger({ logLevel: 'warn' });
+
+    log.group('my-group', () => {}, 'debug');
+
+    expect(groupSpy).not.toHaveBeenCalled();
+    groupSpy.mockRestore();
+  });
+
+  it('still runs the callback when group header is suppressed', () => {
+    vi.spyOn(console, 'group').mockImplementation(() => undefined);
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => undefined);
+
+    const log = createLogger({ logLevel: 'warn' });
+    let called = false;
+
+    log.group(
+      'my-group',
+      () => {
+        called = true;
+      },
+      'debug',
+    );
+
+    expect(called).toBe(true);
+  });
+
+  it('renders group without level param (legacy behaviour)', () => {
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => undefined);
+    const log = createLogger({ logLevel: 'warn' });
+
+    log.group('my-group', () => {});
+
+    expect(groupSpy).toHaveBeenCalledTimes(1);
+    groupSpy.mockRestore();
+  });
+});
+
+/* ─── Logger.dispose() ─── */
+
+describe('Logger.dispose()', () => {
+  it('calls dispose() on every BatchTransport in the transport array', async () => {
+    const flushed: LogEntry[][] = [];
+    const batch = batchTransport({
+      interval: 60_000,
+      maxSize: 100,
+      onFlush: (entries) => flushed.push(entries),
+    });
+    const log = createLogger({ transports: [batch] });
+
+    log.info('before-dispose');
+    log.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushed).toHaveLength(1);
+    expect(flushed[0][0].message).toBe('before-dispose');
+  });
+
+  it('is a no-op when there are no batch transports', () => {
+    const { entries, log } = setup();
+
+    expect(() => log.dispose()).not.toThrow();
+
+    log.info('still works');
+    expect(entries).toHaveLength(1);
+  });
+});
+
+/* ─── middleware undefined guard ─── */
+
+describe('middleware undefined/null drop', () => {
+  it('drops entry when middleware returns null', () => {
+    const { entries, log } = setup({
+      middleware: [() => null],
+    });
+
+    log.info('dropped');
+
+    expect(entries).toHaveLength(0);
+  });
+
+  it('drops entry when JS middleware returns undefined (no return)', () => {
+    const { entries, log } = setup({
+      middleware: [(() => undefined) as unknown as LogMiddleware],
+    });
+
+    log.info('dropped-undef');
+
+    expect(entries).toHaveLength(0);
+  });
+
+  it('passes through when middleware returns the entry', () => {
+    const { entries, log } = setup({
+      middleware: [(e) => e],
+    });
+
+    log.info('kept');
+
+    expect(entries).toHaveLength(1);
+  });
+});
+
+/* ─── lazy factory throw safety ─── */
+
+describe('lazy factory throw safety', () => {
+  it('resolves to undefined when lazy factory throws — does not crash the log call', () => {
+    const { entries, log } = setup();
+
+    expect(() => {
+      const bound = log.withBindings({
+        val: lazy(() => {
+          throw new Error('lazy-fail');
+        }),
+      });
+
+      bound.info('safe');
+    }).not.toThrow();
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].bindings['val']).toBeUndefined();
+  });
+});
+
 /* ─── Test helpers marker ─── */

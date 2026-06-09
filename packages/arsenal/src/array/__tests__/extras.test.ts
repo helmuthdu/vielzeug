@@ -30,6 +30,20 @@ describe('array extras', () => {
     expect(union([1, 2, 2], [2, 3])).toEqual([1, 2, 3]);
   });
 
+  it('intersection with selector', () => {
+    const a = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const b = [{ id: 2 }, { id: 4 }];
+
+    expect(intersection(a, b, (x) => x.id)).toEqual([{ id: 2 }]);
+  });
+
+  it('difference with selector', () => {
+    const a = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const b = [{ id: 2 }];
+
+    expect(difference(a, b, (x) => x.id)).toEqual([{ id: 1 }, { id: 3 }]);
+  });
+
   it('supports edge access and slicing helpers', () => {
     expect(first([1, 2, 3])).toBe(1);
     expect(last([1, 2, 3])).toBe(3);

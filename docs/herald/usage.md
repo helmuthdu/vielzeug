@@ -220,9 +220,9 @@ for await (const { userId } of stream) {
 }
 ```
 
-### `events().filter()` and `events().map()` operators
+### `events()` operators: `.filter()`, `.map()`, `.take()`
 
-`events()` returns an `EventStream<T>` with chainable `.filter()` and `.map()` operators for in-place transforms:
+`events()` returns an `EventStream<T>` with chainable operators for in-place transforms:
 
 ```ts
 // Only yield positive counts
@@ -235,17 +235,25 @@ for await (const label of bus.events('count').map((n) => `count: ${n}`)) {
   console.log(label);
 }
 
-// Chain filter and map
+// Yield at most n values, then stop automatically
+for await (const n of bus.events('count').take(5)) {
+  console.log(n);
+}
+
+// Chain freely
 for await (const s of bus
   .events('count')
   .filter((n) => n % 2 === 0)
-  .map((n) => n * 2)) {
+  .map((n) => n * 2)
+  .take(3)) {
   console.log(s);
 }
 ```
 
+`.take(n)` throws a `RangeError` synchronously if `n` is not a positive integer.
+
 ::: warning Sibling streams
-Calling `.filter()` or `.map()` on the **same base stream** object twice creates two sibling streams sharing one subscription. Disposing one sibling closes both. For independent lifecycles, call `bus.events()` separately for each consumer.
+Calling `.filter()`, `.map()`, or `.take()` on the **same base stream** object twice creates two sibling streams sharing one subscription. Disposing one sibling closes both. For independent lifecycles, call `bus.events()` separately for each consumer.
 :::
 
 ## Error Handling
@@ -455,7 +463,7 @@ bus.current('zoom'); // 1
 Import `debugBus` from the dedicated sub-path to create a bus with debug logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
 
 ```ts
-import { debugBus } from '@vielzeug/herald/debug';
+import { debugBus } from '@vielzeug/herald/devtools';
 
 const bus = debugBus<AppEvents>();
 
@@ -495,6 +503,29 @@ const warnOnlyBus = createBus<AppEvents>({ logger: { warn: console.warn } });
 // Pass {} to suppress all bus logging entirely
 const silentBus = createBus<AppEvents>({ logger: {} });
 ```
+
+### Naming a bus with `name`
+
+Pass `name` to identify a bus in log messages and error output. Useful when multiple buses run concurrently and you need to distinguish their activity:
+
+```ts
+const authBus = createBus<AuthEvents>({ name: 'auth', logger: { debug: console.debug } });
+const cartBus = createBus<CartEvents>({ name: 'cart', logger: { debug: console.debug } });
+
+authBus.emit('user:login', { userId: '1' });
+// → [herald:emit] emit("user:login") — 1 listener(s) (auth)
+
+cartBus.dispose();
+// → [herald:lifecycle] dispose() (cart)
+```
+
+When a named bus is disposed, `BusDisposedError` includes the name in its message:
+
+```ts
+// Bus "auth" is disposed
+```
+
+`name` has no effect on behavior and does not need to be unique.
 
 ### Detecting listener leaks with `maxListeners`
 

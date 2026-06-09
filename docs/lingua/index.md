@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter]
+exports: [createI18n, createFormatter, bindPlural]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -22,6 +22,8 @@ exports: [createI18n, createFormatter]
 **Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** I18n
 
 **Key exports:** `createI18n` · `TpOptions` · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
+
+**`i18n` members:** `t` · `tp` · `bind` · `bindPlural` · `scope` · `has` · `setLocale` · `preload` · `register` · `merge` · `fork` · `subscribe` · `getSupportedLocales` · `getState` · `restoreState`
 
 **When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, partial catalog merging, and reactive subscriptions.
 
@@ -116,7 +118,7 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `bind`, `preload`, `setLocale`, `register`, `merge`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
+- Minimal API: `t`, `tp`, `bind`, `bindPlural`, `preload`, `setLocale`, `register`, `merge`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
@@ -147,7 +149,7 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
 - Partial catalog merging: `merge(locale, source)` adds keys without replacing the full catalog
 - Scoped translation helpers: `scope(prefix)` returns a helper bound to a key prefix
-- Bound translation functions: `bind(key)` returns a cached per-key function for render hot-paths
+- Bound translation functions: `bind(key)` returns a cached per-key function for render hot-paths; `bindPlural(key)` returns a reusable plural function for count-driven hot-paths
 - Instance forking: `fork(overrides?)` creates an isolated child for SSR or test isolation
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales

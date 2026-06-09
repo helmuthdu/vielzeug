@@ -26,7 +26,9 @@ exports:
     createMutation,
     createQuery,
     createStream,
+    createTransportCore,
     HttpError,
+    NO_RETRY,
     bindRefetch,
     createBatcher,
     withBearerAuth,
@@ -34,6 +36,7 @@ exports:
     withLogging,
     persistQueryCache,
     hydrateQueryCache,
+    resolveRetryDelay,
   ]
 ---
 
@@ -50,7 +53,7 @@ exports:
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `HttpError`, `bindRefetch`, `createBatcher`, `withBearerAuth`, `persistQueryCache`, `hydrateQueryCache`
+**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`, `NO_RETRY`, `bindRefetch`, `createBatcher`, `withBearerAuth`, `persistQueryCache`, `hydrateQueryCache`
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with one shared fetch-based transport.
 

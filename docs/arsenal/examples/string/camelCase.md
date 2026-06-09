@@ -16,10 +16,10 @@ Use `camelCase(str)` to transform a string to camelCase.
 ```ts
 import { camelCase } from '@vielzeug/arsenal';
 
-camelCase('hello_world');   // 'helloWorld'
-camelCase('hello-world');   // 'helloWorld'
-camelCase('Hello World');   // 'helloWorld'
-camelCase('FOO_BAR_BAZ');   // 'fooBarBaz'
+camelCase('hello_world'); // 'helloWorld'
+camelCase('hello-world'); // 'helloWorld'
+camelCase('Hello World'); // 'helloWorld'
+camelCase('FOO_BAR_BAZ'); // 'fooBarBaz'
 ```
 
 ### Related

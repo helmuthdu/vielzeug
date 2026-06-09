@@ -16,9 +16,9 @@ Use `percent(value, total)` to return `(value / total) * 100`.
 ```ts
 import { percent } from '@vielzeug/arsenal';
 
-percent(1, 4);    // 25
-percent(3, 4);    // 75
-percent(0, 100);  // 0
+percent(1, 4); // 25
+percent(3, 4); // 75
+percent(0, 100); // 0
 ```
 
 ### Pitfalls

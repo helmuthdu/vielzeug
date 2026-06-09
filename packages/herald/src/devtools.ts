@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugBus } from '@vielzeug/herald/debug';
+ * import { debugBus } from '@vielzeug/herald/devtools';
  * ```
  */
 
@@ -23,7 +23,7 @@ import { createBus } from './bus';
  *
  * @example
  * ```ts
- * import { debugBus } from '@vielzeug/herald/debug';
+ * import { debugBus } from '@vielzeug/herald/devtools';
  *
  * const bus = debugBus<MyEvents>();
  * // or redirect to a custom logger:
@@ -33,8 +33,10 @@ import { createBus } from './bus';
 export function debugBus<T extends EventMap>(
   options?: Omit<BusOptions<T>, 'logger'> & { logger?: Pick<BusLogger, 'warn'> },
 ): Bus<T> {
+  const { logger, ...rest } = options ?? {};
+
   return createBus<T>({
-    ...options,
-    logger: { debug: console.debug, warn: options?.logger?.warn },
+    ...rest,
+    logger: { debug: console.debug, warn: logger?.warn },
   });
 }

@@ -18,6 +18,8 @@ import { assert } from '../function/assert';
  * @param options.concurrency - Maximum number of concurrent promises (default: 1)
  * @returns Queue instance with add, onIdle, and clear methods
  */
+export type Queue = ReturnType<typeof queue>;
+
 export function queue(options: { concurrency?: number } = {}) {
   const { concurrency = 1 } = options;
 

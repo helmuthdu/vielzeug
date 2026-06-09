@@ -1,3 +1,4 @@
+import { afterTransitionsExample } from './after-transitions';
 import { asyncInvokesExample } from './async-invokes';
 import { basicMachineExample } from './basic-machine';
 import { contextValidationExample } from './context-validation';
@@ -8,6 +9,7 @@ import { middlewareExample } from './middleware';
 import { persistenceExample } from './persistence';
 
 export const clockworkExamples = {
+  'after-transitions': afterTransitionsExample,
   'async-invokes': asyncInvokesExample,
   'basic-machine': basicMachineExample,
   'context-validation': contextValidationExample,

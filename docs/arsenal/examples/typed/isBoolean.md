@@ -16,9 +16,9 @@ Use `isBoolean(value)` to narrow the type to `boolean`.
 ```ts
 import { isBoolean } from '@vielzeug/arsenal';
 
-isBoolean(true);   // true
-isBoolean(false);  // true
-isBoolean(1);      // false
+isBoolean(true); // true
+isBoolean(false); // true
+isBoolean(1); // false
 isBoolean('true'); // false
 ```
 

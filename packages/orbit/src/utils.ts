@@ -48,11 +48,12 @@ export function isElement(value: unknown): value is Element {
 // ── Middleware helpers ────────────────────────────────────────────────────────
 
 /**
- * Ordering rules used by both `compose()` and `computePosition()` for dev-mode validation.
- * Each tuple is [before, after], meaning `before` must NOT appear before `after` in the pipeline.
+ * Ordering rules for dev-mode middleware validation.
+ * Each tuple is `[mustFollow, mustPrecede]` — `mustFollow` must appear **after** `mustPrecede`
+ * in the pipeline. Validation throws if `mustFollow` is found at a lower index than `mustPrecede`.
  * @internal
  */
-export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
+export const MIDDLEWARE_ORDER_RULES: Array<[mustFollow: string, mustPrecede: string]> = [
   ['arrow', 'flip'],
   ['arrow', 'shift'],
   ['arrow', 'autoPlacement'],
@@ -66,13 +67,13 @@ export const MIDDLEWARE_ORDER_RULES: Array<[before: string, after: string]> = [
  * @internal
  */
 export function validateMiddlewareNames(names: Array<string | null>, caller: string): void {
-  for (const [before, after] of MIDDLEWARE_ORDER_RULES) {
-    const beforeIdx = names.indexOf(before);
-    const afterIdx = names.indexOf(after);
+  for (const [mustFollow, mustPrecede] of MIDDLEWARE_ORDER_RULES) {
+    const followIdx = names.indexOf(mustFollow);
+    const precedeIdx = names.indexOf(mustPrecede);
 
-    if (beforeIdx !== -1 && afterIdx !== -1 && beforeIdx < afterIdx) {
+    if (followIdx !== -1 && precedeIdx !== -1 && followIdx < precedeIdx) {
       throw new Error(
-        `[orbit] ${caller}: "${before}" must come after "${after}". ` +
+        `[orbit] ${caller}: "${mustFollow}" must come after "${mustPrecede}". ` +
           `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
       );
     }

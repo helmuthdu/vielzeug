@@ -5,7 +5,18 @@ package: conduit
 category: di
 keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
 related: [rune, herald, ward]
-exports: [createContainer, token, scope, CircularDependencyError, ProviderNotFoundError, ContainerDisposedError]
+exports:
+  [
+    createContainer,
+    token,
+    scope,
+    CircularDependencyError,
+    ProviderNotFoundError,
+    DuplicateRegistrationError,
+    SyncResolutionError,
+    ScopedResolutionError,
+    ContainerDisposedError,
+  ]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -23,7 +34,7 @@ exports: [createContainer, token, scope, CircularDependencyError, ProviderNotFou
 
 **Key exports:** `createContainer`, `token`, `scope`
 
-**When to use:** Type-safe DI container with singleton/transient lifetimes, child scopes, async providers, and circular dependency detection.
+**When to use:** Type-safe DI container with singleton/transient/scoped/named-scope lifetimes, child scopes, async providers, disposal hooks, and circular dependency detection.
 
 **Related:** [Rune](/rune/) · [Herald](/herald/) · [Ward](/ward/)
 

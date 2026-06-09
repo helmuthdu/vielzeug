@@ -701,7 +701,7 @@ router.subscribe((state) => {
 Import `debugRouter` from the dedicated sub-path to create a router with navigation logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
 
 ```ts
-import { debugRouter } from '@vielzeug/wayfinder/debug';
+import { debugRouter } from '@vielzeug/wayfinder/devtools';
 
 const router = debugRouter({
   routes: {

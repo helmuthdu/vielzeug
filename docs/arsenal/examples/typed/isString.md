@@ -17,8 +17,8 @@ Use `isString(value)` to narrow to `string`.
 import { isString } from '@vielzeug/arsenal';
 
 isString('hello'); // true
-isString(42);      // false
-isString(null);    // false
+isString(42); // false
+isString(null); // false
 
 const values: unknown[] = ['a', 1, 'b', null, 'c'];
 values.filter(isString); // ['a', 'b', 'c']

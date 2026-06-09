@@ -6,11 +6,13 @@ import { getConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const craftExternals = ['@vielzeug/arsenal', '@vielzeug/orbit', '@vielzeug/ripple'];
+
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        debug: resolve(__dirname, 'src/debug.ts'),
+        devtools: resolve(__dirname, 'src/devtools.ts'),
         index: resolve(__dirname, 'src/index.ts'),
         observers: resolve(__dirname, 'src/observers/index.ts'),
         testing: resolve(__dirname, 'src/testing/index.ts'),
@@ -20,7 +22,7 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
-          external: ['@vielzeug/arsenal', '@vielzeug/ripple', '@vielzeug/orbit'],
+          external: craftExternals,
           output: {
             minify: true,
           },

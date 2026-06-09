@@ -9,11 +9,11 @@
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    "./debug": {
-      "source": "./src/debug.ts",
-      "types": "./dist/debug.d.ts",
-      "import": "./dist/debug.js",
-      "require": "./dist/debug.cjs"
+    "./devtools": {
+      "source": "./src/devtools.ts",
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.js",
+      "require": "./dist/devtools.cjs"
     },
     ".": {
       "source": "./src/index.ts",
@@ -23,13 +23,14 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:types",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
     "access": "public",

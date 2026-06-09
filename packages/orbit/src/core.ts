@@ -27,7 +27,7 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
 
   return {
     ...state,
-    middlewareData: result.data ? { ...state.middlewareData, ...result.data } : state.middlewareData,
+    middlewareData: result.data ? Object.assign({}, state.middlewareData, result.data) : state.middlewareData,
     placement: result.placement ?? state.placement,
     x: result.x ?? state.x,
     y: result.y ?? state.y,
@@ -37,12 +37,13 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Deferred one-shot position computation. Runs `computePosition` in a microtask and returns
- * a `Promise<ComputePositionResult>`.
+ * Deferred one-shot position computation. Runs `computePosition` in the next **microtask** and
+ * returns a `Promise<ComputePositionResult>`.
  *
- * Useful for async component lifecycles (e.g. after `await nextTick()`) where layout is not
- * yet stable when the component mounts but the synchronous `computePosition` would read stale
- * DOM measurements.
+ * Useful for async component lifecycles (e.g. `await nextTick()` in Vue/React) where the
+ * synchronous `computePosition` would read stale DOM measurements because layout has not been
+ * committed yet. Note: this defers to the microtask queue, not the next animation frame — if you
+ * need post-layout measurements use `requestAnimationFrame` instead.
  *
  * @example
  * ```ts

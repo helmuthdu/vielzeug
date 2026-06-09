@@ -17,7 +17,7 @@ Use `takeLast(array, n?)` to return the last `n` items. Default is 1.
 import { takeLast } from '@vielzeug/arsenal';
 
 takeLast([1, 2, 3, 4, 5], 3); // [3, 4, 5]
-takeLast([1, 2, 3]);           // [3]
+takeLast([1, 2, 3]); // [3]
 ```
 
 ### Pitfalls

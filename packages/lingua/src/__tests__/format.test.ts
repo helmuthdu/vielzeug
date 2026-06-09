@@ -33,6 +33,19 @@ describe('createFormatter', () => {
     test('formats a currency value with its symbol', () => {
       expect(createFormatter('en').currency(9.99, 'USD')).toContain('$');
     });
+
+    test('does not share cache with number() — currency options do not bleed into number format', () => {
+      const fmt = createFormatter('en');
+
+      // Prime currency cache with USD.
+      const cVal = fmt.currency(1_000, 'USD');
+
+      // number() must use its own cache and produce plain number formatting.
+      const nVal = fmt.number(1_000);
+
+      expect(cVal).toContain('$');
+      expect(nVal).not.toContain('$');
+    });
   });
 
   // ─── date() ───────────────────────────────────────────────────────────────

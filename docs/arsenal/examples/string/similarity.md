@@ -17,7 +17,7 @@ Use `similarity(str1, str2)` to get the Levenshtein-based similarity score. `1.0
 import { similarity } from '@vielzeug/arsenal';
 
 similarity('hello', 'hello'); // 1
-similarity('hello', 'helo');  // 0.8
+similarity('hello', 'helo'); // 0.8
 similarity('hello', 'world'); // 0.2
 ```
 

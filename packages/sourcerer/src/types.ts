@@ -163,9 +163,19 @@ export type ReactiveSource<T, TMeta = SourceMeta> = {
 
 /**
  * Read-only reactive projection derived from a parent source.
- * Returned by `deriveSource()` and `mergeSource()`.
+ * Returned by `deriveSource()`.
  */
 export type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
+
+/**
+ * Read-only reactive view combining multiple sources.
+ * Returned by `mergeSource()`. Has no `meta` because the parent sources may have different meta shapes.
+ */
+export type MergedSource<T> = {
+  readonly current: readonly T[];
+  dispose(): void;
+  subscribe(listener: () => void): () => void;
+};
 
 // ── Page-based source types ───────────────────────────────────────────────────
 

@@ -16,11 +16,7 @@ Use `runAll(fns, options?)` to execute all functions and throw an `AggregateErro
 ```ts
 import { runAll } from '@vielzeug/arsenal';
 
-const cleanups = [
-  () => closeDatabase(),
-  () => clearCache(),
-  () => flushLogs(),
-];
+const cleanups = [() => closeDatabase(), () => clearCache(), () => flushLogs()];
 
 runAll(cleanups); // all three run; throws AggregateError if any fail
 ```

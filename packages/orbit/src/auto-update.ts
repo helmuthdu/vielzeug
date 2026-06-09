@@ -108,7 +108,7 @@ export function autoUpdate(
   // IntersectionObserver: pause updates when reference is off-screen.
   if (pauseWhenHidden && isElement(reference) && typeof IntersectionObserver !== 'undefined') {
     const io = new IntersectionObserver((entries) => {
-      referenceVisible = entries[entries.length - 1]!.isIntersecting;
+      referenceVisible = entries.at(-1)?.isIntersecting ?? true;
 
       if (referenceVisible) notify(); // Re-position immediately when becoming visible.
     });

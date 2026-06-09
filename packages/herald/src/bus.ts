@@ -13,13 +13,15 @@ import type {
 
 export class BusDisposedError extends Error {
   override name = 'BusDisposedError';
-  constructor() {
-    super('Bus is disposed');
+  constructor(busName?: string) {
+    super(busName ? `Bus "${busName}" is disposed` : 'Bus is disposed');
   }
 }
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
-const noop = () => {};
+// @internal — exported only for sibling internal modules; stripped from public declarations via stripInternal.
+/** @internal */
+export const noop = () => {};
 
 /**
  * Returns a signal that aborts as soon as either `a` or `b` aborts.
@@ -65,7 +67,7 @@ type RegisterEntryOpts = { offLog: string; onLog: string; onRemove?: () => void 
 // makeEventStream wraps a generator with AsyncDisposable + filter/map operators.
 // Module-scoped (not inside createBus) — no per-emit allocation.
 function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<void>): EventStream<V> {
-  // filter and map create derived generators that iterate `gen`. Disposing the parent (via
+  // filter, map, and take create derived generators that iterate `gen`. Disposing the parent (via
   // onDispose) cascades to close derived generators through the for-await protocol: when gen
   // receives a done result, the for-await loop inside the derived generator exits normally.
   const filterFn = (pred: (v: V) => boolean): EventStream<V> => {
@@ -88,10 +90,27 @@ function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<voi
     return makeEventStream<U>(mg(), onDispose);
   };
 
+  const takeFn = (n: number): EventStream<V> => {
+    if (!Number.isInteger(n) || n < 1) throw new RangeError('take() requires a positive integer');
+
+    async function* tg(): AsyncGenerator<V> {
+      let remaining = n;
+
+      for await (const value of gen) {
+        yield value;
+
+        if (--remaining === 0) break;
+      }
+    }
+
+    return makeEventStream(tg(), onDispose);
+  };
+
   return Object.assign(gen, {
     filter: filterFn as EventStream<V>['filter'],
     map: mapFn,
     [Symbol.asyncDispose]: onDispose,
+    take: takeFn,
   }) as unknown as EventStream<V>;
 }
 
@@ -101,10 +120,13 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const listeners = new Map<string, Set<Entry>>();
   const wildcards = new Set<WildcardEntry>();
   const disposeController = new AbortController();
+  const busName = options?.name;
   const maxListeners = options?.maxListeners;
-  const logDebug = options?.logger?.debug;
+  const rawDebug = options?.logger?.debug;
+  const logDebug = rawDebug && busName ? (msg: string) => rawDebug(`${msg} (${busName})`) : rawDebug;
   const hasLogger = options?.logger !== undefined;
   const logWarn = options?.logger?.warn ?? (hasLogger ? undefined : (msg: string) => console.warn(msg));
+  const warnPrefix = busName ? `[herald:warn:${busName}]` : '[herald:warn]';
 
   function mergeSignal(signal?: AbortSignal): AbortSignal {
     return combineSignals(disposeController.signal, signal);
@@ -158,7 +180,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     if (maxListeners !== undefined && container.size > maxListeners) {
       logWarn?.(
-        `[herald:warn] ${onLog} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.`,
+        `${warnPrefix} ${onLog} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.`,
       );
     }
 
@@ -405,9 +427,13 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       let dispatched = 0;
       let i = 0;
 
+      // Guard prevents a misbehaving middleware from calling next() twice and
+      // triggering a double-dispatch to all listeners.
       function next(): void {
-        if (i < middleware!.length) middleware![i++](event, payload, next);
-        else dispatched = dispatch(event, payload, timestamp);
+        const idx = i++;
+
+        if (idx < middleware!.length) middleware![idx](event, payload, next);
+        else if (idx === middleware!.length) dispatched = dispatch(event, payload, timestamp);
       }
 
       next();
@@ -454,6 +480,8 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     eventList: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
+    if (eventList.length < 2) throw new RangeError('waitAny() requires at least 2 events');
+
     const activeSignal = mergeSignal(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
@@ -488,7 +516,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     logDebug?.('[herald:lifecycle] dispose()');
 
-    disposeController.abort(new BusDisposedError());
+    disposeController.abort(new BusDisposedError(busName));
     // disposeController.abort() fires all unsub handlers synchronously, which
     // removes every entry and deletes empty keys. By here both maps are already
     // empty. clear() is a cheap defensive measure against any future code path

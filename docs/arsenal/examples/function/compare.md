@@ -16,8 +16,8 @@ Use `compare(a, b)` as a drop-in comparator. Returns negative, zero, or positive
 ```ts
 import { compare } from '@vielzeug/arsenal';
 
-[3, 1, 4, 1, 5].sort(compare);         // [1, 1, 3, 4, 5]
-['banana', 'apple'].sort(compare);      // ['apple', 'banana']
+[3, 1, 4, 1, 5].sort(compare); // [1, 1, 3, 4, 5]
+['banana', 'apple'].sort(compare); // ['apple', 'banana']
 [new Date('2024'), new Date('2020')].sort(compare); // [2020, 2024]
 ```
 

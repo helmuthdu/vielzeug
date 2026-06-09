@@ -36,7 +36,7 @@ export type ValueOptions<T> = {
   dispose?: (instance: T) => Promise<void> | void;
 };
 
-type InferTokenTypes<D extends Token<any>[]> = { [K in keyof D]: D[K] extends Token<infer U> ? U : never };
+export type InferTokenTypes<D extends Token<any>[]> = { [K in keyof D]: D[K] extends Token<infer U> ? U : never };
 
 export type FactoryOptions<T> = {
   dispose?: (instance: T) => Promise<void> | void;
@@ -102,7 +102,7 @@ export class SyncResolutionError extends Error {
         ? 'transient factories are never cached'
         : typeof lifetime === 'symbol'
           ? `named-scope "${(lifetime as symbol).description ?? 'anonymous'}" instance has not been resolved yet in this scope`
-          : 'the instance has not been resolved yet; call await container.resolve() first';
+          : 'the instance has not been resolved yet; call await container.resolve() or container.resolveAll() first';
 
     super(`Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
     this.name = 'SyncResolutionError';
@@ -217,6 +217,9 @@ export interface Container {
 
   /** Resolve a token, returning undefined when not registered. */
   resolveOptional<T>(tok: Token<T>): Promise<T | undefined>;
+
+  /** Resolve a token, returning the provided default value when not registered. */
+  resolveOrDefault<T>(tok: Token<T>, defaultValue: T): Promise<T>;
 
   /**
    * Resolve a token, returning a result object instead of throwing.
@@ -405,6 +408,10 @@ class ContainerImpl implements Container {
 
       throw error;
     }
+  }
+
+  async resolveOrDefault<T>(tok: Token<T>, defaultValue: T): Promise<T> {
+    return (await this.resolveOptional(tok)) ?? defaultValue;
   }
 
   async tryResolve<T>(tok: Token<T>): Promise<ResolveResult<T>> {

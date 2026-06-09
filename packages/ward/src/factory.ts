@@ -145,14 +145,14 @@ function compileEntry<TAction extends string, TData>(
   const rule = Object.freeze({
     action: input.action,
     effect: input.effect,
+    priority: input.priority ?? 0,
     resource: input.resource,
     role: roles,
-    ...(input.priority !== undefined ? { priority: input.priority } : {}),
     ...(input.when !== undefined ? { when: input.when } : {}),
   }) as WardRule<TAction, TData>;
 
   const score = specificity(rule);
-  const priority = rule.priority ?? 0;
+  const priority = rule.priority;
   const denyBonus: 0 | 1 = rule.effect === 'deny' ? 1 : 0;
 
   return { denyBonus, index, priority, roles, rule, score };
@@ -451,6 +451,24 @@ export function createWard<TAction extends string = string, TData = unknown>(
   // Core decision + logging
   // -------------------------------------------------------------------------
 
+  function fireLogger(
+    principal: Principal,
+    resource: string,
+    action: TAction,
+    data: TData | undefined,
+    decision: WardDecision<TAction, TData>,
+  ): void {
+    if (!logger) return;
+
+    if (decision.allowed) {
+      logger({ action, data, decision: 'allow', principal, resource, rule: decision.rule });
+    } else if (decision.reason === 'explicit-deny') {
+      logger({ action, data, decision: 'explicit-deny', principal, resource, rule: decision.rule });
+    } else {
+      logger({ action, data, decision: 'no-matching-rule', principal, resource });
+    }
+  }
+
   function evaluateAndLog(
     principal: Principal,
     resource: string,
@@ -460,15 +478,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
     const winner = pickWinner(entries, principal, resource, action, data);
     const decision = toDecision(winner);
 
-    if (logger) {
-      if (decision.allowed) {
-        logger({ action, data, decision: 'allow', principal, resource, rule: decision.rule });
-      } else if (decision.reason === 'explicit-deny') {
-        logger({ action, data, decision: 'explicit-deny', principal, resource, rule: decision.rule });
-      } else {
-        logger({ action, data, decision: 'no-matching-rule', principal, resource });
-      }
-    }
+    fireLogger(principal, resource, action, data, decision);
 
     return decision;
   }
@@ -559,15 +569,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
 
     const decision = toDecision(winner);
 
-    if (logger) {
-      if (decision.allowed) {
-        logger({ action, data, decision: 'allow', principal, resource, rule: decision.rule });
-      } else if (decision.reason === 'explicit-deny') {
-        logger({ action, data, decision: 'explicit-deny', principal, resource, rule: decision.rule });
-      } else {
-        logger({ action, data, decision: 'no-matching-rule', principal, resource });
-      }
-    }
+    fireLogger(principal, resource, action, data, decision);
 
     const candidates: WardTraceCandidate<TAction, TData>[] = matching.map((entry) => ({
       priority: entry.priority,

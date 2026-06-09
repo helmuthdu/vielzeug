@@ -118,7 +118,9 @@ async function openStreamWith(
   try {
     res = await transport.dispatch({ init, url: full });
   } catch (err) {
-    throw HttpError.fromCause(err, method, full, ac.signal);
+    // Use the fully-combined signal (with timeout + external abort reason) so
+    // HttpError.fromCause can correctly classify TimeoutError via signal.reason.
+    throw HttpError.fromCause(err, method, full, signal ?? combined);
   }
 
   if (!res.ok) {

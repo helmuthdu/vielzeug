@@ -20,6 +20,12 @@
  * @param b - The second value to compare.
  *
  * @returns A negative number, zero, or a positive number.
+ *
+ * Pass directly as an `Array.sort` comparator:
+ * ```ts
+ * [3, 1, 2].sort(compare); // [1, 2, 3]
+ * ['banana', 'apple', 'cherry'].sort(compare); // ['apple', 'banana', 'cherry']
+ * ```
  */
 export const compare = (a: unknown, b: unknown): number => {
   if (a === b) return 0;
@@ -47,8 +53,8 @@ export const compare = (a: unknown, b: unknown): number => {
     return at === bt ? 0 : at > bt ? 1 : -1;
   }
 
-  // For any other types (objects, arrays, functions, etc.), throw to prevent silent bugs
+  // For any other types (booleans, objects, arrays, functions, etc.), throw to prevent silent bugs
   throw new TypeError(
-    `Cannot compare values of type ${typeof a} and ${typeof b}. Use primitive types or explicit comparison functions.`,
+    `compare: unsupported types "${typeof a}" and "${typeof b}". Supported: number, string, Date, null, undefined.`,
   );
 };

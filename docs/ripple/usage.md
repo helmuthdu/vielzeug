@@ -306,12 +306,13 @@ the original error is re-thrown with the flush errors suppressed.
 
 `scope()` creates an isolated cleanup context that is not tied to any reactive effect. Use it when you want to collect teardown callbacks and release them all at once — without needing an effect or a component lifecycle hook.
 
+Pass an optional `setup` function to register cleanups inline at construction time. This is equivalent to calling `scope.run(setup)` immediately after creation:
+
 ```ts
 import { scope, onCleanup } from '@vielzeug/ripple';
 
-const s = scope();
-
-s.run(() => {
+// Shorthand — setup runs immediately:
+const s = scope(() => {
   const id = setInterval(() => tick(), 1000);
   onCleanup(() => clearInterval(id));
 
@@ -323,7 +324,7 @@ s.run(() => {
 s.dispose();
 ```
 
-`scope.run()` can be called multiple times to incrementally register cleanups into the same scope. The `using` declaration auto-disposes at block end:
+`scope.run()` can also be called multiple times to incrementally register cleanups into the same scope. The `using` declaration auto-disposes at block end:
 
 ```ts
 {
@@ -371,13 +372,14 @@ const s = await asyncScope(async () => {
 
   const db = await openDatabase(); // async — tracking stops here
   // onCleanup() here would throw INVALID_CLEANUP
-  s.run(() => {
-    // use db synchronously in the returned scope
-    onCleanup(() => db.close());
-  });
 });
 
-// cleanup all resources:
+// register post-init cleanup via the returned scope:
+s.run(() => {
+  onCleanup(() => db.close());
+});
+
+// release all resources:
 s.dispose();
 ```
 
@@ -386,7 +388,7 @@ s.dispose();
 `debugEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
 
 ```ts
-import { debugEffect } from '@vielzeug/ripple/debug';
+import { debugEffect } from '@vielzeug/ripple/devtools';
 
 const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 'renderUser' });
 
@@ -498,13 +500,13 @@ s.patch({ count: 1 });
 
 #### Updater Function
 
-Receives the current state; return value replaces it:
+Receives a plain shallow copy of the current state; return value replaces it. The argument is a regular object — you can mutate it freely inside the callback:
 
 ```ts
 s.replace((current) => ({ ...current, count: current.count + 1 }));
 ```
 
-`patch()` and `replace()` are no-ops when the resulting state passes the `equals` check configured on the store (default: `Object.is`).
+`replace()` is a no-op when `fn` returns the same object reference it received.
 
 ### Resetting State
 
@@ -921,31 +923,35 @@ it('computed updates reactively', () => {
 
 ## DevTools
 
-`installDevTools(hook)` installs a global observation hook for signal writes, effect runs, and computed recomputes. Pass `null` to uninstall.
+Import `installDevTools` from the dedicated sub-path. This keeps DevTools code out of production bundles when unused.
 
 ```ts
-import { installDevTools } from '@vielzeug/ripple';
+import { installDevTools } from '@vielzeug/ripple/devtools';
 
 installDevTools({
-  onSignalWrite(signal, name, newValue) {
-    console.log(`[write] ${name ?? '?'} =`, newValue);
+  write({ name, oldValue, newValue }) {
+    console.log(`[write] ${name ?? '(unnamed)'}: ${String(oldValue)} → ${String(newValue)}`);
   },
-  onEffectRun(name) {
-    performance.mark(`effect:start:${name ?? 'anon'}`);
+  run({ name }) {
+    performance.mark(`effect:${name ?? 'anon'}`);
   },
-  onEffectDispose(name) {
-    performance.mark(`effect:end:${name ?? 'anon'}`);
+  dispose({ kind, name }) {
+    console.log(`[dispose] ${kind} "${name ?? '(unnamed)'}"`);
   },
-  onComputedRecompute(name) {
-    console.log(`[computed] ${name ?? '?'} recomputed`);
+  compute({ name }) {
+    console.log(`[compute] ${name ?? '(unnamed)'}`);
+  },
+  mutate({ kind, name, path }) {
+    const target = path ? `${name ?? '(unnamed)'}[${path}]` : (name ?? '(unnamed)');
+    console.log(`[mutate] store ${target} — ${kind}`);
   },
 });
 
-// Uninstall when no longer needed
+// Uninstall when no longer needed:
 installDevTools(null);
 ```
 
-All hook methods are optional. The hook is stored on `globalThis.__RIPPLE_DEVTOOLS__` and takes effect immediately after installation.
+All hook methods are optional. The hook is stored in a module-level variable (not `globalThis`); `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension tools.
 
 ## Best Practices
 

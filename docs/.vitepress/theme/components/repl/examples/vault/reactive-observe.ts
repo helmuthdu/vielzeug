@@ -8,19 +8,16 @@ const schema = {
 
 const db = createMemory({ schema })
 
-// observe() — future changes only by default (immediate: false)
+// observe() always fires immediately with the current table state on registration,
+// then fires again on every subsequent mutation. Returns an Unsubscribe function.
 const snapshots = []
 const stop = db.observe('users', (rows) => {
   snapshots.push(rows.length)
-  console.log('users changed:', rows.map((u) => u.name))
+  console.log('users snapshot:', rows.map((u) => u.name))
 })
 
-// observe with immediate: true — fires right away with the current table state
-const stopImmediate = db.observe('users', (rows) => {
-  console.log('immediate snapshot:', rows.length, 'users')
-}, { immediate: true })
-
-// observeMany — combined snapshot across tables; fires when any table changes
+// observeMany — fires a combined snapshot once all tables deliver their initial
+// state, then fires whenever any observed table changes
 const stopMany = db.observeMany(['users', 'posts'], ({ users, posts }) => {
   console.log('dashboard:', users.length, 'users,', posts.length, 'posts')
 })
@@ -33,10 +30,9 @@ await db.batch(['users', 'posts'], async (tx) => {
 })
 
 await db.put('users', { id: 2, name: 'Bob' })
-console.log('observer fired', snapshots.length, 'times, snapshots:', snapshots)
+console.log('observer fired', snapshots.length, 'times (initial + 2 mutations)')
 
 stop()
-stopImmediate()
 stopMany()
 db.dispose()`,
   name: 'Reactive — observe & observeMany',

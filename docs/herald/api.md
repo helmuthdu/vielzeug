@@ -14,7 +14,7 @@ description: Complete API reference for @vielzeug/herald.
 | `pipeEvents()`        | Forward events from one bus to another               | Sync           | Supports cross-type buses and event renaming            |
 | `bus.on()`            | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe                   |
 | `bus.emit()`          | Emit an event; returns listener invocation count     | Sync           | Returns `0` if disposed, middleware blocked, or invalid |
-| `bus.events()`        | Stream future emits as an async generator            | Async          | Chain `.filter()` / `.map()` for in-place transforms    |
+| `bus.events()`        | Stream future emits as an async generator            | Async          | Chain `.filter()` / `.map()` / `.take()` for transforms |
 | `combineSignals()`    | Merge two AbortSignals into one                      | Sync           | Returns the first signal to abort                       |
 | `bus.wait()`          | Await a one-time event occurrence                    | Async          | Pass `{ signal }` for timeout / cancellation            |
 | `bus.waitAny()`       | Await the first event from many                      | Async          | Result is a discriminated union by event key            |
@@ -24,11 +24,11 @@ description: Complete API reference for @vielzeug/herald.
 
 ## Package Entry Points
 
-| Import                   | Purpose                               |
-| ------------------------ | ------------------------------------- |
-| `@vielzeug/herald`       | Main runtime API and types            |
-| `@vielzeug/herald/debug` | `debugBus` — debug wrapper (dev only) |
-| `@vielzeug/herald/test`  | Test helpers (`createTestBus`)        |
+| Import                      | Purpose                               |
+| --------------------------- | ------------------------------------- |
+| `@vielzeug/herald`          | Main runtime API and types            |
+| `@vielzeug/herald/devtools` | `debugBus` — debug wrapper (dev only) |
+| `@vielzeug/herald/test`     | Test helpers (`createTestBus`)        |
 
 ## Types
 
@@ -65,6 +65,7 @@ type BusOptions<T extends EventMap> = {
   logger?: BusLogger;
   maxListeners?: number;
   middleware?: readonly Middleware<T>[];
+  name?: string; // optional display name — appears in log prefixes and BusDisposedError messages
   onError?: (context: EmissionErrorContext<T>) => void;
   validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
 };
@@ -90,7 +91,7 @@ type PipeableKey<S extends EventMap, T extends EventMap> = {
 type PipeEntry<S extends EventMap, T extends EventMap> = PipeableKey<S, T> | { from: EventKey<S>; to: EventKey<T> };
 ```
 
-`EventStream<T>` — returned by `bus.events()`. Extends `AsyncGenerator<T>` with `AsyncDisposable` and chainable `filter` / `map` operators:
+`EventStream<T>` — returned by `bus.events()`. Extends `AsyncGenerator<T>` with `AsyncDisposable` and chainable `filter` / `map` / `take` operators:
 
 ```ts
 type EventStream<T> = AsyncGenerator<T> &
@@ -98,6 +99,7 @@ type EventStream<T> = AsyncGenerator<T> &
     filter<U extends T>(pred: (value: T) => value is U): EventStream<U>;
     filter(pred: (value: T) => boolean): EventStream<T>;
     map<U>(fn: (value: T) => U): EventStream<U>;
+    take(n: number): EventStream<T>; // yield at most n values, then close
   };
 ```
 
@@ -366,6 +368,8 @@ Waits for the first emitted event among a list of event keys.
 
 **Returns:** `Promise<WaitAnyResult<T, K>>`
 
+**Throws synchronously:** `RangeError` if fewer than 2 event keys are provided.
+
 **Rejects when:**
 
 - The bus is disposed before any listed event fires — rejects with `BusDisposedError`
@@ -385,7 +389,7 @@ if (winner.event === 'user:login') {
 
 Signature: `events(event, options?) => EventStream<payload>`
 
-Returns an `EventStream<T[K]>` — an `AsyncGenerator` extended with `AsyncDisposable` and chainable `.filter()` and `.map()` operators — that yields payloads for every future emit of `event`.
+Returns an `EventStream<T[K]>` — an `AsyncGenerator` extended with `AsyncDisposable` and chainable `.filter()`, `.map()`, and `.take()` operators — that yields payloads for every future emit of `event`.
 
 - `event: K` — event key to stream
 - `options?: { signal?: AbortSignal; maxBuffer?: number }` — optional early termination and buffering
@@ -432,6 +436,12 @@ for await (const label of bus.events('count').map((n) => `count: ${n}`)) { ... }
 
 // .filter().map() — operators chain freely
 for await (const s of bus.events('count').filter((n) => n % 2 === 0).map((n) => n * 2)) { ... }
+
+// .take(n) — yield at most n values, then close automatically
+for await (const n of bus.events('count').take(5)) { ... }
+
+// .filter().take() — chain freely
+for await (const n of bus.events('count').filter((n) => n > 0).take(3)) { ... }
 ```
 
 ::: warning Sibling streams
@@ -840,11 +850,13 @@ bus.on('user:login', handler, { signal });
 ```ts
 class BusDisposedError extends Error {
   override name = 'BusDisposedError';
-  override message = 'Bus is disposed';
+  // message: 'Bus is disposed' or 'Bus "<name>" is disposed' when name option is set
 }
 ```
 
 Thrown as the rejection reason when a pending `wait()` or `waitAny()` call is interrupted by `bus.dispose()`. Also used as the abort reason on `bus.disposalSignal`.
+
+When the bus was created with a `name` option, the message includes the name: `Bus "myBus" is disposed`.
 
 Use `instanceof` to distinguish from signal aborts and other rejections:
 

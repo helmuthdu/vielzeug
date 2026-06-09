@@ -16,9 +16,9 @@ Use `snakeCase(str)` to convert any case to lowercase underscore-separated form.
 ```ts
 import { snakeCase } from '@vielzeug/arsenal';
 
-snakeCase('helloWorld');   // 'hello_world'
-snakeCase('hello-world');  // 'hello_world'
-snakeCase('Hello World');  // 'hello_world'
+snakeCase('helloWorld'); // 'hello_world'
+snakeCase('hello-world'); // 'hello_world'
+snakeCase('Hello World'); // 'hello_world'
 ```
 
 ### Related

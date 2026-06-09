@@ -73,7 +73,7 @@ export function inline(options: InlineOptions = {}): Middleware {
 
     const padding = toSideObject(options.padding ?? 2);
     const side = getSide(state.placement);
-    let nextRect = rects[0];
+    let nextRect = rects[0]!;
 
     if (options.x != null && options.y != null) {
       nextRect = rects.find((rect) => rectContainsPoint(rect, options.x!, options.y!, padding)) ?? nextRect;

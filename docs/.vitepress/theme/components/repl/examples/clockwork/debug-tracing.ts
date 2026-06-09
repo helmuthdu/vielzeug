@@ -17,8 +17,10 @@ const orderMachine = defineMachine({
 const m = interpret(orderMachine, {
   debug: {
     traceLimit: 50,
-    onTransitionSkipped: ({ from, event }) =>
-      console.log('Skipped in ' + from + ': ' + event.type),
+    onDebug: (ev) => {
+      if (ev.type === 'transition-skipped')
+        console.log('Skipped in ' + ev.from + ': ' + ev.event.type)
+    },
   },
 })
 

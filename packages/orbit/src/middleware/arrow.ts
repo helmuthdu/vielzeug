@@ -26,7 +26,7 @@ export interface ArrowOptions {
  * ```
  */
 export function arrow({ element, padding = 0 }: ArrowOptions): TypedMiddleware<'arrow', ArrowData> {
-  return tagMiddleware(function arrowMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  function arrowMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const side = getSide(state.placement);
     const inset = toSideObject(padding);
     const arrowRect = toRect(element.getBoundingClientRect());
@@ -46,5 +46,7 @@ export function arrow({ element, padding = 0 }: ArrowOptions): TypedMiddleware<'
     const y = clamp(idealY, minY, maxY);
 
     return { data: { arrow: { centerOffset: idealY - y, constrained: y !== idealY, y } } };
-  }, 'arrow');
+  }
+
+  return tagMiddleware<'arrow', ArrowData, typeof arrowMiddleware>(arrowMiddleware, 'arrow');
 }

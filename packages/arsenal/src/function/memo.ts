@@ -53,7 +53,7 @@ const defaultKey = (args: unknown[]): string => {
  *
  * @param fn - The function to memorize.
  * @param options - Memoization options.
- * @param [options.ttl] - (optional) time-to-live for cache expiration (ms).
+ * @param [options.ttl] - (optional) time-to-live for cache expiration (ms). `0` disables caching — every call re-executes `fn`.
  * @param [options.maxSize] - (optional) maximum cache size (LRU eviction).
  * @param [options.key] - (optional) custom function to resolve the cache key.
  *

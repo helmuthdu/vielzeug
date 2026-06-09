@@ -275,6 +275,39 @@ describe('createCursorSource', () => {
     });
   });
 
+  describe('prev()', () => {
+    it('navigates to previous page using prevCursor', async () => {
+      const fetch = vi.fn(makeFetch([['page1'], ['page2']], 2));
+      const source = createCursorSource({ autoFetch: false, fetch, limit: 1 });
+
+      await source.refresh();
+      expect(source.current).toEqual(['page1']);
+
+      await source.next();
+      expect(source.current).toEqual(['page2']);
+      expect(source.meta.hasPrevPage).toBe(true);
+
+      await source.prev();
+      expect(source.current).toEqual(['page1']);
+    });
+  });
+
+  describe('refreshInterval', () => {
+    it('fires doUpdate() when interval elapses and source is not disposed', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createCursorSource({ autoFetch: false, fetch, refreshInterval: 500 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(501);
+
+      expect(fetch.mock.calls.length).toBeGreaterThan(1);
+
+      source.dispose();
+    });
+  });
+
   describe('dispose', () => {
     it('stops notifying listeners after dispose', async () => {
       const fetch = vi.fn(async () => ({ cursor: null, items: ['x'] }));
@@ -287,6 +320,21 @@ describe('createCursorSource', () => {
       await source.refresh();
 
       expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('clears refreshInterval timer on dispose', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createCursorSource({ autoFetch: false, fetch, refreshInterval: 500 });
+
+      await source.refresh();
+
+      source.dispose();
+
+      const callsBefore = fetch.mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(fetch.mock.calls.length).toBe(callsBefore);
     });
   });
 });

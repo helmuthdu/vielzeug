@@ -16,9 +16,9 @@ Use `isNumber(value)` to narrow to `number`.
 ```ts
 import { isNumber } from '@vielzeug/arsenal';
 
-isNumber(42);      // true
-isNumber(NaN);     // true — NaN is typeof 'number'
-isNumber('42');    // false
+isNumber(42); // true
+isNumber(NaN); // true — NaN is typeof 'number'
+isNumber('42'); // false
 ```
 
 ### Pitfalls

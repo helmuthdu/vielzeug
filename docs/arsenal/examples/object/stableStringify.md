@@ -20,9 +20,9 @@ const key1 = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
 const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true
 
-stableStringify(new Set([3, 1, 2]));           // '[Set:1,2,3]'
+stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
 stableStringify(new Date('2024-01-01T00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
-stableStringify(42n);                           // '[BigInt:42]'
+stableStringify(42n); // '[BigInt:42]'
 ```
 
 #### Strict mode — throw on class instances
@@ -30,7 +30,7 @@ stableStringify(42n);                           // '[BigInt:42]'
 ```ts
 import { stableStringify } from '@vielzeug/arsenal';
 
-stableStringify(new MyClass());                   // falls back to String(instance)
+stableStringify(new MyClass()); // falls back to String(instance)
 stableStringify(new MyClass(), { strict: true }); // throws TypeError
 ```
 

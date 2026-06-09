@@ -18,9 +18,9 @@ import { getPath } from '@vielzeug/arsenal';
 
 const config = { api: { host: 'localhost', port: 3000 }, items: [10, 20] };
 
-getPath(config, 'api.port');         // 3000
+getPath(config, 'api.port'); // 3000
 getPath(config, 'api.timeout', 5000); // 5000 — fallback for missing path
-getPath(config, 'items.1');          // 20 — array index access
+getPath(config, 'items.1'); // 20 — array index access
 ```
 
 #### Throw on missing path

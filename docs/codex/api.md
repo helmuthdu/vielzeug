@@ -7,18 +7,19 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 ## API At a Glance
 
-| Symbol                  | Purpose                                       | Execution mode | Common gotcha                                                   |
-| ----------------------- | --------------------------------------------- | -------------- | --------------------------------------------------------------- |
-| `list-packages`         | All packages or one by slug                   | Sync           | Always returns an array — even with `packageSlug`               |
-| `get-docs`              | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                |
-| `get-source`            | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source              |
-| `search-packages`       | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches              |
-| `list-components`       | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                    |
-| `get-component`         | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                    |
-| `createServer()`        | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first     |
-| `loadData()`            | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data  |
-| `packageMeta()`         | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
-| `validateBundledData()` | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                        |
+| Symbol                   | Purpose                                       | Execution mode | Common gotcha                                                   |
+| ------------------------ | --------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `list-packages`          | All packages or one by slug                   | Sync           | Always returns an array — even with `packageSlug`               |
+| `get-docs`               | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                |
+| `get-source`             | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source              |
+| `search-packages`        | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches              |
+| `list-components`        | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                    |
+| `get-component`          | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                    |
+| `createServer()`         | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first     |
+| `createServerFromDisk()` | One-call convenience factory                  | Sync           | Calls `loadData()` internally — throws the same errors          |
+| `loadData()`             | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data  |
+| `packageMeta()`          | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
+| `validateBundledData()`  | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                        |
 
 ## Package Entry Points
 
@@ -28,7 +29,7 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 | `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)               |
 | `@vielzeug/codex/generator` | `generateBundledData` (build-time use only)                                     |
 
-The CLI binary (`vielzeug-mcp`) is the primary runtime interface; direct imports are for custom server wiring.
+The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
 
 ## Tools
 
@@ -120,6 +121,8 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
 
 Results are sorted by `score` descending, then `slug` ascending. Multiple categories can match simultaneously.
 
+**Multi-word queries:** all words must appear in the same field for a category to score. `"reactive signal"` matches a description that contains both words; a package where `"reactive"` is in `name` and `"signal"` only appears in docs scores only on `"docs"` (score 1), not `"metadata"` (score 3).
+
 **Result shape:**
 
 ```json
@@ -191,6 +194,29 @@ Resources follow the MCP `resources/list` and `resources/read` protocol.
 **Error cases:** unknown URI → `McpError` with `InvalidParams` code.
 
 ## Programmatic API
+
+### `createServerFromDisk()`
+
+```ts
+createServerFromDisk(): Server;
+```
+
+Convenience factory that calls `loadData()` internally and passes the result to `createServer()`. Use this for the common single-expression wiring pattern.
+
+**Returns:** `Server` from `@modelcontextprotocol/sdk`
+
+**Throws:** same errors as `loadData()`.
+
+**Example:**
+
+```ts
+import { createServerFromDisk } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+await createServerFromDisk().connect(new StdioServerTransport());
+```
+
+---
 
 ### `createServer()`
 
@@ -362,6 +388,7 @@ All tool-level failures return a text content item with `isError: true`. The err
 `loadData()` throws synchronously with an actionable message when:
 
 - The bundled data file is missing (`ENOENT`): includes the regen command
+- The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
 - The file is malformed JSON: includes the regen command
 - The parsed data fails schema validation: includes the regen command
 
@@ -371,4 +398,6 @@ All tool-level failures return a text content item with `isError: true`. The err
 - HTTP mode: `--port <number>` using Streamable HTTP
 - Health endpoint: `GET /health` → `{ "status": "ok" }`
 - Bundled data validated at startup — missing or malformed data aborts with an actionable error
-- CLI flags: `--help`, `--version`
+- CLI flags: `--help` (stderr), `--version` (stdout)
+- Unknown flags print a usage hint and exit with code 1
+- EADDRINUSE prints `error: port N is already in use.` and exits with code 1

@@ -7,7 +7,7 @@ related: [craft, scroll, sigil]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 ---
 
-# /grip
+# @vielzeug/grip
 
 > Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
 
@@ -16,7 +16,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder, mat
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/grip` &nbsp;·&nbsp; **Category:** Ui-interaction
+**Package:** `@vielzeug/grip` &nbsp;·&nbsp; **Category:** UI Interaction
 
 **Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`, `matchesAccept`
 
@@ -26,20 +26,20 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder, mat
 
 </details>
 
-`/grip` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/grip` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /grip
-npm install /grip
-yarn add /grip
+pnpm add @vielzeug/grip
+npm install @vielzeug/grip
+yarn add @vielzeug/grip
 ```
 
 ## Quick Start
 
 ```ts
-import { createDropZone, createSortable } from '/grip';
+import { createDropZone, createSortable } from '@vielzeug/grip';
 
 // Drop zone — with async validation and clipboard paste support
 using zone = createDropZone({

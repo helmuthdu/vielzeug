@@ -92,12 +92,20 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const middlewares = options.middleware ?? [];
   const persistedSnapshot = options.snapshot ?? options.persistence?.load();
 
-  if (persistedSnapshot && !(persistedSnapshot.state.split('.')[0] in definition.states)) {
-    throw new MachineError(
-      'MACHINE_INVALID_SNAPSHOT_STATE',
-      `[machine] snapshot state "${persistedSnapshot.state}" not found in states`,
-      { state: persistedSnapshot.state },
-    );
+  if (persistedSnapshot) {
+    const snapshotRoot = persistedSnapshot.state.split('.')[0];
+    const snapshotValid =
+      snapshotRoot in definition.states &&
+      (!persistedSnapshot.state.includes('.') ||
+        !!getNodeAtPath(definition.states as Record<string, StateNode<string, Ctx, Ev>>, persistedSnapshot.state));
+
+    if (!snapshotValid) {
+      throw new MachineError(
+        'MACHINE_INVALID_SNAPSHOT_STATE',
+        `[machine] snapshot state "${persistedSnapshot.state}" not found in states`,
+        { state: persistedSnapshot.state },
+      );
+    }
   }
 
   const validator: ContextValidator<Ctx> | undefined = definition.validateContext;
@@ -159,7 +167,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   };
 
   type AfterQueueItem = {
-    actions: Array<(args: { context: Ctx; event?: unknown }) => void>;
+    actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>;
     afterEvent: { readonly delay: number; readonly type: '$after' };
     from: State;
     isAfter: true;
@@ -231,7 +239,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const executeTransition = (
     from: State,
     resolvedTarget: State,
-    actions: Array<(args: { context: Ctx; event?: unknown }) => void>,
+    actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>,
     event: Ev | LifecycleEvent,
   ): void => {
     const { entryPaths, exitPaths } = computeTransitionPaths(from, resolvedTarget);
@@ -358,7 +366,9 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
           const afterEvent = { delay: afterDef.delay, type: '$after' } as const;
 
           queue.push({
-            actions: (afterDef.actions ?? []) as Array<(args: { context: Ctx; event?: unknown }) => void>,
+            actions: (afterDef.actions ?? []) as Array<
+              (args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void
+            >,
             afterEvent,
             from: currentState,
             isAfter: true,
@@ -378,7 +388,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     if (disposed) return false;
 
     if ('isAfter' in item) {
-      executeTransition(item.from, item.target, item.actions, item.afterEvent as unknown as Ev);
+      executeTransition(item.from, item.target, item.actions, item.afterEvent);
 
       return true;
     }
@@ -399,7 +409,9 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
 
     const resolvedTarget = resolveLeaf(states, transition.target) as State;
-    const actions = (transition.actions ?? []) as Array<(args: { context: Ctx; event?: unknown }) => void>;
+    const actions = (transition.actions ?? []) as Array<
+      (args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void
+    >;
 
     executeTransition(from, resolvedTarget, actions, item.event);
 

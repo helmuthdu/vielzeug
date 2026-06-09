@@ -16,7 +16,11 @@ Use `unzip(rows)` to transpose a `[row, row, ...]` matrix into column arrays.
 ```ts
 import { unzip } from '@vielzeug/arsenal';
 
-unzip([['a', 1], ['b', 2], ['c', 3]]);
+unzip([
+  ['a', 1],
+  ['b', 2],
+  ['c', 3],
+]);
 // [['a', 'b', 'c'], [1, 2, 3]]
 ```
 

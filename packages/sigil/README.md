@@ -4,7 +4,7 @@ package: sigil
 category: ui-components
 keywords: [web-components, accessible, themeable, ui, components, design-system]
 related: [craft, orbit, forge]
-exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form]
+exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form, sg-avatar, sg-avatar-group, sg-carousel, sg-datagrid, sg-combobox]
 ---
 
 # @vielzeug/sigil
@@ -16,9 +16,9 @@ exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form]
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `@vielzeug/sigil` &nbsp;·&nbsp; **Category:** Ui-components
+**Package:** `@vielzeug/sigil` &nbsp;·&nbsp; **Category:** UI Components
 
-**Key exports:** `sg-button`, `sg-input`, `sg-dialog`, `sg-select`, `sg-form`
+**Key exports (custom elements):** `sg-button`, `sg-button-group`, `sg-input`, `sg-select`, `sg-combobox`, `sg-dialog`, `sg-drawer`, `sg-form`, `sg-avatar`, `sg-avatar-group`, `sg-carousel`, `sg-datagrid`, `sg-date-picker`, `sg-time-picker`, `sg-tabs`, `sg-toast`
 
 **When to use:** Accessible, themeable web components built with Craft for framework and vanilla DOM apps.
 
@@ -26,7 +26,7 @@ exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form]
 
 </details>
 
-`@vielzeug/sigil` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/sigil` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output.
 
 ## Installation
 
@@ -42,10 +42,18 @@ yarn add @vielzeug/sigil
 // Required once: design tokens + base component styles
 import '@vielzeug/sigil/styles';
 
+// Optional: CSS reset (import separately to opt out)
+import '@vielzeug/sigil/styles/preflight.css';
+
 // Register only the components you use
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/card';
 import '@vielzeug/sigil/input';
+import '@vielzeug/sigil/avatar';
+import '@vielzeug/sigil/avatar-group';
+import '@vielzeug/sigil/carousel';
+import '@vielzeug/sigil/datagrid';
+import '@vielzeug/sigil/time-picker';
 ```
 
 ```html
@@ -57,6 +65,18 @@ import '@vielzeug/sigil/input';
   <span slot="header">Account</span>
   <p>Build forms, layouts, overlays, and feedback UI with native custom elements.</p>
 </sg-card>
+
+<sg-avatar src="/alice.jpg" name="Alice"></sg-avatar>
+<sg-avatar-group max="3">
+  <sg-avatar name="Alice"></sg-avatar>
+  <sg-avatar name="Bob"></sg-avatar>
+  <sg-avatar name="Carol"></sg-avatar>
+</sg-avatar-group>
+
+<sg-carousel>
+  <sg-carousel-slide>Slide 1</sg-carousel-slide>
+  <sg-carousel-slide>Slide 2</sg-carousel-slide>
+</sg-carousel>
 ```
 
 To register everything at once:

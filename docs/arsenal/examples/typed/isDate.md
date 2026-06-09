@@ -16,9 +16,9 @@ Use `isDate(value)` to narrow the type to `Date`.
 ```ts
 import { isDate } from '@vielzeug/arsenal';
 
-isDate(new Date());       // true
-isDate('2024-01-01');     // false
-isDate(1704067200000);    // false
+isDate(new Date()); // true
+isDate('2024-01-01'); // false
+isDate(1704067200000); // false
 ```
 
 ### Related

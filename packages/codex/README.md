@@ -18,7 +18,7 @@ exports: [createServer]
 
 **Package:** `@vielzeug/codex` &nbsp;·&nbsp; **Category:** AI Tooling
 
-**Key exports:** `createServer`, `loadData`, `packageMeta`, `validateBundledData`
+**Key exports:** `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData`
 
 **When to use:** You want AI clients to query Vielzeug docs and package metadata through a compact MCP tool set.
 
@@ -84,13 +84,16 @@ The server also exposes MCP Resources readable by URI:
 
 ## Programmatic API
 
-`createServer(data)` is exported for custom runtime wiring.
+`createServerFromDisk()` is the simplest entry point — one call, no arguments:
 
 ```ts
-import { createServer, loadData } from '@vielzeug/codex';
+import { createServerFromDisk } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-const server = createServer(loadData());
+await createServerFromDisk().connect(new StdioServerTransport());
 ```
+
+For explicit control, use `createServer(loadData())`.
 
 ## Documentation
 

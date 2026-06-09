@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugInterpret } from '@vielzeug/clockwork/debug';
+ * import { debugInterpret } from '@vielzeug/clockwork/devtools';
  * ```
  */
 
@@ -22,9 +22,9 @@ import { interpret } from './interpret.js';
  *
  * @example
  * ```ts
- * import { debugInterpret } from '@vielzeug/clockwork/debug';
+ * import { debugInterpret } from '@vielzeug/clockwork/devtools';
  *
- * const machine = debugInterpret(trafficLight, { context: { count: 0 } });
+ * const machine = debugInterpret(trafficLight);
  * machine.send({ type: 'NEXT' });
  * // [clockwork:transition] NEXT: idle → running
  * ```

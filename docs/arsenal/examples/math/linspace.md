@@ -16,8 +16,8 @@ Use `linspace(start, end, steps?)` to produce an array of `steps` numbers from `
 ```ts
 import { linspace } from '@vielzeug/arsenal';
 
-linspace(0, 1, 5);   // [0, 0.25, 0.5, 0.75, 1]
-linspace(0, 10, 3);  // [0, 5, 10]
+linspace(0, 1, 5); // [0, 0.25, 0.5, 0.75, 1]
+linspace(0, 10, 3); // [0, 5, 10]
 ```
 
 ### Pitfalls

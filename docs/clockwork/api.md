@@ -16,10 +16,10 @@ description: Complete API reference for Clockwork.
 
 ## Package Entry Points
 
-| Import                      | Purpose                                     |
-| --------------------------- | ------------------------------------------- |
-| `@vielzeug/clockwork`       | All exports and types                       |
-| `@vielzeug/clockwork/debug` | `debugInterpret` — debug wrapper (dev only) |
+| Import                         | Purpose                                     |
+| ------------------------------ | ------------------------------------------- |
+| `@vielzeug/clockwork`          | All exports and types                       |
+| `@vielzeug/clockwork/devtools` | `debugInterpret` — debug wrapper (dev only) |
 
 ## `defineMachine()`
 

@@ -98,6 +98,7 @@ console.log(after.toString());
 ```ts
 import { clamp, difference, parseInstant, within } from '@vielzeug/tempo';
 
+// difference() returns a signed duration: negative when start is after end
 const duration = difference(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T12:30:00Z'), {
   tz: 'UTC',
   largestUnit: 'hour',
@@ -221,6 +222,8 @@ const duration = parseDuration('PT2H30M');
 const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 ```
 
+> **Note:** `formatDuration()` uses `Intl.DurationFormat` when available. In environments that do not support it, it falls back to a plain **English-only** representation (e.g., `'2 hours, 30 minutes'`).
+
 ## Expiry and Classification
 
 Use `expires()` to classify a date into a named threshold bucket of your choosing.
@@ -246,11 +249,15 @@ const { key, diff } = classify(certificateExpiry, THRESHOLDS);
 // key: 'critical' | 'expired' | 'warning' | 'safe' | 'longExpired' | null
 // diff: { unit: 'hour' | 'day' | ..., value: number }
 
+// Pin the reference time for deterministic behavior in tests
+const pinnedNow = Temporal.Instant.from('2026-06-01T00:00:00Z');
+expires(Temporal.Instant.from('2026-06-04T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'critical'
+
 // timeDiff — largest-unit human-readable time difference
 // No tz needed when both are Instants
 timeDiff(parseInstant('2026-01-01T00:00:00Z'), parseInstant('2027-06-01T00:00:00Z')); // { unit: 'year', value: 1 }
 
-// humanize converts a TimeDiffResult to a readable string
+// humanize converts a TimeDiffResult to a readable string (English only)
 humanize(timeDiff(expiresAt)); // '3 days', '1 hour', etc.
 ```
 

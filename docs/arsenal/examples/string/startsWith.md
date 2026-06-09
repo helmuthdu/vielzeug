@@ -17,7 +17,7 @@ Use `startsWith(value, prefix)` to return a boolean.
 import { startsWith } from '@vielzeug/arsenal';
 
 startsWith('https://example.com', 'https://'); // true
-startsWith('http://example.com',  'https://'); // false
+startsWith('http://example.com', 'https://'); // false
 ```
 
 ### Related

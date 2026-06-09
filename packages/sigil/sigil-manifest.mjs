@@ -187,11 +187,7 @@ export function syncComponentExports() {
 
   // Ensure sideEffects lists all component dist bundles and styles so bundlers
   // never eliminate side-effect-only imports (customElements.define calls, CSS).
-  packageJson.sideEffects = [
-    './dist/*.js',
-    './dist/*.cjs',
-    './dist/styles/**',
-  ];
+  packageJson.sideEffects = ['./dist/*.js', './dist/*.cjs', './dist/styles/**'];
 
   const nextContent = `${JSON.stringify(packageJson, null, 2)}\n`;
 

@@ -36,7 +36,7 @@ import { groupBy } from '@vielzeug/arsenal';
 
 const users = [
   { name: 'Alice', role: 'admin' },
-  { name: 'Bob',   role: 'user'  },
+  { name: 'Bob', role: 'user' },
   { name: 'Carol', role: 'admin' },
 ];
 

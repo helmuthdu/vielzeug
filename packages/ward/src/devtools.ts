@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugWard } from '@vielzeug/ward/debug';
+ * import { debugWard } from '@vielzeug/ward/devtools';
  * ```
  */
 
@@ -18,19 +18,20 @@ import { createWard } from './factory';
  * imported from a dedicated sub-path so `console.debug` references are tree-shaken from
  * production bundles when this sub-path is not imported.
  *
- * Logs every `can()` / `canAll()` / `canAny()` / `checkAll()` decision with `[ward:decision]`
- * prefixes showing the principal, resource, action, and outcome.
+ * Logs every authorization decision made by any decision method (`can`, `canAll`, `canAny`,
+ * `checkAll`, `explain`, `trace`) with `[ward:decision]` prefixes showing the outcome,
+ * principal, resource, action, and — when a rule matched — its effect.
  *
  * @example
  * ```ts
- * import { debugWard } from '@vielzeug/ward/debug';
+ * import { debugWard } from '@vielzeug/ward/devtools';
  *
  * const permit = debugWard(rules);
  * permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
- * // [ward:decision] allow          viewer  posts  read
+ * // [ward:decision] allow            (allow)  viewer  posts  read
  *
  * permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
- * // [ward:decision] no-matching-rule  viewer  posts  delete
+ * // [ward:decision] no-matching-rule          viewer  posts  delete
  * ```
  */
 export function debugWard<TAction extends string = string, TData = unknown>(
@@ -44,8 +45,9 @@ export function debugWard<TAction extends string = string, TData = unknown>(
         : ctx.principal.id
       : 'anonymous';
     const decision = ctx.decision.padEnd(16);
+    const effect = ctx.decision !== 'no-matching-rule' ? `(${ctx.rule.effect})` : '        ';
 
-    console.debug(`[ward:decision] ${decision}  ${principal}  ${ctx.resource}  ${ctx.action}`);
+    console.debug(`[ward:decision] ${decision}  ${effect}  ${principal}  ${ctx.resource}  ${ctx.action}`);
   };
 
   return createWard<TAction, TData>(rules, { ...options, logger });

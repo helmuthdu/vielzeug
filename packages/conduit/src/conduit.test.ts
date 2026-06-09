@@ -178,6 +178,17 @@ describe('Container — freeze()', () => {
 
     expect(() => c.value(T, 'x')).toThrow('sealed');
   });
+
+  it('does not propagate to child containers', () => {
+    const T = token<string>('T');
+    const root = createContainer();
+
+    root.freeze();
+
+    const child = root.createChild();
+
+    expect(() => child.value(T, 'x')).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -343,6 +354,19 @@ describe('Container — resolveMany()', () => {
 
     await expect(c.resolveMany([A, Missing] as const)).rejects.toThrow(ProviderNotFoundError);
   });
+
+  it('throws ContainerDisposedError when the container is disposed', async () => {
+    const A = token<string>('A');
+    const B = token<number>('B');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.value(B, 1);
+
+    await c.dispose();
+
+    await expect(c.resolveMany([A, B] as const)).rejects.toThrow(ContainerDisposedError);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -457,6 +481,27 @@ describe('Container — resolveAll', () => {
     await c.dispose();
 
     await expect(c.resolveAll()).rejects.toThrow(ContainerDisposedError);
+  });
+
+  it('does not invoke a named-scope factory', async () => {
+    let calls = 0;
+    const RequestScope = scope('request');
+    const RequestId = token<string>('RequestId');
+    const c = createContainer();
+
+    c.factory(
+      RequestId,
+      () => {
+        calls++;
+
+        return crypto.randomUUID();
+      },
+      { lifetime: RequestScope },
+    );
+
+    await c.resolveAll();
+
+    expect(calls).toBe(0);
   });
 });
 
@@ -817,6 +862,17 @@ describe('Container — load()', () => {
     await c.dispose();
 
     await expect(c.load(() => {})).rejects.toThrow(ContainerDisposedError);
+  });
+
+  it('supports chained load() calls via the returned Promise', async () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const container = createContainer();
+
+    await (await container.load((c) => void c.value(A, 'a'))).load((c) => void c.value(B, 'b'));
+
+    await expect(container.resolve(A)).resolves.toBe('a');
+    await expect(container.resolve(B)).resolves.toBe('b');
   });
 });
 
@@ -1766,6 +1822,19 @@ describe('Container — resolveSync() cross-container warm path', () => {
 // ---------------------------------------------------------------------------
 
 describe('Container — on() additional edge cases', () => {
+  it('resolveSync() emits a resolve event', async () => {
+    const events: string[] = [];
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'v');
+    c.on((e) => events.push(e.type));
+
+    c.resolveSync(T);
+
+    expect(events).toContain('resolve');
+  });
+
   it('listener receives no further events after the container is disposed', async () => {
     const events: string[] = [];
     const c = createContainer();

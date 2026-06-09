@@ -146,13 +146,14 @@ for await (const event of bus.events('cart:updated')) {
 - **Listener management APIs** with unsubscribe handles, `removeAllListeners`, and `eventNames`
 - **Async event coordination** with `wait`
 - **First-event racing** with `waitAny`
-- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called, with chainable `.filter()` and `.map()` operators
+- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called, with chainable `.filter()`, `.map()`, and `.take(n)` operators
 - **Event piping** with `pipeEvents` — forward events across buses with optional renaming and automatic teardown
 - **Middleware pipeline** via `createBus({ middleware: [...] })` — intercept or block dispatches before listeners run
 - **Payload validation** via `createBus({ validatePayload: ... })` — schema-level guards applied before middleware
 - **Disposal signal** via `bus.disposalSignal` — use as an `AbortSignal` to tie external lifecycles to the bus
 - **Leak detection** via `maxListeners` — warn when a single event accumulates too many listeners
-- **Debug logging** via `logger.debug` or `debugBus()` (`@vielzeug/herald/debug`) — logs subscribe/emit/dispose activity with `[herald:*]` prefixes; `debugBus()` wires `console.debug` automatically and is tree-shaken from production bundles
+- **Named buses** via `createBus({ name: 'myBus' })` — name appears in debug log prefixes and `BusDisposedError` messages for easier debugging across multiple bus instances
+- **Debug logging** via `logger.debug` or `debugBus()` (`@vielzeug/herald/devtools`) — logs subscribe/emit/dispose activity with `[herald:*]` prefixes; `debugBus()` wires `console.debug` automatically and is tree-shaken from production bundles
 - **Abort-aware APIs** for lifecycle-safe teardown
 - **`onAny()` wildcard listener** for bus-wide observability (logging, analytics, tracing)
 - **Custom logger** via `createBus({ logger: { debug, warn } })` — route or suppress debug and warn output

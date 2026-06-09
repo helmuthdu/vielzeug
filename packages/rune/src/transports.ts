@@ -142,17 +142,21 @@ function buildNodePrefix(
   return `${meta.join(' | ')} |`;
 }
 
+function escapeConsoleFormat(s: string): string {
+  return s.replace(/%/g, '%%');
+}
+
 function buildBrowserPrefix(
   theme: ResolvedTheme,
   type: LogType,
   namespace: string,
   timestamp: string,
 ): { fmt: string; parts: string[] } {
-  let fmt = `%c${theme[type].badge}%c`;
+  let fmt = `%c${escapeConsoleFormat(theme[type].badge)}%c`;
   const parts: string[] = [badgeStyle(theme[type]), ''];
 
   if (namespace) {
-    fmt += ` %c${namespace}%c`;
+    fmt += ` %c${escapeConsoleFormat(namespace)}%c`;
     parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}`), '');
   }
 
@@ -227,11 +231,11 @@ export function renderGroup(collapsed: boolean, label: string, namespace: string
     return;
   }
 
-  let fmt = `${theme.group.badge} %c${label}%c`;
+  let fmt = `${theme.group.badge} %c${escapeConsoleFormat(label)}%c`;
   const parts: string[] = [badgeStyle(theme.group, '; margin-right: 6px; padding: 1px 3px 0'), ''];
 
   if (namespace) {
-    fmt += ` %c${namespace}%c`;
+    fmt += ` %c${escapeConsoleFormat(namespace)}%c`;
     parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}; margin-right: 6px`), '');
   }
 
@@ -246,6 +250,10 @@ export type { RemoteLogData };
  * Forwards log entries asynchronously to a remote handler.
  * The handler is fire-and-forget. Use onError to observe delivery failures.
  * Console and remote thresholds are fully independent.
+ *
+ * **Security note:** serialized `Error` objects include the full `stack` trace,
+ * which may expose internal file paths. Use `redactTransport` or a middleware
+ * to strip `err.stack` before forwarding in production if this is a concern.
  *
  * @example
  * remoteTransport({

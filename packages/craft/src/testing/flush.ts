@@ -19,7 +19,7 @@ export interface FlushOptions {
    * Pass `console.debug` or any `(msg: string) => void` to enable output.
    * Omit (or pass `undefined`) to disable all logging.
    *
-   * Prefer `debugFlush()` from `@vielzeug/craft/debug` over wiring this manually.
+   * Prefer `debugFlush()` from `@vielzeug/craft/devtools` over wiring this manually.
    */
   logger?: (msg: string) => void;
 }

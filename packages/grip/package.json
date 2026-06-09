@@ -17,12 +17,13 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:types",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
-    "test": "vitest"
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
     "access": "public",

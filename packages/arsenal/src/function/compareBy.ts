@@ -20,7 +20,7 @@ import { compare } from './compare';
  *
  * @param selectors - An object where keys are properties to compare and values are 'asc' or 'desc'.
  *
- * @returns A comparison function that can be used with array sorting methods.
+ * @returns A comparator for use with `Array.sort` or `sort()`.
  */
 export const compareBy = <T>(selectors: Partial<Record<keyof T, 'asc' | 'desc'>>) => {
   const entries = Object.entries(selectors) as [keyof T, 'asc' | 'desc'][];

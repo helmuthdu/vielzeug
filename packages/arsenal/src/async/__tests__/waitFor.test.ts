@@ -39,4 +39,26 @@ describe('waitFor', () => {
   it('resolves when condition is an async function returning true', async () => {
     await expect(waitFor(async () => true, { interval: 10 })).resolves.toBeUndefined();
   });
+
+  it('rejects promptly when signal aborts during sleep interval — regression B4', async () => {
+    const ac = new AbortController();
+    let polls = 0;
+
+    const start = Date.now();
+
+    const p = waitFor(
+      () => {
+        polls++;
+
+        return false;
+      },
+      { interval: 5000, signal: ac.signal },
+    );
+
+    setTimeout(() => ac.abort(new Error('early abort')), 20);
+
+    await expect(p).rejects.toThrow('early abort');
+    // Should reject in ~20ms, not after 5000ms interval
+    expect(Date.now() - start).toBeLessThan(500);
+  });
 });

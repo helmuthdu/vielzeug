@@ -20,6 +20,7 @@ export type {
   RuneConfig,
   RuneOptions,
   SampleTransportOptions,
+  TimeOptions,
   Transport,
 } from './types';
 

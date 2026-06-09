@@ -10,7 +10,11 @@ export function mapKeys<T extends Obj>(
   const out: Record<PropertyKey, T[keyof T]> = {};
 
   for (const key of Object.keys(obj) as Array<keyof T>) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+
     const mappedKey = mapper(key, obj[key], obj);
+
+    if (mappedKey === '__proto__' || mappedKey === 'constructor' || mappedKey === 'prototype') continue;
 
     out[mappedKey] = obj[key];
   }

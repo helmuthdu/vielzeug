@@ -13,6 +13,17 @@ const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record
   .process?.env;
 const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
+const sigilExternals = [
+  '@vielzeug/craft',
+  '@vielzeug/grip',
+  '@vielzeug/orbit',
+  '@vielzeug/ripple',
+  '@vielzeug/arsenal',
+  '@vielzeug/scroll',
+  '@vielzeug/tempo',
+  'lucide',
+];
+
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
@@ -25,7 +36,7 @@ export default defineConfig(
           checks: {
             pluginTimings: !disablePluginTimings,
           },
-          external: ['@vielzeug/craft', '@vielzeug/grip', '@vielzeug/orbit', '@vielzeug/scroll', '@vielzeug/arsenal'],
+          external: sigilExternals,
         },
       },
       css: {

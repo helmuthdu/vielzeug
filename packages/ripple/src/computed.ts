@@ -1,7 +1,7 @@
 import type { DepEntry } from './tracking';
 import type { ComputedSignal, ReactiveOptions, ReadonlySignal, Subscription } from './types';
 
-import { getDevToolsHook } from './devtools';
+import { getDevToolsHook } from './devtools-hook';
 import { ensureError, StateError } from './error';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
@@ -104,7 +104,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
 
       let next: T;
 
-      getDevToolsHook()?.onComputedRecompute?.(this.name);
+      getDevToolsHook()?.compute?.({ name: this.name });
 
       try {
         next = withTracking({ computed: this, depCollector: newDeps, kind: 'computed' }, this.compute_);
@@ -243,6 +243,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
 
     this.deps_ = [];
     this.clearSubscribers();
+    getDevToolsHook()?.dispose?.({ kind: 'computed', name: this.name });
   }
 
   [Symbol.dispose](): void {

@@ -16,9 +16,9 @@ Use `last(array, fallback?)` to get the last element or a typed fallback.
 ```ts
 import { last } from '@vielzeug/arsenal';
 
-last([10, 20, 30]);    // 30
-last([]);              // undefined
-last([], -1);          // -1
+last([10, 20, 30]); // 30
+last([]); // undefined
+last([], -1); // -1
 ```
 
 ### Pitfalls

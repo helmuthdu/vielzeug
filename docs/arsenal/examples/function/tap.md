@@ -16,10 +16,7 @@ Use `tap(value, callback)` to call `callback(value)` and return `value` unchange
 ```ts
 import { tap } from '@vielzeug/arsenal';
 
-const result = tap(
-  expensiveComputation(),
-  (v) => console.log('computed:', v),
-);
+const result = tap(expensiveComputation(), (v) => console.log('computed:', v));
 // result is the computed value; the log is a side effect
 ```
 

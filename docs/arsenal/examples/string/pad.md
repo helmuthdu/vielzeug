@@ -16,9 +16,9 @@ Use `pad(str, targetLength, fillString?)` to add padding evenly to both sides.
 ```ts
 import { pad } from '@vielzeug/arsenal';
 
-pad('5', 3);       // ' 5 '
-pad('5', 5, '0');  // '00500'
-pad('hello', 9);   // '  hello  '
+pad('5', 3); // ' 5 '
+pad('5', 5, '0'); // '00500'
+pad('hello', 9); // '  hello  '
 ```
 
 ### Pitfalls

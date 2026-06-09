@@ -5,7 +5,7 @@ package: codex
 category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
 related: [sigil, spell]
-exports: [createServer, loadData, packageMeta, validateBundledData]
+exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createServer, loadData, packageMeta, validateBundledData]
 
 **Package:** `@vielzeug/codex`  ·  **Category:** AI Tooling
 
-**Key exports:** `createServer`, `loadData`, `packageMeta`, `validateBundledData`
+**Key exports:** `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData`
 
 **When to use:** You want AI clients (Claude Desktop, Copilot Chat, remote agents) to discover and query Vielzeug package metadata, docs, and Sigil component declarations through a standard MCP tool interface.
 
@@ -123,7 +123,10 @@ const html = await res.text();
 - `search-packages` returns ranked hits across `name`, `description`, `keywords`, `exports`, docs, and source
 - `matchedIn` reports distinct categories: `"metadata"`, `"keywords"`, `"exports"`, `"docs"`
 - MCP Resources exposed at `vielzeug://docs/<slug>/<page>` and `vielzeug://source/<slug>`
-- Programmatic API: `createServer`, `loadData`, `packageMeta`, `validateBundledData` exported from `@vielzeug/codex`
+- Programmatic API: `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData` exported from `@vielzeug/codex`
+- `search-packages` supports multi-word AND queries — all words must match
+- Unknown CLI flags print a usage hint and exit cleanly (no stack trace)
+- Port-in-use (`EADDRINUSE`) prints a clean error and exits with code 1
 - Bundled snapshot data — runs without a local Vielzeug checkout
 - Fail-fast startup: missing or malformed data aborts immediately with an actionable error message
 - Health endpoint at `/health` in HTTP mode

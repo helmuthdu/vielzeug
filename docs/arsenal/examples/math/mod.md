@@ -16,9 +16,9 @@ Use `mod(a, b)` for a non-negative modulo.
 ```ts
 import { mod } from '@vielzeug/arsenal';
 
-mod(7, 3);   // 1
-mod(-1, 7);  // 6  (JS % would give -1)
-mod(10, 5);  // 0
+mod(7, 3); // 1
+mod(-1, 7); // 6  (JS % would give -1)
+mod(10, 5); // 0
 ```
 
 ### Pitfalls

@@ -18,7 +18,7 @@ const PKG_VERSION: string = String(
 function printUsage(): void {
   process.stderr.write(
     [
-      'Usage: vielzeug-mcp [--port <number>]',
+      'Usage: codex [--port <number>]',
       '',
       'Options:',
       '  --port <number>   Run streamable HTTP transport on the specified port.',
@@ -38,22 +38,35 @@ async function main(): Promise<void> {
   }
 
   if (argv.includes('--version') || argv.includes('-v')) {
-    process.stderr.write(`${PKG_VERSION}\n`);
+    process.stdout.write(`${PKG_VERSION}\n`);
 
     return;
   }
 
-  const data = loadData();
-  const { values } = parseArgs({
-    options: { port: { type: 'string' } },
-    strict: true,
-  });
+  let values: { port?: string };
+
+  try {
+    ({ values } = parseArgs({ options: { port: { type: 'string' } }, strict: true }));
+  } catch (err) {
+    process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
+    printUsage();
+    process.exit(1);
+  }
 
   const port = resolvePort(values.port);
+  const data = loadData();
   const mcpServer = createServer(data);
 
   if (port !== null) {
-    await startHttpServer(mcpServer, port);
+    try {
+      await startHttpServer(mcpServer, port);
+    } catch (err) {
+      const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
+      const detail = code === 'EADDRINUSE' ? `port ${port} is already in use.` : String(err);
+
+      process.stderr.write(`error: ${detail}\n`);
+      process.exit(1);
+    }
 
     return;
   }

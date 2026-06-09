@@ -59,7 +59,7 @@ export type BusOptions<T extends EventMap = EventMap> = {
    * Provide `logger.debug` to enable subscription/emission/disposal logging with `[herald:*]` prefixes.
    * Omit to disable all debug output. Pass `{}` to silence warnings too.
    *
-   * Prefer `debugBus()` from `@vielzeug/herald/debug` over wiring this manually — it passes
+   * Prefer `debugBus()` from `@vielzeug/herald/devtools` over wiring this manually — it passes
    * `console.debug` for you and is tree-shaken from production bundles.
    *
    * **Note:** Event key strings appear in log messages — do not encode sensitive data in event names.
@@ -76,6 +76,12 @@ export type BusOptions<T extends EventMap = EventMap> = {
    * Each receives `(event, payload, next)` — call `next()` to proceed, or omit to block dispatch.
    */
   middleware?: readonly Middleware<T>[];
+  /**
+   * Optional display name for this bus instance.
+   * Appears in debug log prefixes and in `BusDisposedError` messages.
+   * Useful when running multiple buses concurrently to identify which bus produced a log or error.
+   */
+  name?: string;
   /**
    * If provided, listener errors are forwarded here instead of re-thrown.
    * Receives a structured `EmissionErrorContext` with the error, event key, payload, and timestamp.
@@ -138,6 +144,21 @@ export type EventStream<T> = AsyncGenerator<T> &
     filter<U extends T>(pred: (value: T) => value is U): EventStream<U>;
     filter(pred: (value: T) => boolean): EventStream<T>;
     map<U>(fn: (value: T) => U): EventStream<U>;
+    /**
+     * Yield at most `n` values then close the stream automatically.
+     * Equivalent to `break`-ing a `for await` loop after `n` iterations, but declarative.
+     *
+     * @throws {RangeError} if `n` is not a positive integer.
+     *
+     * @remarks **Sibling streams:** Like `filter()` and `map()`, `take()` shares the underlying
+     * subscription with its siblings. When `take()` exhausts, it closes the shared base generator
+     * via the `for await` protocol, which also terminates any other sibling streams.
+     * For an independent lifecycle, call `bus.events()` separately.
+     *
+     * @example
+     * for await (const val of bus.events('tick').take(5)) { ... } // stops after 5
+     */
+    take(n: number): EventStream<T>;
   };
 
 export type Bus<T extends EventMap> = {
@@ -255,6 +276,8 @@ export type BehaviorBusOptions<T extends EventMap = EventMap> = BusOptions<T> & 
    * Number of most-recent emitted values to replay to new subscribers via `on()` or `once()`.
    * Defaults to `1` (last value only). Set to a higher number to replay a window of history.
    * `events()`, `wait()`, and `waitAny()` are not affected.
+   *
+   * @throws {RangeError} if set to a non-positive or non-integer value.
    */
   replay?: number;
 };

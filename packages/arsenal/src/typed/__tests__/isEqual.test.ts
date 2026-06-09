@@ -92,4 +92,100 @@ describe('isEqual', () => {
 
     expect(isEqual(arrA, arrB)).toBe(true);
   });
+
+  describe('shallow comparison', () => {
+    it('returns true for same-reference nested objects', () => {
+      const inner = { x: 1 };
+
+      expect(isEqual({ a: inner }, { a: inner }, { depth: 'shallow' })).toBe(true);
+    });
+
+    it('returns false for different-reference nested objects', () => {
+      expect(isEqual({ a: { x: 1 } }, { a: { x: 1 } }, { depth: 'shallow' })).toBe(false);
+    });
+
+    it('returns true for identical primitive-valued objects', () => {
+      expect(isEqual({ a: 1, b: 2 }, { a: 1, b: 2 }, { depth: 'shallow' })).toBe(true);
+    });
+
+    it('returns false when key counts differ', () => {
+      expect(isEqual({ a: 1 }, { a: 1, b: 2 }, { depth: 'shallow' })).toBe(false);
+    });
+
+    it('handles shallow array comparison (element-by-reference)', () => {
+      expect(isEqual([1, 2, 3], [1, 2, 3], { depth: 'shallow' })).toBe(true);
+      expect(isEqual([1, 2], [1, 2, 3], { depth: 'shallow' })).toBe(false);
+    });
+
+    it('returns false when one is null', () => {
+      expect(isEqual(null, {}, { depth: 'shallow' })).toBe(false);
+      expect(isEqual({}, null, { depth: 'shallow' })).toBe(false);
+    });
+
+    it('returns false comparing array with non-array', () => {
+      expect(isEqual([], {}, { depth: 'shallow' })).toBe(false);
+    });
+  });
+
+  describe('RegExp comparison', () => {
+    it('treats equal RegExps as equal', () => {
+      expect(isEqual(/abc/gi, /abc/gi)).toBe(true);
+    });
+
+    it('treats different source as not equal', () => {
+      expect(isEqual(/abc/, /xyz/)).toBe(false);
+    });
+
+    it('treats different flags as not equal', () => {
+      expect(isEqual(/abc/i, /abc/g)).toBe(false);
+    });
+
+    it('treats RegExp vs non-RegExp as not equal', () => {
+      expect(isEqual(/abc/, 'abc')).toBe(false);
+    });
+  });
+
+  describe('Set with object values', () => {
+    it('returns true when Sets contain deeply equal objects', () => {
+      expect(isEqual(new Set([{ a: 1 }]), new Set([{ a: 1 }]))).toBe(true);
+    });
+
+    it('returns false when Set sizes differ', () => {
+      expect(isEqual(new Set([1, 2]), new Set([1]))).toBe(false);
+    });
+
+    it('returns false for Set vs non-Set', () => {
+      expect(isEqual(new Set([1]), [1])).toBe(false);
+    });
+  });
+
+  describe('cross-type and null/undefined edge cases', () => {
+    it('returns false for null vs undefined', () => {
+      expect(isEqual(null, undefined)).toBe(false);
+    });
+
+    it('returns false for object vs null', () => {
+      expect(isEqual({}, null)).toBe(false);
+    });
+
+    it('returns false for array vs object', () => {
+      expect(isEqual([], {})).toBe(false);
+    });
+
+    it('returns false for Map vs non-Map', () => {
+      expect(isEqual(new Map(), {})).toBe(false);
+    });
+
+    it('returns false for Maps with different sizes', () => {
+      expect(isEqual(new Map([['a', 1]]), new Map())).toBe(false);
+    });
+
+    it('returns false for Maps with different values', () => {
+      expect(isEqual(new Map([['a', 1]]), new Map([['a', 2]]))).toBe(false);
+    });
+
+    it('returns false for objects with different key counts', () => {
+      expect(isEqual({ a: 1, b: 2 }, { a: 1 })).toBe(false);
+    });
+  });
 });

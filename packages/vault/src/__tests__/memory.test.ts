@@ -159,6 +159,24 @@ describe('Memory adapter', () => {
     await expect(db.batch([], async () => undefined)).rejects.toThrow('at least one table');
   });
 
+  test('query.delete() works inside batch()', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Carol' },
+    ]);
+
+    const deleted = await db.batch(['users'], (tx) =>
+      tx
+        .query('users')
+        .filter((u) => u.id < 3)
+        .delete(),
+    );
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ id: 3, name: 'Carol' }]);
+  });
+
   test('debug returns live and expired counts', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
     await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1));
@@ -205,6 +223,15 @@ describe('Memory adapter', () => {
 
     expect(results).toHaveLength(2);
     expect(events.some((e) => e.operation === 'getAll' && e.table === 'users')).toBe(true);
+  });
+
+  test('onMetrics emits isEmpty event', async () => {
+    const events: MetricsEvent[] = [];
+    const db2 = createMemory({ onMetrics: (e) => events.push(e), schema: userSchema });
+
+    await db2.isEmpty('users');
+
+    expect(events.some((e) => e.operation === 'isEmpty' && e.table === 'users')).toBe(true);
   });
 
   test('onMetrics emits query and queryDelete events for query().delete()', async () => {
@@ -600,6 +627,50 @@ describe('Memory adapter', () => {
         expect(await received).toEqual({ id: 99, name: 'Legit' });
       } finally {
         db1.dispose();
+        db2.dispose();
+      }
+    });
+
+    test('throwing codec during message validation does not kill the onmessage handler', async () => {
+      // Codec throws when it sees the "poison" sentinel value — simulates a corrupt record
+      // that causes the codec to throw during isBroadcastMsg validation.
+      const POISON = '__POISON__';
+      const poisonCodec = {
+        decode: (raw: unknown): { expiresAt?: number; value: unknown } | undefined => {
+          if (typeof raw === 'object' && raw !== null && (raw as Record<string, unknown>)['__poison']) {
+            throw new Error('codec exploded on poison record');
+          }
+
+          if (typeof raw !== 'object' || raw === null || !('value' in raw)) return undefined;
+
+          return raw as { value: unknown };
+        },
+        encode: (value: unknown, expiresAt?: number) => (expiresAt !== undefined ? { expiresAt, value } : { value }),
+      };
+
+      const db2 = createMemory({ codec: poisonCodec, name: 'sec-throwing-codec3', schema: userSchema });
+
+      try {
+        const attacker = new BroadcastChannel('vault-memory:sec-throwing-codec3');
+
+        // Message 1: stored is a poison value — codec.decode throws during isBroadcastMsg; must be dropped silently.
+        attacker.postMessage({
+          key: '1',
+          stored: { __poison: true, [POISON]: true, value: { id: 1 } },
+          table: 'users',
+          type: 'put',
+        });
+        // Message 2: valid stored record — codec succeeds.
+        attacker.postMessage({ key: '2', stored: { value: { id: 2, name: 'Valid' } }, table: 'users', type: 'put' });
+        attacker.close();
+
+        await new Promise<void>((r) => setTimeout(r, 10));
+
+        // Handler survived the throw: message 2 was applied.
+        expect(await db2.has('users', 2)).toBe(true);
+        // id:1 poison was dropped.
+        expect(await db2.has('users', 1)).toBe(false);
+      } finally {
         db2.dispose();
       }
     });

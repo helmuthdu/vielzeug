@@ -62,4 +62,20 @@ describe('stableStringify', () => {
 
     expect(() => stableStringify(new Baz())).not.toThrow();
   });
+
+  it('does not stack overflow on circular references — security regression', () => {
+    const a: Record<string, unknown> = { x: 1 };
+
+    a['self'] = a;
+    expect(() => stableStringify(a)).not.toThrow();
+    expect(stableStringify(a)).toContain('[Circular]');
+  });
+
+  it('handles circular arrays without stack overflow', () => {
+    const arr: unknown[] = [1, 2];
+
+    arr.push(arr);
+    expect(() => stableStringify(arr)).not.toThrow();
+    expect(stableStringify(arr)).toContain('[Circular]');
+  });
 });

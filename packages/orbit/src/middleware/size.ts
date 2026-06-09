@@ -24,7 +24,7 @@ export type SizeOptions = DetectOverflowOptions;
  * ```
  */
 export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeData> {
-  return tagMiddleware(function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const boundary = getBoundaryRect(options.boundary ?? state.boundary);
     const padding = toSideObject(options.padding ?? state.padding);
     const side = getSide(state.placement);
@@ -50,5 +50,7 @@ export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeDat
     const sizeData: SizeData = { availableHeight, availableWidth };
 
     return { data: { size: sizeData } };
-  }, 'size');
+  }
+
+  return tagMiddleware<'size', SizeData, typeof sizeMiddleware>(sizeMiddleware, 'size');
 }

@@ -20,8 +20,8 @@ function resolve<T>(valueOrFactory: T | (() => T)): T {
   return isFunction(valueOrFactory) ? valueOrFactory() : valueOrFactory;
 }
 
-resolve(42);          // 42
-resolve(() => 42);    // 42
+resolve(42); // 42
+resolve(() => 42); // 42
 ```
 
 ### Related

@@ -93,8 +93,8 @@ Create or extend `.vscode/mcp.json` in your workspace root.
 Typical AI-agent pattern from discovery to code generation:
 
 ```
-list-packages                           → scan catalog, note availableDocPages
-search-packages { query: "forms" }      → find relevant packages by capability
+list-packages                                   → scan catalog, note availableDocPages
+search-packages { query: "form validation" }   → multi-word AND search across all fields
 list-packages { packageSlug: "forge" }  → structured metadata for one package
 get-docs { packageSlug: "forge", page: "usage" }     → how-to guide
 get-docs { packageSlug: "forge", page: "api" }       → full API reference
@@ -110,13 +110,23 @@ get-component { tagName: "sg-input" }       → full CEM declaration
 
 ## Programmatic Usage
 
-Use `createServer` with `loadData` to embed the MCP server in a custom Node.js application.
+For the common case, use `createServerFromDisk()` — it calls `loadData()` internally:
+
+```ts
+import { createServerFromDisk } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+await createServerFromDisk().connect(new StdioServerTransport());
+```
+
+When you need explicit control over when data is loaded, use `createServer` with `loadData` separately:
 
 ```ts
 import { createServer, loadData } from '@vielzeug/codex';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-const server = createServer(loadData());
+const data = loadData();
+const server = createServer(data);
 await server.connect(new StdioServerTransport());
 ```
 
@@ -183,7 +193,7 @@ This returns the complete `spell` API reference, letting an agent write correct 
 ## Best Practices
 
 - Call `list-packages` first to discover `availableDocPages` before calling `get-docs` — not every package has every page.
-- Prefer `search-packages` over iterating `list-packages` manually when looking for a capability.
+- Prefer `search-packages` over iterating `list-packages` manually when looking for a capability. Multi-word queries are supported — all words must match.
 - Use `get-source` for the exact public API surface; do not infer exports from docs alone.
 - In HTTP mode, check `/health` before routing traffic to verify the server is up.
 - Pin a version in production (`npx @vielzeug/codex@3.0.1`) to avoid surprise data changes from snapshot updates.

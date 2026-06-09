@@ -16,11 +16,11 @@ Use `isEqual(a, b, options?)` for deep equality. Pass `{ depth: 'shallow' }` to 
 ```ts
 import { isEqual } from '@vielzeug/arsenal';
 
-isEqual({ a: 1 }, { a: 1 });           // true
-isEqual([1, [2, 3]], [1, [2, 3]]);      // true
+isEqual({ a: 1 }, { a: 1 }); // true
+isEqual([1, [2, 3]], [1, [2, 3]]); // true
 isEqual(new Date('2024'), new Date('2024')); // true
 
-isEqual({ a: 1 }, { a: 2 });           // false
+isEqual({ a: 1 }, { a: 2 }); // false
 ```
 
 #### Shallow mode
@@ -30,7 +30,7 @@ import { isEqual } from '@vielzeug/arsenal';
 
 const arr = [1, 2, 3];
 isEqual({ arr }, { arr }, { depth: 'shallow' }); // true — same reference
-isEqual([1, 2], [1, 2], { depth: 'shallow' });   // false — different references
+isEqual([1, 2], [1, 2], { depth: 'shallow' }); // false — different references
 ```
 
 ### Pitfalls

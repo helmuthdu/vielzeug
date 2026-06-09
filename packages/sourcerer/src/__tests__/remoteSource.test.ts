@@ -389,6 +389,38 @@ describe('createRemoteSource', () => {
       expect(source.meta.isLoading).toBe(false);
     });
 
+    it('new request for same key after superseded entry resolves correctly', async () => {
+      const resolvers: Array<(v: { items: string[]; total: number }) => void> = [];
+      const fetch = vi.fn(() => {
+        return new Promise<{ items: string[]; total: number }>((resolve) => {
+          resolvers.push(resolve);
+        });
+      });
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      // p1: page 2 in-flight
+      const p1 = source.goTo(2);
+      // p2: page 3 supersedes page 2 (page 2 entry aborted+removed)
+      const p3 = source.goTo(3);
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+
+      // Settle stale first
+      resolvers[0]({ items: ['stale-p2'], total: 30 });
+      await p1;
+
+      // p3 not yet settled — issue another goTo(3) which should join the existing entry
+      const p3b = source.goTo(3);
+
+      resolvers[1]({ items: ['fresh-p3'], total: 30 });
+      await Promise.all([p3, p3b]);
+
+      // Only 2 fetch calls total — p3b joined, not a new fetch
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['fresh-p3']);
+      expect(source.meta.isLoading).toBe(false);
+    });
+
     it('keeps isLoading true until all pending requests settle', async () => {
       let resolveLatest!: (v: { items: string[]; total: number }) => void;
       let callCount = 0;
@@ -475,6 +507,34 @@ describe('createRemoteSource', () => {
     });
   });
 
+  describe('restoreQuery() page clamping', () => {
+    it('clamps restored page to valid range when total is known', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 30 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.refresh();
+
+      await source.restoreQuery({ page: 999 });
+
+      expect(source.toQuery().page).toBe(3);
+    });
+
+    it('passes arbitrary page to fetch before total is known', async () => {
+      let capturedPage = 0;
+      const fetch = vi.fn(async ({ page }: { page: number }) => {
+        capturedPage = page;
+
+        return { items: ['a'], total: 30 };
+      });
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+
+      // Before first fetch total=0; page is stored as-is and forwarded to the server.
+      await source.restoreQuery({ page: 5 });
+
+      expect(capturedPage).toBe(5);
+    });
+  });
+
   describe('boundary conditions', () => {
     it('prev does not fetch when already at first page', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 10 }));
@@ -525,6 +585,34 @@ describe('createRemoteSource', () => {
 
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(keyCallCount).toBeGreaterThan(0);
+    });
+  });
+
+  describe('extractError branches', () => {
+    it('uses string reason as error message', async () => {
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch: async () => {
+          throw 'string-error-message';
+        },
+      });
+
+      await source.refresh();
+
+      expect(source.meta.error?.message).toBe('string-error-message');
+    });
+
+    it('falls back to "Request failed" for non-string non-Error throws', async () => {
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch: async () => {
+          throw 42;
+        },
+      });
+
+      await source.refresh();
+
+      expect(source.meta.error?.message).toBe('Request failed');
     });
   });
 
@@ -719,6 +807,54 @@ describe('createRemoteSource', () => {
       source.optimisticUpdate((items) => [...items, 'b']);
 
       expect(() => source.optimisticUpdate((items) => [...items, 'c'])).toThrow('already active');
+    });
+  });
+
+  describe('staleTime', () => {
+    it('skips re-fetch when data is fresh within staleTime window', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10, staleTime: 60_000 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      await source.refresh();
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-fetches after staleTime window expires', async () => {
+      vi.useFakeTimers();
+
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10, staleTime: 1000 });
+
+      await source.refresh();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1001);
+
+      await source.refresh();
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('optimisticUpdate safety', () => {
+    it('leaves state clean when mutator throws', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      await source.refresh();
+
+      expect(() =>
+        source.optimisticUpdate(() => {
+          throw new Error('mutator-fail');
+        }),
+      ).toThrow('mutator-fail');
+
+      expect(source.current).toEqual(['a', 'b']);
+      expect(() => source.optimisticUpdate((items) => [...items, 'c'])).not.toThrow();
     });
   });
 

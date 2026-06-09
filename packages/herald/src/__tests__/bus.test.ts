@@ -1245,6 +1245,25 @@ describe('createBus - middleware', () => {
     bus.dispose();
   });
 
+  it('middleware calling next() twice does not double-dispatch to listeners', () => {
+    const listener = vi.fn();
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_event, _payload, next) => {
+          next();
+          next(); // second call must be a no-op
+        },
+      ],
+    });
+
+    bus.on('count', listener);
+    bus.emit('count', 1);
+
+    expect(listener).toHaveBeenCalledOnce();
+
+    bus.dispose();
+  });
+
   it('a throwing middleware propagates out of emit()', () => {
     const bus = createBus<TestEvents>({
       middleware: [
@@ -1532,6 +1551,279 @@ describe('combineSignals', () => {
 
     ctrlA.abort();
     expect(combined.aborted).toBe(true);
+  });
+});
+
+describe('createBus - name option', () => {
+  it('BusDisposedError message includes the bus name', async () => {
+    const bus = createBus<TestEvents>({ name: 'myBus' });
+    const pending = bus.wait('count');
+
+    bus.dispose();
+
+    await expect(pending).rejects.toThrow('"myBus"');
+  });
+
+  it('BusDisposedError message is generic when no name is provided', async () => {
+    const bus = createBus<TestEvents>();
+    const pending = bus.wait('count');
+
+    bus.dispose();
+
+    await expect(pending).rejects.toThrow('Bus is disposed');
+  });
+
+  it('debug log messages are suffixed with the bus name', () => {
+    const logs: string[] = [];
+    const bus = createBus<TestEvents>({ logger: { debug: (m) => logs.push(m) }, name: 'auth' });
+
+    bus.emit('count', 1);
+
+    expect(logs[0]).toContain('(auth)');
+
+    bus.dispose();
+  });
+
+  it('warn messages include the bus name', () => {
+    const warns: string[] = [];
+    const bus = createBus<TestEvents>({ logger: { warn: (m) => warns.push(m) }, maxListeners: 1, name: 'auth' });
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+
+    expect(warns[0]).toContain('[herald:warn:auth]');
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - waitAny runtime guard', () => {
+  it('throws RangeError when fewer than 2 events are provided', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.waitAny(['count'] as unknown as [string, string])).toThrow(RangeError);
+    expect(() => bus.waitAny([] as unknown as [string, string])).toThrow(RangeError);
+
+    bus.dispose();
+  });
+
+  it('resolves normally with 2 or more events', async () => {
+    const bus = createBus<TestEvents>();
+    const pending = bus.waitAny(['count', 'greet']);
+
+    bus.emit('count', 7);
+
+    await expect(pending).resolves.toEqual({ event: 'count', payload: 7 });
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - events().take()', () => {
+  it('yields exactly n values then stops', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of bus.events('count').take(3)) {
+        collected.push(n);
+      }
+    })();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3);
+    bus.emit('count', 4); // should not be collected
+
+    await consume;
+
+    expect(collected).toEqual([1, 2, 3]);
+
+    bus.dispose();
+  });
+
+  it('throws RangeError for non-positive n', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.events('count').take(0)).toThrow(RangeError);
+    expect(() => bus.events('count').take(-1)).toThrow(RangeError);
+    expect(() => bus.events('count').take(1.5)).toThrow(RangeError);
+
+    bus.dispose();
+  });
+
+  it('terminates early when bus disposes before n values', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of bus.events('count').take(10)) {
+        collected.push(n);
+      }
+    })();
+
+    bus.emit('count', 1);
+    await new Promise((r) => setTimeout(r, 0));
+    bus.dispose();
+
+    await consume;
+
+    expect(collected).toEqual([1]);
+  });
+
+  it('can be chained after filter()', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of bus
+        .events('count')
+        .filter((n) => n % 2 === 0)
+        .take(2)) {
+        collected.push(n);
+      }
+    })();
+
+    bus.emit('count', 1); // filtered
+    bus.emit('count', 2); // passes, count=1
+    bus.emit('count', 3); // filtered
+    bus.emit('count', 4); // passes, count=2 → stops
+    bus.emit('count', 6); // not reached
+
+    await consume;
+
+    expect(collected).toEqual([2, 4]);
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - events() filter + map chaining', () => {
+  it('filter then map transforms values correctly', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus
+      .events('count')
+      .filter((n) => n > 0)
+      .map((n) => n * 10);
+    const results: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of stream) {
+        results.push(n);
+
+        if (results.length === 2) break;
+      }
+    })();
+
+    bus.emit('count', -1); // filtered
+    bus.emit('count', 2); // → 20
+    bus.emit('count', 3); // → 30
+
+    await consume;
+
+    expect(results).toEqual([20, 30]);
+
+    bus.dispose();
+  });
+
+  it('map then filter works in sequence', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus
+      .events('count')
+      .map((n) => n * 2)
+      .filter((n) => n > 4);
+    const results: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of stream) {
+        results.push(n);
+
+        if (results.length === 2) break;
+      }
+    })();
+
+    bus.emit('count', 1); // 1*2=2, filtered (<= 4)
+    bus.emit('count', 3); // 3*2=6, passes
+    bus.emit('count', 4); // 4*2=8, passes
+
+    await consume;
+
+    expect(results).toEqual([6, 8]);
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - events().take() subscription cleanup', () => {
+  it('cleans up the subscription after natural exhaustion (no lingering listeners)', async () => {
+    const bus = createBus<TestEvents>();
+
+    const consume = (async () => {
+      for await (const _ of bus.events('count').take(2)) {
+        // consume
+      }
+    })();
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+
+    await consume;
+
+    // After take(2) exhausted, the subscription must be removed
+    expect(bus.listenerCount('count')).toBe(0);
+
+    bus.dispose();
+  });
+
+  it('map() then take() yields mapped values and stops', async () => {
+    const bus = createBus<TestEvents>();
+    const collected: number[] = [];
+
+    const consume = (async () => {
+      for await (const n of bus
+        .events('count')
+        .map((n) => n * 3)
+        .take(2)) {
+        collected.push(n);
+      }
+    })();
+
+    bus.emit('count', 1); // → 3
+    bus.emit('count', 2); // → 6
+    bus.emit('count', 3); // not collected
+
+    await consume;
+
+    expect(collected).toEqual([3, 6]);
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - middleware double-next with chain', () => {
+  it('double-next in first middleware does not cause second middleware to run twice', () => {
+    const order: string[] = [];
+    const bus = createBus<TestEvents>({
+      middleware: [
+        (_event, _payload, next) => {
+          order.push('mw1-before');
+          next();
+          next(); // second call is no-op
+          order.push('mw1-after');
+        },
+        (_event, _payload, next) => {
+          order.push('mw2');
+          next();
+        },
+      ],
+    });
+
+    bus.on('count', () => order.push('listener'));
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['mw1-before', 'mw2', 'listener', 'mw1-after']);
+
+    bus.dispose();
   });
 });
 

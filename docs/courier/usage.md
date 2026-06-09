@@ -145,7 +145,7 @@ const fresh = await api.get<Config>('/config');
 
 ### Request Deduplication
 
-GET, HEAD, OPTIONS, and DELETE requests are deduplicated automatically by **method + URL + responseType**. Request headers are not part of the automatic dedupe key anymore. Writes are never deduplicated unless you pass an explicit `dedupeKey`.
+GET, HEAD, and OPTIONS requests are deduplicated automatically by **method + URL + responseType**. DELETE is idempotent but has side effects, so it does not auto-dedupe — pass an explicit `dedupeKey` to opt in. Request headers are not part of the automatic dedupe key. Writes (POST, PUT, PATCH) are never deduplicated unless you pass an explicit `dedupeKey`.
 
 ```ts
 // Only ONE network call is made
@@ -786,6 +786,7 @@ await retryingQc.fetch({
 - Use `dedupe: false` when method + URL + response type are the same but you explicitly want separate requests.
 - `subscribe()` does **not** emit immediately; call `getState(key)` for the current snapshot first.
 - `watch()` does **not** emit immediately; call `peek()` for the initial snapshot.
+- `watch()` returns a **new object on every call** — memoize it in framework hooks (e.g. React `useMemo`) to avoid re-subscribing on every render.
 - Long-lived streams default to `Infinity` timeout per connection.
 
 ## Framework Integration

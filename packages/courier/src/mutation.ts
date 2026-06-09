@@ -110,6 +110,14 @@ export function createMutation<TData, TVariables = void>(
       snap = createPendingState();
       notify();
 
+      // Assign activeRun synchronously before the operation IIFE executes any
+      // awaited code. Without this, a mutationFn that resolves synchronously
+      // would hit the `finally` cleanup before `activeRun` was set, leaving a
+      // stale reference that persists until the next mutate() call.
+      const pendingRun = { controller: localController, promise: null as unknown as Promise<TData> };
+
+      activeRun = pendingRun;
+
       const operation = (async () => {
         try {
           const data = await retry(() => mutationFn(variables, signal), {
@@ -154,7 +162,7 @@ export function createMutation<TData, TVariables = void>(
         }
       })();
 
-      activeRun = { controller: localController, promise: operation };
+      pendingRun.promise = operation;
 
       return operation;
     },

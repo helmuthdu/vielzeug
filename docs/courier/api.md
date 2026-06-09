@@ -196,6 +196,8 @@ When multiple `mutate()` calls run simultaneously, state updates reflect the **l
 
 ---
 
+### `createCourier()`
+
 ```ts
 createCourier(opts?: CourierOptions): Courier;
 ```

@@ -57,7 +57,7 @@ exports:
 
 **Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date Time
 
-**Key exports:** `now`, `parsePlainDateTime`, `parseInstant`, `parseDate`, `toInstant`, `toZoned`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `expires`, `classify`, `timeDiff`, `recurrence`
+**Key exports:** `now`, `parsePlainDateTime`, `parseInstant`, `parseDate`, `toInstant`, `toZoned`, `shift`, `difference`, `within`, `clamp`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `format`, `formatRelative`, `parseDuration`, `formatDuration`, `expires`, `classify`, `timeDiff`, `humanize`, `dateRange`, `recurrence`
 
 **When to use:** Temporal-powered date parsing, DST-safe arithmetic, timezone conversion, and Intl formatting.
 

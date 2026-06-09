@@ -26,7 +26,7 @@ init(); // returns 42, no log
 init(); // returns 42, no log
 
 init.reset(); // allow re-invocation
-init();       // 'initialized' logged again, returns 42
+init(); // 'initialized' logged again, returns 42
 ```
 
 ### Pitfalls

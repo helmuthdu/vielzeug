@@ -20,10 +20,7 @@ const [evens, odds] = partition([1, 2, 3, 4, 5], (n) => n % 2 === 0);
 // evens: [2, 4]
 // odds:  [1, 3, 5]
 
-const [admins, users] = partition(
-  [{ role: 'admin' }, { role: 'user' }, { role: 'admin' }],
-  (u) => u.role === 'admin',
-);
+const [admins, users] = partition([{ role: 'admin' }, { role: 'user' }, { role: 'admin' }], (u) => u.role === 'admin');
 ```
 
 ### Pitfalls

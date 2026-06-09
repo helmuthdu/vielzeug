@@ -3,7 +3,7 @@ import { sleep } from './sleep';
 
 export type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
 
-type RetryOptions = {
+export type RetryOptions = {
   delay?: number | ((attempt: number) => number);
   onError?: (error: unknown) => void;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
@@ -74,7 +74,8 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>
  * @param [options.signal] - External AbortSignal to cancel all retries.
  * @param [options.shouldRetry] - Predicate called after each non-final failure.
  *   Receives the error and the number of failures so far (0-indexed: `0` on the first failure,
- *   `1` on the second, etc.). Return `false` to abort immediately. Not called on the final attempt.
+ *   `1` on the second, etc.). Return `false` to abort immediately. **Not called on the final attempt**
+ *   (use `onError` to observe the final error unconditionally).
  * @param [options.onError] - Called with the final error before rethrowing.
  * @returns The resolved value.
  * @throws The last error if all attempts fail.

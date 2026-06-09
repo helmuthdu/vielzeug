@@ -408,6 +408,75 @@ describe('createLocalSource', () => {
     });
   });
 
+  describe('restoreQuery()', () => {
+    it('applies filter from patch', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
+      const pred = (x: number) => x > 3;
+
+      await source.restoreQuery({ filter: pred });
+
+      expect(source.current).toEqual([4, 5]);
+    });
+
+    it('applies sort from patch', async () => {
+      const source = createLocalSource([3, 1, 2], { limit: 10 });
+      const sorter = (a: number, b: number) => a - b;
+
+      await source.restoreQuery({ sort: sorter });
+
+      expect(source.current).toEqual([1, 2, 3]);
+    });
+
+    it('applies page from patch when within range', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+
+      await source.restoreQuery({ page: 2 });
+
+      expect(source.meta.pageNumber).toBe(2);
+    });
+
+    it('is a no-op when patch produces no changes', async () => {
+      const source = createLocalSource([1, 2, 3], { limit: 10 });
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+
+      await source.restoreQuery({ limit: 20, page: 1 });
+      await source.restoreQuery({ limit: 20, page: 1 });
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('sync recomputeSync error handling', () => {
+    it('sets meta.error when searchFn throws', async () => {
+      const source = createLocalSource([1, 2, 3], {
+        limit: 10,
+        searchFn: () => {
+          throw new Error('search-boom');
+        },
+      });
+
+      await source.searchNow('q');
+
+      expect(source.meta.error?.message).toBe('search-boom');
+      expect(source.current).toEqual([]);
+    });
+
+    it('sets meta.error when filterFn throws in sync path', async () => {
+      const source = createLocalSource([1, 2, 3], {
+        limit: 10,
+      });
+
+      await source.setFilter(() => {
+        throw new Error('filter-boom');
+      });
+
+      expect(source.meta.error?.message).toBe('filter-boom');
+      expect(source.current).toEqual([]);
+    });
+  });
+
   describe('async filter and sort', () => {
     it('filterAsync applies asynchronous filter and sets isLoading', async () => {
       const filterAsync = vi.fn(async (items: readonly number[]) => items.filter((x) => x > 2));

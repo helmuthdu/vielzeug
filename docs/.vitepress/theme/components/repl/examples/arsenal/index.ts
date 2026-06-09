@@ -17,6 +17,7 @@ import { functionThrottleExample } from './function-throttle';
 import { mathAverageExample } from './math-average';
 import { objectDiffExample } from './object-diff';
 import { objectMergeExample } from './object-merge';
+import { objectParseJSONExample } from './object-parseJSON';
 import { objectPruneExample } from './object-prune';
 import { stringCamelcaseExample } from './string-camelcase';
 import { typedIsExample } from './typed-is';
@@ -41,6 +42,7 @@ export const arsenalExamples = {
   'math-average': mathAverageExample,
   'object-diff': objectDiffExample,
   'object-merge': objectMergeExample,
+  'object-parseJSON': objectParseJSONExample,
   'object-prune': objectPruneExample,
   'string-camelcase': stringCamelcaseExample,
   'typed-is': typedIsExample,

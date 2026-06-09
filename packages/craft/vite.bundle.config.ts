@@ -1,29 +1,15 @@
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
+import { getBundleConfig } from '../../vite.config';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Secondary build: bundles all craft internals into a single craft.{js,cjs}
- * file (with /ripple kept external). Run after the main vite build so
- * it adds to dist/ rather than replacing it.
- */
-export default defineConfig({
-  build: {
-    emptyOutDir: false,
-    lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      fileName: (format) => `craft.${format === 'es' ? 'js' : 'cjs'}`,
-      formats: ['es', 'cjs'],
-      name: 'craft',
-    },
-    rolldownOptions: {
-      external: ['/ripple'],
-      output: {
-        minify: true,
-      },
-    },
-    sourcemap: true,
-  },
-});
+export default defineConfig(
+  getBundleConfig(__dirname, {
+    external: ['@vielzeug/arsenal', '@vielzeug/orbit', '@vielzeug/ripple'],
+    fileName: 'craft',
+    name: 'Craft',
+  }),
+);

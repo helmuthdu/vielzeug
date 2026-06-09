@@ -127,6 +127,32 @@ describe('detectOverflow', () => {
     expect(detectOverflow(state)).toEqual({ bottom: 22, left: -980, right: 36, top: -760 });
   });
 
+  it('accepts an Element as boundary', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 0 }, { height: 30, width: 80 });
+    const boundary = document.createElement('div');
+
+    vi.spyOn(boundary, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 200, width: 400, x: 10, y: 10 }),
+    );
+
+    const state = withState({
+      elements: { floating, reference },
+      initialPlacement: 'bottom',
+      placement: 'bottom',
+      rects: {
+        floating: { height: 30, width: 80, x: 0, y: 0 },
+        reference: { height: 40, width: 100, x: 0, y: 0 },
+      },
+      x: 10,
+      y: 10,
+    });
+
+    const overflow = detectOverflow(state, { boundary });
+
+    expect(overflow.left).toBeLessThanOrEqual(0);
+    expect(overflow.top).toBeLessThanOrEqual(0);
+  });
+
   it('supports per-side padding', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 0 }, { height: 30, width: 80 });
     const state = withState({
@@ -688,6 +714,33 @@ describe('float', () => {
     expect(handle.cssAnchor).toBe(false);
     handle.cleanup();
   });
+
+  it('update() re-computes position after DOM change', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
+
+    expect(floating.style.left).toBe('210px');
+
+    vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 40, width: 100, x: 0, y: 0 }));
+    handle.update();
+
+    expect(floating.style.left).toBe('10px');
+    handle.cleanup();
+  });
+
+  it('emits a DEV warn when preferCssAnchor is true but CSS Anchor Positioning is unsupported', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const handle = float(reference, floating, { autoUpdate: false, preferCssAnchor: true });
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));
+      handle.cleanup();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 // ─── computeOnce ─────────────────────────────────────────────────────────────
@@ -754,6 +807,15 @@ describe('custom middleware', () => {
       computePosition(reference, floating, { middleware: [onceMiddleware], placement: 'bottom' }),
     ).not.toThrow();
     expect(callCount).toBe(2);
+  });
+
+  it('throws when a middleware triggers more than 8 resets', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const infiniteReset: Middleware = () => ({ reset: {} });
+
+    expect(() => computePosition(reference, floating, { middleware: [infiniteReset], placement: 'bottom' })).toThrow(
+      /too many resets/i,
+    );
   });
 });
 
@@ -872,6 +934,10 @@ describe('presets', () => {
 // ─── compose ─────────────────────────────────────────────────────────────────
 
 describe('compose', () => {
+  it('returns an empty array when called with no arguments', () => {
+    expect(compose()).toEqual([]);
+  });
+
   it('filters falsy entries and returns a Middleware array', () => {
     const mws = compose(offset(8), null, undefined, false, flip());
 

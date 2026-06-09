@@ -89,6 +89,11 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
     return a instanceof RegExp && b instanceof RegExp && a.source === b.source && a.flags === b.flags;
   }
 
+  // Cross-type guards: Map/Set vs plain objects are never equal
+  if (a instanceof Map || b instanceof Map) return false;
+
+  if (a instanceof Set || b instanceof Set) return false;
+
   // Object comparison
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);

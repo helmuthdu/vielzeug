@@ -90,6 +90,20 @@ divide(money('100.00', 'USD'), 3, 'ceiling'); // $33.34
 divide(money('100.00', 'USD'), 0); // throws RangeError: Division by zero
 ```
 
+### `percentage(money, pct, mode?)`
+
+Computes `pct`% of a money value — i.e. `money × (pct / 100)`. Use a string `pct` for lossless fractions. Accepts the same rounding modes as `multiply`.
+
+```ts
+import { percentage } from '@vielzeug/coins';
+
+percentage(money('100.00', 'USD'), 10); // $10.00
+percentage(money('199.99', 'USD'), '8.5'); // $17.00  (8.5% = 8.5/100 — lossless with string)
+percentage(money('100.00', 'USD'), 33.33); // $33.33
+percentage(money('-100.00', 'USD'), 10); // -$10.00 (sign preserved)
+percentage(money('100.00', 'USD'), 0); // $0.00
+```
+
 ### Rounding Modes
 
 | Mode                    | Description                                                         |
@@ -169,7 +183,17 @@ clamp(money('150.00', 'USD'), lo, hi); // $99.99 (above maximum)
 All comparison functions throw `TypeError` on currency mismatch.
 
 ```ts
-import { compare, isEqual, greaterThan, lessThan, isZero, isPositive, isNegative } from '@vielzeug/coins';
+import {
+  compare,
+  isEqual,
+  greaterThan,
+  lessThan,
+  isZero,
+  isPositive,
+  isNegative,
+  isNonNegative,
+  isNonPositive,
+} from '@vielzeug/coins';
 
 const five = money('5.00', 'USD');
 const ten = money('10.00', 'USD');
@@ -187,6 +211,12 @@ lessThan(five, ten); // true
 isZero(money('0.00', 'USD')); // true
 isPositive(five); // true
 isNegative(money('-1.00', 'USD')); // true
+
+// Non-strict predicates (inclusive of zero)
+isNonNegative(money('0.00', 'USD')); // true  (zero or positive)
+isNonNegative(money('-1.00', 'USD')); // false
+isNonPositive(money('0.00', 'USD')); // true  (zero or negative)
+isNonPositive(five); // false
 
 // throws TypeError: Currency mismatch: USD and EUR
 compare(money('5.00', 'USD'), money('5.00', 'EUR'));
@@ -298,8 +328,9 @@ exchange(money('100.00', 'USD'), rate, 'floor'); // explicit rounding mode
 // Throws TypeError if money.currency !== rate.from
 exchange(money('100.00', 'EUR'), rate); // TypeError: Currency mismatch: EUR and USD
 
-// Throws RangeError for negative rates
+// Throws RangeError for negative or empty rates
 exchange(money('100.00', 'USD'), { from: usd, rate: '-0.92', to: eur }); // RangeError: Exchange rate must be non-negative
+exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur }); // RangeError: Exchange rate must be a non-empty decimal string
 
 // High-precision rates — string parsing avoids float error
 const jpyRate: ExchangeRate = { from: usd, rate: '0.847532', to: eur };
@@ -391,7 +422,7 @@ import { money, format } from '@vielzeug/coins';
 import { formatDate } from '@vielzeug/tempo';
 
 const amount = money('1234.56', 'USD');
-const date   = new Date();
+const date = new Date();
 
 console.log(`As of ${formatDate(date, 'MMM d, yyyy')}: ${format(amount)}`);
 // e.g. "As of Jun 9, 2026: $1,234.56"
@@ -404,13 +435,13 @@ import { sum, money } from '@vielzeug/coins';
 import { groupBy } from '@vielzeug/arsenal';
 
 const transactions = [
-  { category: 'food',   amount: money('12.50', 'USD') },
+  { category: 'food', amount: money('12.50', 'USD') },
   { category: 'travel', amount: money('80.00', 'USD') },
-  { category: 'food',   amount: money('9.75',  'USD') },
+  { category: 'food', amount: money('9.75', 'USD') },
 ];
 
 const byCategory = groupBy(transactions, (t) => t.category);
-const foodTotal  = sum(byCategory.food.map((t) => t.amount));
+const foodTotal = sum(byCategory.food.map((t) => t.amount));
 // foodTotal = money('22.25', 'USD')
 ```
 
@@ -421,12 +452,12 @@ import { money, toCurrencyCode } from '@vielzeug/coins';
 import { object, string } from '@vielzeug/spell';
 
 const MoneyInput = object({
-  amount:   string().regex(/^\d+(\.\d{1,3})?$/),
+  amount: string().regex(/^\d+(\.\d{1,3})?$/),
   currency: string().transform((v) => toCurrencyCode(v)),
 });
 
 const parsed = MoneyInput.parse(formData);
-const value  = money(parsed.amount, parsed.currency);
+const value = money(parsed.amount, parsed.currency);
 ```
 
 ## Best Practices
@@ -437,4 +468,4 @@ const value  = money(parsed.amount, parsed.currency);
 - Use `'half-even'` (banker's rounding) in bulk-processing scenarios (batch invoices, statement generation) to minimise cumulative rounding drift.
 - Never store `toNumber()` output and feed it back into arithmetic. `toNumber()` is lossy — use it only for display and charting libraries.
 - Pass `ExchangeRate.rate` as a string, not a number. The string is parsed into an exact rational fraction; a `number` would introduce float error before the bigint conversion.
-- Use `sum()` instead of a manual reduce over `add()` — it validates currency consistency across the entire array in one pass.
+- Use `sum()` instead of a manual reduce over `add()` — it validates currency consistency across the entire array upfront, so any mismatch is caught immediately with a clear error rather than failing at a mid-array `add()` call.

@@ -103,33 +103,30 @@ Add a colored status dot with the `status` attribute.
 
 ## Avatar Group
 
-Stack multiple avatars by applying a negative margin via CSS. You can use `--avatar-border` and `--avatar-border-color` to add an outline so overlapping avatars remain distinct.
+Use `sg-avatar-group` to stack `sg-avatar` elements in an overlapping row with automatic overflow handling. When more avatars are provided than `max` allows, the excess count is shown in a `+N` badge.
 
 <ComponentPreview center>
 
 ```html
-<div style="display:flex; align-items:center;">
-  <sg-avatar initials="AA" color="primary" style="--avatar-border: 2px solid; z-index:4;"></sg-avatar>
-  <sg-avatar
-    initials="BB"
-    color="secondary"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:3;"></sg-avatar>
-  <sg-avatar
-    initials="CC"
-    color="success"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:2;"></sg-avatar>
-  <sg-avatar
-    initials="DD"
-    color="warning"
-    style="--avatar-border: 2px solid; margin-left:-0.5rem; z-index:1;"></sg-avatar>
-</div>
+<sg-avatar-group max="3">
+  <sg-avatar src="/a.jpg" alt="Alice" color="primary"></sg-avatar>
+  <sg-avatar src="/b.jpg" alt="Bob" color="secondary"></sg-avatar>
+  <sg-avatar src="/c.jpg" alt="Carol" color="success"></sg-avatar>
+  <sg-avatar alt="Dave" color="warning"></sg-avatar>
+</sg-avatar-group>
 ```
 
 </ComponentPreview>
 
+### Source Code
+
+::: details View Source (sg-avatar-group)
+<<< @/../packages/sigil/src/content/avatar/avatar.ts#AvatarGroup
+:::
+
 ## API Reference
 
-### Attributes
+### `sg-avatar` Attributes
 
 | Attribute  | Type                                                                      | Default  | Description                                          |
 | ---------- | ------------------------------------------------------------------------- | -------- | ---------------------------------------------------- |
@@ -141,7 +138,7 @@ Stack multiple avatars by applying a negative margin via CSS. You can use `--ava
 | `rounded`  | `'sm' \| 'md' \| 'lg' \| 'full'`                                          | `'full'` | Border radius                                        |
 | `status`   | `'online' \| 'offline' \| 'busy' \| 'away'`                               | —        | Online presence indicator dot                        |
 
-### CSS Custom Properties
+### `sg-avatar` CSS Custom Properties
 
 | Property                | Description                              |
 | ----------------------- | ---------------------------------------- |
@@ -153,6 +150,31 @@ Stack multiple avatars by applying a negative margin via CSS. You can use `--ava
 | `--avatar-border-color` | Border color (also used for status ring) |
 | `--avatar-font-size`    | Initials font size                       |
 | `--avatar-font-weight`  | Initials font weight                     |
+
+### `sg-avatar-group` Attributes
+
+| Attribute | Type     | Default | Description                                                               |
+| --------- | -------- | ------- | ------------------------------------------------------------------------- |
+| `max`     | `number` | `5`     | Maximum visible avatars. Excess avatars are hidden behind a `+N` badge    |
+| `total`   | `number` | —       | Override the count shown in the overflow badge (defaults to hidden count) |
+
+### `sg-avatar-group` Slots
+
+| Slot      | Description                   |
+| --------- | ----------------------------- |
+| (default) | `sg-avatar` elements to group |
+
+### `sg-avatar-group` CSS Parts
+
+| Part       | Description                   |
+| ---------- | ----------------------------- |
+| `overflow` | The `+N` overflow count badge |
+
+### `sg-avatar-group` CSS Custom Properties
+
+| Property                 | Description                                                |
+| ------------------------ | ---------------------------------------------------------- |
+| `--avatar-group-overlap` | Negative margin creating the overlap (default: `-0.75rem`) |
 
 ## Accessibility
 

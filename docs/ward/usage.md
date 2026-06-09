@@ -606,7 +606,7 @@ const ward = createWard(
 Import `debugWard` from the dedicated sub-path to create a ward with decision logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
 
 ```ts
-import { debugWard } from '@vielzeug/ward/debug';
+import { debugWard } from '@vielzeug/ward/devtools';
 
 const permit = debugWard([
   { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },

@@ -17,7 +17,7 @@ Use `normalize(value, min, max)` to return a `[0, 1]` proportion.
 import { normalize } from '@vielzeug/arsenal';
 
 normalize(75, 0, 100); // 0.75
-normalize(0,  0, 100); // 0
+normalize(0, 0, 100); // 0
 normalize(50, 25, 75); // 0.5
 ```
 

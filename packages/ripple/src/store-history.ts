@@ -1,6 +1,6 @@
 import type { StoreWithHistory } from './types';
 
-import { store } from './store';
+import { StoreImpl } from './store';
 
 /**
  * Creates a reactive store with snapshot history for undo/redo / time-travel.
@@ -33,7 +33,12 @@ export const storeWithHistory = <T extends object>(
   let cursor = 0; // index into snapshots[] pointing at current state
   let pauseHistory = false;
 
-  const base = store(initial, options);
+  const baseImpl = new StoreImpl(initial, options?.name) as StoreImpl<T> & {
+    patch: (partial: Partial<T>) => void;
+    replace: (fn: (state: Readonly<T>) => T) => void;
+    reset: () => void;
+  };
+  const base = baseImpl as unknown as StoreWithHistory<T>;
 
   // Push a new snapshot after every mutation, truncating redo history.
   const pushSnapshot = (state: Readonly<T>): void => {
@@ -54,31 +59,21 @@ export const storeWithHistory = <T extends object>(
     cursor = snapshots.length - 1;
   };
 
-  // Intercept patch/replace/reset AND direct applyTopLevelChange_ (called by lens writes)
-  // so that all mutation paths push a history snapshot.
-  //
-  // applyTopLevelChange_ is used by lens writes and is the lowest-level mutation point.
-  // We intercept it on the instance so lens writes also record history.
-  // patch/replace/reset already call applyTopLevelChange_ internally, so we guard with
-  // a `highLevelMutating` flag to avoid pushing a snapshot on each individual key change
-  // inside patch/replace — those high-level methods push one snapshot at the end.
+  // Use the _onMutation_ hook to observe each top-level key change without
+  // monkey-patching applyTopLevelChange_. patch/replace/reset already batch
+  // all key changes internally, so we guard with `highLevelMutating` to push
+  // only one snapshot per high-level operation rather than one per key.
   let highLevelMutating = false;
-  const baseAsAny = base as unknown as {
-    applyTopLevelChange_: (key: string, newValue: unknown) => void;
-  };
-  const originalApplyTopLevelChange = baseAsAny.applyTopLevelChange_.bind(base);
 
-  baseAsAny.applyTopLevelChange_ = (key: string, newValue: unknown): void => {
-    originalApplyTopLevelChange(key, newValue);
-
+  baseImpl._onMutation_ = (): void => {
     if (!highLevelMutating && !pauseHistory) {
-      pushSnapshot(base.peek());
+      pushSnapshot(baseImpl.peek());
     }
   };
 
-  const originalPatch = base.patch.bind(base);
-  const originalReplace = base.replace.bind(base);
-  const originalReset = base.reset.bind(base);
+  const originalPatch = baseImpl.patch.bind(baseImpl);
+  const originalReplace = baseImpl.replace.bind(baseImpl);
+  const originalReset = baseImpl.reset.bind(baseImpl);
 
   const patch = (partial: Partial<T>): void => {
     highLevelMutating = true;
@@ -89,7 +84,7 @@ export const storeWithHistory = <T extends object>(
       highLevelMutating = false;
     }
 
-    pushSnapshot(base.peek());
+    pushSnapshot(baseImpl.peek());
   };
 
   const replace = (fn: (state: Readonly<T>) => T): void => {
@@ -101,7 +96,7 @@ export const storeWithHistory = <T extends object>(
       highLevelMutating = false;
     }
 
-    pushSnapshot(base.peek());
+    pushSnapshot(baseImpl.peek());
   };
 
   const reset = (): void => {
@@ -113,7 +108,7 @@ export const storeWithHistory = <T extends object>(
       highLevelMutating = false;
     }
 
-    pushSnapshot(base.peek());
+    pushSnapshot(baseImpl.peek());
   };
 
   const undo = (): void => {
@@ -150,7 +145,7 @@ export const storeWithHistory = <T extends object>(
 
   // Use defineProperties so the historyLength getter is preserved as a live accessor.
   // Object.assign would evaluate the getter once at call time and freeze the value.
-  Object.defineProperties(base, {
+  Object.defineProperties(baseImpl, {
     historyAt: { configurable: true, enumerable: true, value: historyAt, writable: true },
     historyLength: {
       configurable: true,

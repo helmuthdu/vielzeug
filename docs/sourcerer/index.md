@@ -13,6 +13,7 @@ exports:
     createInfiniteSource,
     deriveSource,
     mergeSource,
+    MergedSource,
     toSignals,
     SourceError,
     SourceTimeoutError,

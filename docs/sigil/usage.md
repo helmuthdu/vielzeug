@@ -152,7 +152,9 @@ function LoginForm() {
   return (
     <sg-form onSubmit={handleSubmit}>
       <sg-input name="email" type="email" label="Email" required />
-      <sg-button type="submit" color="primary" variant="solid">Log in</sg-button>
+      <sg-button type="submit" color="primary" variant="solid">
+        Log in
+      </sg-button>
     </sg-form>
   );
 }

@@ -7,18 +7,23 @@ export type {
   AsyncComputedSignal,
   AsyncComputedState,
   AsyncEffectCallback,
+  AsyncScopeSetup,
   AsyncSubscription,
   BatchOptions,
   CleanupFn,
   ComputedSignal,
+  DisposeEvent,
   EffectAsyncOptions,
   EffectCallback,
   EffectOptions,
   EffectScheduler,
   EqualityFn,
+  MutateEvent,
+  NamedEvent,
   PathValue,
   ReactiveOptions,
   ReadonlySignal,
+  RippleDevToolsHook,
   Scope,
   Signal,
   SignalOptions,
@@ -26,6 +31,7 @@ export type {
   StoreWithHistory,
   Subscription,
   WatchOptions,
+  WriteEvent,
 } from './types';
 
 export { StateError } from './error';
@@ -52,6 +58,6 @@ export { asyncComputed } from './async-computed';
 // Store with history / time-travel (F5)
 export { storeWithHistory } from './store-history';
 
-// DevTools (F3)
-export { getDevToolsHook, getSignalName, installDevTools } from './devtools';
-export type { RippleDevToolsHook } from './devtools';
+// DevTools — read-only access from core; install via @vielzeug/ripple/devtools
+export { getDevToolsHook } from './devtools-hook';
+export { getSignalName } from './registry';

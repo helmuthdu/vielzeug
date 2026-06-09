@@ -355,6 +355,12 @@ function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
       await idbReq(storeOf(table).clear());
     },
     count: async (table) => {
+      // For tables with no TTL, every stored record is live — use native O(1) IDB count.
+      // For TTL tables we must inspect each record to exclude expired entries.
+      if (!schema[table]?.defaultTtl) {
+        return idbReq(storeOf(table).count());
+      }
+
       const all = await idbReq<unknown[]>(storeOf(table).getAll());
 
       return all.filter((r) => decode(r) !== undefined).length;

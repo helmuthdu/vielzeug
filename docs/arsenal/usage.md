@@ -12,6 +12,10 @@ description: Practical usage patterns for the current Arsenal API.
 ```ts
 import { chunk, groupBy, indexBy, pick, retry } from '@vielzeug/arsenal';
 
+const users = [
+  { id: 1, name: 'Alice', role: 'admin' },
+  { id: 2, name: 'Bob', role: 'user' },
+];
 const pages = chunk([1, 2, 3, 4, 5], 2);
 const byRole = groupBy(users, (u) => u.role);
 const byId = indexBy(users, (u) => u.id);
@@ -59,11 +63,15 @@ const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (item) => item.rol
 const byId = indexBy([{ id: 1 }, { id: 2 }], (item) => item.id);
 
 // Fuzzy search — filter mode returns matching items
-const hits = search(users, 'alice', { threshold: 0.4 }); // User[]
+const roster = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+];
+const hits = search(roster, 'alice', { threshold: 0.4 }); // typeof roster[number][]
 
 // Scored mode returns items with similarity score, sorted best-first
-const ranked = search(users, 'alice', { mode: 'scored' });
-// [{ item: User, score: 0.91 }, ...]
+const ranked = search(roster, 'alice', { mode: 'scored' });
+// [{ item: { id: 1, name: 'Alice' }, score: 0.91 }, ...]
 ```
 
 ### Objects
@@ -195,8 +203,8 @@ lerp(0, 100, 0.25); // 25
 normalize(75, 0, 100); // 0.75
 
 // range generates index arrays without mutation
-range(5);        // [0, 1, 2, 3, 4]
-range(1, 6);     // [1, 2, 3, 4, 5]
+range(5); // [0, 1, 2, 3, 4]
+range(1, 6); // [1, 2, 3, 4, 5]
 range(0, 10, 2); // [0, 2, 4, 6, 8]
 
 // round to N decimal places

@@ -79,6 +79,12 @@ export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'f
  * @cssprop --color-primary-focus-shadow - Focus ring shadow color.
  * @cssprop --color-warning - Warning state color token.
  * @cssprop --font-medium - Font-weight token.
+ *
+ * @part wrapper - Outer wrapper element.
+ * @part label - Label element.
+ * @part field - Field container.
+ * @part textarea - The native `<textarea>` element.
+ *
  * @example
  * ```html
  * <sg-textarea></sg-textarea>
@@ -207,12 +213,13 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
     const helperText = () => assistive.value.errorText || assistive.value.helperText;
 
     return html`
-      <div class="textarea-wrapper">
-        <label class="label" for="${textareaId}" id="${labelId}" ?hidden="${() => !labelVisible.value}"
+      <div class="textarea-wrapper" part="wrapper">
+        <label class="label" part="label" for="${textareaId}" id="${labelId}" ?hidden="${() => !labelVisible.value}"
           >${props.label}</label
         >
-        <div class="field">
+        <div class="field" part="field">
           <textarea
+            part="textarea"
             ref="${textareaRef}"
             id="${textareaId}"
             :name="${props.name}"

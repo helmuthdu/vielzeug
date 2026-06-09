@@ -18,7 +18,7 @@ import { clamp } from '@vielzeug/arsenal';
 
 clamp(150, 0, 100); // 100
 clamp(-10, 0, 100); // 0
-clamp(50,  0, 100); // 50
+clamp(50, 0, 100); // 50
 ```
 
 ### Pitfalls

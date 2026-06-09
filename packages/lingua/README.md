@@ -7,7 +7,7 @@ related: [ripple, wayfinder, courier]
 exports: [createI18n, createFormatter]
 ---
 
-# /lingua
+# @vielzeug/lingua
 
 > Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 
@@ -16,9 +16,9 @@ exports: [createI18n, createFormatter]
 <details>
 <summary>Quick Reference</summary>
 
-**Package:** `/lingua` &nbsp;·&nbsp; **Category:** I18n
+**Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** i18n
 
-**Key exports:** `createI18n` · `createFormatter` (from `/lingua/format`) · `validateCatalog` (from `/lingua/validate`)
+**Key exports:** `createI18n` · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
 
 **When to use:** Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 
@@ -26,21 +26,21 @@ exports: [createI18n, createFormatter]
 
 </details>
 
-`/lingua` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/lingua` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
-pnpm add /lingua
-npm install /lingua
-yarn add /lingua
+pnpm add @vielzeug/lingua
+npm install @vielzeug/lingua
+yarn add @vielzeug/lingua
 ```
 
 ## Quick Start
 
 ```ts
-import { createI18n } from '/lingua';
-import { createFormatter } from '/lingua/format';
+import { createI18n } from '@vielzeug/lingua';
+import { createFormatter } from '@vielzeug/lingua/format';
 
 const i18n = createI18n({
   locale: 'en',
@@ -69,6 +69,7 @@ nav.t('home'); // resolves 'nav.home'
 
 // Bind a cached per-key function for hot-path rendering
 const greet = i18n.bind('greeting');
+const users = [{ name: 'Alice' }, { name: 'Bob' }];
 users.forEach((u) => greet({ name: u.name }));
 
 // Merge route-specific keys on top of the base catalog

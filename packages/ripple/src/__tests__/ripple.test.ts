@@ -7,7 +7,6 @@ import {
   effectAsync,
   getDevToolsHook,
   getSignalName,
-  installDevTools,
   isComputed,
   isSignal,
   isStore,
@@ -21,7 +20,7 @@ import {
   untrack,
   watch,
 } from '../';
-import { debugEffect } from '../debug';
+import { debugEffect, installDevTools } from '../devtools';
 
 describe('ripple', () => {
   describe('signals', () => {
@@ -1264,19 +1263,22 @@ describe('ripple', () => {
       vi.restoreAllMocks();
     });
 
-    it('trace does not log on the first run', () => {
+    it('logs initial deps on the first run', () => {
       const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
 
       vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
       vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const n = signal(0);
+      const n = signal(0, { name: 'counter' });
 
-      const stop = debugEffect(() => {
-        void n.value;
-      });
+      const stop = debugEffect(
+        () => {
+          void n.value;
+        },
+        { name: 'initTest' },
+      );
 
-      expect(groupSpy).not.toHaveBeenCalled();
+      expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('"initTest" initial deps'));
 
       stop.dispose();
       vi.restoreAllMocks();
@@ -2291,19 +2293,15 @@ describe('ripple', () => {
   });
 
   describe('F3 — DevTools hook', () => {
-    it('installDevTools sets a global hook', () => {
-      const calls: string[] = [];
+    // Save/restore pattern — isolates each test without relying on teardown ordering.
+    let savedHook: ReturnType<typeof getDevToolsHook>;
 
-      installDevTools({ onSignalWrite: (_, name) => calls.push(name ?? '?') });
+    beforeEach(() => {
+      savedHook = getDevToolsHook();
+    });
 
-      const n = signal(0, { name: 'devtest' });
-
-      n.value = 1;
-      n.dispose();
-
-      installDevTools(null);
-
-      expect(calls).toContain('devtest');
+    afterEach(() => {
+      installDevTools(savedHook);
     });
 
     it('getDevToolsHook returns null when not installed', () => {
@@ -2312,30 +2310,196 @@ describe('ripple', () => {
       expect(getDevToolsHook()).toBeNull();
     });
 
-    it('onEffectRun is called when effect runs', () => {
-      const runNames: Array<string | undefined> = [];
+    it('installDevTools stores the hook and getDevToolsHook returns it', () => {
+      const hook = { write: vi.fn() };
 
-      installDevTools({ onEffectRun: (name) => runNames.push(name) });
+      installDevTools(hook);
 
-      const stop = effect(() => {}, { name: 'myEffect' });
-
-      stop.dispose();
-      installDevTools(null);
-
-      expect(runNames).toContain('myEffect');
+      expect(getDevToolsHook()).toBe(hook);
     });
 
-    it('onEffectDispose is called when effect is disposed', () => {
-      const disposeNames: Array<string | undefined> = [];
+    it('globalThis.__RIPPLE_DEVTOOLS__ mirrors the installed hook', () => {
+      const hook = { write: vi.fn() };
 
-      installDevTools({ onEffectDispose: (name) => disposeNames.push(name) });
+      installDevTools(hook);
+      expect((globalThis as Record<string, unknown>)['__RIPPLE_DEVTOOLS__']).toBe(hook);
+
+      installDevTools(null);
+      expect((globalThis as Record<string, unknown>)['__RIPPLE_DEVTOOLS__']).toBeUndefined();
+    });
+
+    it('write event fires with name, oldValue, and newValue on signal write', () => {
+      const events: Array<{ name: string | undefined; newValue: unknown; oldValue: unknown }> = [];
+
+      installDevTools({ write: (e) => events.push({ name: e.name, newValue: e.newValue, oldValue: e.oldValue }) });
+
+      const n = signal(0, { name: 'devtest' });
+
+      n.value = 42;
+      n.dispose();
+
+      expect(events).toEqual(expect.arrayContaining([{ name: 'devtest', newValue: 42, oldValue: 0 }]));
+    });
+
+    it('write event fires with name:undefined for unnamed signal', () => {
+      const events: Array<{ name: string | undefined; newValue: unknown; oldValue: unknown }> = [];
+
+      installDevTools({ write: (e) => events.push({ name: e.name, newValue: e.newValue, oldValue: e.oldValue }) });
+
+      const n = signal(0);
+
+      n.value = 1;
+      n.dispose();
+
+      expect(events[0]?.name).toBeUndefined();
+      expect(events[0]?.oldValue).toBe(0);
+      expect(events[0]?.newValue).toBe(1);
+    });
+
+    it('compute event fires on computed recompute', () => {
+      const names: Array<string | undefined> = [];
+
+      installDevTools({ compute: (e) => names.push(e.name) });
+
+      const n = signal(0);
+      const c = computed(() => n.value * 2, { name: 'doubled' });
+
+      void c.value; // trigger first compute
+      n.value = 1;
+      void c.value; // trigger recompute
+
+      c.dispose();
+      n.dispose();
+
+      expect(names).toContain('doubled');
+    });
+
+    it('run event fires with name when effect runs', () => {
+      const names: Array<string | undefined> = [];
+
+      installDevTools({ run: (e) => names.push(e.name) });
 
       const stop = effect(() => {}, { name: 'myEffect' });
 
       stop.dispose();
-      installDevTools(null);
 
-      expect(disposeNames).toContain('myEffect');
+      expect(names).toContain('myEffect');
+    });
+
+    it('dispose event fires with kind:effect when effect is disposed', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ dispose: (e) => events.push(e) });
+
+      const stop = effect(() => {}, { name: 'myEffect' });
+
+      stop.dispose();
+
+      expect(events).toContainEqual({ kind: 'effect', name: 'myEffect' });
+    });
+
+    it('dispose event fires with kind:signal when signal is disposed', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ dispose: (e) => events.push(e) });
+
+      const n = signal(0, { name: 'sig' });
+
+      n.dispose();
+
+      expect(events).toContainEqual({ kind: 'signal', name: 'sig' });
+    });
+
+    it('dispose event fires with kind:computed when computed is disposed', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ dispose: (e) => events.push(e) });
+
+      const c = computed(() => 1, { name: 'comp' });
+
+      c.dispose();
+
+      expect(events).toContainEqual({ kind: 'computed', name: 'comp' });
+    });
+
+    it('dispose event fires with name:undefined for unnamed nodes', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ dispose: (e) => events.push(e) });
+
+      const n = signal(0);
+      const c = computed(() => n.value);
+      const stop = effect(() => {});
+
+      n.dispose();
+      c.dispose();
+      stop.dispose();
+
+      expect(events.filter((e) => e.kind === 'signal')[0]?.name).toBeUndefined();
+      expect(events.filter((e) => e.kind === 'computed')[0]?.name).toBeUndefined();
+      expect(events.filter((e) => e.kind === 'effect')[0]?.name).toBeUndefined();
+    });
+
+    it('mutate event fires with kind:patch on store.patch()', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ mutate: (e) => events.push(e) });
+
+      const s = store({ x: 0 }, { name: 'myStore' });
+
+      s.patch({ x: 1 });
+
+      expect(events).toContainEqual({ kind: 'patch', name: 'myStore' });
+    });
+
+    it('mutate event fires with kind:replace on store.replace()', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ mutate: (e) => events.push(e) });
+
+      const s = store({ x: 0 }, { name: 'myStore' });
+
+      s.replace((st) => ({ ...st, x: 99 }));
+
+      expect(events).toContainEqual({ kind: 'replace', name: 'myStore' });
+    });
+
+    it('mutate event fires with kind:reset on store.reset()', () => {
+      const events: Array<{ kind: string; name: string | undefined }> = [];
+
+      installDevTools({ mutate: (e) => events.push(e) });
+
+      const s = store({ x: 5 }, { name: 'myStore' });
+
+      s.reset();
+
+      expect(events).toContainEqual({ kind: 'reset', name: 'myStore' });
+    });
+
+    it('mutate event fires with kind:lens and correct path on top-level lens write', () => {
+      const events: Array<{ kind: string; name: string | undefined; path?: string }> = [];
+
+      installDevTools({ mutate: (e) => events.push(e) });
+
+      const s = store({ x: 0 }, { name: 'myStore' });
+      const xLens = s.lens('x');
+
+      xLens.value = 7;
+
+      expect(events).toContainEqual({ kind: 'lens', name: 'myStore', path: 'x' });
+    });
+
+    it('mutate event fires with kind:lens and correct path on nested lens write', () => {
+      const events: Array<{ kind: string; name: string | undefined; path?: string }> = [];
+
+      installDevTools({ mutate: (e) => events.push(e) });
+
+      const s = store({ a: { b: 0 } }, { name: 'nested' });
+      const bLens = s.lens('a.b');
+
+      bLens.value = 99;
+
+      expect(events).toContainEqual({ kind: 'lens', name: 'nested', path: 'a.b' });
     });
   });
 
@@ -2764,6 +2928,174 @@ describe('ripple', () => {
       expect(ac.value.value).toBe(5);
 
       ac.dispose();
+    });
+  });
+
+  describe('getSignalName — store', () => {
+    it('returns the name for a named store', () => {
+      const s = store({ x: 0 }, { name: 'myStore' });
+
+      expect(getSignalName(s)).toBe('myStore');
+    });
+
+    it('returns undefined for an unnamed store', () => {
+      const s = store({ x: 0 });
+
+      expect(getSignalName(s)).toBeUndefined();
+    });
+  });
+
+  describe('scope.run() — return value', () => {
+    it('returns the value produced by the fn callback', () => {
+      const s = scope();
+      const result = s.run(() => 42);
+
+      expect(result).toBe(42);
+      s.dispose();
+    });
+
+    it('returns undefined when fn returns void', () => {
+      const s = scope();
+      const result = s.run(() => {});
+
+      expect(result).toBeUndefined();
+      s.dispose();
+    });
+  });
+
+  describe('storeWithHistory — reset()', () => {
+    it('reset() restores initial state and pushes a history snapshot', () => {
+      const h = storeWithHistory({ count: 5 });
+
+      h.patch({ count: 10 });
+      h.reset();
+
+      expect(h.value.count).toBe(5);
+      expect(h.historyLength).toBe(3); // initial + patch + reset
+    });
+
+    it('reset() is undoable', () => {
+      const h = storeWithHistory({ count: 5 });
+
+      h.patch({ count: 10 });
+      h.reset();
+      h.undo();
+
+      expect(h.value.count).toBe(10);
+    });
+  });
+
+  describe('debugEffect — zero deps', () => {
+    it('does not log anything on initial run when there are no deps', () => {
+      const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+
+      vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const stop = debugEffect(() => {}, { name: 'noDeps' });
+
+      expect(groupSpy).not.toHaveBeenCalled();
+
+      stop.dispose();
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('signal.update() — standalone', () => {
+    it('applies an atomic read-modify-write transform', () => {
+      const n = signal(10);
+
+      n.update((v) => v * 2);
+      expect(n.value).toBe(20);
+
+      n.update((v) => v - 5);
+      expect(n.value).toBe(15);
+    });
+
+    it('does not notify when update produces the same value', () => {
+      const n = signal(5);
+      const listener = vi.fn();
+      const stop = n.subscribe(listener);
+
+      n.update((v) => v); // same value — no notification
+
+      expect(listener).not.toHaveBeenCalled();
+
+      stop.dispose();
+    });
+  });
+
+  describe('store.lens() — unsafe path guard', () => {
+    it('throws StateError for __proto__ path segment', () => {
+      const s = store({ x: 0 } as Record<string, unknown>);
+      let caught: unknown;
+
+      try {
+        s.lens('__proto__');
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+    });
+
+    it('throws StateError for constructor path segment', () => {
+      const s = store({ x: 0 } as Record<string, unknown>);
+      let caught: unknown;
+
+      try {
+        s.lens('constructor');
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+    });
+
+    it('throws StateError for nested path with __proto__ segment', () => {
+      const s = store({ a: { b: 0 } } as Record<string, unknown>);
+      let caught: unknown;
+
+      try {
+        s.lens('a.__proto__');
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(StateError);
+      expect((caught as StateError).code).toBe('INVALID_STORE');
+    });
+  });
+
+  describe('effectAsync — disposeAsync() idempotency', () => {
+    it('calling disposeAsync() twice returns the same promise', async () => {
+      const stop = effectAsync(async () => {
+        await Promise.resolve();
+      });
+
+      const p1 = stop.disposeAsync();
+      const p2 = stop.disposeAsync();
+
+      expect(p1).toBe(p2);
+
+      await p1;
+    });
+  });
+
+  describe('store.replace() — callback receives plain object, not proxy', () => {
+    it('mutations on the callback argument do not throw', () => {
+      const s = store({ count: 0 });
+
+      expect(() => {
+        s.replace((state) => {
+          (state as { count: number }).count = 99; // would throw if proxy
+          return { count: state.count + 1 }; // 99 + 1 = 100
+        });
+      }).not.toThrow();
+
+      expect(s.value.count).toBe(100);
     });
   });
 });

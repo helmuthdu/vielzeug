@@ -16,14 +16,11 @@ Use `backoff(attempt, maxMs?)` to compute `min(1000 × 2^attempt, maxMs)`. Multi
 ```ts
 import { backoff, retry } from '@vielzeug/arsenal';
 
-const data = await retry(
-  (signal) => fetch('/api/data', { signal }).then((r) => r.json()),
-  {
-    times: 5,
-    delay: (failureIndex) => backoff(failureIndex) * Math.random(),
-    //              0: ~500ms, 1: ~1s, 2: ~2s, 3: ~4s (capped at 30s default)
-  },
-);
+const data = await retry((signal) => fetch('/api/data', { signal }).then((r) => r.json()), {
+  times: 5,
+  delay: (failureIndex) => backoff(failureIndex) * Math.random(),
+  //              0: ~500ms, 1: ~1s, 2: ~2s, 3: ~4s (capped at 30s default)
+});
 ```
 
 #### Standalone
@@ -31,10 +28,10 @@ const data = await retry(
 ```ts
 import { backoff } from '@vielzeug/arsenal';
 
-backoff(0);          // 1000
-backoff(1);          // 2000
-backoff(2);          // 4000
-backoff(3, 5_000);   // 5000 — capped at maxMs
+backoff(0); // 1000
+backoff(1); // 2000
+backoff(2); // 4000
+backoff(3, 5_000); // 5000 — capped at maxMs
 ```
 
 ### Pitfalls

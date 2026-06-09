@@ -517,6 +517,24 @@ cleanup();
 
 `createFloatState` accepts all `FloatOptions` except `apply` (which is used internally to update the signal).
 
+## One-shot Async Positioning
+
+Use `computeOnce()` when you need a single position result inside an async function, such as after `await nextTick()` in Vue or after React's `useLayoutEffect` has flushed.
+
+```ts
+import { computeOnce } from '@vielzeug/orbit';
+
+// Inside an async lifecycle (e.g. Vue onMounted with async)
+const result = await computeOnce(reference, floating, {
+  placement: 'top',
+});
+
+floating.style.left = `${result.x}px`;
+floating.style.top = `${result.y}px`;
+```
+
+`computeOnce` defers to the microtask queue. If you need coordinates after the next paint (e.g. after CSS transitions), use `requestAnimationFrame` around `computePosition` directly.
+
 ## SSR
 
 For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All three exports are no-ops that return zero-coordinate results and safe cleanup functions.

@@ -64,9 +64,13 @@ export async function startHttpServer(mcpServer: Server, port: number): Promise<
     void handleRequest(transport, req, res);
   });
 
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
+    const onError = (err: Error): void => reject(err);
+
+    httpServer.once('error', onError);
     httpServer.listen(port, () => {
-      process.stderr.write(`vielzeug MCP server (HTTP) listening on http://localhost:${port}/\n`);
+      httpServer.off('error', onError);
+      process.stderr.write(`codex MCP server listening on http://localhost:${port}/\n`);
       resolve();
     });
   });

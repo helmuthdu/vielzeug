@@ -32,7 +32,7 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | Import                      | Purpose                                             |
 | --------------------------- | --------------------------------------------------- |
 | `@vielzeug/craft`           | Core authoring/runtime API plus ripple re-exports   |
-| `@vielzeug/craft/debug`     | `debugFlush` — verbose flush for timing diagnostics |
+| `@vielzeug/craft/devtools`  | `debugFlush` — verbose flush for timing diagnostics |
 | `@vielzeug/craft/observers` | Resize, intersection, mutation, and media observers |
 | `@vielzeug/craft/testing`   | DOM-oriented test helpers                           |
 

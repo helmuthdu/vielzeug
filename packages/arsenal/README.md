@@ -53,9 +53,10 @@ import {
   stableStringify,
 } from '@vielzeug/arsenal';
 
+const users = [{ id: 1, name: 'Alice', role: 'admin' }, { id: 2, name: 'Bob', role: 'user' }];
 const pages = chunk([1, 2, 3, 4, 5], 2);
 const byRole = groupBy(users, (u) => u.role);
-const safe = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
+const safe = pick(users[0], ['id', 'name']);
 
 const q = queue({ concurrency: 2 });
 await q.add(() => fetch('/api/a'));

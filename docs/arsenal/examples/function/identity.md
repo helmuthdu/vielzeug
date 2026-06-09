@@ -16,7 +16,7 @@ Use `identity(value)` to return its argument unchanged.
 ```ts
 import { identity } from '@vielzeug/arsenal';
 
-identity(42);      // 42
+identity(42); // 42
 identity('hello'); // 'hello'
 
 // As a default mapper

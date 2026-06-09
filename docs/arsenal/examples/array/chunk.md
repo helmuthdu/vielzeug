@@ -25,7 +25,7 @@ const pages = chunk([1, 2, 3, 4, 5, 6, 7], 3);
 ```ts
 import { chunk } from '@vielzeug/arsenal';
 
-chunk('hello', 2);               // ['he', 'll', 'o']
+chunk('hello', 2); // ['he', 'll', 'o']
 chunk('hello', 2, { pad: '_' }); // ['he', 'll', 'o_']
 chunk('abcd', 2, { overlap: true }); // ['ab', 'bc', 'cd']
 ```

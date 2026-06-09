@@ -42,6 +42,7 @@ export function createFetchManager<TQuery>(keyOf: (q: TQuery) => string): FetchM
       }
 
       inflight.clear();
+      _pendingCount = 0;
     },
 
     get pendingCount() {
@@ -53,9 +54,12 @@ export function createFetchManager<TQuery>(keyOf: (q: TQuery) => string): FetchM
 
       latestKey = key;
 
-      // Abort all superseded in-flight requests.
+      // Abort and remove all superseded in-flight requests.
       for (const [k, entry] of inflight) {
-        if (k !== key) entry.controller.abort();
+        if (k !== key) {
+          entry.controller.abort();
+          inflight.delete(k);
+        }
       }
 
       // Join an identical in-flight request rather than issuing a duplicate.

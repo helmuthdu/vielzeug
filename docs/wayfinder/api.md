@@ -27,10 +27,10 @@ description: Complete API reference for Wayfinder.
 
 ## Package Entry Points
 
-| Import                      | Purpose                                      |
-| --------------------------- | -------------------------------------------- |
-| `@vielzeug/wayfinder`       | Main exports and types                       |
-| `@vielzeug/wayfinder/debug` | `debugRouter` — navigation logger (dev only) |
+| Import                         | Purpose                                      |
+| ------------------------------ | -------------------------------------------- |
+| `@vielzeug/wayfinder`          | Main exports and types                       |
+| `@vielzeug/wayfinder/devtools` | `debugRouter` — navigation logger (dev only) |
 
 ## `createRouter(options)`
 
@@ -688,10 +688,10 @@ Wayfinder does not export custom `Error` subclasses. All errors are thrown as na
 | `/files/:rest*`                | `/files/a/b/c`      | Wildcard suffix captured as one named param |
 | `*`                            | anything            | Global catch-all                            |
 
-## `debugRouter(options)` <Badge type="tip" text="@vielzeug/wayfinder/debug" />
+## `debugRouter(options)` <Badge type="tip" text="@vielzeug/wayfinder/devtools" />
 
 ```ts
-import { debugRouter } from '@vielzeug/wayfinder/debug';
+import { debugRouter } from '@vielzeug/wayfinder/devtools';
 
 const router = debugRouter({ routes });
 // [wayfinder:nav] idle      /         [home]

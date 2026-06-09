@@ -18,9 +18,9 @@ import { isMatch } from '@vielzeug/arsenal';
 
 const user = { id: 1, name: 'Alice', role: 'admin', active: true };
 
-isMatch(user, { role: 'admin' });          // true
+isMatch(user, { role: 'admin' }); // true
 isMatch(user, { role: 'admin', active: true }); // true
-isMatch(user, { role: 'user' });           // false
+isMatch(user, { role: 'user' }); // false
 ```
 
 ### Pitfalls

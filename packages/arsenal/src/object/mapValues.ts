@@ -10,6 +10,8 @@ export function mapValues<T extends Obj, R>(
   const out = {} as { [K in keyof T]: R };
 
   for (const key of Object.keys(obj) as Array<keyof T>) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+
     out[key] = mapper(obj[key], key, obj);
   }
 

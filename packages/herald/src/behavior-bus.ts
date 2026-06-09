@@ -13,7 +13,7 @@ import type {
 } from './types';
 
 import { makeBusDelegate } from './_delegate';
-import { createBus } from './bus';
+import { createBus, noop } from './bus';
 
 /**
  * Creates a bus that replays the last known value(s) for each event to new subscribers.
@@ -42,6 +42,9 @@ export function createBehaviorBus<T extends EventMap>(
 ): BehaviorBus<T> {
   // Replay window — number of most-recent values replayed to new subscribers.
   const replayCount = options?.replay ?? 1;
+
+  if (!Number.isInteger(replayCount) || replayCount < 1)
+    throw new RangeError('createBehaviorBus: replay must be a positive integer');
 
   // Pass options through to createBus unchanged. Capture values by wrapping emit() instead.
   const { replay: _replay, ...busOptions } = options ?? {};
@@ -90,7 +93,7 @@ export function createBehaviorBus<T extends EventMap>(
   // For `once: true`, only the latest value is replayed (preserves the "fires exactly once" contract).
   // For regular subscriptions with replay > 1, all buffered values are replayed in order.
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe {
-    if (bus.disposed || opts?.signal?.aborted) return () => {};
+    if (bus.disposed || opts?.signal?.aborted) return noop;
 
     const buf = buffers.get(event as string);
 
@@ -99,7 +102,7 @@ export function createBehaviorBus<T extends EventMap>(
         // Replay latest value only — preserves the "fires exactly once" contract.
         callSafeReplay(listener as Listener<unknown>, event, buf[buf.length - 1] as T[K]);
 
-        return () => {};
+        return noop;
       }
 
       for (const value of buf) {

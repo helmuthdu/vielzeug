@@ -66,6 +66,12 @@ export type ExpressMiddleware<TReq extends ExpressRequest = ExpressRequest> = (
 export type ExpressGuardOptions<TAction extends string, TData, TReq extends ExpressRequest> = {
   /** Static data payload forwarded to every `when` predicate evaluation. */
   data?: TData;
+  /**
+   * Called instead of the default `403 { reason }` response when the guard denies access.
+   * Use to return a uniform error body that does not leak the denial reason to clients.
+   *
+   * When omitted, the middleware responds with `res.status(403).json({ reason: result.reason })`.
+   */
   onDenied?: (
     req: TReq,
     res: ExpressResponse,
@@ -118,6 +124,12 @@ export type HonoMiddleware = (c: HonoContext, next: HonoNext) => Promise<Respons
 export type HonoGuardOptions<TAction extends string, TData> = {
   /** Static data payload forwarded to every `when` predicate evaluation. */
   data?: TData;
+  /**
+   * Called instead of the default `403 { reason }` response when the guard denies access.
+   * Use to return a uniform error body that does not leak the denial reason to clients.
+   *
+   * When omitted, the middleware responds with `c.json({ reason: result.reason }, 403)`.
+   */
   onDenied?: (
     c: HonoContext,
     next: HonoNext,

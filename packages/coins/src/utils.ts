@@ -43,16 +43,6 @@ export function validateCurrencyCode(code: string): CurrencyCode {
   return code as CurrencyCode;
 }
 
-/**
- * Returns the absolute value of `a % b`.
- * Avoids computing `a % b` twice in callers that need both quotient and |remainder|.
- */
-export function absMod(a: bigint, b: bigint): bigint {
-  const r = a % b;
-
-  return r < 0n ? -r : r;
-}
-
 /** Returns `10n ** BigInt(exponent)`. */
 export function pow10(exponent: number): bigint {
   return 10n ** BigInt(exponent);

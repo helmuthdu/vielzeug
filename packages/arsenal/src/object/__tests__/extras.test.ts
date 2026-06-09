@@ -44,6 +44,24 @@ describe('object extras', () => {
     ).toEqual({ a: 1, b: 2 });
   });
 
+  it('guards against __proto__ prototype pollution — security regression', () => {
+    const malicious = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
+
+    // None of these should pollute Object.prototype
+    const d = defaults({} as Record<string, unknown>, malicious);
+    const mv = mapValues(malicious, (v) => v);
+    const mk = mapKeys(malicious, (k) => k);
+    const om = omit(malicious, [] as never[]);
+    const fv = filterValues(malicious, () => true);
+
+    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect(Object.hasOwn(d, '__proto__')).toBe(false);
+    expect(Object.hasOwn(mv, '__proto__')).toBe(false);
+    expect(Object.hasOwn(mk, '__proto__')).toBe(false);
+    expect(Object.hasOwn(om, '__proto__')).toBe(false);
+    expect(Object.hasOwn(fv, '__proto__')).toBe(false);
+  });
+
   it('supports invert, has, and defaults', () => {
     const input = { a: 'x', b: 'y' };
     const target = { a: 1, b: undefined as number | undefined };

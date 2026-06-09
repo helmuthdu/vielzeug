@@ -16,8 +16,8 @@ Use `endsWith(value, suffix)` to return a boolean.
 ```ts
 import { endsWith } from '@vielzeug/arsenal';
 
-endsWith('hello.ts', '.ts');  // true
-endsWith('hello.js', '.ts');  // false
+endsWith('hello.ts', '.ts'); // true
+endsWith('hello.js', '.ts'); // false
 ```
 
 ### Related
