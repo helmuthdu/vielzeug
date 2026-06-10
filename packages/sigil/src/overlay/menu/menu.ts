@@ -13,7 +13,7 @@ import {
   watch,
 } from '@vielzeug/craft';
 
-import type { ComponentSize, ThemeColor } from '../../types';
+import type { ComponentSize } from '../../types';
 
 import {
   lifecycleSignal,
@@ -22,8 +22,8 @@ import {
   type DropdownCloseReason,
   type OverlayOpenDetail,
 } from '../../headless';
-import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import { disablableBundle, sizableBundle } from '../../shared';
+import { forcedColorsMixin, sizeVariantMixin } from '../../styles';
 import menuItemStyles from './menu-item.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
 import componentStyles from './menu.css?inline';
@@ -51,7 +51,6 @@ export type SgMenuItemProps = {
 };
 
 export type SgMenuProps = {
-  color?: ThemeColor;
   disabled?: boolean;
   placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
   size?: ComponentSize;
@@ -132,7 +131,7 @@ define<SgMenuItemProps>(MENU_ITEM_TAG, {
             role="${itemRole}"
             aria-checked="${() => String(isChecked())}"
             aria-disabled="${props.disabled}">
-            <span class="item-check" aria-hidden="true">${() => (isChecked() ? '☑' : '☐')}</span>
+            <span class="item-check" aria-hidden="true"></span>
             <span class="icon-slot"><slot name="icon"></slot></span>
             <span class="item-label"><slot></slot></span>
           </div>
@@ -181,7 +180,6 @@ const isCheckableItemType = (value: string | null): value is SgMenuItemType =>
  * @element sg-menu-item - Clickable menu option (place in default slot)
  * @element sg-menu-separator - Visual divider between menu groups
  *
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {boolean} disabled - Disables opening and keyboard interaction
  * @attr {string} placement - Panel placement: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end' (default: 'bottom-start')
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
@@ -214,7 +212,6 @@ const isCheckableItemType = (value: string | null): value is SgMenuItemType =>
 export const MENU_TAG = 'sg-menu' as const;
 define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
   props: {
-    ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
     placement: prop.oneOf(
@@ -449,5 +446,5 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       </div>
     `;
   },
-  styles: [componentStyles, colorThemeMixin, sizeVariantMixin(), forcedColorsMixin],
+  styles: [componentStyles, sizeVariantMixin(), forcedColorsMixin],
 });

@@ -45,7 +45,7 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('S
  * @attr {string} label - Accessible label
  * @attr {string} orientation - 'horizontal' | 'vertical'
  * @attr {string} size - Shared size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Shared visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost' | 'glass'
+ * @attr {string} variant - Shared visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
  *
  * @slot - Place sg-button elements here
  *

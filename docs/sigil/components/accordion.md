@@ -4,7 +4,7 @@ A flexible accordion component for organizing collapsible content sections. Buil
 
 ## Features
 
-- <sg-icon name="palette" size="16"></sg-icon> **6 Variants**: solid, flat, bordered, outline, ghost, text
+- <sg-icon name="palette" size="16"></sg-icon> **8 Variants**: solid, flat, bordered, outline, ghost, text, glass, frost
 - <sg-icon name="refresh-cw" size="16"></sg-icon> **Selection Modes**: Single or multiple expansion
 - <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg- <sg-icon name="clapperboard" size="16"></sg-icon> **Smooth Animation**: content height animates via CSS `grid-template-rows` — no layout thrashing- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
 - <sg-icon name="crosshair" size="16"></sg-icon> **Flexible Content**: Support for icons, subtitles, and custom content
@@ -78,7 +78,7 @@ Only one item can be expanded at a time.
 
 ### Variants
 
-Six standard variants plus glass and frost — applied to all items via the parent accordion.
+Eight variants applied to all items via the parent accordion — six standard plus glass and frost for translucent effects.
 
 <ComponentPreview vertical>
 

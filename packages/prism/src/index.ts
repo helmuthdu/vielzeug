@@ -9,10 +9,13 @@ export type {
   BandScaleConfig,
   BarChartConfig,
   BarSeriesConfig,
+  BarVariant,
+  BaseChartConfig,
   ChartDimensions,
   ChartEvent,
   ChartHandle,
   ChartMargin,
+  ChartPlugin,
   CrosshairConfig,
   DataPoint,
   GridConfig,
@@ -22,18 +25,26 @@ export type {
   LineSeriesConfig,
   LinearScaleConfig,
   MaybeSignal,
+  PieChartConfig,
+  PieSliceConfig,
+  PieVariant,
   PrismTheme,
   Scale,
   Series,
+  SparklineConfig,
+  SparklineVariant,
   TimeScaleConfig,
   TooltipConfig,
   TransitionConfig,
+  XScale,
 } from './types';
 
 // Chart factories
 export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';
 export { createLineChart } from './charts/line';
+export { createPieChart } from './charts/pie';
+export { createSparkline } from './charts/sparkline';
 
 // Scale factories
 export { bandScale } from './scales/band';
@@ -41,4 +52,4 @@ export { linearScale } from './scales/linear';
 export { timeScale } from './scales/time';
 
 // Theme utilities
-export { getSeriesColor, PRISM_COLORS } from './theme';
+export { seriesColor, setTheme } from './types';

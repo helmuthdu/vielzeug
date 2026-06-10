@@ -64,7 +64,7 @@ export type SgSelectEvents = {
   open: OverlayOpenDetail;
 };
 
-export type SgSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>> & {
+export type SgSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>> & {
   /** Show loading state in dropdown */
   loading?: boolean;
   /** Allow selecting multiple options */
@@ -92,7 +92,7 @@ export type SgSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' 
  * @attr {string} helper - Helper text below the select
  * @attr {string} error - Error message
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {boolean} fullwidth - Expand to full width

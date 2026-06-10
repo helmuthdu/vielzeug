@@ -38,16 +38,17 @@ Sigil provides a comprehensive set of design tokens organized into the following
 | **Font Weights**           | `--font-*`                                     | Numeric weight scale (100–900)                                   |
 | **Letter Spacing**         | `--tracking-*`                                 | Tracking utilities                                               |
 | **Line Heights**           | `--leading-*`                                  | Relative (named) + absolute (numeric) line height scale          |
-| **Body Text Scale**        | `--text-{xs–2xl}`                              | 6-step body font size scale                                      |
+| **Body Text Scale**        | `--text-{2xs–3xl}`                             | 8-step body font size scale (2xs through 3xl)                    |
 | **Heading Scale**          | `--heading-{xs–2xl}`                           | 6-step heading font size scale                                   |
 | **Semantic Text Colors**   | `--text-color-*`                               | Role-based text color tokens                                     |
 | **Transitions**            | `--transition-*`                               | Pre-built timing + easing combos                                 |
 | **Durations**              | `--duration-{75,100,150,200,300,500,700,1000}` | Millisecond step scale (all zero under `prefers-reduced-motion`) |
 | **Easing Functions**       | `--ease-*`                                     | Named cubic-bezier curves                                        |
-| **Contrast Scale**         | `--color-contrast-{50–900}`                    | 10-step light/dark adaptive palette                              |
+| **Contrast Scale**         | `--color-contrast-{50–900}`                    | 11-step light/dark adaptive palette (includes 150)               |
 | **Canvas / Contrast**      | `--color-canvas`, `--color-contrast`           | Aliases for `contrast-50` and `contrast-900`                     |
 | **Semantic Colors**        | `--color-{name}-*`                             | 7 sub-tokens per semantic color                                  |
 | **Section Spacing**        | `--section-spacing`                            | Default block section gap (`2rem`)                               |
+| **Neutral Overrides**      | `--sigil-color-neutral-*`                      | Global neutral palette override surface (6 tokens)               |
 
 ## Color Palette
 
@@ -61,31 +62,32 @@ Sigil provides a comprehensive set of design tokens organized into the following
 
 ## Contrast Scale
 
-Sigil uses a 10-step contrast scale driven entirely by `light-dark()`. The values flip automatically between the light and dark poles — no `@media` query needed.
+Sigil uses an 11-step contrast scale driven entirely by `light-dark()`. The values flip automatically between the light and dark poles — no `@media` query needed.
 
 ### Background Range (50–400)
 
 Optimized for surfaces, borders, and UI structure:
 
-| Token                  | Light           | Dark            | Usage                           |
-| ---------------------- | --------------- | --------------- | ------------------------------- |
-| `--color-contrast-50`  | hsl(240 5% 98%) | hsl(210 6% 10%) | Canvas, page background         |
-| `--color-contrast-100` | hsl(240 5% 96%) | hsl(210 5% 14%) | Cards, elevated surfaces        |
-| `--color-contrast-200` | hsl(240 5% 93%) | hsl(210 5% 18%) | Nested cards, hover states      |
-| `--color-contrast-300` | hsl(240 5% 88%) | hsl(210 5% 24%) | Borders, dividers               |
-| `--color-contrast-400` | hsl(240 4% 80%) | hsl(210 4% 32%) | Disabled backgrounds, subtle UI |
+| Token                  | Light                    | Dark                    | Usage                           |
+| ---------------------- | ------------------------ | ----------------------- | ------------------------------- |
+| `--color-contrast-50`  | oklch(99% 0.004 264deg)  | oklch(13% 0.005 250deg) | Canvas, page background         |
+| `--color-contrast-100` | oklch(97% 0.004 264deg)  | oklch(17% 0.005 250deg) | Cards, elevated surfaces        |
+| `--color-contrast-150` | oklch(95.5% 0.0045 264deg) | oklch(19.5% 0.005 250deg) | Midpoint — chip base, subtle fills |
+| `--color-contrast-200` | oklch(94% 0.005 264deg)  | oklch(22% 0.005 250deg) | Nested cards, hover states      |
+| `--color-contrast-300` | oklch(89% 0.006 264deg)  | oklch(29% 0.006 250deg) | Borders, dividers               |
+| `--color-contrast-400` | oklch(81% 0.007 264deg)  | oklch(38% 0.006 250deg) | Disabled backgrounds, subtle UI |
 
 ### Text Range (500–900)
 
-Optimized for readability and WCAG compliance:
+Optimized for readability and WCAG compliance. OKLCH provides perceptually-uniform lightness steps so contrast ratios are consistent across the ramp.
 
-| Token                  | Light           | Dark            | WCAG            | Usage                       |
-| ---------------------- | --------------- | --------------- | --------------- | --------------------------- |
-| `--color-contrast-500` | hsl(240 4% 49%) | hsl(210 4% 52%) | AA (large text) | Tertiary text, placeholders |
-| `--color-contrast-600` | hsl(240 4% 40%) | hsl(210 3% 64%) | AA              | Secondary / muted text      |
-| `--color-contrast-700` | hsl(240 4% 32%) | hsl(210 3% 76%) | AAA             | Supplemental body text      |
-| `--color-contrast-800` | hsl(240 4% 22%) | hsl(210 4% 86%) | AAA             | Default body text           |
-| `--color-contrast-900` | hsl(240 4% 12%) | hsl(210 5% 94%) | AAA             | Headings, highest contrast  |
+| Token                  | Light                  | Dark                   | WCAG            | Usage                       |
+| ---------------------- | ---------------------- | ---------------------- | --------------- | --------------------------- |
+| `--color-contrast-500` | oklch(49% 0.008 264deg) | oklch(58% 0.006 250deg) | AA (large text) | Tertiary text, placeholders |
+| `--color-contrast-600` | oklch(40% 0.008 264deg) | oklch(68% 0.005 250deg) | AA              | Secondary / muted text      |
+| `--color-contrast-700` | oklch(32% 0.008 264deg) | oklch(78% 0.004 250deg) | AAA             | Supplemental body text      |
+| `--color-contrast-800` | oklch(22% 0.008 264deg) | oklch(88% 0.004 250deg) | AAA             | Default body text           |
+| `--color-contrast-900` | oklch(12% 0.008 264deg) | oklch(95% 0.003 250deg) | AAA             | Headings, highest contrast  |
 
 ::: tip Accessibility
 All text color values (500–900) meet or exceed WCAG AA standards. Values 700–900 achieve AAA compliance for body text and headings.
@@ -170,14 +172,16 @@ Sigil uses two parallel font-size scales to cleanly separate body text sizing fr
 
 Used by default for all non-heading text:
 
-| Token         | Value           | Usage                               |
-| ------------- | --------------- | ----------------------------------- |
-| `--text-xs`   | 0.75rem (12px)  | Small labels, captions              |
-| `--text-sm`   | 0.875rem (14px) | Secondary text, labels              |
-| `--text-base` | 1rem (16px)     | Body text (minimum accessible size) |
-| `--text-lg`   | 1.125rem (18px) | Large UI text                       |
-| `--text-xl`   | 1.25rem (20px)  | Subheadings                         |
-| `--text-2xl`  | 1.5rem (24px)   | Major display text                  |
+| Token          | Value            | Usage                               |
+| -------------- | ---------------- | ----------------------------------- |
+| `--text-2xs`   | 0.625rem (10px)  | Micro labels, dot-only badges       |
+| `--text-xs`    | 0.75rem (12px)   | Small labels, captions              |
+| `--text-sm`    | 0.875rem (14px)  | Secondary text, labels              |
+| `--text-base`  | 1rem (16px)      | Body text (minimum accessible size) |
+| `--text-lg`    | 1.125rem (18px)  | Large UI text                       |
+| `--text-xl`    | 1.25rem (20px)   | Subheadings                         |
+| `--text-2xl`   | 1.5rem (24px)    | Major display text                  |
+| `--text-3xl`   | 1.875rem (30px)  | Display / circular progress label   |
 
 ### Heading Scale (`--heading-*`)
 
@@ -230,7 +234,10 @@ Used exclusively by `variant="heading"` on `<sg-text>`:
 ### Letter Spacing
 
 ```css
---tracking-header: -0.025em; /* tight tracking for headings */
+--tracking-tight:  -0.025em; /* -2.5% — headers, display text */
+--tracking-header: -0.025em; /* alias for --tracking-tight */
+--tracking-normal:  0em;     /* default body tracking */
+--tracking-wide:    0.05em;  /* labels, badges, uppercase caps */
 ```
 
 ## Cascade Layer
@@ -240,7 +247,7 @@ All Sigil tokens are defined inside `@layer sigil.tokens { … }`. This means an
 ```css
 /* <sg-icon name="circle-check" size="16"></sg-icon> This beats sigil.tokens without !important */
 :root {
-  --color-primary: hsl(200deg 100% 45%);
+  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
 }
 ```
 
@@ -250,11 +257,13 @@ Sigil uses the CSS [`light-dark()`](https://developer.mozilla.org/en-US/docs/Web
 
 ### How it works
 
-Every color variable in the theme is defined like:
+Every color variable in the theme is defined using OKLCH for perceptually-uniform lightness:
 
 ```css
---color-primary: light-dark(hsl(260deg 85% 65%), hsl(260deg 85% 70%));
+--color-primary: light-dark(oklch(56% 0.22 293deg), oklch(62% 0.22 293deg));
 ```
+
+OKLCH provides two key advantages over HSL: lightness steps that look visually equal across the ramp, and a wider gamut for P3 displays.
 
 Two rules on `<html>` override the OS preference when needed:
 
@@ -311,7 +320,7 @@ Sigil provides pre-built transition and animation tokens. Under `prefers-reduced
 --ease-in: cubic-bezier(0.4, 0, 1, 1);
 --ease-out: cubic-bezier(0, 0, 0.2, 1);
 --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
---ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* bouncy */
+--ease-spring: cubic-bezier(0.22, 1, 0.36, 1); /* fast start, soft landing — no overshoot */
 ```
 
 ### Pre-built Transitions
@@ -323,8 +332,11 @@ Sigil provides pre-built transition and animation tokens. Under `prefers-reduced
 --transition-slow: 300ms var(--ease-in-out);
 --transition-slower: 500ms var(--ease-in-out);
 --transition-spring: 300ms var(--ease-spring);
---transition-all: all 150ms var(--ease-in-out);
 ```
+
+::: warning
+`--transition-all` has been removed. Use explicit property-specific transitions (`transition: color var(--transition-fast), background var(--transition-fast)`) to avoid forcing layout recalculation on every style change.
+:::
 
 ## Global Customization
 
@@ -332,8 +344,8 @@ Override the default theme by setting CSS variables in your root stylesheet. A p
 
 ```css
 :root {
-  /* Mode-aware override — adapts to light/dark automatically */
-  --color-primary: light-dark(hsl(200deg 100% 45%), hsl(200deg 100% 60%));
+  /* Mode-aware override — adapts to light/dark automatically (OKLCH recommended) */
+  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
 
   /* Static override — same in both modes */
   --rounded-md: 0.5rem;
@@ -373,7 +385,6 @@ Refer to each component's documentation for the complete list of CSS custom prop
 /* sg-button */
 --button-bg
 --button-color
---button-hover-bg
 --button-border
 --button-radius
 --button-padding
@@ -394,31 +405,52 @@ Refer to each component's documentation for the complete list of CSS custom prop
 
 ## Advanced Theming
 
+### Overriding the Neutral Palette
+
+All uncolored Sigil components (buttons, inputs, chips, etc. without a `color` attribute) use the **neutral** token family. Override it globally with the `--sigil-color-neutral-*` surface — no `!important` needed:
+
+```css
+:root {
+  --sigil-color-neutral:          light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
+  --sigil-color-neutral-focus:    light-dark(oklch(56% 0.01 240deg), oklch(74% 0.01 240deg));
+  --sigil-color-neutral-backdrop: light-dark(oklch(95% 0.005 240deg / 83%), oklch(25% 0.005 240deg / 60%));
+  --sigil-color-neutral-border:   light-dark(oklch(84% 0.006 240deg / 75%), oklch(28% 0.006 240deg / 75%));
+  --sigil-color-neutral-content:  light-dark(oklch(40% 0.01 240deg), oklch(80% 0.01 240deg));
+  --sigil-color-neutral-contrast: light-dark(oklch(99% 0 240deg), oklch(13% 0 240deg));
+}
+```
+
+This affects every component that defaults to neutral — buttons, chips, badges, inputs — without needing `color="primary"` on each element. Follow the same OKLCH + `light-dark()` pattern to keep both modes consistent.
+
+::: tip
+The six `--sigil-color-neutral-*` tokens mirror the `--color-{name}-*` family shape. All six must be defined together to avoid partially-themed components.
+:::
+
 ### Creating Custom Theme Variants
 
 Create custom theme variants by defining new color palettes on a scoped selector. Use the full 7-token pattern to keep components consistent:
 
 ```css
-/* Ocean theme */
+/* Ocean theme — OKLCH for perceptual uniformity, light-dark() for mode-awareness */
 .theme-ocean {
-  --color-primary: hsl(200deg 100% 50%);
-  --color-primary-backdrop: hsl(200deg 100% 92%);
-  --color-primary-content: hsl(200deg 100% 10%);
-  --color-primary-contrast: hsl(200deg 100% 98%);
-  --color-primary-focus: hsl(200deg 100% 45%);
-  --color-primary-border: hsl(200deg 100% 50% / 60%);
-  --color-primary-focus-shadow: 0 0 0 4px hsl(200deg 100% 50% / 15%), var(--shadow-sm);
+  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
+  --color-primary-backdrop: light-dark(oklch(93% 0.05 220deg), oklch(28% 0.08 220deg / 40%));
+  --color-primary-content: light-dark(oklch(22% 0.08 220deg), oklch(95% 0.02 220deg));
+  --color-primary-contrast: light-dark(oklch(98% 0.01 220deg), oklch(14% 0.05 220deg));
+  --color-primary-focus: light-dark(oklch(61% 0.18 220deg), oklch(68% 0.18 220deg));
+  --color-primary-border: light-dark(oklch(61% 0.18 220deg / 60%), oklch(68% 0.18 220deg / 60%));
+  --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
 }
 
 /* Sunset theme */
 .theme-sunset {
-  --color-primary: hsl(20deg 100% 55%);
-  --color-primary-backdrop: hsl(20deg 100% 92%);
-  --color-primary-content: hsl(20deg 100% 10%);
-  --color-primary-contrast: hsl(20deg 100% 98%);
-  --color-primary-focus: hsl(20deg 100% 50%);
-  --color-primary-border: hsl(20deg 100% 55% / 60%);
-  --color-primary-focus-shadow: 0 0 0 4px hsl(20deg 100% 55% / 15%), var(--shadow-sm);
+  --color-primary: light-dark(oklch(60% 0.20 35deg), oklch(66% 0.20 35deg));
+  --color-primary-backdrop: light-dark(oklch(93% 0.06 35deg), oklch(28% 0.09 35deg / 40%));
+  --color-primary-content: light-dark(oklch(22% 0.09 35deg), oklch(95% 0.02 35deg));
+  --color-primary-contrast: light-dark(oklch(98% 0.01 35deg), oklch(14% 0.06 35deg));
+  --color-primary-focus: light-dark(oklch(66% 0.20 35deg), oklch(72% 0.20 35deg));
+  --color-primary-border: light-dark(oklch(66% 0.20 35deg / 60%), oklch(72% 0.20 35deg / 60%));
+  --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
 }
 ```
 
@@ -429,20 +461,20 @@ type ThemeName = 'ocean' | 'sunset';
 
 const themes: Record<ThemeName, Record<string, string>> = {
   ocean: {
-    '--color-primary': 'hsl(200deg 100% 50%)',
-    '--color-primary-backdrop': 'hsl(200deg 100% 92%)',
-    '--color-primary-content': 'hsl(200deg 100% 10%)',
-    '--color-primary-contrast': 'hsl(200deg 100% 98%)',
-    '--color-primary-focus': 'hsl(200deg 100% 45%)',
-    '--color-primary-border': 'hsl(200deg 100% 50% / 60%)',
+    '--color-primary': 'light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg))',
+    '--color-primary-backdrop': 'light-dark(oklch(93% 0.05 220deg), oklch(28% 0.08 220deg / 40%))',
+    '--color-primary-content': 'light-dark(oklch(22% 0.08 220deg), oklch(95% 0.02 220deg))',
+    '--color-primary-contrast': 'light-dark(oklch(98% 0.01 220deg), oklch(14% 0.05 220deg))',
+    '--color-primary-focus': 'light-dark(oklch(61% 0.18 220deg), oklch(68% 0.18 220deg))',
+    '--color-primary-border': 'light-dark(oklch(61% 0.18 220deg / 60%), oklch(68% 0.18 220deg / 60%))',
   },
   sunset: {
-    '--color-primary': 'hsl(20deg 100% 55%)',
-    '--color-primary-backdrop': 'hsl(20deg 100% 92%)',
-    '--color-primary-content': 'hsl(20deg 100% 10%)',
-    '--color-primary-contrast': 'hsl(20deg 100% 98%)',
-    '--color-primary-focus': 'hsl(20deg 100% 50%)',
-    '--color-primary-border': 'hsl(20deg 100% 55% / 60%)',
+    '--color-primary': 'light-dark(oklch(60% 0.20 35deg), oklch(66% 0.20 35deg))',
+    '--color-primary-backdrop': 'light-dark(oklch(93% 0.06 35deg), oklch(28% 0.09 35deg / 40%))',
+    '--color-primary-content': 'light-dark(oklch(22% 0.09 35deg), oklch(95% 0.02 35deg))',
+    '--color-primary-contrast': 'light-dark(oklch(98% 0.01 35deg), oklch(14% 0.06 35deg))',
+    '--color-primary-focus': 'light-dark(oklch(66% 0.20 35deg), oklch(72% 0.20 35deg))',
+    '--color-primary-border': 'light-dark(oklch(66% 0.20 35deg / 60%), oklch(72% 0.20 35deg / 60%))',
   },
 };
 
@@ -492,11 +524,11 @@ Flat overrides are always light (or always dark). Wrap in `light-dark()` to keep
 
 ```css
 :root {
-  /* <sg-icon name="circle-check" size="16"></sg-icon> Adapts to light and dark */
-  --color-primary: light-dark(hsl(200deg 100% 45%), hsl(200deg 100% 62%));
+  /* <sg-icon name="circle-check" size="16"></sg-icon> Adapts to light and dark (OKLCH recommended) */
+  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
 
   /* <sg-icon name="triangle-alert" size="16"></sg-icon> Static — always the same regardless of color scheme */
-  --color-primary: hsl(200deg 100% 50%);
+  --color-primary: oklch(58% 0.18 220deg);
 }
 ```
 
@@ -509,8 +541,9 @@ When customizing colors, verify contrast ratios:
 
 ```css
 :root {
-  --custom-bg: hsl(210deg 5% 98%);
-  --custom-text: hsl(210deg 4% 12%); /* ~17:1 contrast — AAA <sg-icon name="circle-check" size="16"></sg-icon> */
+  /* OKLCH — perceptually uniform, wide gamut, light-dark() aware */
+  --custom-bg: light-dark(oklch(99% 0.004 264deg), oklch(13% 0.005 250deg));
+  --custom-text: light-dark(oklch(12% 0.008 264deg), oklch(95% 0.003 250deg)); /* ~17:1 in both modes — AAA ✓ */
 }
 ```
 
@@ -520,12 +553,13 @@ When introducing a brand color, define all 7 sub-tokens so every component rende
 
 ```css
 .my-brand {
-  --color-primary: light-dark(hsl(…), hsl(…));
-  --color-primary-backdrop: light-dark(hsl(…), hsl(…));
-  --color-primary-content: light-dark(hsl(…), hsl(…));
-  --color-primary-contrast: light-dark(hsl(…), hsl(…));
-  --color-primary-focus: light-dark(hsl(…), hsl(…));
-  --color-primary-border: light-dark(hsl(… / 60%), hsl(… / 60%));
-  --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
+  /* Use OKLCH for perceptual uniformity; wrap in light-dark() for automatic mode-switching */
+  --color-primary: light-dark(oklch(L% C H), oklch(L% C H));
+  --color-primary-backdrop: light-dark(oklch(93% C H), oklch(28% C H / 40%));
+  --color-primary-content: light-dark(oklch(22% C H), oklch(95% C H));
+  --color-primary-contrast: light-dark(oklch(98% C H), oklch(14% C H));
+  --color-primary-focus: light-dark(oklch((L+6)% C H), oklch((L+6)% C H));
+  --color-primary-border: light-dark(oklch((L+6)% C H / 60%), oklch((L+6)% C H / 60%));
+  --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
 }
 ```

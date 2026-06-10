@@ -1,5 +1,5 @@
 import type { Point } from '../../svg/path';
-import type { Scale, TransitionConfig } from '../../types';
+import type { Scale, TransitionConfig, XScale } from '../../types';
 
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
@@ -14,6 +14,7 @@ export interface AreaRenderOptions {
 
 function cssEasing(t: TransitionConfig['easing']): string {
   if (!t || t === 'ease-out') return 'ease-out';
+
   if (typeof t === 'function') return 'ease-out';
 
   return t;
@@ -64,11 +65,11 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
 
 export function computeAreaPoints(
   data: { x: Date | number | string; y: number }[],
-  xScale: Scale<unknown>,
+  xScale: XScale,
   yScale: Scale<number>,
 ): Point[] {
   return data.map((d) => ({
-    x: xScale.map(d.x),
+    x: (xScale as Scale<Date | number>).map(d.x as Date | number),
     y: yScale.map(d.y),
   }));
 }

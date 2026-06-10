@@ -98,6 +98,17 @@ define<SgAlertProps, SgAlertEvents>(ALERT_TAG, {
     variant: prop.string<'solid' | 'flat' | 'bordered'>(),
   },
   setup(props, { bind: _bind, el, emit, slots }) {
+    let announceEl: HTMLElement | null = null;
+
+    const announce = (message: string) => {
+      if (!announceEl) return;
+
+      announceEl.textContent = '';
+      requestAnimationFrame(() => {
+        if (announceEl) announceEl.textContent = message;
+      });
+    };
+
     const handleDismiss = (e: MouseEvent) => {
       if (!props.dismissible.value) return;
 
@@ -105,6 +116,7 @@ define<SgAlertProps, SgAlertEvents>(ALERT_TAG, {
       awaitExit(el, () => {
         el.removeAttribute('dismissing');
         el.setAttribute('dismissed', '');
+        announce('Alert dismissed');
         emit('dismiss', { originalEvent: e });
       });
     };
@@ -112,6 +124,13 @@ define<SgAlertProps, SgAlertEvents>(ALERT_TAG, {
     const alertRole = () => (props.color.value === 'error' ? 'alert' : 'status');
 
     return html`
+      <span
+        class="sr-announce"
+        aria-live="polite"
+        aria-atomic="true"
+        ref="${(ref: HTMLElement) => {
+          announceEl = ref;
+        }}"></span>
       <div class="alert" :role="${alertRole}" part="alert">
         <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
           <slot name="icon"></slot>

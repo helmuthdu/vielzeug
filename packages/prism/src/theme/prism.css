@@ -295,13 +295,13 @@
     color: var(--prism-text-color);
   }
 
-  .prism-legend--bottom,
-  .prism-legend--top {
+  .prism-legend-bottom,
+  .prism-legend-top {
     justify-content: center;
   }
 
-  .prism-legend--left,
-  .prism-legend--right {
+  .prism-legend-left,
+  .prism-legend-right {
     flex-direction: column;
     align-items: flex-start;
   }

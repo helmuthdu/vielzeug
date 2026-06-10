@@ -1,9 +1,10 @@
 <template>
   <div class="reference-section">
     <div class="reference-header">
-      <h3>{{ selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports' }}</h3>
+      <span class="reference-title">{{ selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports' }}</span>
+      <span class="reference-hint">Click any to insert at cursor</span>
       <div class="search-container">
-        <sg-input :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </sg-input>
+        <sg-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </sg-input>
       </div>
     </div>
     <div class="function-categories">
@@ -32,10 +33,10 @@
           <sg-chip
             v-for="ex in filteredExports"
             :key="ex"
-            mode="static"
+            mode="action"
             size="sm"
+            variant="outline"
             :color="isMatch(ex) ? 'primary' : undefined"
-            style="cursor: pointer"
             @click="emit('insert-function', ex)"
             title="Click to insert"
             >{{ ex }}</sg-chip
@@ -120,49 +121,60 @@ const isMatch = (fn: string) => {
 <style scoped>
 /* Reference Section */
 .reference-section {
-  margin-top: 3rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 20px;
-  background: var(--vp-c-bg);
+  margin-top: 0;
+  background: var(--vp-c-bg-alt);
   overflow: hidden;
-  transition: border-color 0.3s;
-}
-
-.reference-section:focus-within {
-  border-color: var(--vp-c-brand-1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
 }
 
 .reference-header {
-  padding: 1rem 1.5rem;
-  background: var(--vp-c-bg-soft);
+  padding: 0.625rem 1rem;
+  background: var(--vp-c-bg-alt);
+  border-top: 1px solid var(--vp-c-divider);
   border-bottom: 1px solid var(--vp-c-divider);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex-shrink: 0;
 }
 
-.reference-header h3 {
+.reference-hint {
+  font-size: 0.6875rem;
+  color: var(--vp-c-text-3);
+  letter-spacing: 0.01em;
+}
+
+.reference-title {
   margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--vp-c-text-2);
+  letter-spacing: -0.01em;
 }
 
 .search-container {
-  min-width: 240px;
-  display: flex;
-  justify-content: flex-end;
+  width: 100%;
+  display: block;
+}
+
+.search-container :deep(sg-input),
+.search-container :deep(input) {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .function-categories {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--vp-c-divider) transparent;
 }
 
 .no-results {
@@ -176,23 +188,30 @@ const isMatch = (fn: string) => {
 }
 
 .category h4 {
-  margin: 0 0 1rem;
-  color: var(--vp-c-brand-1);
-  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+  color: var(--vp-c-text-2);
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid var(--vp-c-divider);
-  padding-bottom: 0.5rem;
+  align-items: baseline;
 }
 
 .function-list {
-  font-size: 0.85rem;
-  line-height: 1.6;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.3rem;
+}
+
+.function-list :deep(sg-chip) {
+  cursor: pointer;
+}
+
+.function-list :deep(sg-chip:hover) {
+  --sg-chip-bg: color-mix(in srgb, var(--vp-c-brand-1) 12%, transparent);
+  --sg-chip-border: var(--vp-c-brand-1);
+  --sg-chip-color: var(--vp-c-brand-1);
 }
 </style>

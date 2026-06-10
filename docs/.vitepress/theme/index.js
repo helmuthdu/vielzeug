@@ -3,6 +3,7 @@ import DefaultTheme from 'vitepress/theme';
 
 import ColorPalette from './components/ColorPalette.vue';
 import ComponentPreview from './components/ComponentPreview.vue';
+import HomePage from './components/HomePage.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
@@ -24,6 +25,7 @@ if (typeof window !== 'undefined') {
 export default {
   ...DefaultTheme,
   async enhanceApp({ app }) {
+    app.component('HomePage', HomePage);
     app.component('REPL', Repl);
     app.component('ColorPalette', ColorPalette);
     app.component('PackageBadges', PackageBadges);

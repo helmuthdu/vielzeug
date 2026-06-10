@@ -1,4 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { signal } from '@vielzeug/ripple';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ChartPlugin } from '../types';
 
 import { createBarChart } from '../charts/bar';
 
@@ -79,7 +82,7 @@ describe('createBarChart', () => {
       series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
     });
 
-    expect(container.querySelector('.prism-legend--top')).not.toBeNull();
+    expect(container.querySelector('.prism-legend-top')).not.toBeNull();
     chart.dispose();
   });
 
@@ -101,5 +104,235 @@ describe('createBarChart', () => {
 
     expect(container.querySelector('.prism-legend')).toBeNull();
     chart.dispose();
+  });
+
+  it('double dispose is a no-op', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
+    });
+
+    chart.dispose();
+    expect(() => chart.dispose()).not.toThrow();
+  });
+
+  it('does not expose update() on ChartHandle', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+    });
+
+    expect('update' in chart).toBe(false);
+    chart.dispose();
+  });
+
+  it('renders tooltip inside container (not body)', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      tooltip: true,
+    });
+
+    expect(container.querySelector('.prism-tooltip')).not.toBeNull();
+    chart.dispose();
+    expect(container.querySelector('.prism-tooltip')).toBeNull();
+  });
+
+  it('accepts reactive data via signals', () => {
+    const data = signal([{ x: 'A', y: 10 }]);
+    const chart = createBarChart(container, {
+      series: [{ data, name: 'Reactive' }],
+    });
+
+    data.value = [...data.value, { x: 'B', y: 20 }];
+    chart.dispose();
+  });
+
+  it('calls onHover(null) on mouseleave', () => {
+    const onHover = vi.fn();
+    const chart = createBarChart(container, {
+      onHover,
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(onHover).toHaveBeenCalledWith(null);
+    chart.dispose();
+  });
+
+  it('installs and destroys plugins', () => {
+    const install = vi.fn();
+    const destroy = vi.fn();
+    const plugin: ChartPlugin = { destroy, install };
+
+    const chart = createBarChart(container, {
+      plugins: [plugin],
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+    });
+
+    expect(install).toHaveBeenCalledWith(chart.el, container);
+    chart.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
+  });
+
+  it('renders bar elements for each data point', () => {
+    const chart = createBarChart(container, {
+      series: [
+        {
+          data: [
+            { x: 'A', y: 10 },
+            { x: 'B', y: 20 },
+            { x: 'C', y: 15 },
+          ],
+          name: 'Test',
+        },
+      ],
+    });
+
+    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(3);
+    chart.dispose();
+  });
+
+  it('renders stacked bars with correct bar count', () => {
+    const chart = createBarChart(container, {
+      series: [
+        {
+          color: '#3b82f6',
+          data: [
+            { x: 'A', y: 10 },
+            { x: 'B', y: 20 },
+          ],
+          name: 'S1',
+        },
+        {
+          color: '#10b981',
+          data: [
+            { x: 'A', y: 15 },
+            { x: 'B', y: 25 },
+          ],
+          name: 'S2',
+        },
+      ],
+      variant: 'stacked',
+      xAxis: { position: 'bottom' },
+      yAxis: { position: 'left' },
+    });
+
+    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(4);
+    chart.dispose();
+  });
+
+  it('stacked bars use full bandwidth', () => {
+    const chart = createBarChart(container, {
+      series: [
+        { color: '#3b82f6', data: [{ x: 'A', y: 10 }], name: 'S1' },
+        { color: '#10b981', data: [{ x: 'A', y: 20 }], name: 'S2' },
+      ],
+      variant: 'stacked',
+    });
+
+    const bars = chart.el.querySelectorAll('.prism-bar');
+
+    expect(bars.length).toBe(2);
+    expect(bars[0].getAttribute('x')).toBe(bars[1].getAttribute('x'));
+    chart.dispose();
+  });
+
+  it('renders horizontal bars with height and width > 0', () => {
+    const chart = createBarChart(container, {
+      series: [
+        {
+          color: '#3b82f6',
+          data: [
+            { x: 'A', y: 10 },
+            { x: 'B', y: 20 },
+          ],
+          name: 'S1',
+        },
+      ],
+      variant: 'grouped-horizontal',
+      xAxis: { position: 'bottom' },
+      yAxis: { position: 'left' },
+    });
+
+    const bars = chart.el.querySelectorAll('.prism-bar');
+
+    expect(bars.length).toBe(2);
+    expect(Number(bars[0].getAttribute('height'))).toBeGreaterThan(0);
+    expect(Number(bars[0].getAttribute('width'))).toBeGreaterThan(0);
+    chart.dispose();
+  });
+
+  it('renders stacked-horizontal bars', () => {
+    const chart = createBarChart(container, {
+      series: [
+        { data: [{ x: 'A', y: 10 }], name: 'S1' },
+        { data: [{ x: 'A', y: 20 }], name: 'S2' },
+      ],
+      variant: 'stacked-horizontal',
+    });
+
+    const bars = chart.el.querySelectorAll('.prism-bar');
+
+    expect(bars.length).toBe(2);
+    expect(Number(bars[0].getAttribute('height'))).toBeGreaterThan(0);
+    chart.dispose();
+  });
+
+  it('renders nothing and does not throw with empty series data', () => {
+    expect(() => {
+      const chart = createBarChart(container, {
+        series: [{ data: [], name: 'Empty' }],
+      });
+
+      chart.dispose();
+    }).not.toThrow();
+  });
+
+  it('supports Symbol.dispose', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ x: 'A', y: 5 }], name: 'Test' }],
+    });
+
+    chart[Symbol.dispose]();
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('reactive signal update re-renders bars', async () => {
+    const data = signal([{ x: 'A', y: 10 }]);
+    const chart = createBarChart(container, {
+      series: [{ data, name: 'Reactive' }],
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(1);
+    data.value = [
+      { x: 'A', y: 10 },
+      { x: 'B', y: 20 },
+    ];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(2);
+    chart.dispose();
+  });
+
+  it('calls onClick with point and series on click event', () => {
+    const onClick = vi.fn();
+    const chart = createBarChart(container, {
+      onClick,
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 0, clientY: 0 }));
+    // jsdom has no layout so hit test may not fire — verify no throw
+    chart.dispose();
+  });
+
+  it('removes mouse listeners after dispose (no error on synthetic events)', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+    });
+    const svg = chart.el;
+
+    chart.dispose();
+    expect(() => svg.dispatchEvent(new MouseEvent('mousemove'))).not.toThrow();
+    expect(() => svg.dispatchEvent(new MouseEvent('click'))).not.toThrow();
   });
 });

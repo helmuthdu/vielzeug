@@ -36,7 +36,7 @@ export type SgOtpInputProps = {
   /** Current value */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'text' | 'frost' | 'glass'>;
+  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
 };
 
 /**
@@ -95,7 +95,7 @@ define<SgOtpInputProps, SgOtpInputEvents>(OTP_INPUT_TAG, {
     separator: prop.string(),
     type: prop.oneOf(['numeric', 'alphanumeric'] as const, 'numeric'),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'text' | 'frost' | 'glass'>>(),
+    variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
   },
   setup(props, { bind, el, emit }) {
     const formCtx = inject(FORM_CTX);

@@ -1,5 +1,5 @@
 import type { Point } from '../../svg/path';
-import type { Scale, TransitionConfig } from '../../types';
+import type { Scale, TransitionConfig, XScale } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
@@ -140,11 +140,11 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
 
 export function computePoints(
   data: { x: Date | number | string; y: number }[],
-  xScale: Scale<unknown>,
+  xScale: XScale,
   yScale: Scale<number>,
 ): Point[] {
   return data.map((d) => ({
-    x: xScale.map(d.x),
+    x: (xScale as Scale<Date | number>).map(d.x as Date | number),
     y: yScale.map(d.y),
   }));
 }

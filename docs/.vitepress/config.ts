@@ -1348,7 +1348,7 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
-                { link: '/sigil/components/avatar', text: 'Avatar (+ Avatar Group)' },
+                { link: '/sigil/components/avatar', text: 'Avatar' },
                 { link: '/sigil/components/breadcrumb', text: 'Breadcrumb' },
                 { link: '/sigil/components/card', text: 'Card' },
                 { link: '/sigil/components/carousel', text: 'Carousel' },

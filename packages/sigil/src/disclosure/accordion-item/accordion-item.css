@@ -15,7 +15,7 @@
     width: 100%;
     overflow: hidden;
     border-radius: var(--accordion-item-radius);
-    transition: all var(--accordion-item-transition);
+    transition: border-radius var(--accordion-item-transition);
   }
 
   summary {
@@ -33,7 +33,10 @@
     background: var(--accordion-item-bg);
     border: var(--border) solid var(--accordion-item-border-color);
     border-radius: var(--accordion-details-radius);
-    transition: all var(--accordion-item-transition);
+    transition:
+      background var(--accordion-item-transition),
+      border-color var(--accordion-item-transition),
+      color var(--accordion-item-transition);
   }
 
   summary::-webkit-details-marker {

@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**22 independent, zero-dependency TypeScript packages for modern JavaScript**
+**23 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -340,6 +340,26 @@ pnpm add @vielzeug/orbit
 
 ---
 
+### [@vielzeug/prism](packages/prism) – Reactive SVG Charts
+
+Reactive SVG charting library with signal-driven updates — line, bar, area, pie, and sparkline charts.
+
+```bash
+pnpm add @vielzeug/prism
+```
+
+**Key Features:**
+- `createLineChart()`, `createBarChart()`, `createAreaChart()`, `createPieChart()`, `createSparkline()`
+- Signal-driven reactivity via `@vielzeug/ripple` — data updates re-render automatically
+- Built-in scales: `linearScale()`, `bandScale()`, `timeScale()`
+- Tooltips, crosshairs, legends, and axis configuration
+- Theming via CSS custom properties and `setTheme()`
+- Zero external dependencies (32 KB min / 10.3 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/prism/) • [Examples](https://vielzeug.dev/prism/examples)
+
+---
+
 ### [@vielzeug/sourcerer](packages/sourcerer) – Reactive Data Sources
 
 Reactive local and remote data sources with pagination, filtering, sorting, and search.
@@ -542,6 +562,7 @@ vielzeug/
 │   ├── familiar/      # Web Worker pool
 │   ├── grip/          # Drag-and-drop utilities
 │   ├── orbit/         # Floating element positioning
+│   ├── prism/         # Reactive SVG charts
 │   ├── sourcerer/     # Reactive data sources
 │   ├── scroll/        # Virtual list engine
 │   ├── tempo/         # Date & time utilities
@@ -588,6 +609,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/familiar`     | —                          | —              | 0            |
 | `@vielzeug/grip`         | —                          | —              | 0            |
 | `@vielzeug/orbit`        | —                          | —              | 0            |
+| `@vielzeug/prism`        | **32 KB**                  | **10.3 KB**    | 2\*          |
 | `@vielzeug/sourcerer`    | —                          | —              | 1\*          |
 | `@vielzeug/scroll`       | —                          | —              | 0            |
 | `@vielzeug/tempo`        | —                          | —              | 0            |

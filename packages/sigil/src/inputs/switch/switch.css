@@ -112,6 +112,10 @@
        Helper / Error Text
        ======================================== */
 
+  .helper-text[hidden] {
+    display: none;
+  }
+
   .helper-text {
     width: 100%;
     padding-inline-start: calc(var(--_width) + var(--size-2-5));

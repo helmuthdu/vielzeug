@@ -16,7 +16,7 @@ export function createLegend(container: HTMLElement, config: LegendConfig | true
   const position = resolvePosition(config);
   const el = document.createElement('div');
 
-  el.className = `prism-legend prism-legend--${position}`;
+  el.className = `prism-legend prism-legend-${position}`;
 
   if (position === 'top') {
     container.insertBefore(el, container.firstChild);

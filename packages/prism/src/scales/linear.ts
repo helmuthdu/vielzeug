@@ -30,15 +30,25 @@ function niceRange(min: number, max: number, tickCount: number): [number, number
 }
 
 export function linearScale(config: LinearScaleConfig): Scale<number> {
+  let _niceCached: [number, number] | null = null;
+  let _niceKey = '';
+
+  function getNiceDomain(raw: [number, number]): [number, number] {
+    if (config.nice === false) return raw;
+
+    const key = `${raw[0]},${raw[1]}`;
+
+    if (key !== _niceKey) {
+      _niceKey = key;
+      _niceCached = niceRange(raw[0], raw[1], 10);
+    }
+
+    return _niceCached!;
+  }
+
   return {
     get domain(): [number, number] {
-      const d = resolve(config.domain);
-
-      if (config.nice !== false) {
-        return niceRange(d[0], d[1], 10);
-      }
-
-      return d;
+      return getNiceDomain(resolve(config.domain));
     },
 
     invert(pixel: number): number {

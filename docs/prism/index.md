@@ -11,11 +11,13 @@ exports:
     createLineChart,
     createBarChart,
     createAreaChart,
+    createPieChart,
+    createSparkline,
     linearScale,
     timeScale,
     bandScale,
-    getSeriesColor,
-    PRISM_COLORS,
+    seriesColor,
+    setTheme,
   ]
 ---
 
@@ -32,7 +34,7 @@ exports:
 
 **Package:** `@vielzeug/prism` &nbsp;·&nbsp; **Category:** UI / Visualization
 
-**Key exports:** `createLineChart`, `createBarChart`, `createAreaChart`, `linearScale`, `timeScale`, `bandScale`
+**Key exports:** `createLineChart`, `createBarChart`, `createAreaChart`, `createPieChart`, `createSparkline`, `linearScale`, `timeScale`, `bandScale`, `seriesColor`, `setTheme`
 
 **When to use:** Data visualization with reactive charts that auto-update when signal-based data sources change. Renders accessible SVG, themeable via CSS custom properties.
 
@@ -84,6 +86,7 @@ const chart = createLineChart(document.getElementById('chart')!, {
   yAxis: { position: 'left', grid: true },
   tooltip: true,
   crosshair: true,
+  onHover: (event) => console.log(event?.point),
 });
 
 // Update data → chart re-renders automatically
@@ -114,15 +117,21 @@ Charting libraries typically require a framework binding, bundle heavy dependenc
 ## Features
 
 - **`createLineChart(container, config)`** — line chart with linear, monotone, or step interpolation
-- **`createBarChart(container, config)`** — grouped/stacked vertical bar chart
-- **`createAreaChart(container, config)`** — filled area with configurable opacity and stacking
+- **`createBarChart(container, config)`** — bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
+- **`createAreaChart(container, config)`** — filled area with configurable opacity
+- **`createSparkline(container, config)`** — minimal inline sparkline (line, area, or bar variant)
+- **`createPieChart(container, config)`** — pie, donut, or semi-circle donut chart
 - **`linearScale(config)`** — continuous numeric scale with nice tick generation
 - **`timeScale(config)`** — date/time scale with interval-based ticks
 - **`bandScale(config)`** — categorical scale for bar charts
 - **`MaybeSignal<T>`** — pass plain values or reactive signals; both work seamlessly
+- **`seriesColor(index, override?)`** — resolve CSS palette color by series index
+- **`setTheme(theme)`** — apply custom colors, font, and grid tokens at runtime
+- **Event hooks** — `onClick` and `onHover` callbacks on every chart
+- **Plugin system** — extend charts with `ChartPlugin` (install/destroy lifecycle)
 - **CSS custom properties** — full theme control via `--prism-*` tokens
 - **Responsive** — auto-resizes via `ResizeObserver`
-- **Accessible** — ARIA labels, semantic SVG structure, keyboard support
+- **Accessible** — ARIA labels and semantic SVG structure
 - **`Symbol.dispose`** — explicit resource management following TC39 proposal
 
 ## Sub-paths

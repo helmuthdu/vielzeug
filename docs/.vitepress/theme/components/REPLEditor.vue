@@ -1,95 +1,45 @@
 <template>
-  <sg-grid
-    cols-md="2"
-    cols="1"
-    areas-md="'editor output'"
-    areas="'editor' 'output'"
-    gap="lg"
-    fullwidth
-    align="start"
-    style="margin: 0.5rem 0; min-height: 500px">
+  <div class="repl-panes" :class="{ 'has-output': hasOutput }">
+    <!-- Shared toolbar: Examples (left) + Run (right) -->
+    <div class="editor-toolbar">
+      <sg-select
+        label-placement="inset"
+        style="width: 180px"
+        placeholder="Examples..."
+        :value="localSelectedExample"
+        @change="handleExampleSelect">
+        <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
+          <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
+        </optgroup>
+      </sg-select>
+      <div class="toolbar-spacer" />
+      <span class="toolbar-shortcut"><kbd>⌘</kbd><kbd>Return</kbd></span>
+      <sg-button
+        size="sm"
+        color="primary"
+        variant="solid"
+        v-bind="isExecuting ? { loading: true } : {}"
+        @click="handleRunCode">
+        <svg
+          v-if="!isExecuting"
+          slot="prefix"
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+        Run
+      </sg-button>
+    </div>
+
     <!-- Code Editor -->
-    <div class="editor-section" style="grid-area: editor">
-      <sg-grid
-        areas="'title selector actions'"
-        style="grid-template-columns: auto 1fr"
-        align="center"
-        gap="md"
-        class="section-header">
-        <h3 class="section-label" style="grid-area: title">Editor</h3>
-        <div class="header-actions" style="grid-area: selector">
-          <sg-select fullwidth placeholder="Examples..." :value="localSelectedExample" @change="handleExampleSelect">
-            <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
-              <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
-            </optgroup>
-          </sg-select>
-        </div>
-        <div class="header-actions" style="grid-area: actions">
-          <sg-grid cols="1" justify="end" gap="md" flow="column">
-            <sg-grid-item>
-              <sg-button
-                color="primary"
-                variant="solid"
-                v-bind="isExecuting ? { loading: true } : {}"
-                @click="handleRunCode">
-                <svg
-                  v-if="!isExecuting"
-                  slot="prefix"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                Run
-              </sg-button>
-            </sg-grid-item>
-            <sg-grid-item>
-              <sg-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
-                <sg-button icon-only variant="ghost" @click="emit('toggle-expand')" size="md">
-                  <svg
-                    v-if="!isExpanded"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                  </svg>
-                  <svg
-                    v-else
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <polyline points="4 14 10 14 10 20" />
-                    <polyline points="20 10 14 10 14 4" />
-                    <line x1="14" y1="10" x2="21" y2="3" />
-                    <line x1="10" y1="14" x2="3" y2="21" />
-                  </svg>
-                </sg-button>
-              </sg-tooltip>
-            </sg-grid-item>
-          </sg-grid>
-        </div>
-      </sg-grid>
+    <div class="editor-section">
       <div class="editor-content-wrapper">
         <div ref="editorContainer" class="code-editor"></div>
         <div class="editor-floating-toolbar">
@@ -177,43 +127,36 @@
     </div>
 
     <!-- Output -->
-    <div class="output-section" style="grid-area: output">
-      <sg-grid
-        areas="'title actions'"
-        style="grid-template-columns: auto 1fr"
-        align="center"
-        gap="sm"
-        class="section-header">
-        <h3 class="section-label" style="grid-area: title">Output</h3>
-        <div style="grid-area: actions; display: flex; justify-content: flex-end">
-          <sg-tooltip content="Clear Output" placement="bottom">
-            <sg-button icon-only variant="ghost" @click="handleClearOutput">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" x2="10" y1="11" y2="17" />
-                <line x1="14" x2="14" y1="11" y2="17" />
-              </svg>
-            </sg-button>
-          </sg-tooltip>
-        </div>
-      </sg-grid>
+    <div class="output-section">
+      <div class="output-header">
+        <span class="output-label">Output</span>
+        <sg-tooltip content="Clear Output" placement="bottom">
+          <sg-button icon-only variant="ghost" size="sm" @click="handleClearOutput">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" x2="10" y1="11" y2="17" />
+              <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
+          </sg-button>
+        </sg-tooltip>
+      </div>
       <div ref="outputContainer" class="output-area">
         <div class="output-placeholder">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -223,12 +166,17 @@
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
-          <p>Ready to execute code...</p>
-          <span>Press Run or Cmd+Enter to see results here</span>
+          <p>Run code to see output</p>
+          <ul class="placeholder-steps">
+            <li><span class="step-num">1</span> Edit the code in the editor above</li>
+            <li><span class="step-num">2</span> Press <kbd>⌘</kbd><kbd>Return</kbd> or click <strong>Run</strong></li>
+            <li><span class="step-num">3</span> Results and logs appear here</li>
+          </ul>
+          <span class="placeholder-note">Your edits are saved automatically in the browser</span>
         </div>
       </div>
     </div>
-  </sg-grid>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -241,7 +189,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 const props = defineProps<{
   selectedLibrary: string;
   selectedExample: string;
-  isExpanded: boolean;
   examples: Record<string, any>;
   isDark: boolean;
   getDefaultCode: (libName: string) => string;
@@ -251,7 +198,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:selectedExample': [value: string];
-  'toggle-expand': [];
   'run-code': [];
   'clear-output': [];
 }>();
@@ -263,6 +209,7 @@ const emit = defineEmits<{
 const editorContainer = ref<HTMLElement | null>(null);
 const outputContainer = ref<HTMLElement | null>(null);
 const isExecuting = ref(false);
+const hasOutput = ref(false);
 const localSelectedExample = ref(props.selectedExample);
 
 let editor: any = null;
@@ -307,7 +254,7 @@ watch(
 );
 
 watch(localSelectedExample, (newVal) => {
-  if (newVal) loadExample();
+  if (newVal) loadExample(props.selectedLibrary);
 });
 
 watch(
@@ -320,6 +267,7 @@ watch(
     }
     handleClearOutput();
   },
+  { flush: 'sync' },
 );
 
 watch(
@@ -387,6 +335,7 @@ const createOutputLine = (content: string[], type: 'log' | 'error' | 'warn' | 'r
 
   output.appendChild(line);
   output.scrollTop = output.scrollHeight;
+  hasOutput.value = true;
 };
 
 const interceptConsole = () => {
@@ -558,14 +507,15 @@ const clearEditor = () => {
 
 const handleClearOutput = () => {
   if (!outputContainer.value) return;
+  hasOutput.value = false;
   outputContainer.value.innerHTML = `
     <div class="output-placeholder">
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="16 18 22 12 16 6" />
         <polyline points="8 6 2 12 8 18" />
       </svg>
-      <p>Ready to execute code...</p>
-      <span>Press Run or Cmd+Enter to see results here</span>
+      <p>Output cleared</p>
+      <span>Press <kbd>⌘ Enter</kbd> or click <strong>Run</strong> to execute</span>
     </div>
   `;
   emit('clear-output');
@@ -577,10 +527,10 @@ const handleExampleSelect = (e: Event) => {
   localSelectedExample.value = newValue;
   // Always call loadExample directly so that re-selecting the *same* example
   // also reloads the editor — the watcher only fires when the value changes.
-  if (newValue) loadExample();
+  if (newValue) loadExample(props.selectedLibrary);
 };
 
-const loadExample = () => {
+const loadExample = (forLibrary = props.selectedLibrary) => {
   if (!localSelectedExample.value) return;
 
   // Editor not ready yet — remember and apply once initializeEditor runs.
@@ -589,12 +539,15 @@ const loadExample = () => {
     return;
   }
 
-  const libExamples = props.examples[props.selectedLibrary];
+  // Bail if the library changed by the time this runs (watcher race guard)
+  if (forLibrary !== props.selectedLibrary) return;
+
+  const libExamples = props.examples[forLibrary];
   const example = libExamples?.[localSelectedExample.value];
 
   if (example?.code) {
     editor.setValue(example.code);
-    localStorage.setItem(`${props.storagePrefix}${props.selectedLibrary}`, example.code);
+    localStorage.setItem(`${props.storagePrefix}${forLibrary}`, example.code);
   }
 
   emit('update:selectedExample', localSelectedExample.value);
@@ -626,6 +579,19 @@ const initializeEditor = () => {
   }
 
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, handleRunCode);
+
+  // Native fallback: catch ⌘+Enter (Mac) and Ctrl+Enter before browser intercepts
+  editorContainer.value?.addEventListener(
+    'keydown',
+    (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleRunCode();
+      }
+    },
+    { capture: true },
+  );
 
   // Track cursor position changes
   editor.onDidChangeCursorPosition((e: any) => {
@@ -753,41 +719,108 @@ defineExpose({
 </script>
 
 <style scoped>
-/* REPL Layout */
-.editor-section,
-.output-section {
+/* ── Outer container ────────────────────────────────── */
+.repl-panes {
+  display: grid;
+  grid-template-rows: 52px 1fr 0.35fr;
+  height: 100%;
+  min-height: 0;
+  transition: grid-template-rows 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.repl-panes.has-output {
+  grid-template-rows: 52px 1fr 0.55fr;
+}
+
+/* ── Shared toolbar ───────────────────────────────── */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+}
+
+.editor-toolbar > * {
+  align-self: center;
+  margin: 0;
+}
+
+.editor-toolbar :deep(sg-select),
+.editor-toolbar :deep(sg-button) {
+  align-self: center;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-right: 0.25rem;
+}
+
+.toolbar-shortcut kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  background: var(--vp-c-bg-alt);
   border: 1px solid var(--vp-c-divider);
-  border-radius: 16px;
+  border-radius: 4px;
+  color: var(--vp-c-text-3);
+  box-shadow: 0 1px 0 var(--vp-c-divider);
+}
+
+.editor-section {
+  min-height: 0;
   overflow: hidden;
   background: var(--vp-c-bg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-  transition:
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
 }
 
-.editor-section:hover,
-.output-section:hover {
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+.output-section {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--vp-c-bg-alt);
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--vp-c-divider);
 }
 
-/* Headers */
-.section-header {
-  background: var(--vp-c-bg-soft);
-  padding: 0.75rem 1.25rem;
+@media (prefers-reduced-motion: reduce) {
+  .repl-panes {
+    transition: none;
+  }
+}
+
+/* ── Output header bar ──────────────────────────────── */
+.output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem;
+  height: 32px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--vp-c-divider);
-  min-height: 56px;
+  background: var(--vp-c-bg-soft);
 }
 
-.section-label {
-  margin: 0;
-  font-size: 0.75rem;
+.output-label {
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--vp-c-text-2);
-  white-space: nowrap;
+  letter-spacing: 0.07em;
+  color: var(--vp-c-text-3);
 }
 
 /* Editor & Output Areas */
@@ -805,25 +838,34 @@ defineExpose({
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;
-  background: var(--vp-c-bg-soft);
+  background: var(--vp-c-bg-elv);
   border: 1px solid var(--vp-c-divider);
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.08);
   z-index: 10;
-  opacity: 0.9;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .editor-floating-toolbar:hover {
   opacity: 1;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1);
   border-color: var(--vp-c-brand-1);
 }
 
 .code-editor,
 .output-area {
-  height: 450px;
+  flex: 1;
+  min-height: 0;
   font-family: var(--vp-font-family-mono);
 }
 
@@ -884,21 +926,21 @@ defineExpose({
 
 .output-area :deep(.output-error),
 .output-area :deep(.output-warn) {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin: 1rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
 }
 
 .output-area :deep(.output-error) {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
-  border-left: 4px solid #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .output-area :deep(.output-warn) {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
-  border-left: 4px solid #f59e0b;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.2);
 }
 
 .output-area :deep(.output-result) {
@@ -958,21 +1000,21 @@ defineExpose({
 
 .output-area .output-error,
 .output-area .output-warn {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin: 1rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
 }
 
 .output-area .output-error {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
-  border-left: 4px solid #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .output-area .output-warn {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
-  border-left: 4px solid #f59e0b;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.2);
 }
 
 .output-area .output-result {
@@ -992,19 +1034,70 @@ defineExpose({
   height: 100%;
   color: var(--vp-c-text-3);
   text-align: center;
-  gap: 0.75rem;
-  opacity: 0.6;
+  gap: 0.625rem;
+  padding: 2rem;
   user-select: none;
 }
 
 .output-placeholder p {
   margin: 0;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-2);
 }
 
 .output-placeholder span {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+}
+
+.placeholder-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  text-align: left;
+}
+
+.placeholder-steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--vp-c-text-3);
+}
+
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--vp-c-divider);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--vp-c-text-3);
+  flex-shrink: 0;
+}
+
+.placeholder-note {
+  font-size: 0.6875rem;
+  color: var(--vp-c-text-3);
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.output-placeholder kbd {
+  display: inline-block;
+  padding: 0.1em 0.35em;
+  font-size: 0.75em;
+  font-family: var(--vp-font-family-mono);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-2);
 }
 
 /* Animations */

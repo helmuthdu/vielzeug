@@ -141,6 +141,112 @@ Grouped bar chart comparing categories:
 
 </ComponentPreview>
 
+## Stacked Bar Chart
+
+Bar chart with `variant: 'stacked'` — series stack vertically per category:
+
+<ComponentPreview vertical height="320px">
+
+```html
+<div id="ex-bar-stacked" style="width:100%;height:280px;"></div>
+<script>
+  const { createBarChart } = Prism;
+  createBarChart(document.getElementById('ex-bar-stacked'), {
+    series: [
+      {
+        name: 'Mobile',
+        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        color: '#3b82f6',
+        borderRadius: 0,
+      },
+      {
+        name: 'Desktop',
+        data: [{ x: 'Q1', y: 60 }, { x: 'Q2', y: 90 }, { x: 'Q3', y: 75 }, { x: 'Q4', y: 100 }],
+        color: '#10b981',
+        borderRadius: 0,
+      },
+      {
+        name: 'Tablet',
+        data: [{ x: 'Q1', y: 20 }, { x: 'Q2', y: 30 }, { x: 'Q3', y: 25 }, { x: 'Q4', y: 35 }],
+        color: '#f59e0b',
+        borderRadius: 0,
+      },
+    ],
+    variant: 'stacked',
+    xAxis: { position: 'bottom' },
+    yAxis: { position: 'left', grid: true },
+    tooltip: true,
+    legend: true,
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Horizontal Bar Chart
+
+Bar chart with `variant: 'grouped-horizontal'` — categories on the Y axis, values on the X axis:
+
+<ComponentPreview vertical height="320px">
+
+```html
+<div id="ex-bar-horizontal" style="width:100%;height:280px;"></div>
+<script>
+  const { createBarChart } = Prism;
+  createBarChart(document.getElementById('ex-bar-horizontal'), {
+    variant: 'grouped-horizontal',
+    series: [
+      {
+        name: 'Revenue',
+        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        color: '#3b82f6',
+      },
+    ],
+    xAxis: { position: 'bottom', grid: true },
+    yAxis: { position: 'left' },
+    tooltip: true,
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Horizontal Stacked Bar Chart
+
+Use `variant: 'stacked-horizontal'` — horizontal bars stacked per category:
+
+<ComponentPreview vertical height="320px">
+
+```html
+<div id="ex-bar-h-stacked" style="width:100%;height:280px;"></div>
+<script>
+  const { createBarChart } = Prism;
+  createBarChart(document.getElementById('ex-bar-h-stacked'), {
+    variant: 'stacked-horizontal',
+    series: [
+      {
+        name: 'Mobile',
+        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        color: '#3b82f6',
+        borderRadius: 0,
+      },
+      {
+        name: 'Desktop',
+        data: [{ x: 'Q1', y: 60 }, { x: 'Q2', y: 90 }, { x: 'Q3', y: 75 }, { x: 'Q4', y: 100 }],
+        color: '#10b981',
+        borderRadius: 0,
+      },
+    ],
+    xAxis: { position: 'bottom', grid: true },
+    yAxis: { position: 'left' },
+    tooltip: true,
+    legend: true,
+  });
+</script>
+```
+
+</ComponentPreview>
+
 ## Legend — Bar Chart
 
 Grouped bar chart with a legend positioned at the top:
@@ -209,7 +315,7 @@ Filled area with monotone curve and low opacity:
 
 ## Legend — Area Chart
 
-Stacked area chart with a bottom legend:
+Multi-series area chart with a bottom legend:
 
 <ComponentPreview vertical height="360px">
 
@@ -321,7 +427,7 @@ Chart that updates when signal data changes:
 
 ## Reactive Bar Chart
 
-Bar chart that updates when signal data changes:
+Bar chart that updates when signal data changes, with stagger animation on new bars:
 
 <ComponentPreview vertical height="320px">
 
@@ -345,7 +451,7 @@ Bar chart that updates when signal data changes:
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left', grid: true },
     tooltip: true,
-    transition: { duration: 400, easing: 'ease-out' },
+    transition: { duration: 400, easing: 'ease-out', stagger: 40 },
   });
 
   var quarters = ['Q5', 'Q6', 'Q7', 'Q8'];
@@ -354,6 +460,248 @@ Bar chart that updates when signal data changes:
     if (qIdx >= quarters.length) return;
     var nextY = 150 + Math.floor(Math.random() * 120);
     barData.value = barData.value.concat([{ x: quarters[qIdx++], y: nextY }]);
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Event Hooks
+
+Using `onHover` and `onClick` to react to chart interactions:
+
+<ComponentPreview vertical height="360px">
+
+```html
+<div id="ex-events-info" style="margin-bottom:8px;font-size:13px;color:#64748b;min-height:20px;"></div>
+<div id="ex-events" style="width:100%;height:280px;"></div>
+<script>
+  const { createLineChart } = Prism;
+
+  const info = document.getElementById('ex-events-info');
+
+  createLineChart(document.getElementById('ex-events'), {
+    series: [{
+      name: 'Revenue',
+      data: [
+        { x: 1, y: 120 }, { x: 2, y: 180 }, { x: 3, y: 150 },
+        { x: 4, y: 220 }, { x: 5, y: 195 }, { x: 6, y: 280 },
+      ],
+      color: '#3b82f6',
+      curve: 'monotone',
+      showPoints: true,
+    }],
+    xAxis: { position: 'bottom' },
+    yAxis: { position: 'left', grid: true },
+    onHover: function(event) {
+      info.textContent = event
+        ? 'Hovering x=' + event.point.x + ' y=' + event.point.y
+        : '';
+    },
+    onClick: function(event) {
+      info.textContent = 'Clicked x=' + event.point.x + ' y=' + event.point.y;
+    },
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Pie Chart
+
+Basic pie chart with labeled slices:
+
+<ComponentPreview vertical height="340px">
+
+```html
+<div id="ex-pie" style="width:300px;height:300px;"></div>
+<script>
+  const { createPieChart } = Prism;
+  createPieChart(document.getElementById('ex-pie'), {
+    data: [
+      { label: 'Direct', value: 42, color: '#3b82f6' },
+      { label: 'Organic', value: 28, color: '#10b981' },
+      { label: 'Referral', value: 18, color: '#f59e0b' },
+      { label: 'Social', value: 12, color: '#8b5cf6' },
+    ],
+    variant: 'pie',
+    transition: { duration: 600, easing: 'ease-out' },
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Donut Chart
+
+Donut chart with tooltip:
+
+<ComponentPreview vertical height="340px">
+
+```html
+<div id="ex-donut" style="width:300px;height:300px;"></div>
+<script>
+  const { createPieChart } = Prism;
+  createPieChart(document.getElementById('ex-donut'), {
+    data: [
+      { label: 'Direct', value: 42, color: '#3b82f6' },
+      { label: 'Organic', value: 28, color: '#10b981' },
+      { label: 'Referral', value: 18, color: '#f59e0b' },
+      { label: 'Social', value: 12, color: '#8b5cf6' },
+    ],
+    variant: 'donut',
+    tooltip: true,
+    transition: { duration: 600, easing: 'ease-out' },
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Semi-circle Donut
+
+Semicircle donut — useful for gauges and progress indicators:
+
+<ComponentPreview vertical height="220px">
+
+```html
+<div id="ex-semi" style="width:300px;height:180px;"></div>
+<script>
+  const { createPieChart } = Prism;
+  createPieChart(document.getElementById('ex-semi'), {
+    data: [
+      { label: 'Used', value: 68, color: '#3b82f6' },
+      { label: 'Free', value: 32, color: '#e2e8f0' },
+    ],
+    variant: 'semi',
+    transition: { duration: 800, easing: 'ease-out' },
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Sparkline — Line
+
+Minimal inline sparkline inside a table cell or card:
+
+<ComponentPreview vertical height="80px">
+
+```html
+<div id="ex-spark-line" style="width:200px;height:40px;"></div>
+<script>
+  const { createSparkline } = Prism;
+  createSparkline(document.getElementById('ex-spark-line'), {
+    data: [12, 18, 14, 22, 19, 28, 24, 32],
+    variant: 'line',
+    color: '#3b82f6',
+    curve: 'monotone',
+    strokeWidth: 1.5,
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Sparkline — Area
+
+Area variant with fill:
+
+<ComponentPreview vertical height="80px">
+
+```html
+<div id="ex-spark-area" style="width:200px;height:40px;"></div>
+<script>
+  const { createSparkline } = Prism;
+  createSparkline(document.getElementById('ex-spark-area'), {
+    data: [12, 18, 14, 22, 19, 28, 24, 32],
+    variant: 'area',
+    color: '#8b5cf6',
+    curve: 'monotone',
+    fillOpacity: 0.25,
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Sparkline — Bar
+
+Bar variant — one rect per value:
+
+<ComponentPreview vertical height="80px">
+
+```html
+<div id="ex-spark-bar" style="width:200px;height:40px;"></div>
+<script>
+  const { createSparkline } = Prism;
+  createSparkline(document.getElementById('ex-spark-bar'), {
+    data: [12, 18, 14, 22, 19, 28, 24, 32],
+    variant: 'bar',
+    color: '#10b981',
+    transition: { duration: 400, easing: 'ease-out', stagger: 30 },
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Sparkline — Reactive
+
+Sparkline that updates when signal data changes:
+
+<ComponentPreview vertical height="120px">
+
+```html
+<div style="margin-bottom:8px;">
+  <button id="ex-spark-btn" style="padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;">
+    Add Point
+  </button>
+</div>
+<div id="ex-spark-reactive" style="width:200px;height:40px;"></div>
+<script>
+  const { createSparkline } = Prism;
+  const { signal } = Ripple;
+
+  const sparkData = signal([10, 15, 12, 18, 14]);
+
+  createSparkline(document.getElementById('ex-spark-reactive'), {
+    data: sparkData,
+    variant: 'area',
+    color: '#f59e0b',
+    curve: 'monotone',
+    fillOpacity: 0.2,
+    transition: { duration: 300, easing: 'ease-out' },
+  });
+
+  document.getElementById('ex-spark-btn').addEventListener('click', function() {
+    sparkData.value = sparkData.value.concat([10 + Math.floor(Math.random() * 25)]);
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Sparkline — Stack
+
+Horizontal stacked bar — proportional segments with per-segment colors:
+
+<ComponentPreview vertical height="80px">
+
+```html
+<div id="ex-spark-stack" style="width:200px;height:40px;"></div>
+<script>
+  const { createSparkline } = Prism;
+  createSparkline(document.getElementById('ex-spark-stack'), {
+    variant: 'stack',
+    data: [
+      { label: 'Chrome',  value: 341, color: '#3b82f6' },
+      { label: 'Safari',  value: 217,  color: '#06b6d4' },
+      { label: 'Firefox', value: 124,  color: '#10b981' },
+      { label: 'Edge',    value: 53,   color: '#f59e0b' },
+    ],
+    cornerRadius: 4,
+    padPixels: 4,
   });
 </script>
 ```

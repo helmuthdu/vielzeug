@@ -18,7 +18,7 @@ export type SgInputEvents = {
   input: { originalEvent: Event; value: string };
 };
 
-export type SgInputProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost'>> & {
+export type SgInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
   /** Autocomplete hint */
   autocomplete?: string;
   /** Show a clear (×) button when the field has a value */
@@ -242,6 +242,9 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
     const counterHidden = () => !counter;
     const counterText = () => counter?.value.counterText ?? '';
 
+    const clearTabIndex = () => (fieldValue.value ? '0' : '-1');
+    const pwdToggleTabIndex = () => (props.type.value === 'password' ? '0' : '-1');
+
     const togglePassword = () => {
       showPassword.value = !showPassword.value;
       inputRef.value?.focus();
@@ -282,11 +285,17 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
               type="button"
               :aria-label="${passwordToggleLabel}"
               :aria-pressed="${passwordTogglePressed}"
-              tabindex="-1"
+              :tabindex="${pwdToggleTabIndex}"
               @click="${togglePassword}">
               ${passwordToggleIcon}
             </button>
-            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
+            <button
+              aria-label="Clear"
+              class="clear-btn"
+              part="clear"
+              type="button"
+              :tabindex="${clearTabIndex}"
+              @click="${clear}">
               <sg-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></sg-icon>
             </button>
           </div>

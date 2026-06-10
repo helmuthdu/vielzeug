@@ -243,7 +243,7 @@ define<SgNavbarProps, SgNavbarEvents>(NAVBAR_TAG, {
     rounded: prop.string<RoundedSize>(),
     'scroll-threshold': prop.number(80),
     sticky: prop.bool(false),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost' | 'glass'>(),
+    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost'>(),
   },
   setup(props, { bind, el, emit, slots }) {
     const hasLogo = () => slots.has('logo').value;

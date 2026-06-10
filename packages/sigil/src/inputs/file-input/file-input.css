@@ -101,6 +101,10 @@
        Helper Text
        ======================================== */
 
+  .helper-text[hidden] {
+    display: none;
+  }
+
   .helper-text {
     padding-inline: 2px;
     font-size: var(--text-xs);

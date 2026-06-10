@@ -44,7 +44,7 @@
     height: 100%;
     min-height: 0;
     overflow: visible;
-    transition: var(--_motion-transition, width var(--_sidebar-transition), min-width var(--_sidebar-transition));
+    transition: var(--_motion-transition, max-width var(--_sidebar-transition));
   }
 
   :host > nav {

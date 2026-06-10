@@ -34,7 +34,7 @@ type ChipBaseProps = {
   /** Value associated with this chip — included in emitted event detail */
   value?: string;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
 };
 
 type SgChipMode = 'static' | 'removable' | 'selectable' | 'action';
@@ -171,7 +171,7 @@ define<SgChipComponentProps, SgChipEvents>(CHIP_TAG, {
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.string<ComponentSize>(),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>(),
+    variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
   },
 
   setup(props, { bind, el: _el, emit }) {

@@ -188,6 +188,9 @@ export const sizeVariantMixin = (config?: { lg?: SizeConfig; md?: SizeConfig; sm
   });
 
   return css`
+    :host {
+      ${md}
+    }
     :host([size='sm']) {
       ${sm}
     }

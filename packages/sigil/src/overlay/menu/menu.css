@@ -42,7 +42,7 @@
     box-shadow: var(--_menu-panel-shadow);
     opacity: 0;
     backdrop-filter: blur(var(--_menu-panel-blur));
-    transform: translateY(-4px) scale(0.97);
+    transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
     transform-origin: top;
     transition:
       opacity var(--transition-fast),
@@ -55,6 +55,11 @@
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0) scale(1);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
+    }
   }
 
   /* ========================================

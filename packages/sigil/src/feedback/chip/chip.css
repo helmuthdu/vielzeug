@@ -1,6 +1,6 @@
 @layer sigil.base {
   :host {
-    --_bg: var(--chip-bg, var(--color-contrast-150, var(--color-contrast-100)));
+    --_bg: var(--chip-bg, var(--color-contrast-150));
     --_color: var(--chip-color, var(--color-contrast-800));
     --_border-color: var(--chip-border-color, transparent);
     --_radius: var(--chip-radius, var(--rounded-lg));
@@ -122,9 +122,10 @@
     cursor: pointer;
   }
 
-  .chip-btn:focus-visible .chip {
+  .chip-btn:focus-visible {
     outline: 2px solid var(--_theme-base, currentColor);
     outline-offset: 2px;
+    border-radius: var(--_radius);
   }
 }
 
@@ -198,7 +199,7 @@
 
   :host([variant='bordered']) .remove-btn:hover,
   :host([variant='outline']) .remove-btn:hover {
-    background: var(--chip-remove-hover-bg, color-mix(in srgb, var(--_remove-bg) 80%, black));
+    background: var(--chip-remove-hover-bg, color-mix(in oklch, var(--_remove-bg) 80%, var(--color-contrast-900)));
     opacity: 1;
   }
 

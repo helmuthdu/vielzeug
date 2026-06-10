@@ -100,6 +100,14 @@ function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?:
   if (source.childElementCount > 0) {
     // Source has element children — deep-clone them into the native cell so
     // components like sg-skeleton render correctly inside the shadow table.
+    // Guard: skip re-clone if the serialised content is identical to avoid
+    // redundant DOM work on every MutationObserver tick (e.g. 250+ cells
+    // of skeleton loaders all cloning on each attribute change).
+    const snapshot = source.innerHTML;
+
+    if (native.getAttribute('data-src-html') === snapshot) return;
+
+    native.setAttribute('data-src-html', snapshot);
     native.textContent = '';
 
     for (const child of source.childNodes) {
@@ -163,6 +171,7 @@ function buildTable(
       const inferredScope = isHeader ? (section === thead ? 'col' : 'row') : undefined;
 
       native.setAttribute('part', section === tbody ? 'cell' : 'header-cell');
+      native.removeAttribute('data-src-html');
       syncCell(cell, native, inferredScope);
       cellMap.set(cell, { inferredScope, native });
       tr.appendChild(native);

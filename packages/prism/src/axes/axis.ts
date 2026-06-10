@@ -1,14 +1,11 @@
-import type { AxisConfig } from '../types';
+import type { AxisConfig, BandScale, Scale } from '../types';
 
 import { createSvgElement, setAttributes } from '../svg/element';
 import { createTextElement } from '../svg/text';
 
-interface AxisScale {
-  map(value: unknown): number;
-  ticks(count?: number): unknown[];
-}
+type AnyScale = BandScale | Scale<Date> | Scale<number>;
 
-export function renderAxis(parent: SVGGElement, scale: AxisScale, config: AxisConfig, length: number): void {
+export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisConfig, length: number): void {
   while (parent.firstChild) parent.removeChild(parent.firstChild);
 
   const isHorizontal = config.position === 'bottom' || config.position === 'top';
@@ -30,7 +27,7 @@ export function renderAxis(parent: SVGGElement, scale: AxisScale, config: AxisCo
   const format = config.tickFormat ?? String;
 
   for (const tick of ticks) {
-    const pos = scale.map(tick);
+    const pos = (scale as Scale<Date | number | string>).map(tick as Date | number | string);
     const tickLine = createSvgElement('line', {
       class: 'prism-axis-tick',
       x1: isHorizontal ? pos : 0,

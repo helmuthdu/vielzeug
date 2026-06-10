@@ -1,4 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { signal } from '@vielzeug/ripple';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ChartPlugin } from '../types';
 
 import { createAreaChart } from '../charts/area';
 
@@ -85,7 +88,7 @@ describe('createAreaChart', () => {
       series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
     });
 
-    expect(container.querySelector('.prism-legend--top')).not.toBeNull();
+    expect(container.querySelector('.prism-legend-top')).not.toBeNull();
     chart.dispose();
   });
 
@@ -106,6 +109,90 @@ describe('createAreaChart', () => {
     });
 
     expect(container.querySelector('.prism-legend')).toBeNull();
+    chart.dispose();
+  });
+
+  it('double dispose is a no-op', () => {
+    const chart = createAreaChart(container, {
+      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+    });
+
+    chart.dispose();
+    expect(() => chart.dispose()).not.toThrow();
+  });
+
+  it('does not expose update() on ChartHandle', () => {
+    const chart = createAreaChart(container, {
+      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+    });
+
+    expect('update' in chart).toBe(false);
+    chart.dispose();
+  });
+
+  it('renders tooltip inside container (not body)', () => {
+    const chart = createAreaChart(container, {
+      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      tooltip: true,
+    });
+
+    expect(container.querySelector('.prism-tooltip')).not.toBeNull();
+    chart.dispose();
+    expect(container.querySelector('.prism-tooltip')).toBeNull();
+  });
+
+  it('accepts reactive data via signals', () => {
+    const data = signal([{ x: 1, y: 10 }]);
+    const chart = createAreaChart(container, {
+      series: [{ data, name: 'Reactive' }],
+    });
+
+    data.value = [...data.value, { x: 2, y: 20 }];
+    chart.dispose();
+  });
+
+  it('calls onHover(null) on mouseleave', () => {
+    const onHover = vi.fn();
+    const chart = createAreaChart(container, {
+      onHover,
+      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(onHover).toHaveBeenCalledWith(null);
+    chart.dispose();
+  });
+
+  it('installs and destroys plugins', () => {
+    const install = vi.fn();
+    const destroy = vi.fn();
+    const plugin: ChartPlugin = { destroy, install };
+
+    const chart = createAreaChart(container, {
+      plugins: [plugin],
+      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+    });
+
+    expect(install).toHaveBeenCalledWith(chart.el, container);
+    chart.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
+  });
+
+  it('renders with Date x-axis (time scale)', () => {
+    const chart = createAreaChart(container, {
+      series: [
+        {
+          data: [
+            { x: new Date('2024-01-01'), y: 10 },
+            { x: new Date('2024-06-01'), y: 20 },
+          ],
+          name: 'Time',
+        },
+      ],
+      xAxis: { position: 'bottom' },
+    });
+
+    expect(chart.el.querySelector('.prism-area-fill')).not.toBeNull();
     chart.dispose();
   });
 });

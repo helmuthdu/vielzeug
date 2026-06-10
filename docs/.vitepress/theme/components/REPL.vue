@@ -1,54 +1,54 @@
 <!-- eslint-disable no-undef -->
 <template>
-  <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
-    <!-- Library Selector Card Grid -->
-    <sg-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem">
-      <sg-card
-        v-for="(desc, lib) in libraryDescriptions"
-        :key="lib"
-        interactive
-        variant="flat"
-        padding="md"
-        :color="selectedLibrary === lib ? 'primary' : undefined"
-        @click="
-          selectedLibrary = lib;
-          switchLibrary();
-        ">
-        <div class="lib-card-body">
-          <div class="card-icon">
-            <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="lib-logo" />
-          </div>
-          <div class="card-info">
-            <span class="card-title">@vielzeug/{{ lib }}</span>
-            <p class="card-desc">{{ desc }}</p>
-          </div>
+  <div id="repl-container" class="repl-container">
+    <!-- IDE layout: sidebar + main -->
+    <div class="ide-layout">
+      <!-- Sidebar: library list -->
+      <aside class="ide-sidebar">
+        <div class="sidebar-header">
+          <img :src="withBase(`/logo-${selectedLibrary}.svg`)" :alt="selectedLibrary" class="sidebar-active-logo" />
+          <span class="sidebar-active-name">@vielzeug/<strong>{{ selectedLibrary }}</strong></span>
         </div>
-      </sg-card>
-    </sg-grid>
+        <nav class="sidebar-nav">
+          <button
+            v-for="(desc, lib) in libraryDescriptions"
+            :key="lib"
+            class="sidebar-item"
+            :class="{ 'is-active': selectedLibrary === lib }"
+            :title="desc"
+            @click="selectedLibrary = lib; switchLibrary()">
+            <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="sidebar-logo" />
+            <span class="sidebar-info">
+              <span class="sidebar-name">{{ lib }}</span>
+              <span class="sidebar-desc">{{ desc }}</span>
+            </span>
+          </button>
+        </nav>
+        <div class="sidebar-ref">
+          <REPLReference
+            :selected-library="selectedLibrary"
+            :arsenal-categories="ARSENAL_CATEGORIES"
+            :library-exports="LIBRARY_EXPORTS"
+            @insert-function="insertFunction" />
+        </div>
+      </aside>
 
-    <!-- Editor and Output Component -->
-    <REPLEditor
-      ref="editorRef"
-      :selected-library="selectedLibrary"
-      :selected-example="selectedExample"
-      :is-expanded="isExpanded"
-      :examples="examples"
-      :is-dark="isDark"
-      :get-default-code="getDefaultCode"
-      :update-monaco-types="updateMonacoTypes"
-      :storage-prefix="STORAGE_PREFIX"
-      @update:selected-example="selectedExample = $event"
-      @toggle-expand="toggleExpand"
-      @run-code="onRunCode"
-      @clear-output="onClearOutput" />
-
-    <!-- Function Reference -->
-    <REPLReference
-      v-if="!isExpanded"
-      :selected-library="selectedLibrary"
-      :arsenal-categories="ARSENAL_CATEGORIES"
-      :library-exports="LIBRARY_EXPORTS"
-      @insert-function="insertFunction" />
+      <!-- Main: editor + output -->
+      <div class="ide-main">
+        <REPLEditor
+          ref="editorRef"
+          :selected-library="selectedLibrary"
+          :selected-example="selectedExample"
+          :examples="examples"
+          :is-dark="isDark"
+          :get-default-code="getDefaultCode"
+          :update-monaco-types="updateMonacoTypes"
+          :storage-prefix="STORAGE_PREFIX"
+          @update:selected-example="selectedExample = $event"
+          @run-code="onRunCode"
+          @clear-output="onClearOutput" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -577,7 +577,6 @@ const ARSENAL_CATEGORIES = [
 const editorRef = ref<InstanceType<typeof REPLEditor> | null>(null);
 const selectedLibrary = ref('arsenal');
 const selectedExample = ref('');
-const isExpanded = ref(false);
 const isDark = ref(true);
 
 // Constants exposed for template
@@ -633,10 +632,6 @@ const loadLibrary = async (libName: string) => {
 const switchLibrary = () => {
   selectedExample.value = '';
   loadLibrary(selectedLibrary.value);
-};
-
-const toggleExpand = () => {
-  isExpanded.value = !isExpanded.value;
 };
 
 const insertFunction = (item: string) => {
@@ -702,80 +697,205 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Card body layout inside sg-card */
-.lib-card-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.25rem;
+/* ── IDE shell ─────────────────────────────────────────── */
+.repl-container {
+  --sidebar-w: 280px;
+  overflow: hidden;
+  background: var(--vp-c-bg);
+  height: calc(100vh - var(--vp-nav-height, 64px));
 }
 
-.card-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  flex-shrink: 0;
-  border-radius: 12px;
-  background: var(--color-contrast-50);
-  padding: 8px;
-  border: 1px solid var(--vp-c-divider);
-}
-
-.lib-logo {
-  width: 100%;
+.ide-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
   height: 100%;
-  object-fit: contain;
 }
 
-.card-info {
+.ide-main {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar ───────────────────────────────────────────── */
+.ide-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  background: var(--vp-c-bg-alt);
+  overflow: hidden;
+  height: 100%;
+  border-right: 1px solid var(--vp-c-divider);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+  flex-shrink: 0;
+  background: var(--vp-c-bg-soft);
+  height: 52px;
+}
+
+.sidebar-active-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sidebar-active-name {
+  font-size: 0.8125rem;
+  color: var(--vp-c-text-2);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-active-name strong {
+  color: var(--vp-c-text-1);
+  font-weight: 600;
+}
+
+.sidebar-nav {
+  flex: 1 1 0;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 0.375rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--vp-c-divider) transparent;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--vp-c-text-2);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: color 0.15s, background 0.15s;
+}
+
+.sidebar-item:hover {
+  color: var(--vp-c-text-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 6%, transparent);
+}
+
+.sidebar-item.is-active {
+  color: var(--vp-c-brand-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 10%, transparent);
+  font-weight: 600;
+}
+
+.sidebar-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--vp-c-brand-1);
+}
+
+.sidebar-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+.sidebar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
   min-width: 0;
 }
 
-.card-title {
-  font-weight: 700;
-  font-size: 1rem;
+.sidebar-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--vp-c-text-1);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
-.card-desc {
-  font-size: 0.85rem;
+.sidebar-item:not(.is-active) .sidebar-name {
   color: var(--vp-c-text-2);
-  line-height: 1.4;
-  margin: 0;
+  font-weight: 500;
 }
 
-/* REPL Layout - Expanded Mode Adjustments */
-.is-expanded {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-  background: var(--vp-c-bg);
-  padding: 1rem;
-  overflow: auto;
+.sidebar-desc {
+  font-size: 0.6875rem;
+  color: var(--vp-c-text-3);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.is-expanded :deep(.repl-layout) {
-  height: calc(100vh - 4rem);
-  min-height: auto;
-  max-height: calc(100vh - 4rem);
+.sidebar-item.is-active .sidebar-logo {
+  opacity: 1;
 }
 
-.is-expanded :deep(.editor-section),
-.is-expanded :deep(.output-section) {
-  height: 100%;
-  max-height: calc(100vh - 2rem);
+.sidebar-ref {
+  flex: 1 1 0;
+  min-height: 200px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.is-expanded :deep(.code-editor),
-.is-expanded :deep(.output-area) {
-  height: calc(100vh - 8rem);
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ide-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ide-sidebar {
+    border-left: none;
+    border-bottom: 1px solid var(--vp-c-divider);
+    max-height: 180px;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebar-item {
+    width: auto;
+    padding: 0.3rem 0.625rem;
+    border-radius: 6px;
+  }
+
+  .sidebar-item.is-active::before {
+    display: none;
+  }
+
+  .ide-main {
+    border-left: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-item {
+    transition: none;
+  }
 }
 </style>

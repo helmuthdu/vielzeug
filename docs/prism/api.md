@@ -10,13 +10,15 @@ description: Complete type signatures, parameter docs, and return values for eve
 | Symbol | Purpose | Returns |
 |---|---|---|
 | `createLineChart()` | Reactive line chart with curves and interpolation | `ChartHandle` |
-| `createBarChart()` | Grouped/stacked bar chart | `ChartHandle` |
+| `createBarChart()` | Bar chart: grouped, stacked, horizontal variants | `ChartHandle` |
 | `createAreaChart()` | Filled area chart | `ChartHandle` |
 | `linearScale()` | Continuous numeric → pixel scale | `Scale<number>` |
 | `timeScale()` | Date → pixel scale | `Scale<Date>` |
 | `bandScale()` | Categorical → pixel band scale | `BandScale` |
-| `getSeriesColor()` | Get palette color by index | `string` |
-| `PRISM_COLORS` | Default 8-color palette array | `readonly string[]` |
+| `createSparkline()` | Minimal inline sparkline (line/area/bar) | `ChartHandle` |
+| `createPieChart()` | Pie, donut, or semi-circle donut chart | `ChartHandle` |
+| `seriesColor()` | CSS variable color for series index | `string` |
+| `setTheme()` | Apply custom palette / CSS tokens at runtime | `void` |
 
 ## Package Entry Points
 
@@ -35,9 +37,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle;
 ```
 
-Creates a reactive line chart. Supports multiple series, curve interpolation, tooltips, and crosshair.
-
-**Parameters**
+Creates a reactive line chart. Supports multiple series, curve interpolation, tooltips, crosshair, and event hooks.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -54,9 +54,7 @@ Creates a reactive line chart. Supports multiple series, curve interpolation, to
 function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle;
 ```
 
-Creates a reactive bar chart. Multiple series render as grouped bars.
-
-**Parameters**
+Creates a reactive bar chart. Use `variant` to switch between grouped, stacked, horizontal variants.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -73,14 +71,46 @@ Creates a reactive bar chart. Multiple series render as grouped bars.
 function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle;
 ```
 
-Creates a reactive filled area chart with configurable opacity and curve.
-
-**Parameters**
+Creates a reactive filled area chart with configurable opacity, curve, and event hooks.
 
 | Parameter | Type | Description |
 |---|---|---|
 | `container` | `HTMLElement` | DOM element to render into |
 | `config` | `AreaChartConfig` | Chart configuration |
+
+**Returns** — [`ChartHandle`](#charthandle)
+
+---
+
+### `createPieChart`
+
+```ts
+function createPieChart(container: HTMLElement, config: PieChartConfig): ChartHandle;
+```
+
+Creates a pie, donut, or semi-circle donut chart. All three variants share the same `PieChartConfig` — select via `variant`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `container` | `HTMLElement` | DOM element to render into (sized by CSS) |
+| `config` | `PieChartConfig` | Chart configuration |
+
+**Returns** — [`ChartHandle`](#charthandle)
+
+---
+
+### `createSparkline`
+
+```ts
+function createSparkline(container: HTMLElement, config: SparklineConfig): ChartHandle;
+```
+
+Creates a minimal inline chart with no axes, no legend, and no margin. Designed for use in tables, cards, and inline data contexts.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `container` | `HTMLElement` | DOM element to render into (sized by CSS) |
+| `config` | `SparklineConfig` | Sparkline configuration |
 
 **Returns** — [`ChartHandle`](#charthandle)
 
@@ -94,14 +124,12 @@ Creates a reactive filled area chart with configurable opacity and curve.
 function linearScale(config: LinearScaleConfig): Scale<number>;
 ```
 
-Creates a continuous linear scale mapping a numeric domain to a pixel range. Generates "nice" rounded tick values by default.
-
-**Parameters**
+Continuous linear scale mapping a numeric domain to a pixel range.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `config.domain` | `MaybeSignal<[number, number]>` | — | Input data range [min, max] |
-| `config.range` | `MaybeSignal<[number, number]>` | — | Output pixel range [min, max] |
+| `config.domain` | `MaybeSignal<[number, number]>` | — | Input data range `[min, max]` |
+| `config.range` | `MaybeSignal<[number, number]>` | — | Output pixel range `[min, max]` |
 | `config.nice` | `boolean` | `true` | Extend domain to nice round numbers |
 | `config.clamp` | `boolean` | `false` | Clamp output to range bounds |
 
@@ -113,13 +141,11 @@ Creates a continuous linear scale mapping a numeric domain to a pixel range. Gen
 function timeScale(config: TimeScaleConfig): Scale<Date>;
 ```
 
-Creates a time scale mapping dates to pixels. Automatically selects appropriate tick intervals (seconds, minutes, hours, days, months, years).
-
-**Parameters**
+Time scale mapping `Date` values to pixels. Automatically selects tick intervals (seconds → years).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `config.domain` | `MaybeSignal<[Date, Date]>` | — | Input date range [start, end] |
+| `config.domain` | `MaybeSignal<[Date, Date]>` | — | Input date range `[start, end]` |
 | `config.range` | `MaybeSignal<[number, number]>` | — | Output pixel range |
 | `config.nice` | `boolean` | `true` | Extend domain to nice boundaries |
 
@@ -131,9 +157,7 @@ Creates a time scale mapping dates to pixels. Automatically selects appropriate 
 function bandScale(config: BandScaleConfig): BandScale;
 ```
 
-Creates a categorical scale that divides the range into equal bands with configurable padding.
-
-**Parameters**
+Categorical scale dividing the range into equal bands with configurable padding.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -148,12 +172,11 @@ Creates a categorical scale that divides the range into equal bands with configu
 
 ### `ChartHandle`
 
-Returned by all chart factories. Provides access to the rendered SVG and lifecycle methods.
+Returned by all chart factories.
 
 ```ts
 interface ChartHandle {
   readonly el: SVGSVGElement;
-  update(): void;
   dispose(): void;
   [Symbol.dispose](): void;
 }
@@ -161,10 +184,72 @@ interface ChartHandle {
 
 | Member | Description |
 |---|---|
-| `el` | The root SVG element (for external styling/manipulation) |
-| `update()` | Force a re-render (normally automatic via signals) |
-| `dispose()` | Tear down all effects, observers, and DOM nodes |
-| `[Symbol.dispose]()` | Same as `dispose()` — for `using` declarations |
+| `el` | The root `SVGSVGElement` (for styling or external manipulation) |
+| `dispose()` | Tear down all effects, observers, DOM nodes, tooltip, and legend |
+| `[Symbol.dispose]()` | Same as `dispose()` — for TC39 `using` declarations |
+
+> **Note:** Charts re-render automatically when signal data changes. There is no `update()` method — reactivity is fully automatic.
+
+---
+
+### `ChartEvent`
+
+Passed to `onClick` and `onHover` callbacks.
+
+```ts
+interface ChartEvent {
+  originalEvent: MouseEvent;
+  point: DataPoint;
+  series: Series;
+}
+```
+
+---
+
+### `ChartPlugin`
+
+Interface for extending charts with custom behavior. Plugins are installed after the chart is mounted and destroyed on `dispose()`.
+
+```ts
+interface ChartPlugin {
+  install(svg: SVGSVGElement, container: HTMLElement): void;
+  destroy(): void;
+}
+```
+
+---
+
+### `BaseChartConfig`
+
+Shared configuration inherited by all chart config types.
+
+```ts
+interface BaseChartConfig {
+  ariaLabel?: string;
+  legend?: boolean | LegendConfig;
+  margin?: Partial<ChartMargin>;
+  onClick?: (event: ChartEvent) => void;
+  onHover?: (event: ChartEvent | null) => void;
+  plugins?: ChartPlugin[];
+  tooltip?: boolean | TooltipConfig;
+  transition?: TransitionConfig;
+  xAxis?: AxisConfig;
+  yAxis?: AxisConfig;
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `ariaLabel` | `string` | Accessible label on the SVG element |
+| `legend` | `boolean \| LegendConfig` | Show a series legend |
+| `margin` | `Partial<ChartMargin>` | Override chart margins |
+| `onClick` | `(event: ChartEvent) => void` | Fired when a data point is clicked |
+| `onHover` | `(event: ChartEvent \| null) => void` | Fired on mousemove (null on mouseleave) |
+| `plugins` | `ChartPlugin[]` | Extension plugins installed at mount |
+| `tooltip` | `boolean \| TooltipConfig` | Hover tooltip |
+| `transition` | `TransitionConfig` | Enter/update animation |
+| `xAxis` | `AxisConfig` | X-axis configuration |
+| `yAxis` | `AxisConfig` | Y-axis configuration |
 
 ---
 
@@ -174,7 +259,17 @@ interface ChartHandle {
 type MaybeSignal<T> = T | ReadonlySignal<T>;
 ```
 
-Union type accepting either a plain value or a Ripple signal. Used throughout config types to enable optional reactivity.
+Accepts either a plain value or a `@vielzeug/ripple` signal. Used throughout config types for optional reactivity.
+
+---
+
+### `XScale`
+
+```ts
+type XScale = Scale<Date> | Scale<number>;
+```
+
+Union type for horizontal scales. The chart auto-selects `timeScale` when `x` values are `Date` instances, `linearScale` otherwise.
 
 ---
 
@@ -192,11 +287,11 @@ interface Scale<T> {
 
 | Member | Description |
 |---|---|
-| `domain` | Current input domain [min, max] |
-| `range` | Current output pixel range |
-| `map(value)` | Convert a domain value to a pixel position |
-| `invert(pixel)` | Convert a pixel position back to a domain value |
-| `ticks(count?)` | Generate nicely-spaced tick values (default: 10) |
+| `domain` | Input domain `[min, max]` |
+| `range` | Output pixel range |
+| `map(value)` | Domain value → pixel position |
+| `invert(pixel)` | Pixel position → domain value |
+| `ticks(count?)` | Nicely-spaced tick values (default: 10) |
 
 ---
 
@@ -209,14 +304,16 @@ interface BandScale {
   map(value: string): number;
   bandwidth(): number;
   gap(): number;
+  ticks(): string[];
 }
 ```
 
 | Member | Description |
 |---|---|
+| `map(value)` | Left edge pixel position of a category's band |
 | `bandwidth()` | Width of each band in pixels |
 | `gap()` | Gap between bands in pixels |
-| `map(value)` | Left edge pixel position of a category's band |
+| `ticks()` | All domain categories |
 
 ---
 
@@ -244,89 +341,206 @@ interface Series<T extends DataPoint = DataPoint> {
 
 ---
 
-### Config Types
+## Pie / Donut Types
 
-#### `LineChartConfig`
+### `PieChartConfig`
 
 ```ts
-interface LineChartConfig {
-  series: MaybeSignal<LineSeriesConfig[]>;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
-  margin?: Partial<ChartMargin>;
-  tooltip?: boolean | TooltipConfig;
-  crosshair?: boolean | CrosshairConfig;
-  transition?: TransitionConfig;
+interface PieChartConfig {
   ariaLabel?: string;
+  cornerRadius?: number;
+  data: MaybeSignal<PieSliceConfig[]>;
+  innerRadius?: number;
+  onClick?: (slice: PieSliceConfig, index: number) => void;
+  onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
+  padPixels?: number;
+  tooltip?: TooltipConfig | boolean;
+  transition?: TransitionConfig;
+  variant?: PieVariant;
 }
 ```
 
-#### `LineSeriesConfig`
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `data` | `MaybeSignal<PieSliceConfig[]>` | — | Slice definitions |
+| `variant` | `PieVariant` | `'pie'` | Chart style: `'pie'`, `'donut'`, or `'semi'` |
+| `innerRadius` | `number` | `55%` of outer (donut/semi), `0` (pie) | Inner hole radius in pixels |
+| `padPixels` | `number` | `4` | Pixel gap between slices (uniform across arc thickness) |
+| `cornerRadius` | `number` | `6` | Rounded arc corners (pixels) |
+| `tooltip` | `boolean \| TooltipConfig` | — | Hover tooltip |
+| `transition` | `TransitionConfig` | `duration: 400` | Enter animation |
+| `onClick` | `(slice, index) => void` | — | Fired on slice click |
+| `onHover` | `(slice\|null, index\|null) => void` | — | Fired on hover; `null` on mouseleave |
+| `ariaLabel` | `string` | — | Accessible label on the SVG element |
+
+### `PieSliceConfig`
+
+```ts
+interface PieSliceConfig {
+  color?: string;
+  label?: string;
+  value: number;
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `value` | `number` | Numeric weight of the slice |
+| `color` | `string` | Slice fill color; defaults to `--prism-color-{n}` |
+| `label` | `string` | Optional text rendered at the arc centroid |
+
+### `PieVariant`
+
+```ts
+type PieVariant = 'donut' | 'pie' | 'semi';
+```
+
+- **`pie`** — full circle, no hole
+- **`donut`** — full circle with inner hole (~55% of outer radius by default)
+- **`semi`** — top-half semicircle with inner hole (useful for gauges/progress)
+
+---
+
+## Sparkline Types
+
+### `SparklineConfig`
+
+```ts
+interface SparklineConfig {
+  color?: string;
+  cornerRadius?: number;
+  curve?: 'linear' | 'monotone' | 'step';
+  data: MaybeSignal<number[] | StackSegment[]>;
+  fillOpacity?: number;
+  onClick?: (index: number, value: number) => void;
+  onHover?: (index: number | null, value: number | null) => void;
+  padPixels?: number;
+  strokeWidth?: number;
+  transition?: TransitionConfig;
+  variant?: SparklineVariant;
+}
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `data` | `MaybeSignal<number[] \| StackSegment[]>` | — | Numeric values, or `StackSegment[]` for `'stack'` variant |
+| `variant` | `SparklineVariant` | `'line'` | Chart style |
+| `color` | `string` | `var(--prism-color-1)` | Stroke/fill color (line/area/bar only) |
+| `curve` | `'linear' \| 'monotone' \| 'step'` | `'linear'` | Line interpolation (line/area only) |
+| `strokeWidth` | `number` | `1.5` | Line stroke width (line/area only) |
+| `fillOpacity` | `number` | `0.2` | Fill opacity (area only) |
+| `cornerRadius` | `number` | `0` | Bar corner radius in pixels (bar/stack only) |
+| `padPixels` | `number` | `2` | Gap between stack segments in pixels (stack only) |
+| `transition` | `TransitionConfig` | — | Enter animation |
+| `onClick` | `(index, value) => void` | — | Called on click with nearest data index |
+| `onHover` | `(index\|null, value\|null) => void` | — | Called on mousemove; `null` on mouseleave |
+
+### `SparklineVariant`
+
+```ts
+type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
+```
+
+- **`line`** — polyline path (default)
+- **`area`** — filled area + line overlay
+- **`bar`** — vertical bar per data point
+- **`stack`** — horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
+
+### `StackSegment`
+
+```ts
+interface StackSegment {
+  color?: string;
+  label?: string;
+  value: number;
+}
+```
+
+> **Accessibility:** The sparkline SVG is marked `aria-hidden="true"` — provide surrounding text context for screen readers.
+
+---
+
+## Chart Config Types
+
+### `LineChartConfig`
+
+Extends [`BaseChartConfig`](#basechartconfig).
+
+```ts
+interface LineChartConfig extends BaseChartConfig {
+  series: MaybeSignal<LineSeriesConfig[]>;
+  crosshair?: boolean | CrosshairConfig;
+}
+```
+
+### `LineSeriesConfig`
 
 ```ts
 interface LineSeriesConfig extends Series {
-  curve?: 'linear' | 'monotone' | 'step';   // default: 'linear'
-  strokeWidth?: number;                       // default: 2
-  showPoints?: boolean;                       // default: false
-  pointRadius?: number;                       // default: 3
-}
-```
-
-#### `BarChartConfig`
-
-```ts
-interface BarChartConfig {
-  series: MaybeSignal<BarSeriesConfig[]>;
-  orientation?: 'vertical' | 'horizontal';   // default: 'vertical'
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
-  margin?: Partial<ChartMargin>;
-  tooltip?: boolean | TooltipConfig;
-  transition?: TransitionConfig;
-  ariaLabel?: string;
-}
-```
-
-#### `BarSeriesConfig`
-
-```ts
-interface BarSeriesConfig extends Series {
-  mode?: 'grouped' | 'stacked';    // default: 'grouped'
-  borderRadius?: number;            // default: 0
-}
-```
-
-#### `AreaChartConfig`
-
-```ts
-interface AreaChartConfig {
-  series: MaybeSignal<AreaSeriesConfig[]>;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
-  margin?: Partial<ChartMargin>;
-  tooltip?: boolean | TooltipConfig;
-  crosshair?: boolean | CrosshairConfig;
-  transition?: TransitionConfig;
-  ariaLabel?: string;
-}
-```
-
-#### `AreaSeriesConfig`
-
-```ts
-interface AreaSeriesConfig extends Series {
-  curve?: 'linear' | 'monotone' | 'step';   // default: 'linear'
-  fillOpacity?: number;                       // default: 0.3
-  showLine?: boolean;                         // default: true
-  stacked?: boolean;                          // default: false
+  curve?: 'linear' | 'monotone' | 'step';  // default: 'linear'
+  strokeWidth?: number;                      // default: 2
+  showPoints?: boolean;                      // default: false
+  pointRadius?: number;                      // default: 3
 }
 ```
 
 ---
 
-### Shared Config Types
+### `BarChartConfig`
 
-#### `AxisConfig`
+Extends [`BaseChartConfig`](#basechartconfig).
+
+```ts
+type BarVariant =
+  | 'grouped'             // vertical grouped (default)
+  | 'stacked'             // vertical stacked
+  | 'grouped-horizontal'  // horizontal grouped
+  | 'stacked-horizontal'; // horizontal stacked
+
+interface BarChartConfig extends BaseChartConfig {
+  series: MaybeSignal<BarSeriesConfig[]>;
+  variant?: BarVariant;   // default: 'grouped'
+}
+```
+
+**Migration from v3:** replace `stacked: true` → `variant: 'stacked'` and `orientation: 'horizontal'` → `variant: 'grouped-horizontal'`.
+
+### `BarSeriesConfig`
+
+```ts
+interface BarSeriesConfig extends Series {
+  borderRadius?: number;  // default: 0
+}
+```
+
+---
+
+### `AreaChartConfig`
+
+Extends [`BaseChartConfig`](#basechartconfig).
+
+```ts
+interface AreaChartConfig extends BaseChartConfig {
+  series: MaybeSignal<AreaSeriesConfig[]>;
+  crosshair?: boolean | CrosshairConfig;
+}
+```
+
+### `AreaSeriesConfig`
+
+```ts
+interface AreaSeriesConfig extends Series {
+  curve?: 'linear' | 'monotone' | 'step';  // default: 'linear'
+  fillOpacity?: number;                      // default: 0.3
+  showLine?: boolean;                        // default: true
+}
+```
+
+---
+
+## Shared Config Types
+
+### `AxisConfig`
 
 ```ts
 interface AxisConfig {
@@ -338,52 +552,64 @@ interface AxisConfig {
 }
 ```
 
-#### `GridConfig`
+### `GridConfig`
 
 ```ts
 interface GridConfig {
   color?: string;
-  dash?: string;    // SVG stroke-dasharray value
+  dash?: string;  // SVG stroke-dasharray value, e.g. '4 2'
 }
 ```
 
-#### `TooltipConfig`
+### `TooltipConfig`
 
 ```ts
 interface TooltipConfig {
-  offset?: number;                                    // default: 8
-  render?: (point: DataPoint, series: Series) => string;  // custom HTML
+  offset?: number;                                         // default: 8
+  render?: (point: DataPoint, series: Series) => string;  // returns HTML string
 }
 ```
 
-#### `CrosshairConfig`
+The tooltip is appended inside the chart container (not `document.body`), so it is automatically scoped and cleaned up on `dispose()`.
+
+### `CrosshairConfig`
 
 ```ts
 interface CrosshairConfig {
-  vertical?: boolean;      // default: true
-  horizontal?: boolean;    // default: false
-  snap?: boolean;          // default: true
+  vertical?: boolean;    // default: true
+  horizontal?: boolean;  // default: false
+  snap?: boolean;        // default: true
 }
 ```
 
-#### `TransitionConfig`
+### `LegendConfig`
+
+```ts
+interface LegendConfig {
+  position?: 'top' | 'bottom' | 'left' | 'right';  // default: 'bottom'
+}
+```
+
+### `TransitionConfig`
 
 ```ts
 interface TransitionConfig {
-  duration?: number;       // ms, default: 300
+  duration?: number;  // ms, default: 300
   easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | ((t: number) => number);
-  stagger?: number;        // ms between elements, default: 0
+  stagger?: number;   // ms delay between bar enter animations, default: 0
 }
 ```
 
-#### `ChartMargin`
+> **`stagger`** applies only to bar chart enter animations — new bars grow in sequence with a `stagger`ms delay between each one.
+
+### `ChartMargin`
 
 ```ts
 interface ChartMargin {
-  top: number;       // default: 20
-  right: number;     // default: 20
-  bottom: number;    // default: 40
-  left: number;      // default: 50
+  top: number;     // default: 20
+  right: number;   // default: 20
+  bottom: number;  // default: 40
+  left: number;    // default: 50
 }
 ```
 
@@ -391,18 +617,31 @@ interface ChartMargin {
 
 ## Utilities
 
-### `getSeriesColor`
+### `seriesColor`
 
 ```ts
-function getSeriesColor(index: number): string;
+function seriesColor(index: number, override?: string): string;
 ```
 
-Returns a CSS variable reference for the palette color at the given index (wraps around after 8).
+Returns the CSS variable reference for palette color at `index` (wraps at 8). If `override` is provided it is returned as-is. Used internally by all chart factories.
 
-### `PRISM_COLORS`
+### `setTheme`
 
 ```ts
-const PRISM_COLORS: readonly string[];
+interface PrismTheme {
+  colors?: string[];      // replaces --prism-color-1 … -8
+  fontFamily?: string;    // sets --prism-font-family
+  gridColor?: string;     // sets --prism-grid-color
+  gridOpacity?: number;   // sets --prism-grid-opacity
+}
+
+function setTheme(theme: PrismTheme): void;
 ```
 
-Array of 8 CSS variable references for the default series palette.
+Applies CSS custom properties to `document.documentElement`. Call once at app startup before mounting charts.
+
+```ts
+import { setTheme } from '@vielzeug/prism';
+
+setTheme({ colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'] });
+```

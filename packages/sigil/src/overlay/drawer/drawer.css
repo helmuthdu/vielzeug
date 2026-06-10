@@ -323,7 +323,10 @@
     border-radius: var(--rounded-full);
     opacity: 0.6;
     translate: -50% -50%;
-    transition: all var(--transition-fast);
+    transition:
+      background var(--transition-fast),
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
   }
 
   :host([placement='left']) .drag-handle::before,

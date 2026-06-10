@@ -54,7 +54,7 @@ export type SgDatePickerProps = {
    */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
   /**
    * Day-of-week indices to disable (0 = Sunday … 6 = Saturday).
    * Pass as a JSON array attribute or a JS property.
@@ -85,7 +85,7 @@ export type SgDatePickerProps = {
  * @attr {string} helper - Helper text
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} locale - BCP 47 locale string
  * @attr {string} weekend-days - Comma-separated day indices to disable

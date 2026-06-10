@@ -467,7 +467,8 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
       emit('search', { query: target.value });
     }
     function handleFocus() {
-      if (!isOpen.value) openPopup(true, 'focus');
+      // Intentionally no-op: open only on explicit click or keyboard.
+      // Opening on every focus surprises users tabbing through a form.
     }
 
     // ── Keyboard Navigation ──────────────────────────────────────────────────
@@ -726,6 +727,14 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
       } else {
         el.removeAttribute('aria-disabled');
       }
+
+      if (props.error.value) {
+        el.setAttribute('aria-invalid', 'true');
+        el.setAttribute('aria-errormessage', `${comboId}-error`);
+      } else {
+        el.removeAttribute('aria-invalid');
+        el.removeAttribute('aria-errormessage');
+      }
     });
 
     // Reactively sync the query signal into the raw input value.
@@ -814,6 +823,14 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
           </span>
         </span>
       </sg-input>
+      <span
+        class="sr-only"
+        id="${() => `${comboId}-error`}"
+        role="alert"
+        aria-live="assertive"
+        ?hidden="${() => !props.error.value}"
+        >${() => props.error.value ?? ''}</span
+      >
       <div
         class="dropdown"
         part="dropdown"

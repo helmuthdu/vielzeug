@@ -140,7 +140,7 @@ Use the following pages as the canonical per-component API source.
 
 ### Content
 
-- [Avatar (+ Avatar Group)](./components/avatar.md)
+- [Avatar](./components/avatar.md)
 - [Breadcrumb](./components/breadcrumb.md)
 - [Card](./components/card.md)
 - [Carousel](./components/carousel.md)

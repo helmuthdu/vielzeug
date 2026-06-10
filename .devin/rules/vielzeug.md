@@ -41,7 +41,7 @@ All other packages are fully independent.
 ## Package catalogue
 
 | Package               | Category   | What it does                                                       |
-| --------------------- | ---------- | ------------------------------------------------------------------ |
+|-----------------------| ---------- |--------------------------------------------------------------------|
 | `@vielzeug/ripple`    | State      | Reactive signals, computed, effects, stores                        |
 | `@vielzeug/craft`     | UI         | Functional web-component authoring on top of ripple                |
 | `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
@@ -58,6 +58,7 @@ All other packages are fully independent.
 | `@vielzeug/familiar`  | Workers    | Web Worker pool with tasks, timeouts, cancellation                 |
 | `@vielzeug/grip`      | UI         | Drag-and-drop — drop zones and sortable lists                      |
 | `@vielzeug/orbit`     | UI         | Floating element positioning (tooltip, popover)                    |
+| `@vielzeug/prism`     | UI         | SVG Chart library                                                  |
 | `@vielzeug/sourcerer` | Data       | Reactive data sources with pagination and search                   |
 | `@vielzeug/tempo`     | Date/Time  | Temporal-powered date utilities                                    |
 | `@vielzeug/arsenal`   | Utilities  | 75+ tree-shakeable array/object/string/async helpers               |

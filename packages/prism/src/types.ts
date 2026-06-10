@@ -4,6 +4,29 @@ import type { ReadonlySignal } from '@vielzeug/ripple';
 
 export type MaybeSignal<T> = ReadonlySignal<T> | T;
 
+// ─── Theme ───────────────────────────────────────────────────────────────────
+
+export interface PrismTheme {
+  colors?: string[];
+  fontFamily?: string;
+  gridColor?: string;
+  gridOpacity?: number;
+}
+
+export function setTheme(theme: PrismTheme): void {
+  const root = document.documentElement;
+
+  if (theme.colors) {
+    theme.colors.forEach((c, i) => root.style.setProperty(`--prism-color-${i + 1}`, c));
+  }
+
+  if (theme.fontFamily) root.style.setProperty('--prism-font-family', theme.fontFamily);
+
+  if (theme.gridColor) root.style.setProperty('--prism-grid-color', theme.gridColor);
+
+  if (theme.gridOpacity !== undefined) root.style.setProperty('--prism-grid-opacity', String(theme.gridOpacity));
+}
+
 // ─── Core Types ──────────────────────────────────────────────────────────────
 
 export interface ChartMargin {
@@ -22,8 +45,11 @@ export interface ChartDimensions {
 export interface ChartHandle {
   readonly el: SVGSVGElement;
   dispose(): void;
-  update(): void;
   [Symbol.dispose](): void;
+}
+
+export function seriesColor(index: number, override?: string): string {
+  return override ?? `var(--prism-color-${(index % 8) + 1})`;
 }
 
 // ─── Data Types ──────────────────────────────────────────────────────────────
@@ -44,18 +70,20 @@ export interface Series<T extends DataPoint = DataPoint> {
 
 export interface Scale<T> {
   domain: [T, T];
-  range: [number, number];
-  map(value: T): number;
   invert(pixel: number): T;
+  map(value: T): number;
+  range: [number, number];
   ticks(count?: number): T[];
 }
 
+export type XScale = Scale<Date> | Scale<number>;
+
 export interface BandScale {
-  domain: string[];
-  range: [number, number];
   bandwidth(): number;
+  domain: string[];
   gap(): number;
   map(value: string): number;
+  range: [number, number];
   ticks(): string[];
 }
 
@@ -131,7 +159,27 @@ export interface TransitionConfig {
   stagger?: number;
 }
 
+// ─── Plugin Types ────────────────────────────────────────────────────────────
+
+export interface ChartPlugin {
+  destroy(): void;
+  install(svg: SVGSVGElement, container: HTMLElement): void;
+}
+
 // ─── Chart Config Types ──────────────────────────────────────────────────────
+
+export interface BaseChartConfig {
+  ariaLabel?: string;
+  legend?: LegendConfig | boolean;
+  margin?: Partial<ChartMargin>;
+  onClick?: (event: ChartEvent) => void;
+  onHover?: (event: ChartEvent | null) => void;
+  plugins?: ChartPlugin[];
+  tooltip?: TooltipConfig | boolean;
+  transition?: TransitionConfig;
+  xAxis?: AxisConfig;
+  yAxis?: AxisConfig;
+}
 
 export interface LineSeriesConfig extends Series {
   curve?: 'linear' | 'monotone' | 'step';
@@ -140,61 +188,82 @@ export interface LineSeriesConfig extends Series {
   strokeWidth?: number;
 }
 
-export interface LineChartConfig {
-  ariaLabel?: string;
+export interface LineChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
-  legend?: LegendConfig | boolean;
-  margin?: Partial<ChartMargin>;
   series: MaybeSignal<LineSeriesConfig[]>;
-  tooltip?: TooltipConfig | boolean;
-  transition?: TransitionConfig;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
 }
 
 export interface BarSeriesConfig extends Series {
   borderRadius?: number;
-  mode?: 'grouped' | 'stacked';
 }
 
-export interface BarChartConfig {
-  ariaLabel?: string;
-  legend?: LegendConfig | boolean;
-  margin?: Partial<ChartMargin>;
-  orientation?: 'horizontal' | 'vertical';
+/**
+ * `grouped`            — vertical grouped bars (default)
+ * `stacked`            — vertical stacked bars
+ * `grouped-horizontal` — horizontal grouped bars
+ * `stacked-horizontal` — horizontal stacked bars
+ */
+export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
+
+export interface BarChartConfig extends BaseChartConfig {
   series: MaybeSignal<BarSeriesConfig[]>;
-  tooltip?: TooltipConfig | boolean;
-  transition?: TransitionConfig;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
+  variant?: BarVariant;
 }
 
 export interface AreaSeriesConfig extends Series {
   curve?: 'linear' | 'monotone' | 'step';
   fillOpacity?: number;
   showLine?: boolean;
-  stacked?: boolean;
 }
 
-export interface AreaChartConfig {
-  ariaLabel?: string;
+export interface AreaChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
-  legend?: LegendConfig | boolean;
-  margin?: Partial<ChartMargin>;
   series: MaybeSignal<AreaSeriesConfig[]>;
+}
+
+// ─── Pie / Donut Types ───────────────────────────────────────────────────────
+
+export type PieVariant = 'donut' | 'pie' | 'semi';
+
+export interface PieSliceConfig {
+  color?: string;
+  label?: string;
+  value: number;
+}
+
+export interface PieChartConfig {
+  ariaLabel?: string;
+  cornerRadius?: number;
+  data: MaybeSignal<PieSliceConfig[]>;
+  innerRadius?: number;
+  onClick?: (slice: PieSliceConfig, index: number) => void;
+  onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
+  padPixels?: number;
   tooltip?: TooltipConfig | boolean;
   transition?: TransitionConfig;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
+  variant?: PieVariant;
 }
 
-// ─── Theme Types ─────────────────────────────────────────────────────────────
+// ─── Sparkline Types ──────────────────────────────────────────────────────────
 
-export interface PrismTheme {
-  axisColor: string;
-  colors: string[];
-  fontFamily: string;
-  fontSize: string;
-  gridColor: string;
-  textColor: string;
+export type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
+
+export interface StackSegment {
+  color?: string;
+  label?: string;
+  value: number;
+}
+
+export interface SparklineConfig {
+  color?: string;
+  cornerRadius?: number;
+  curve?: 'linear' | 'monotone' | 'step';
+  data: MaybeSignal<number[] | StackSegment[]>;
+  fillOpacity?: number;
+  onClick?: (index: number, value: number) => void;
+  onHover?: (index: number | null, value: number | null) => void;
+  padPixels?: number;
+  strokeWidth?: number;
+  transition?: TransitionConfig;
+  variant?: SparklineVariant;
 }

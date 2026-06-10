@@ -45,7 +45,7 @@
     border-right: var(--border) solid var(--_border-color);
   }
 
-  :host-context([dir='rtl']) .dg-th,
+  :host(:dir(rtl)) .dg-th,
   :dir(rtl) .dg-th {
     border-right: none;
     border-left: var(--border) solid var(--_border-color);
@@ -58,10 +58,10 @@
     border-right: none;
   }
 
-  :host-context([dir='rtl']) .dg-th:last-child,
-  :host-context([dir='rtl']) .dg-th.dg-th-check,
-  :host-context([dir='rtl']) .dg-th.dg-th-expand,
-  :host-context([dir='rtl']) .dg-th.dg-th-last,
+  :host(:dir(rtl)) .dg-th:last-child,
+  :host(:dir(rtl)) .dg-th.dg-th-check,
+  :host(:dir(rtl)) .dg-th.dg-th-expand,
+  :host(:dir(rtl)) .dg-th.dg-th-last,
   :dir(rtl) .dg-th:last-child,
   :dir(rtl) .dg-th.dg-th-check,
   :dir(rtl) .dg-th.dg-th-expand,
@@ -205,7 +205,7 @@
     border-right: var(--border) solid var(--_border-color);
   }
 
-  :host-context([dir='rtl']) .dg-td,
+  :host(:dir(rtl)) .dg-td,
   :dir(rtl) .dg-td {
     border-right: none;
     border-left: var(--border) solid var(--_border-color);
@@ -218,10 +218,10 @@
     border-right: none;
   }
 
-  :host-context([dir='rtl']) .dg-td:last-child,
-  :host-context([dir='rtl']) .dg-td.dg-td-check,
-  :host-context([dir='rtl']) .dg-td.dg-td-expand,
-  :host-context([dir='rtl']) .dg-td.dg-td-last,
+  :host(:dir(rtl)) .dg-td:last-child,
+  :host(:dir(rtl)) .dg-td.dg-td-check,
+  :host(:dir(rtl)) .dg-td.dg-td-expand,
+  :host(:dir(rtl)) .dg-td.dg-td-last,
   :dir(rtl) .dg-td:last-child,
   :dir(rtl) .dg-td.dg-td-check,
   :dir(rtl) .dg-td.dg-td-expand,
@@ -310,7 +310,7 @@
     align-items: center;
   }
 
-  :host-context([dir='rtl']) .dg-page-btn,
+  :host(:dir(rtl)) .dg-page-btn,
   :dir(rtl) .dg-page-btn {
     transform: scaleX(-1);
   }

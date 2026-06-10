@@ -5,7 +5,7 @@ A multi-line text input with integrated label, helper text, character counter, a
 ## Features
 
 - <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **6 Variants** — solid, flat, bordered, outline, ghost, frost
+- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
 - <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (floating-style) or outside
 - <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
 - <sg-icon name="triangle-right" size="16"></sg-icon> **Auto Resize** — grows vertically with content; no scrollbar
@@ -176,7 +176,7 @@ Control the resize handle with the `resize` attribute.
 | `auto-resize`     | `boolean`                                                                 | `false`      | Grow vertically with content                       |
 | `no-resize`       | `boolean`                                                                 | `false`      | Disable the manual resize handle                   |
 | `resize`          | `'none' \| 'vertical' \| 'horizontal' \| 'both'`                          | `'vertical'` | Resize direction                                   |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | `'solid'`    | Visual style variant                               |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                  | `'solid'`    | Visual style variant                               |
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -            | Color theme                                        |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                                     |
 | `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | -            | Border radius override                             |

@@ -85,3 +85,29 @@
   gap: 4px;
   margin-bottom: 24px;
 }
+
+/* Full-bleed homepage — remove VPDoc container constraints */
+.VPDoc:has(.home-page) {
+  padding: 0;
+}
+
+.VPDoc:has(.home-page) .container {
+  max-width: none;
+}
+
+.VPDoc:has(.home-page) .content {
+  max-width: none;
+  padding: 0;
+}
+
+/* Full-bleed REPL page — IDE fills viewport below navbar */
+.VPContent:has(#repl-container) {
+  padding: 0 !important;
+  margin: 0 !important;
+  padding-top: var(--vp-nav-height, 64px) !important;
+}
+
+html:has(#repl-container),
+body:has(#repl-container) {
+  overflow: hidden;
+}

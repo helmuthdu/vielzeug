@@ -28,7 +28,6 @@
       box-shadow var(--transition-normal),
       background var(--transition-normal),
       border-color var(--transition-normal);
-    will-change: box-shadow;
   }
 }
 
@@ -63,8 +62,12 @@
 
   /* Subtle hover for solid/default + color (glass & frost manage their own hover) */
   :host([color]:not([variant='glass'], [variant='frost']):hover) {
-    --_bg: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
+    --_bg: color-mix(in oklch, var(--_theme-base) 16%, var(--color-contrast-50));
     --_border-color: var(--_theme-focus);
+  }
+
+  :host(:hover) .box {
+    will-change: box-shadow;
   }
 }
 

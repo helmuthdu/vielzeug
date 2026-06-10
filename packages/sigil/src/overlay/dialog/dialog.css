@@ -107,13 +107,13 @@
 
     @starting-style {
       opacity: 0;
-      transform: scale(0.96) translateY(var(--size-2));
+      transform: scale(var(--overlay-enter-scale-dialog)) translateY(var(--size-2));
     }
   }
 
   dialog.closing .panel {
     opacity: 0;
-    transform: scale(0.96) translateY(var(--size-2));
+    transform: scale(var(--overlay-enter-scale-dialog)) translateY(var(--size-2));
   }
 
   /* =====================

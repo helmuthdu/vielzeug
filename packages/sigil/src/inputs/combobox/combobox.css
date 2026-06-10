@@ -27,6 +27,18 @@
     width: 100%;
   }
 
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
   /* sg-input cursor override so the field still feels like a text input */
   .trigger::part(input) {
     cursor: text;
@@ -164,7 +176,7 @@
     border-radius: var(--_radius);
     box-shadow: var(--shadow-lg);
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(var(--overlay-enter-translate-y));
     transition: var(
       --_motion-transition,
       opacity var(--transition-fast),
@@ -178,6 +190,11 @@
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y));
+    }
   }
 
   /* ========================================

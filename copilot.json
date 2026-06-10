@@ -28,6 +28,7 @@
     "packages/herald",
     "packages/lingua",
     "packages/orbit",
+    "packages/prism",
     "packages/ripple",
     "packages/rune",
     "packages/scroll",

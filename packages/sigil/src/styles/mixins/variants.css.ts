@@ -28,10 +28,9 @@ export const frostVariantMixin = (selector: string) => css`
 
   :host([variant='frost']:not([color])) ${selector} {
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    border-color: color-mix(in srgb, var(--color-contrast-400) 45%, transparent);
     color: var(--color-contrast);
     text-shadow: var(--text-shadow-xs);
-    border: var(--border) solid var(--_border-color);
+    border: var(--border) solid color-mix(in srgb, var(--color-contrast-400) 45%, transparent);
   }
 
   /* Frost neutral without elevation: use halo shadow */
@@ -73,33 +72,5 @@ export const frostVariantMixin = (selector: string) => css`
   :host([variant='frost'][color]) ${selector}:hover {
     backdrop-filter: blur(var(--blur-3xl)) saturate(240%) brightness(1.2);
     -webkit-backdrop-filter: blur(var(--blur-3xl)) saturate(240%) brightness(1.2);
-  }
-
-  /* ========================================
-     Halo Shadows per Theme Color
-     ======================================== */
-
-  :host([variant='frost'][color='primary']) ${selector} {
-    box-shadow: var(--halo-shadow-primary);
-  }
-
-  :host([variant='frost'][color='secondary']) ${selector} {
-    box-shadow: var(--halo-shadow-secondary);
-  }
-
-  :host([variant='frost'][color='info']) ${selector} {
-    box-shadow: var(--halo-shadow-info);
-  }
-
-  :host([variant='frost'][color='success']) ${selector} {
-    box-shadow: var(--halo-shadow-success);
-  }
-
-  :host([variant='frost'][color='warning']) ${selector} {
-    box-shadow: var(--halo-shadow-warning);
-  }
-
-  :host([variant='frost'][color='error']) ${selector} {
-    box-shadow: var(--halo-shadow-error);
   }
 `;

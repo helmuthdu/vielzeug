@@ -64,7 +64,7 @@
 
   /* Flat - Subtle background with theme color text */
   :host([variant='flat']) {
-    --_bg: var(--badge-bg, color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100)));
+    --_bg: var(--badge-bg, color-mix(in oklch, var(--_theme-backdrop) 25%, var(--color-contrast-100)));
     --_color: var(--badge-color, var(--_theme-base));
     --_border-color: var(--badge-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
   }

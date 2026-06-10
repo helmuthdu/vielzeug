@@ -39,7 +39,7 @@
     top: calc(100% + var(--size-1));
     left: 0;
     z-index: var(--z-dropdown, 200);
-    display: none;
+    display: flex;
     flex-direction: column;
     min-width: 12rem;
     overflow: hidden;
@@ -48,10 +48,30 @@
     border-radius: var(--time-picker-radius, var(--_radius));
     box-shadow: var(--time-picker-shadow, var(--shadow-lg));
     backdrop-filter: blur(var(--blur-sm));
+
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(var(--overlay-enter-translate-y));
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast)
+    );
   }
 
   .dropdown[data-open] {
-    display: flex;
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y));
+    }
   }
 
   /* ── Columns row ────────────────────────────────────────────────────────── */

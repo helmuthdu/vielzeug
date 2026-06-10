@@ -1,14 +1,15 @@
 @layer sigil.base {
   :host {
+    --_menu-color: var(--menu-item-color, var(--_theme-base, var(--color-primary)));
     --_hover-bg: var(--menu-item-hover-bg, var(--color-contrast-100));
-    --_focus-color: var(--menu-item-focus-color, var(--color-primary));
-    --_focus-bg: var(--menu-item-focus-bg, color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100)));
+    --_focus-color: var(--menu-item-focus-color, var(--_menu-color));
+    --_focus-bg: var(--menu-item-focus-bg, color-mix(in oklch, var(--_menu-color) 12%, var(--color-contrast-100)));
     --_selection-bg: var(
       --menu-item-selection-bg,
-      color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas))
+      color-mix(in oklch, var(--color-contrast-900) 5%, var(--color-canvas))
     );
-    --_checked-color: var(--menu-item-checked-color, var(--color-primary));
-    --_checked-bg: var(--menu-item-checked-bg, color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas)));
+    --_checked-color: var(--menu-item-checked-color, var(--_menu-color));
+    --_checked-bg: var(--menu-item-checked-bg, color-mix(in oklch, var(--_menu-color) 18%, var(--color-canvas)));
 
     display: block;
     outline: none;

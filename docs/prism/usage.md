@@ -1,23 +1,23 @@
 ---
 title: Prism — Usage Guide
-description: Concepts, patterns, and best practices for @vielzeug/prism — reactive SVG charts and hex world map.
+description: Concepts, patterns, and best practices for @vielzeug/prism — reactive SVG charts.
 ---
 
 [[toc]]
 
 ## Basic Setup
 
-Every chart needs a container element and the theme CSS:
+Every chart needs a container element with defined dimensions and the theme CSS:
 
 ```ts
 import '@vielzeug/prism/theme';
 ```
 
-The container must have defined dimensions (width/height via CSS). Prism observes its size and re-renders on resize.
-
 ```html
 <div id="chart" style="width: 100%; height: 300px;"></div>
 ```
+
+Prism observes the container size via `ResizeObserver` and re-renders automatically on resize.
 
 ## Reactivity with Signals
 
@@ -51,13 +51,13 @@ data.value = [...data.value, { x: 3, y: 30 }];
 
 ### The `MaybeSignal<T>` Pattern
 
-All config fields that accept changing data use the `MaybeSignal<T>` type:
+All data-bearing config fields use the `MaybeSignal<T>` type:
 
 ```ts
 type MaybeSignal<T> = T | ReadonlySignal<T>;
 ```
 
-This means you can pass a plain value when data is fixed, or a signal when it updates dynamically. The chart normalizes internally.
+Pass a plain value when data is fixed, or a signal when it changes dynamically. The chart handles both identically.
 
 ## Line Charts
 
@@ -70,7 +70,7 @@ const chart = createLineChart(container, {
       name: 'Revenue',
       data: [{ x: 1, y: 100 }, { x: 2, y: 150 }, { x: 3, y: 130 }],
       color: '#3b82f6',
-      curve: 'monotone',   // 'linear' | 'monotone' | 'step'
+      curve: 'monotone',  // 'linear' | 'monotone' | 'step'
       strokeWidth: 2,
       showPoints: true,
       pointRadius: 4,
@@ -137,9 +137,45 @@ const chart = createBarChart(container, {
 });
 ```
 
+### Variants
+
+Select the bar layout with `variant`:
+
+| Value | Layout |
+|---|---|
+| `'grouped'` | Vertical grouped (default) |
+| `'stacked'` | Vertical stacked |
+| `'grouped-horizontal'` | Horizontal grouped |
+| `'stacked-horizontal'` | Horizontal stacked |
+
+```ts
+const chart = createBarChart(container, {
+  variant: 'stacked',
+  series: [
+    { name: 'Mobile', data: mobileData, color: '#3b82f6', borderRadius: 0 },
+    { name: 'Desktop', data: desktopData, color: '#10b981', borderRadius: 0 },
+  ],
+  xAxis: { position: 'bottom' },
+  yAxis: { position: 'left', grid: true },
+  tooltip: true,
+  legend: true,
+});
+```
+
+For horizontal layouts, categories appear on the Y axis and values on the X axis:
+
+```ts
+const chart = createBarChart(container, {
+  variant: 'grouped-horizontal',
+  series: [{ name: 'Revenue', data, color: '#3b82f6' }],
+  xAxis: { position: 'bottom', grid: true },
+  yAxis: { position: 'left' },
+});
+```
+
 ### Grouped Bars
 
-Multiple series render side-by-side:
+Multiple series with `variant: 'grouped'` (default) render side-by-side:
 
 ```ts
 const chart = createBarChart(container, {
@@ -169,21 +205,161 @@ const chart = createAreaChart(container, {
 });
 ```
 
-## Axes and Grid
+## Pie, Donut, and Semi-circle Charts
 
-Configure axes on any cartesian chart:
+All three variants use `createPieChart` with the `variant` field:
+
+```ts
+import { createPieChart } from '@vielzeug/prism';
+
+const chart = createPieChart(container, {
+  data: [
+    { label: 'Direct', value: 42, color: '#3b82f6' },
+    { label: 'Organic', value: 28, color: '#10b981' },
+    { label: 'Referral', value: 18, color: '#f59e0b' },
+    { label: 'Social', value: 12, color: '#8b5cf6' },
+  ],
+  variant: 'donut',  // 'pie' | 'donut' | 'semi'
+  tooltip: true,
+  transition: { duration: 400, easing: 'ease-out' },
+});
+```
+
+### Variants
+
+| Value | Shape |
+|---|---|
+| `'pie'` | Full circle, no hole |
+| `'donut'` | Full circle with inner hole (~55% of outer by default) |
+| `'semi'` | Top-half semicircle with inner hole — useful for gauges |
+
+### Inner Radius
+
+`innerRadius` overrides the automatic calculation:
+
+```ts
+createPieChart(container, {
+  data,
+  variant: 'donut',
+  innerRadius: 60,  // explicit pixels
+});
+```
+
+### Slice Labels
+
+Set `label` on each `PieSliceConfig` to render text at the arc centroid:
+
+```ts
+{ value: 42, label: '42%' }
+```
+
+Style labels via CSS:
+
+```css
+:root {
+  --prism-pie-label-color: #fff;
+  --prism-pie-label-size: 11px;
+}
+```
+
+### Reactive Data
+
+```ts
+import { signal } from '@vielzeug/ripple';
+
+const data = signal([
+  { label: 'A', value: 40 },
+  { label: 'B', value: 60 },
+]);
+
+const chart = createPieChart(container, { data, variant: 'donut' });
+
+data.value = [{ label: 'A', value: 55 }, { label: 'B', value: 45 }];
+```
+
+### Event Hooks
+
+```ts
+createPieChart(container, {
+  data,
+  onHover: (slice, index) => {
+    // slice/index are null on mouseleave
+    if (slice) console.log(slice.label, slice.value);
+  },
+  onClick: (slice, index) => {
+    console.log('clicked', slice.label);
+  },
+});
+```
+
+## Sparklines
+
+Sparklines are minimal inline charts with no axes, no legend, and no margin — designed to live inline with text or inside table cells.
+
+```ts
+import { createSparkline } from '@vielzeug/prism';
+
+const spark = createSparkline(container, {
+  data: [12, 18, 14, 22, 19, 28],
+  variant: 'line',      // 'line' | 'area' | 'bar' (default: 'line')
+  color: '#3b82f6',
+  curve: 'monotone',
+  strokeWidth: 1.5,
+});
+
+spark.dispose();
+```
+
+### Variants
+
+- **`line`** — simple polyline path (default)
+- **`area`** — filled area + line overlay
+- **`bar`** — vertical bar for each data point
+
+### Reactive Data
+
+```ts
+import { signal } from '@vielzeug/ripple';
+
+const data = signal([12, 18, 14, 22]);
+
+const spark = createSparkline(container, { data, variant: 'area' });
+
+data.value = [...data.value, 30]; // re-renders automatically
+```
+
+### Event Hooks
+
+Sparklines use simplified hooks — index-based rather than full `ChartEvent`:
+
+```ts
+const spark = createSparkline(container, {
+  data: [10, 20, 30],
+  onHover: (index, value) => {
+    // index/value are null on mouseleave
+    if (index !== null) console.log(`Hovering point ${index}: ${value}`);
+  },
+  onClick: (index, value) => {
+    console.log(`Clicked point ${index}: ${value}`);
+  },
+});
+```
+
+> **Note:** Sparkline SVGs are marked `aria-hidden="true"` since they are decorative. Provide meaningful surrounding text context for accessibility.
+
+## Axes and Grid
 
 ```ts
 {
   xAxis: {
-    position: 'bottom',      // 'top' | 'bottom'
-    tickCount: 5,            // suggested number of ticks
+    position: 'bottom',          // 'top' | 'bottom'
+    tickCount: 5,
     tickFormat: (v) => `$${v}`,
     label: 'Month',
-    grid: true,              // or { color: '#ddd', dash: '4 2' }
+    grid: true,                  // or { color: '#ddd', dash: '4 2' }
   },
   yAxis: {
-    position: 'left',        // 'left' | 'right'
+    position: 'left',            // 'left' | 'right'
     grid: { color: '#f0f0f0' },
     label: 'Revenue ($)',
   },
@@ -192,7 +368,7 @@ Configure axes on any cartesian chart:
 
 ## Tooltips
 
-Enable with `tooltip: true` for default rendering, or provide a custom render function:
+Enable with `tooltip: true` for default rendering, or provide a custom `render` function returning an HTML string:
 
 ```ts
 {
@@ -206,6 +382,8 @@ Enable with `tooltip: true` for default rendering, or provide a custom render fu
 }
 ```
 
+The tooltip element is scoped inside the chart container (not `document.body`) and is removed automatically on `dispose()`.
+
 ## Crosshair
 
 A vertical guide that snaps to the nearest data point:
@@ -213,44 +391,121 @@ A vertical guide that snaps to the nearest data point:
 ```ts
 {
   crosshair: true,
-  // or configure individually:
+  // or configure:
   crosshair: { vertical: true, horizontal: true, snap: true },
 }
 ```
 
 ## Legend
 
-Add a legend to identify series by name and color. Enable with `legend: true` (defaults to `bottom` position) or pass a `LegendConfig` to control placement:
+Enable with `legend: true` (defaults to `bottom`) or configure position:
 
 ```ts
 {
   legend: true,
   // or:
-  legend: { position: 'top' },    // 'top' | 'bottom' | 'left' | 'right'
+  legend: { position: 'top' },  // 'top' | 'bottom' | 'left' | 'right'
 }
 ```
 
-The legend renders as a `div` placed outside the SVG — before the chart for `top`, after for `bottom`, `left`, and `right`. Each item shows a color dot and the series `name`.
-
-Customize appearance via CSS custom properties:
+The legend renders as a `div` placed outside the SVG. Each item shows a color swatch and the series `name`. Customize via CSS:
 
 ```css
 :root {
-  --prism-legend-gap: 1rem;        /* spacing between items */
-  --prism-legend-dot-size: 0.5rem; /* color swatch size */
+  --prism-legend-gap: 1rem;
+  --prism-legend-dot-size: 0.5rem;
   --prism-legend-font-size: 0.75rem;
 }
 ```
 
+## Event Hooks
+
+All charts expose `onClick` and `onHover` callbacks on the config:
+
+```ts
+const chart = createLineChart(container, {
+  series: [{ name: 'Revenue', data }],
+  onHover: (event) => {
+    // event is ChartEvent | null (null on mouseleave)
+    if (event) console.log(event.point, event.series);
+  },
+  onClick: (event) => {
+    console.log('clicked', event.point);
+  },
+});
+```
+
+`ChartEvent` provides:
+- `point` — the nearest `DataPoint`
+- `series` — the corresponding `Series` config
+- `originalEvent` — the raw `MouseEvent`
+
+## Plugins
+
+Extend any chart with custom behavior using the `ChartPlugin` interface:
+
+```ts
+import type { ChartPlugin } from '@vielzeug/prism';
+
+const myPlugin: ChartPlugin = {
+  install(svg, container) {
+    // called once after the chart mounts
+    svg.addEventListener('click', handler);
+  },
+  destroy() {
+    // called when chart.dispose() runs
+    svg.removeEventListener('click', handler);
+  },
+};
+
+const chart = createLineChart(container, {
+  series: [{ name: 'Revenue', data }],
+  plugins: [myPlugin],
+});
+```
+
+## Animations
+
+Pass a `transition` config to animate enter and update transitions:
+
+```ts
+{
+  transition: {
+    duration: 400,
+    easing: 'ease-out',
+    stagger: 30,  // bar charts only: ms delay between each bar's enter animation
+  },
+}
+```
+
+Line and area charts use CSS transitions on the SVG path `d` attribute. Bar charts use a requestAnimationFrame loop — `stagger` delays each bar in sequence, creating a cascade effect on first render.
+
 ## Theming
 
-Import the default theme or override CSS custom properties:
+Import the default theme:
 
 ```ts
 import '@vielzeug/prism/theme';
 ```
 
-### Custom Theme
+### Programmatic Theme with `setTheme`
+
+Call `setTheme` once at app startup to apply custom tokens programmatically:
+
+```ts
+import { setTheme } from '@vielzeug/prism';
+
+setTheme({
+  colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'],  // replaces --prism-color-1 through -4
+  fontFamily: 'Inter, system-ui, sans-serif',              // sets --prism-font-family
+  gridColor: '#e2e8f0',                                    // sets --prism-grid-color
+  gridOpacity: 0.6,                                        // sets --prism-grid-opacity
+});
+```
+
+`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults.
+
+### Custom Theme (CSS)
 
 ```css
 :root {
@@ -266,7 +521,7 @@ import '@vielzeug/prism/theme';
 
 ### Scoped Themes
 
-Apply tokens to a specific container to scope the theme:
+Apply tokens to a specific container:
 
 ```css
 .dark-dashboard {
@@ -290,14 +545,12 @@ Apply tokens to a specific container to scope the theme:
 | `--prism-tooltip-bg` | `#1e293b` | Tooltip background |
 | `--prism-tooltip-color` | `#f8fafc` | Tooltip text |
 | `--prism-tooltip-radius` | `6px` | Tooltip border radius |
-| `--prism-hex-empty` | `#e2e8f0` | Hex cell with no data |
-| `--prism-hex-stroke` | `#cbd5e1` | Hex cell border |
 | `--prism-crosshair-color` | `#64748b` | Crosshair line |
 | `--prism-crosshair-dash` | `4 2` | Crosshair dash pattern |
 
 ## Scales (Standalone)
 
-Scales can be used independently of charts for custom visualizations:
+Scales can be used independently for custom visualizations:
 
 ```ts
 import { linearScale, timeScale, bandScale } from '@vielzeug/prism';
@@ -308,13 +561,13 @@ y.invert(150);   // → 50
 y.ticks(5);      // → [0, 20, 40, 60, 80, 100]
 
 const x = bandScale({ domain: ['A', 'B', 'C'], range: [0, 300] });
-x.map('B');      // → pixel position of band B
+x.map('B');      // → pixel left edge of band B
 x.bandwidth();   // → width of each band
 ```
 
 ## Lifecycle and Cleanup
 
-Every chart returns a `ChartHandle` with a `dispose()` method. Always call it when removing a chart:
+Every chart returns a `ChartHandle`. Always call `dispose()` when removing a chart:
 
 ```ts
 const chart = createLineChart(container, config);
@@ -322,7 +575,7 @@ const chart = createLineChart(container, config);
 // When done:
 chart.dispose();
 
-// Or use Symbol.dispose (TC39 explicit resource management):
+// Or with TC39 explicit resource management:
 {
   using chart = createLineChart(container, config);
   // auto-disposed at block end
@@ -331,10 +584,13 @@ chart.dispose();
 
 Calling `dispose()`:
 - Disconnects the `ResizeObserver`
-- Disposes all reactive effects
+- Cancels all reactive effects
 - Removes the SVG element from the DOM
-- Cleans up tooltip elements
+- Removes the tooltip and legend elements
+- Calls `destroy()` on all plugins
+
+> **Reactivity is automatic** — charts re-render whenever signal data changes. There is no manual `update()` call needed.
 
 ## Responsive Behavior
 
-Charts automatically resize when their container changes dimensions. No manual `resize()` call is needed — Prism uses `ResizeObserver` internally with `requestAnimationFrame` debouncing.
+Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally — no manual `resize()` call is needed.

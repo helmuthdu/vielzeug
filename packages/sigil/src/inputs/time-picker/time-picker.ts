@@ -51,7 +51,7 @@ export type SgTimePickerProps = {
   /** Selected time in HH:MM format (24-hour) */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ function clampTime(
  * @attr {string} helper - Helper text
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} time-format - '12' or '24' (default: '24')
  * @attr {number} minute-step - Minute increment (default: 5)

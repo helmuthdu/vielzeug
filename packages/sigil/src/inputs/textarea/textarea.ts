@@ -17,7 +17,7 @@ export type SgTextareaEvents = {
   input: { originalEvent: Event; value: string };
 };
 
-export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'frost' | 'text'>> & {
+export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | 'text'>> & {
   /** Allow auto-grow with content */
   'auto-resize'?: boolean;
   /** Maximum character count; shows a counter when set */
@@ -58,7 +58,7 @@ export type SgTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | 'f
  * @attr {boolean} auto-resize - Grow with content
  * @attr {string} resize - Resize direction: 'none' | 'horizontal' | 'both' | 'vertical'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *

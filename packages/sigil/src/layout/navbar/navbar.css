@@ -244,14 +244,14 @@
   @starting-style {
     .mobile-menu-panel {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(var(--overlay-enter-translate-y));
     }
   }
 
   @keyframes navbar-mobile-in {
     from {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(var(--overlay-enter-translate-y));
     }
 
     to {

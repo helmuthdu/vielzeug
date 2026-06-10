@@ -1,211 +1,317 @@
-import { effect, scope } from '@vielzeug/ripple';
-
-import type { BarChartConfig, ChartDimensions, ChartHandle, DataPoint } from '../../types';
+import type { BarChartConfig, BarVariant, ChartHandle, DataPoint } from '../../types';
 
 import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
-import { createChartBase } from '../../core/chart-base';
+import { createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { resolve } from '../../core/resolve';
 import { getMousePosition } from '../../interaction/events';
-import { createLegend } from '../../interaction/legend';
-import { createTooltip } from '../../interaction/tooltip';
 import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement } from '../../svg/element';
+import { seriesColor } from '../../types';
 import { renderBars } from './bar-renderer';
 
+// ─── Scale context ────────────────────────────────────────────────────────────
+// Uniform representation for both orientations. "band" is always the category
+// axis; "value" is always the value axis. Callers use `horizontal` to know
+// which SVG dimension each maps to.
+
+interface BarScaleContext {
+  bandCenter: (cat: string) => number;
+  bandwidth: number;
+  baselinePx: number;
+  horizontal: boolean;
+  stacked: boolean;
+  stackedTops: number[][]; // [seriesIdx][catIdx] = cumulative top value
+  valueScale: ReturnType<typeof linearScale>;
+}
+
+function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: boolean } {
+  return {
+    horizontal: variant === 'grouped-horizontal' || variant === 'stacked-horizontal',
+    stacked: variant === 'stacked' || variant === 'stacked-horizontal',
+  };
+}
+
+// ─── Hit detection helpers ────────────────────────────────────────────────────
+
+function findCatIdx(pos: number, categories: string[], sc: BarScaleContext): number {
+  for (let i = 0; i < categories.length; i++) {
+    const center = sc.bandCenter(categories[i]);
+    const start = center - sc.bandwidth / 2;
+
+    if (pos >= start && pos < start + sc.bandwidth) return i;
+  }
+
+  return -1;
+}
+
+function findSeriesIdx(
+  pos: { x: number; y: number },
+  catIdx: number,
+  categories: string[],
+  _allData: DataPoint[][],
+  sc: BarScaleContext,
+  seriesCount: number,
+): number {
+  if (sc.stacked) {
+    if (sc.horizontal) {
+      // Walk series left→right; first whose right edge >= pos.x
+      for (let si = 0; si < seriesCount; si++) {
+        const rightX = sc.valueScale.map(sc.stackedTops[si]?.[catIdx] ?? 0);
+
+        if (rightX >= pos.x) return si;
+      }
+
+      return seriesCount - 1;
+    } else {
+      // Walk series bottom→top; find where bar top crosses above pos.y
+      for (let si = 0; si < seriesCount; si++) {
+        const topY = sc.valueScale.map(sc.stackedTops[si]?.[catIdx] ?? 0);
+
+        if (topY <= pos.y) return si;
+      }
+
+      return seriesCount - 1;
+    }
+  } else {
+    // Grouped: sub-division within band
+    const subSize = sc.bandwidth / seriesCount;
+    const bandStart = sc.bandCenter(categories[catIdx]) - sc.bandwidth / 2;
+    const offset = sc.horizontal ? pos.y - bandStart : pos.x - bandStart;
+    const subIdx = Math.floor(offset / subSize);
+
+    return Math.max(0, Math.min(seriesCount - 1, subIdx));
+  }
+}
+
+function isOutsideBars(
+  pos: { x: number; y: number },
+  catIdx: number,
+  allData: DataPoint[][],
+  sc: BarScaleContext,
+  seriesCount: number,
+): boolean {
+  const lastSi = seriesCount - 1;
+  const maxVal = sc.stacked
+    ? (sc.stackedTops[lastSi]?.[catIdx] ?? 0)
+    : Math.max(...Array.from({ length: seriesCount }, (_, si) => allData[si]?.[catIdx]?.y ?? 0));
+  const maxPx = sc.valueScale.map(maxVal);
+
+  // Horizontal: pos.x beyond right edge; vertical: pos.y above top edge
+  return sc.horizontal ? pos.x > maxPx : pos.y < maxPx;
+}
+
+// ─── Chart ────────────────────────────────────────────────────────────────────
+
 export function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle {
-  const base = createChartBase(container, { ariaLabel: config.ariaLabel, margin: config.margin });
-  let disposed = false;
-  let currentData: DataPoint[][] = [];
-  let currentCategories: string[] = [];
-  let currentBandwidth = 0;
-  let currentXMap: ((cat: string) => number) | null = null;
-
-  const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
-  const legend = config.legend ? createLegend(container, config.legend) : null;
-
-  const xAxisGroup = createSvgElement('g', { class: 'prism-x-axis' });
-  const yAxisGroup = createSvgElement('g', { class: 'prism-y-axis' });
-  const gridGroup = createSvgElement('g', { class: 'prism-grid' });
-  const seriesGroup = createSvgElement('g', { class: 'prism-series' });
-
-  base.chartArea.appendChild(gridGroup);
-  base.chartArea.appendChild(xAxisGroup);
-  base.chartArea.appendChild(yAxisGroup);
-  base.chartArea.appendChild(seriesGroup);
-
-  const s = scope(() => {
-    effect(
-      () => {
-        if (disposed) return;
-
-        const dims = base.dimensions.value;
-        const area = chartArea(dims.width, dims.height, dims.margin);
-        const seriesList = resolve(config.series);
-
-        const allData = seriesList.map((s) => resolve(s.data));
-
-        currentData = allData;
-
-        const categories = [...new Set(allData.flat().map((d) => String(d.x)))];
-
-        currentCategories = categories;
-
-        const allY = allData.flat().map((d) => d.y);
-
-        if (categories.length === 0) return;
-
-        const xScale = bandScale({ domain: categories, range: [0, area.width] });
-
-        currentBandwidth = xScale.bandwidth();
-        currentXMap = (cat: string) => xScale.map(cat) + xScale.bandwidth() / 2;
-
-        const yScale = linearScale({
-          domain: [Math.min(0, ...allY), Math.max(...allY)],
-          range: [area.height, 0],
-        });
-
-        if (config.yAxis?.grid) {
-          renderGrid(gridGroup, yScale, config.yAxis.grid, area.height, area.width, 'horizontal');
-        }
-
-        if (config.xAxis) {
-          xAxisGroup.setAttribute('transform', `translate(0,${area.height})`);
-          renderAxis(xAxisGroup, xScale, config.xAxis, area.width);
-        }
-
-        if (config.yAxis) {
-          renderAxis(yAxisGroup, yScale, config.yAxis, area.height);
-        }
-
-        while (seriesGroup.children.length > seriesList.length) {
-          seriesGroup.removeChild(seriesGroup.lastChild!);
-        }
-
-        const baselineY = yScale.map(0);
-
-        for (let i = 0; i < seriesList.length; i++) {
-          const series = seriesList[i];
-          let group = seriesGroup.children[i] as SVGGElement | undefined;
-
-          if (!group) {
-            group = createSvgElement('g', { class: 'prism-bar-series' });
-            seriesGroup.appendChild(group);
-          }
-
-          const barData = allData[i].map((d) => ({ x: String(d.x), y: d.y }));
-
-          renderBars(group, barData, xScale, yScale, baselineY, {
-            borderRadius: series.borderRadius ?? 0,
-            color: series.color ?? `var(--prism-color-${(i % 8) + 1})`,
-            seriesCount: seriesList.length,
-            seriesIndex: i,
-            transition: config.transition,
-          });
-        }
-
-        if (legend) {
-          legend.update(
-            seriesList.map((s, i) => ({
-              color: s.color ?? `var(--prism-color-${(i % 8) + 1})`,
-              name: s.name,
-            })),
-          );
-        }
-      },
-      { scheduler: 'raf' },
-    );
-  });
-
-  const handleMouseMove = (event: MouseEvent) => {
-    if (!tooltip || currentCategories.length === 0 || !currentXMap) return;
-
-    const dims = base.dimensions.value;
-    const pos = getMousePosition(base.svg, event, dims.margin.left, dims.margin.top);
+  return createChartScaffold(container, config, (ctx) => {
+    const { groups, legend, tooltip } = ctx;
+    const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
+    const seriesList = resolve(config.series);
+    const allData = seriesList.map((s) => resolve(s.data));
+    const categories = [...new Set(allData.flat().map((d) => String(d.x)))];
 
-    if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) {
-      tooltip.hide();
+    if (categories.length === 0) {
+      if (import.meta.env?.DEV) console.warn('[prism] createBarChart: no data');
 
       return;
     }
 
-    let nearestIdx = 0;
-    let minDist = Infinity;
+    const { horizontal, stacked } = variantFlags(config.variant ?? 'grouped');
 
-    for (let i = 0; i < currentCategories.length; i++) {
-      const centerX = currentXMap(currentCategories[i]);
-      const dist = Math.abs(centerX - pos.x);
+    // Value domain
+    let vMax: number;
+    let vMin: number;
 
-      if (dist < minDist) {
-        minDist = dist;
-        nearestIdx = i;
-      }
+    if (stacked) {
+      const sums = categories.map((cat) =>
+        allData.reduce((sum, sd) => {
+          const pt = sd.find((d) => String(d.x) === cat);
+
+          return sum + (pt ? Math.max(0, pt.y) : 0);
+        }, 0),
+      );
+
+      vMax = Math.max(...sums);
+      vMin = 0;
+    } else {
+      const allY = allData.flat().map((d) => d.y);
+
+      vMax = Math.max(...allY);
+      vMin = Math.min(0, ...allY);
     }
 
-    const seriesList = resolve(config.series);
-    const hitSeriesIdx = seriesList.findIndex((_, si) => {
-      const centerX = currentXMap!(currentCategories[nearestIdx]);
-      const barLeft = centerX - currentBandwidth / 2 + (currentBandwidth / seriesList.length) * si;
+    // Build uniform scale context
+    const catScale = horizontal
+      ? bandScale({ domain: categories, range: [0, area.height] })
+      : bandScale({ domain: categories, range: [0, area.width] });
 
-      return pos.x >= barLeft && pos.x < barLeft + currentBandwidth / seriesList.length;
-    });
-    const seriesIdx = hitSeriesIdx >= 0 ? hitSeriesIdx : 0;
-    const point = currentData[seriesIdx]?.[nearestIdx];
+    const valScale = horizontal
+      ? linearScale({ domain: [vMin, vMax], range: [0, area.width] })
+      : linearScale({ domain: [vMin, vMax], range: [area.height, 0] });
 
-    if (point) {
-      const centerX = currentXMap(currentCategories[nearestIdx]);
+    const stackedTops: number[][] = [];
+    const stackTops: Record<string, number> = {};
 
-      tooltip.show(centerX + dims.margin.left, yPosForTooltip(point.y, dims, area), point, seriesList[seriesIdx]);
-    }
-  };
+    for (const cat of categories) stackTops[cat] = 0;
 
-  function yPosForTooltip(y: number, dims: ChartDimensions, area: { height: number }): number {
-    const allData = resolve(config.series).map((s) => resolve(s.data));
-    const allY = allData.flat().map((d) => d.y);
-    const yScale = linearScale({
-      domain: [Math.min(0, ...allY), Math.max(...allY)],
-      range: [area.height, 0],
-    });
+    const sc: BarScaleContext = {
+      bandCenter: (cat) => catScale.map(cat) + catScale.bandwidth() / 2,
+      bandwidth: catScale.bandwidth(),
+      baselinePx: valScale.map(0),
+      horizontal,
+      stacked,
+      stackedTops,
+      valueScale: valScale,
+    };
 
-    return yScale.map(y) + dims.margin.top;
-  }
+    // Axes & grid
+    if (horizontal) {
+      if (config.xAxis?.grid) renderGrid(groups.grid, valScale, config.xAxis.grid, area.height, area.width, 'vertical');
 
-  const handleMouseLeave = () => {
-    tooltip?.hide();
-  };
+      if (config.yAxis) renderAxis(groups.yAxis, catScale, config.yAxis, area.height);
 
-  if (tooltip) {
-    base.svg.addEventListener('mousemove', handleMouseMove);
-    base.svg.addEventListener('mouseleave', handleMouseLeave);
-  }
+      if (config.xAxis) {
+        groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+        renderAxis(groups.xAxis, valScale, config.xAxis, area.width);
+      }
+    } else {
+      if (config.yAxis?.grid)
+        renderGrid(groups.grid, valScale, config.yAxis.grid, area.height, area.width, 'horizontal');
 
-  const handle: ChartHandle = {
-    dispose() {
-      if (disposed) return;
-
-      disposed = true;
-
-      if (tooltip) {
-        base.svg.removeEventListener('mousemove', handleMouseMove);
-        base.svg.removeEventListener('mouseleave', handleMouseLeave);
+      if (config.xAxis) {
+        groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+        renderAxis(groups.xAxis, catScale, config.xAxis, area.width);
       }
 
-      tooltip?.destroy();
-      legend?.destroy();
-      s.dispose();
-      base.dispose();
-    },
-    el: base.svg,
-    [Symbol.dispose]() {
-      this.dispose();
-    },
-    update() {
-      base.dimensions.update((d) => ({ ...d }));
-    },
-  };
+      if (config.yAxis) renderAxis(groups.yAxis, valScale, config.yAxis, area.height);
+    }
 
-  return handle;
+    // Series groups
+    while (groups.series.children.length > seriesList.length) {
+      groups.series.removeChild(groups.series.lastChild!);
+    }
+
+    for (let i = 0; i < seriesList.length; i++) {
+      const series = seriesList[i];
+      let group = groups.series.children[i] as SVGGElement | undefined;
+
+      if (!group) {
+        group = createSvgElement('g', { class: 'prism-bar-series' });
+        groups.series.appendChild(group);
+      }
+
+      const barData = allData[i].map((d) => {
+        const x = String(d.x);
+
+        if (stacked) {
+          const base = stackTops[x] ?? 0;
+          const top = base + Math.max(0, d.y);
+
+          stackTops[x] = top;
+
+          return { base, x, y: top };
+        }
+
+        return { base: 0, x, y: d.y };
+      });
+
+      stackedTops[i] = barData.map((d) => d.y);
+
+      const baselineYs = stacked ? barData.map((d) => valScale.map(d.base)) : undefined;
+
+      renderBars(group, barData, catScale, valScale, sc.baselinePx, {
+        baselineYs,
+        borderRadius: series.borderRadius ?? 0,
+        color: seriesColor(i, series.color),
+        horizontal,
+        seriesCount: seriesList.length,
+        seriesIndex: i,
+        stacked,
+        transition: config.transition,
+      });
+    }
+
+    if (legend) {
+      legend.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
+    }
+
+    if (tooltip) tooltip.hide();
+
+    // ─── Event handlers (close over render-derived state) ─────────────────────
+
+    const onMouseMove = (event: MouseEvent) => {
+      const d = ctx.dimensions.value;
+      const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
+      const a = chartArea(d.width, d.height, d.margin);
+
+      if (pos.x < 0 || pos.x > a.width || pos.y < 0 || pos.y > a.height) {
+        tooltip?.hide();
+
+        return;
+      }
+
+      const posBand = horizontal ? pos.y : pos.x;
+      const catIdx = findCatIdx(posBand, categories, sc);
+
+      if (catIdx === -1) {
+        tooltip?.hide();
+
+        return;
+      }
+
+      if (isOutsideBars(pos, catIdx, allData, sc, seriesList.length)) {
+        tooltip?.hide();
+
+        return;
+      }
+
+      const seriesIdx = findSeriesIdx(pos, catIdx, categories, allData, sc, seriesList.length);
+      const point = allData[seriesIdx]?.[catIdx];
+
+      if (point) {
+        const bandCenterPx = sc.bandCenter(categories[catIdx]);
+        const stackedTop = stacked ? (stackedTops[seriesIdx]?.[catIdx] ?? point.y) : point.y;
+        const valuePx = valScale.map(stackedTop);
+
+        const tooltipX = horizontal ? valuePx + d.margin.left : bandCenterPx + d.margin.left;
+        const tooltipY = horizontal ? bandCenterPx + d.margin.top : valuePx + d.margin.top;
+
+        tooltip?.show(tooltipX, tooltipY, point, seriesList[seriesIdx]);
+        config.onHover?.({ originalEvent: event, point, series: seriesList[seriesIdx] });
+      }
+    };
+
+    const onMouseLeave = () => {
+      tooltip?.hide();
+      config.onHover?.(null);
+    };
+
+    const onClick = (event: MouseEvent) => {
+      if (!config.onClick) return;
+
+      const d = ctx.dimensions.value;
+      const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
+      const a = chartArea(d.width, d.height, d.margin);
+
+      if (pos.x < 0 || pos.x > a.width || pos.y < 0 || pos.y > a.height) return;
+
+      const posBand = horizontal ? pos.y : pos.x;
+      const catIdx = findCatIdx(posBand, categories, sc);
+
+      if (catIdx === -1) return;
+
+      const seriesIdx = findSeriesIdx(pos, catIdx, categories, allData, sc, seriesList.length);
+      const point = allData[seriesIdx]?.[catIdx];
+
+      if (point) {
+        config.onClick({ originalEvent: event, point, series: seriesList[seriesIdx] });
+      }
+    };
+
+    return { onClick, onMouseLeave, onMouseMove };
+  });
 }

@@ -382,7 +382,7 @@
   :host([size='lg']) {
     --_height: var(--size-3-5, 0.875rem);
     --_circle-size: 9rem;
-    --_circular-label-size: var(--text-3xl, 1.875rem);
+    --_circular-label-size: var(--text-3xl);
     --_circular-title-size: var(--text-sm, 0.875rem);
   }
 }

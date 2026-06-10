@@ -98,7 +98,17 @@ define<SgBadgeProps>(BADGE_TAG, {
       return String(count);
     });
 
-    return html`<span class="badge" part="badge" aria-label="${props.label}">
+    const ariaLabel = computed(() => {
+      if (props.label.value) return props.label.value;
+
+      if (props.dot.value) return undefined;
+
+      if (label.value != null) return `${label.value} notifications`;
+
+      return undefined;
+    });
+
+    return html`<span class="badge" part="badge" :aria-label="${ariaLabel}">
         <slot name="icon"></slot>
         <span ?hidden="${() => label.value == null}">${label}</span>
         <span class="badge-label" ?hidden="${() => label.value != null}"><slot></slot></span>

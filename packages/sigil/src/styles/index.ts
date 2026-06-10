@@ -53,8 +53,12 @@ export const surfaceMixins = [colorThemeMixin, elevationMixin, paddingMixin, rou
  * Covers theming, coarse-pointer targets, reduced-motion, border radius, and
  * disabled/loading states.
  *
- * Pass `sizeVariantMixin(YOUR_PRESET)` and `forcedColorsFocusMixin(selector)`
- * separately, as they accept component-specific arguments.
+ * **Required additions** (component-specific arguments, so not included here):
+ * - `sizeVariantMixin(YOUR_PRESET)` — supply the component's size config.
+ * - `forcedColorsFocusMixin(selector)` — **mandatory** for WCAG forced-colors
+ *   compliance. Pass the CSS selector for the component's focusable inner
+ *   element (e.g. `'input'`, `'textarea'`, `'.dropzone'`). Omitting this
+ *   removes the focus ring in Windows High Contrast mode.
  *
  * @example
  * ```ts

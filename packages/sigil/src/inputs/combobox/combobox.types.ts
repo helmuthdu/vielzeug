@@ -24,7 +24,7 @@ export type ComboboxOptionItem = {
 };
 
 export type SgComboboxProps = Omit<
-  SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>,
+  SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>>,
   'label-placement' | 'value'
 > & {
   /** Allow typing a new value to create a new option */

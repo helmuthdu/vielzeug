@@ -67,7 +67,7 @@ function buildPageRange(
  * @attr {boolean} show-first-last - Show first/last page buttons (default: false)
  * @attr {boolean} show-prev-next - Show prev/next buttons (default: false)
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} variant - Visual variant for nav buttons: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass' (default: 'ghost')
+ * @attr {string} variant - Visual variant for nav buttons: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' (default: 'ghost')
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} label - Accessible nav label (default: 'Pagination')
  *

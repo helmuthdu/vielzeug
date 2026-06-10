@@ -1,8 +1,8 @@
 @layer sigil.base {
   :host {
-    --_bg: var(--button-bg, var(--color-contrast-50));
+    --_bg: var(--button-bg, var(--color-contrast-100));
     --_color: var(--button-color, var(--color-contrast-900));
-    --_border-color: var(--button-border-color, var(--color-contrast-200));
+    --_border-color: var(--button-border-color, var(--color-contrast-300));
     --_radius: var(--button-radius, var(--rounded-lg));
 
     display: inline-flex;
@@ -10,16 +10,11 @@
     justify-content: center;
   }
 
-  :host([disabled]) {
-    cursor: not-allowed;
-  }
-
-  /* Link mode: mixin covers <button> but not <a> */
+  /* Link mode: explicit pointer-events on <a> since it is not a :not(slot) direct child in all browsers */
   :host([disabled]) a,
   :host([loading]) a {
     pointer-events: none;
     cursor: not-allowed;
-    opacity: 0.5;
   }
 
   :host([loading]) a {
@@ -156,7 +151,7 @@
 
   /* Flat */
   :host([variant='flat']) {
-    --_bg: var(--button-bg, color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100)));
+    --_bg: var(--button-bg, color-mix(in oklch, var(--_theme-backdrop) 25%, var(--color-contrast-100)));
     --_color: var(--button-color, var(--_theme-base));
     --_border-color: var(--button-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
     --_hover-bg: var(--_theme-focus);
@@ -283,20 +278,20 @@
 }
 
 @layer sigil.overrides {
-  /* Focus ring — wins over variant box-shadow rules */
+  /* Focus ring — keyboard navigation only; combines focus shadow + halo to avoid shadow pop */
   button:focus-visible,
   a:focus-visible {
     outline: none;
-    box-shadow: var(--_theme-shadow);
+    box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
-  /* Hover halo — applies the theme glow on hover for all non-text variants */
+  /* Hover depth — subtle directional halo, not a focus ring */
   button:hover,
   a:hover {
-    box-shadow: var(--_theme-shadow);
+    box-shadow: var(--_theme-halo);
   }
 
-  /* Text variant: suppress halo — no box-shadow decoration on hover */
+  /* Text variant: no hover shadow decoration */
   :host([variant='text']) button:hover,
   :host([variant='text']) a:hover {
     box-shadow: none;

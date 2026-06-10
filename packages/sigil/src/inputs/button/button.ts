@@ -171,6 +171,7 @@ define<SgButtonProps>(BUTTON_TAG, {
               :target="${props.target}"
               :rel="${effectiveRel}"
               role="button"
+              :aria-busy="${props.loading}"
               @click="${handleClick}">
               <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
               <slot name="prefix"></slot>

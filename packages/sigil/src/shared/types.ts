@@ -16,7 +16,7 @@ export type ComponentSize = 'sm' | 'md' | 'lg';
 export type ThemeColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
 
 /** Visual variant styles */
-export type VisualVariant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' | 'glass';
+export type VisualVariant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost';
 
 /** Border radius variants */
 export type RoundedSize = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';

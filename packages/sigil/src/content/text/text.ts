@@ -61,7 +61,7 @@ export type SgTextProps = {
  *
  * @example
  * ```html
- * <sg-text variant="heading" size="3xl" weight="bold">Welcome</sg-text>
+ * <sg-text variant="heading" size="2xl" weight="bold">Welcome</sg-text>
  * <sg-text as="h2" variant="heading" size="xl">Section title</sg-text>
  * <sg-text color="primary" weight="semibold">Important notice</sg-text>
  * <sg-text variant="code">npm install</sg-text>
