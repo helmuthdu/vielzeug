@@ -314,34 +314,18 @@
    ======================================== */
     color-scheme: light dark;
 
-    /* Contrast scale — perceptually-uniform via OKLCH */
-    --color-contrast-50: light-dark(oklch(99% 0.004 264deg), oklch(13% 0.005 250deg)); /* Canvas, page background */
-    --color-contrast-100: light-dark(oklch(97% 0.004 264deg), oklch(17% 0.005 250deg)); /* Cards, elevated surfaces */
-    --color-contrast-150: light-dark(oklch(95.5% 0.0045 264deg), oklch(19.5% 0.005 250deg)); /* Midpoint — chip base, subtle fills */
-    --color-contrast-200: light-dark(oklch(94% 0.005 264deg), oklch(22% 0.005 250deg)); /* Nested cards, hover states */
-    --color-contrast-300: light-dark(oklch(89% 0.006 264deg), oklch(29% 0.006 250deg)); /* Borders, dividers */
-    --color-contrast-400: light-dark(
-      oklch(81% 0.007 264deg),
-      oklch(38% 0.006 250deg)
-    ); /* Disabled backgrounds, subtle UI */
-
-    --color-contrast-500: light-dark(
-      oklch(49% 0.008 264deg),
-      oklch(58% 0.006 250deg)
-    ); /* Tertiary text - AA compliant */
-
-    --color-contrast-600: light-dark(
-      oklch(40% 0.008 264deg),
-      oklch(68% 0.005 250deg)
-    ); /* Secondary text - AA compliant */
-
-    --color-contrast-700: light-dark(oklch(32% 0.008 264deg), oklch(78% 0.004 250deg)); /* Body text - AAA compliant */
-    --color-contrast-800: light-dark(oklch(22% 0.008 264deg), oklch(88% 0.004 250deg)); /* Headings - AAA compliant */
-    --color-contrast-900: light-dark(
-      oklch(12% 0.008 264deg),
-      oklch(95% 0.003 250deg)
-    ); /* High contrast text - AAA compliant */
-
+    /* Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline */
+    --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Lifted Canvas (was 13%) */
+    --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); /* Lifted Cards (was 17%) */
+    --color-contrast-150: light-dark(oklch(95.5% 0.001 264deg), oklch(23.5% 0.001 250deg)); /* Lifted Fills (was 19.5%) */
+    --color-contrast-200: light-dark(oklch(94% 0.001 264deg), oklch(26% 0.001 250deg)); /* Lifted Nested/Hovers (was 22%) */
+    --color-contrast-300: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg)); /* Lifted Borders (was 29%) */
+    --color-contrast-400: light-dark(oklch(81% 0.002 264deg), oklch(40% 0.001 250deg)); /* Lifted Subtle UI (was 38%) */
+    --color-contrast-500: light-dark(oklch(49% 0.002 264deg), oklch(58% 0.001 250deg)); /* Tertiary text */
+    --color-contrast-600: light-dark(oklch(40% 0.002 264deg), oklch(68% 0.001 250deg)); /* Secondary text */
+    --color-contrast-700: light-dark(oklch(32% 0.002 264deg), oklch(78% 0.001 250deg)); /* Body text */
+    --color-contrast-800: light-dark(oklch(22% 0.002 264deg), oklch(88% 0.001 250deg)); /* Headings */
+    --color-contrast-900: light-dark(oklch(12% 0.002 264deg), oklch(95% 0.001 250deg)); /* Highest contrast text */
     --color-canvas: var(--color-contrast-50);
     --color-contrast: var(--color-contrast-900);
 
@@ -383,6 +367,7 @@
       0 var(--size-1) var(--size-3) light-dark(oklch(56% 0.22 29deg / 8%), oklch(65% 0.22 29deg / 10%));
 
     /* ── Neutral ─────────────────────────────────────────────────────────────── */
+
     /* Override any of these by setting --sigil-color-neutral-* on :root or a container. */
     --color-neutral: var(--sigil-color-neutral, light-dark(oklch(56% 0 264deg), oklch(72% 0 250deg)));
     --color-neutral-backdrop: var(

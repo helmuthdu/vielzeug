@@ -19,34 +19,54 @@ exports:
     seriesColor,
     setTheme,
   ]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="prism" />
+<PackageHero package="prism" />
 
-<img src="/logo-prism.svg" alt="Prism logo" width="156" class="logo-highlight"/>
+## Why Prism?
 
-# Prism
+Charting libraries typically require a framework binding, bundle heavy dependencies, or force canvas rendering that can't be styled with CSS. Prism takes a different approach:
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — Chart.js, imperative setup with a canvas you can't CSS-theme
+import Chart from 'chart.js/auto';
+const ctx = document.getElementById('myChart') as HTMLCanvasElement;
+new Chart(ctx, {
+  type: 'line',
+  data: { labels, datasets: [{ data: values }] },
+  // re-render manually when data changes, no signals, canvas not CSS-styleable
+});
 
-**Package:** `@vielzeug/prism` &nbsp;·&nbsp; **Category:** UI / Visualization
+// After — Prism, declarative SVG chart driven by a signal
+import { createLineChart } from '@vielzeug/prism';
+import { signal } from '@vielzeug/ripple';
 
-**Key exports:** `createLineChart`, `createBarChart`, `createAreaChart`, `createPieChart`, `createSparkline`, `linearScale`, `timeScale`, `bandScale`, `seriesColor`, `setTheme`
+const values = signal([12, 40, 28, 65, 50]);
+const chart = createLineChart({ data: values, container: '#chart' });
+// chart auto-updates when values.value changes — no manual re-render
+values.value = [...values.value, 80];
+```
 
-**When to use:** Data visualization with reactive charts that auto-update when signal-based data sources change. Renders accessible SVG, themeable via CSS custom properties.
+| Feature | Prism | Chart.js | Lightweight Charts | D3 |
+|---|---|---|---|---|
+| Bundle size | ~8 kB | ~60 kB | ~45 kB | ~30 kB (core) |
+| Renderer | SVG | Canvas | Canvas | SVG/Canvas |
+| Zero external deps | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| CSS themeable | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Limited | <sg-icon name="check" size="16"></sg-icon> |
+| Reactive (signals) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Accessible SVG | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Manual |
+| TypeScript-first | <sg-icon name="check" size="16"></sg-icon> | Partial | <sg-icon name="check" size="16"></sg-icon> | Types available |
 
-**Related:** [Ripple](/ripple/) · [Sigil](/sigil/) · [Orbit](/orbit/)
+<div class="decision-callout">
 
-</details>
+**Use Prism when** you need lightweight, reactive charts that integrate with signal-based state and can be styled purely with CSS. Ideal for dashboards, admin panels, and data-heavy applications using Vielzeug.
 
-**Prism** is a reactive SVG charting library that provides:
+**Consider alternatives when** you need 50+ chart types (ECharts), financial trading charts (Lightweight Charts), or low-level visualization grammar (D3).
 
-- **Cartesian charts** — line, bar, and area with configurable axes, grid, tooltips, and crosshair
-- **Signal-driven updates** — charts auto-render when `@vielzeug/ripple` signal data changes
-- **CSS theming** — all colors, fonts, and spacing via custom properties with dark mode support
+</div>
 
 ## Installation
 
@@ -96,25 +116,9 @@ data.value = [...data.value, { x: 5, y: 28 }];
 chart.dispose();
 ```
 
-## Why Prism?
-
-Charting libraries typically require a framework binding, bundle heavy dependencies, or force canvas rendering that can't be styled with CSS. Prism takes a different approach:
-
-| Feature | Prism | Chart.js | Lightweight Charts | D3 |
-|---|---|---|---|---|
-| Bundle size | ~8 kB | ~60 kB | ~45 kB | ~30 kB (core) |
-| Renderer | SVG | Canvas | Canvas | SVG/Canvas |
-| Zero external deps | <sg-icon name="circle-check" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | <sg-icon name="circle-check" size="16"></sg-icon> | <sg-icon name="circle-check" size="16"></sg-icon> |
-| CSS themeable | <sg-icon name="circle-check" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | Limited | <sg-icon name="circle-check" size="16"></sg-icon> |
-| Reactive (signals) | <sg-icon name="circle-check" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> |
-| Accessible SVG | <sg-icon name="circle-check" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | <sg-icon name="circle-x" size="16"></sg-icon> | Manual |
-| TypeScript-first | <sg-icon name="circle-check" size="16"></sg-icon> | Partial | <sg-icon name="circle-check" size="16"></sg-icon> | Types available |
-
-**Use Prism when** you need lightweight, reactive charts that integrate with signal-based state and can be styled purely with CSS. Ideal for dashboards, admin panels, and data-heavy applications using Vielzeug.
-
-**Consider alternatives when** you need 50+ chart types (ECharts), financial trading charts (Lightweight Charts), or low-level visualization grammar (D3).
-
 ## Features
+
+<div class="features-grid">
 
 - **`createLineChart(container, config)`** — line chart with linear, monotone, or step interpolation
 - **`createBarChart(container, config)`** — bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
@@ -134,6 +138,8 @@ Charting libraries typically require a framework binding, bundle heavy dependenc
 - **Accessible** — ARIA labels and semantic SVG structure
 - **`Symbol.dispose`** — explicit resource management following TC39 proposal
 
+</div>
+
 ## Sub-paths
 
 | Import | Purpose |
@@ -141,24 +147,24 @@ Charting libraries typically require a framework binding, bundle heavy dependenc
 | `@vielzeug/prism` | All chart factories, scales, and types |
 | `@vielzeug/prism/theme` | Default CSS (custom properties + dark mode) |
 
-## Compatibility
-
-| Environment | Support |
-|---|---|
-| Browser | <sg-icon name="circle-check" size="16"></sg-icon> |
-| Node.js (jsdom) | <sg-icon name="circle-check" size="16"></sg-icon> |
-| SSR | <sg-icon name="circle-x" size="16"></sg-icon> (requires DOM) |
-
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Ripple](/ripple/) — reactive signals that power Prism's auto-updating charts
 - [Sigil](/sigil/) — accessible web components that pair well with Prism for dashboards
 - [Orbit](/orbit/) — floating element positioning for chart tooltips and popovers
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

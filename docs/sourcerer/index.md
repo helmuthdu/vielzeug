@@ -29,41 +29,53 @@ exports:
     encodeQuery,
     decodeQuery,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="sourcerer" />
+<PackageHero package="sourcerer" />
 
-<img src="/logo-sourcerer.svg" alt="Sourcerer logo" width="156" class="logo-highlight"/>
+## Why Sourcerer?
 
-# Sourcerer
+Managing paginated lists across local and remote data usually means writing different state models for each case, wiring separate loading flags, and duplicating URL serialization logic. Sourcerer provides one typed contract — `current`, `meta`, and `subscribe` — that works the same whether data lives in memory or comes from a server.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Without Sourcerer — manual local list state
+const [items, setItems] = useState(allUsers);
+const [page, setPage] = useState(1);
+const [search, setSearch] = useState('');
+const pageSize = 10;
+const filtered = items.filter((u) => u.name.includes(search));
+const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+const totalPages = Math.ceil(filtered.length / pageSize);
+// ... repeat for remote with loading/error/abort logic ...
 
-**Package:** `@vielzeug/sourcerer` &nbsp;·&nbsp; **Category:** Data
+// With Sourcerer — same API for both
+const source = createLocalSource(allUsers, { limit: 10 }); // or createRemoteSource(...)
+await source.searchNow(search);
+// source.current, source.meta.pageCount — both cases handled
+```
 
-**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`, `SourceError`, `itemRange`, `sourceState`
+| Feature                             | Sourcerer                                       | TanStack Query | SWR            |
+| ----------------------------------- | ----------------------------------------------- | -------------- | -------------- |
+| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB         | ~6 kB          |
+| In-memory source primitive          | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>             |
+| Remote source primitive             | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
+| Cursor-based pagination             | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Infinite scroll source              | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
+| Typed page/filter/sort/search model | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Optimistic updates                  | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
+| URL query encode/decode helpers     | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
+| Framework agnostic                  | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
 
-**When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
+<div class="decision-callout">
 
-**Related:** [Courier](/courier/) · [Ripple](/ripple/) · [Wayfinder](/wayfinder/)
+**Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists, with built-in support for pagination, search, filters, and optimistic mutation.
 
-</details>
+**Consider TanStack Query when** your data layer is already built around query keys, cache invalidation across many components, and React-first DevTools integration.
 
-`@vielzeug/sourcerer` provides typed, reactive source models for list-based UIs:
-
-- `createLocalSource()` — in-memory collections with synchronous filter/sort/search (optional async filter/sort via `filterAsync`/`sortAsync`)
-- `createRemoteSource()` — async server-backed collections with page-number navigation
-- `createCursorSource()` — async collections navigated by cursor tokens (opaque next/prev pointers)
-- `createInfiniteSource()` — append-mode (infinite scroll) collections
-- `toSignals()` — universal Ripple signal adapter for all source types
-- `SourceError` — structured error class with `message`, `cause`, `query`, and `attempt`
-- `sourceState()` — derive a discriminated union (`loading` / `error` / `success`) from any source
-- `itemRange()` — compute 1-based display range from `SourceMeta`
-
-All sources expose `current`, `meta`, and `subscribe` — UI code is identical regardless of the underlying data strategy.
+</div>
 
 ## Installation
 
@@ -118,44 +130,9 @@ await source.ready();
 console.log(source.current, source.meta.totalItems);
 ```
 
-## Why Sourcerer?
-
-Managing paginated lists across local and remote data usually means writing different state models for each case, wiring separate loading flags, and duplicating URL serialization logic. Sourcerer provides one typed contract — `current`, `meta`, and `subscribe` — that works the same whether data lives in memory or comes from a server.
-
-```ts
-// Without Sourcerer — manual local list state
-const [items, setItems] = useState(allUsers);
-const [page, setPage] = useState(1);
-const [search, setSearch] = useState('');
-const pageSize = 10;
-const filtered = items.filter((u) => u.name.includes(search));
-const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-const totalPages = Math.ceil(filtered.length / pageSize);
-// ... repeat for remote with loading/error/abort logic ...
-
-// With Sourcerer — same API for both
-const source = createLocalSource(allUsers, { limit: 10 }); // or createRemoteSource(...)
-await source.searchNow(search);
-// source.current, source.meta.pageCount — both cases handled
-```
-
-| Feature                             | Sourcerer                                       | TanStack Query | SWR            |
-| ----------------------------------- | ----------------------------------------------- | -------------- | -------------- |
-| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB         | ~6 kB          |
-| In-memory source primitive          | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>             |
-| Remote source primitive             | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
-| Cursor-based pagination             | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Infinite scroll source              | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
-| Typed page/filter/sort/search model | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Optimistic updates                  | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="circle-check" size="16"></sg-icon>             |
-| URL query encode/decode helpers     | <sg-icon name="circle-check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Framework agnostic                  | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-check" size="16"></sg-icon>             | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
-
-**Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists, with built-in support for pagination, search, filters, and optimistic mutation.
-
-**Consider TanStack Query when** your data layer is already built around query keys, cache invalidation across many components, and React-first DevTools integration.
-
 ## Features
+
+<div class="features-grid">
 
 | Factory                  | Data model      | Navigation          | Key extras                                                             |
 | ------------------------ | --------------- | ------------------- | ---------------------------------------------------------------------- |
@@ -164,25 +141,27 @@ await source.searchNow(search);
 | `createCursorSource()`   | Server fetch    | Cursor tokens       | `restoreQuery()`, `ready()`, `queryKey`                                |
 | `createInfiniteSource()` | Server fetch    | Append (`loadMore`) | `loadedPages`, `ready()`, `queryKey`                                   |
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Ripple](/ripple/)
-- [Arsenal](/arsenal/)
-- [Wayfinder](/wayfinder/)
+<div class="see-also">
+
+- [Ripple](/ripple/) — reactive signals; Sourcerer's loading, error, and data state are exposed as signals for framework-agnostic UI binding
+- [Arsenal](/arsenal/) — utility functions used inside Sourcerer's fetch and transform pipelines
+- [Wayfinder](/wayfinder/) — client-side router; sync Sourcerer's pagination and filter state with URL search params
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

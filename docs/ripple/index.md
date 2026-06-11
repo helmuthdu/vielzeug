@@ -29,35 +29,57 @@ exports:
     getDevToolsHook,
     StateError,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="ripple" />
+<PackageHero package="ripple" />
 
-<img src="/logo-ripple.svg" alt="Ripple logo" width="156" class="logo-highlight"/>
+## Why Ripple?
 
-# Ripple
+Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — manual notification
+let count = 0;
+const listeners: Array<() => void> = [];
+function setCount(n: number) {
+  count = n;
+  listeners.forEach((fn) => fn());
+}
 
-**Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
+// After — Ripple signals
+import { signal, effect } from '@vielzeug/ripple';
+const count = signal(0);
+effect(() => console.log(count.value)); // auto-tracks dependencies
+count.value = 1; // notifies automatically
+```
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
+| Feature                      | Ripple                                       | Zustand          | Jotai        | Nanostores |
+| ---------------------------- | -------------------------------------------- | ---------------- | ------------ | ---------- |
+| Bundle size                  | <PackageInfo package="ripple" type="size" /> | ~3.5 kB          | ~7 kB        | ~2 kB      |
+| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
+| Framework-agnostic           | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | React-first  | <sg-icon name="check" size="16"></sg-icon>         |
+| Fine-grained reactivity      | <sg-icon name="check" size="16"></sg-icon> (per-property)                            | <sg-icon name="x" size="16"></sg-icon> (whole store) | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon> (atom)  |
+| Structured object stores     | <sg-icon name="check" size="16"></sg-icon> (`store`, `lens`)                         | <sg-icon name="check" size="16"></sg-icon>               | Manual atoms | <sg-icon name="x" size="16"></sg-icon>         |
+| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`asyncComputed`)                         | Manual           | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
+| Undo / redo history          | <sg-icon name="check" size="16"></sg-icon> (`storeWithHistory`)                      | Manual           | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
+| Computed signals             | <sg-icon name="check" size="16"></sg-icon> (lazy, glitch-free)                       | Selectors        | <sg-icon name="check" size="16"></sg-icon> (atoms)   | <sg-icon name="check" size="16"></sg-icon>         |
+| Batched writes               | <sg-icon name="check" size="16"></sg-icon> (`batch`)                                 | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
+| Explicit cleanup / scopes    | <sg-icon name="check" size="16"></sg-icon> (`scope`, `onCleanup`)                    | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
+| SSR support                  | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
+| TypeScript — strict generics | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | Partial    |
+| React Suspense               | <sg-icon name="x" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
+| Redux DevTools               | <sg-icon name="x" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
 
-**When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
+<div class="decision-callout">
 
-**Related:** [Craft](/craft/) · [Forge](/forge/) · [Herald](/herald/)
+**Use Ripple when** you need fine-grained, per-property reactivity without framework lock-in — especially for web components, vanilla JS apps, or any environment where you want zero runtime dependencies and explicit lifecycle control.
 
-</details>
+**Consider alternatives when** you are React-only and need Suspense or React Query integration (Jotai), need Redux DevTools out of the box (Zustand), or need a minimal atom store with no extra features (Nanostores).
 
-**Ripple** is a tiny, zero-dependency reactive library that unifies two complementary primitives:
-
-- **Signals** — fine-grained reactive values (`signal`, `computed`, `effect`, `watch`)
-- **Stores** — structured reactive state containers for plain objects (`store`)
-
-Both share the same `.value` access and `watch()` / `effect()` subscription model. A `Store<T>` **is** a `Signal<T>`, so every signal primitive works on stores too.
+</div>
 
 ## Installation
 
@@ -139,48 +161,9 @@ stopWatch.dispose();
 label.dispose();
 ```
 
-## Why Ripple?
-
-Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
-
-```ts
-// Before — manual notification
-let count = 0;
-const listeners: Array<() => void> = [];
-function setCount(n: number) {
-  count = n;
-  listeners.forEach((fn) => fn());
-}
-
-// After — Ripple signals
-import { signal, effect } from '@vielzeug/ripple';
-const count = signal(0);
-effect(() => console.log(count.value)); // auto-tracks dependencies
-count.value = 1; // notifies automatically
-```
-
-| Feature                      | Ripple                                       | Zustand          | Jotai        | Nanostores |
-| ---------------------------- | -------------------------------------------- | ---------------- | ------------ | ---------- |
-| Bundle size                  | <PackageInfo package="ripple" type="size" /> | ~3.5 kB          | ~7 kB        | ~2 kB      |
-| Zero dependencies            | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Framework-agnostic           | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | React-first  | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Fine-grained reactivity      | <sg-icon name="circle-check" size="16"></sg-icon> (per-property)                            | <sg-icon name="circle-x" size="16"></sg-icon> (whole store) | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon> (atom)  |
-| Structured object stores     | <sg-icon name="circle-check" size="16"></sg-icon> (`store`, `lens`)                         | <sg-icon name="circle-check" size="16"></sg-icon>               | Manual atoms | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Async computed               | <sg-icon name="circle-check" size="16"></sg-icon> (`asyncComputed`)                         | Manual           | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Undo / redo history          | <sg-icon name="circle-check" size="16"></sg-icon> (`storeWithHistory`)                      | Manual           | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Computed signals             | <sg-icon name="circle-check" size="16"></sg-icon> (lazy, glitch-free)                       | Selectors        | <sg-icon name="circle-check" size="16"></sg-icon> (atoms)   | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Batched writes               | <sg-icon name="circle-check" size="16"></sg-icon> (`batch`)                                 | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Explicit cleanup / scopes    | <sg-icon name="circle-check" size="16"></sg-icon> (`scope`, `onCleanup`)                    | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| SSR support                  | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| TypeScript — strict generics | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | Partial    |
-| React Suspense               | <sg-icon name="circle-x" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Redux DevTools               | <sg-icon name="circle-x" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>         |
-
-**Use Ripple when** you need fine-grained, per-property reactivity without framework lock-in — especially for web components, vanilla JS apps, or any environment where you want zero runtime dependencies and explicit lifecycle control.
-
-**Consider alternatives when** you are React-only and need Suspense or React Query integration (Jotai), need Redux DevTools out of the box (Zustand), or need a minimal atom store with no extra features (Nanostores).
-
 ## Features
+
+<div class="features-grid">
 
 - **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; `batched: true` coalesces rapid writes into one microtask notification
 - **`computed(fn, options?)`** — lazy derived signal; glitch-free; `computed([a, b], fn)` overload for explicit dep arrays with no auto-tracking
@@ -210,6 +193,8 @@ count.value = 1; // notifies automatically
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
+</div>
+
 ## Sub-paths
 
 | Import                      | Purpose                                                                                              |
@@ -218,25 +203,24 @@ count.value = 1; // notifies automatically
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
 | `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                                                |
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Craft](/craft/) — web-component authoring framework built on ripple
 - [Forge](/forge/) — typed form state that uses signals for field reactivity and submission tracking
 - [Herald](/herald/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

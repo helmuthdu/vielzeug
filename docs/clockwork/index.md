@@ -6,30 +6,61 @@ category: state
 keywords: [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, middleware]
 related: [ripple, herald, ward]
 exports: [defineMachine, interpret, resolveTransition, MachineError]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="clockwork" />
+<PackageHero package="clockwork" />
 
-<img src="/logo-clockwork.svg" alt="Clockwork logo" width="156" class="logo-highlight"/>
+## Why Clockwork?
 
-# Clockwork
+Manual state management leads to invalid state combinations, unreachable code paths, and complex conditional logic. FSMs eliminate these bugs by making state transitions explicit and exhaustive.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — manual state management
+type LoaderState = {
+  data?: string;
+  error?: Error;
+  isRetrying?: boolean;
+  status: 'error' | 'idle' | 'loading' | 'success';
+};
+// Multiple invalid state combinations are possible.
 
-**Package:** `@vielzeug/clockwork` &nbsp;·&nbsp; **Category:** State
+// After — FSM enforces valid state combinations
+type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
 
-**Key exports:** `defineMachine`, `interpret`, `resolveTransition`, `MachineError`
+const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: string; error?: Error }, Event>({
+  context: { data: '', error: undefined },
+  initial: 'idle',
+  states: {
+    error: { on: { FETCH: { target: 'loading' } } },
+    idle: { on: { FETCH: { target: 'loading' } } },
+    loading: { on: { DONE: { target: 'success' }, FAIL: { target: 'error' } } },
+    success: { on: { FETCH: { target: 'loading' } } },
+  },
+});
+// Now success && error is impossible. State is always valid.
+```
 
-**When to use:** Complex application state with discrete states, guarded transitions, async side effects, delayed transitions, and persistence.
+| Feature                    | Clockwork                                       | xstate              | zustand   |
+| -------------------------- | ----------------------------------------------- | ------------------- | --------- |
+| Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon> 5+ deps          | <sg-icon name="check" size="16"></sg-icon>        |
+| Typed discriminated events | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial          | <sg-icon name="x" size="16"></sg-icon>        |
+| Reactive signals           | <sg-icon name="check" size="16"></sg-icon> Native                                       | <sg-icon name="x" size="16"></sg-icon> Observer pattern | <sg-icon name="check" size="16"></sg-icon> Native |
+| Persistence adapter        | <sg-icon name="check" size="16"></sg-icon> Pluggable                                    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
+| Hierarchical states        | <sg-icon name="check" size="16"></sg-icon> Compound + leaf resolution                   | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>        |
+| Middleware pipeline        | <sg-icon name="check" size="16"></sg-icon> Composable                                   | <sg-icon name="x" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
+| Context isolation          | <sg-icon name="check" size="16"></sg-icon> Cloned on every transition                   | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>        |
 
-**Related:** [Ripple](/ripple/) &nbsp;·&nbsp; [Herald](/herald/) &nbsp;·&nbsp; [Ward](/ward/)
+<div class="decision-callout">
 
-</details>
+**Use Clockwork when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
 
-`@vielzeug/clockwork` is a zero-dependency typed finite state machine. Define states, events, transitions, and async invokes once, then get a reactive, fully-typed machine instance with hierarchical states, delayed transitions, middleware, persistence, tracing, and debugging hooks—all with zero runtime overhead when unused.
+**Consider xstate when** you need visual state machine tooling or already have a large bundle budget.
+
+</div>
 
 ## Installation
 
@@ -91,52 +122,9 @@ console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 5
 ```
 
-## Why Clockwork?
-
-Manual state management leads to invalid state combinations, unreachable code paths, and complex conditional logic. FSMs eliminate these bugs by making state transitions explicit and exhaustive.
-
-```ts
-// Before — manual state management
-type LoaderState = {
-  data?: string;
-  error?: Error;
-  isRetrying?: boolean;
-  status: 'error' | 'idle' | 'loading' | 'success';
-};
-// Multiple invalid state combinations are possible.
-
-// After — FSM enforces valid state combinations
-type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
-
-const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: string; error?: Error }, Event>({
-  context: { data: '', error: undefined },
-  initial: 'idle',
-  states: {
-    error: { on: { FETCH: { target: 'loading' } } },
-    idle: { on: { FETCH: { target: 'loading' } } },
-    loading: { on: { DONE: { target: 'success' }, FAIL: { target: 'error' } } },
-    success: { on: { FETCH: { target: 'loading' } } },
-  },
-});
-// Now success && error is impossible. State is always valid.
-```
-
-| Feature                    | Clockwork                                       | xstate              | zustand   |
-| -------------------------- | ----------------------------------------------- | ------------------- | --------- |
-| Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
-| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="circle-x" size="16"></sg-icon> 5+ deps          | <sg-icon name="circle-check" size="16"></sg-icon>        |
-| Typed discriminated events | <sg-icon name="circle-check" size="16"></sg-icon>                                              | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial          | <sg-icon name="circle-x" size="16"></sg-icon>        |
-| Reactive signals           | <sg-icon name="circle-check" size="16"></sg-icon> Native                                       | <sg-icon name="circle-x" size="16"></sg-icon> Observer pattern | <sg-icon name="circle-check" size="16"></sg-icon> Native |
-| Persistence adapter        | <sg-icon name="circle-check" size="16"></sg-icon> Pluggable                                    | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-check" size="16"></sg-icon>        |
-| Hierarchical states        | <sg-icon name="circle-check" size="16"></sg-icon> Compound + leaf resolution                   | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-x" size="16"></sg-icon>        |
-| Middleware pipeline        | <sg-icon name="circle-check" size="16"></sg-icon> Composable                                   | <sg-icon name="circle-x" size="16"></sg-icon>                  | <sg-icon name="circle-check" size="16"></sg-icon>        |
-| Context isolation          | <sg-icon name="circle-check" size="16"></sg-icon> Cloned on every transition                   | <sg-icon name="circle-check" size="16"></sg-icon>                  | <sg-icon name="circle-x" size="16"></sg-icon>        |
-
-**Use Clockwork when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
-
-**Consider xstate when** you need visual state machine tooling or already have a large bundle budget.
-
 ## Features
+
+<div class="features-grid">
 
 - `defineMachine()` — Create immutable, validated FSM definitions
 - `interpret()` — Spawn reactive machine instances from definitions
@@ -155,6 +143,8 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 - **Subscribe** — Change-detection subscription without direct ripple dependency
 - **Pure resolver** — Test transition logic independently with `resolveTransition()`
 
+</div>
+
 ## Sub-paths
 
 | Import                         | Purpose                                                 |
@@ -162,26 +152,25 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 | `@vielzeug/clockwork`          | All exports and types                                   |
 | `@vielzeug/clockwork/devtools` | `debugInterpret` — pre-wired console logging (dev only) |
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Ripple](/ripple/) — Reactive signals and effects; core reactivity layer for Clockwork
 - [Herald](/herald/) — Typed event bus; complementary for event-driven architectures
 - [Ward](/ward/) — RBAC engine; use alongside Clockwork for state-dependent permissions
 - [Forge](/forge/) — Form state management; integrates with Clockwork for multi-step workflows
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

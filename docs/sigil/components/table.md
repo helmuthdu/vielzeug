@@ -406,19 +406,19 @@ The table component follows WCAG 2.1 Level AA standards.
 
 ### `sg-table`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-busy` is set to `"true"` when `loading` is active.
 - `aria-label` is set to the `caption` value when provided.
 - The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `sg-table`'s shadow DOM, preserving all table semantics for assistive technologies.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - `<sg-th>` in a `<sg-tr head>` row automatically gets `scope="col"` on the native `<th>`.
 - `<sg-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
 - Use the `caption` attribute on `sg-table` to label the table for assistive technologies.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Standard browser table keyboard navigation applies (Tab, arrow keys with screen readers).
 

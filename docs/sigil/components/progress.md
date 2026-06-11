@@ -272,7 +272,7 @@ The progress component follows WAI-ARIA best practices.
 
 ### `sg-progress`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `role="progressbar"` is applied to the track element.
 - `aria-valuenow` reflects the current `value` (omitted when `indeterminate`).

@@ -285,15 +285,27 @@
     box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
-  /* Hover depth — subtle directional halo, not a focus ring */
+  /* Hover depth — halo border effect matching sg-input focus style */
   button:hover,
   a:hover {
-    box-shadow: var(--_theme-halo);
+    border-color: var(--_hover-border-color, var(--_theme-focus));
+    box-shadow: var(--_theme-shadow);
+    transform: translateY(-1px);
   }
 
-  /* Text variant: no hover shadow decoration */
+  /* Ghost + Text variants: no border/shadow decoration on hover */
+  :host([variant='ghost']) button:hover,
+  :host([variant='ghost']) a:hover,
   :host([variant='text']) button:hover,
   :host([variant='text']) a:hover {
+    border-color: transparent;
     box-shadow: none;
+    transform: none;
+  }
+
+  /* Reset lift on active so it snaps back down */
+  button:active,
+  a:active {
+    transform: none;
   }
 }

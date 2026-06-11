@@ -14,30 +14,60 @@ exports:
     createGridVirtualizer,
     createReactiveVirtualizer,
   ]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="scroll" />
+<PackageHero package="scroll" />
 
-<img src="/logo-scroll.svg" alt="Scroll logo" width="156" class="logo-highlight"/>
+## Why Scroll?
 
-# Scroll
+Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory — long lists need to render only what is visible in the viewport.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — render all 10 000 items (browser freezes)
+list.innerHTML = '';
+items.forEach((item) => {
+  const el = document.createElement('div');
+  el.textContent = item.name;
+  list.appendChild(el); // 10 000 DOM nodes
+});
 
-**Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
+// After — Scroll (only ~15 visible rows in the DOM at any time)
+import { createVirtualizer } from '@vielzeug/scroll';
+const virt = createVirtualizer(scrollEl, {
+  count: items.length,
+  estimateSize: 36,
+  onChange: ({ items, totalSize }) => {
+    list.style.height = `${totalSize}px`;
+    list.innerHTML = '';
+    for (const { index, start } of items) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
+      el.textContent = items[index].name;
+      list.appendChild(el);
+    }
+  },
+});
+```
 
-**Key exports:** `createVirtualizer`, `createDomVirtualList`, `createVirtualScroller`, `createGroupedVirtualizer`, `createGridVirtualizer`, `createReactiveVirtualizer`
+| Feature            | Scroll                                       | TanStack Virtual | react-window |
+| ------------------ | -------------------------------------------- | ---------------- | ------------ |
+| Bundle size        | <PackageInfo package="scroll" type="size" /> | ~5 kB            | ~8 kB        |
+| Framework agnostic | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | React only   |
+| Variable heights   | <sg-icon name="check" size="16"></sg-icon> Measured                                  | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="triangle-alert" size="16"></sg-icon> Static    |
+| O(log n) lookup    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           |
+| `using` support    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           |
+| Zero dependencies  | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           |
 
-**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, sticky headers, grouped sections, grid virtualization, programmatic scrolling, and reactive signal integration.
+<div class="decision-callout">
 
-**Related:** [Grip](/grip/) · [Craft](/craft/) · [Sigil](/sigil/)
+**Use Scroll when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
 
-</details>
+**Consider TanStack Virtual** if you need its framework adapters and ecosystem integration.
 
-`@vielzeug/scroll` is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
+</div>
 
 ## Installation
 
@@ -91,51 +121,9 @@ virt.destroy();
 
 All APIs export from a single entry: `@vielzeug/scroll`.
 
-## Why Scroll?
-
-Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory — long lists need to render only what is visible in the viewport.
-
-```ts
-// Before — render all 10 000 items (browser freezes)
-list.innerHTML = '';
-items.forEach((item) => {
-  const el = document.createElement('div');
-  el.textContent = item.name;
-  list.appendChild(el); // 10 000 DOM nodes
-});
-
-// After — Scroll (only ~15 visible rows in the DOM at any time)
-import { createVirtualizer } from '@vielzeug/scroll';
-const virt = createVirtualizer(scrollEl, {
-  count: items.length,
-  estimateSize: 36,
-  onChange: ({ items, totalSize }) => {
-    list.style.height = `${totalSize}px`;
-    list.innerHTML = '';
-    for (const { index, start } of items) {
-      const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
-      el.textContent = items[index].name;
-      list.appendChild(el);
-    }
-  },
-});
-```
-
-| Feature            | Scroll                                       | TanStack Virtual | react-window |
-| ------------------ | -------------------------------------------- | ---------------- | ------------ |
-| Bundle size        | <PackageInfo package="scroll" type="size" /> | ~5 kB            | ~8 kB        |
-| Framework agnostic | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | React only   |
-| Variable heights   | <sg-icon name="circle-check" size="16"></sg-icon> Measured                                  | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="triangle-alert" size="16"></sg-icon> Static    |
-| O(log n) lookup    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           |
-| `using` support    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>               | <sg-icon name="circle-x" size="16"></sg-icon>           |
-| Zero dependencies  | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>               | <sg-icon name="circle-check" size="16"></sg-icon>           |
-
-**Use Scroll when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
-
-**Consider TanStack Virtual** if you need its framework adapters and ecosystem integration.
-
 ## Features
+
+<div class="features-grid">
 
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
 - **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
@@ -156,16 +144,8 @@ const virt = createVirtualizer(scrollEl, {
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - **Zero runtime dependencies** (ripple is a peer dependency used only by `createReactiveVirtualizer`)
 
-## Compatibility
+</div>
 
-| Environment | Support       |
-| ----------- | ------------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>            |
-| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
-| SSR         | <sg-icon name="circle-x" size="16"></sg-icon> (DOM only) |
-| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>            |
-
-Requires a browser DOM environment with a fixed-height scroll container (`overflow: auto`) and a positioned inner list element. Items must be positioned absolutely from virtual item offsets.
 
 ## How It Works
 
@@ -183,14 +163,22 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 
 ## Documentation
 
+<div class="doc-links">
+
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Sigil](/sigil/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
 - [Craft](/craft/) — web-component authoring layer; use with Scroll to build virtualizing custom elements
 - [Grip](/grip/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -42,30 +42,65 @@ exports:
     resizeObserver,
     CraftitError,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="craft" />
+<PackageHero package="craft" />
 
-<img src="/logo-craft.svg" alt="Craft logo" width="156" class="logo-highlight"/>
 
-# Craft
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+## Why Craft?
 
-**Package:** `@vielzeug/craft` &nbsp;·&nbsp; **Category:** UI Primitives
+Craft keeps custom elements functional and signal-driven while giving you direct control over templates, lifecycle hooks, host bindings, and form-associated behavior.
 
-**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `prop`, `ref`, `provide`, `inject`, `each`, `when`
+```ts
+// Before — vanilla custom element boilerplate
+class MyCounter extends HTMLElement {
+  #count = 0;
+  connectedCallback() {
+    this.attachShadow({ mode: 'open' });
+    this.#render();
+  }
+  #render() {
+    this.shadowRoot!.innerHTML = `<button>${this.#count}</button>`;
+    this.shadowRoot!.querySelector('button')!.onclick = () => {
+      this.#count++;
+      this.#render();
+    };
+  }
+}
+customElements.define('my-counter', MyCounter);
 
-**When to use:** Framework-agnostic UI components powered by reactive signals. Ideal when you need custom elements without a full UI framework.
+// After — Craft
+import { define, html, signal } from '@vielzeug/craft';
 
-**Related:** [Ripple](/ripple/) · [Sigil](/sigil/) · [Orbit](/orbit/)
+define('my-counter', {
+  setup() {
+    const count = signal(0);
+    return html`<button @click=${() => count.value++}>${count}</button>`;
+  },
+});
+```
 
-</details>
+| Feature                    | Craft                                       | Lit                           | Stencil           |
+| -------------------------- | ------------------------------------------- | ----------------------------- | ----------------- |
+| Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
+| Signal-first runtime       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon> (separate signals package) | <sg-icon name="x" size="16"></sg-icon>                |
+| Functional component setup | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="x" size="16"></sg-icon>                |
+| Typed prop helpers         | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="check" size="16"></sg-icon>                |
+| Host binding helpers       | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | Partial           |
+| Form-associated helpers    | <sg-icon name="check" size="16"></sg-icon>                                          | Manual                        | Partial           |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon>                |
 
-Craft is a custom-element authoring library built on `@vielzeug/ripple`.
+<div class="decision-callout">
+
+**Use Craft when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
+
+**Consider Lit when** you need a mature ecosystem with wide community adoption and don't need signal-based reactivity.
+
+</div>
 
 ## Installation
 
@@ -117,54 +152,9 @@ define('my-counter', {
 });
 ```
 
-## Why Craft?
-
-Craft keeps custom elements functional and signal-driven while giving you direct control over templates, lifecycle hooks, host bindings, and form-associated behavior.
-
-```ts
-// Before — vanilla custom element boilerplate
-class MyCounter extends HTMLElement {
-  #count = 0;
-  connectedCallback() {
-    this.attachShadow({ mode: 'open' });
-    this.#render();
-  }
-  #render() {
-    this.shadowRoot!.innerHTML = `<button>${this.#count}</button>`;
-    this.shadowRoot!.querySelector('button')!.onclick = () => {
-      this.#count++;
-      this.#render();
-    };
-  }
-}
-customElements.define('my-counter', MyCounter);
-
-// After — Craft
-import { define, html, signal } from '@vielzeug/craft';
-
-define('my-counter', {
-  setup() {
-    const count = signal(0);
-    return html`<button @click=${() => count.value++}>${count}</button>`;
-  },
-});
-```
-
-| Feature                    | Craft                                       | Lit                           | Stencil           |
-| -------------------------- | ------------------------------------------- | ----------------------------- | ----------------- |
-| Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
-| Signal-first runtime       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon> (separate signals package) | <sg-icon name="circle-x" size="16"></sg-icon>                |
-| Functional component setup | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="circle-x" size="16"></sg-icon>                |
-| Typed prop helpers         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="circle-check" size="16"></sg-icon>                |
-| Host binding helpers       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial                       | Partial           |
-| Form-associated helpers    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Manual                        | Partial           |
-| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>                            | <sg-icon name="circle-x" size="16"></sg-icon>                |
-
-**Use Craft when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
-
-**Consider Lit when** you need a mature ecosystem with wide community adoption and don't need signal-based reactivity.
-
 ## Features
+
+<div class="features-grid">
 
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related ripple APIs
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
@@ -178,6 +168,9 @@ define('my-counter', {
 - Testing utilities (`@vielzeug/craft/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
 - Debug utilities (`@vielzeug/craft/devtools`) — `debugFlush()` for diagnosing update timing
 
+</div>
+
+
 ## Package Entry Points
 
 | Import                      | Purpose                                                                       |
@@ -187,26 +180,25 @@ define('my-counter', {
 | `@vielzeug/craft/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Lifecycle Best Practices](./lifecycle-best-practices.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Sigil](../sigil/index.md) for prebuilt accessible components powered by Craft.
 - [Ripple](../ripple/index.md) for reactive state used inside Craft components.
 - [Forge](../forge/index.md) for typed form state that integrates with Craft.
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

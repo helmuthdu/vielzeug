@@ -219,12 +219,12 @@ The textarea component follows WCAG 2.1 Level AA standards.
 
 ### `sg-textarea`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the field; `Shift+Tab` blurs it.
 - Native textarea keyboard behaviour applies within the field.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.
 - `aria-invalid` is set when `error` is provided; `aria-required` reflects the `required` attribute.

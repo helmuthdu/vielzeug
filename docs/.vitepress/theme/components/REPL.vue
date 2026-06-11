@@ -701,7 +701,7 @@ onMounted(() => {
 .repl-container {
   --sidebar-w: 280px;
   overflow: hidden;
-  background: var(--vp-c-bg);
+  background: var(--color-canvas);
   height: calc(100vh - var(--vp-nav-height, 64px));
 }
 
@@ -720,10 +720,10 @@ onMounted(() => {
 .ide-sidebar {
   display: flex;
   flex-direction: column;
-  background: var(--vp-c-bg-alt);
+  background: var(--color-contrast-100);
   overflow: hidden;
   height: 100%;
-  border-right: 1px solid var(--vp-c-divider);
+  border-right: var(--border) solid var(--color-contrast-300);
 }
 
 .sidebar-header {
@@ -731,9 +731,9 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--vp-c-divider);
+  border-bottom: var(--border) solid var(--color-contrast-300);
   flex-shrink: 0;
-  background: var(--vp-c-bg-soft);
+  background: var(--color-contrast-100);
   height: 52px;
 }
 
@@ -745,17 +745,17 @@ onMounted(() => {
 }
 
 .sidebar-active-name {
-  font-size: 0.8125rem;
-  color: var(--vp-c-text-2);
-  letter-spacing: -0.01em;
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+  letter-spacing: var(--tracking-tight);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .sidebar-active-name strong {
-  color: var(--vp-c-text-1);
-  font-weight: 600;
+  color: var(--text-color-heading);
+  font-weight: var(--font-semibold);
 }
 
 .sidebar-nav {
@@ -764,8 +764,8 @@ onMounted(() => {
   overflow-y: auto;
   padding: 0.375rem 0;
   scrollbar-width: thin;
-  scrollbar-color: var(--vp-c-divider) transparent;
-  border-bottom: 1px solid var(--vp-c-divider);
+  scrollbar-color: var(--color-contrast-300) transparent;
+  border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
 .sidebar-item {
@@ -776,23 +776,23 @@ onMounted(() => {
   padding: 0.5rem 1rem;
   border: none;
   background: transparent;
-  color: var(--vp-c-text-2);
-  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  font-size: var(--text-sm);
   cursor: pointer;
   text-align: left;
   position: relative;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .sidebar-item:hover {
-  color: var(--vp-c-text-1);
-  background: color-mix(in srgb, var(--vp-c-brand-1) 6%, transparent);
+  color: var(--text-color-body);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
 .sidebar-item.is-active {
-  color: var(--vp-c-brand-1);
-  background: color-mix(in srgb, var(--vp-c-brand-1) 10%, transparent);
-  font-weight: 600;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  font-weight: var(--font-semibold);
 }
 
 .sidebar-item.is-active::before {
@@ -803,7 +803,7 @@ onMounted(() => {
   height: 60%;
   width: 3px;
   border-radius: 0 2px 2px 0;
-  background: var(--vp-c-brand-1);
+  background: var(--color-primary);
 }
 
 .sidebar-logo {
@@ -823,21 +823,21 @@ onMounted(() => {
 }
 
 .sidebar-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--vp-c-text-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-color-heading);
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
 .sidebar-item:not(.is-active) .sidebar-name {
-  color: var(--vp-c-text-2);
-  font-weight: 500;
+  color: var(--text-color-secondary);
+  font-weight: var(--font-medium);
 }
 
 .sidebar-desc {
-  font-size: 0.6875rem;
-  color: var(--vp-c-text-3);
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -865,14 +865,14 @@ onMounted(() => {
 
   .ide-sidebar {
     border-left: none;
-    border-bottom: 1px solid var(--vp-c-divider);
+    border-bottom: var(--border) solid var(--color-contrast-300);
     max-height: 180px;
   }
 
   .sidebar-nav {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: var(--size-1);
     padding: 0.5rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -880,8 +880,8 @@ onMounted(() => {
 
   .sidebar-item {
     width: auto;
-    padding: 0.3rem 0.625rem;
-    border-radius: 6px;
+    padding: var(--size-1) var(--size-2-5);
+    border-radius: var(--rounded-md);
   }
 
   .sidebar-item.is-active::before {

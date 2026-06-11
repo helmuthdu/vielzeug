@@ -313,7 +313,7 @@ The badge component follows WAI-ARIA best practices.
 
 ### `sg-badge`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Badge text content is read by screen readers as inline text.
 - Count badges expose the full value (or `{max}+`) as visible text that is read aloud.

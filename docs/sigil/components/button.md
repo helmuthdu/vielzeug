@@ -466,12 +466,12 @@ Both components follow WAI-ARIA best practices.
 
 ### `sg-button`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Enter` and `Space` activate the button.
 - `Tab` moves focus to/from the button.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Announces button role and label.
 - `aria-disabled` when disabled.
@@ -480,16 +480,16 @@ Both components follow WAI-ARIA best practices.
 
 ### `sg-button-group`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Automatically includes `role="group"` on the container.
 - Use the `label` attribute to provide context for screen readers (e.g., `label="Text alignment"`).
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` moves focus between buttons.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Buttons within a group are announced in context.
 

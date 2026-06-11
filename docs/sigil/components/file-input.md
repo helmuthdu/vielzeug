@@ -319,12 +319,12 @@ The file input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-file-input`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker.
 - Remove buttons inside the file list are individually focusable.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text.
 - Each remove button has a descriptive `aria-label` (e.g. `"Remove report.pdf"`).

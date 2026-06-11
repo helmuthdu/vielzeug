@@ -329,18 +329,18 @@ The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
 ### `sg-accordion`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Native Semantics**
+<sg-icon name="check" size="16"></sg-icon> **Native Semantics**
 
 - Built with native `<details>` and `<summary>` elements.
 - Progressive enhancement - works without JavaScript.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Smooth Animation**
+<sg-icon name="check" size="16"></sg-icon> **Smooth Animation**
 
 - Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing.
 - Respects `prefers-reduced-motion`: the transition plays only when the user hasn’t opted out of animations.
 - Override the speed with `--accordion-item-transition`.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Enter` and `Space` toggle expansion.
 - `Tab` moves focus between accordion items.

@@ -450,17 +450,17 @@ The text component follows WAI-ARIA best practices.
 
 ### `sg-text`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Automatic Heading ARIA**
+<sg-icon name="check" size="16"></sg-icon> **Automatic Heading ARIA**
 
 - `as="h1"` through `as="h6"` automatically sets `role="heading"` and the matching `aria-level` (1–6) on the host element. Screen readers announce the correct heading level without any extra markup.
 - Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Use the `as` attribute to give the element correct document semantics (`h1`–`h6`, `p`, `label`, etc.).
 - `as="span"`, `as="label"`, and `as="code"` render as `display: inline` matching their native HTML counterparts.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `rem` units to respect user's browser font size preferences.
 - Maintains WCAG-compliant line height (1.5 default for body text).

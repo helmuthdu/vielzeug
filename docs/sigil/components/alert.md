@@ -286,13 +286,13 @@ The alert component follows WAI-ARIA best practices.
 
 ### `sg-alert`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="alert"` with `aria-live="polite"` — screen readers announce the alert on insertion.
 - `aria-live` is `assertive` when `color="error"` so urgent errors interrupt immediately; all other severities use `polite`.
 - `[dismissed]` uses `display: none`, removing the element from the accessibility tree entirely.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - The close button is keyboard-reachable and has `aria-label="Dismiss alert"`.
 - `[dismissing]` disables `pointer-events` during the exit animation to prevent double-activation.

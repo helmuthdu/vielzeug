@@ -216,21 +216,21 @@ The slider component follows WAI-ARIA best practices.
 
 ### `sg-slider`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Arrow Right` / `Arrow Up` — increase value by one step
 - `Arrow Left` / `Arrow Down` — decrease value by one step
 - `Home` — jump to minimum value
 - `End` — jump to maximum value
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The thumb has `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`.
 - Provide `value-text` or `from-value-text` / `to-value-text` when the raw number needs a unit (e.g. `"$80"`, `"75%"`).
 - In range mode, each thumb has its own accessible label and independent ARIA attributes.
 - `aria-disabled` is set when `disabled` is active.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Touch & Focus**
+<sg-icon name="check" size="16"></sg-icon> **Touch & Focus**
 
 - Touch-friendly draggable thumb with a minimum 44 × 44 px hit area.
 - `Tab` focuses the slider; `Shift+Tab` blurs it.

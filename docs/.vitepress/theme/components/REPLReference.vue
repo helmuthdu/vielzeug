@@ -122,7 +122,7 @@ const isMatch = (fn: string) => {
 /* Reference Section */
 .reference-section {
   margin-top: 0;
-  background: var(--vp-c-bg-alt);
+  background: var(--color-contrast-100);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -132,9 +132,9 @@ const isMatch = (fn: string) => {
 
 .reference-header {
   padding: 0.625rem 1rem;
-  background: var(--vp-c-bg-alt);
-  border-top: 1px solid var(--vp-c-divider);
-  border-bottom: 1px solid var(--vp-c-divider);
+  background: var(--color-contrast-100);
+  border-top: var(--border) solid var(--color-contrast-300);
+  border-bottom: var(--border) solid var(--color-contrast-300);
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
@@ -142,16 +142,16 @@ const isMatch = (fn: string) => {
 }
 
 .reference-hint {
-  font-size: 0.6875rem;
-  color: var(--vp-c-text-3);
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
   letter-spacing: 0.01em;
 }
 
 .reference-title {
   margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--vp-c-text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-color-secondary);
   letter-spacing: -0.01em;
 }
 
@@ -174,24 +174,24 @@ const isMatch = (fn: string) => {
   overflow-y: auto;
   flex: 1;
   scrollbar-width: thin;
-  scrollbar-color: var(--vp-c-divider) transparent;
+  scrollbar-color: var(--color-contrast-300) transparent;
 }
 
 .no-results {
   grid-column: 1 / -1;
   text-align: center;
   padding: 3rem;
-  color: var(--vp-c-text-3);
+  color: var(--text-color-tertiary);
   font-style: italic;
-  background: var(--vp-c-bg-soft);
-  border-radius: 8px;
+  background: var(--color-contrast-100);
+  border-radius: var(--rounded-lg);
 }
 
 .category h4 {
   margin: 0 0 0.5rem;
-  color: var(--vp-c-text-2);
-  font-size: 0.6875rem;
-  font-weight: 700;
+  color: var(--text-color-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   display: flex;
@@ -210,8 +210,8 @@ const isMatch = (fn: string) => {
 }
 
 .function-list :deep(sg-chip:hover) {
-  --sg-chip-bg: color-mix(in srgb, var(--vp-c-brand-1) 12%, transparent);
-  --sg-chip-border: var(--vp-c-brand-1);
-  --sg-chip-color: var(--vp-c-brand-1);
+  --sg-chip-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --sg-chip-border: var(--color-primary);
+  --sg-chip-color: var(--color-primary);
 }
 </style>

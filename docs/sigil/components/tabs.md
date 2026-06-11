@@ -451,12 +451,12 @@ The tabs component follows the WAI-ARIA Tabs Pattern best practices.
 
 ### `sg-tabs`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last.
 - Disabled tabs are skipped during keyboard navigation.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The tab list has `role="tablist"`.
 - Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel.

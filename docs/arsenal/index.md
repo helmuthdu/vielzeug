@@ -6,30 +6,34 @@ category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
 exports: [chunk, debounce, throttle, allOf, clamp, isEqual, attempt, retry, sleep, stableStringify, search, getPath]
 related: [tempo, sourcerer, spell, coins]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="arsenal" />
+<PackageHero package="arsenal" />
 
-<img src="/logo-arsenal.svg" alt="Arsenal logo" width="156" class="logo-highlight"/>
+## Why Arsenal?
 
-# Arsenal
+Arsenal favors a curated, typed utility surface over an everything-and-the-kitchen-sink API, with zero dependencies and modern tree-shakeable exports.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+| Feature                     | Arsenal                                       | lodash-es | Remeda  |
+| --------------------------- | --------------------------------------------- | --------- | ------- |
+| Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB    | ~18 kB  |
+| TypeScript-first ergonomics | <sg-icon name="check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="check" size="16"></sg-icon>      |
+| Deep utility coverage       | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | Partial |
+| Async control-flow helpers  | <sg-icon name="check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="x" size="16"></sg-icon>      |
+| Typed predicate functions   | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>        | Partial |
+| Tree-shakeable modules      | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="check" size="16"></sg-icon>      |
+| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="check" size="16"></sg-icon>      |
 
-**Package:** `@vielzeug/arsenal` &nbsp;·&nbsp; **Category:** Utilities
+<div class="decision-callout">
 
-**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `attempt`, `retry`, `sleep`, `stableStringify`, `search`, `getPath`
+**Use Arsenal when** you want one compact, typed utility layer that covers array/object/function/async/math use cases. For money handling, use [`@vielzeug/coins`](/coins/).
 
-**When to use:** 80+ tree-shakeable utility functions for arrays, objects, strings, async control, math, and typed checks. Import only what you use.
+**Consider narrower alternatives when** you only need a small functional subset and prefer ultra-focused APIs.
 
-**Related:** [Tempo](/tempo/) · [Sourcerer](/sourcerer/) · [Spell](/spell/) · [Coins](/coins/)
-
-</details>
-
-`@vielzeug/arsenal` is a compact utility package built for modern TypeScript projects. The API is intentionally small, composable, and fully tree-shakeable.
+</div>
 
 ## Installation
 
@@ -85,25 +89,9 @@ const hits = search(users, 'alice', { mode: 'scored' });
 const key = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
 ```
 
-## Why Arsenal?
-
-Arsenal favors a curated, typed utility surface over an everything-and-the-kitchen-sink API, with zero dependencies and modern tree-shakeable exports.
-
-| Feature                     | Arsenal                                       | lodash-es | Remeda  |
-| --------------------------- | --------------------------------------------- | --------- | ------- |
-| Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB    | ~18 kB  |
-| TypeScript-first ergonomics | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deep utility coverage       | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | Partial |
-| Async control-flow helpers  | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Typed predicate functions   | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>        | Partial |
-| Tree-shakeable modules      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Zero dependencies           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-
-**Use Arsenal when** you want one compact, typed utility layer that covers array/object/function/async/math use cases. For money handling, use [`@vielzeug/coins`](/coins/).
-
-**Consider narrower alternatives when** you only need a small functional subset and prefer ultra-focused APIs.
-
 ## Features
+
+<div class="features-grid">
 
 - **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `search`, `take/drop`, `union/intersection`, `zip/unzip`, and more
 - **Async**: `abortable`, `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
@@ -113,26 +101,27 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 - **Random**: `draw`, `random`, `shuffle`, `uuid`
 - **Typed predicates**: `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isError`, `isFunction`, `isMatch`, `isNil`, `isNumber`, `isPlainObject`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isAbortError`
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
+</div>
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Tempo](/tempo/) — date/time utilities including `expires`, `timeDiff`, and `dateRange`
 - [Coins](/coins/) — money formatting and currency conversion (`currency`, `exchange`)
 - [Sourcerer](/sourcerer/) — reactive paginated sources built on top of arsenal primitives
 - [Spell](/spell/) — schema validation that pairs naturally with `parseJSON` and `assert`
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

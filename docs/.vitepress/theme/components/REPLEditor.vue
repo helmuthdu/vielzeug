@@ -740,8 +740,8 @@ defineExpose({
   padding: 0 1rem;
   height: 52px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  border-bottom: var(--border) solid var(--color-contrast-300);
+  background: var(--color-contrast-100);
 }
 
 .editor-toolbar > * {
@@ -769,21 +769,21 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--vp-font-family-mono);
-  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
   line-height: 1;
   padding: 0.2rem 0.35rem;
-  background: var(--vp-c-bg-alt);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 4px;
-  color: var(--vp-c-text-3);
-  box-shadow: 0 1px 0 var(--vp-c-divider);
+  background: var(--color-contrast-100);
+  border: var(--border) solid var(--color-contrast-300);
+  border-radius: var(--rounded-sm);
+  color: var(--text-color-tertiary);
+  box-shadow: 0 1px 0 var(--color-contrast-300);
 }
 
 .editor-section {
   min-height: 0;
   overflow: hidden;
-  background: var(--vp-c-bg);
+  background: var(--color-canvas);
   display: flex;
   flex-direction: column;
 }
@@ -791,10 +791,10 @@ defineExpose({
 .output-section {
   min-height: 0;
   overflow: hidden;
-  background: var(--vp-c-bg-alt);
+  background: var(--color-contrast-100);
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--vp-c-divider);
+  border-top: var(--border) solid var(--color-contrast-300);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -811,8 +811,8 @@ defineExpose({
   padding: 0 0.75rem;
   height: 32px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  border-bottom: var(--border) solid var(--color-contrast-300);
+  background: var(--color-contrast-100);
 }
 
 .output-label {
@@ -820,7 +820,7 @@ defineExpose({
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--vp-c-text-3);
+  color: var(--text-color-tertiary);
 }
 
 /* Editor & Output Areas */
@@ -838,70 +838,66 @@ defineExpose({
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;
-  background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 10px;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--color-contrast-200);
+  border: var(--border) solid var(--color-contrast-300);
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--shadow-sm);
   z-index: 10;
   opacity: 0.55;
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+    opacity var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .editor-floating-toolbar:hover {
   opacity: 1;
   transform: translateY(-1px);
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.15),
-    0 2px 6px rgba(0, 0, 0, 0.1);
-  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
 }
 
 .code-editor,
 .output-area {
   flex: 1;
   min-height: 0;
-  font-family: var(--vp-font-family-mono);
+  font-family: var(--font-mono);
 }
 
 .code-editor {
-  background: var(--vp-code-bg);
+  background: var(--color-contrast-100);
 }
 
 .output-area {
-  padding: 1.25rem;
-  background: var(--vp-c-bg-alt);
+  padding: var(--size-5);
+  background: var(--color-contrast-100);
   overflow-y: auto;
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
 }
 
 /* Output Styles - for dynamically created DOM elements */
 .output-area :deep(.output-line) {
-  margin: 0.4rem 0;
-  padding: 0.2rem 0;
+  margin: var(--size-1-5) 0;
+  padding: var(--size-0-5) 0;
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  border-bottom: 1px solid var(--vp-c-divider);
+  gap: var(--size-4);
+  border-bottom: var(--border) solid var(--color-contrast-300);
   opacity: 0.9;
 }
 
 .output-area :deep(.log-timestamp) {
-  font-size: 0.75rem;
-  color: var(--vp-c-text-3);
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
   min-width: 70px;
   font-variant-numeric: tabular-nums;
 }
 
 .output-area :deep(.log-icon) {
-  font-size: 0.85rem;
-  color: var(--vp-c-text-2);
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
   min-width: 16px;
   text-align: center;
 }
@@ -910,7 +906,7 @@ defineExpose({
   flex: 1;
   word-break: break-all;
   white-space: pre-wrap;
-  color: var(--vp-c-text-1);
+  color: var(--text-color-body);
 }
 
 .output-area :deep(.log-text) {
@@ -919,37 +915,37 @@ defineExpose({
 }
 
 .output-area :deep(.output-result .log-text) {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
-  font-size: 1rem;
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
 }
 
 .output-area :deep(.output-error),
 .output-area :deep(.output-warn) {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  margin: 0.5rem 0;
+  padding: var(--size-2) var(--size-3);
+  border-radius: var(--rounded-md);
+  margin: var(--size-2) 0;
 }
 
 .output-area :deep(.output-error) {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--color-error);
+  background: var(--color-error-backdrop);
+  border: var(--border) solid var(--color-error-border);
 }
 
 .output-area :deep(.output-warn) {
-  color: #d97706;
-  background: rgba(217, 119, 6, 0.08);
-  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: var(--color-warning);
+  background: var(--color-warning-backdrop);
+  border: var(--border) solid var(--color-warning-border);
 }
 
 .output-area :deep(.output-result) {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
 }
 
 .output-area :deep(.output-log) {
-  color: var(--vp-c-text-1);
+  color: var(--text-color-body);
 }
 </style>
 
@@ -957,25 +953,25 @@ defineExpose({
 /* Global styles for dynamically created output elements */
 /* These need to be global because they're created via document.createElement */
 .output-area .output-line {
-  margin: 0.4rem 0;
-  padding: 0.2rem 0;
+  margin: var(--size-1-5) 0;
+  padding: var(--size-0-5) 0;
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  border-bottom: 1px solid var(--vp-c-divider);
+  gap: var(--size-4);
+  border-bottom: var(--border) solid var(--color-contrast-300);
   opacity: 0.9;
 }
 
 .output-area .log-timestamp {
-  font-size: 0.75rem;
-  color: var(--vp-c-text-3);
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
   min-width: 70px;
   font-variant-numeric: tabular-nums;
 }
 
 .output-area .log-icon {
-  font-size: 0.85rem;
-  color: var(--vp-c-text-2);
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
   min-width: 16px;
   text-align: center;
 }
@@ -984,7 +980,7 @@ defineExpose({
   flex: 1;
   word-break: break-all;
   white-space: pre-wrap;
-  color: var(--vp-c-text-1);
+  color: var(--text-color-body);
 }
 
 .output-area .log-text {
@@ -993,37 +989,37 @@ defineExpose({
 }
 
 .output-area .output-result .log-text {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
-  font-size: 1rem;
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
 }
 
 .output-area .output-error,
 .output-area .output-warn {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  margin: 0.5rem 0;
+  padding: var(--size-2) var(--size-3);
+  border-radius: var(--rounded-md);
+  margin: var(--size-2) 0;
 }
 
 .output-area .output-error {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--color-error);
+  background: var(--color-error-backdrop);
+  border: var(--border) solid var(--color-error-border);
 }
 
 .output-area .output-warn {
-  color: #d97706;
-  background: rgba(217, 119, 6, 0.08);
-  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: var(--color-warning);
+  background: var(--color-warning-backdrop);
+  border: var(--border) solid var(--color-warning-border);
 }
 
 .output-area .output-result {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
 }
 
 .output-area .output-log {
-  color: var(--vp-c-text-1);
+  color: var(--text-color-body);
 }
 
 .output-placeholder {
@@ -1032,22 +1028,22 @@ defineExpose({
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--vp-c-text-3);
+  color: var(--text-color-tertiary);
   text-align: center;
-  gap: 0.625rem;
-  padding: 2rem;
+  gap: var(--size-2-5);
+  padding: var(--size-8);
   user-select: none;
 }
 
 .output-placeholder p {
   margin: 0;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--vp-c-text-2);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
 }
 
 .output-placeholder span {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .placeholder-steps {
@@ -1056,16 +1052,16 @@ defineExpose({
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--size-1-5);
   text-align: left;
 }
 
 .placeholder-steps li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--vp-c-text-3);
+  gap: var(--size-2);
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
 }
 
 .step-num {
@@ -1075,29 +1071,29 @@ defineExpose({
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid var(--vp-c-divider);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--vp-c-text-3);
+  border: var(--border) solid var(--color-contrast-300);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-color-tertiary);
   flex-shrink: 0;
 }
 
 .placeholder-note {
-  font-size: 0.6875rem;
-  color: var(--vp-c-text-3);
+  font-size: var(--text-2xs);
+  color: var(--text-color-tertiary);
   opacity: 0.7;
-  margin-top: 0.25rem;
+  margin-top: var(--size-1);
 }
 
 .output-placeholder kbd {
   display: inline-block;
   padding: 0.1em 0.35em;
   font-size: 0.75em;
-  font-family: var(--vp-font-family-mono);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 4px;
-  background: var(--vp-c-bg);
-  color: var(--vp-c-text-2);
+  font-family: var(--font-mono);
+  border: var(--border) solid var(--color-contrast-300);
+  border-radius: var(--rounded-sm);
+  background: var(--color-canvas);
+  color: var(--text-color-secondary);
 }
 
 /* Animations */

@@ -8,7 +8,7 @@ An autocomplete input that combines a text field with a filterable dropdown list
 - <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a spinner while options are being fetched
 - <sg-icon name="zap" size="16"></sg-icon> **Virtualised Rendering** — powered by `@vielzeug/scroll` for smooth performance with large option lists
 - <sg-icon name="sparkles" size="16"></sg-icon> **Creatable** — allow users to create new options when no match is found
-- <sg-icon name="circle-x" size="16"></sg-icon> **Clearable** — optional clear button to reset the value
+- <sg-icon name="x" size="16"></sg-icon> **Clearable** — optional clear button to reset the value
 - <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
 - <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
 - <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (default) or outside
@@ -506,12 +506,12 @@ The combobox component follows WCAG 2.1 Level AA standards.
 
 ### `sg-combobox`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the input; `ArrowDown` / `ArrowUp` navigate the option list.
 - `Enter` confirms selection; `Escape` closes the dropdown.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="combobox"` with `aria-expanded`, `aria-controls`, `aria-activedescendant`, and `aria-autocomplete="list"`.
 - The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected` and `aria-disabled`.

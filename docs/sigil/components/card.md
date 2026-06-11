@@ -560,19 +560,19 @@ The card component follows WCAG 2.1 Level AA standards.
 
 ### `sg-card`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Enter` / `Space` activate the card when `interactive` is set.
 - `Tab` moves focus to the card.
 - Disabled cards have `tabindex="-1"` and cannot receive focus.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `role="button"` is applied when `interactive` is set; `aria-disabled` reflects the disabled state.
 - `aria-busy` reflects the loading state.
 - Proper content hierarchy with semantic slots for screen reader users.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Uses semantic HTML for proper content organization.
 - Compliant with WCAG 2.1 Level AA color contrast requirements.

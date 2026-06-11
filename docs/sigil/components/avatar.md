@@ -178,7 +178,7 @@ The avatar component follows WAI-ARIA best practices.
 
 ### `sg-avatar`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Provide a meaningful `alt` attribute — it serves as the accessible name and is also used to derive initials automatically.
 - Initials backgrounds are decorative; the `alt` text provides the accessible name.

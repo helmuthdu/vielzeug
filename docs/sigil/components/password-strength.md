@@ -134,21 +134,21 @@ For production use, prefer an external scorer like zxcvbn and pass the result vi
 
 ## Accessibility
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Meter Role**
+<sg-icon name="check" size="16"></sg-icon> **Meter Role**
 
 - Uses `role="meter"` with `aria-valuemin="0"`, `aria-valuemax="4"`, and dynamic `aria-valuenow`.
 - Provides human-readable state through `aria-valuetext` (`Weak`, `Fair`, `Good`, `Strong`).
 - When `score` is `0` (empty), `aria-valuetext` is omitted to avoid announcing "empty".
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Live Updates**
+<sg-icon name="check" size="16"></sg-icon> **Live Updates**
 
 - The visible label uses `aria-live="polite"` and `aria-atomic="true"` to announce level transitions.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
 
 - The shimmer transition respects `prefers-reduced-motion: reduce`.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Decorative segments are hidden from the accessibility tree via `aria-hidden="true"`.
 

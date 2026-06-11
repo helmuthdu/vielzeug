@@ -175,12 +175,12 @@ The pagination component follows WAI-ARIA best practices.
 
 ### `sg-pagination`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` moves focus between page buttons; `Enter` / `Space` activate the focused button.
 - Previous and next navigation buttons are individually focusable.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The component renders a `<nav>` element as a navigation landmark.
 - Each page button's accessible name includes the page number.

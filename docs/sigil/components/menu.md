@@ -9,7 +9,7 @@ An action dropdown triggered by any slotted element. Presents a list of `sg-menu
 - <sg-icon name="map-pin" size="16"></sg-icon> **Auto-positioning**: uses `@vielzeug/orbit` to flip when near viewport edges
 - <sg-icon name="bell-off" size="16"></sg-icon> **Outside-click close**: dismiss by clicking anywhere outside
 - <sg-icon name="minus" size="16"></sg-icon> **Separator**: `sg-menu-separator` renders a visual divider between groups of items
-- <sg-icon name="circle-check" size="16"></sg-icon> **Checkable Items**: `sg-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
+- <sg-icon name="check" size="16"></sg-icon> **Checkable Items**: `sg-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
 - <sg-icon name="hand" size="16"></sg-icon> **Disabled items**: individual `sg-menu-item` items can be disabled
 - <sg-icon name="puzzle" size="16"></sg-icon> **Icon slot**: each item supports a leading `icon` slot
 - <sg-icon name="palette" size="16"></sg-icon> **Color Themes**: primary, secondary, info, success, warning, error
@@ -321,20 +321,20 @@ The menu component follows WAI-ARIA Menu Button Pattern best practices.
 
 ### `sg-menu`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Arrow keys move focus between items; `Enter` / `Space` activates; `Escape` closes and returns focus to the trigger.
 - `Home` / `End` jump to the first or last item.
 - Outside clicks and `Tab` close the menu and restore focus to the trigger.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The panel has `role="menu"` and `aria-orientation="vertical"`.
 - The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel.
 
 ### `sg-menu-item`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Each item has `role="menuitem"` and `aria-disabled` when disabled.
 - Checkable items automatically switch to `role="menuitemcheckbox"` or `role="menuitemradio"` with the appropriate `aria-checked` value.

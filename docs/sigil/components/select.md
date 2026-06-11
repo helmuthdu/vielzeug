@@ -357,12 +357,12 @@ The select component follows WCAG 2.1 Level AA standards.
 
 ### `sg-select`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the trigger; `Enter` / `Space` open the dropdown.
 - Arrow keys navigate options; `Home` / `End` jump to first / last; `Escape` closes; `Tab` closes and moves focus out.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The trigger uses `role="combobox"` with `aria-haspopup="listbox"`, `aria-expanded`, and `aria-activedescendant`.
 - The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected`; `aria-multiselectable` is set when `multiple` is active.

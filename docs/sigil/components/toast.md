@@ -393,11 +393,11 @@ The toast component follows WAI-ARIA best practices.
 
 ### `sg-toast`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `sg-alert` carries `role="alert"` with `aria-live="polite"` (`assertive` for `error` color) — screen readers announce new toasts automatically.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Auto-dismiss timers pause on both `mouseenter` and `focusin`, satisfying WCAG 2.1 SC 2.2.3.
 - Dismiss buttons are keyboard-reachable and labelled `"Dismiss alert"`.

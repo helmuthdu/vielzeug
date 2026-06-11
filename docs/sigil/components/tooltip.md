@@ -179,11 +179,11 @@ The tooltip component follows WAI-ARIA best practices.
 
 ### `sg-tooltip`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Pressing `Escape` while a tooltip is visible dismisses it.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The tooltip bubble has `role="tooltip"`.
 - The trigger element is augmented with `aria-describedby` pointing to the tooltip — this happens automatically when using the `focus` trigger.

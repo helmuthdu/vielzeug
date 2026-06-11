@@ -17,30 +17,53 @@ exports:
     ScopedResolutionError,
     ContainerDisposedError,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="conduit" />
+<PackageHero package="conduit" />
 
-<img src="/logo-conduit.svg" alt="Conduit logo" width="156" class="logo-highlight"/>
+## Why Conduit?
 
-# Conduit
+Manual dependency wiring often spreads across modules, making lifetimes and teardown behavior difficult to reason about in larger systems.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — manual wiring, no lifecycle, no type safety
+const logger = new ConsoleLogger();
+const db = await connectDb(process.env.DATABASE_URL);
+const repo = new UserRepo(db, logger);
+const service = new UserService(repo, logger);
+// cleanup is your problem
 
-**Package:** `@vielzeug/conduit` &nbsp;·&nbsp; **Category:** Di
+// After — explicit tokens, typed resolution, disposal hooks
+const container = createContainer();
+container.value(Logger, new ConsoleLogger());
+container.factory(Db, () => connectDb(process.env.DATABASE_URL), { dispose: (db) => db.close() });
+container.factory(UserRepo, (db, logger) => new UserRepo(db, logger), { deps: [Db, Logger] });
+container.factory(UserService, (repo, logger) => new UserService(repo, logger), { deps: [UserRepo, Logger] });
 
-**Key exports:** `createContainer`, `token`, `scope`
+const service = await container.resolve(UserService);
+await container.dispose(); // all hooks run automatically
+```
 
-**When to use:** Type-safe DI container with singleton/transient/scoped/named-scope lifetimes, child scopes, async providers, disposal hooks, and circular dependency detection.
+| Feature                     | Conduit                                       | tsyringe                | InversifyJS                      |
+| --------------------------- | --------------------------------------------- | ----------------------- | -------------------------------- |
+| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                   | ~45 kB                           |
+| Typed token ergonomics      | <sg-icon name="check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
+| Async-first resolution      | <sg-icon name="check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
+| Child container scopes      | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>                      | <sg-icon name="check" size="16"></sg-icon>                               |
+| Explicit disposal lifecycle | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>                      | Partial                          |
+| Decorator-free usage        | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
+| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>                      | <sg-icon name="x" size="16"></sg-icon>                               |
 
-**Related:** [Rune](/rune/) · [Herald](/herald/) · [Ward](/ward/)
+<div class="decision-callout">
 
-</details>
+**Use Conduit when** you need a compact typed container with explicit scopes and lifecycle control.
 
-`@vielzeug/conduit` is a compact dependency injection container built around typed symbol tokens, factory registration, and explicit container scopes.
+**Consider decorator-heavy DI frameworks when** your project is already standardized around metadata/decorator injection patterns.
+
+</div>
 
 ## Installation
 
@@ -81,44 +104,9 @@ await service.run();
 await container.dispose();
 ```
 
-## Why Conduit?
-
-Manual dependency wiring often spreads across modules, making lifetimes and teardown behavior difficult to reason about in larger systems.
-
-```ts
-// Before — manual wiring, no lifecycle, no type safety
-const logger = new ConsoleLogger();
-const db = await connectDb(process.env.DATABASE_URL);
-const repo = new UserRepo(db, logger);
-const service = new UserService(repo, logger);
-// cleanup is your problem
-
-// After — explicit tokens, typed resolution, disposal hooks
-const container = createContainer();
-container.value(Logger, new ConsoleLogger());
-container.factory(Db, () => connectDb(process.env.DATABASE_URL), { dispose: (db) => db.close() });
-container.factory(UserRepo, (db, logger) => new UserRepo(db, logger), { deps: [Db, Logger] });
-container.factory(UserService, (repo, logger) => new UserService(repo, logger), { deps: [UserRepo, Logger] });
-
-const service = await container.resolve(UserService);
-await container.dispose(); // all hooks run automatically
-```
-
-| Feature                     | Conduit                                       | tsyringe                | InversifyJS                      |
-| --------------------------- | --------------------------------------------- | ----------------------- | -------------------------------- |
-| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                   | ~45 kB                           |
-| Typed token ergonomics      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
-| Async-first resolution      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
-| Child container scopes      | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>                      | <sg-icon name="circle-check" size="16"></sg-icon>                               |
-| Explicit disposal lifecycle | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>                      | Partial                          |
-| Decorator-free usage        | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
-| Zero dependencies           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-check" size="16"></sg-icon>                      | <sg-icon name="circle-x" size="16"></sg-icon>                               |
-
-**Use Conduit when** you need a compact typed container with explicit scopes and lifecycle control.
-
-**Consider decorator-heavy DI frameworks when** your project is already standardized around metadata/decorator injection patterns.
-
 ## Features
+
+<div class="features-grid">
 
 - Small core API — `token`, `scope`, `createContainer`, and a focused set of container methods
 - Typed dependency contracts via Symbol tokens with phantom types
@@ -138,25 +126,27 @@ await container.dispose(); // all hooks run automatically
 - Child containers for request/component/test scope boundaries
 - Explicit disposal lifecycle with `Symbol.asyncDispose` support
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Familiar](../familiar/index.md) for dependency-managed worker orchestration.
 - [Herald](../herald/index.md) for pub/sub coordination in container-managed modules.
 - [Ward](../ward/index.md) for injecting authorization services.
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -42,30 +42,41 @@ exports:
     dateRange,
     recurrence,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="tempo" />
+<PackageHero package="tempo" />
 
-<img src="/logo-tempo.svg" alt="Tempo logo" width="156" class="logo-highlight"/>
+## Why Tempo?
 
-# Tempo
+Manual date handling breaks at daylight-saving boundaries, timezone edges, and DST transitions.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — fragile, loses timezone context
+const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
-**Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date Time
+// After — DST-safe, handles transitions correctly
+const reminder = shift(meeting, { minutes: -15 });
+```
 
-**Key exports:** `now`, `parsePlainDateTime`, `parseInstant`, `parseDate`, `toInstant`, `toZoned`, `shift`, `difference`, `within`, `clamp`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `format`, `formatRelative`, `parseDuration`, `formatDuration`, `expires`, `classify`, `timeDiff`, `humanize`, `dateRange`, `recurrence`
+| Feature        | Tempo                                       | date-fns | Day.js  | Native Date |
+| -------------- | ------------------------------------------- | -------- | ------- | ----------- |
+| Bundle size    | <PackageInfo package="tempo" type="size" /> | ~10 kB   | ~3 kB   | 0 kB        |
+| DST-safe math  | <sg-icon name="check" size="16"></sg-icon> (Temporal)                               | Manual   | Manual  | <sg-icon name="x" size="16"></sg-icon>          |
+| Timezone aware | <sg-icon name="check" size="16"></sg-icon> Full support                             | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>      | Partial     |
+| Immutable      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>          |
+| Format presets | <sg-icon name="check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.)  | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>          |
+| Type inference | <sg-icon name="check" size="16"></sg-icon> Full TypeScript                          | Partial  | Partial | <sg-icon name="x" size="16"></sg-icon>          |
 
-**When to use:** Temporal-powered date parsing, DST-safe arithmetic, timezone conversion, and Intl formatting.
+<div class="decision-callout">
 
-**Related:** [Arsenal](/arsenal/)
+**Use Tempo when** you need reliable timezone handling, DST-safe arithmetic, and clean Temporal-based APIs without heavy dependencies.
 
-</details>
+**Consider alternatives when** you need extensive locale data (date-fns).
 
-`@vielzeug/tempo` is a Temporal-first date/time library for TypeScript. It provides explicit helpers for parsing local values, timezone conversion, DST-safe arithmetic, comparison, boundaries, Intl-based formatting, expiry classification, and recurrence generation.
+</div>
 
 ## Installation
 
@@ -107,34 +118,9 @@ const text = format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/
 const stable = formatInstant(reminder);
 ```
 
-> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor.
+> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor.## Features
 
-## Why Tempo?
-
-Manual date handling breaks at daylight-saving boundaries, timezone edges, and DST transitions.
-
-```ts
-// Before — fragile, loses timezone context
-const reminder = new Date(meeting.getTime() - 15 * 60_000);
-
-// After — DST-safe, handles transitions correctly
-const reminder = shift(meeting, { minutes: -15 });
-```
-
-| Feature        | Tempo                                       | date-fns | Day.js  | Native Date |
-| -------------- | ------------------------------------------- | -------- | ------- | ----------- |
-| Bundle size    | <PackageInfo package="tempo" type="size" /> | ~10 kB   | ~3 kB   | 0 kB        |
-| DST-safe math  | <sg-icon name="circle-check" size="16"></sg-icon> (Temporal)                               | Manual   | Manual  | <sg-icon name="circle-x" size="16"></sg-icon>          |
-| Timezone aware | <sg-icon name="circle-check" size="16"></sg-icon> Full support                             | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>      | Partial     |
-| Immutable      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>          |
-| Format presets | <sg-icon name="circle-check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.)  | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>          |
-| Type inference | <sg-icon name="circle-check" size="16"></sg-icon> Full TypeScript                          | Partial  | Partial | <sg-icon name="circle-x" size="16"></sg-icon>          |
-
-**Use Tempo when** you need reliable timezone handling, DST-safe arithmetic, and clean Temporal-based APIs without heavy dependencies.
-
-**Consider alternatives when** you need extensive locale data (date-fns).
-
-## Features
+<div class="features-grid">
 
 - **Zero Temporal imports** — `parseInstant()`, `parseZoned()`, `parsePlainDateTime()`, `parsePlainDate()`, `nowInstant()`, `now()` replace every common `Temporal.*` constructor; import only from `@vielzeug/tempo`
 - **DST-safe arithmetic** — `shift()` handles transitions correctly; always returns `ZonedDateTime` (call `.toInstant()` if needed)
@@ -150,24 +136,26 @@ const reminder = shift(meeting, { minutes: -15 });
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`
 - <PackageInfo package="tempo" type="size" /> gzipped
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Spell](/spell/) — Schema validation (similar `v` namespace pattern)
-- [Rune](/rune/) — Structured logging
+<div class="see-also">
+
+- [Spell](/spell/) — schema validation with a similar `v` namespace pattern; combine with Tempo's date validators for typed form fields that accept date strings
+- [Rune](/rune/) — structured logger; use Tempo to format timestamps consistently in log entries and audit trails
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

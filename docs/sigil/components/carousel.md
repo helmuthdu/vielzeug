@@ -430,7 +430,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 
 The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `role="region"` + `aria-roledescription="carousel"` on the host
 - `role="group"` + `aria-roledescription="slide"` on each `<sg-carousel-slide>`
@@ -440,11 +440,11 @@ The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg
 - `role="tablist"` on the indicators container; each dot has `role="tab"` and `aria-selected`
 - Screen-reader announcement via the internal `announce()` helper on every slide change
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Autoplay**
+<sg-icon name="check" size="16"></sg-icon> **Autoplay**
 
 When `autoplay` is on, the track uses `aria-live="off"` so automatic advances don't trigger screen reader speech. The timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
 
 The carousel responds to `prefers-reduced-motion: reduce` automatically:
 

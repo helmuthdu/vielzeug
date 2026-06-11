@@ -24,30 +24,35 @@ exports:
     getAlignment,
     getSide,
   ]
+environments: [browser, ssr]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="orbit" />
+<PackageHero package="orbit" />
 
-<img src="/logo-orbit.svg" alt="Orbit logo" width="156" class="logo-highlight"/>
+## Why Orbit?
 
-# Orbit
+Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+| Feature                  | Orbit                                       | Floating UI | Popper  |
+| ------------------------ | ------------------------------------------- | ----------- | ------- |
+| Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB      | ~6 kB   |
+| Middleware pipeline      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
+| Direct compute API       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
+| High-level follow API    | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | Partial |
+| Inline anchor middleware | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>      |
+| Auto-update helpers      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
+| Framework agnostic       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
+| Zero dependencies        | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
 
-**Package:** `@vielzeug/orbit` &nbsp;·&nbsp; **Category:** Ui Positioning
+<div class="decision-callout">
 
-**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`, `hide`, `autoPlacement`, `compose`, `limitShift`, `inline` (sub-path)
+**Use Orbit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
 
-**When to use:** Precise floating element positioning for tooltips, dropdowns, menus, and popovers with middleware pipeline.
+**Consider larger alternatives when** you need their existing integration ecosystem or migration compatibility.
 
-**Related:** [Craft](/craft/) · [Sigil](/sigil/) · [Grip](/grip/)
-
-</details>
-
-`@vielzeug/orbit` is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a high-level follow API, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
+</div>
 
 ## Installation
 
@@ -96,26 +101,9 @@ const handle = float(trigger, tooltip, tooltipPreset());
 handle.cleanup();
 ```
 
-## Why Orbit?
-
-Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
-
-| Feature                  | Orbit                                       | Floating UI | Popper  |
-| ------------------------ | ------------------------------------------- | ----------- | ------- |
-| Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB      | ~6 kB   |
-| Middleware pipeline      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Direct compute API       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| High-level follow API    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | Partial |
-| Inline anchor middleware | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Auto-update helpers      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Framework agnostic       | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Zero dependencies        | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-
-**Use Orbit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
-
-**Consider larger alternatives when** you need their existing integration ecosystem or migration compatibility.
-
 ## Features
+
+<div class="features-grid">
 
 - `float()` covers the common position-and-follow case; returns a `FloatHandle` with `cleanup()`, `update()`, and `getPosition()`
 - Custom `apply(result)` callback on `float()` for transforms or custom rendering
@@ -135,6 +123,9 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 - SSR-safe no-op stubs (sub-path `@vielzeug/orbit/ssr`)
 - Zero dependencies (optional peer: `@vielzeug/ripple` for the reactive sub-path)
 
+</div>
+
+
 ## Sub-paths
 
 | Import                     | Purpose                                       |
@@ -146,25 +137,24 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 | `@vielzeug/orbit/devtools` | Visual debug overlay (development only)       |
 | `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
 
-## Compatibility
-
-| Environment | Support                                          |
-| ----------- | ------------------------------------------------ |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>                                               |
-| Node.js     | <sg-icon name="circle-x" size="16"></sg-icon> (use `@vielzeug/orbit/ssr` for SSR rendering) |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> via `@vielzeug/orbit/ssr`                     |
-| Deno        | <sg-icon name="circle-x" size="16"></sg-icon>                                               |
-
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Sigil](/sigil/)
-- [Grip](/grip/)
-- [Craft](/craft/)
+<div class="see-also">
+
+- [Sigil](/sigil/) — accessible web components that use Orbit internally for dropdown, tooltip, and popover positioning
+- [Grip](/grip/) — drag-and-drop engine; use Orbit to reposition drop targets and drag previews relative to containers
+- [Craft](/craft/) — web-component authoring framework; Orbit integrates as a positioning primitive for overlay elements
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

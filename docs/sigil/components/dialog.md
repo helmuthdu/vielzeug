@@ -367,7 +367,7 @@ The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w
 
 ### `sg-dialog`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 | Key           | Action                                                                    |
 | ------------- | ------------------------------------------------------------------------- |
@@ -375,14 +375,14 @@ The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w
 | `Shift + Tab` | Move focus to the previous focusable element (wraps around)               |
 | `Escape`      | Close the dialog (handled natively by the browser)                        |
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The inner `<dialog>` element carries `role="dialog"` implicitly — no extra ARIA role is needed.
 - `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open.
 - When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open.
 - When `dismissible` is set, the close button has a descriptive `aria-label="Close dialog"`.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
+<sg-icon name="check" size="16"></sg-icon> **Focus Management**
 
 - On open, the browser moves focus into the dialog panel automatically — no manual `focus()` call required.
 - Focus is trapped inside the dialog while it is open; pressing `Tab` cycles only through interactive elements within the panel.

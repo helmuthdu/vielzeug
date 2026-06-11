@@ -958,23 +958,23 @@ All hook methods are optional. The hook is stored in a module-level variable (no
 ### 1. Signals for Primitive Values, Stores for Objects
 
 ```ts
-// <sg-icon name="circle-check" size="16"></sg-icon> signal for a single scalar
+// <sg-icon name="check" size="16"></sg-icon> signal for a single scalar
 const isOpen = signal(false);
 
-// <sg-icon name="circle-check" size="16"></sg-icon> store for structured objects
+// <sg-icon name="check" size="16"></sg-icon> store for structured objects
 const user = store({ id: '', name: '', role: 'guest' });
 
-// <sg-icon name="circle-x" size="16"></sg-icon> store for a simple boolean — overcomplicated
+// <sg-icon name="x" size="16"></sg-icon> store for a simple boolean — overcomplicated
 const isOpen = store({ value: false });
 ```
 
 ### 2. Computed for Derived Values
 
 ```ts
-// <sg-icon name="circle-check" size="16"></sg-icon> computed instead of duplicating logic in effects
+// <sg-icon name="check" size="16"></sg-icon> computed instead of duplicating logic in effects
 const fullName = computed(() => `${firstName.value} ${lastName.value}`);
 
-// <sg-icon name="circle-x" size="16"></sg-icon> avoid manually syncing derived state in an effect
+// <sg-icon name="x" size="16"></sg-icon> avoid manually syncing derived state in an effect
 const fullNameState = signal('');
 effect(() => {
   fullNameState.value = `${firstName.value} ${lastName.value}`;
@@ -986,13 +986,13 @@ effect(() => {
 Both approaches work; choose based on reuse needs:
 
 ```ts
-// <sg-icon name="circle-check" size="16"></sg-icon> getter source — simple for one-off watches
+// <sg-icon name="check" size="16"></sg-icon> getter source — simple for one-off watches
 watch(
   () => userStore.value.count,
   (count) => console.log('count:', count),
 );
 
-// <sg-icon name="circle-check" size="16"></sg-icon> composed with computed() — better for shared/complex selections
+// <sg-icon name="check" size="16"></sg-icon> composed with computed() — better for shared/complex selections
 const countSignal = computed(() => userStore.value.count);
 watch(countSignal, (count) => console.log('count:', count));
 countSignal.dispose();
@@ -1001,7 +1001,7 @@ countSignal.dispose();
 ### 4. Batch Multiple Updates
 
 ```ts
-// <sg-icon name="circle-check" size="16"></sg-icon> one notification instead of two
+// <sg-icon name="check" size="16"></sg-icon> one notification instead of two
 batch(() => {
   x.value = 1;
   y.value = 2;
@@ -1011,10 +1011,10 @@ batch(() => {
 ### 5. Use `.update()` / `.replace()` to Avoid Stale Reads
 
 ```ts
-// <sg-icon name="circle-check" size="16"></sg-icon> signals: atomic read-modify-write
+// <sg-icon name="check" size="16"></sg-icon> signals: atomic read-modify-write
 count.update((n) => n + 1);
 
-// <sg-icon name="circle-check" size="16"></sg-icon> stores: replace via function
+// <sg-icon name="check" size="16"></sg-icon> stores: replace via function
 cart.replace((s) => ({ ...s, items: [...s.items, newItem] }));
 ```
 

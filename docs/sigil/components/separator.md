@@ -127,7 +127,7 @@ The separator component follows WAI-ARIA best practices.
 
 ### `sg-separator`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - By default, the separator is decorative and has `aria-hidden="true"`.
 - Set `decorative="false"` for separators that carry structural meaning and pair with `aria-label` to describe the separation.

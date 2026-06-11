@@ -175,12 +175,12 @@ The switch component follows WCAG 2.1 Level AA standards.
 
 ### `sg-switch`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` toggle the switch.
 - `Tab` moves focus to and from the control.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`).
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.

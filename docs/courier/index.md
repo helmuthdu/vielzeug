@@ -38,30 +38,45 @@ exports:
     hydrateQueryCache,
     resolveRetryDelay,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="courier" />
+<PackageHero package="courier" />
 
-<img src="/logo-courier.svg" alt="Courier logo" width="156" class="logo-highlight"/>
+## Why Courier?
 
-# Courier
+Native `fetch` is excellent but low-level. Courier adds typed path params, a query cache, tracked mutations, SSE, readable streaming, and a shared interceptor pipeline without external dependencies.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — raw fetch
+const res = await fetch(`https://api.example.com/users/${userId}`);
+if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const user: User = await res.json();
 
-**Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
+// After — Courier
+const client = createCourier({ baseUrl: 'https://api.example.com' });
+const user = await client.api.get<User>('/users/{id}', { params: { id: userId } });
+```
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`, `NO_RETRY`, `bindRefetch`, `createBatcher`, `withBearerAuth`, `persistQueryCache`, `hydrateQueryCache`
+| Feature               | Courier                                       | axios          | ky     |
+| --------------------- | --------------------------------------------- | -------------- | ------ |
+| Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB         | ~5 kB  |
+| Built on              | fetch                                         | XMLHttpRequest | fetch  |
+| Type-safe path params | <sg-icon name="check" size="16"></sg-icon>                                            | Manual         | Manual |
+| Query cache           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
+| SSE + streaming       | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
+| Standalone mutations  | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
+| Zero dependencies     | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
 
-**When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with one shared fetch-based transport.
+<div class="decision-callout">
 
-**Related:** [Spell](/spell/) · [Ripple](/ripple/) · [Vault](/vault/)
+**Use Courier when** your app needs typed HTTP, a query cache, tracked mutations, or SSE — especially when you want all of these sharing one interceptor pipeline and zero extra dependencies.
 
-</details>
+**Consider axios when** you need to support IE11 or other XMLHttpRequest-based environments, or you already have a large axios-specific codebase.
 
-`@vielzeug/courier` ships composable primitives on top of native `fetch`: REST requests, query caching, tracked mutations, SSE, readable streams, and a unified `createCourier()` factory.
+</div>
 
 ## Installation
 
@@ -108,36 +123,9 @@ client.query.set(['users', nextUser.id], nextUser);
 client.query.invalidate(['users']);
 ```
 
-## Why Courier?
-
-Native `fetch` is excellent but low-level. Courier adds typed path params, a query cache, tracked mutations, SSE, readable streaming, and a shared interceptor pipeline without external dependencies.
-
-```ts
-// Before — raw fetch
-const res = await fetch(`https://api.example.com/users/${userId}`);
-if (!res.ok) throw new Error(`HTTP ${res.status}`);
-const user: User = await res.json();
-
-// After — Courier
-const client = createCourier({ baseUrl: 'https://api.example.com' });
-const user = await client.api.get<User>('/users/{id}', { params: { id: userId } });
-```
-
-| Feature               | Courier                                       | axios          | ky     |
-| --------------------- | --------------------------------------------- | -------------- | ------ |
-| Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB         | ~5 kB  |
-| Built on              | fetch                                         | XMLHttpRequest | fetch  |
-| Type-safe path params | <sg-icon name="circle-check" size="16"></sg-icon>                                            | Manual         | Manual |
-| Query cache           | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
-| SSE + streaming       | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
-| Standalone mutations  | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
-| Zero dependencies     | <sg-icon name="circle-check" size="16"></sg-icon>                                            | <sg-icon name="circle-x" size="16"></sg-icon>             | <sg-icon name="circle-x" size="16"></sg-icon>     |
-
-**Use Courier when** your app needs typed HTTP, a query cache, tracked mutations, or SSE — especially when you want all of these sharing one interceptor pipeline and zero extra dependencies.
-
-**Consider axios when** you need to support IE11 or other XMLHttpRequest-based environments, or you already have a large axios-specific codebase.
-
 ## Features
+
+<div class="features-grid">
 
 - **Unified client** — `createCourier()` combines `api`, `stream`, `query`, and `mutation()` behind one shared transport
 - **HTTP client** — `createApi()` with base URL, global headers, interceptors, timeout, deduplication, and `cancelAll()`
@@ -155,25 +143,27 @@ const user = await client.api.get<User>('/users/{id}', { params: { id: userId } 
 - **Structured errors** — `HttpError` captures HTTP, network, abort, and timeout failures
 - **Disposable** — clients implement `[Symbol.dispose]` for deterministic cleanup
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Spell](/spell/) — validate HTTP response payloads against typed schemas before they enter your cache
 - [Forge](/forge/) — pair with Courier mutations to manage typed form state and submission
 - [Ripple](/ripple/) — use signal stores as a reactive layer on top of Courier's `SyncStore` API
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

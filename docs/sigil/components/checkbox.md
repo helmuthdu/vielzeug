@@ -385,11 +385,11 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 
 ### `sg-checkbox`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` toggle the focused checkbox; `Tab` moves focus in and out.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="checkbox"` with `aria-checked` set to `"true"`, `"false"`, or `"mixed"` for indeterminate.
 - `aria-labelledby` links the label; `aria-describedby` links helper text; `aria-errormessage` links error text.
@@ -397,15 +397,15 @@ The checkbox components follow WCAG 2.1 Level AA standards.
 
 ### `sg-checkbox-group`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` moves to the next checkbox within the group.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-required` and `aria-invalid` reflect the group validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
 

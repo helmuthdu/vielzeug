@@ -5,7 +5,7 @@ A navigational landmark that shows the user's current location in a hierarchy. R
 ## Features
 
 - <sg-icon name="map-pin" size="16"></sg-icon> **Semantic HTML**: renders `<nav>` → `<ol>` → `<li>` for proper landmark semantics
-- <sg-icon name="circle-check" size="16"></sg-icon> **active prop**: marks the current page — adds `aria-current="page"` and disables the link
+- <sg-icon name="check" size="16"></sg-icon> **active prop**: marks the current page — adds `aria-current="page"` and disables the link
 - <sg-icon name="link" size="16"></sg-icon> **Flexible hrefs**: each item accepts an `href` for standard navigation
 - <sg-icon name="palette" size="16"></sg-icon> **Custom separator**: override the separator character per-instance or via CSS variable
 - <sg-icon name="image" size="16"></sg-icon> **Icon slot**: each item supports a leading `icon` slot
@@ -147,12 +147,12 @@ The breadcrumb component follows WAI-ARIA best practices.
 
 ### `sg-breadcrumb`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders a `<nav>` element with `aria-label` matching the `label` attribute — it serves as a navigation landmark.
 - Items are rendered as `<li>` elements inside an `<ol>`, conveying the sequential structure to screen readers.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The `active` item receives `aria-current="page"` and `aria-disabled="true"` so it is announced as the current location and not activated when clicked.
 - The separator is rendered via CSS `content` (or a hidden `aria-hidden` element) so it is not read aloud.

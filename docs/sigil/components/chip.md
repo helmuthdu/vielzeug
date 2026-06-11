@@ -7,8 +7,8 @@ A compact, styled label for tags, filters, and selected values. Supports a leadi
 - <sg-icon name="palette" size="16"></sg-icon> **5 Variants**: solid, flat, bordered, outline, ghost
 - <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
 - <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="circle-x" size="16"></sg-icon> **Removable**: optional × button that fires `remove`
-- <sg-icon name="circle-check" size="16"></sg-icon> **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
+- <sg-icon name="x" size="16"></sg-icon> **Removable**: optional × button that fires `remove`
+- <sg-icon name="check" size="16"></sg-icon> **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
 - <sg-icon name="zap" size="16"></sg-icon> **Action**: stateless button-like chip that fires a `click` event
 - <sg-icon name="image" size="16"></sg-icon> **Icon Slot**: prepend an icon or decoration
 - <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: remove button has a contextual `aria-label` including the chip value
@@ -277,12 +277,12 @@ The chip component follows WAI-ARIA best practices.
 
 ### `sg-chip`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - The remove button is keyboard-accessible.
 - When `disabled`, the remove button has the `disabled` attribute preventing activation.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The remove button has a contextual `aria-label`: `"Remove {value}"` when `value` is set, `"Remove"` otherwise.
 - Selectable chips use `role="checkbox"` and `aria-checked` while preserving the visible label as the accessible name.

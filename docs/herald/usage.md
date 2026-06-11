@@ -452,11 +452,11 @@ bus.current('zoom'); // 1
 
 | Method         | Replays current value? |
 | -------------- | ---------------------- |
-| `on()`         | <sg-icon name="circle-check" size="16"></sg-icon> Yes                 |
-| `once()`       | <sg-icon name="circle-check" size="16"></sg-icon> Yes (then done)     |
-| `on({ once })` | <sg-icon name="circle-check" size="16"></sg-icon> Yes (then done)     |
-| `events()`     | <sg-icon name="circle-x" size="16"></sg-icon> No                  |
-| `wait()`       | <sg-icon name="circle-x" size="16"></sg-icon> No                  |
+| `on()`         | <sg-icon name="check" size="16"></sg-icon> Yes                 |
+| `once()`       | <sg-icon name="check" size="16"></sg-icon> Yes (then done)     |
+| `on({ once })` | <sg-icon name="check" size="16"></sg-icon> Yes (then done)     |
+| `events()`     | <sg-icon name="x" size="16"></sg-icon> No                  |
+| `wait()`       | <sg-icon name="x" size="16"></sg-icon> No                  |
 
 ## Debug Mode
 

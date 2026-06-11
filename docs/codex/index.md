@@ -6,30 +6,43 @@ category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
 related: [sigil, spell]
 exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData]
+environments: [node]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="mcp" />
+<PackageHero package="codex" />
 
-<img src="/logo-codex.svg" alt="Codex logo" width="156" class="logo-highlight"/>
+## Why Codex?
 
-# Codex
+AI agents working with Vielzeug need reliable, structured access to package metadata and documentation. A custom fetch integration or web scraper breaks with every docs update and returns inconsistent data shapes.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — fetch and parse docs manually in each agent
+const res = await fetch('https://vielzeug.dev/spell/api');
+const html = await res.text();
+// parse, clean, truncate — fragile, network-dependent, inconsistent
 
-**Package:** `@vielzeug/codex`  ·  **Category:** AI Tooling
+// After — structured MCP tool call, always in sync with the published snapshot
+{ "name": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
+```
 
-**Key exports:** `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData`
+| Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
+| ------------------------- | ----------------------------------------- | ------------ | ------------------ |
+| Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
+| Zero external deps        | <sg-icon name="x" size="16"></sg-icon> (MCP SDK)                              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>                 |
+| Structured metadata       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
+| Sigil component CEM       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
+| Offline / snapshot-backed | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
+| Stdio + HTTP transports   | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
 
-**When to use:** You want AI clients (Claude Desktop, Copilot Chat, remote agents) to discover and query Vielzeug package metadata, docs, and Sigil component declarations through a standard MCP tool interface.
+<div class="decision-callout">
 
-**Related:** [Sigil](/sigil/) · [Spell](/spell/)
+**Use `@vielzeug/codex` when** you are building or configuring an AI agent that needs reliable, offline access to Vielzeug documentation and component metadata.
 
-</details>
+**Consider a web search when** you need content from the live docs site that post-dates the current published snapshot.
 
-`@vielzeug/codex` is the Model Context Protocol server for the Vielzeug ecosystem — run it over stdio or HTTP to expose package metadata, documentation, source entrypoints, and Sigil component metadata to AI assistants.
+</div>
 
 ## Installation
 
@@ -63,36 +76,7 @@ npx -y @vielzeug/codex --help
 npx -y @vielzeug/codex --version
 ```
 
-Then wire it into your AI client — see the [Usage Guide](./usage.md).
-
-## Why Codex?
-
-AI agents working with Vielzeug need reliable, structured access to package metadata and documentation. A custom fetch integration or web scraper breaks with every docs update and returns inconsistent data shapes.
-
-```ts
-// Before — fetch and parse docs manually in each agent
-const res = await fetch('https://vielzeug.dev/spell/api');
-const html = await res.text();
-// parse, clean, truncate — fragile, network-dependent, inconsistent
-
-// After — structured MCP tool call, always in sync with the published snapshot
-{ "name": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
-```
-
-| Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
-| ------------------------- | ----------------------------------------- | ------------ | ------------------ |
-| Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
-| Zero external deps        | <sg-icon name="circle-x" size="16"></sg-icon> (MCP SDK)                              | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>                 |
-| Structured metadata       | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
-| Sigil component CEM       | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
-| Offline / snapshot-backed | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
-| Stdio + HTTP transports   | <sg-icon name="circle-check" size="16"></sg-icon>                                        | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                 |
-
-**Use `@vielzeug/codex` when** you are building or configuring an AI agent that needs reliable, offline access to Vielzeug documentation and component metadata.
-
-**Consider a web search when** you need content from the live docs site that post-dates the current published snapshot.
-
-## What it exposes
+Then wire it into your AI client — see the [Usage Guide](./usage.md).## What it exposes
 
 ### Tools
 
@@ -119,6 +103,8 @@ const html = await res.text();
 
 ## Features
 
+<div class="features-grid">
+
 - `list-packages` accepts optional `packageSlug` to retrieve a single package as a one-item array
 - `search-packages` returns ranked hits across `name`, `description`, `keywords`, `exports`, docs, and source
 - `matchedIn` reports distinct categories: `"metadata"`, `"keywords"`, `"exports"`, `"docs"`
@@ -131,25 +117,26 @@ const html = await res.text();
 - Fail-fast startup: missing or malformed data aborts immediately with an actionable error message
 - Health endpoint at `/health` in HTTP mode
 
-## Compatibility
+</div>
 
-| Environment                 | Support |
-| --------------------------- | ------- |
-| Node.js 22+                 | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Claude Desktop (stdio)      | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| GitHub Copilot Chat (stdio) | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Remote agents (HTTP)        | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Browser                     | <sg-icon name="circle-x" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Sigil](/sigil/) — source of the bundled Sigil component CEM metadata
 - [Spell](/spell/) — example of a well-documented package discoverable via MCP
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

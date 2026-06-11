@@ -6,30 +6,51 @@ category: forms
 keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
 related: [spell, ripple, courier]
 exports: [createForm, toFormData, ValidationModes, FORM_ERROR]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="forge" />
+<PackageHero package="forge" />
 
-<img src="/logo-forge.svg" alt="Forge logo" width="156" class="logo-highlight"/>
+## Why Forge?
 
-# Forge
+Native form handling quickly grows repetitive when you need typed values, deterministic submit behavior, and granular subscriptions.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before: manual state and ad-hoc validation sequencing
+const errors: Record<string, string> = {};
+if (!email.includes('@')) errors.email = 'Invalid email';
+if (password.length < 8) errors.password = 'Too short';
+if (Object.keys(errors).length === 0) await submit({ email, password });
 
-**Package:** `@vielzeug/forge` &nbsp;·&nbsp; **Category:** Forms
+// After: one form controller with explicit transitions
+const form = createForm({
+  defaultValues: { email: '', password: '' },
+  validators: { email: isEmail, password: min8 },
+});
+await form.submit(submit);
+```
 
-**Key exports:** `createForm` · `toFormData` · `ValidationModes` · `FORM_ERROR`
+| Feature                    | Forge                                       | React Hook Form | VeeValidate |
+| -------------------------- | ------------------------------------------- | --------------- | ----------- |
+| Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
+| Framework-agnostic         | <sg-icon name="check" size="16"></sg-icon>                                          | React only      | Vue only    |
+| Typed dot-path APIs        | <sg-icon name="check" size="16"></sg-icon>                                          | Partial         | Partial     |
+| Result-based submit flow   | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
+| Live field observation     | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
+| Full array helpers         | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
+| Scoped sub-forms           | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
+| Form + field subscriptions | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
 
-**When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
+<div class="decision-callout">
 
-**Related:** [Spell](/spell/) · [Ripple](/ripple/) · [Courier](/courier/)
+**Use Forge when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
 
-</details>
+**Consider framework-specific alternatives when** you need deeply integrated framework bindings and are not sharing form logic across runtimes.
 
-`@vielzeug/forge` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
+</div>
 
 ## Installation
 
@@ -81,42 +102,9 @@ if (!submission.ok && submission.type === 'validation') {
 }
 ```
 
-## Why Forge?
-
-Native form handling quickly grows repetitive when you need typed values, deterministic submit behavior, and granular subscriptions.
-
-```ts
-// Before: manual state and ad-hoc validation sequencing
-const errors: Record<string, string> = {};
-if (!email.includes('@')) errors.email = 'Invalid email';
-if (password.length < 8) errors.password = 'Too short';
-if (Object.keys(errors).length === 0) await submit({ email, password });
-
-// After: one form controller with explicit transitions
-const form = createForm({
-  defaultValues: { email: '', password: '' },
-  validators: { email: isEmail, password: min8 },
-});
-await form.submit(submit);
-```
-
-| Feature                    | Forge                                       | React Hook Form | VeeValidate |
-| -------------------------- | ------------------------------------------- | --------------- | ----------- |
-| Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
-| Framework-agnostic         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | React only      | Vue only    |
-| Typed dot-path APIs        | <sg-icon name="circle-check" size="16"></sg-icon>                                          | Partial         | Partial     |
-| Result-based submit flow   | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
-| Live field observation     | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
-| Full array helpers         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
-| Scoped sub-forms           | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
-| Form + field subscriptions | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>              | <sg-icon name="circle-check" size="16"></sg-icon>          |
-| Zero dependencies          | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>              | <sg-icon name="circle-x" size="16"></sg-icon>          |
-
-**Use Forge when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
-
-**Consider framework-specific alternatives when** you need deeply integrated framework bindings and are not sharing form logic across runtimes.
-
 ## Features
+
+<div class="features-grid">
 
 - Typed field paths with compile-time value inference
 - Explicit validation API: `validate()` and `validateFields(fields)`
@@ -140,23 +128,27 @@ await form.submit(submit);
 - Ready-made adapters for React, Vue, and Svelte
 - `@vielzeug/forge/validators` adapter: `fieldValidator` and `composeValidators`
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js 22+ | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Spell](/spell/)
-- [Courier](/courier/)
-- [Ripple](/ripple/)
+<div class="see-also">
+
+- [Spell](/spell/) — schema validation; plug a Spell schema into Forge to validate fields and submission payloads with full type inference
+- [Courier](/courier/) — HTTP client; submit Forge's validated payload directly through a Courier mutation with loading and error state wired automatically
+- [Ripple](/ripple/) — reactive signals; Forge exposes field values and submission state as signals for fine-grained reactive UI updates
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

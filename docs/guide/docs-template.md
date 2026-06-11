@@ -83,30 +83,32 @@ category: <category>
 keywords: [keyword1, keyword2, keyword3]
 related: [related-pkg-1, related-pkg-2]
 exports: [export1, export2, export3]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="<pkg>" />
+<PackageHero package="<pkg>" />
 
-<img src="/logo-<pkg>.svg" alt="<PackageName> logo" width="156" class="logo-highlight"/>
+## Why <PackageName>?
 
-# <PackageName>
+<One paragraph, max 3 sentences, explaining the concrete problem this solves.>
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+<Before/After code block — show the same task done without the library versus with it.>
 
-**Package:** `@vielzeug/<pkg>` &nbsp;·&nbsp; **Category:** <Category>
+| Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
+| -------------------- | ------------------------------------------- | -------------- | -------------- |
+| Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                          | ...            | ...            |
+| <Key differentiator> | <sg-icon name="check" size="16"></sg-icon>                                          | ...            | ...            |
 
-**Key exports:** `export1`, `export2`, `export3`
+<div class="decision-callout">
 
-**When to use:** <One sentence explaining the concrete problem this solves.>
+**Use <PackageName> when** <concrete situation where this is the right choice>.
 
-**Related:** [Related Pkg 1](/related-pkg-1/) · [Related Pkg 2](/related-pkg-2/)
+**Consider <alternative> when** <concrete situation where something else is better>.
 
-</details>
-
-`@vielzeug/<pkg>` is a <short description in one sentence>.
+</div>
 
 ## Installation
 
@@ -130,55 +132,49 @@ yarn add @vielzeug/<pkg>
 
 <Minimal working example — not a toy. Include error handling and cleanup where they apply.>
 
-## Why <PackageName>?
-
-<One paragraph, max 3 sentences, explaining the concrete problem this solves.>
-
-<Before/After code block — show the same task done without the library versus with it.>
-
-| Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
-| -------------------- | ------------------------------------------- | -------------- | -------------- |
-| Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                          | ...            | ...            |
-| <Key differentiator> | <sg-icon name="circle-check" size="16"></sg-icon>                                          | ...            | ...            |
-
-**Use <PackageName> when** <concrete situation where this is the right choice>.
-
-**Consider <alternative> when** <concrete situation where something else is better>.
-
 ## Features
+
+<div class="features-grid">
 
 <Bullet list. Each bullet is one feature described in one line. Start with a backtick-quoted API name or concept when applicable.>
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon> / <sg-icon name="circle-x" size="16"></sg-icon> |
+</div>
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-<2–4 links to related Vielzeug packages with a brief note on the relationship.>
+<div class="see-also">
+
+<2–4 links to related Vielzeug packages. Each bullet: `[PackageName](/pkg/)` followed by an em-dash and one sentence explaining *why* the reader should look at it in the context of this package.>
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->
 ````
 
 ### Rules
 
+- **`<PackageHero>`** replaces the old `<PackageBadges>`, `<img>`, `# heading`, and `<details>` Quick Reference block. All metadata (name, description, version, exports, environments, category) is rendered automatically from frontmatter.
+- **`environments` frontmatter field** is required. List only environments the package actually supports: `browser`, `node`, `ssr`, `deno`. Browser-only packages: `[browser]`. Universal: `[browser, node, ssr, deno]`. Node-only: `[node]`.
+- **`## Why <PackageName>?` comes first** — immediately after `<PackageHero>`, before Installation and Quick Start. This is the decision-making section.
+- **`decision-callout` div** wraps the "Use when / Consider when" statements. Both must be present.
+- **No `## Compatibility` section.** Environment support is expressed entirely through the `environments` frontmatter field, which the `<PackageHero>` renders as badges.
+- **`features-grid` div** wraps the `## Features` bullet list for consistent grid layout.
+- **`doc-links` div** wraps the `## Documentation` links for pill-card styling.
+- **`see-also` div** wraps the `## See Also` links for annotated-list styling. Each entry must include a contextual reason — not bare link text.
 - The `## Documentation` section must use that exact heading. Do not merge it into `## See Also`.
-- **AI-agent friendly metadata** (new): Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`.
-- **Quick Reference block** (new): Add a `<details>` block immediately after the `#` heading with key exports, category, and when to use.
+- Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`, `environments`.
 - The Before/After code block in "Why" must be a single fenced block with a `// Before` comment block followed by a `// After` comment block, not two separate blocks with prose between them.
-- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `<sg-icon name="circle-check" size="16"></sg-icon>`, `<sg-icon name="circle-x" size="16"></sg-icon>`, `<sg-icon name="triangle-alert" size="16"></sg-icon>` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
+- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `<sg-icon name="check" size="16"></sg-icon>`, `<sg-icon name="x" size="16"></sg-icon>`, `<sg-icon name="triangle-alert" size="16"></sg-icon>` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
 - "Use when / Consider when" must both be present. They are italic-free, direct statements.
 
 ## `usage.md` — Usage Guide
@@ -478,7 +474,8 @@ import { relevantExport } from '@vielzeug/<pkg>';
 | `category`    | one of the 12 categories (always)    | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
 | `keywords`    | `[keyword1, keyword2, …]` (always)   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
 | `related`     | `[pkg1, pkg2, …]` (always)           | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `exports`     | top exports as `[name1, name2, …]`   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `exports`      | top exports as `[name1, name2, …]`               | \_not required\_ | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `environments` | `[browser, node, ssr, deno]` (list supported only) | \_not required\_ | \_not required\_               | \_not required\_                       | \_not required\_                                       |
 
 Use em-dash (—) as the separator in titles, except for individual example files where the frontmatter title is wrapped in single quotes and uses an em-dash.
 
@@ -491,6 +488,7 @@ These fields enable AI agents (via the Codex MCP server) to discover and underst
 - **`keywords`:** Searchable terms (e.g., `[signals, reactive, state-management]`). Used by Codex's `search-packages` tool.
 - **`related`:** Related package slugs (e.g., `[spell, ripple]`). Must exist as real packages. Used in Quick Reference links.
 - **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and Codex metadata.
+- **`environments`:** Supported runtimes as a list — only include what actually works: `browser`, `node`, `ssr`, `deno`. Rendered as badges in `<PackageHero>`. Replaces the old `## Compatibility` table.
 
 ## AI-Agent Integration (Codex)
 
@@ -557,18 +555,18 @@ Use this list when auditing or updating a library. The first check applies to al
 ### `index.md`
 
 - [ ] Frontmatter has `title` and `description`
-- [ ] Frontmatter has `package`, `category`, `keywords`, `related`, `exports` (AI-agent friendly metadata)
-- [ ] `<PackageBadges>` and `<img>` logo present
-- [ ] Quick Reference `<details>` block present immediately after `#` heading with category, exports, when-to-use, and related links
-- [ ] One-sentence description immediately after the `#` heading
+- [ ] Frontmatter has `package`, `category`, `keywords`, `related`, `exports`, `environments`
+- [ ] `<PackageHero package="<pkg>" />` present immediately after the markdownlint-disable comment
+- [ ] `## Why <PackageName>?` comes immediately after `<PackageHero>` (before Installation and Quick Start)
+- [ ] Before/After code block in "Why" section (single fenced block, `// Before` then `// After`)
+- [ ] Comparison table has bundle size, zero deps, 2–3 differentiators; icons use `check`/`x`/`triangle-alert`
+- [ ] "Use when / Consider when" statements both present, wrapped in `<div class="decision-callout">`
+- [ ] No `## Compatibility` section — environment support is in the `environments` frontmatter field only
 - [ ] Installation code-group covers pnpm, npm, yarn
 - [ ] Quick Start is complete and runnable (not a toy)
-- [ ] Before/After code block in "Why" section
-- [ ] Comparison table has bundle size, zero deps, 2–3 differentiators
-- [ ] "Use when / Consider when" statements both present
-- [ ] Compatibility table present
-- [ ] `## Documentation` section (not merged into See Also)
-- [ ] `## See Also` links to 2–4 related Vielzeug packages
+- [ ] `## Features` bullet list wrapped in `<div class="features-grid">`
+- [ ] `## Documentation` links wrapped in `<div class="doc-links">`
+- [ ] `## See Also` links wrapped in `<div class="see-also">`; each entry has a contextual reason
 
 ### `usage.md`
 

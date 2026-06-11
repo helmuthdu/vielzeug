@@ -20,30 +20,58 @@ exports:
     WILDCARD,
     ANONYMOUS,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="ward" />
+<PackageHero package="ward" />
 
-<img src="/logo-ward.svg" alt="Ward logo" width="156" class="logo-highlight"/>
+## Why Ward?
 
-# Ward
+Spreading authorization checks across route handlers, service methods, and UI components leads to inconsistent enforcement, no central place to audit permissions, and rules that drift as the codebase grows.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — ad-hoc checks scattered across handlers
+function deletePost(user: User, post: Post) {
+  if (user.role !== 'admin' && user.id !== post.authorId) {
+    throw new Error('Forbidden');
+  }
+  // no logging, no explain, no wildcard, no composition
+}
 
-**Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
+// After — Ward declarative rules with typed enforcement
+import { createWard } from '@vielzeug/ward';
 
-**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `guardRequestWith`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
+const ward = createWard([
+  { role: 'admin', action: '*', resource: '*', effect: 'allow' },
+  { role: 'author', action: ['delete', 'edit'], resource: 'post',
+    effect: 'allow', predicate: (ctx) => ctx.resource.authorId === ctx.principal.id },
+]);
 
-**When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
+const guard = ward.forUser(currentUser);
+guard.can('delete', post);           // boolean — typed, predictable
+guard.explain('delete', post);       // { effect, rule } — auditable
+```
 
-**Related:** [Rune](/rune/) · [Wayfinder](/wayfinder/) · [Conduit](/conduit/)
+| Feature                           | Ward                                       | CASL    | AccessControl        |
+| --------------------------------- | ------------------------------------------ | ------- | -------------------- |
+| Bundle size                       | <PackageInfo package="ward" type="size" /> | ~11 kB  | ~7 kB                |
+| Typed rule contracts              | <sg-icon name="check" size="16"></sg-icon>                                         | Partial | Partial              |
+| Deterministic deny precedence     | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                   |
+| Rule predicates with request data | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
+| Wildcard action support           | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                   |
+| Principal-bound API               | <sg-icon name="check" size="16"></sg-icon> (`forUser`)                             | Partial | <sg-icon name="x" size="16"></sg-icon>                   |
+| Explainable decisions             | <sg-icon name="check" size="16"></sg-icon>                                         | Partial | <sg-icon name="x" size="16"></sg-icon>                   |
+| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                   |
 
-</details>
+<div class="decision-callout">
 
-`@vielzeug/ward` is a small authorization engine for role/resource/action checks.
+**Use Ward when** you want predictable authorization decisions with typed rules and explicit introspection APIs.
+
+**Consider larger policy frameworks when** you need ecosystem-specific integrations or policy storage outside application code.
+
+</div>
 
 ## Installation
 
@@ -109,31 +137,9 @@ bound.checkAll([
 bound.rulesInScope('posts');
 ```
 
-## Why Ward?
-
-- Minimal API: `can`, `canAll`, `canAny`, `checkAll`, `allowedActions`, `explain`, `rulesInScope`, `forUser`
-- Deterministic precedence model
-- Deny-overrides at top precedence
-- Runtime predicates directly on rules
-- Exact matching with explicit wildcards
-- Zero dependencies
-
-| Feature                           | Ward                                       | CASL    | AccessControl        |
-| --------------------------------- | ------------------------------------------ | ------- | -------------------- |
-| Bundle size                       | <PackageInfo package="ward" type="size" /> | ~11 kB  | ~7 kB                |
-| Typed rule contracts              | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Partial | Partial              |
-| Deterministic deny precedence     | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>                   |
-| Rule predicates with request data | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
-| Wildcard action support           | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>                   |
-| Principal-bound API               | <sg-icon name="circle-check" size="16"></sg-icon> (`forUser`)                             | Partial | <sg-icon name="circle-x" size="16"></sg-icon>                   |
-| Explainable decisions             | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Partial | <sg-icon name="circle-x" size="16"></sg-icon>                   |
-| Zero dependencies                 | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>                   |
-
-**Use Ward when** you want predictable authorization decisions with typed rules and explicit introspection APIs.
-
-**Consider larger policy frameworks when** you need ecosystem-specific integrations or policy storage outside application code.
-
 ## Features
+
+<div class="features-grid">
 
 - One rule primitive: `WardRule` passed to `createWard(rules)`
 - **Multi-role rules**: `role` accepts a string or an array of strings (OR semantics)
@@ -152,25 +158,27 @@ bound.rulesInScope('posts');
 - Built-in Express and Hono middleware guards via `createExpressGuard`, `createHonoGuard`, `guardRequest`, and `guardRequestWith`
 - **Debug logging** via `debugWard()` (`@vielzeug/ward/devtools`) — logs every authorization decision (`can`, `explain`, `trace`, etc.) with `[ward:decision]` prefixes including rule effect; tree-shaken from production bundles
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Wayfinder](../wayfinder/index.md) for route-level authorization middleware.
 - [Rune](../rune/index.md) for structured audit logs of permission checks.
 - [Herald](../herald/index.md) for event-driven permission workflows.
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

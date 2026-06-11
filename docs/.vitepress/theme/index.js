@@ -5,6 +5,7 @@ import ColorPalette from './components/ColorPalette.vue';
 import ComponentPreview from './components/ComponentPreview.vue';
 import HomePage from './components/HomePage.vue';
 import PackageBadges from './components/PackageBadges.vue';
+import PackageHero from './components/PackageHero.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
 
@@ -29,6 +30,7 @@ export default {
     app.component('REPL', Repl);
     app.component('ColorPalette', ColorPalette);
     app.component('PackageBadges', PackageBadges);
+    app.component('PackageHero', PackageHero);
     app.component('PackageInfo', PackageInfo);
     app.component('ComponentPreview', ComponentPreview);
 

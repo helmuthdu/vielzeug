@@ -8,7 +8,7 @@ An accessible, keyboard-navigable data grid with built-in column sorting, row-le
 - <sg-icon name="file-pen" size="16"></sg-icon> **Declarative HTML API** — use `<sg-column>` child elements instead of the `columns` JS property
 - <sg-icon name="arrow-up-down" size="16"></sg-icon> **Column sorting** — click/Enter cycles `none → asc → desc`; emits `sort-change`; `sort-mode="server"` passes sorting responsibility to the consumer
 - <sg-icon name="arrow-left-right" size="16"></sg-icon> **Column resizing** — set `resizable: true` on a column for a drag handle; widths persist across re-renders
-- <sg-icon name="circle-check" size="16"></sg-icon> **Single & multi selection** — `selection-mode="single"` or `"multi"` with a dedicated checkbox column; emits `selection-change`; `selected-keys` prop for controlled/programmatic selection
+- <sg-icon name="check" size="16"></sg-icon> **Single & multi selection** — `selection-mode="single"` or `"multi"` with a dedicated checkbox column; emits `selection-change`; `selected-keys` prop for controlled/programmatic selection
 - <sg-icon name="file-text" size="16"></sg-icon> **Built-in pagination** — configurable `page-size` (reactive after mount); prev/next controls with `aria-live` info text; emits `page-change`
 - <sg-icon name="chevron-down" size="16"></sg-icon> **Row expansion** — `expandable` + `renderExpanded` per column renders an inline detail panel; emits `row-expand`
 - <sg-icon name="search" size="16"></sg-icon> **Search & filters** — `searchable` for full-text search; `filters` prop for multi-select column filters via `sg-combobox`; stale filters are pruned automatically when columns change

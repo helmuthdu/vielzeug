@@ -275,23 +275,23 @@ The radio components follow WCAG 2.1 Level AA standards.
 
 ### `sg-radio`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Space` / `Enter` select a radio; `Tab` moves focus in and out of the group.
 - Arrow keys navigate between radios within a group using a roving tabindex.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Uses `role="radio"` with `aria-checked` reflecting the current state.
 - `aria-disabled` reflects the disabled state.
 
 ### `sg-radio-group`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
 

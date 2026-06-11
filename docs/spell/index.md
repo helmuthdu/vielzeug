@@ -23,30 +23,67 @@ exports:
     useLocale,
     reset,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="spell" />
+<PackageHero package="spell" />
 
-<img src="/logo-spell.svg" alt="Spell logo" width="156" class="logo-highlight"/>
+## Why Spell?
 
-# Spell
+Spell keeps runtime validation, static inference, and schema introspection in one API. You can use the namespace form for ergonomics or the `sXxx` exports for tree shaking. Descriptor and JSON Schema output make Spell useful at API boundaries, build tooling, and documentation layers.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+This example shows the difference between manual branching and a single reusable schema.
 
-**Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
+```ts
+// Before
+function parseUserBefore(value: unknown) {
+  if (typeof value !== 'object' || value === null) throw new Error('Expected object');
 
-**Key exports:** `s`, `Schema`, `ValidationError`, `ErrorCode`, `errorsAt`, `fail`, `fromDescriptor`, `descriptorToJsonSchema`, `configure`, `currentLocale`, `registerLocale`
+  const candidate = value as Record<string, unknown>;
 
-**When to use:** Validate unknown input, infer types from schemas, customize messages, and round-trip schema descriptors across tools.
+  if (typeof candidate.email !== 'string' || !candidate.email.includes('@')) {
+    throw new Error('Expected valid email');
+  }
 
-**Related:** [Forge](/forge/) · [Courier](/courier/) · [Vault](/vault/)
+  if (typeof candidate.role !== 'string' || !['admin', 'editor', 'viewer'].includes(candidate.role)) {
+    throw new Error('Expected valid role');
+  }
 
-</details>
+  return {
+    email: candidate.email,
+    role: candidate.role,
+  };
+}
 
-Spell validates unknown input with strict TypeScript inference, sync and async parsing, and descriptor-based introspection.
+// After
+import { s } from '@vielzeug/spell';
+
+const User = s.object({
+  email: s.string().email(),
+  role: s.enum(['admin', 'editor', 'viewer'] as const),
+});
+
+const user = User.parse({ email: 'ada@example.com', role: 'admin' });
+```
+
+| Feature           | Spell                                       | Zod    | Yup     |
+| ----------------- | ------------------------------------------- | ------ | ------- |
+| Bundle size       | <PackageInfo package="spell" type="size" /> | ~62 kB | ~14 kB  |
+| Type inference    | <sg-icon name="check" size="16"></sg-icon> `Infer<T>`                               | <sg-icon name="check" size="16"></sg-icon>     | Partial |
+| Coercion API      | <sg-icon name="check" size="16"></sg-icon> `s.coerce.*`                             | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon>      |
+| Async validation  | <sg-icon name="check" size="16"></sg-icon> `.check()`                               | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon>      |
+| Error flattening  | <sg-icon name="check" size="16"></sg-icon> `flatten()` + `flattenFirst()`           | <sg-icon name="check" size="16"></sg-icon>     | Partial |
+| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>      |
+
+<div class="decision-callout">
+
+**Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
+
+**Consider alternatives when** you are already standardized on another validator ecosystem and migration cost outweighs the API benefits.
+
+</div>
 
 ## Installation
 
@@ -95,58 +132,9 @@ const payload: unknown = {
 const user = User.parse(payload);
 ```
 
-## Why Spell?
-
-Spell keeps runtime validation, static inference, and schema introspection in one API. You can use the namespace form for ergonomics or the `sXxx` exports for tree shaking. Descriptor and JSON Schema output make Spell useful at API boundaries, build tooling, and documentation layers.
-
-This example shows the difference between manual branching and a single reusable schema.
-
-```ts
-// Before
-function parseUserBefore(value: unknown) {
-  if (typeof value !== 'object' || value === null) throw new Error('Expected object');
-
-  const candidate = value as Record<string, unknown>;
-
-  if (typeof candidate.email !== 'string' || !candidate.email.includes('@')) {
-    throw new Error('Expected valid email');
-  }
-
-  if (typeof candidate.role !== 'string' || !['admin', 'editor', 'viewer'].includes(candidate.role)) {
-    throw new Error('Expected valid role');
-  }
-
-  return {
-    email: candidate.email,
-    role: candidate.role,
-  };
-}
-
-// After
-import { s } from '@vielzeug/spell';
-
-const User = s.object({
-  email: s.string().email(),
-  role: s.enum(['admin', 'editor', 'viewer'] as const),
-});
-
-const user = User.parse({ email: 'ada@example.com', role: 'admin' });
-```
-
-| Feature           | Spell                                       | Zod    | Yup     |
-| ----------------- | ------------------------------------------- | ------ | ------- |
-| Bundle size       | <PackageInfo package="spell" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | <sg-icon name="circle-check" size="16"></sg-icon> `Infer<T>`                               | <sg-icon name="circle-check" size="16"></sg-icon>     | Partial |
-| Coercion API      | <sg-icon name="circle-check" size="16"></sg-icon> `s.coerce.*`                             | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Async validation  | <sg-icon name="circle-check" size="16"></sg-icon> `.check()`                               | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Error flattening  | <sg-icon name="circle-check" size="16"></sg-icon> `flatten()` + `flattenFirst()`           | <sg-icon name="circle-check" size="16"></sg-icon>     | Partial |
-| Zero dependencies | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>     | <sg-icon name="circle-x" size="16"></sg-icon>      |
-
-**Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
-
-**Consider alternatives when** you are already standardized on another validator ecosystem and migration cost outweighs the API benefits.
-
 ## Features
+
+<div class="features-grid">
 
 - Namespace and tree-shakeable schema builders.
 - Sync and async parsing with `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`.
@@ -157,25 +145,26 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 - Structured errors with flattened, formatted, and best-match union diagnostics.
 - Object parsing and error formatting hardened against prototype-pollution-style keys.
 
-## Compatibility
-
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
+</div>
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Forge](/forge/) — typed form state that uses Sieve schemas as its validation layer
 - [Courier](/courier/) — HTTP client for validating request and response payloads at service boundaries
 - [Vault](/vault/) — unified storage API that accepts Sieve schemas to type-gate persisted data
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

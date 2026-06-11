@@ -188,12 +188,12 @@ The number input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-number-input`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `↑` / `↓` step the value by `step`; `Page Up` / `Page Down` step by `large-step`.
 - `Tab` moves focus in and out.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - `aria-labelledby` links the label; `aria-describedby` links helper and error text.
 - Spin buttons use `aria-label` ("Increment" / "Decrement") and `aria-disabled` when the value is at `min` / `max`.

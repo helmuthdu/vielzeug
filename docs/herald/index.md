@@ -6,30 +6,59 @@ category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
 exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedError]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="herald" />
+<PackageHero package="herald" />
 
-<img src="/logo-herald.svg" alt="Herald logo" width="156" class="logo-highlight"/>
+## Why Herald?
 
-# Herald
+Manual event emitters lack TypeScript inference across event names and payloads, and offer no async patterns — `await`ing an event or streaming all future emits requires bespoke wiring.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — manual typed event bus
+type Handlers = { 'user:login': (p: { userId: string }) => void };
+const listeners = new Map<keyof Handlers, Set<Function>>();
+function on<K extends keyof Handlers>(event: K, fn: Handlers[K]) {
+  /* ... */
+}
+function emit<K extends keyof Handlers>(event: K, payload: Parameters<Handlers[K]>[0]) {
+  /* ... */
+}
+// No await, no stream, no AbortSignal, no error isolation
 
-**Package:** `@vielzeug/herald` &nbsp;·&nbsp; **Category:** Events
+// After — Herald
+import { createBus } from '@vielzeug/herald';
+const bus = createBus<AppEvents>();
+bus.on('user:login', ({ userId }) => loadProfile(userId));
+bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
+const session = await bus.wait('user:login'); // async one-shot
+for await (const event of bus.events('cart:updated')) {
+} // async stream
+```
 
-**Key exports:** `createBus`, `createBehaviorBus`, `pipeEvents`, `combineSignals`
+| Feature              | Herald                                       | mitt     | EventEmitter3 |
+| -------------------- | -------------------------------------------- | -------- | ------------- |
+| Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
+| TypeScript inference | <sg-icon name="check" size="16"></sg-icon> Full                                      | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic      |
+| Async/await (`wait`) | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Async streaming      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| AbortSignal          | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Event piping         | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Wildcard (`onAny`)   | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Disposal signal      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Error isolation      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>            |
 
-**When to use:** Decoupled inter-module communication via a typed event bus. Supports subscribe/emit, one-time await, async iteration, event piping, and AbortSignal lifecycle management.
+<div class="decision-callout">
 
-**Related:** [Ripple](/ripple/) · [Wayfinder](/wayfinder/) · [Familiar](/familiar/)
+**Use Herald when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
 
-</details>
+**Consider mitt when** you only need a bare-minimum synchronous pub/sub with the smallest possible footprint.
 
-`@vielzeug/herald` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with payload inference.
+</div>
 
 ## Installation
 
@@ -95,50 +124,9 @@ try {
 }
 ```
 
-## Why Herald?
-
-Manual event emitters lack TypeScript inference across event names and payloads, and offer no async patterns — `await`ing an event or streaming all future emits requires bespoke wiring.
-
-```ts
-// Before — manual typed event bus
-type Handlers = { 'user:login': (p: { userId: string }) => void };
-const listeners = new Map<keyof Handlers, Set<Function>>();
-function on<K extends keyof Handlers>(event: K, fn: Handlers[K]) {
-  /* ... */
-}
-function emit<K extends keyof Handlers>(event: K, payload: Parameters<Handlers[K]>[0]) {
-  /* ... */
-}
-// No await, no stream, no AbortSignal, no error isolation
-
-// After — Herald
-import { createBus } from '@vielzeug/herald';
-const bus = createBus<AppEvents>();
-bus.on('user:login', ({ userId }) => loadProfile(userId));
-bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
-const session = await bus.wait('user:login'); // async one-shot
-for await (const event of bus.events('cart:updated')) {
-} // async stream
-```
-
-| Feature              | Herald                                       | mitt     | EventEmitter3 |
-| -------------------- | -------------------------------------------- | -------- | ------------- |
-| Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
-| TypeScript inference | <sg-icon name="circle-check" size="16"></sg-icon> Full                                      | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic      |
-| Async/await (`wait`) | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Async streaming      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| AbortSignal          | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Event piping         | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Wildcard (`onAny`)   | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Disposal signal      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Error isolation      | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-x" size="16"></sg-icon>       | <sg-icon name="circle-x" size="16"></sg-icon>            |
-| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                           | <sg-icon name="circle-check" size="16"></sg-icon>       | <sg-icon name="circle-check" size="16"></sg-icon>            |
-
-**Use Herald when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
-
-**Consider mitt when** you only need a bare-minimum synchronous pub/sub with the smallest possible footprint.
-
 ## Features
+
+<div class="features-grid">
 
 - **Typed event maps** for strict event/payload correctness
 - **Persistent + one-shot listeners** with `on` and `once` — each registration is independent, including duplicate handlers
@@ -162,25 +150,27 @@ for await (const event of bus.events('cart:updated')) {
 - **Testing helper** via `@vielzeug/herald/test`
 - **Zero dependencies** — <PackageInfo package="herald" type="size" /> gzipped, <PackageInfo package="herald" type="dependencies" /> dependencies
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Ripple](/ripple/) — reactive signals and computed state that pair naturally with event-driven update patterns
 - [Wayfinder](/wayfinder/) — client-side router whose navigation lifecycle hooks integrate with bus-dispatched events
 - [Familiar](/familiar/) — Web Worker pool that can use a bus to stream task progress and completion events
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

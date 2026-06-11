@@ -187,12 +187,12 @@ The OTP input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-otp-input`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Focus auto-advances to the next cell on valid input; `Backspace` moves back and clears the cell.
 - `Tab` moves focus out of the group; paste fills all cells at once.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
 - `autocomplete="one-time-code"` is set automatically on each cell input.

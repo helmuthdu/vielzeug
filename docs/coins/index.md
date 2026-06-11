@@ -37,30 +37,47 @@ exports:
     toJSON,
     fromJSON,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="coins" />
+<PackageHero package="coins" />
 
-<img src="/logo-coins.svg" alt="Coins logo" width="156" class="logo-highlight"/>
+## Why Coins?
 
-# Coins
+Monetary arithmetic with `number` accumulates IEEE-754 rounding errors. These errors are invisible in tests but show up in production totals, allocation remainders, and exchange results.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — float arithmetic
+const price = 10.1 + 10.2; // 20.299999999999997, not 20.3
+const [a, b, c] = [price / 3, price / 3, price / 3];
+a + b + c; // 20.299999999999997 — penny lost
 
-**Package:** `@vielzeug/coins` &nbsp;·&nbsp; **Category:** Utilities
+// After — bigint minor units
+import { add, allocate, money, toDecimal } from '@vielzeug/coins';
+const price = add(money('10.10', 'USD'), money('10.20', 'USD'));
+const [a, b, c] = allocate(price, [1, 1, 1]);
+a.amount + b.amount + c.amount === price.amount; // true — always
+```
 
-**Key exports:** `money`, `zero`, `toCurrencyCode`, `add`, `subtract`, `multiply`, `divide`, `allocate`, `clamp`, `format`, `formatParts`, `exchange`
+| Feature                      | Coins                                       | Dinero.js v2 | currency.js          |
+| ---------------------------- | ------------------------------------------- | ------------ | -------------------- |
+| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB       | ~2.5 kB              |
+| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>                   |
+| `bigint` minor units         | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon> (number)  | <sg-icon name="x" size="16"></sg-icon> (number)          |
+| TypeScript-native            | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
+| Validated currency codes     | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                   |
+| Locale-aware formatting      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
+| Largest Remainder allocation | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                   |
 
-**When to use:** Precise monetary arithmetic — creation, arithmetic, allocation, locale-aware formatting, and exchange rate conversion without floating-point drift.
+<div class="decision-callout">
 
-**Related:** [Arsenal](/arsenal/) · [Tempo](/tempo/)
+**Use Coins when** you need exact bigint arithmetic with validated currencies, typed allocation, and `Intl`-powered formatting in a single zero-dependency package.
 
-</details>
+**Consider Dinero.js when** your team already uses it and float precision is acceptable for your use case.
 
-`@vielzeug/coins` is a zero-dependency package for working with money in TypeScript. Amounts are stored as `bigint` in minor units (cents, pence, fils, etc.), eliminating floating-point rounding errors entirely. The package covers the full monetary workflow: creating values, arithmetic, allocation, formatting, serialization, and currency conversion.
+</div>
 
 ## Installation
 
@@ -112,38 +129,9 @@ const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
 exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 ```
 
-## Why Coins?
-
-Monetary arithmetic with `number` accumulates IEEE-754 rounding errors. These errors are invisible in tests but show up in production totals, allocation remainders, and exchange results.
-
-```ts
-// Before — float arithmetic
-const price = 10.1 + 10.2; // 20.299999999999997, not 20.3
-const [a, b, c] = [price / 3, price / 3, price / 3];
-a + b + c; // 20.299999999999997 — penny lost
-
-// After — bigint minor units
-import { add, allocate, money, toDecimal } from '@vielzeug/coins';
-const price = add(money('10.10', 'USD'), money('10.20', 'USD'));
-const [a, b, c] = allocate(price, [1, 1, 1]);
-a.amount + b.amount + c.amount === price.amount; // true — always
-```
-
-| Feature                      | Coins                                       | Dinero.js v2 | currency.js          |
-| ---------------------------- | ------------------------------------------- | ------------ | -------------------- |
-| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB       | ~2.5 kB              |
-| Zero dependencies            | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-check" size="16"></sg-icon>                   |
-| `bigint` minor units         | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon> (number)  | <sg-icon name="circle-x" size="16"></sg-icon> (number)          |
-| TypeScript-native            | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
-| Validated currency codes     | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-x" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                   |
-| Locale-aware formatting      | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
-| Largest Remainder allocation | <sg-icon name="circle-check" size="16"></sg-icon>                                          | <sg-icon name="circle-check" size="16"></sg-icon>           | <sg-icon name="circle-x" size="16"></sg-icon>                   |
-
-**Use Coins when** you need exact bigint arithmetic with validated currencies, typed allocation, and `Intl`-powered formatting in a single zero-dependency package.
-
-**Consider Dinero.js when** your team already uses it and float precision is acceptable for your use case.
-
 ## Features
+
+<div class="features-grid">
 
 - `money()` — create from decimal string, number, or bigint minor units; currency code validated at creation time
 - `toCurrencyCode()` — brand and cache ISO 4217 codes; result is type-safe in `ExchangeRate`
@@ -156,25 +144,26 @@ a.amount + b.amount + c.amount === price.amount; // true — always
 - `exchange()` — currency conversion using string rates; rounding mode configurable
 - Serialization — `toDecimal`, `toNumber`, `toJSON`, `fromJSON`; safe `bigint` round-trip through JSON
 
-## Compatibility
+</div>
 
-| Environment  | Support |
-| ------------ | ------- |
-| Browser      | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js      | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR          | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| React Native | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Arsenal](/arsenal/) — general-purpose utility functions
-- [Tempo](/tempo/) — date and time utilities
+<div class="see-also">
+
+- [Arsenal](/arsenal/) — general-purpose utility functions; pairs with Coins for formatting pipelines that combine numbers, strings, and currency in one pass
+- [Tempo](/tempo/) — date and time utilities; combine with Coins when displaying transaction histories or time-windowed financial summaries
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

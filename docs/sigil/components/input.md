@@ -305,12 +305,12 @@ The input component follows WCAG 2.1 Level AA standards.
 
 ### `sg-input`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` focuses the input.
 - Native input behavior (Enter to commit, etc.).
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Proper ARIA states (disabled, required, readonly).
 - Associated labels via `aria-label` or `<label>`.

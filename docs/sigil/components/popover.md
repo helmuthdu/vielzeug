@@ -202,18 +202,18 @@ The popover component follows WAI-ARIA best practices.
 
 ### `sg-popover`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Escape` closes the popover and returns focus to the trigger.
 - `Tab` moves focus through interactive elements inside the panel.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The panel uses `role="dialog"` when `label` is set, giving screen readers a concise title on open.
 - The trigger element receives `aria-expanded` and `aria-controls` reflecting the open state.
 - Provide a `label` attribute to give the panel an accessible name.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
+<sg-icon name="check" size="16"></sg-icon> **Focus Management**
 
 - Focus moves into the panel on open (when `trigger` includes `click` or `focus`).
 - Focus returns to the trigger element on close.

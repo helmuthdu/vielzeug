@@ -15,30 +15,53 @@ exports:
     WorkerTaskError,
     WorkerQueueFullError,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="familiar" />
+<PackageHero package="familiar" />
 
-<img src="/logo-familiar.svg" alt="Familiar logo" width="156" class="logo-highlight"/>
+## Why Familiar?
 
-# Worker
+Raw Web Workers require blob-URL boilerplate, untyped `postMessage`/`onmessage` pairs, and no built-in pooling, timeouts, or cancellation.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — raw Web Worker
+const blob = new Blob([`onmessage = (e) => postMessage(e.data * 2);`]);
+const rawWorker = new Worker(URL.createObjectURL(blob));
+rawWorker.postMessage(21);
+rawWorker.onmessage = (e) => console.log(e.data); // 42 — untyped, no await, no error handling
 
-**Package:** `@vielzeug/familiar` &nbsp;·&nbsp; **Category:** Workers
+// After — Worker
+import { createWorker } from '@vielzeug/familiar';
+const typedWorker = createWorker<number, number>((n) => n * 2);
+console.log(await typedWorker.run(21)); // 42 — typed, awaitable, error-safe
+typedWorker.dispose();
+```
 
-**Key exports:** `createWorker`, `createModuleWorker`, `createTestWorker`
+| Feature           | Worker                                         | Comlink | workerpool |
+| ----------------- | ---------------------------------------------- | ------- | ---------- |
+| Bundle size       | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
+| Worker pools      | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>         |
+| Typed payloads    | <sg-icon name="check" size="16"></sg-icon>                                             | Partial | <sg-icon name="x" size="16"></sg-icon>         |
+| Timeout support   | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>         |
+| Priority queue    | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| AbortSignal       | <sg-icon name="check" size="16"></sg-icon> Queued tasks                                | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Streaming         | <sg-icon name="check" size="16"></sg-icon> `runStream()`                               | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Heartbeat         | <sg-icon name="check" size="16"></sg-icon> Auto for inline workers                     | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Typed errors      | <sg-icon name="check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc.        | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Testing utilities | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Module workers    | <sg-icon name="check" size="16"></sg-icon> `createModuleWorker`                        | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
 
-**When to use:** Typed Web Worker pools with task queuing, priorities, per-task timeouts, AbortSignal cancellation, streaming, heartbeat monitoring, and in-process testing.
+<div class="decision-callout">
 
-**Related:** [Arsenal](/arsenal/) · [Ripple](/ripple/) · [Herald](/herald/)
+**Use Worker when** you need typed, awaitable Web Workers with pooling, priorities, timeouts, streaming, and cancellation.
 
-</details>
+**Consider Comlink** if you only need a simple typed RPC proxy over a single Worker without pooling, priority, or timeout requirements.
 
-`@vielzeug/familiar` is a typed Web Worker pool with task queuing, priorities, per-task timeouts, streaming, heartbeat monitoring, and in-process testing.
+</div>
 
 ## Installation
 
@@ -87,44 +110,9 @@ try {
 }
 ```
 
-## Why Worker?
-
-Raw Web Workers require blob-URL boilerplate, untyped `postMessage`/`onmessage` pairs, and no built-in pooling, timeouts, or cancellation.
-
-```ts
-// Before — raw Web Worker
-const blob = new Blob([`onmessage = (e) => postMessage(e.data * 2);`]);
-const rawWorker = new Worker(URL.createObjectURL(blob));
-rawWorker.postMessage(21);
-rawWorker.onmessage = (e) => console.log(e.data); // 42 — untyped, no await, no error handling
-
-// After — Worker
-import { createWorker } from '@vielzeug/familiar';
-const typedWorker = createWorker<number, number>((n) => n * 2);
-console.log(await typedWorker.run(21)); // 42 — typed, awaitable, error-safe
-typedWorker.dispose();
-```
-
-| Feature           | Worker                                         | Comlink | workerpool |
-| ----------------- | ---------------------------------------------- | ------- | ---------- |
-| Bundle size       | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
-| Worker pools      | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Typed payloads    | <sg-icon name="circle-check" size="16"></sg-icon>                                             | Partial | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Timeout support   | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-check" size="16"></sg-icon>         |
-| Priority queue    | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| AbortSignal       | <sg-icon name="circle-check" size="16"></sg-icon> Queued tasks                                | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Streaming         | <sg-icon name="circle-check" size="16"></sg-icon> `runStream()`                               | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Heartbeat         | <sg-icon name="circle-check" size="16"></sg-icon> Auto for inline workers                     | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Typed errors      | <sg-icon name="circle-check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc.        | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Testing utilities | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-x" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Module workers    | <sg-icon name="circle-check" size="16"></sg-icon> `createModuleWorker`                        | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-| Zero dependencies | <sg-icon name="circle-check" size="16"></sg-icon>                                             | <sg-icon name="circle-check" size="16"></sg-icon>      | <sg-icon name="circle-x" size="16"></sg-icon>         |
-
-**Use Worker when** you need typed, awaitable Web Workers with pooling, priorities, timeouts, streaming, and cancellation.
-
-**Consider Comlink** if you only need a simple typed RPC proxy over a single Worker without pooling, priority, or timeout requirements.
-
 ## Features
+
+<div class="features-grid">
 
 - **Type-safe** — payload types flow from `TaskFn` declaration to every `run()` call
 - **Web Worker backed** — CPU-bound work runs off the main thread, no jank
@@ -145,25 +133,27 @@ typedWorker.dispose();
 - **Testing utilities** — `createTestWorker` runs tasks in-process with call recording
 - **Zero dependencies** — no supply chain risk, minimal bundle size
 
-## Compatibility
+</div>
 
-| Environment | Support                                                                          |
-| ----------- | -------------------------------------------------------------------------------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon> Full support                                                                  |
-| Node.js     | <sg-icon name="triangle-alert" size="16"></sg-icon> `createWorker()` is safe; `run()` requires a compatible Worker implementation |
-| SSR         | <sg-icon name="triangle-alert" size="16"></sg-icon> `createWorker()` is safe; `run()` requires a compatible Worker implementation |
-| Deno        | <sg-icon name="triangle-alert" size="16"></sg-icon> Support depends on Worker compatibility                                       |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
+
+<div class="see-also">
 
 - [Arsenal](/arsenal/) — utility functions useful inside self-contained task functions
 - [Ripple](/ripple/) — pair with reactive signals to drive UI from worker pool metrics
 - [Herald](/herald/) — emit typed events from worker task functions back to the main thread
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

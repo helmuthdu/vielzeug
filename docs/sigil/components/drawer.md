@@ -304,18 +304,18 @@ The drawer component follows the WAI-ARIA Dialog Pattern best practices.
 
 ### `sg-drawer`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` / `Shift+Tab` move focus between focusable elements inside the panel.
 - `Escape` closes the drawer (when `dismissible` is set).
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert.
 - Provide a `label` attribute to give screen readers a descriptive panel title.
 - The close button has `aria-label="Close"` when `dismissible` is set.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Focus Management**
+<sg-icon name="check" size="16"></sg-icon> **Focus Management**
 
 - Focus moves into the panel on open and returns to the trigger element on close.
 

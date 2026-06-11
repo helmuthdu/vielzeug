@@ -595,12 +595,12 @@ The grid component follows WAI-ARIA best practices.
 
 ### `sg-grid`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Maintains semantic HTML structure and document reading order by default.
 - Grid layout is purely visual — keyboard navigation follows DOM order.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Compatible with screen readers.
 - Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement.

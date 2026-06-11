@@ -155,23 +155,23 @@ The rating component follows WCAG 2.1 Level AA standards.
 
 ### `sg-rating`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `←` / `→` arrow keys move and commit the selection.
 - `Home` / `End` jump to 1 / max; `Tab` moves focus in and out.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - The group uses `role="radiogroup"`; each star uses `role="radio"` with `aria-checked` reflecting the current selection.
 - The group `aria-label` comes from the `label` attribute (default: `'Rating'`).
 - `aria-disabled` reflects the disabled state; `aria-readonly` reflects the readonly state.
 - Hover previews stars visually without committing the value.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Forced Colors**
+<sg-icon name="check" size="16"></sg-icon> **Forced Colors**
 
 - In `forced-colors` environments unfilled stars use `ButtonText` and filled stars use `Highlight`, ensuring visible distinction without relying on color alone.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
 
 - The sparkle particle animation is suppressed when `prefers-reduced-motion: reduce` is active.
 

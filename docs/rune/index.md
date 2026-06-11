@@ -24,30 +24,55 @@ exports:
     DEFAULT_THEME,
     DEFAULT_TRANSPORT,
   ]
+environments: [browser, node, ssr, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
-<PackageBadges package="rune" />
+<PackageHero package="rune" />
 
-<img src="/logo-rune.svg" alt="Rune logo" width="156" class="logo-highlight"/>
+## Why Rune?
 
-# Rune
+Plain `console.log` lacks structure: no log levels, no namespacing, no remote delivery, no way to silence logs in production.
 
-<details>
-<summary><sg-icon name="zap" size="16"></sg-icon> Quick Reference</summary>
+```ts
+// Before — manual approach
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[api] GET /users', data);
+}
+fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg }) });
 
-**Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
+// After — Rune
+import { createLogger } from '@vielzeug/rune';
+import { consoleTransport, pipe, remoteTransport } from '@vielzeug/rune';
 
-**Key exports:** `createLogger` · `Rune` · `consoleTransport` · `remoteTransport` · `jsonTransport` · `batchTransport` · `sampleTransport` · `redactTransport` · `pipe` · `lazy` · `isLazyBinding` · `isLevelEnabled` · `PRIORITY`
+const api = createLogger({
+  namespace: 'api',
+  transports: [
+    pipe(consoleTransport({ level: 'debug' }), remoteTransport({ handler: sendToCollector, level: 'error' })),
+  ],
+});
+api.info({ data }, 'GET /users');
+```
 
-**When to use:** Structured browser/Node logging with log levels, namespaced scopes, timing helpers, and optional remote transport.
+| Feature              | Rune                                       | Winston       | Pino       | console |
+| -------------------- | ------------------------------------------ | ------------- | ---------- | ------- |
+| Bundle size          | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
+| Browser support      | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon>            | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>      |
+| Scoped loggers       | <sg-icon name="check" size="16"></sg-icon>                                         | Manual        | Child      | <sg-icon name="x" size="16"></sg-icon>      |
+| Pluggable transports | <sg-icon name="check" size="16"></sg-icon> Built-in factories                      | <sg-icon name="check" size="16"></sg-icon> Transports | <sg-icon name="check" size="16"></sg-icon> Streams | <sg-icon name="x" size="16"></sg-icon>      |
+| Structured log entry | <sg-icon name="check" size="16"></sg-icon> `LogEntry` type                         | Partial       | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>      |
+| Lazy bindings        | <sg-icon name="check" size="16"></sg-icon> `lazy(fn)`                              | <sg-icon name="x" size="16"></sg-icon>            | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>      |
+| Styled output        | <sg-icon name="check" size="16"></sg-icon> CSS badges                              | Text only     | Text only  | Manual  |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon> (15+)      | <sg-icon name="x" size="16"></sg-icon> (5+)    | N/A     |
 
-**Related:** [Courier](/courier/) · [Herald](/herald/) · [Familiar](/familiar/)
+<div class="decision-callout">
 
-</details>
+**Use Rune when** you need isomorphic logging (browser + Node.js), namespaced module loggers, or remote error delivery without a heavy dependency chain.
 
-`@vielzeug/rune` is a zero-dependency logger built around a pluggable transport pipeline. It augments the native console with level filtering, namespace scopes, structured log entries, styled badges, lazy bindings, and flexible delivery via composable transport factories.
+**Consider alternatives when** you need high-throughput file-based logging (Pino), file rotation (Winston), or your team already uses a logging framework.
+
+</div>
 
 ## Installation
 
@@ -113,46 +138,9 @@ const nodeLog = createLogger({
 });
 ```
 
-## Why Rune?
-
-Plain `console.log` lacks structure: no log levels, no namespacing, no remote delivery, no way to silence logs in production.
-
-```ts
-// Before — manual approach
-if (process.env.NODE_ENV !== 'production') {
-  console.log('[api] GET /users', data);
-}
-fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg }) });
-
-// After — Rune
-import { createLogger } from '@vielzeug/rune';
-import { consoleTransport, pipe, remoteTransport } from '@vielzeug/rune';
-
-const api = createLogger({
-  namespace: 'api',
-  transports: [
-    pipe(consoleTransport({ level: 'debug' }), remoteTransport({ handler: sendToCollector, level: 'error' })),
-  ],
-});
-api.info({ data }, 'GET /users');
-```
-
-| Feature              | Rune                                       | Winston       | Pino       | console |
-| -------------------- | ------------------------------------------ | ------------- | ---------- | ------- |
-| Bundle size          | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
-| Browser support      | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon>            | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Scoped loggers       | <sg-icon name="circle-check" size="16"></sg-icon>                                         | Manual        | Child      | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Pluggable transports | <sg-icon name="circle-check" size="16"></sg-icon> Built-in factories                      | <sg-icon name="circle-check" size="16"></sg-icon> Transports | <sg-icon name="circle-check" size="16"></sg-icon> Streams | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Structured log entry | <sg-icon name="circle-check" size="16"></sg-icon> `LogEntry` type                         | Partial       | <sg-icon name="circle-check" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Lazy bindings        | <sg-icon name="circle-check" size="16"></sg-icon> `lazy(fn)`                              | <sg-icon name="circle-x" size="16"></sg-icon>            | <sg-icon name="circle-x" size="16"></sg-icon>         | <sg-icon name="circle-x" size="16"></sg-icon>      |
-| Styled output        | <sg-icon name="circle-check" size="16"></sg-icon> CSS badges                              | Text only     | Text only  | Manual  |
-| Zero dependencies    | <sg-icon name="circle-check" size="16"></sg-icon>                                         | <sg-icon name="circle-x" size="16"></sg-icon> (15+)      | <sg-icon name="circle-x" size="16"></sg-icon> (5+)    | N/A     |
-
-**Use Rune when** you need isomorphic logging (browser + Node.js), namespaced module loggers, or remote error delivery without a heavy dependency chain.
-
-**Consider alternatives when** you need high-throughput file-based logging (Pino), file rotation (Winston), or your team already uses a logging framework.
-
 ## Features
+
+<div class="features-grid">
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
 - Runtime level mutation via `setLevel(level)` — toggle debug mode without recreating loggers
@@ -170,25 +158,27 @@ api.info({ data }, 'GET /users');
 - `LogEntry` type — the shared contract between logger and transports
 - Zero dependencies — <PackageInfo package="rune" type="size" /> gzipped
 
-## Compatibility
+</div>
 
-| Environment | Support |
-| ----------- | ------- |
-| Browser     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Node.js     | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| SSR         | <sg-icon name="circle-check" size="16"></sg-icon>      |
-| Deno        | <sg-icon name="circle-check" size="16"></sg-icon>      |
 
 ## Documentation
+
+<div class="doc-links">
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 
+</div>
+
 ## See Also
 
-- [Courier](/courier/)
-- [Herald](/herald/)
-- [Familiar](/familiar/)
+<div class="see-also">
+
+- [Courier](/courier/) — HTTP client with built-in request/response interception; pipe Rune as a transport to log every API call with structured context
+- [Herald](/herald/) — typed event bus; emit log-level change or flush events across modules without coupling loggers directly
+- [Familiar](/familiar/) — Web Worker pool; use Rune inside task functions to surface structured worker-side logs back to the main thread
+
+</div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

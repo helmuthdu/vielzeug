@@ -5,7 +5,7 @@ A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `val
 ## Features
 
 - <sg-icon name="arrow-left-right" size="16"></sg-icon> **Layout Orientation** — `vertical` (default) or `horizontal` with automatic wrapping
-- <sg-icon name="circle-check" size="16"></sg-icon> **Validation Strategy** — configure when validation runs: on `submit`, on `blur`, or on every `change`
+- <sg-icon name="check" size="16"></sg-icon> **Validation Strategy** — configure when validation runs: on `submit`, on `blur`, or on every `change`
 - <sg-icon name="palette" size="16"></sg-icon> **Uniform Styling** — set `variant` and `size` once instead of on every individual field
 - <sg-icon name="radio-tower" size="16"></sg-icon> **Context Propagation** — `disabled`, `size`, `variant`, and `validateOn` automatically apply to all child form fields
 - <sg-icon name="upload" size="16"></sg-icon> **Submit / Reset Events** — intercepts native events and emits `submit` with `FormData` and `reset`
@@ -218,11 +218,11 @@ The form component follows WCAG 2.1 Level AA standards.
 
 ### `sg-form`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Keyboard Navigation**
+<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - `Tab` navigates between child form fields.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Renders a native `<form>` in the shadow root, preserving semantic form behaviour.
 - `aria-disabled` reflects the disabled state on the `<form>`.

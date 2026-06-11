@@ -222,12 +222,12 @@ The box component follows WAI-ARIA best practices.
 
 ### `sg-box`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Semantic Structure**
+<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
 
 - Supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.).
 - Elevation changes are purely visual and do not affect accessibility.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Glass and frost variants maintain readable contrast ratios.
 

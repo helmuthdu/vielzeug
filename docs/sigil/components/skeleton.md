@@ -211,17 +211,17 @@ The skeleton component follows WAI-ARIA best practices.
 
 ### `sg-skeleton`
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Screen Readers**
+<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
 
 - Skeleton placeholders are decorative and non-interactive.
 - Each bone is marked with `aria-hidden="true"`; no content is announced.
 - No focusable roles or tab stops are exposed.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Reduced Motion**
+<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
 
 - Shimmer animation respects `prefers-reduced-motion: reduce`.
 
-<sg-icon name="circle-check" size="16"></sg-icon> **Forced Colors**
+<sg-icon name="check" size="16"></sg-icon> **Forced Colors**
 
 - In `forced-colors` environments the bone renders with `ButtonFace` background and `ButtonText` border for high-contrast visibility.
 
